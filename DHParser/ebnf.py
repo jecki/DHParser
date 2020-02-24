@@ -726,7 +726,7 @@ class EBNFCompiler(Compiler):
     DROP_WHITESPACE_PARSER_KEYWORD = "dwsp__"
     RESUME_RULES_KEYWORD = "resume_rules__"
     SKIP_RULES_KEYWORD = 'skip_rules__'
-    ERR_MSG_SUFFIX = '_err_msg__'
+    ERR_MSGS_KEYWORD = 'error_messages__'
     COMMENT_OR_WHITESPACE = {COMMENT_PARSER_KEYWORD, DROP_COMMENT_PARSER_KEYWORD,
                              RAW_WS_PARSER_KEYWORD, DROP_RAW_WS_PARSER_KEYWORD,
                              WHITESPACE_PARSER_KEYWORD, DROP_WHITESPACE_PARSER_KEYWORD}
@@ -953,6 +953,23 @@ class EBNFCompiler(Compiler):
         the EBNF-Grammar
         """
 
+        def pp_rules(rule_name: str, ruleset: Dict[str, List]) -> Tuple[str, str]:
+            """Pretty-print skip- and resume-rule and error-messages dictionaries
+            to avoid excessively long lines in the generated python source."""
+            assert ruleset
+            indent = "\n" + " " * (len(rule_name) + 8)
+            rule_repr = []
+            for k, v in ruleset.items():
+                if len(v) > 1:
+                    delimiter = ', ' + indent + ' ' * (len(k) + 5)
+                    val = '[' + delimiter.join(str(it) for it in v) + ']'
+                else:
+                    val = v
+                rule_repr.append("'{key}': {value},".format(key=k, value=str(val)))
+            rule_repr[0] = '{' + rule_repr[0]
+            rule_repr[-1] = rule_repr[-1] + '}'
+            return rule_name, indent.join(rule_repr)
+
         # execute deferred tasks, for example semantic checks that cannot
         # be done before the symbol table is complete
 
@@ -1012,12 +1029,42 @@ class EBNFCompiler(Compiler):
                 else:
                     refined_rules.append(rule)
             resume_rules[symbol] = refined_rules
-        definitions.append((self.RESUME_RULES_KEYWORD, repr(resume_rules)))
+        if resume_rules:
+            definitions.append(pp_rules(self.RESUME_RULES_KEYWORD, resume_rules))
+
+        # prepare and add skip-rules
+
+        skip_rules = dict()  # # type: Dict[str, List[ReprType]]
+        for symbol, skip in self.directives.skip.items():
+            rules = []  # type: List[ReprType]
+            for search in skip:
+                if isinstance(search, unrepr) and search.s.isidentifier():
+                    try:
+                        nd = self.rules[search.s][0].children[1]
+                        search = self._gen_search_rule(nd)
+                    except IndexError:
+                        search = ''
+                rules.append(search)
+            skip_rules[symbol] = rules
+        if skip_rules:
+            definitions.append(pp_rules(self.SKIP_RULES_KEYWORD, skip_rules))
+
+        for symbol in self.directives.skip.keys():
+            if symbol not in self.consumed_skip_rules:
+                try:
+                    def_node = self.rules[symbol][0]
+                    self.tree.new_error(
+                        def_node, '"Skip-rules" for symbol "{}" will never be used, '
+                        'because the mandatory marker "§" appears nowhere in its definiendum!'
+                        .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                except KeyError:
+                    pass  # error has already been notified earlier!
 
         # prepare and add customized error-messages
 
+        error_messages = dict()  # type: Dict[str, List[Tuple[ReprType, ReprType]]]
         for symbol, err_msgs in self.directives.error.items():
-            custom_errors = []  # type: List[Tuple[ReprType, ReprType]]
+            custom_errors = []  # type: List[List[ReprType, ReprType]]
             for search, message in err_msgs:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -1025,8 +1072,10 @@ class EBNFCompiler(Compiler):
                         search = self._gen_search_rule(nd)
                     except IndexError:
                         search = ''
-                custom_errors.append((search, message))
-            definitions.append((symbol + self.ERR_MSG_SUFFIX, repr(custom_errors)))
+                custom_errors.append([search, message])
+            error_messages[symbol] = custom_errors
+        if error_messages:
+            definitions.append(pp_rules(self.ERR_MSGS_KEYWORD, error_messages))
 
         for symbol in self.directives.error.keys():
             if symbol not in self.consumed_custom_errors:
@@ -1045,33 +1094,6 @@ class EBNFCompiler(Compiler):
                         self.tree.new_error(
                             dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
                             .format(directive, directive.split('_')[0]))
-
-        # prepare and add skip-rules
-
-        skip_rules = dict()  # # type: Dict[str, List[ReprType]]
-        for symbol, skip in self.directives.skip.items():
-            rules = []  # type: List[ReprType]
-            for search in skip:
-                if isinstance(search, unrepr) and search.s.isidentifier():
-                    try:
-                        nd = self.rules[search.s][0].children[1]
-                        search = self._gen_search_rule(nd)
-                    except IndexError:
-                        search = ''
-                rules.append(search)
-            skip_rules[symbol] = rules
-        definitions.append((self.SKIP_RULES_KEYWORD, repr(skip_rules)))
-
-        for symbol in self.directives.skip.keys():
-            if symbol not in self.consumed_skip_rules:
-                try:
-                    def_node = self.rules[symbol][0]
-                    self.tree.new_error(
-                        def_node, '"Skip-rules" for symbol "{}" will never be used, '
-                        'because the mandatory marker "§" appears nowhere in its definiendum!'
-                        .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
-                except KeyError:
-                    pass  # error has already been notified earlier!
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -1436,7 +1458,9 @@ class EBNFCompiler(Compiler):
                         Error.AMBIGUOUS_ERROR_HANDLING)
                 else:
                     # use class field instead or direct representation of error messages!
-                    custom_args.append('err_msgs=' + current_symbol + self.ERR_MSG_SUFFIX)
+                    custom_args.append('err_msgs={err_msgs_name}["{symbol}"]'
+                                       .format(err_msgs_name=self.ERR_MSGS_KEYWORD,
+                                               symbol=current_symbol))
                     self.consumed_custom_errors.add(current_symbol)
             # add skip-rules to resume parsing of a series, if rules have been declared
             if current_symbol in self.directives.skip:
