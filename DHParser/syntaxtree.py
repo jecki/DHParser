@@ -763,7 +763,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self.select_if(create_match_function(criterion), include_root, reverse)
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
-        """Returns an iterator over all direct children of a node that"""
+        """Returns an iterator over all direct children of a node that fulfill `criterion`."""
         # if not self.children and self.result:
         #     raise ValueError("Leaf-Node %s does not have any children to iterate over"
         #                      % self.serialize())
@@ -849,7 +849,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
-        return self.select_context_if(create_match_function(criterion), include_root, reverse)
+        return self.select_context_if(create_context_match_function(criterion),
+                                      include_root, reverse)
 
     def pick_context(self, criterion: CriteriaType,
                      reverse: bool = False) -> Optional[List['Node']]:
