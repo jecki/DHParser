@@ -269,8 +269,8 @@ EBNF = r"""
     directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
 
     expression = sequence { "|" sequence }
-    sequence       = { ["§"] factor }+                       # "§" means all following factors mandatory
-    factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+    sequence       = { ["§"] term }+                       # "§" means all following terms mandatory
+    term     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
                | [flowmarker] literal
                | [flowmarker] plaintext
                | [flowmarker] regexp
@@ -291,7 +291,7 @@ EBNF = r"""
     repetition = "{" §expression "}"
     option     = "[" §expression "]"
 
-    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
     literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
                | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
     plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace

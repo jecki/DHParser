@@ -13,9 +13,9 @@ directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | litera
 
 #: components
 
-expression = term { "|" term }
-term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
+expression = sequence { "|" sequence }
+sequence   = { ["§"] term }+                         # "§" means all following terms mandatory
+term       = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
            | [flowmarker] literal
            | [flowmarker] plaintext
            | [flowmarker] regexp
@@ -42,7 +42,7 @@ option     = "[" §expression "]"
 
 #: leaf-elements
 
-symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace

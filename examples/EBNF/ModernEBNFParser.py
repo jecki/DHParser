@@ -66,17 +66,16 @@ class ModernEBNFGrammar(Grammar):
     """
     expression = Forward()
     retrieveop = Forward()
-    source_hash__ = "e9c644e95bde4db4e384aa8f93854462"
+    source_hash__ = "0f405b8b05fb72024f7936d79a151ff5"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    dwsp__ = Whitespace(WSP_RE__)  # Drop(Whitespace(WSP_RE__))
+    dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
@@ -92,14 +91,15 @@ class ModernEBNFGrammar(Grammar):
     unordered = Series(interleave, OneOrMore(Series(Series(Token("^"), dwsp__), interleave)))
     retrieveop.set(Alternative(Series(Token("::"), dwsp__), Series(Token(":"), dwsp__)))
     flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("-!"), dwsp__), Series(Token("-&"), dwsp__))
-    factor = Alternative(repetition, option, Series(Option(flowmarker), Alternative(unordered, oneormore, element)))
-    term = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), dwsp__), term))))
+    term = Alternative(repetition, option, Series(Option(flowmarker), Alternative(unordered, oneormore, element)))
+    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), term))
+    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
     definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
+
 def get_grammar() -> ModernEBNFGrammar:
     """Returns a thread/process-exclusive ModernEBNFGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
@@ -130,8 +130,8 @@ ModernEBNF_AST_transformation_table = {
     "definition": [],
     "directive": [],
     "expression": [],
+    "sequence": [],
     "term": [],
-    "factor": [],
     "flowmarker": [],
     "retrieveop": [],
     "unordered": [],
@@ -196,10 +196,10 @@ class ModernEBNFCompiler(Compiler):
     # def on_expression(self, node):
     #     return node
 
-    # def on_term(self, node):
+    # def on_sequence(self, node):
     #     return node
 
-    # def on_factor(self, node):
+    # def on_term(self, node):
     #     return node
 
     # def on_flowmarker(self, node):

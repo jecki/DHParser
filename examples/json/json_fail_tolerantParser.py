@@ -67,20 +67,25 @@ class json_fail_tolerantGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    string_skip__ = [re.compile(r'(?=")')]
-    _ARRAY_SEPARATOR_err_msg__ = [(re.compile(r'(?!,)'), 'Missing separator ","')]
-    _OBJECT_SEPARATOR_err_msg__ = [(re.compile(r'(?!,)'), 'Missing separator ","')]
-    string_err_msg__ = [(re.compile(r'\\'), 'Illegal escape sequence "{1}" Allowed values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u.'), (re.compile(r'(?=)'), 'Illegal character "{1}" in string.')]
-    member_err_msg__ = [(re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')]
-    resume_rules__ = {'object': [re.compile(r'(?:[^{}]|(?:\{.*\}))*\}\s*')], 'array': [re.compile(r'(?:[^\[\]]|(?:\[.*\]))*\]\s*')], 'member': [re.compile(r'(?=(?:"[^"\n]+"\s*:)|\}|,)')], '_OBJECT_SEPARATOR': [re.compile(r'(?=)')], '_ARRAY_SEPARATOR': [re.compile(r'(?=)')]}
+    error_messages__ = {'member': [[re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!']],
+                        'string': [[re.compile(r'\\'), 'Illegal escape sequence "{1}" Allowed values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u.'],
+                                   [re.compile(r'(?=)'), 'Illegal character "{1}" in string.']],
+                        '_OBJECT_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']],
+                        '_ARRAY_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']]}
+    skip_rules__ = {'string': [re.compile(r'(?=")')]}
+    resume_rules__ = {'object': [re.compile(r'(?:[^{}]|(?:\{.*\}))*\}\s*')],
+                      'array': [re.compile(r'(?:[^\[\]]|(?:\[.*\]))*\]\s*')],
+                      'member': [re.compile(r'(?=(?:"[^"\n]+"\s*:)|\}|,)')],
+                      '_OBJECT_SEPARATOR': [re.compile(r'(?=)')],
+                      '_ARRAY_SEPARATOR': [re.compile(r'(?=)')]}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Token("]"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=_ARRAY_SEPARATOR_err_msg__)
-    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Token("}"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=_OBJECT_SEPARATOR_err_msg__)
+    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Token("]"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_ARRAY_SEPARATOR"])
+    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Token("}"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_OBJECT_SEPARATOR"])
     _EOF = NegativeLookahead(RegExp('.'))
     EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
     DOT = Token(".")
@@ -95,14 +100,15 @@ class json_fail_tolerantGrammar(Grammar):
     null = Series(Token("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Token('"')), _CHARACTERS, Drop(Token('"')), dwsp__, mandatory=1, err_msgs=string_err_msg__, skip=string_skip__)
+    string = Series(Drop(Token('"')), _CHARACTERS, Drop(Token('"')), dwsp__, mandatory=1, err_msgs=error_messages__["string"], skip=skip_rules__["string"])
     array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(_ARRAY_SEPARATOR, _element, mandatory=1)))), Series(Drop(Token("]")), dwsp__))
-    member = Series(string, Series(Drop(Token(":")), dwsp__), _element, mandatory=1, err_msgs=member_err_msg__)
+    member = Series(string, Series(Drop(Token(":")), dwsp__), _element, mandatory=1, err_msgs=error_messages__["member"])
     object = Series(Series(Drop(Token("{")), dwsp__), member, ZeroOrMore(Series(_OBJECT_SEPARATOR, member, mandatory=1)), Series(Drop(Token("}")), dwsp__), mandatory=3)
     _element.set(Alternative(object, array, string, number, bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
     
+
 def get_grammar() -> json_fail_tolerantGrammar:
     """Returns a thread/process-exclusive json_fail_tolerantGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

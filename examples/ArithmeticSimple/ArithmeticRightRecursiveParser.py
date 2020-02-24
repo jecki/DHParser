@@ -67,7 +67,6 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'#.*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -89,6 +88,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     expression.set(Alternative(add, sub, term))
     root__ = expression
     
+
 def get_grammar() -> ArithmeticRightRecursiveGrammar:
     """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

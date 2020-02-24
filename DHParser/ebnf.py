@@ -159,9 +159,9 @@ class EBNFGrammar(Grammar):
     #: components
 
     expression = sequence { "|" sequence }
-    sequence       = { ["§"] factor }+          # "§" means all following factors mandatory
+    sequence       = { ["§"] term }+          # "§" means all following terms mandatory
     # negative lookahead !"=" to be sure it's not a definition
-    factor     = [flowmarker] [retrieveop] symbol !"="
+    term     = [flowmarker] [retrieveop] symbol !"="
                | [flowmarker] literal
                | [flowmarker] plaintext
                | [flowmarker] regexp
@@ -188,7 +188,7 @@ class EBNFGrammar(Grammar):
 
     #: leaf-elements
 
-    symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
+    symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
     literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
                | /'(?:(?<!\\)\\'|[^'])*?'/~         # ignore whitespace following literals
     plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
@@ -222,7 +222,7 @@ class EBNFGrammar(Grammar):
     retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
     flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
                              Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
+    term = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
                                 NegativeLookahead(Series(Token("="), wsp__))),
                          Series(Option(flowmarker), literal),
                          Series(Option(flowmarker), plaintext),
@@ -231,7 +231,7 @@ class EBNFGrammar(Grammar):
                          Series(Option(flowmarker), oneormore),
                          Series(Option(flowmarker), group),
                          Series(Option(flowmarker), unordered), repetition, option)
-    sequence = OneOrMore(Series(Option(Series(Token("§"), wsp__)), factor))
+    sequence = OneOrMore(Series(Option(Series(Token("§"), wsp__)), term))
     expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), wsp__), sequence))))
     directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__),
                        Alternative(regexp, literal, symbol),
@@ -303,8 +303,8 @@ EBNF_AST_transformation_table = {
         [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
     "sequence":
         [replace_by_single_child, flatten],  # supports both idioms:
-                                             # "{ factor }+" and "factor { factor }"
-    "factor, flowmarker, retrieveop":
+                                             # "{ term }+" and "term { term }"
+    "term, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
         [remove_brackets, replace_by_single_child],
@@ -400,7 +400,7 @@ class EBNFDecompiler(Compiler):
         result.pop()
         return result
 
-    def on_factor(self, node):
+    def on_term(self, node):
         result = []
         for child in node.children:
             result.extend(self.compile(child))
@@ -1485,7 +1485,7 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(mock_node, 'Series', custom_args)
 
 
-    def on_factor(self, node: Node) -> str:
+    def on_term(self, node: Node) -> str:
         assert node.children
         assert len(node.children) >= 2, node.as_sxpr()
         prefix = node.children[0].content

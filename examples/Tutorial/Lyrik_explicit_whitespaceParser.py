@@ -66,7 +66,6 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'[\t ]*'
@@ -100,16 +99,17 @@ class Lyrik_explicit_whitespaceGrammar(Grammar):
     gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
+
 def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
     """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000001_grammar_singleton
+            THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):

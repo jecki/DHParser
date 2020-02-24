@@ -69,7 +69,6 @@ class ClassicEBNFGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'#.*(?:\n|$)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -97,6 +96,7 @@ class ClassicEBNFGrammar(Grammar):
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
+
 def get_grammar() -> ClassicEBNFGrammar:
     """Returns a thread/process-exclusive ClassicEBNFGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

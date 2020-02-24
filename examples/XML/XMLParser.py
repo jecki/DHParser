@@ -78,7 +78,6 @@ class XMLGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'//'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -183,6 +182,7 @@ class XMLGrammar(Grammar):
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
+
 def get_grammar() -> XMLGrammar:
     """Returns a thread/process-exclusive XMLGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

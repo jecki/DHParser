@@ -65,7 +65,6 @@ class LaTeXGrammar(Grammar):
     anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'%.*'
     comment_rx__ = re.compile(COMMENT__)
     comment__ = RegExp(comment_rx__)
@@ -166,6 +165,7 @@ class LaTeXGrammar(Grammar):
     latexdoc = Series(preamble, document)
     root__ = latexdoc
     
+
 def get_grammar() -> LaTeXGrammar:
     """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

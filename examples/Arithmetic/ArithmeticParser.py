@@ -65,7 +65,6 @@ class ArithmeticGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'#.*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -87,6 +86,7 @@ class ArithmeticGrammar(Grammar):
     expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
     root__ = expression
     
+
 def get_grammar() -> ArithmeticGrammar:
     """Returns a thread/process-exclusive ArithmeticGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

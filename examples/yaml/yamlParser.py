@@ -68,7 +68,6 @@ class yamlGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -94,6 +93,7 @@ class yamlGrammar(Grammar):
     json = Series(dwsp__, element, EOF)
     root__ = json
     
+
 def get_grammar() -> yamlGrammar:
     """Returns a thread/process-exclusive yamlGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

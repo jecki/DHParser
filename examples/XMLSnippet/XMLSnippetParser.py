@@ -70,7 +70,6 @@ class XMLSnippetGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'//'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -129,6 +128,7 @@ class XMLSnippetGrammar(Grammar):
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
+
 def get_grammar() -> XMLSnippetGrammar:
     """Returns a thread/process-exclusive XMLSnippetGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()

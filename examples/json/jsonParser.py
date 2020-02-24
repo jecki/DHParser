@@ -67,7 +67,6 @@ class jsonGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -96,6 +95,7 @@ class jsonGrammar(Grammar):
     json = Series(dwsp__, _element, _EOF)
     root__ = json
     
+
 def get_grammar() -> jsonGrammar:
     """Returns a thread/process-exclusive jsonGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
