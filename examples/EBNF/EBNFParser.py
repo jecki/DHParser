@@ -128,10 +128,10 @@ EBNF_AST_transformation_table = {
         [flatten, remove_tokens('@', '=', ',')],
     "expression":
         [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
-    "term":
+    "sequence":
         [replace_by_single_child, flatten],  # supports both idioms:
-                                             # "{ factor }+" and "factor { factor }"
-    "factor, flowmarker, retrieveop":
+                                             # "{ term }+" and "term { term }"
+    "term, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
         [remove_brackets, replace_by_single_child],
@@ -196,10 +196,10 @@ class EBNFCompiler(Compiler):
     # def on_expression(self, node):
     #     return node
 
-    # def on_term(self, node):
+    # def on_sequence(self, node):
     #     return node
 
-    # def on_factor(self, node):
+    # def on_term(self, node):
     #     return node
 
     # def on_flowmarker(self, node):

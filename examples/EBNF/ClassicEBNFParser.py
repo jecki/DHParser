@@ -88,9 +88,9 @@ class ClassicEBNFGrammar(Grammar):
     group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
     retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":"), dwsp__))
     flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("-!"), dwsp__), Series(Token("-&"), dwsp__))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), dwsp__), term))))
+    term = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), term))
+    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
     definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
@@ -130,10 +130,10 @@ ClassicEBNF_AST_transformation_table = {
         [flatten, remove_tokens('@', '=', ',')],
     "expression":
         [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
-    "term":
+    "sequence":
         [replace_by_single_child, flatten],  # supports both idioms:
-    # "{ factor }+" and "factor { factor }"
-    "factor, flowmarker, retrieveop":
+    # "{ term }+" and "term { term }"
+    "term, flowmarker, retrieveop":
         replace_by_single_child,
     "group":
         [remove_brackets, replace_by_single_child],
@@ -196,10 +196,10 @@ class ClassicEBNFCompiler(Compiler):
     # def on_expression(self, node):
     #     return node
 
-    # def on_term(self, node):
+    # def on_sequence(self, node):
     #     return node
 
-    # def on_factor(self, node):
+    # def on_term(self, node):
     #     return node
 
     # def on_flowmarker(self, node):

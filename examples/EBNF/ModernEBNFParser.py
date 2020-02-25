@@ -125,28 +125,26 @@ def get_grammar() -> ModernEBNFGrammar:
 
 ModernEBNF_AST_transformation_table = {
     # AST Transformations for the ModernEBNF-grammar
-    "<": flatten,
+    "<": remove_empty,
     "syntax": [],
-    "definition": [],
-    "directive": [],
-    "expression": [],
-    "sequence": [],
-    "term": [],
-    "flowmarker": [],
-    "retrieveop": [],
-    "unordered": [],
+    "directive, definition": [flatten, remove_tokens('@', '=', ',')],
+    "expression": [replace_by_single_child, flatten, remove_tokens('|')],
+    "sequence": [replace_by_single_child, flatten],
+    "term, flowmarker, retrieveop": replace_by_single_child,
+    "unordered": remove_brackets,
     "interleave": [],
-    "oneormore": [],
-    "repetition": [],
-    "option": [],
+    "oneormore, repetition, option":
+        [reduce_single_child, remove_brackets,
+         forbid('repetition', 'option', 'oneormore'),
+         assert_content(r'(?!§)(?:.|\n)*')],
     "element": [],
-    "group": [],
-    "symbol": [],
-    "literal": [],
+    "group": [remove_brackets, replace_by_single_child],
+    "symbol, literal, regexp": reduce_single_child,
     "plaintext": [],
-    "regexp": [],
     "whitespace": [],
     "EOF": [],
+    (TOKEN_PTYPE, WHITESPACE_PTYPE):
+        reduce_single_child,
     "*": replace_by_single_child
 }
 

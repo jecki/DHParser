@@ -429,6 +429,100 @@ class EBNFDecompiler(Compiler):
     #     return node
 
 
+class ModernEBNFDecompiler(EBNFDecompiler):
+    """Converts AST representing an EBNF-syntax-description back to
+    EBNF-text in a modern Relax-NG type syntax."""
+
+    def __init__(self):
+        super(ModernEBNFDecompiler, self).__init__()
+
+    def reset(self):
+        super().reset()
+        # initialize your variables here, not in the constructor!
+
+    def fallback_compiler(self, node: Node) -> Any:
+        """Fallback for flowmarker, retrieveop, symbol, literal, plaintest,
+        regexp, whitespace and Token."""
+        return [node.content]
+
+    def on_ZOMBIE__(self, node: Node) -> str:
+        result = ['Errors in abstract syntax tree of EBNF-grammar! Reconstructing fragments: ']
+        result.extend([str(self.compile(child)) for child in node.children])
+        return '\n\n'.join(result)
+
+    def on_syntax(self, node):
+        return '\n'.join(''.join(self.compile(child)) for child in node.children)
+
+    def on_definition(self, node):
+        children = node.children
+        assert len(children) == 2
+        return self.compile(children[0]) + [' = '] + self.compile(children[1])
+
+    def on_directive(self, node):
+        children = node.children
+        assert children
+        result = ['@'] + self.compile(children[0])
+        if len(children) > 1:
+            result.extend([' = '] + self.compile(children[1]))
+        for child in children[2:]:
+            result.extend([' , '] + self.compile(child))
+        return result
+
+    def on_expression(self, node):
+        result = ['('] if self.context[-2].tag_name == "sequence" else []
+        for child in node.children:
+            result.extend(self.compile(child))
+            if result[-1] != "§":
+                result.append(' | ')
+        result.pop()
+        if self.context[-2].tag_name == "sequence":
+            result.append(')')
+        return result
+
+    def on_sequence(self, node):
+        result = []
+        for child in node.children:
+            result.extend(self.compile(child))
+            if result[-1] != "§":
+                result.append(' ')
+        result.pop()
+        return result
+
+    def on_term(self, node):
+        result = []
+        for child in node.children:
+            result.extend(self.compile(child))
+        return result
+
+    def on_unordered(self, node):
+        # TODO: return interleaved
+        assert len(node.children) == 1
+        return ['<'] + self.compile(node.children[0]) + ['>']
+
+    # def on_interleave(self, node):
+    #     return node
+
+    def postfixed(self, node: Node, postfix: str):
+        assert len(node.children) == 1
+        assert postfix in ('?', '*', '+')
+        if len(node.children[0].children) > 1:
+            return ['('] + self.compile(node.children[0]) + [')' + postfix]
+        else:
+            return self.compile(node.children[0]) + [postfix]
+
+    def on_oneormore(self, node: Node) -> str:
+        return self.postfixed(node, '+')
+
+    def on_repetition(self, node: Node) -> str:
+        return self.postfixed(node, '*')
+
+    def on_option(self, node: Node) -> str:
+        return self.postfixed(node, '?')
+
+    # def on_element(self, node):
+    #     return node
+
+
 def get_ebnf_decompiler() -> EBNFGrammar:
     try:
         decompiler = THREAD_LOCALS.ebnf_decompiler_singleton  # type: EBNFDecompiler
@@ -1575,6 +1669,10 @@ class EBNFCompiler(Compiler):
             # args = ', '.join(self.compile(child) for child in nd.children)
             return self.non_terminal(node, 'SomeOf')  # "SomeOf(" + args + ")"
         else:
+            # if a sequence or expression has only one element, it will have
+            # been reduced during AST-transformation. Thus, if the tag-name of
+            # a child of unordered is neither "sequence" nor "expression", there
+            # are too few arguments for "unordered".
             self.tree.new_error(node, "Unordered sequence or alternative "
                                       "requires at least two elements.")
             return ""
