@@ -33,7 +33,7 @@ for an example.
 from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, Dict, \
-    DefaultDict, Union, Optional, Any
+    DefaultDict, Sequence, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error
@@ -1876,7 +1876,9 @@ class MandatoryNary(NaryParser):
                 and all following elements are considered "mandatory". This
                 means that rather than returning a non-match an error message
                 is issued. The default value is NO_MANDATORY, which means that
-                no elements are mandatory.
+                no elements are mandatory. NOTE: The semantics of the mandatory-
+                parameter might change depending on the sub-class implementing
+                it.
         err_msgs:  A list of pairs of regular expressions (or simple
                 strings for that matter) and error messages that are chosen
                 if the regular expression matches the text where the error
@@ -2168,6 +2170,14 @@ class AllOf(MandatoryNary):
         >>> Grammar(prefixes)('B A').content
         'B A'
 
+    Note: The semantics of the mandatory-parameter differs for `AllOf` from
+    that of `Series`: Rather than the position of the sub-parser starting
+    from which all following parsers cause the Series-parser to raise an
+    Error instead of returning a non-match, mandatory is here understood
+    as the number of (unordered) sub-parsers that must have matched already,
+    before an error is raised, if non of the remaining sub-parsers matches
+    any more.
+
     EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
 
     EBNF-Example:  ``set = <letter letter_or_digit>``
@@ -2205,18 +2215,17 @@ class AllOf(MandatoryNary):
                     del parsers[i]
                     break
             else:
-                # TODO: Should mandatory Semantics be changed for AllOf
+                # TODO: Should mandatory-semantics be changed for AllOf to match that of Interleave???
                 if self.num_parsers - len(parsers) < self.mandatory:
                     return None, text
-                else:
-                    reloc = self.get_reentry_point(text_)
-                    expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
-                    lookahead = any([isinstance(p, Lookahead) for p in parsers])
-                    error, err_node, text_ = self.mandatory_violation(
-                        text_, lookahead, expected, reloc)
-                    results += (err_node,)
-                    if reloc < 0:
-                        parsers = []
+                reloc = self.get_reentry_point(text_)
+                expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
+                lookahead = any([isinstance(p, Lookahead) for p in parsers])
+                error, err_node, text_ = self.mandatory_violation(
+                    text_, lookahead, expected, reloc)
+                results += (err_node,)
+                if reloc < 0:
+                    parsers = []
         assert len(results) <= len(self.parsers) \
             or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         nd = self._return_values(results)  # type: Node
@@ -2291,6 +2300,62 @@ def Unordered(parser: NaryParser) -> NaryParser:
         return SomeOf(parser)
     else:
         raise AssertionError("Unordered can take only Series or Alternative as parser.")
+
+
+
+class Interleave(NaryParser):
+    """EXPERIMENTAL!!! NOT YET TESTED at all!!!"""
+
+    def __init__(self, *parsers: Parser,
+                 mandatory: int = NO_MANDATORY,
+                 err_msgs: MessagesType = [],
+                 skip: ResumeList = [],
+                 repetitions: Sequence[Tuple[int, int]]) -> None:
+        assert len(parsers) == len(repetitions), \
+            "Number of repition tuples does not match the number of sub-parsers!"
+        self.repetitions = repetitions
+
+    def _parse(self, text: StringView) :
+        results = ()  # type: Tuple[Node, ...]
+        text_ = text  # type: StringView
+        parsers = list(self.parsers)  # type: List[Parser]
+        counter = [0] * len(parsers)
+        consumed = set()  # type: Set[Parser]
+        error = None  # type: Optional[Error]
+        while parsers:
+            for i, parser in enumerate(parsers):
+                node, text__ = parser(text_)
+                if node is not None:
+                    if node._result or not node.tag_name.startswith(':'):
+                        # drop anonymous empty nodes
+                        results += (node,)
+                        text_ = text__
+                    counter[i] += 1
+                    if counter[i] >= self.repetitions[i][1]:
+                        consumed.add(parser)
+                        del parsers[i]
+                    break
+            else:
+                if not self.non_mandatory <= consumed:
+                    return None, text
+                reloc = self.get_reentry_point(text_)
+                expected = '°'.join([parser.repr for parser in parsers])
+                lookahead = any([isinstance(p, Lookahead) for p in parsers])
+                error, err_node, text_ = self.mandatory_violation(
+                    text_, lookahead, expected, reloc)
+                results += (err_node,)
+                if reloc < 0:
+                    parsers = []
+        assert len(results) <= len(self.parsers) \
+            or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
+        nd = self._return_values(results)  # type: Node
+        if error and reloc < 0:
+            raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
+                              text, error, first_throw=True)
+        return nd, text_
+
+    def __repr__(self):
+        return '°'.join(parser.repr for parser in self.parsers)
 
 
 ########################################################################
