@@ -78,6 +78,7 @@ __all__ = ('ParserError',
            'AllOf',
            'SomeOf',
            'Unordered',
+           'Interleave',
            'Required',
            'Lookahead',
            'NegativeLookahead',
@@ -318,7 +319,7 @@ class Parser:
         self.reset()
 
     def __deepcopy__(self, memo):
-        """        Deepcopy method of the parser. Upon instantiation of a Grammar-
+        """Deepcopy method of the parser. Upon instantiation of a Grammar-
         object, parsers will be deep-copied to the Grammar object. If a
         derived parser-class changes the signature of the `__init__`-constructor,
         `__deepcopy__`-method must be replaced (i.e. overridden without
@@ -2187,6 +2188,8 @@ class AllOf(MandatoryNary):
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
                  skip: ResumeList = []) -> None:
+        assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
+                and not isinstance(parser, FlowParser) for parser in parsers)
         assert len(parsers) > 1, "AllOf requires at least two sub-parsers."
         super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         self.num_parsers = len(self.parsers)  # type: int
@@ -2261,6 +2264,8 @@ class SomeOf(NaryParser):
 
     def __init__(self, *parsers: Parser) -> None:
         assert len(parsers) > 1, "SomeOf requires at least two sub-parsers."
+        assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
+                and not isinstance(parser, FlowParser) for parser in parsers)
         super(SomeOf, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2302,18 +2307,32 @@ def Unordered(parser: NaryParser) -> NaryParser:
         raise AssertionError("Unordered can take only Series or Alternative as parser.")
 
 
-
-class Interleave(NaryParser):
+class Interleave(MandatoryNary):
     """EXPERIMENTAL!!! NOT YET TESTED at all!!!"""
 
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
                  skip: ResumeList = [],
-                 repetitions: Sequence[Tuple[int, int]]) -> None:
-        assert len(parsers) == len(repetitions), \
-            "Number of repition tuples does not match the number of sub-parsers!"
+                 repetitions: Sequence[Tuple[int, int]] = ()) -> None:
+        assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
+                and not isinstance(parser, FlowParser) for parser in parsers)
+        super(Interleave, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
+        if len(repetitions) == 0:
+            repetitions = [(1, 1)] * len(parsers)
+        elif len(parsers) != len(repetitions):
+            raise ValueError("Number of repetition-tuples unequal number of sub-parsers!")
         self.repetitions = repetitions
+        self.non_mandatory = frozenset(parsers[i] for i in range(min(mandatory, len(parsers))))
+
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
+                                   err_msgs=self.err_msgs, skip=self.skip,
+                                   repetitions=self.repetitions)
+        duplicate.pname = self.pname
+        copy_parser_attrs(self, duplicate)
+        return duplicate
 
     def _parse(self, text: StringView) :
         results = ()  # type: Tuple[Node, ...]
@@ -2324,18 +2343,20 @@ class Interleave(NaryParser):
         error = None  # type: Optional[Error]
         while parsers:
             for i, parser in enumerate(parsers):
-                node, text__ = parser(text_)
-                if node is not None:
-                    if node._result or not node.tag_name.startswith(':'):
-                        # drop anonymous empty nodes
-                        results += (node,)
-                        text_ = text__
-                    counter[i] += 1
-                    if counter[i] >= self.repetitions[i][1]:
-                        consumed.add(parser)
-                        del parsers[i]
-                    break
+                if parser not in consumed:
+                    node, text__ = parser(text_)
+                    if node is not None:
+                        if node._result or not node.tag_name.startswith(':'):
+                            # drop anonymous empty nodes
+                            results += (node,)
+                            text_ = text__
+                        counter[i] += 1
+                        if counter[i] >= self.repetitions[i][1]:
+                            consumed.add(parser)
+                            # del parsers[i] # Bringt die Zählung durcheinander
+                        break
             else:
+                # TODO: Füge parser zu consumed, bei denen die Minimum-Anzahl überschritten
                 if not self.non_mandatory <= consumed:
                     return None, text
                 reloc = self.get_reentry_point(text_)
@@ -2355,7 +2376,7 @@ class Interleave(NaryParser):
         return nd, text_
 
     def __repr__(self):
-        return '°'.join(parser.repr for parser in self.parsers)
+        return ' ° '.join(parser.repr for parser in self.parsers)
 
 
 ########################################################################

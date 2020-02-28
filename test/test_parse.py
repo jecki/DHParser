@@ -32,7 +32,7 @@ from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    UnknownParserError, MetaParser, EMPTY_NODE
+    Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
 from DHParser.dsl import grammar_provider
@@ -519,6 +519,30 @@ class TestAllOfSomeOf:
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
         assert Grammar(prefixes)('A B B').error_flag
+
+
+class TestInterleave:
+    def test_interleave_most_simple(self):
+        letterset = Interleave(Token("A"), Token("B"), Token("C"))
+        gr = Grammar(letterset)
+        st = gr('ABC')
+        assert not st.errors
+        assert st.content == "ABC"
+        st = gr('BCA')
+        assert not st.errors
+        assert st.content == "BCA"
+        st = gr('BCBA')
+        assert st.errors
+        st = gr('AB')
+        assert st.errors
+
+    def test_interleave(self):
+        letterset = Interleave(Token("A"), Token("B"), Token("C"),
+                               repetitions=[(1, 1000), (0, 1), (1, 1)])
+        gr = Grammar(letterset)
+        st = gr('AABC')
+        print(st.errors, st.as_sxpr())
+        assert not st.errors
 
 
 class TestErrorRecovery:
