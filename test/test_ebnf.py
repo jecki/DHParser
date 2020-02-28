@@ -34,7 +34,7 @@ from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_decompiler, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
-from DHParser.dsl import CompilationError, compileDSL, grammar_provider
+from DHParser.dsl import CompilationError, compileDSL, grammar_instance, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
 
@@ -472,11 +472,14 @@ class TestAllSome:
     def test_all(self):
         ebnf = 'prefix = <"A" "B">'
         grammar = grammar_provider(ebnf)()
+        assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
+        assert grammar('A B').content == 'A B'
 
     def test_some(self):
         ebnf = 'prefix = <"A" | "B">'
         grammar = grammar_provider(ebnf)()
+        assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
         assert grammar('B').content == 'B'
 

@@ -1528,13 +1528,15 @@ class EBNFCompiler(Compiler):
 
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
+        """Generates the customization arguments (mantary, error_msgs, skip) for
+        `MandatoryNary`-parsers (Series, Allof, ...)."""
         mandatory_marker = []
         filtered_children = []  # type: List[Node]
         for nd in node.children:
             if nd.tag_name == TOKEN_PTYPE and nd.content == "§":
                 mandatory_marker.append(len(filtered_children))
                 if len(mandatory_marker) > 1:
-                    self.tree.new_error(nd, 'One mandatory marker (§) sufficient to declare '
+                    self.tree.new_error(nd, 'One mandatory marker (§) is sufficient to declare '
                                         'the rest of the elements as mandatory.', Error.WARNING)
             else:
                 filtered_children.append(nd)
@@ -1546,7 +1548,7 @@ class EBNFCompiler(Compiler):
             if current_symbol in self.directives.error:
                 if current_symbol in self.consumed_custom_errors:
                     self.tree.new_error(
-                        node, "Cannot apply customized error messages unambigiously, because "
+                        node, "Cannot apply customized error messages unambiguously, because "
                         "symbol {} contains more than one parser with a mandatory marker '§' "
                         "in its definiens.".format(current_symbol),
                         Error.AMBIGUOUS_ERROR_HANDLING)
@@ -1667,7 +1669,7 @@ class EBNFCompiler(Compiler):
             if any(c.tag_name == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
                 self.tree.new_error(node, "No mandatory items § allowed in SomeOf-operator!")
             # args = ', '.join(self.compile(child) for child in nd.children)
-            return self.non_terminal(node, 'SomeOf')  # "SomeOf(" + args + ")"
+            return self.non_terminal(nd, 'SomeOf')  # "SomeOf(" + args + ")"
         else:
             # if a sequence or expression has only one element, it will have
             # been reduced during AST-transformation. Thus, if the tag-name of

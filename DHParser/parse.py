@@ -1926,7 +1926,7 @@ class MandatoryNary(NaryParser):
                             expected: str,
                             reloc: int) -> Tuple[Error, Node, StringView]:
         """
-        Choses the right error message in case of a mandatory violation and
+        Chooses the right error message in case of a mandatory violation and
         returns an error with this message, an error node, to which the error
         is attached, and the text segment where parsing is to continue.
 
@@ -2177,26 +2177,7 @@ class AllOf(MandatoryNary):
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
                  skip: ResumeList = []) -> None:
-        if len(parsers) == 1:
-            assert isinstance(parsers[0], Series), \
-                "AllOf should be initialized either with a series or with more than one parser!"
-            series = cast(Series, parsers[0])  # type: Series
-            if mandatory == NO_MANDATORY:
-                mandatory = series.mandatory
-            if not err_msgs:
-                err_msgs = series.err_msgs
-            if not skip:
-                skip = series.skip
-
-            assert series.mandatory == NO_MANDATORY or mandatory == series.mandatory, \
-                "If AllOf is initialized with a series, parameter 'mandatory' must be the same!"
-            assert not series.err_msgs or err_msgs == series.err_msgs, \
-                "If AllOf is initialized with a series, 'err_msg' must empty or the same!"
-            assert not series.skip or skip == series.skip, \
-                "If AllOf is initialized with a series, 'skip' must empty or the same!"
-
-            parsers = series.parsers
-
+        assert len(parsers) > 1, "AllOf requires at least two sub-parsers."
         super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         self.num_parsers = len(self.parsers)  # type: int
 
@@ -2224,6 +2205,7 @@ class AllOf(MandatoryNary):
                     del parsers[i]
                     break
             else:
+                # TODO: Should mandatory Semantics be changed for AllOf
                 if self.num_parsers - len(parsers) < self.mandatory:
                     return None, text
                 else:
@@ -2269,12 +2251,7 @@ class SomeOf(NaryParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        if len(parsers) == 1:
-            assert isinstance(parsers[0], Alternative), \
-                "Parser-specification Error: No single arguments other than a Alternative " \
-                "allowed as arguments for SomeOf-Parser !"
-            alternative = cast(Alternative, parsers[0])
-            parsers = alternative.parsers
+        assert len(parsers) > 1, "SomeOf requires at least two sub-parsers."
         super(SomeOf, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:

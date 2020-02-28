@@ -480,16 +480,12 @@ class TestSeries:
         # print(ebnf)
 
 
-
 class TestAllOfSomeOf:
     def test_allOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
         prefixes = AllOf(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
-        # aternative Form
-        prefixes = AllOf(Series(TKN("B"), TKN("A")))
-        assert Grammar(prefixes)('A B').content == 'A B'
 
     def test_allOf_completeness(self):
         """Test that an error is raised if not  all parsers of an AllOf-List
@@ -511,8 +507,7 @@ class TestAllOfSomeOf:
         prefixes = SomeOf(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
-        # aternative Form
-        prefixes = SomeOf(Alternative(TKN("B"), TKN("A")))
+        prefixes = SomeOf(TKN("B"), TKN("A"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B').content == 'B'
 
