@@ -541,8 +541,19 @@ class TestInterleave:
                                repetitions=[(1, 1000), (0, 1), (1, 1)])
         gr = Grammar(letterset)
         st = gr('AABC')
-        print(st.errors, st.as_sxpr())
         assert not st.errors
+        st = gr('BACAAA')
+        assert not st.errors
+        st = gr('ABCC')
+        assert st.errors
+        st = gr('AAACAAA')
+        assert not st.errors
+        st = gr('AAABAAA')
+        assert st.errors
+
+
+
+
 
 
 class TestErrorRecovery:

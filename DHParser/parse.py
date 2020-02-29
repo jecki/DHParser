@@ -2190,6 +2190,8 @@ class AllOf(MandatoryNary):
                  skip: ResumeList = []) -> None:
         assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
                 and not isinstance(parser, FlowParser) for parser in parsers)
+        if len(parsers) == 1 and isinstance(parsers[0], Series):
+            parsers = parsers[0].parsers
         assert len(parsers) > 1, "AllOf requires at least two sub-parsers."
         super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         self.num_parsers = len(self.parsers)  # type: int
@@ -2219,6 +2221,9 @@ class AllOf(MandatoryNary):
                     break
             else:
                 # TODO: Should mandatory-semantics be changed for AllOf to match that of Interleave???
+                # for i, p in enumerate(self.parsers):
+                #     if p in parsers and i < self.mandatory:
+                #         return None, text
                 if self.num_parsers - len(parsers) < self.mandatory:
                     return None, text
                 reloc = self.get_reentry_point(text_)
@@ -2261,6 +2266,8 @@ class SomeOf(NaryParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
+        if len(parsers) == 1 and isinstance(parsers[0], Series):
+            parsers = parsers[0].parsers
         assert len(parsers) > 1, "SomeOf requires at least two sub-parsers."
         assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
                 and not isinstance(parser, FlowParser) for parser in parsers)
