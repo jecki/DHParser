@@ -51,6 +51,9 @@ __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_transformer',
            'get_ebnf_decompiler',
            'get_ebnf_compiler',
+           'parse_ebnf',
+           'transform_ebnf',
+           'compile_ebnf_ast',
            'EBNFGrammar',
            'EBNFTransform',
            'EBNFDecompiler',
@@ -276,12 +279,19 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
 
 
 def get_ebnf_grammar() -> EBNFGrammar:
+    """Returns a thread-local EBNF-Grammar-object for parsing EBNF sources."""
     try:
         grammar = THREAD_LOCALS.ebnf_grammar_singleton
         return grammar
     except AttributeError:
         THREAD_LOCALS.ebnf_grammar_singleton = EBNFGrammar()
         return THREAD_LOCALS.ebnf_grammar_singleton
+
+
+def parse_ebnf(ebnf: str) -> Node:
+    """Parses and EBNF-source-text and returns the concrete syntax tree
+    of the EBNF-code.."""
+    return get_ebnf_grammar()(ebnf)
 
 
 ########################################################################
@@ -333,6 +343,13 @@ def get_ebnf_transformer() -> TransformationFunc:
         THREAD_LOCALS.EBNF_transformer_singleton = EBNFTransform()
         transformer = THREAD_LOCALS.EBNF_transformer_singleton
     return transformer
+
+
+def transform_ebnf(cst: Node) -> None:
+    """Transforms the contrete-syntax-tree of an EBNF-source-code
+    into the abstract-syntax-tree. The transformation changes the
+    syntaxtree in place. No value is returned."""
+    get_ebnf_transformer()(cst)
 
 
 ########################################################################
@@ -1768,6 +1785,13 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         compiler.set_grammar_name(grammar_name, grammar_source)
         THREAD_LOCALS.ebnf_compiler_singleton = compiler
         return compiler
+
+
+def compile_ebnf_ast(ast: Node) -> str:
+    """Compiles the abstract-syntax-tree of an EBNF-source-text into
+    python code of a class derived from `parse.Grammar` that can
+    parse text following the grammar describend with the EBNF-code."""
+    return get_ebnf_compiler()(ast)
 
 
 ########################################################################
