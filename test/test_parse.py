@@ -526,7 +526,7 @@ class TestInterleave:
         letterset = Interleave(Token("A"), Token("B"), Token("C"))
         gr = Grammar(letterset)
         st = gr('ABC')
-        assert not st.errors
+        assert not st.errors, str(st.errors)
         assert st.content == "ABC"
         st = gr('BCA')
         assert not st.errors

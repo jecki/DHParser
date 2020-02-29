@@ -2223,9 +2223,7 @@ class AllOf(MandatoryNary):
                     return None, text
                 reloc = self.get_reentry_point(text_)
                 expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
-                lookahead = any([isinstance(p, Lookahead) for p in parsers])
-                error, err_node, text_ = self.mandatory_violation(
-                    text_, lookahead, expected, reloc)
+                error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
                 results += (err_node,)
                 if reloc < 0:
                     parsers = []
@@ -2317,13 +2315,15 @@ class Interleave(MandatoryNary):
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
         assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
                 and not isinstance(parser, FlowParser) for parser in parsers)
-        super(Interleave, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
+        super(Interleave, self).__init__(
+            *parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         if len(repetitions) == 0:
             repetitions = [(1, 1)] * len(parsers)
         elif len(parsers) != len(repetitions):
             raise ValueError("Number of repetition-tuples unequal number of sub-parsers!")
         self.repetitions = repetitions
         self.non_mandatory = frozenset(parsers[i] for i in range(min(mandatory, len(parsers))))
+        self.parsers_set = frozenset(self.parsers)
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
@@ -2337,12 +2337,11 @@ class Interleave(MandatoryNary):
     def _parse(self, text: StringView) :
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
-        parsers = list(self.parsers)  # type: List[Parser]
-        counter = [0] * len(parsers)
+        counter = [0] * len(self.parsers)
         consumed = set()  # type: Set[Parser]
         error = None  # type: Optional[Error]
-        while parsers:
-            for i, parser in enumerate(parsers):
+        while True:
+            for i, parser in enumerate(self.parsers):
                 if parser not in consumed:
                     node, text__ = parser(text_)
                     if node is not None:
@@ -2353,22 +2352,22 @@ class Interleave(MandatoryNary):
                         counter[i] += 1
                         if counter[i] >= self.repetitions[i][1]:
                             consumed.add(parser)
-                            # del parsers[i] # Bringt die Zählung durcheinander
                         break
             else:
-                # TODO: Füge parser zu consumed, bei denen die Minimum-Anzahl überschritten
-                if not self.non_mandatory <= consumed:
+                for i, parser in enumerate(self.parsers):
+                    if counter[i] >= self.repetitions[i][0]:
+                        consumed.add(parser)
+                if self.non_mandatory <= consumed:
+                    if consumed == self.parsers_set:
+                        break
+                else:
                     return None, text
                 reloc = self.get_reentry_point(text_)
-                expected = '°'.join([parser.repr for parser in parsers])
-                lookahead = any([isinstance(p, Lookahead) for p in parsers])
-                error, err_node, text_ = self.mandatory_violation(
-                    text_, lookahead, expected, reloc)
+                expected = ' ° '.join([parser.repr for parser in self.parsers])
+                error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
                 results += (err_node,)
                 if reloc < 0:
-                    parsers = []
-        assert len(results) <= len(self.parsers) \
-            or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
+                    break
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:
             raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
