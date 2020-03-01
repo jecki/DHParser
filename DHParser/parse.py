@@ -2174,10 +2174,11 @@ class AllOf(MandatoryNary):
     Note: The semantics of the mandatory-parameter differs for `AllOf` from
     that of `Series`: Rather than the position of the sub-parser starting
     from which all following parsers cause the Series-parser to raise an
-    Error instead of returning a non-match, mandatory is here understood
-    as the number of (unordered) sub-parsers that must have matched already,
-    before an error is raised, if non of the remaining sub-parsers matches
-    any more.
+    Error instead of returning a non-match, an error is raised if and only
+    if the parsers up to (but not including the one at) the mandatory-position
+    have already been exhausted, i.e. have already captured content for the
+    AllOf-parser. Otherwise no error is raised, but just a non-match is
+    returned.
 
     EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
 
@@ -2192,6 +2193,8 @@ class AllOf(MandatoryNary):
                 and not isinstance(parser, FlowParser) for parser in parsers)
         if len(parsers) == 1 and isinstance(parsers[0], Series):
             parsers = parsers[0].parsers
+            if self.mandatory == NO_MANDATORY:
+                self.mandatory = parsers[0].mandatory
         assert len(parsers) > 1, "AllOf requires at least two sub-parsers."
         super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         self.num_parsers = len(self.parsers)  # type: int
@@ -2221,11 +2224,11 @@ class AllOf(MandatoryNary):
                     break
             else:
                 # TODO: Should mandatory-semantics be changed for AllOf to match that of Interleave???
-                # for i, p in enumerate(self.parsers):
-                #     if p in parsers and i < self.mandatory:
-                #         return None, text
-                if self.num_parsers - len(parsers) < self.mandatory:
-                    return None, text
+                for i, p in enumerate(self.parsers):
+                    if p in parsers and i < self.mandatory:
+                        return None, text
+                # if self.num_parsers - len(parsers) < self.mandatory:
+                #     return None, text
                 reloc = self.get_reentry_point(text_)
                 expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
                 error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
@@ -2266,7 +2269,7 @@ class SomeOf(NaryParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        if len(parsers) == 1 and isinstance(parsers[0], Series):
+        if len(parsers) == 1 and isinstance(parsers[0], Alternative):
             parsers = parsers[0].parsers
         assert len(parsers) > 1, "SomeOf requires at least two sub-parsers."
         assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)

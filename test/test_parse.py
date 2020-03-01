@@ -593,8 +593,10 @@ class TestErrorRecovery:
         assert st['allof'].content == "A__D"
         st = parser('CA_D')
         assert st['allof'].content == "CA_D"
+        st = parser('A_CB')
+        assert st['allof'].content == "A_CB"
         st = parser('BC_A')
-        assert st['allof'].content == "BC_A"
+        assert 'allof' not in st
 
 
 class TestPopRetrieve:

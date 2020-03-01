@@ -730,13 +730,12 @@ class TestAllOfResume:
         self.gr = grammar_provider(lang)()
 
     def test_garbage_added(self):
-        st = self.gr('GFCBAED')
+        st = self.gr('BAGFCED')
         assert not st.error_flag
-        st = self.gr('GFCB XYZ AED')
+        st = self.gr('BAG FC XYZ ED')
         errors = st.errors_sorted
         assert errors[0].code == Error.MANDATORY_CONTINUATION
         assert str(errors[0]).find(':-(') >= 0
-
 
     def test_allof_resume_later(self):
         lang = """
@@ -760,7 +759,6 @@ class TestAllOfResume:
         st = gr('FCB_GAED.')
         assert len(st.errors_sorted) == 1
 
-
     def test_complex_resume_task(self):
         lang = """
             document = flow { flow } "."
@@ -781,11 +779,15 @@ class TestAllOfResume:
         assert not st.error_flag
         st = gr('EDXYZ.')
         assert st.error_flag
-        assert len(st.errors_sorted) == 1
-        st = gr('FCB_GAED.')
-        assert len(st.errors_sorted) == 2
+        assert len(st.errors) == 1
+        st = gr('A_BCDEFG.')
+        assert len(st.errors) == 1 and st.errors[0].code == Error.PARSER_DID_NOT_MATCH
+        st = gr('AB_CDEFG.')
+        # mandatory continuation error kicks in only, if the parsers before
+        # the §-sign have been exhausted!
+        assert len(st.errors) == 2 and st.errors_sorted[1].code == Error.MANDATORY_CONTINUATION
         st = gr('EXY EXYZ.')
-        assert len(st.errors_sorted) == 1
+        assert len(st.errors) == 1
 
 
 class TestEBNFDecompile:
