@@ -30,7 +30,7 @@ term       = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be 
 
 flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
            | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
 
 #: groups
 

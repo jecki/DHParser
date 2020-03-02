@@ -99,7 +99,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
-    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, remove_if, \\
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
@@ -113,7 +113,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     chain, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \\
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
-    trace_history, has_descendant, neg, has_parent
+    trace_history, has_descendant, neg, has_parent, optional_last_value
 '''
 
 
@@ -179,7 +179,7 @@ class EBNFGrammar(Grammar):
 
     flowmarker = "!"  | "&"                 # '!' negative lookahead, '&' positive lookahead
                | "-!" | "-&"                # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop = "::" | ":"                 # '::' pop, ':' retrieve
+    retrieveop = "::" | ":?" | ":"          # '::' pop, ':?' optional pop, ':' retrieve
 
     #: groups
 
@@ -222,7 +222,7 @@ class EBNFGrammar(Grammar):
     unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__),
                        mandatory=1)
     group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":"), wsp__))
+    retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":?"), wsp__), Series(Token(":"), wsp__))
     flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
                              Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
     term = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
@@ -651,7 +651,7 @@ class EBNFDirectives:
 
         tokens:  set of the names of preprocessor tokens
 
-        filter:  mapping of symbols to python filter functions that
+        filter:  mapping of symbols to python match functions that
                 will be called on any retrieve / pop - operations on
                 these symbols
 
@@ -857,7 +857,7 @@ class EBNFCompiler(Compiler):
     PREFIX_TABLE = {'§': 'Required',
                     '&': 'Lookahead', '!': 'NegativeLookahead',
                     '-&': 'Lookbehind', '-!': 'NegativeLookbehind',
-                    '::': 'Pop', ':': 'Retrieve'}
+                    '::': 'Pop', ':?': 'Pop', ':': 'Retrieve'}
     REPEATABLE_DIRECTIVES = {'tokens'}
 
 
@@ -1604,7 +1604,7 @@ class EBNFCompiler(Compiler):
         prefix = node.children[0].content
         custom_args = []  # type: List[str]
 
-        if prefix in {'::', ':'}:
+        if prefix in {'::', ':?', ':'}:
             assert len(node.children) == 2
             arg = node.children[-1]
             if arg.tag_name != 'symbol':
@@ -1616,8 +1616,15 @@ class EBNFCompiler(Compiler):
                     node, ('Retrive operator "%s" does not work with anonymous parsers like %s')
                     % (prefix, arg.content))
                 return arg.content
+
+            match_func = 'last_value'
             if arg.content in self.directives.filter:
-                custom_args = ['rfilter=%s' % self.directives.filter[arg.content]]
+                match_func = self.directives.filter[arg.content]
+            if prefix.endswith('?'):
+                match_func = 'optional_' + match_func
+            if match_func != 'last_value':
+                custom_args = ['match_func=%s' % match_func]
+
             self.variables.add(str(arg))  # cast(str, arg.result)
 
         elif len(node.children) > 2:

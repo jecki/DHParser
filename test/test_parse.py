@@ -608,7 +608,7 @@ class TestPopRetrieve:
         text           = /[^`]+/
         """
     mini_lang2 = r"""
-        @braces_filter=counterpart
+        @braces_filter=matching_bracket
         document       = { text | codeblock }
         codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
         braces         = opening_braces
@@ -628,11 +628,20 @@ class TestPopRetrieve:
         name           = /\w+/~
         text           = /[^<>]+/
         """
+    mini_lang4 = r"""
+        document       = { text | env }
+        env            = opentag document closetag
+        opentag        = "<" name ">"
+        closetag       = "</" :?name ">"
+        name           = /\w+/~
+        text           = /[^<>]+/        
+    """
 
     def setup(self):
         self.minilang_parser = grammar_provider(self.mini_language)()
         self.minilang_parser2 = grammar_provider(self.mini_lang2)()
         self.minilang_parser3 = grammar_provider(self.mini_lang3)()
+        self.minilang_parser4 = grammar_provider(self.mini_lang4)()
 
     @staticmethod
     def opening_delimiter(node, name):
@@ -668,6 +677,34 @@ class TestPopRetrieve:
         proper = "<em> has closing tag <em*>"
         syntax_tree = self.minilang_parser3(proper)
         assert not syntax_tree.error_flag, str(syntax_tree.errors_sorted)
+
+    def test_optional_match(self):
+        test1 = '<info>Hey, you</info>'
+        st = self.minilang_parser4(test1)
+        assert not st.error_flag
+        test12 = '<info>Hey, <emph>you</emph></info>'
+        st = self.minilang_parser4(test1)
+        assert not st.error_flag
+        test2 = '<info>Hey, you</>'
+        st = self.minilang_parser4(test2)
+        assert not st.error_flag
+        test3 = '<info>Hey, <emph>you</></>'
+        st = self.minilang_parser4(test3)
+        assert not st.error_flag
+        test4 = '<info>Hey, <emph>you</></info>'
+        st = self.minilang_parser4(test4)
+        assert not st.error_flag
+
+    def test_rollback_behaviour_of_optional_match(self):
+        test1 = '<info>Hey, you</info*>'
+        st = self.minilang_parser4(test1)
+        assert not self.minilang_parser4.variables__['name']
+        assert st.error_flag
+        test2 = '<info>Hey, you</*>'
+        st = self.minilang_parser4(test2)
+        assert not self.minilang_parser4.variables__['name']
+        assert st.error_flag
+
 
     def test_cache_neutrality(self):
         """Test that packrat-caching does not interfere with the variable-

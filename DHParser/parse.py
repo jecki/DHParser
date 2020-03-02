@@ -85,8 +85,8 @@ __all__ = ('ParserError',
            'Lookbehind',
            'NegativeLookbehind',
            'last_value',
-           'counterpart',
-           'accumulate',
+           'optional_last_value',
+           'matching_bracket',
            'Capture',
            'Retrieve',
            'Pop',
@@ -375,7 +375,7 @@ class Parser:
         try:
             # rollback variable changing operation if parser backtracks
             # to a position before the variable changing operation occurred
-            if grammar.last_rb__loc__ >= location:
+            if grammar.last_rb__loc__ > location:
                 grammar.rollback_to__(location)
 
             # if location has already been visited by the current parser, return saved result
@@ -1287,11 +1287,13 @@ class Grammar:
         self.rollback__.append((location, func))
         self.last_rb__loc__ = location
 
+
     @property
     def document_lbreaks__(self) -> List[int]:
         if not self._document_lbreaks__:
             self._document_lbreaks__ = linebreaks(self.document__)
         return self._document_lbreaks__
+
 
     def rollback_to__(self, location):
         """
@@ -2547,26 +2549,38 @@ class Capture(UnaryParser):
         return self.parser.repr
 
 
-RetrieveFilter = Callable[[List[str]], str]
+MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
+# (text, stack) -> value, where:
+# text is the following text for be parsed
+# stack is a stack of stored variables (for a particular symbol)
+# and the return value is the matched text (which can be the empty string) or
+# None, if no match occurred
 
 
-def last_value(stack: List[str]) -> str:
-    """Returns the last value on the cpature stack. This is the default case
-    when retrieving cpatured substrings."""
-    return stack[-1]
+def last_value(text: Union[StringView, str], stack: List[str]) -> str:
+    """Matches `text` with the most recent value on the capture stack.
+    This is the default case when retrieving captured substrings."""
+    value = stack[-1]
+    return value if text.startswith(value) else None
 
 
-def counterpart(stack: List[str]) -> str:
+def optional_last_value(text: Union[StringView, str], stack: List[str]) -> str:
+    """Matches `text` with the most recent value on the capture stack or
+    with the empty string, i.e. `optional_match` never returns `None` but
+    either the value on the stack or the empty string.
+    Use case: Implement shorthand notation for matching tags, i.e.:
+        Good Morning, Mrs. <emph>Smith</>!
+    """
+    value = stack[-1]
+    return value if text.startswith(value) else ""
+
+
+def matching_bracket(text: Union[StringView, str], stack: List[str]) -> str:
     """Returns a closing bracket for the opening bracket on the capture stack,
     i.e. if "[" was captured, "]" will be retrieved."""
     value = stack[-1]
-    return value.replace("(", ")").replace("[", "]").replace("{", "}").replace("<", ">")
-
-
-def accumulate(stack: List[str]) -> str:
-    """Returns an accumulation of all values on the stack.
-    By the way: I cannot remember any reasonable use case for this!?"""
-    return "".join(stack) if len(stack) > 1 else stack[-1]  # provoke IndexError if stack empty
+    value = value.replace("(", ")").replace("[", "]").replace("{", "}").replace("<", ">")
+    return value if text.startswith(value) else None
 
 
 class Retrieve(Parser):
@@ -2582,19 +2596,19 @@ class Retrieve(Parser):
     Attributes:
         symbol: The parser that has stored the value to be retrieved, in
             other words: "the observed parser"
-        rfilter: a procedure that through which the processing to the
+        match_func: a procedure that through which the processing to the
             retrieved symbols is channeled. In the simplest case it merely
             returns the last string stored by the observed parser. This can
             be (mis-)used to execute any kind of semantic action.
     """
 
-    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
+    def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
         super(Retrieve, self).__init__()
         self.symbol = symbol
-        self.filter = rfilter if rfilter else last_value
+        self.match = match_func if match_func else last_value
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.symbol, self.filter)
+        duplicate = self.__class__(self.symbol, self.match)
         copy_parser_attrs(self, duplicate)
         return duplicate
 
@@ -2608,25 +2622,24 @@ class Retrieve(Parser):
 
     def retrieve_and_match(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """
-        Retrieves variable from stack through the filter function passed to
+        Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
         the following text. Returns a Node containing the value or `None`
         accordingly.
         """
         try:
             stack = self.grammar.variables__[self.symbol.pname]
-            value = self.filter(stack)
+            value = self.match(text, stack)
         except (KeyError, IndexError):
             node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - text.__len__())
             self.grammar.tree__.new_error(
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
             return node, text
-        if text.startswith(value):
-            if self.drop_content:
-                return EMPTY_NODE, text[len(value):]
-            return Node(self.tag_name, value), text[len(value):]
-        else:
+        if value is None:
             return None, text
+        elif self.drop_content:
+            return EMPTY_NODE, text[len(value):]
+        return Node(self.tag_name, value), text[len(value):]
 
 
 class Pop(Retrieve):
@@ -2640,21 +2653,21 @@ class Pop(Retrieve):
     The constructor parameter `symbol` determines which variable is
     used.
     """
-    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
-        super(Pop, self).__init__(symbol, rfilter)
+    def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
+        super(Pop, self).__init__(symbol, match_func)
 
     def reset(self):
         super(Pop, self).reset()
         self.values = []
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.symbol, self.filter)
+        duplicate = self.__class__(self.symbol, self.match)
         copy_parser_attrs(self, duplicate)
         duplicate.values = self.values[:]
         return duplicate
 
     def _rollback(self):
-        return self.grammar.variables__[self.symbol.pname].append(self.values.pop())
+        self.grammar.variables__[self.symbol.pname].append(self.values.pop())
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = self.retrieve_and_match(text)
@@ -2665,7 +2678,7 @@ class Pop(Retrieve):
         return node, txt
 
     def __repr__(self):
-        return '::' + self.symbol.repr
+        return ':?' + self.symbol.repr if self.match.__name__.startswith('optional_') else '::'
 
 
 ########################################################################

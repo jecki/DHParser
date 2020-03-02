@@ -177,7 +177,7 @@ class EBNFLanguageServerProtocol:
     #                 'will be emitted instead of the stock message, if a mandatory element '
     #                 'violation occured within the given parser. (DHParser-extension to EBNF)'],
     #                ['_filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
-    #                 'Name of a Python-filter-function that is applied when retrieving a stored '
+    #                 'Name of a Python-match-function that is applied when retrieving a stored '
     #                 'symbol. (DHParser-extension to EBNF)']]
 
 
