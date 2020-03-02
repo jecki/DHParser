@@ -2191,8 +2191,8 @@ class AllOf(MandatoryNary):
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
                  skip: ResumeList = []) -> None:
-        assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
-                and not isinstance(parser, FlowParser) for parser in parsers)
+        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
+            "Only the last parser from unordered sequence may be optional!"
         if len(parsers) == 1 and isinstance(parsers[0], Series):
             parsers = parsers[0].parsers
             if self.mandatory == NO_MANDATORY:
@@ -2274,8 +2274,8 @@ class SomeOf(NaryParser):
         if len(parsers) == 1 and isinstance(parsers[0], Alternative):
             parsers = parsers[0].parsers
         assert len(parsers) > 1, "SomeOf requires at least two sub-parsers."
-        assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
-                and not isinstance(parser, FlowParser) for parser in parsers)
+        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
+            "Only the last parser from unordered alternative may be optional!"
         super(SomeOf, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2325,8 +2325,8 @@ class Interleave(MandatoryNary):
                  err_msgs: MessagesType = [],
                  skip: ResumeList = [],
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
-        assert (not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
-                and not isinstance(parser, FlowParser) for parser in parsers)
+        assert all(not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
+                   and not isinstance(parser, FlowParser) for parser in parsers)
         super(Interleave, self).__init__(
             *parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         if len(repetitions) == 0:

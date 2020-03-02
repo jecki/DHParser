@@ -33,7 +33,7 @@ from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
 from DHParser.configuration import THREAD_LOCALS, get_config_value
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, mixin_noempty, Forward, RegExp, \
+from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     DropRegExp, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
     Token, GrammarError
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
@@ -1040,9 +1040,9 @@ class EBNFCompiler(Compiler):
         """
         if nd.tag_name == 'regexp':
             super_ws = self.directives.super_ws
-            noempty_ws = mixin_noempty(super_ws)
+            nonempty_ws = mixin_nonempty(super_ws)
             search_regex = self._extract_regex(nd)\
-                .replace(r'\~!', noempty_ws).replace(r'\~', super_ws)
+                .replace(r'\~!', nonempty_ws).replace(r'\~', super_ws)
             return unrepr("re.compile(r'%s')" % search_regex)
         elif nd.tag_name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks
