@@ -1712,7 +1712,7 @@ class NaryParser(MetaParser):
 
     def __init__(self, *parsers: Parser) -> None:
         super(NaryParser, self).__init__()
-        assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
+        # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
     def __deepcopy__(self, memo):
@@ -2113,11 +2113,12 @@ class Alternative(NaryParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        super(Alternative, self).__init__(*parsers)
-        assert len(self.parsers) >= 1
+        assert len(parsers) >= 1
+        assert len(set(parsers)) == len(parsers)
         # only the last alternative may be optional. Could this be checked at compile time?
-        assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
+        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
             "Parser-specification Error: only the last alternative may be optional!"
+        super(Alternative, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         for parser in self.parsers:
