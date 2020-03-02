@@ -63,7 +63,7 @@ __all__ = ('ParserError',
            'Whitespace',
            'DropRegExp',
            'mixin_comment',
-           'mixin_noempty',
+           'mixin_nonempty',
            'MetaParser',
            'UnaryParser',
            'NaryParser',
@@ -649,13 +649,13 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     return whitespace
 
 
-def mixin_noempty(whitespace: str) -> str:
+def mixin_nonempty(whitespace: str) -> str:
     r"""
     Returns a regular expression pattern that matches only if the regular
     expression pattern `whitespace` matches AND if the match is not empty.
 
-    If `whitespace` already matches the empty string '', then it will be
-    returned unaltered.
+    If `whitespace`  does not match the empty string '', anyway,
+    then it will be returned unaltered.
 
     WARNING: `non_empty_ws` does not work regular expressions the matched
     strings of which can be followed by a symbol that can also occur at

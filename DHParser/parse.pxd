@@ -28,7 +28,7 @@ cdef class Parser:
 
 # cpdef mixin_comment(whitespace, str)
 
-# cpdef mixin_noempty(whitespace)
+# cpdef mixin_nonempty(whitespace)
 
 cdef class Grammar:
     cdef dict __dict__
