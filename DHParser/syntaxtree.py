@@ -612,9 +612,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', List['Node']]:
+    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', Sequence['Node']]:
         """
-        Returns the child node with the given index if ``index_or_tagname`` is
+        Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
 
             >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
@@ -627,7 +627,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             key(str): A criterion (tag name(s), match function, node) or
                 an index of the child that shall be returned.
         Returns:
-            Node: All nodes which have a given tag name.
+            Node: The node with the given index (always type Node),
+                all nodes which have a given tag name (type Node if there
+                exists only one or type Tuple[Node] if there are more than
+                one).
         Raises:
             KeyError:   if no matching child was found.
             IndexError: if key was an integer index that did not exist
@@ -637,9 +640,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.children[key]
         else:
             mf = create_match_function(key)
-            for child in self.children:
-                if mf(child):
-                    return child
+            items = tuple(child for child in self.children if mf(child))
+            if items:
+                return items if len(items) >= 2 else items[0]
             raise IndexError('index out of range') if isinstance(key, int) \
                 else KeyError(str(key))
 
@@ -658,16 +661,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             mf = create_match_function(key)
             self.result = tuple(child for child in self.children if not mf(child))
 
-    def get(self, index_or_tagname: Union[CriteriaType, int],
-            surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
-        """Returns the child node with the given index if ``index_or_tagname``
+    def get(self, key: Union[CriteriaType, int],
+            surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
+        """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
         child with the given index or tag_name exists, the ``surrogate`` is
         returned instead. This mimics the behaviour of Python's dictionary's
         get-method.
+        The type of the return value is always the same type as that of the
+        surrogate. If the surrogate is a Node, but there are several items
+        matching key, then the first of these will be returned.
         """
         try:
-            return self[index_or_tagname]
+            items = self[key]
+            if isinstance(surrogate, Sequence):
+                return items if isinstance(items, Sequence) else (items,)
+            else:
+                return items[0] if isinstance(items, Sequence) else items
         except KeyError:
             return surrogate
 

@@ -407,7 +407,7 @@ class Parser:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:  i = 0
                     try:
-                        zombie = pe.node[ZOMBIE_TAG]  # type: Optional[Node]
+                        zombie = pe.node.pick_child(ZOMBIE_TAG)  # type: Optional[Node]
                     except (KeyError, ValueError):
                         zombie = None
                     if zombie and not zombie.result:

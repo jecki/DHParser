@@ -71,6 +71,9 @@ __all__ = ('typing',
            'abbreviate_middle',
            'escape_formatstr',
            'as_identifier',
+           'as_list',
+           'first',
+           'last',
            'linebreaks',
            'line_col',
            'text_pos',
@@ -305,6 +308,30 @@ def as_identifier(s: str, replacement: str = "_") -> str:
             ident.append(replacement * delta)
             i += rng[1] - rng[0]
     return ''.join(ident)
+
+
+def as_list(item_or_sequence) -> List[Any]:
+    """Turns an arbitrary sequence or a single item into a list. In case of
+    a single item, the list contains this element as its sole item."""
+    if isinstance(item_or_sequence, Iterable):
+        return list(item_or_sequence)
+    return [item_or_sequence]
+
+
+def first(item_or_sequence: Union[Sequence, Any]) -> Any:
+    """Returns an item or a the first item of a sequence of items."""
+    if isinstance(item_or_sequence, Sequence):
+        return item_or_sequence[0]
+    else:
+        return item_or_sequence
+
+
+def last(item_or_sequence: Union[Sequence, Any]) -> Any:
+    """Returns an item or a the first item of a sequence of items."""
+    if isinstance(item_or_sequence, Sequence):
+        return item_or_sequence[-1]
+    else:
+        return item_or_sequence
 
 
 #######################################################################

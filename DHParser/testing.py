@@ -361,7 +361,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             for parent in syntax_tree.select_if(lambda node: any(child.tag_name == ZOMBIE_TAG
                                                                  for child in node.children),
                                                 include_root=True, reverse=True):
-                zombie = parent[ZOMBIE_TAG]
+                zombie = parent.pick_child(ZOMBIE_TAG)
                 zombie.tag_name = '__TESTING_ARTIFACT__'
                 zombie.result = 'Artifact can be ignored. Be aware, though, that also the ' \
                                 'tree structure may not be the same as in a non-testing ' \

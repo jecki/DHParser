@@ -171,7 +171,7 @@ class TestConditionalTransformations:
         context = [Node('A', 'alpha'),
                    Node('B', 'beta'),
                    Node('C', 'gamma')]
-        assert has_parent(context, {'A'})
+        assert has_parent(context, {'A'}, 2)
         assert has_parent(context, {'B'})
         assert not has_parent(context, {'C'})
 
@@ -292,7 +292,7 @@ class TestWhitespaceTransformations:
         transformations = {'SENTENCE': merge_adjacent(is_one_of('TEXT', 'L'), 'TEXT')}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
-        assert sentence['TEXT'].result == "Guten Tag"
+        assert sentence.pick_child('TEXT').result == "Guten Tag"
         assert sentence[2].result == "Hallo Welt"
         assert sentence[-1].tag_name == 'L'
         assert 'T' in sentence
