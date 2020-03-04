@@ -2244,8 +2244,7 @@ class AllOf(MandatoryNary):
 class SomeOf(NaryParser):
     """
     Matches if at least one element of a list of parsers match. No parser
-    must match more than once . Other than in a sequence, the order in which
-    the parsers match is arbitrary, however.
+    can match more than once.
 
     Example::
 
@@ -2674,7 +2673,10 @@ class Pop(Retrieve):
         return node, txt
 
     def __repr__(self):
-        return ':?' + self.symbol.repr if self.match.__name__.startswith('optional_') else '::'
+        stack = self.grammar.variables__.get(self.symbol.pname, [])
+        content = (' "%s"' % stack[-1]) if stack else ''
+        prefix = ':?' if self.match.__name__.startswith('optional_') else '::'
+        return prefix + self.symbol.repr + content
 
 
 ########################################################################

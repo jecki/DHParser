@@ -88,6 +88,8 @@ __all__ = ('TransformationDict',
            'is_one_of',
            'not_one_of',
            'matches_re',
+           'has_attr',
+           'attr_equals',
            'has_content',
            'has_parent',
            'has_descendant',
@@ -506,7 +508,7 @@ def is_empty(context: List[Node]) -> bool:
 @transformation_factory(collections.abc.Set)
 def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
     """
-    Checks whether the last node in the context has `ptype == TOKEN_PTYPE`
+    Checks whether the last node in the context has the tag_name ":Token"
     and it's content matches one of the given tokens. Leading and trailing
     whitespace-tokens will be ignored. In case an empty set of tokens is passed,
     any token is a match.
@@ -538,6 +540,26 @@ def matches_re(context: List[Node], patterns: AbstractSet[str]) -> bool:
         if re.match(pattern, tn):
             return True
     return False
+
+
+@transformation_factory(str)
+def has_attr(context: List[Node], attr: str) -> bool:
+    """
+    Returns true, if the node has the attribute `attr`, no matter
+    what its value is.
+    """
+    node = context[-1]
+    return node.has_attr(attr)
+
+
+@transformation_factory(str)
+def attr_equals(context: List[Node], attr: str, value: str) -> bool:
+    """
+    Returns true, if the node has the attribute `attr` and its value equals
+    `value`.
+    """
+    node = context[-1]
+    return node.has_attr(attr) and node.attr[attr] == value
 
 
 @transformation_factory

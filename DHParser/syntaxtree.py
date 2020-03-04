@@ -612,10 +612,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node']:
+    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', List['Node']]:
         """
         Returns the child node with the given index if ``index_or_tagname`` is
-        an integer or the first child node with the given tag name. Examples::
+        an integer or all child-nodes with the given tag name. Examples::
 
             >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
             >>> flatten_sxpr(tree[0].as_sxpr())
@@ -642,6 +642,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     return child
             raise IndexError('index out of range') if isinstance(key, int) \
                 else KeyError(str(key))
+
+    def __delitem__(self, key: Union[CriteriaType, int]):
+        """
+        Removes children from the node.
+        :param key:  A criterion (tag name(s), match function, node) or
+                an index of the child(ren) that shall be removed.
+        """
+        if isinstance(key, int):
+            if 0 <= key < len(self.children):
+                raise IndexError("index %s out of range [0, %i[" % (key, len(self.children)))
+            self.result = self.children[:key] + self.children[key + 1:]
+        else:
+            assert not isinstance(self.result, str)
+            mf = create_match_function(key)
+            self.result = tuple(child for child in self.children if not mf(child))
 
     def get(self, index_or_tagname: Union[CriteriaType, int],
             surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
@@ -782,13 +797,29 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the given criterion which can be either a match-function or a tag-name or
         a container of tag-names.
 
-        This function is mostly just syntactic sugar for
+        This function is syntactic sugar for
         ``next(node.select(criterion, False))``. However, rather than
         raising a StopIterationError if no descendant with the given tag-name
         exists, it returns None.
         """
         try:
             return next(self.select(criterion, include_root=False, reverse=reverse))
+        except StopIteration:
+            return None
+
+    def pick_child(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
+        """
+        Picks the first child (or last if run in reverse mode) descendant that fulfills
+        the given criterion which can be either a match-function or a tag-name or
+        a container of tag-names.
+
+        This function is syntactic sugar for
+        ``next(node.select_children(criterion, False))``. However, rather than
+        raising a StopIterationError if no descendant with the given tag-name
+        exists, it returns None.
+        """
+        try:
+            return next(self.select_children(criterion, reverse=reverse))
         except StopIteration:
             return None
 
