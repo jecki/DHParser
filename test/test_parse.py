@@ -644,13 +644,8 @@ class TestPopRetrieve:
         self.minilang_parser4 = grammar_provider(self.mini_lang4)()
 
     @staticmethod
-    def opening_delimiter(node, name):
+    def has_tag_name(node, name):
         return node.tag_name == name # and not isinstance(node.parser, Retrieve)
-
-    @staticmethod
-    def closing_delimiter(node):
-        return node.tag_name in {':Pop', ':Retrieve'}
-        # return isinstance(node.parser, Retrieve)
 
     def test_compile_mini_language(self):
         assert self.minilang_parser
@@ -727,8 +722,9 @@ class TestPopRetrieve:
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
         syntax_tree = self.minilang_parser(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="delimiter"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
+        matchf = partial(self.has_tag_name, name="delimiter")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
         assert delim == pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
@@ -744,8 +740,9 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="delimiter"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
+        matchf = partial(self.has_tag_name, name="delimiter")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
         assert delim == pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
@@ -754,9 +751,11 @@ class TestPopRetrieve:
         teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
         syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="braces"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
-        assert len(delim) == len(pop) and delim != pop
+        matchf = partial(self.has_tag_name, name="braces")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
+        assert len(delim) == len(pop)
+        assert delim != pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
 
@@ -771,8 +770,9 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="braces"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
+        matchf = partial(self.has_tag_name, name="braces")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
         assert len(delim) == len(pop) and delim != pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")

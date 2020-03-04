@@ -326,7 +326,7 @@ class Parser:
         calling the same method from the superclass) by the derived class.
         """
         duplicate = self.__class__()
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def __repr__(self):
@@ -603,8 +603,8 @@ class Parser:
             self._apply(func, positive_flip)
 
 
-def copy_parser_attrs(src: Parser, duplicate: Parser):
-    """Duplicates all parser attributes from source to dest."""
+def copy_parser_base_attrs(src: Parser, duplicate: Parser):
+    """Duplicates all attributes of the Parser-class from source to dest."""
     duplicate.pname = src.pname
     duplicate.anonymous = src.anonymous
     duplicate.drop_content = src.drop_content
@@ -1466,7 +1466,7 @@ class Token(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.text)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1514,7 +1514,7 @@ class RegExp(Parser):
         except TypeError:
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1691,7 +1691,7 @@ class UnaryParser(MetaParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -1718,7 +1718,7 @@ class NaryParser(MetaParser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -1915,6 +1915,13 @@ class MandatoryNary(NaryParser):
         self.err_msgs = err_msgs    # type: MessagesType
         self.skip = skip            # type: ResumeList
 
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
+                                   err_msgs=self.err_msgs, skip=self.skip)
+        copy_parser_base_attrs(self, duplicate)
+        return duplicate
+
     def get_reentry_point(self, text_: StringView) -> int:
         """Returns a reentry-point determined by the skip-list in `self.skip`.
         If no reentry-point was found or the skip-list ist empty, -1 is returned.
@@ -2004,13 +2011,6 @@ class Series(MandatoryNary):
     EBNF-Example:  ``series = letter letter_or_digit``
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
-
-    def __deepcopy__(self, memo):
-        parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   err_msgs=self.err_msgs, skip=self.skip)
-        copy_parser_attrs(self, duplicate)
-        return duplicate
 
     @cython.locals(pos=cython.int, reloc=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2200,15 +2200,6 @@ class AllOf(MandatoryNary):
                 self.mandatory = parsers[0].mandatory
         assert len(parsers) > 1, "AllOf requires at least two sub-parsers."
         super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
-        self.num_parsers = len(self.parsers)  # type: int
-
-    def __deepcopy__(self, memo):
-        parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   err_msgs=self.err_msgs, skip=self.skip)
-        duplicate.pname = self.pname
-        copy_parser_attrs(self, duplicate)
-        return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -2343,8 +2334,7 @@ class Interleave(MandatoryNary):
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    err_msgs=self.err_msgs, skip=self.skip,
                                    repetitions=self.repetitions)
-        duplicate.pname = self.pname
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _parse(self, text: StringView) :
@@ -2609,8 +2599,10 @@ class Retrieve(Parser):
         self.match = match_func if match_func else last_value
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.symbol, self.match)
-        copy_parser_attrs(self, duplicate)
+        symbol = copy.deepcopy(self.symbol, memo)
+        duplicate = self.__class__(symbol, self.match)
+        copy_parser_base_attrs(self, duplicate)
+        duplicate.match = self.match
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2632,7 +2624,8 @@ class Retrieve(Parser):
             stack = self.grammar.variables__[self.symbol.pname]
             value = self.match(text, stack)
         except (KeyError, IndexError):
-            node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - text.__len__())
+            tn = self.tag_name if self.pname else self.symbol.tag_name
+            node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
             self.grammar.tree__.new_error(
                 node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
             return node, text
@@ -2640,7 +2633,8 @@ class Retrieve(Parser):
             return None, text
         elif self.drop_content:
             return EMPTY_NODE, text[len(value):]
-        return Node(self.tag_name, value), text[len(value):]
+        tn = self.tag_name if self.pname else self.symbol.tag_name
+        return Node(tn, value), text[len(value):]
 
 
 class Pop(Retrieve):
@@ -2662,8 +2656,9 @@ class Pop(Retrieve):
         self.values = []
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.symbol, self.match)
-        copy_parser_attrs(self, duplicate)
+        symbol = copy.deepcopy(self.symbol, memo)
+        duplicate = self.__class__(symbol, self.match)
+        copy_parser_base_attrs(self, duplicate)
         duplicate.values = self.values[:]
         return duplicate
 

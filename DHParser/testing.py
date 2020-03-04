@@ -274,7 +274,7 @@ POSSIBLE_ARTIFACTS = frozenset((
 
 def md_codeblock(code: str) -> str:
     """Formats a piece of code as Markdown inline-code or code-block,
-    depending on whethter it stretches over several lines or not."""
+    depending on whether it stretches over several lines or not."""
     if '\n' not in code:
         return '`' + code + '`'
     else:
