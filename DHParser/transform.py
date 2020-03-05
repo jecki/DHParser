@@ -92,6 +92,7 @@ __all__ = ('TransformationDict',
            'has_content',
            'has_parent',
            'has_descendant',
+           'has_sibling',
            'lstrip',
            'rstrip',
            'strip',
@@ -355,7 +356,11 @@ def traverse(root_node: Node,
             cache[key] = sequence
 
         for call in sequence:
-            call(context)
+            try:
+                call(context)
+            except Exception as ae:
+                raise AssertionError('An error occured when transforming "%s" with:\n%s\n%s' %
+                                     (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
 
     traverse_recursive([root_node])
     # assert processing_table['__cache__']
@@ -382,27 +387,38 @@ def traverse_locally(context: List[Node],
     traverse(context[-1], processing_table, key_func)
 
 
+def transformation_guard(value) -> None:
+    if value is not None:
+        raise AssertionError('Transformation a value instead of None!')
+
+
+def condition_guard(value) -> bool:
+    if value is None:
+        raise AssertionError('Condition returned None instead of a bool!')
+    return value
+
+
 def apply_transformations(context: List[Node], transformation: Union[Callable, Sequence[Callable]]):
     """Applies a sinlge or a sequence of transformations to a context."""
     if callable(transformation):
-        transformation(context)
+        transformation_guard(transformation(context))
     else:
         assert isinstance(transformation, tuple)
         for trans in cast(tuple, transformation):
-            trans(context)
+            transformation_guard(trans(context))
 
 
 @transformation_factory(collections.abc.Callable, tuple)
 def apply_if(context: List[Node], transformation: Union[Callable, Tuple[Callable]], condition: Callable):
     """Applies a transformation only if a certain condition is met."""
-    if condition(context):
+    if condition_guard(condition(context)):
         apply_transformations(context, transformation)
 
 
 @transformation_factory(collections.abc.Callable, tuple)
 def apply_unless(context: List[Node], transformation: Union[Callable, Tuple[Callable]], condition: Callable):
     """Applies a transformation if a certain condition is *not* met."""
-    if not condition(context):
+    if not condition_guard(condition(context)):
         apply_transformations(context, transformation)
 
 
@@ -592,6 +608,15 @@ def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
         if child.tag_name in tag_name_set:
             return True
         if stop_level > 1 and has_descendant(context + [child], tag_name_set, stop_level - 1):
+            return True
+    return False
+
+
+@transformation_factory(collections.abc.Set)
+def has_sibling(context: List[Node], tag_name_set: AbstractSet[str]):
+    node = context[-1]
+    for child in context[-2].children:
+        if child != node and child.tag_name in tag_name_set:
             return True
     return False
 
