@@ -488,13 +488,26 @@ class Parser:
     def __add__(self, other: 'Parser') -> 'Series':
         """The + operator generates a series-parser that applies two
         parsers in sequence."""
+        if isinstance(other, Series):
+            return cast('Series', other).__radd__(self)
         return Series(self, other)
 
     def __or__(self, other: 'Parser') -> 'Alternative':
         """The | operator generates an alternative parser that applies
         the first parser and, if that does not match, the second parser.
         """
+        if isinstance(other, Alternative):
+            return cast('Alternative', other).__ror__(self)
         return Alternative(self, other)
+
+    def __mul__(self, other: 'Parser') -> 'Alternative':
+        """The * operator generates an interleave parser that applies
+        the first parser and the second parser in any possible order
+        until both match.
+        """
+        if isinstance(other, Interleave):
+            return cast(Interleave, other).__rmul__(self)
+        return Interleave(self, other)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
@@ -2217,12 +2230,9 @@ class AllOf(MandatoryNary):
                     del parsers[i]
                     break
             else:
-                # TODO: Should mandatory-semantics be changed for AllOf to match that of Interleave???
                 for i, p in enumerate(self.parsers):
                     if p in parsers and i < self.mandatory:
                         return None, text
-                # if self.num_parsers - len(parsers) < self.mandatory:
-                #     return None, text
                 reloc = self.get_reentry_point(text_)
                 expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
                 error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
@@ -2309,13 +2319,14 @@ def Unordered(parser: NaryParser) -> NaryParser:
 
 
 class Interleave(MandatoryNary):
-    """EXPERIMENTAL!!! NOT YET TESTED at all!!!"""
+    """EXPERIMENTAL!!!"""
 
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
                  skip: ResumeList = [],
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
+        assert len(set(parsers)) == len(parsers)
         assert all(not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
                    and not isinstance(parser, FlowParser) for parser in parsers)
         super(Interleave, self).__init__(
@@ -2343,6 +2354,7 @@ class Interleave(MandatoryNary):
         consumed = set()  # type: Set[Parser]
         error = None  # type: Optional[Error]
         while True:
+            # there is an order of testing, but no promise about the order of testing, here!
             for i, parser in enumerate(self.parsers):
                 if parser not in consumed:
                     node, text__ = parser(text_)
@@ -2378,6 +2390,46 @@ class Interleave(MandatoryNary):
 
     def __repr__(self):
         return ' ° '.join(parser.repr for parser in self.parsers)
+
+    def _prepare_combined(self, other: Parser) -> Tuple[Tuple[Parser], int, List[Tuple[int, int]]]:
+        """Returns the other's parsers and repetitions if `other` is an Interleave-parser,
+        otherwise returns ((other,),), [(1, 1])."""
+        other_parsers = cast('Interleave', other).parsers if isinstance(other, Interleave) \
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+        other_repetitions = cast('Interleave', other).repetitions \
+            if isinstance(other, Interleave) else [(1, 1),]
+        other_mandatory = cast('Interleave', other).mandatory \
+            if isinstance(other, Interleave) else NO_MANDATORY
+        if other_mandatory == NO_MANDATORY:
+            mandatory = self.mandatory
+            parsers = self.parsers + other_parsers
+            repetitions = self.repetitions + other_repetitions
+        elif self.mandatory == NO_MANDATORY:
+            mandatory = other_mandatory
+            parsers = other_parsers + self.parsers
+            repetitions = other_repetitions + self.repetitions
+        else:
+            mandatory = self.mandatory + other_mandatory
+            parsers = self.parsers[:self.mandatory] + other_parsers[:other_mandatory] \
+                + self.parsers[self.mandatory:] + other_parsers[other_mandatory:]
+            repetitions = self.repetitions[:self.mandatory] + other_repetitions[:other_mandatory] \
+                + self.repetitions[self.mandatory:] + other_repetitions[other_mandatory:]
+        return parsers, mandatory, repetitions
+
+    def __mul__(self, other: Parser) -> 'Interleave':
+        parsers, mandatory, repetitions = self._prepare_combined(other)
+        return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
+
+    def __rmul__(self, other: Parser) -> 'Interleave':
+        parsers, mandatory, repetitions = self._prepare_combined(other)
+        return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
+
+    def __imul__(self, other: Parser) -> 'Interleave':
+        parsers, mandatory, repetitions = self._prepare_combined(other)
+        self.parsers = parsers
+        self.mandatory = mandatory
+        self.repetitions = repetitions
+        return self
 
 
 ########################################################################

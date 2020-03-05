@@ -1122,6 +1122,55 @@ class TestMetaParser:
         assert bool(cst.pick('MUL')), "Named empty nodes should not be dropped!!!"
 
 
+class TestParserCombining:
+    def test_series(self):
+        parser = RegExp(r'\d+') + RegExp(r'\.')
+        assert isinstance(parser, Series)
+        parser += RegExp(r'\d+')
+        assert isinstance(parser, Series)
+        assert len(parser.parsers) == 3
+        parser = Token(">") + parser
+        assert isinstance(parser, Series)
+        assert len(parser.parsers) == 4
+        parser = parser + Token("<")
+        assert isinstance(parser, Series)
+        assert len(parser.parsers) == 5
+
+    def test_alternative(self):
+        parser = RegExp(r'\d+') | RegExp(r'\.')
+        assert isinstance(parser, Alternative)
+        parser |= RegExp(r'\d+')
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 3
+        parser = Token(">") | parser
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 4
+        parser = parser | Token("<")
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 5
+
+    def test_interleave(self):
+        parser = RegExp(r'\d+') * RegExp(r'\.')
+        assert isinstance(parser, Interleave)
+        parser *= RegExp(r'\d+')
+        assert isinstance(parser, Interleave)
+        assert len(parser.parsers) == 3
+        parser = Token(">") * parser
+        assert isinstance(parser, Interleave)
+        assert len(parser.parsers) == 4
+        parser = parser * Token("<")
+        assert isinstance(parser, Interleave)
+        assert len(parser.parsers) == 5
+
+    def test_mixed_combinations(self):
+        parser = RegExp(r'\d+') +  RegExp(r'\.') + RegExp(r'\d+') | RegExp(r'\d+')
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 2
+        assert isinstance(parser.parsers[0], Series)
+        assert len(parser.parsers[0].parsers) == 3
+        assert isinstance(parser.parsers[1], RegExp)
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
