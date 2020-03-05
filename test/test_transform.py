@@ -27,12 +27,12 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
-    tree_sanity_check
+    tree_sanity_check, flatten_sxpr
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_parent, contains_only_whitespace, \
     is_insignificant_whitespace, merge_adjacent, is_one_of, swap_attributes, delimit_children, \
-    positions_of, insert, node_maker
+    positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -387,6 +387,14 @@ class TestConstructiveTransformations:
         assert result2 == '(A (B "1") (C "2") (X "0") (D "3"))', result2
 
 
+class TestBoolean:
+    def test_apply_if(self):
+        tree = parse_sxpr('(A (B 1) (C 1) (B 2))').with_pos(0)
+        trans_table = { 'B': [apply_if((change_tag_name('X'),
+                                        add_attributes({'renamed': 'True'})),
+                                       is_one_of('B'))] }
+        traverse(tree, trans_table)
+        assert flatten_sxpr(tree.as_sxpr()) == '(A (X `(renamed "True") "1") (C "1") (X `(renamed "True") "2"))'
 
 
 if __name__ == "__main__":

@@ -75,7 +75,6 @@ __all__ = ('TransformationDict',
            'move_adjacent',
            'left_associative',
            'lean_left',
-           'chain',
            'apply_if',
            'apply_unless',
            'traverse_locally',
@@ -383,34 +382,28 @@ def traverse_locally(context: List[Node],
     traverse(context[-1], processing_table, key_func)
 
 
-@transformation_factory(tuple)
-def chain(context: List[Node], transformations: Tuple[Callable]):
-    """Successively apply all transformations in the given tuple."""
-    for transform in transformations:
-        transform(context)
+def apply_transformations(context: List[Node], transformation: Union[Callable, Sequence[Callable]]):
+    """Applies a sinlge or a sequence of transformations to a context."""
+    if callable(transformation):
+        transformation(context)
+    else:
+        assert isinstance(transformation, tuple)
+        for trans in cast(tuple, transformation):
+            trans(context)
 
 
-@transformation_factory(collections.abc.Callable)
-def apply_if(context: List[Node], transformation: Callable, condition: Callable):
-    """
-    Applies a transformation only if a certain condition is met.
-    """
+@transformation_factory(collections.abc.Callable, tuple)
+def apply_if(context: List[Node], transformation: Union[Callable, Tuple[Callable]], condition: Callable):
+    """Applies a transformation only if a certain condition is met."""
     if condition(context):
-        transformation(context)
-        # if isinstance(transformation, Sequence):
-        #     for trans in transformation:
-        #         trans(context)
-        # else:
-        #     transformation(context)
+        apply_transformations(context, transformation)
 
 
-@transformation_factory(collections.abc.Callable)
-def apply_unless(context: List[Node], transformation: Callable, condition: Callable):
-    """
-    Applies a transformation if a certain condition is *not* met.
-    """
+@transformation_factory(collections.abc.Callable, tuple)
+def apply_unless(context: List[Node], transformation: Union[Callable, Tuple[Callable]], condition: Callable):
+    """Applies a transformation if a certain condition is *not* met."""
     if not condition(context):
-        transformation(context)
+        apply_transformations(context, transformation)
 
 
 ## boolean operators
