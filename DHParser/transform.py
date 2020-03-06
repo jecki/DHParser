@@ -986,7 +986,7 @@ def merge_connected(context: List[Node], content: Callable, delimiter: Callable,
                     content_name: str = '', delimiter_name: str = ''):
     """
     Merges sequences of content and delimiters. Other than `merge_adjacent()`, which
-    does not this distinction, delimiters at the fringe of content blocks are not
+    does not make this distinction, delimiters at the fringe of content blocks are not
     included in the merge.
     :param context:     The context, i.e. list of "ancestor" nodes, rangeing from the
             root node (`context[0]`) to the current node (`context[-1]`)
@@ -1451,7 +1451,7 @@ def delimit_children(context: List[Node], node_factory: Callable):
 @transformation_factory(str)
 def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = Error.ERROR):
     """
-    Raises an error unconditionally. This makes sense in case illegal pathes are
+    Raises an error unconditionally. This makes sense in case illegal paths are
     encoded in the syntax to provide more accurate error messages.
     """
     node = context[-1]
