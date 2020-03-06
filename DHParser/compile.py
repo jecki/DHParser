@@ -37,6 +37,7 @@ compiler object.
 import copy
 import functools
 import os
+import traceback
 from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
@@ -247,6 +248,17 @@ CompilerCallable = Union[Compiler, Callable[[Node], Any], functools.partial]
 ResultTuple = Tuple[Optional[Any], List[Error], Optional[Node]]
 
 
+def filter_stacktrace(stacktrace: List[str]) -> List[str]:
+    """Removes those frames from a formatted stacktrace that are located
+    within the DHParser-code."""
+    for n, frame in enumerate(stacktrace):
+        i = frame.find('"')
+        k = frame.find('"', i + 1)
+        if frame.find("DHParser", i, k) < 0:
+            break
+    return stacktrace[n:]
+
+
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],  # str -> str
                    parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
@@ -347,10 +359,12 @@ def compile_source(source: str,
                     node = syntax_tree  # type: Node
                     if isinstance(compiler, Compiler) and compiler.context:
                         node = compiler.context[-1]
+                    st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+                    trace = ''.join(filter_stacktrace(st))
                     syntax_tree.new_error(
                         node, "Compilation failed, most likely, due to errors earlier "
-                              "in the processing pipeline. Crash Message: %s: %s"
-                              % (e.__class__.__name__, str(e)),
+                              "in the processing pipeline. Crash Message: %s: %s\n%s"
+                              % (e.__class__.__name__, str(e), trace),
                         Error.COMPILER_CRASH)
             else:
                 # assume Python crashes are programming mistakes, so let
@@ -414,10 +428,12 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
                 tree = tp(tree)
             except Exception as e:
                 node = tp.context[-1] if tp.context else tree
+                st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+                trace = ''.join(filter_stacktrace(st))
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "in the processing pipeline. Crash Message: %s: %s"
-                          % (e.__class__.__name__, str(e)),
+                          "in the processing pipeline. Crash Message: %s: %s\n%s"
+                          % (e.__class__.__name__, str(e), trace),
                     Error.TREE_PROCESSING_CRASH)
         else:
             # assume Python crashes are programming mistakes, so let

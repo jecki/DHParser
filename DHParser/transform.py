@@ -614,10 +614,11 @@ def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
 
 @transformation_factory(collections.abc.Set)
 def has_sibling(context: List[Node], tag_name_set: AbstractSet[str]):
-    node = context[-1]
-    for child in context[-2].children:
-        if child != node and child.tag_name in tag_name_set:
-            return True
+    if len(context) >= 2:
+        node = context[-1]
+        for child in context[-2].children:
+            if child != node and child.tag_name in tag_name_set:
+                return True
     return False
 
 
@@ -1446,7 +1447,7 @@ def delimit_children(context: List[Node], node_factory: Callable):
 ########################################################################
 
 
-@transformation_factory
+# @transformation_factory
 @transformation_factory(str)
 def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = Error.ERROR):
     """
