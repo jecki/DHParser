@@ -4,6 +4,7 @@
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
+@ anonymous  = pure_elem, element
 
 #: top-level
 
@@ -16,10 +17,9 @@ directive  = "@" §symbol "="
 #: components
 
 expression = sequence { "|" sequence }
-sequence   = { ["§"]                            # "§" means all following terms mandatory
-               ( interleave
-               | flowmarker (oneormore | pure_elem) ) }+
-interleave = term { "°" term }
+sequence   = { ["§"] ( interleave | lookaround ) }+  # "§" means all following terms mandatory
+interleave = term { "°" ["§"] term }
+lookaround = flowmarker (oneormore | pure_elem)
 term       = oneormore | repetition | option | pure_elem
 
 #: elements
@@ -35,7 +35,7 @@ element    = [retrieveop] symbol !"="           # negative lookahead to be sure 
 #: flow-operators
 
 flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-           | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
+           | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
 retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
 
 #: groups
