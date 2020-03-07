@@ -31,11 +31,11 @@ import os
 from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any
 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
-from DHParser.configuration import THREAD_LOCALS, get_config_value
+from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
-    DropRegExp, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
-    Token, GrammarError
+    Drop, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
+    Token, GrammarError, Whitespace
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -144,105 +144,116 @@ class EBNFGrammar(Grammar):
     r"""
     Parser for an EBNF source file, with this grammar:
 
-    # comments start with '#' and eat all chars up to and including '\n'
-    @ comment    = /#.*(?:\n|$)/
-    # whitespace includes linefeed
-    @ whitespace = /\s*/
-    # trailing whitespace of literals will be ignored tacitly
-    @ literalws  = right
-
-    @ drop       = whitespace   # do not include whitespace in concrete syntax tree
+    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+    @ whitespace = /\s*/                            # whitespace includes linefeed
+    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+    @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
+    @ anonymous  = pure_elem, element
 
     #: top-level
 
     syntax     = [~//] { definition | directive } §EOF
     definition = symbol §"=" expression
-    directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
+    directive  = "@" §symbol "="
+                 (regexp | literal | symbol)
+                 { "," (regexp | literal | symbol) }
 
     #: components
 
     expression = sequence { "|" sequence }
-    sequence       = { ["§"] term }+          # "§" means all following terms mandatory
-    # negative lookahead !"=" to be sure it's not a definition
-    term     = [flowmarker] [retrieveop] symbol !"="
-               | [flowmarker] literal
-               | [flowmarker] plaintext
-               | [flowmarker] regexp
-               | [flowmarker] whitespace
-               | [flowmarker] oneormore
-               | [flowmarker] group
-               | [flowmarker] unordered
-               | repetition
-               | option
+    sequence   = { ["§"] ( interleave | lookaround ) }+  # "§" means all following terms mandatory
+    interleave = term { "°" ["§"] term }
+    lookaround = flowmarker (oneormore | pure_elem)
+    term       = oneormore | repetition | option | pure_elem
+
+    #: elements
+
+    pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
+    element    = [retrieveop] symbol !"="           # negative lookahead to be sure it's not a definition
+               | literal
+               | plaintext
+               | regexp
+               | whitespace
+               | group
 
     #: flow-operators
 
-    flowmarker = "!"  | "&"                 # '!' negative lookahead, '&' positive lookahead
-               | "-!" | "-&"                # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop = "::" | ":?" | ":"          # '::' pop, ':?' optional pop, ':' retrieve
+    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+               | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
+    retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
 
     #: groups
 
     group      = "(" §expression ")"
-    unordered  = "<" §expression ">"        # elements of expression in arbitrary order
-    oneormore  = "{" expression "}+"
-    repetition = "{" §expression "}"
-    option     = "[" §expression "]"
+    oneormore  = "{" expression "}+" | element "+"
+    repetition = "{" §expression "}" | element "*"
+    option     = "[" §expression "]" | element "?"
 
     #: leaf-elements
 
     symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
     literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
-               | /'(?:(?<!\\)\\'|[^'])*?'/~         # ignore whitespace following literals
+               | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
     plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
     regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
     whitespace = /~/~                               # insignificant whitespace
 
     EOF = !/./
     """
+    element = Forward()
     expression = Forward()
-    source_hash__ = "82a7c668f86b83f86515078e6c9093ed"
-    static_analysis_pending__ = []  # type: List[bool]
+    source_hash__ = "d69cbf8e455c989628fc2dd75aa97bb6"
+    anonymous__ = re.compile('pure_elem$|element$')
+    static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
+    comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
-    wsp__ = DropRegExp(WSP_RE__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
-    whitespace = Series(RegExp('~'), wsp__)
-    regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), wsp__)
-    plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), wsp__)
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), wsp__),
-                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), wsp__))
-    symbol = Series(RegExp('(?!\\d)\\w+'), wsp__)
-    option = Series(Series(Token("["), wsp__), expression, Series(Token("]"), wsp__), mandatory=1)
-    repetition = Series(Series(Token("{"), wsp__), expression, Series(Token("}"), wsp__),
-                        mandatory=1)
-    oneormore = Series(Series(Token("{"), wsp__), expression, Series(Token("}+"), wsp__))
-    unordered = Series(Series(Token("<"), wsp__), expression, Series(Token(">"), wsp__),
-                       mandatory=1)
-    group = Series(Series(Token("("), wsp__), expression, Series(Token(")"), wsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), wsp__), Series(Token(":?"), wsp__), Series(Token(":"), wsp__))
-    flowmarker = Alternative(Series(Token("!"), wsp__), Series(Token("&"), wsp__),
-                             Series(Token("-!"), wsp__), Series(Token("-&"), wsp__))
-    term = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol,
-                                NegativeLookahead(Series(Token("="), wsp__))),
-                         Series(Option(flowmarker), literal),
-                         Series(Option(flowmarker), plaintext),
-                         Series(Option(flowmarker), regexp),
-                         Series(Option(flowmarker), whitespace),
-                         Series(Option(flowmarker), oneormore),
-                         Series(Option(flowmarker), group),
-                         Series(Option(flowmarker), unordered), repetition, option)
-    sequence = OneOrMore(Series(Option(Series(Token("§"), wsp__)), term))
-    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), wsp__), sequence))))
-    directive = Series(Series(Token("@"), wsp__), symbol, Series(Token("="), wsp__),
+    whitespace = Series(RegExp('~'), dwsp__)
+    regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
+    plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
+                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
+    option = Alternative(Series(Series(Token("["), dwsp__), expression,
+                                Series(Token("]"), dwsp__), mandatory=1),
+                         Series(element, Series(Token("?"), dwsp__)))
+    repetition = Alternative(Series(Series(Token("{"), dwsp__), expression,
+                                    Series(Token("}"), dwsp__), mandatory=1),
+                             Series(element, Series(Token("*"), dwsp__)))
+    oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression,
+                                   Series(Token("}+"), dwsp__)),
+                            Series(element, Series(Token("+"), dwsp__)))
+    group = Series(Series(Token("("), dwsp__), expression,
+                   Series(Token(")"), dwsp__), mandatory=1)
+    retrieveop = Alternative(Series(Token("::"), dwsp__),
+                             Series(Token(":?"), dwsp__),
+                             Series(Token(":"), dwsp__))
+    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__),
+                             Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
+    element.set(Alternative(Series(Option(retrieveop), symbol,
+                                   NegativeLookahead(Series(Token("="), dwsp__))),
+                            literal, plaintext, regexp, whitespace, group))
+    pure_elem = Series(element, NegativeLookahead(RegExp('[?*+]')), mandatory=1)
+    term = Alternative(oneormore, repetition, option, pure_elem)
+    lookaround = Series(flowmarker, Alternative(oneormore, pure_elem))
+    interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__),
+                                                Option(Series(Token("§"), dwsp__)), term)))
+    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)),
+                                Alternative(interleave, lookaround)))
+    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
+    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__),
                        Alternative(regexp, literal, symbol),
-                       ZeroOrMore(Series(Series(Token(","), wsp__),
+                       ZeroOrMore(Series(Series(Token(","), dwsp__),
                                          Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Series(Token("="), wsp__), expression, mandatory=1)
-    syntax = Series(Option(Series(wsp__, RegExp(''))),
-                    ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
+    syntax = Series(Option(Series(dwsp__, RegExp(''))),
+                    ZeroOrMore(Alternative(definition, directive)),
+                    EOF, mandatory=2)
     root__ = syntax
 
 
@@ -280,6 +291,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
 
 def get_ebnf_grammar() -> EBNFGrammar:
     """Returns a thread-local EBNF-Grammar-object for parsing EBNF sources."""
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.ebnf_grammar_singleton
         return grammar
@@ -304,31 +316,30 @@ def parse_ebnf(ebnf: str) -> Node:
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
-        [remove_empty],  # remove_whitespace
+        [remove_empty],
     "syntax":
-        [],  # otherwise '"*": replace_by_single_child' would be applied
+        [],
     "directive, definition":
         [flatten, remove_tokens('@', '=', ',')],
     "expression":
-        [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
-    "sequence":
-        [replace_by_single_child, flatten],  # supports both idioms:
-                                             # "{ term }+" and "term { term }"
-    "term, flowmarker, retrieveop":
-        replace_by_single_child,
-    "group":
-        [remove_brackets, replace_by_single_child],
-    "unordered":
-        remove_brackets,
+        [replace_by_single_child, flatten, remove_tokens('|')],
+    "sequence, interleave":
+        [replace_by_single_child, flatten],
+    "term, pure_elem, element":
+        [replace_by_single_child],
+    "flowmarker, retrieveop":
+        [reduce_single_child],
+    "group": [
+        remove_brackets, replace_by_single_child],
     "oneormore, repetition, option":
-        [reduce_single_child, remove_brackets,
+        [reduce_single_child, remove_brackets, # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
     "symbol, literal, regexp":
-        reduce_single_child,
+        [reduce_single_child],
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        reduce_single_child,
+        [reduce_single_child],
     "*":
-        replace_by_single_child
+        [replace_by_single_child]
 }
 
 
@@ -337,6 +348,7 @@ def EBNFTransform() -> TransformationFunc:
 
 
 def get_ebnf_transformer() -> TransformationFunc:
+    THREAD_LOCALS = access_thread_locals()
     try:
         transformer = THREAD_LOCALS.EBNF_transformer_singleton
     except AttributeError:
@@ -541,6 +553,7 @@ class ModernEBNFDecompiler(EBNFDecompiler):
 
 
 def get_ebnf_decompiler() -> EBNFGrammar:
+    THREAD_LOCALS = access_thread_locals()
     try:
         decompiler = THREAD_LOCALS.ebnf_decompiler_singleton  # type: EBNFDecompiler
         return decompiler
@@ -856,7 +869,7 @@ class EBNFCompiler(Compiler):
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
                     '&': 'Lookahead', '!': 'NegativeLookahead',
-                    '-&': 'Lookbehind', '-!': 'NegativeLookbehind',
+                    '<-&': 'Lookbehind', '<-!': 'NegativeLookbehind',
                     '::': 'Pop', ':?': 'Pop', ':': 'Retrieve'}
     REPEATABLE_DIRECTIVES = {'tokens'}
 
@@ -1358,9 +1371,9 @@ class EBNFCompiler(Compiler):
             #     defn = 'Drop(%s)' % defn
             # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
-            from traceback import extract_tb
-            trace = str(extract_tb(error.__traceback__)[-1])
-            errmsg = "%s (TypeError: %s; %s)\n%s" \
+            from traceback import extract_tb, format_list
+            trace = ''.join(format_list((extract_tb(error.__traceback__))))
+            errmsg = "%s (TypeError: %s;\n%s)\n%s" \
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
@@ -1527,6 +1540,7 @@ class EBNFCompiler(Compiler):
         name for the particular non-terminal.
         """
         arguments = [self.compile(r) for r in node.children] + custom_args
+        assert all(isinstance(arg, str) for arg in arguments), str(arguments)
         # remove drop clause for non dropping definitions of forms like "/\w+/~"
         if (parser_class == "Series" and node.tag_name not in self.directives.drop
             and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
@@ -1598,71 +1612,72 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(mock_node, 'Series', custom_args)
 
 
-    def on_term(self, node: Node) -> str:
+    def on_interleave(self, node) -> str:
+        raise NotImplementedError
+
+
+    def on_lookaround(self, node: Node) -> str:
         assert node.children
-        assert len(node.children) >= 2, node.as_sxpr()
+        assert len(node.children) == 2
+        assert node.children[0].tag_name == 'flowmarker'
         prefix = node.children[0].content
-        custom_args = []  # type: List[str]
-
-        if prefix in {'::', ':?', ':'}:
-            assert len(node.children) == 2
-            arg = node.children[-1]
-            if arg.tag_name != 'symbol':
-                self.tree.new_error(node, ('Retrieve Operator "%s" requires a symbol, '
-                                    'and not a %s.') % (prefix, arg.tag_name))
-                return arg.content
-            elif self.anonymous_regexp.match(arg.content):
-                self.tree.new_error(
-                    node, ('Retrive operator "%s" does not work with anonymous parsers like %s')
-                    % (prefix, arg.content))
-                return arg.content
-
-            match_func = 'last_value'
-            if arg.content in self.directives.filter:
-                match_func = self.directives.filter[arg.content]
-            if prefix.endswith('?'):
-                match_func = 'optional_' + match_func
-            if match_func != 'last_value':
-                custom_args = ['match_func=%s' % match_func]
-
-            self.variables.add(str(arg))  # cast(str, arg.result)
-
-        elif len(node.children) > 2:
-            # shift = (Node(node.parser, node.result[1].result),)
-            # node.result[1].result = shift + node.result[2:]
-            node.children[1].result = (Node(node.children[1].tag_name, node.children[1].result),) \
-                + node.children[2:]
-            node.children[1].tag_name = node.tag_name
-            node.result = (node.children[0], node.children[1])
-
+        arg_node = node.children[1]
         node.result = node.children[1:]
-        try:
-            parser_class = self.PREFIX_TABLE[prefix]
-            result = self.non_terminal(node, parser_class, custom_args)
-            if prefix[:1] == '-':
-                def check(node):
-                    nd = node
-                    if len(nd.children) >= 1:
-                        nd = nd.children[0]
-                    while nd.tag_name == "symbol":
-                        symlist = self.rules.get(nd.content, [])
-                        if len(symlist) == 2:
-                            nd = symlist[1]
-                        else:
-                            if len(symlist) == 1:
-                                nd = symlist[0].children[1]
-                            break
-                    content = nd.content
-                    if (nd.tag_name != "regexp" or content[:1] != '/' or content[-1:] != '/'):
-                        self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
-                                            "-parsers, not: " + nd.tag_name)
+        assert prefix in {'&', '!', '<-&', '<-!'}
 
-                if not result.startswith('RegExp('):
-                    self.deferred_tasks.append(lambda: check(node))
-            return result
-        except KeyError:
-            self.tree.new_error(node, 'Unknown prefix "%s".' % prefix)
-        return ""
+        parser_class = self.PREFIX_TABLE[prefix]
+        result = self.non_terminal(node, parser_class)
+        if prefix[:2] == '<-':
+            def verify(node):
+                nd = node
+                if len(nd.children) >= 1:
+                    nd = nd.children[0]
+                while nd.tag_name == "symbol":
+                    symlist = self.rules.get(nd.content, [])
+                    if len(symlist) == 2:
+                        nd = symlist[1]
+                    else:
+                        if len(symlist) == 1:
+                            nd = symlist[0].children[1]
+                        break
+                content = nd.content
+                if (nd.tag_name != "regexp" or content[:1] != '/' or content[-1:] != '/'):
+                    self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
+                                              "-parsers, not: " + nd.tag_name)
+
+            if not result.startswith('RegExp('):
+                self.deferred_tasks.append(partial(verify, node= node))
+        return result
+
+
+    def on_element(self, node: Node) -> str:
+        assert node.children
+        assert len(node.children) == 2
+        assert node.children[0].tag_name == "retrieve_op"
+        assert node.children[1].tag_name == "symbol"
+        prefix = node.children[0].content  # type: str
+        arg = node.children[1].content     # type: str
+        node.result = node.children[1:]
+        assert prefix in {'::', ':?', ':'}
+
+        if self.anonymous_regexp.match(arg):
+            self.tree.new_error(
+                node, ('Retrive operator "%s" does not work with anonymous parsers like %s')
+                      % (prefix, arg))
+            return arg
+
+        custom_args = []           # type: List[str]
+        match_func = 'last_value'  # type: str
+        if arg in self.directives.filter:
+            match_func = self.directives.filter[arg]
+        if prefix.endswith('?'):
+            match_func = 'optional_' + match_func
+        if match_func != 'last_value':
+            custom_args = ['match_func=%s' % match_func]
+
+        self.variables.add(arg)
+        parser_class = self.PREFIX_TABLE[prefix]
+        return self.non_terminal(node, parser_class, custom_args)
 
 
     def on_option(self, node) -> str:
@@ -1681,27 +1696,6 @@ class EBNFCompiler(Compiler):
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
 
-    def on_unordered(self, node) -> str:
-        # return self.non_terminal(node, 'Unordered')
-        assert len(node.children) == 1
-        nd = node.children[0]
-        if nd.tag_name == "sequence":
-            filtered_result, custom_args = self._error_customization(nd)
-            mock_node = Node(nd.tag_name, filtered_result)
-            return self.non_terminal(mock_node, 'AllOf', custom_args)
-        elif nd.tag_name == "expression":
-            if any(c.tag_name == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
-                self.tree.new_error(node, "No mandatory items § allowed in SomeOf-operator!")
-            # args = ', '.join(self.compile(child) for child in nd.children)
-            return self.non_terminal(nd, 'SomeOf')  # "SomeOf(" + args + ")"
-        else:
-            # if a sequence or expression has only one element, it will have
-            # been reduced during AST-transformation. Thus, if the tag-name of
-            # a child of unordered is neither "sequence" nor "expression", there
-            # are too few arguments for "unordered".
-            self.tree.new_error(node, "Unordered sequence or alternative "
-                                      "requires at least two elements.")
-            return ""
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = node.content  # ; assert result == cast(str, node.result)
@@ -1769,9 +1763,9 @@ class EBNFCompiler(Compiler):
         try:
             arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
         except AttributeError as error:
-            from traceback import extract_tb
-            trace = str(extract_tb(error.__traceback__)[-1])
-            errmsg = "%s (AttributeError: %s; %s)\n%s" \
+            from traceback import extract_tb, format_list
+            trace = ''.join(format_list(extract_tb(error.__traceback__)))
+            errmsg = "%s (AttributeError: %s;\n%s)\n%s" \
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             return '"' + errmsg + '"'
@@ -1782,7 +1776,9 @@ class EBNFCompiler(Compiler):
         return self.WSPC_PARSER()
 
 
+
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.ebnf_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)

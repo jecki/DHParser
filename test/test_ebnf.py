@@ -257,49 +257,64 @@ class TestCompilerErrors:
 
 
 EBNF = r"""
-    # EBNF-Grammar in EBNF
+# EBNF-Grammar in EBNF
 
-    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace = /\s*/                            # whitespace includes linefeed
-    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-    @ drop       = whitespace                       # no whitespace in concrete syntax tree
+@ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+@ whitespace = /\s*/                            # whitespace includes linefeed
+@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+@ drop       = whitespace                       # do not include whitespace in concrete syntax tree
+@ anonymous  = pure_elem, element
 
-    syntax     = [~//] { definition | directive } §EOF
-    definition = symbol §"=" expression
-    directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
+#: top-level
 
-    expression = sequence { "|" sequence }
-    sequence       = { ["§"] term }+                       # "§" means all following terms mandatory
-    term     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-               | [flowmarker] literal
-               | [flowmarker] plaintext
-               | [flowmarker] regexp
-               | [flowmarker] whitespace
-               | [flowmarker] oneormore
-               | [flowmarker] group
-               | [flowmarker] unordered
-               | repetition
-               | option
+syntax     = [~//] { definition | directive } §EOF
+definition = symbol §"=" expression
+directive  = "@" §symbol "="
+             (regexp | literal | symbol)
+             { "," (regexp | literal | symbol) }
 
-    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-               | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-    retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
+#: components
 
-    group      = "(" §expression ")"
-    unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-    oneormore  = "{" expression "}+"
-    repetition = "{" §expression "}"
-    option     = "[" §expression "]"
+expression = sequence { "|" sequence }
+sequence   = { ["§"] ( interleave | lookaround ) }+  # "§" means all following terms mandatory
+interleave = term { "°" ["§"] term }
+lookaround = flowmarker (oneormore | pure_elem)
+term       = oneormore | repetition | option | pure_elem
 
-    symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
-    literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-               | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-    plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-    regexp     = /\/(?:\\(?:\/)|[^\/])*?\//~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-    whitespace = /~/~                               # insignificant whitespace
+#: elements
 
-    EOF = !/./
-    """
+pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
+element    = [retrieveop] symbol !"="           # negative lookahead to be sure it's not a definition
+           | literal
+           | plaintext
+           | regexp
+           | whitespace
+           | group
+
+#: flow-operators
+
+flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+           | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
+retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+
+#: groups
+
+group      = "(" §expression ")"
+oneormore  = "{" expression "}+" | element "+"
+repetition = "{" §expression "}" | element "*"
+option     = "[" §expression "]" | element "?"
+
+#: leaf-elements
+
+symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
+literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
+           | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+whitespace = /~/~                               # insignificant whitespace
+
+EOF = !/./
+"""
 
 
 class TestSelfHosting:
@@ -408,7 +423,7 @@ class TestFlowControlOperators:
         lang = r"""
             document = ws sequence doc_end ws         
             sequence = { !end word ws }+
-            doc_end  = -&SUCC_LB end        
+            doc_end  = <-&SUCC_LB end        
             ws       = /\s*/
             end      = /END/
             word     = /\w+/
