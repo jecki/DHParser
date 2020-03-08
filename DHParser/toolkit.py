@@ -351,10 +351,12 @@ def issubtype(sub_type, base_type) -> bool:
             ot = t.__origin__
             if ot is Union:
                 try:
-                    return tuple(a.__origin__ for a in t.__args__)
+                    return tuple((a.__origin__ if a.__origin__ is not None else a)
+                                 for a in t.__args__)
                 except AttributeError:
                     try:
-                        return tuple(a.__origin__ for a in t.__union_args__)
+                        return tuple((a.__origin__ if a.__origin__ is not None else a)
+                                     for a in t.__union_args__)
                     except AttributeError:
                         return t.__args__
         except AttributeError:
