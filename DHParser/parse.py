@@ -2177,6 +2177,8 @@ class Alternative(NaryParser):
 
 class AllOf(MandatoryNary):
     """
+    DEPRECATED, will be removed soon, use Interleave instead!!!
+
     Matches if all elements of a list of parsers match. Each parser must
     match exactly once. Other than in a sequence, the order in which
     the parsers match is arbitrary, however.
@@ -2255,6 +2257,8 @@ class AllOf(MandatoryNary):
 
 class SomeOf(NaryParser):
     """
+    DEPRECATED, will be removed soon, use Interleave instead!!!
+
     Matches if at least one element of a list of parsers match. No parser
     can match more than once.
 
@@ -2578,6 +2582,7 @@ class Capture(UnaryParser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
+        assert node != EMPTY_NODE
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
@@ -2658,10 +2663,11 @@ class Retrieve(Parser):
         symbol = copy.deepcopy(self.symbol, memo)
         duplicate = self.__class__(symbol, self.match)
         copy_parser_base_attrs(self, duplicate)
-        duplicate.match = self.match
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        if len(self.grammar.variables__[self.symbol.pname]) == 0:
+            _ = self.symbol(text)   # auto-capture value
         # the following indirection allows the call() method to be called
         # from subclass without triggering the parser guard a second time
         return self.retrieve_and_match(text)
