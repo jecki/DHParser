@@ -572,11 +572,11 @@ class TestErrorRecovery:
         assert 'Skipping' in str(st.errors_sorted[1])
 
 
-    def test_AllOf_skip(self):
+    def test_Interleave_skip(self):
         lang = """
         document = allof | /.*/
         @allof_skip = /[A-Z]/
-        allof = < "A" §"B" "C" "D" >
+        allof = "A" ° §"B" ° "C" ° "D"
         """
         parser = grammar_provider(lang)()
         st = parser('CADB')

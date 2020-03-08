@@ -68,8 +68,8 @@ block_environment   = known_environment | generic_block
 known_environment   = itemize | enumerate | figure | tabular | quotation
                     | verbatim
 generic_block       = begin_generic_block sequence §end_generic_block
-begin_generic_block = -&_LB begin_environment LFF
-end_generic_block   = -&_LB  end_environment LFF
+begin_generic_block = <-&_LB begin_environment LFF
+end_generic_block   = <-&_LB  end_environment LFF
 
 itemize             = "\begin{itemize}" [_WSPC] { item } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [_WSPC] {item } §"\end{enumerate}"
@@ -100,9 +100,9 @@ line_element        = text | block |inline_environment |command
 inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
 generic_inline_env  = begin_inline_env ~ paragraph §end_inline_env
-begin_inline_env    = (-!_LB begin_environment) | (begin_environment !LFF)
+begin_inline_env    = (<-!_LB begin_environment) | (begin_environment !LFF)
 end_inline_env      = end_environment
-                      ## (-!_LB end_environment)   | (end_environment !LFF)  # ambiguity with generic_block when EOF
+                      ## (<-!_LB end_environment)   | (end_environment !LFF)  # ambiguity with generic_block when EOF
 begin_environment   = /\\begin{/ §NAME /}/
 end_environment     = /\\end{/ §::NAME /}/
 

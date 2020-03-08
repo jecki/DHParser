@@ -483,16 +483,16 @@ class TestWhitespace:
         assert not cst.error_flag
 
 
-class TestAllSome:
+class TestInterleave:
     def test_all(self):
-        ebnf = 'prefix = <"A" "B">'
+        ebnf = 'prefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
         assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
         assert grammar('A B').content == 'A B'
 
     def test_some(self):
-        ebnf = 'prefix = <"A" | "B">'
+        ebnf = 'prefix = "A"? ° "B"?'
         grammar = grammar_provider(ebnf)()
         assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
@@ -734,13 +734,13 @@ class TestInSeriesResume:
         assert len(errors) >= 1  # cannot really recover from permutation errors
 
 
-class TestAllOfResume:
+class TestInterleaveResume:
     def setup(self):
         lang = """
             document = allof
             @ allof_error = '{} erwartet, {} gefunden :-('
             @ allof_skip = "D", "E", "F", "G"
-            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G" 
         """
         self.gr = grammar_provider(lang)()
 
@@ -758,7 +758,7 @@ class TestAllOfResume:
             @ flow_resume = "."
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
-            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G"
             series = "E" "X" "Y" "Z"
         """
         gr = grammar_provider(lang)()
@@ -781,7 +781,7 @@ class TestAllOfResume:
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
             @ allof_resume = "E", "A"
-            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            allof = "A" ° "B" ° §"C" °"D" ° "E" ° "F" ° "G"
             @ series_resume = "E", "A"
             series = "E" "X" §"Y" "Z"
         """

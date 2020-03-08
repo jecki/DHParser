@@ -118,8 +118,8 @@ class NewEBNFGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "d69cbf8e455c989628fc2dd75aa97bb6"
-    anonymous__ = re.compile('pure_elem$|element$')
+    source_hash__ = "abd9bf9a97d8534bd6d7eaf27e1e4b8b"
+    anonymous__ = re.compile('pure_elem$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'

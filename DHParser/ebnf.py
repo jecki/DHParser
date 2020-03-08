@@ -96,7 +96,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \\
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
@@ -148,7 +148,7 @@ class EBNFGrammar(Grammar):
     @ whitespace = /\s*/                            # whitespace includes linefeed
     @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
     @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
-    @ anonymous  = pure_elem, element
+    @ anonymous  = pure_elem                        # remove this element early, if possible
 
     #: top-level
 
@@ -203,7 +203,7 @@ class EBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "d69cbf8e455c989628fc2dd75aa97bb6"
-    anonymous__ = re.compile('pure_elem$|element$')
+    anonymous__ = re.compile('pure_elem$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
@@ -323,8 +323,12 @@ EBNF_AST_transformation_table = {
         [flatten, remove_tokens('@', '=', ',')],
     "expression":
         [replace_by_single_child, flatten, remove_tokens('|')],
-    "sequence, interleave":
+    "sequence":
         [replace_by_single_child, flatten],
+    "interleave":
+        [replace_by_single_child, flatten, remove_tokens('°')],
+    "lookaround":
+        [],
     "term, pure_elem, element":
         [replace_by_single_child],
     "flowmarker, retrieveop":
@@ -1607,25 +1611,33 @@ class EBNFCompiler(Compiler):
 
 
     def on_sequence(self, node) -> str:
-        new_result, custom_args = self._error_customization(node)
-        mock_node = Node(node.tag_name, new_result)
+        filtered_result, custom_args = self._error_customization(node)
+        mock_node = Node(node.tag_name, filtered_result)
         return self.non_terminal(mock_node, 'Series', custom_args)
 
 
     def on_interleave(self, node) -> str:
+        children = []
         repetitions = []
-        children, custom_args = self._error_customization(node)
-        for child in children:
+        filtered_result, custom_args = self._error_customization(node)
+        for child in filtered_result:
             if child.tag_name == "oneormore":
                 repetitions.append((1, INFINITE))
+                assert len(child.children) == 1
+                children.append(child.children[0])
             elif child.tag_name == "repetition":
                 repetitions.append((0, INFINITE))
-            elif child.rag_name == "option":
+                assert len(child.children) == 1
+                children.append(child.children[0])
+            elif child.tag_name == "option":
                 repetitions.append((0, 1))
+                assert len(child.children) == 1
+                children.append(child.children[0])
             else:
                 repetitions.append((1, 1))
-        custom_args.append('repetitions=%' % str(repetitions))
-        mock_node = Node(node.tag_name, children)
+                children.append(child)
+        custom_args.append('repetitions={}'.format(repetitions))
+        mock_node = Node(node.tag_name, tuple(children))
         return self.non_terminal(mock_node, 'Interleave', custom_args)
 
 
@@ -1666,7 +1678,7 @@ class EBNFCompiler(Compiler):
     def on_element(self, node: Node) -> str:
         assert node.children
         assert len(node.children) == 2
-        assert node.children[0].tag_name == "retrieve_op"
+        assert node.children[0].tag_name == "retrieveop"
         assert node.children[1].tag_name == "symbol"
         prefix = node.children[0].content  # type: str
         arg = node.children[1].content     # type: str

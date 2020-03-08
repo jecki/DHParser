@@ -394,7 +394,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = result
                 self._result = result or ''
             else:
-                assert result is not None
+                # assert isinstance(result, StringView) \
+                #     or isinstance(result, str)
                 self.children = tuple()
                 self._result = result
 
