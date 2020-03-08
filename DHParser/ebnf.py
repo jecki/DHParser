@@ -35,7 +35,7 @@ from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
-    Token, GrammarError, Whitespace
+    Token, GrammarError, Whitespace, INFINITE
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -1607,13 +1607,26 @@ class EBNFCompiler(Compiler):
 
 
     def on_sequence(self, node) -> str:
-        filtered_result, custom_args = self._error_customization(node)
-        mock_node = Node(node.tag_name, filtered_result)
+        new_result, custom_args = self._error_customization(node)
+        mock_node = Node(node.tag_name, new_result)
         return self.non_terminal(mock_node, 'Series', custom_args)
 
 
     def on_interleave(self, node) -> str:
-        raise NotImplementedError
+        repetitions = []
+        children, custom_args = self._error_customization(node)
+        for child in children:
+            if child.tag_name == "oneormore":
+                repetitions.append((1, INFINITE))
+            elif child.tag_name == "repetition":
+                repetitions.append((0, INFINITE))
+            elif child.rag_name == "option":
+                repetitions.append((0, 1))
+            else:
+                repetitions.append((1, 1))
+        custom_args.append('repetitions=%' % str(repetitions))
+        mock_node = Node(node.tag_name, children)
+        return self.non_terminal(mock_node, 'Interleave', custom_args)
 
 
     def on_lookaround(self, node: Node) -> str:

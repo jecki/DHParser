@@ -72,12 +72,14 @@ __all__ = ('ParserError',
            'Option',
            'ZeroOrMore',
            'OneOrMore',
+           'NO_MANDATORY',
            'MandatoryNary',
            'Series',
            'Alternative',
            'AllOf',
            'SomeOf',
            'Unordered',
+           'INFINITE',
            'Interleave',
            'Required',
            'Lookahead',
@@ -1882,7 +1884,7 @@ class OneOrMore(UnaryParser):
 
 
 MessagesType = List[Tuple[Union[str, Any], str]]
-NO_MANDATORY = 1000
+NO_MANDATORY = 2**30
 
 
 class MandatoryNary(NaryParser):
@@ -2316,6 +2318,9 @@ def Unordered(parser: NaryParser) -> NaryParser:
         return SomeOf(parser)
     else:
         raise AssertionError("Unordered can take only Series or Alternative as parser.")
+
+
+INFINITE = 2**30
 
 
 class Interleave(MandatoryNary):
