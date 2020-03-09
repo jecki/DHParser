@@ -2666,11 +2666,22 @@ class Retrieve(Parser):
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        # auto-capture on first use if symbol was not captured before
         if len(self.grammar.variables__[self.symbol.pname]) == 0:
             _ = self.symbol(text)   # auto-capture value
-        # the following indirection allows the call() method to be called
-        # from subclass without triggering the parser guard a second time
-        return self.retrieve_and_match(text)
+        node, text_ = self.retrieve_and_match(text)
+        # in case the symbol allows for different values, generate an
+        # error, if the wrong value has been used
+        # if node is None:
+        #     node, text__ = self.symbol(text)
+        #     if node is not None:
+        #         tn = self.tag_name if self.pname else self.symbol.tag_name
+        #         node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
+        #         self.grammar.tree__.new_error(
+        #             node, 'Inconsistent use of symbol %s: "%s" expected, "%s" found!'
+        #             % (self.symbol.pname, self.grammar.variables__[self.symbol.pname], text__))
+        #         return node, text__
+        return node, text_
 
     def __repr__(self):
         return ':' + self.symbol.repr

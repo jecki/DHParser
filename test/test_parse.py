@@ -552,10 +552,6 @@ class TestInterleave:
         assert st.errors
 
 
-
-
-
-
 class TestErrorRecovery:
     def test_series_skip(self):
         lang = """
@@ -651,6 +647,7 @@ class TestPopRetrieve:
         assert self.minilang_parser
         assert self.minilang_parser2
         assert self.minilang_parser3
+        assert self.minilang_parser4
 
     def test_stackhandling(self):
         ambigous_opening = "<ABCnormal> normal tag <ABCnormal*>"
@@ -700,7 +697,6 @@ class TestPopRetrieve:
         assert not self.minilang_parser4.variables__['name']
         assert st.error_flag
 
-
     def test_cache_neutrality(self):
         """Test that packrat-caching does not interfere with the variable-
         changing parsers: Capture and Retrieve."""
@@ -721,7 +717,8 @@ class TestPopRetrieve:
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
         syntax_tree = self.minilang_parser(teststr)
-        assert not syntax_tree.errors_sorted
+        assert not syntax_tree.errors_sorted, \
+            ''.join(str(error) for error in syntax_tree.errors_sorted)
         matchf = partial(self.has_tag_name, name="delimiter")
         delim = str(next(syntax_tree.select_if(matchf)))
         pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
