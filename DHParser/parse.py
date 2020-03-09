@@ -2336,7 +2336,7 @@ class Interleave(MandatoryNary):
                  skip: ResumeList = [],
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
         assert len(set(parsers)) == len(parsers)
-        assert all(not isinstance(parser, Option) and not isinstance(parser, OneOrMore)
+        assert all(not isinstance(parser, Option)
                    and not isinstance(parser, FlowParser) for parser in parsers)
         super(Interleave, self).__init__(
             *parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
