@@ -774,6 +774,18 @@ class TestPopRetrieve:
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
 
+    def test_autoretrieve(self):
+        lang = """
+            document   = { definition }
+            definition = symbol :defsign value
+            symbol     = /\w+/~
+            defsign    = "=" | ":="
+            value      = /\d+/~
+        """
+        parser = grammar_provider(lang)()
+        st = parser("X := 1")
+        print(st.as_sxpr())
+
 
 class TestWhitespaceHandling:
     minilang = """
