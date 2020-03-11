@@ -34,7 +34,8 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
     Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE
 from DHParser import compile_source
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
+    compile_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import grammar_provider
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
@@ -773,6 +774,22 @@ class TestPopRetrieve:
         assert len(delim) == len(pop) and delim != pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
+
+    def test_autoretrieve(self):
+        lang = r"""
+            document   = { definition } § EOF
+            definition = symbol :defsign value
+            symbol     = /\w+/~
+            defsign    = "=" | ":="
+            value      = /\d+/~
+            EOF        = !/./ :?defsign    # eat up captured defsign
+        """
+        code, _, _ = compile_ebnf(lang)
+        print(code)
+        parser = grammar_provider(lang)()
+        print('>>> ', parser["defsign"].parser)
+        # st = parser("X := 1")
+        # print(st.as_sxpr())
 
 
 class TestWhitespaceHandling:

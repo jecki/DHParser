@@ -1272,8 +1272,8 @@ class Grammar:
                 stitches.append(Node(ZOMBIE_TAG, rest))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
         if any(self.variables__.values()):
-            error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
-                + str(self.variables__)
+            error_msg = "Capture-stack not empty after end of parsing: " \
+                + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
             error_code = Error.CAPTURE_STACK_NOT_EMPTY
             if result:
                 if result.children:
@@ -2635,7 +2635,7 @@ def matching_bracket(text: Union[StringView, str], stack: List[str]) -> str:
     return value if text.startswith(value) else None
 
 
-class Retrieve(Parser):
+class Retrieve(UnaryParser):
     """
     Matches if the following text starts with the value of a particular
     variable. As a variable in this context means a stack of values,
@@ -2655,20 +2655,19 @@ class Retrieve(Parser):
     """
 
     def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
-        super(Retrieve, self).__init__()
-        self.symbol = symbol
+        super(Retrieve, self).__init__(symbol)
         self.match = match_func if match_func else last_value
 
     def __deepcopy__(self, memo):
-        symbol = copy.deepcopy(self.symbol, memo)
+        symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.match)
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # auto-capture on first use if symbol was not captured before
-        if len(self.grammar.variables__[self.symbol.pname]) == 0:
-            _ = self.symbol(text)   # auto-capture value
+        if len(self.grammar.variables__[self.parser.pname]) == 0:
+            _ = self.parser(text)   # auto-capture value
         node, text_ = self.retrieve_and_match(text)
         # in case the symbol allows for different values, generate an
         # error, if the wrong value has been used
@@ -2684,7 +2683,7 @@ class Retrieve(Parser):
         return node, text_
 
     def __repr__(self):
-        return ':' + self.symbol.repr
+        return ':' + self.parser.repr
 
     def retrieve_and_match(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """
@@ -2694,19 +2693,19 @@ class Retrieve(Parser):
         accordingly.
         """
         try:
-            stack = self.grammar.variables__[self.symbol.pname]
+            stack = self.grammar.variables__[self.parser.pname]
             value = self.match(text, stack)
         except (KeyError, IndexError):
-            tn = self.tag_name if self.pname else self.symbol.tag_name
+            tn = self.tag_name if self.pname else self.parser.tag_name
             node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
             self.grammar.tree__.new_error(
-                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
+                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.parser.pname))
             return node, text
         if value is None:
             return None, text
         elif self.drop_content:
             return EMPTY_NODE, text[len(value):]
-        tn = self.tag_name if self.pname else self.symbol.tag_name
+        tn = self.tag_name if self.pname else self.parser.tag_name
         return Node(tn, value), text[len(value):]
 
 
@@ -2729,28 +2728,28 @@ class Pop(Retrieve):
         self.values = []
 
     def __deepcopy__(self, memo):
-        symbol = copy.deepcopy(self.symbol, memo)
+        symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.match)
         copy_parser_base_attrs(self, duplicate)
         duplicate.values = self.values[:]
         return duplicate
 
     def _rollback(self):
-        self.grammar.variables__[self.symbol.pname].append(self.values.pop())
+        self.grammar.variables__[self.parser.pname].append(self.values.pop())
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
-            self.values.append(self.grammar.variables__[self.symbol.pname].pop())
+            self.values.append(self.grammar.variables__[self.parser.pname].pop())
             location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
         return node, txt
 
     def __repr__(self):
-        stack = self.grammar.variables__.get(self.symbol.pname, [])
+        stack = self.grammar.variables__.get(self.parser.pname, [])
         content = (' "%s"' % stack[-1]) if stack else ''
         prefix = ':?' if self.match.__name__.startswith('optional_') else '::'
-        return prefix + self.symbol.repr + content
+        return prefix + self.parser.repr + content
 
 
 ########################################################################
