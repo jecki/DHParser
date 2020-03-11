@@ -2328,7 +2328,7 @@ INFINITE = 2**30
 
 
 class Interleave(MandatoryNary):
-    """EXPERIMENTAL!!!"""
+    """Parse elements in arbitrary order."""
 
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
