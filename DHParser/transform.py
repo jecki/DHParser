@@ -1319,6 +1319,7 @@ def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
     remove_children_if(context, partial(is_token, tokens=tokens))
 
 
+# TODO: refactor to "remove_children"!?
 @transformation_factory(collections.abc.Set)
 def remove_nodes(context: List[Node], tag_names: AbstractSet[str]):
     """Removes children by tag name."""
