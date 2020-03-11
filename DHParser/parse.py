@@ -2664,9 +2664,27 @@ class Retrieve(UnaryParser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
+    @property
+    def symbol_pname(self) -> str:
+        """Returns the watched symbol's pname, properly, i.e. even in cases
+        where the symbol's parser is shielded by a Forward-parser"""
+        return self.parser.pname or cast(Forward, self.parser).parser.pname
+
+    def get_tag_name(self) -> str:
+        """Returns a tag name for the retrieved node. If the Retrieve-parser
+        has a tag name, this overrides the tag name of the retrieved symbol's
+        parser."""
+        if self.anonymous or not self.tag_name:
+            if self.parser.pname:
+                return self.parser.tag_name
+            # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
+            return cast(Forward, self.parser).parser.tag_name
+        return self.tag_name
+
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # auto-capture on first use if symbol was not captured before
-        if len(self.grammar.variables__[self.parser.pname]) == 0:
+        # ("or"-clause needed, because Forward parsers do not have a pname)
+        if len(self.grammar.variables__[self.symbol_pname]) == 0:
             _ = self.parser(text)   # auto-capture value
         node, text_ = self.retrieve_and_match(text)
         # in case the symbol allows for different values, generate an
@@ -2692,21 +2710,21 @@ class Retrieve(UnaryParser):
         the following text. Returns a Node containing the value or `None`
         accordingly.
         """
+        # `or self.parser.parser.pname` needed, because Forward-Parsers do not have a pname
         try:
-            stack = self.grammar.variables__[self.parser.pname]
+            stack = self.grammar.variables__[self.symbol_pname]
             value = self.match(text, stack)
         except (KeyError, IndexError):
-            tn = self.tag_name if self.pname else self.parser.tag_name
+            tn = self.get_tag_name()
             node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
             self.grammar.tree__.new_error(
-                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.parser.pname))
+                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname))
             return node, text
         if value is None:
             return None, text
         elif self.drop_content:
             return EMPTY_NODE, text[len(value):]
-        tn = self.tag_name if self.pname else self.parser.tag_name
-        return Node(tn, value), text[len(value):]
+        return Node(self.get_tag_name(), value), text[len(value):]
 
 
 class Pop(Retrieve):
@@ -2735,18 +2753,18 @@ class Pop(Retrieve):
         return duplicate
 
     def _rollback(self):
-        self.grammar.variables__[self.parser.pname].append(self.values.pop())
+        self.grammar.variables__[self.symbol_pname].append(self.values.pop())
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
-            self.values.append(self.grammar.variables__[self.parser.pname].pop())
+            self.values.append(self.grammar.variables__[self.symbol_pname].pop())
             location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
         return node, txt
 
     def __repr__(self):
-        stack = self.grammar.variables__.get(self.parser.pname, [])
+        stack = self.grammar.variables__.get(self.symbol_pname, [])
         content = (' "%s"' % stack[-1]) if stack else ''
         prefix = ':?' if self.match.__name__.startswith('optional_') else '::'
         return prefix + self.parser.repr + content

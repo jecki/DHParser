@@ -779,17 +779,48 @@ class TestPopRetrieve:
         lang = r"""
             document   = { definition } § EOF
             definition = symbol :defsign value
-            symbol     = /\w+/~
+            symbol     = /\w+/~                      
             defsign    = "=" | ":="
             value      = /\d+/~
             EOF        = !/./ :?defsign    # eat up captured defsign
         """
-        code, _, _ = compile_ebnf(lang)
-        print(code)
+        # code, _, _ = compile_ebnf(lang)
+        # print(code)
         parser = grammar_provider(lang)()
-        print('>>> ', parser["defsign"].parser)
-        # st = parser("X := 1")
-        # print(st.as_sxpr())
+        st = parser("X := 1")
+        assert not st.error_flag
+        st1 = st
+
+        lines = [line for line in lang.split('\n') if line.strip()]
+        eof_line = lines.pop()
+        lines.insert(1, eof_line)
+        lang = '\n'.join(lines)
+        parser = grammar_provider(lang)()
+        st = parser("X := 1")
+        assert not st.errors
+        assert st.equals(st1)
+
+        del lines[1]
+        lines.insert(2, eof_line)
+        lang = '\n'.join(lines)
+        parser = grammar_provider(lang)()
+        st = parser("X := 1")
+        assert not st.errors
+        assert st.equals(st1)
+
+        # and, finally...
+        lang_variant = r"""
+            document   = { definition } § EOF
+            symbol     = /\w+/~                      
+            defsign    = "=" | ":="
+            value      = /\d+/~
+            EOF        = !/./ :?defsign    # eat up captured defsign
+            definition = symbol :defsign value
+        """
+        parser = grammar_provider(lang_variant)()
+        st = parser("X := 1")
+        assert not st.errors
+        assert st.equals(st1)
 
 
 class TestWhitespaceHandling:

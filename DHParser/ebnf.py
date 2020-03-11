@@ -1107,9 +1107,13 @@ class EBNFCompiler(Compiler):
         # provide for capturing of symbols that are variables, i.e. the
         # value of which will be retrieved at some point during the parsing process
 
+        # The following is needed for cases, where the first retrival-use of a symbol
+        # follows its definition
+
         if self.variables:
             for i in range(len(definitions)):
-                if definitions[i][0] in self.variables:
+                if definitions[i][0] in self.variables \
+                        and not definitions[i][1].startswith('Capture('):
                     definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
 
         # add special fields for Grammar class
@@ -1365,10 +1369,10 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             defn = self.compile(node.children[1])
-            if rule in self.variables:
-                defn = 'Capture(%s)' % defn
-                self.variables.remove(rule)
-            elif defn.find("(") < 0:
+            # if rule in self.variables:
+            #     defn = 'Capture(%s)' % defn
+                # self.variables.remove(rule)
+            if defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
             # if self.drop_flag:
