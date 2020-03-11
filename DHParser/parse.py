@@ -1272,8 +1272,8 @@ class Grammar:
                 stitches.append(Node(ZOMBIE_TAG, rest))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
         if any(self.variables__.values()):
-            error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
-                + str(self.variables__)
+            error_msg = "Capture-stack not empty after end of parsing: " \
+                + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
             error_code = Error.CAPTURE_STACK_NOT_EMPTY
             if result:
                 if result.children:

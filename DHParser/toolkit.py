@@ -431,7 +431,6 @@ def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
     See http://spec.commonmark.org/0.28/#fenced-code-blocks for more
     information on fenced code blocks in common mark documents.
     """
-
     if is_filename(text_or_file):
         with open(text_or_file, 'r', encoding='utf-8') as f:
             markdown = f.read()
