@@ -831,12 +831,9 @@ class TestPopRetrieve:
             value      = /\d+/~
             EOF        = !/./ :?defsign  # eat up captured defsigns
         """
-        # code, _, _ = compile_ebnf(lang)
-        # print(code)
         parser = grammar_provider(lang)()
         st = parser("")
-        assert not st.error_flag, str(st.errors_sorted)
-
+        assert st.error_flag and any(e.code == Error.UNDEFINED_RETRIEVE for e in st.errors)
 
 
 class TestWhitespaceHandling:

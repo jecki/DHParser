@@ -90,7 +90,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         if self == grammar.start_parser__ and grammar.most_recent_error__:
             fe = grammar.most_recent_error__  # type: ParserError
             lc = line_col(grammar.document_lbreaks__, fe.error.pos)
-            # TODO: get the call stack from when the error occured, here
+            # TODO: get the call stack from when the error occurred, here
             nd = fe.node
             grammar.history__.append(
                 HistoryRecord(grammar.call_stack__, nd, fe.rest[len(nd):], lc, [fe.error]))
@@ -99,7 +99,6 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
-
     if ((grammar.moving_forward__ or (node and not self.anonymous))
             and (self.tag_name != WHITESPACE_PTYPE)):
         # record history

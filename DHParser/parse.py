@@ -2718,7 +2718,8 @@ class Retrieve(UnaryParser):
             tn = self.get_tag_name()
             node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
             self.grammar.tree__.new_error(
-                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname))
+                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
+                Error.UNDEFINED_RETRIEVE)
             return node, text
         if value is None:
             return None, text
@@ -2843,9 +2844,9 @@ class Forward(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
-        # duplicate.pname = self.pname  # Forward-Parsers should never have a name!
+        duplicate.pname = self.pname        # Forward-Parsers should not have a name!
         duplicate.anonymous = self.anonymous
-        duplicate.tag_name = self.tag_name
+        duplicate.tag_name = self.tag_name  # Forward-Parser should not have a tag name!
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.parser = parser
