@@ -782,7 +782,7 @@ class TestPopRetrieve:
             symbol     = /\w+/~                      
             defsign    = "=" | ":="
             value      = /\d+/~
-            EOF        = !/./ :?defsign    # eat up captured defsign
+            EOF        = !/./ :?defsign   # eat up captured defsigns
         """
         # code, _, _ = compile_ebnf(lang)
         # print(code)
@@ -814,13 +814,29 @@ class TestPopRetrieve:
             symbol     = /\w+/~                      
             defsign    = "=" | ":="
             value      = /\d+/~
-            EOF        = !/./ :?defsign    # eat up captured defsign
+            EOF        = !/./ :?defsign   # eat up captured defsign
             definition = symbol :defsign value
         """
         parser = grammar_provider(lang_variant)()
         st = parser("X := 1")
         assert not st.errors
         assert st.equals(st1)
+
+    def test_eat_captured_values(self):
+        lang = r"""
+            document   = { definition } § EOF
+            definition = symbol :defsign value
+            symbol     = /\w+/~                      
+            defsign    = "=" | ":="
+            value      = /\d+/~
+            EOF        = !/./ :?defsign  # eat up captured defsigns
+        """
+        # code, _, _ = compile_ebnf(lang)
+        # print(code)
+        parser = grammar_provider(lang)()
+        st = parser("")
+        assert not st.error_flag, str(st.errors_sorted)
+
 
 
 class TestWhitespaceHandling:
