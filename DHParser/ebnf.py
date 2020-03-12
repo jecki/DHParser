@@ -1112,8 +1112,8 @@ class EBNFCompiler(Compiler):
 
         if self.variables:
             for i in range(len(definitions)):
-                if definitions[i][0] in self.variables \
-                        and not definitions[i][1].startswith('Capture('):
+                if definitions[i][0] in self.variables:  # \
+                        # and not definitions[i][1].startswith('Capture('):
                     definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
 
         # add special fields for Grammar class
