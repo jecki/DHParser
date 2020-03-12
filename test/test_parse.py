@@ -782,7 +782,7 @@ class TestPopRetrieve:
             symbol     = /\w+/~                      
             defsign    = "=" | ":="
             value      = /\d+/~
-            EOF        = !/./ :?defsign   # eat up captured defsigns
+            EOF        = !/./ [:?defsign]   # eat up captured defsigns
         """
         # code, _, _ = compile_ebnf(lang)
         # print(code)
@@ -790,6 +790,8 @@ class TestPopRetrieve:
         st = parser("X := 1")
         assert not st.error_flag
         st1 = st
+        st = parser("")
+        assert not st.error_flag
 
         lines = [line for line in lang.split('\n') if line.strip()]
         eof_line = lines.pop()
@@ -814,26 +816,15 @@ class TestPopRetrieve:
             symbol     = /\w+/~                      
             defsign    = "=" | ":="
             value      = /\d+/~
-            EOF        = !/./ :?defsign   # eat up captured defsign
+            EOF        = !/./ :?defsign   # eat up captured defsign, only if it has been retrieved
             definition = symbol :defsign value
         """
         parser = grammar_provider(lang_variant)()
         st = parser("X := 1")
         assert not st.errors
         assert st.equals(st1)
-
-    def test_eat_captured_values(self):
-        lang = r"""
-            document   = { definition } § EOF
-            definition = symbol :defsign value
-            symbol     = /\w+/~                      
-            defsign    = "=" | ":="
-            value      = /\d+/~
-            EOF        = !/./ :?defsign  # eat up captured defsigns
-        """
-        parser = grammar_provider(lang)()
-        st = parser("")
-        assert st.error_flag and any(e.code == Error.UNDEFINED_RETRIEVE for e in st.errors)
+        st = parser('')
+        assert "EOF expected" in str(st.errors)
 
 
 class TestWhitespaceHandling:

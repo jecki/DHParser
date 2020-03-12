@@ -2608,6 +2608,10 @@ MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
 # and the return value is the matched text (which can be the empty string) or
 # None, if no match occurred
 
+# Match functions, the name of which starts with 'optional_', must never return
+# None, but should return the empty string if no match occurs.
+# Match functions, the name of which does not start with 'optional_', should
+# on the contrary always return `None` if no match occurs!
 
 def last_value(text: Union[StringView, str], stack: List[str]) -> str:
     """Matches `text` with the most recent value on the capture stack.
@@ -2687,17 +2691,6 @@ class Retrieve(UnaryParser):
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
             _ = self.parser(text)   # auto-capture value
         node, text_ = self.retrieve_and_match(text)
-        # in case the symbol allows for different values, generate an
-        # error, if the wrong value has been used
-        # if node is None:
-        #     node, text__ = self.symbol(text)
-        #     if node is not None:
-        #         tn = self.tag_name if self.pname else self.symbol.tag_name
-        #         node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
-        #         self.grammar.tree__.new_error(
-        #             node, 'Inconsistent use of symbol %s: "%s" expected, "%s" found!'
-        #             % (self.symbol.pname, self.grammar.variables__[self.symbol.pname], text__))
-        #         return node, text__
         return node, text_
 
     def __repr__(self):
@@ -2716,11 +2709,15 @@ class Retrieve(UnaryParser):
             value = self.match(text, stack)
         except (KeyError, IndexError):
             tn = self.get_tag_name()
-            node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
-            self.grammar.tree__.new_error(
-                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
-                Error.UNDEFINED_RETRIEVE)
-            return node, text
+            if self.match.__name__.startswith('optional_'):
+                # returns a None match if parser is optional but there was no value to retrieve
+                return None, text
+            else:
+                node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
+                self.grammar.tree__.new_error(
+                    node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
+                    Error.UNDEFINED_RETRIEVE)
+                return node, text
         if value is None:
             return None, text
         elif self.drop_content:
