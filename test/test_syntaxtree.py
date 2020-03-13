@@ -177,6 +177,15 @@ class TestNode:
         nd.result = (Node('A', 'aaa'), Node('B', 'bbb'))
         assert nd.children[0].pos == 0 and nd.children[1].pos == 3
 
+    def test_with_pos(self):
+        nd = Node('A', '123')
+        nd._pos = 0
+        n1 = Node('B', '')
+        n2 = Node('C', '456')
+        root = Node('root', (nd, n1, n2))
+        root.with_pos(0)
+        assert len(root) == root.children[-1].pos + len(root.children[-1])
+
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
         tree.with_pos(0)

@@ -2582,7 +2582,6 @@ class Capture(UnaryParser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
-        assert node != EMPTY_NODE
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
@@ -2689,7 +2688,9 @@ class Retrieve(UnaryParser):
         # auto-capture on first use if symbol was not captured before
         # ("or"-clause needed, because Forward parsers do not have a pname)
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
-            _ = self.parser(text)   # auto-capture value
+            node, text_ = self.parser(text)   # auto-capture value
+            if node is None:
+                return None, text_
         node, text_ = self.retrieve_and_match(text)
         return node, text_
 
@@ -2713,7 +2714,7 @@ class Retrieve(UnaryParser):
                 # returns a None match if parser is optional but there was no value to retrieve
                 return None, text
             else:
-                node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
+                node = Node(tn, '') # .with_pos(self.grammar.document_length__ - text.__len__())
                 self.grammar.tree__.new_error(
                     node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
                     Error.UNDEFINED_RETRIEVE)

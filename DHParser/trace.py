@@ -77,7 +77,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             getattr(mre, 'frozen_callstack', grammar.call_stack__), mre.node, text_, lc, errors))
 
     grammar.call_stack__.append(
-        ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE)
+        ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")
           else (self.pname or self.tag_name)), location))
     grammar.moving_forward__ = True
 

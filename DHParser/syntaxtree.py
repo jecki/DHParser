@@ -414,6 +414,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     child.with_pos(offset)
                 else:
                     offset = child._pos
+                prev = child
 
     @property
     def result(self) -> Union[Tuple['Node', ...], StringView, str]:

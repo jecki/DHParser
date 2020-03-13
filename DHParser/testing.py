@@ -71,7 +71,7 @@ RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
 # RE_VALUE = r'(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
 #            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
 RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
-RX_COMMENT = re.compile(r'\s*#.*\n')
+RX_COMMENT = re.compile(r'\s*[#;].*\n')
 
 
 def unit_from_config(config_str, filename):
