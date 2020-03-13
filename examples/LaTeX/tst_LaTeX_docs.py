@@ -47,7 +47,7 @@ if not DHParser.dsl.recompile_grammar(grammar_path, force=False):
     sys.exit(1)
 
 
-from LaTeXCompiler import get_grammar, get_transformer, get_compiler
+from LaTeXParser import get_grammar, get_transformer, get_compiler
 
 parser = get_grammar()
 transformer = get_transformer()

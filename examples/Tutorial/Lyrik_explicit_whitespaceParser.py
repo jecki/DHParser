@@ -11,8 +11,6 @@ import collections
 from functools import partial
 import os
 import sys
-sys.path.extend([os.path.join('..', '..'), '..', '.'])
-
 
 if r'/home/eckhart/Entwicklung/DHParser' not in sys.path:
     sys.path.append(r'/home/eckhart/Entwicklung/DHParser')
@@ -26,14 +24,14 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, remove_if, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, \
+    keep_children, is_one_of, not_one_of, has_content, apply_if,\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
@@ -48,11 +46,11 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def LyrikPreprocessor(text):
+def Lyrik_explicit_whitespacePreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return LyrikPreprocessor
+    return Lyrik_explicit_whitespacePreprocessor
 
 
 #######################################################################
@@ -61,55 +59,57 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class LyrikGrammar(Grammar):
-    r"""Parser for a Lyrik source file.
+class Lyrik_explicit_whitespaceGrammar(Grammar):
+    r"""Parser for a Lyrik_explicit_whitespace source file.
     """
-    source_hash__ = "67a576722c8248e8f2a88094256d5db2"
+    source_hash__ = "082c362ff149f702e7b1b76032b5febb"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(Whitespace(WSP_RE__))
+    L = Series(RegExp('[ \\t]+'), dwsp__)
     ENDE = NegativeLookahead(RegExp('.'))
-    JAHRESZAHL = Series(RegExp('\\d\\d\\d\\d'), wsp__)
-    LEERZEILE = Series(RegExp('\\n[ \\t]*(?=\\n)'), wsp__)
-    NZ = Series(RegExp('\\n'), wsp__)
-    ZEICHENFOLGE = Series(RegExp('[^ \\n<>]+'), wsp__)
-    NAME = Series(RegExp('\\w+\\.?'), wsp__)
-    WORT = Series(RegExp('\\w+'), wsp__)
-    vers = OneOrMore(ZEICHENFOLGE)
+    JAHRESZAHL = RegExp('\\d\\d\\d\\d')
+    LEERZEILE = Series(RegExp('\\n[ \\t]*(?=\\n)'), dwsp__)
+    NZ = RegExp('\\n')
+    ZEICHENFOLGE = RegExp('[^ \\n<>]+')
+    NAME = RegExp('\\w+\\.?')
+    WORT = RegExp('\\w+')
+    vers = OneOrMore(Series(ZEICHENFOLGE, Option(L)))
     strophe = OneOrMore(Series(NZ, vers))
     text = OneOrMore(Series(strophe, ZeroOrMore(LEERZEILE)))
-    zeile = OneOrMore(ZEICHENFOLGE)
-    titel = Series(OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
+    zeile = OneOrMore(Series(ZEICHENFOLGE, Option(L)))
+    titel = OneOrMore(Series(NZ, Option(L), zeile, OneOrMore(LEERZEILE)))
     serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
-    ziel = Synonym(ZEICHENFOLGE)
-    verknüpfung = Series(Series(Token("<"), wsp__), ziel, Series(Token(">"), wsp__))
-    namenfolge = OneOrMore(NAME)
-    wortfolge = OneOrMore(WORT)
-    jahr = Synonym(JAHRESZAHL)
+    ziel = Series(ZEICHENFOLGE, dwsp__)
+    verknüpfung = Series(Series(Drop(Token("<")), dwsp__), ziel, Series(Drop(Token(">")), dwsp__))
+    namenfolge = OneOrMore(Series(NAME, Option(L)))
+    wortfolge = OneOrMore(Series(WORT, Option(L)))
+    jahr = Series(JAHRESZAHL, dwsp__)
     ort = Series(wortfolge, Option(verknüpfung))
     untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Series(Token("."), wsp__), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Series(Drop(Token(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(Token(","), wsp__), Option(NZ), werk, Series(Token(","), wsp__), Option(NZ), ort, Series(Token(","), wsp__), Option(NZ), jahr, Series(Token("."), wsp__), mandatory=1)
+    bibliographisches = Series(autor, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), werk, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), ort, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), jahr, Series(Drop(Token(".")), dwsp__), mandatory=1)
     gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
     root__ = gedicht
     
-def get_grammar() -> LyrikGrammar:
-    """Returns a thread/process-exclusive LyrikGrammar-singleton."""
+
+def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
+    """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_00000001_grammar_singleton = LyrikGrammar()
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.Lyrik_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
+            THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -123,8 +123,8 @@ def get_grammar() -> LyrikGrammar:
 #
 #######################################################################
 
-Lyrik_AST_transformation_table = {
-    # AST Transformations for the Lyrik-grammar
+Lyrik_explicit_whitespace_AST_transformation_table = {
+    # AST Transformations for the Lyrik_explicit_whitespace-grammar
     "<": flatten,
     "gedicht": [],
     "bibliographisches": [],
@@ -150,23 +150,24 @@ Lyrik_AST_transformation_table = {
     "LEERZEILE": [],
     "JAHRESZAHL": [],
     "ENDE": [],
+    "L": [],
     "*": replace_by_single_child
 }
 
 
-def CreateLyrikTransformer() -> TransformationFunc:
+def CreateLyrik_explicit_whitespaceTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=Lyrik_AST_transformation_table.copy())
+    return partial(traverse, processing_table=Lyrik_explicit_whitespace_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.Lyrik_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_00000001_transformer_singleton = CreateLyrikTransformer()
-        transformer = THREAD_LOCALS.Lyrik_00000001_transformer_singleton
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton = CreateLyrik_explicit_whitespaceTransformer()
+        transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
     return transformer
 
 
@@ -176,12 +177,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class LyrikCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a Lyrik source file.
+class Lyrik_explicit_whitespaceCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a Lyrik_explicit_whitespace source file.
     """
 
     def __init__(self):
-        super(LyrikCompiler, self).__init__()
+        super(Lyrik_explicit_whitespaceCompiler, self).__init__()
 
     def reset(self):
         super().reset()
@@ -259,15 +260,18 @@ class LyrikCompiler(Compiler):
     # def on_ENDE(self, node):
     #     return node
 
+    # def on_L(self, node):
+    #     return node
 
-def get_compiler() -> LyrikCompiler:
-    """Returns a thread/process-exclusive LyrikCompiler-singleton."""
+
+def get_compiler() -> Lyrik_explicit_whitespaceCompiler:
+    """Returns a thread/process-exclusive Lyrik_explicit_whitespaceCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.Lyrik_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_00000001_compiler_singleton = LyrikCompiler()
-        compiler = THREAD_LOCALS.Lyrik_00000001_compiler_singleton
+        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton = Lyrik_explicit_whitespaceCompiler()
+        compiler = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
     return compiler
 
 
@@ -287,7 +291,7 @@ def compile_src(source):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     parser_update = False
 
     def notify():
@@ -297,7 +301,7 @@ if __name__ == "__main__":
 
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False, notify=notify):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -325,4 +329,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: LyrikCompiler.py [FILENAME]")
+        print("Usage: Lyrik_explicit_whitespaceParser.py [FILENAME]")

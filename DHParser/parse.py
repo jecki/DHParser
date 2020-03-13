@@ -33,7 +33,7 @@ for an example.
 from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, Dict, \
-    DefaultDict, Union, Optional, Any
+    DefaultDict, Sequence, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error
@@ -63,7 +63,7 @@ __all__ = ('ParserError',
            'Whitespace',
            'DropRegExp',
            'mixin_comment',
-           'mixin_noempty',
+           'mixin_nonempty',
            'MetaParser',
            'UnaryParser',
            'NaryParser',
@@ -72,20 +72,23 @@ __all__ = ('ParserError',
            'Option',
            'ZeroOrMore',
            'OneOrMore',
+           'NO_MANDATORY',
            'MandatoryNary',
            'Series',
            'Alternative',
            'AllOf',
            'SomeOf',
            'Unordered',
+           'INFINITE',
+           'Interleave',
            'Required',
            'Lookahead',
            'NegativeLookahead',
            'Lookbehind',
            'NegativeLookbehind',
            'last_value',
-           'counterpart',
-           'accumulate',
+           'optional_last_value',
+           'matching_bracket',
            'Capture',
            'Retrieve',
            'Pop',
@@ -318,14 +321,14 @@ class Parser:
         self.reset()
 
     def __deepcopy__(self, memo):
-        """        Deepcopy method of the parser. Upon instantiation of a Grammar-
+        """Deepcopy method of the parser. Upon instantiation of a Grammar-
         object, parsers will be deep-copied to the Grammar object. If a
         derived parser-class changes the signature of the `__init__`-constructor,
         `__deepcopy__`-method must be replaced (i.e. overridden without
         calling the same method from the superclass) by the derived class.
         """
         duplicate = self.__class__()
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def __repr__(self):
@@ -374,7 +377,7 @@ class Parser:
         try:
             # rollback variable changing operation if parser backtracks
             # to a position before the variable changing operation occurred
-            if grammar.last_rb__loc__ >= location:
+            if grammar.last_rb__loc__ > location:
                 grammar.rollback_to__(location)
 
             # if location has already been visited by the current parser, return saved result
@@ -406,7 +409,7 @@ class Parser:
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:  i = 0
                     try:
-                        zombie = pe.node[ZOMBIE_TAG]  # type: Optional[Node]
+                        zombie = pe.node.pick_child(ZOMBIE_TAG)  # type: Optional[Node]
                     except (KeyError, ValueError):
                         zombie = None
                     if zombie and not zombie.result:
@@ -487,13 +490,26 @@ class Parser:
     def __add__(self, other: 'Parser') -> 'Series':
         """The + operator generates a series-parser that applies two
         parsers in sequence."""
+        if isinstance(other, Series):
+            return cast('Series', other).__radd__(self)
         return Series(self, other)
 
     def __or__(self, other: 'Parser') -> 'Alternative':
         """The | operator generates an alternative parser that applies
         the first parser and, if that does not match, the second parser.
         """
+        if isinstance(other, Alternative):
+            return cast('Alternative', other).__ror__(self)
         return Alternative(self, other)
+
+    def __mul__(self, other: 'Parser') -> 'Alternative':
+        """The * operator generates an interleave parser that applies
+        the first parser and the second parser in any possible order
+        until both match.
+        """
+        if isinstance(other, Interleave):
+            return cast(Interleave, other).__rmul__(self)
+        return Interleave(self, other)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """Applies the parser to the given `text` and returns a node with
@@ -602,8 +618,8 @@ class Parser:
             self._apply(func, positive_flip)
 
 
-def copy_parser_attrs(src: Parser, duplicate: Parser):
-    """Duplicates all parser attributes from source to dest."""
+def copy_parser_base_attrs(src: Parser, duplicate: Parser):
+    """Duplicates all attributes of the Parser-class from source to dest."""
     duplicate.pname = src.pname
     duplicate.anonymous = src.anonymous
     duplicate.drop_content = src.drop_content
@@ -648,13 +664,13 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     return whitespace
 
 
-def mixin_noempty(whitespace: str) -> str:
+def mixin_nonempty(whitespace: str) -> str:
     r"""
     Returns a regular expression pattern that matches only if the regular
     expression pattern `whitespace` matches AND if the match is not empty.
 
-    If `whitespace` already matches the empty string '', then it will be
-    returned unaltered.
+    If `whitespace`  does not match the empty string '', anyway,
+    then it will be returned unaltered.
 
     WARNING: `non_empty_ws` does not work regular expressions the matched
     strings of which can be followed by a symbol that can also occur at
@@ -1045,6 +1061,8 @@ class Grammar:
             except (NameError, AttributeError):
                 pass  # don't fail the initialization of PLACEHOLDER
 
+    def __str__(self):
+        return self.__class__.__name__
 
     def __getitem__(self, key):
         try:
@@ -1058,7 +1076,6 @@ class Grammar:
                 assert self[key] == parser
                 return self[key]
             raise UnknownParserError('Unknown parser "%s" !' % key)
-
 
     def __contains__(self, key):
         return key in self.__dict__ or hasattr(self, key)
@@ -1255,8 +1272,8 @@ class Grammar:
                 stitches.append(Node(ZOMBIE_TAG, rest))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
         if any(self.variables__.values()):
-            error_msg = "Capture-retrieve-stack not empty after end of parsing: " \
-                + str(self.variables__)
+            error_msg = "Capture-stack not empty after end of parsing: " \
+                + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
             error_code = Error.CAPTURE_STACK_NOT_EMPTY
             if result:
                 if result.children:
@@ -1285,11 +1302,13 @@ class Grammar:
         self.rollback__.append((location, func))
         self.last_rb__loc__ = location
 
+
     @property
     def document_lbreaks__(self) -> List[int]:
         if not self._document_lbreaks__:
             self._document_lbreaks__ = linebreaks(self.document__)
         return self._document_lbreaks__
+
 
     def rollback_to__(self, location):
         """
@@ -1316,9 +1335,25 @@ class Grammar:
         return line_col(self.document_lbreaks__, self.document_length__ - len(text))
 
 
+    def as_ebnf(self) -> str:
+        """
+        Serializes the Grammar object as a grammar-description in the
+        Extended Backus-Naur-Form. Does not serialize directives and
+        may contain abbreviations with three dots " ... " for very long
+        expressions.
+        """
+        ebnf = ['# This grammar does not include any of the DHParser-specific ',
+                '# directives and may contain abbreviations ("...")!', '']
+        for entry, parser in self.__dict__.items():
+            if isinstance(parser, Parser) and sane_parser_name(entry):
+                ebnf.append(str(parser))
+        ebnf.append('')
+        return '\n'.join(ebnf)
+
+
     def static_analysis(self) -> List[GrammarErrorType]:
         """
-        EXPERIMENTAL
+        EXPERIMENTAL!!!
 
         Checks the parser tree statically for possible errors. At the moment,
         no checks are implemented
@@ -1446,7 +1481,7 @@ class Token(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.text)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1459,7 +1494,8 @@ class Token(Parser):
         return None, text
 
     def __repr__(self):
-        return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
+        return '`%s`' % abbreviate_middle(self.text, 80)
+        # return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
 
 
 class RegExp(Parser):
@@ -1493,7 +1529,7 @@ class RegExp(Parser):
         except TypeError:
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1509,7 +1545,17 @@ class RegExp(Parser):
         return None, text
 
     def __repr__(self):
-        return escape_control_characters('/%s/' % abbreviate_middle(self.regexp.pattern, 120))
+        pattern = self.regexp.pattern
+        try:
+            if pattern == self._grammar.WSP_RE__:
+                return '~'
+            elif pattern == self._grammar.COMMENT__:
+                return 'comment__'
+            elif pattern == self._grammar.WHITESPACE__:
+                return 'whitespace__'
+        except (AttributeError, NameError):
+            pass
+        return '/' + escape_control_characters('%s' % abbreviate_middle(pattern, 118)) + '/'
 
 
 def DropToken(text: str) -> Token:
@@ -1660,7 +1706,7 @@ class UnaryParser(MetaParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -1681,13 +1727,13 @@ class NaryParser(MetaParser):
 
     def __init__(self, *parsers: Parser) -> None:
         super(NaryParser, self).__init__()
-        assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
+        # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
-        copy_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -1794,7 +1840,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "{/\\w+,?/ ~}+ \'.\' ~" did not match! >>> '
+        ' <<< Error on "." | Parser "{/\\w+,?/ ~}+ `.` ~" did not match! >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node(':EMPTY', '')
@@ -1838,7 +1884,7 @@ class OneOrMore(UnaryParser):
 
 
 MessagesType = List[Tuple[Union[str, Any], str]]
-NO_MANDATORY = 1000
+NO_MANDATORY = 2**30
 
 
 class MandatoryNary(NaryParser):
@@ -1848,7 +1894,9 @@ class MandatoryNary(NaryParser):
                 and all following elements are considered "mandatory". This
                 means that rather than returning a non-match an error message
                 is issued. The default value is NO_MANDATORY, which means that
-                no elements are mandatory.
+                no elements are mandatory. NOTE: The semantics of the mandatory-
+                parameter might change depending on the sub-class implementing
+                it.
         err_msgs:  A list of pairs of regular expressions (or simple
                 strings for that matter) and error messages that are chosen
                 if the regular expression matches the text where the error
@@ -1882,6 +1930,13 @@ class MandatoryNary(NaryParser):
         self.err_msgs = err_msgs    # type: MessagesType
         self.skip = skip            # type: ResumeList
 
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
+                                   err_msgs=self.err_msgs, skip=self.skip)
+        copy_parser_base_attrs(self, duplicate)
+        return duplicate
+
     def get_reentry_point(self, text_: StringView) -> int:
         """Returns a reentry-point determined by the skip-list in `self.skip`.
         If no reentry-point was found or the skip-list ist empty, -1 is returned.
@@ -1898,7 +1953,7 @@ class MandatoryNary(NaryParser):
                             expected: str,
                             reloc: int) -> Tuple[Error, Node, StringView]:
         """
-        Choses the right error message in case of a mandatory violation and
+        Chooses the right error message in case of a mandatory violation and
         returns an error with this message, an error node, to which the error
         is attached, and the text segment where parsing is to continue.
 
@@ -1971,13 +2026,6 @@ class Series(MandatoryNary):
     EBNF-Example:  ``series = letter letter_or_digit``
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
-
-    def __deepcopy__(self, memo):
-        parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   err_msgs=self.err_msgs, skip=self.skip)
-        copy_parser_attrs(self, duplicate)
-        return duplicate
 
     @cython.locals(pos=cython.int, reloc=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2080,11 +2128,12 @@ class Alternative(NaryParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        super(Alternative, self).__init__(*parsers)
-        assert len(self.parsers) >= 1
+        assert len(parsers) >= 1
+        assert len(set(parsers)) == len(parsers)
         # only the last alternative may be optional. Could this be checked at compile time?
-        assert all(not isinstance(p, Option) for p in self.parsers[:-1]), \
+        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
             "Parser-specification Error: only the last alternative may be optional!"
+        super(Alternative, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         for parser in self.parsers:
@@ -2097,6 +2146,8 @@ class Alternative(NaryParser):
         return None, text
 
     def __repr__(self):
+        if self.pname:
+            return ' | '.join(parser.repr for parser in self.parsers)
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
     def reset(self):
@@ -2126,6 +2177,8 @@ class Alternative(NaryParser):
 
 class AllOf(MandatoryNary):
     """
+    DEPRECATED, will be removed soon, use Interleave instead!!!
+
     Matches if all elements of a list of parsers match. Each parser must
     match exactly once. Other than in a sequence, the order in which
     the parsers match is arbitrary, however.
@@ -2138,6 +2191,15 @@ class AllOf(MandatoryNary):
         >>> Grammar(prefixes)('B A').content
         'B A'
 
+    Note: The semantics of the mandatory-parameter differs for `AllOf` from
+    that of `Series`: Rather than the position of the sub-parser starting
+    from which all following parsers cause the Series-parser to raise an
+    Error instead of returning a non-match, an error is raised if and only
+    if the parsers up to (but not including the one at) the mandatory-position
+    have already been exhausted, i.e. have already captured content for the
+    AllOf-parser. Otherwise no error is raised, but just a non-match is
+    returned.
+
     EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
 
     EBNF-Example:  ``set = <letter letter_or_digit>``
@@ -2147,36 +2209,14 @@ class AllOf(MandatoryNary):
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
                  skip: ResumeList = []) -> None:
-        if len(parsers) == 1:
-            assert isinstance(parsers[0], Series), \
-                "AllOf should be initialized either with a series or with more than one parser!"
-            series = cast(Series, parsers[0])  # type: Series
-            if mandatory == NO_MANDATORY:
-                mandatory = series.mandatory
-            if not err_msgs:
-                err_msgs = series.err_msgs
-            if not skip:
-                skip = series.skip
-
-            assert series.mandatory == NO_MANDATORY or mandatory == series.mandatory, \
-                "If AllOf is initialized with a series, parameter 'mandatory' must be the same!"
-            assert not series.err_msgs or err_msgs == series.err_msgs, \
-                "If AllOf is initialized with a series, 'err_msg' must empty or the same!"
-            assert not series.skip or skip == series.skip, \
-                "If AllOf is initialized with a series, 'skip' must empty or the same!"
-
-            parsers = series.parsers
-
+        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
+            "Only the last parser from unordered sequence may be optional!"
+        if len(parsers) == 1 and isinstance(parsers[0], Series):
+            parsers = parsers[0].parsers
+            if self.mandatory == NO_MANDATORY:
+                self.mandatory = parsers[0].mandatory
+        assert len(parsers) > 1, "AllOf requires at least two sub-parsers."
         super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
-        self.num_parsers = len(self.parsers)  # type: int
-
-    def __deepcopy__(self, memo):
-        parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   err_msgs=self.err_msgs, skip=self.skip)
-        duplicate.pname = self.pname
-        copy_parser_attrs(self, duplicate)
-        return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -2194,17 +2234,15 @@ class AllOf(MandatoryNary):
                     del parsers[i]
                     break
             else:
-                if self.num_parsers - len(parsers) < self.mandatory:
-                    return None, text
-                else:
-                    reloc = self.get_reentry_point(text_)
-                    expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
-                    lookahead = any([isinstance(p, Lookahead) for p in parsers])
-                    error, err_node, text_ = self.mandatory_violation(
-                        text_, lookahead, expected, reloc)
-                    results += (err_node,)
-                    if reloc < 0:
-                        parsers = []
+                for i, p in enumerate(self.parsers):
+                    if p in parsers and i < self.mandatory:
+                        return None, text
+                reloc = self.get_reentry_point(text_)
+                expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
+                error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
+                results += (err_node,)
+                if reloc < 0:
+                    parsers = []
         assert len(results) <= len(self.parsers) \
             or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         nd = self._return_values(results)  # type: Node
@@ -2219,9 +2257,10 @@ class AllOf(MandatoryNary):
 
 class SomeOf(NaryParser):
     """
+    DEPRECATED, will be removed soon, use Interleave instead!!!
+
     Matches if at least one element of a list of parsers match. No parser
-    must match more than once . Other than in a sequence, the order in which
-    the parsers match is arbitrary, however.
+    can match more than once.
 
     Example::
 
@@ -2239,12 +2278,11 @@ class SomeOf(NaryParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        if len(parsers) == 1:
-            assert isinstance(parsers[0], Alternative), \
-                "Parser-specification Error: No single arguments other than a Alternative " \
-                "allowed as arguments for SomeOf-Parser !"
-            alternative = cast(Alternative, parsers[0])
-            parsers = alternative.parsers
+        if len(parsers) == 1 and isinstance(parsers[0], Alternative):
+            parsers = parsers[0].parsers
+        assert len(parsers) > 1, "SomeOf requires at least two sub-parsers."
+        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
+            "Only the last parser from unordered alternative may be optional!"
         super(SomeOf, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2284,6 +2322,123 @@ def Unordered(parser: NaryParser) -> NaryParser:
         return SomeOf(parser)
     else:
         raise AssertionError("Unordered can take only Series or Alternative as parser.")
+
+
+INFINITE = 2**30
+
+
+class Interleave(MandatoryNary):
+    """Parse elements in arbitrary order."""
+
+    def __init__(self, *parsers: Parser,
+                 mandatory: int = NO_MANDATORY,
+                 err_msgs: MessagesType = [],
+                 skip: ResumeList = [],
+                 repetitions: Sequence[Tuple[int, int]] = ()) -> None:
+        assert len(set(parsers)) == len(parsers)
+        assert all(not isinstance(parser, Option)
+                   and not isinstance(parser, FlowParser) for parser in parsers)
+        super(Interleave, self).__init__(
+            *parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
+        if len(repetitions) == 0:
+            repetitions = [(1, 1)] * len(parsers)
+        elif len(parsers) != len(repetitions):
+            raise ValueError("Number of repetition-tuples unequal number of sub-parsers!")
+        self.repetitions = repetitions
+        self.non_mandatory = frozenset(parsers[i] for i in range(min(mandatory, len(parsers))))
+        self.parsers_set = frozenset(self.parsers)
+
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
+                                   err_msgs=self.err_msgs, skip=self.skip,
+                                   repetitions=self.repetitions)
+        copy_parser_base_attrs(self, duplicate)
+        return duplicate
+
+    def _parse(self, text: StringView) :
+        results = ()  # type: Tuple[Node, ...]
+        text_ = text  # type: StringView
+        counter = [0] * len(self.parsers)
+        consumed = set()  # type: Set[Parser]
+        error = None  # type: Optional[Error]
+        while True:
+            # there is an order of testing, but no promise about the order of testing, here!
+            for i, parser in enumerate(self.parsers):
+                if parser not in consumed:
+                    node, text__ = parser(text_)
+                    if node is not None:
+                        if node._result or not node.tag_name.startswith(':'):
+                            # drop anonymous empty nodes
+                            results += (node,)
+                            text_ = text__
+                        counter[i] += 1
+                        if counter[i] >= self.repetitions[i][1]:
+                            consumed.add(parser)
+                        break
+            else:
+                for i, parser in enumerate(self.parsers):
+                    if counter[i] >= self.repetitions[i][0]:
+                        consumed.add(parser)
+                if self.non_mandatory <= consumed:
+                    if consumed == self.parsers_set:
+                        break
+                else:
+                    return None, text
+                reloc = self.get_reentry_point(text_)
+                expected = ' ° '.join([parser.repr for parser in self.parsers])
+                error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
+                results += (err_node,)
+                if reloc < 0:
+                    break
+        nd = self._return_values(results)  # type: Node
+        if error and reloc < 0:
+            raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
+                              text, error, first_throw=True)
+        return nd, text_
+
+    def __repr__(self):
+        return ' ° '.join(parser.repr for parser in self.parsers)
+
+    def _prepare_combined(self, other: Parser) -> Tuple[Tuple[Parser], int, List[Tuple[int, int]]]:
+        """Returns the other's parsers and repetitions if `other` is an Interleave-parser,
+        otherwise returns ((other,),), [(1, 1])."""
+        other_parsers = cast('Interleave', other).parsers if isinstance(other, Interleave) \
+            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+        other_repetitions = cast('Interleave', other).repetitions \
+            if isinstance(other, Interleave) else [(1, 1),]
+        other_mandatory = cast('Interleave', other).mandatory \
+            if isinstance(other, Interleave) else NO_MANDATORY
+        if other_mandatory == NO_MANDATORY:
+            mandatory = self.mandatory
+            parsers = self.parsers + other_parsers
+            repetitions = self.repetitions + other_repetitions
+        elif self.mandatory == NO_MANDATORY:
+            mandatory = other_mandatory
+            parsers = other_parsers + self.parsers
+            repetitions = other_repetitions + self.repetitions
+        else:
+            mandatory = self.mandatory + other_mandatory
+            parsers = self.parsers[:self.mandatory] + other_parsers[:other_mandatory] \
+                + self.parsers[self.mandatory:] + other_parsers[other_mandatory:]
+            repetitions = self.repetitions[:self.mandatory] + other_repetitions[:other_mandatory] \
+                + self.repetitions[self.mandatory:] + other_repetitions[other_mandatory:]
+        return parsers, mandatory, repetitions
+
+    def __mul__(self, other: Parser) -> 'Interleave':
+        parsers, mandatory, repetitions = self._prepare_combined(other)
+        return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
+
+    def __rmul__(self, other: Parser) -> 'Interleave':
+        parsers, mandatory, repetitions = self._prepare_combined(other)
+        return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
+
+    def __imul__(self, other: Parser) -> 'Interleave':
+        parsers, mandatory, repetitions = self._prepare_combined(other)
+        self.parsers = parsers
+        self.mandatory = mandatory
+        self.repetitions = repetitions
+        return self
 
 
 ########################################################################
@@ -2427,6 +2582,7 @@ class Capture(UnaryParser):
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text_ = self.parser(text)
+        assert node != EMPTY_NODE
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
@@ -2445,29 +2601,45 @@ class Capture(UnaryParser):
         return self.parser.repr
 
 
-RetrieveFilter = Callable[[List[str]], str]
+MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
+# (text, stack) -> value, where:
+# text is the following text for be parsed
+# stack is a stack of stored variables (for a particular symbol)
+# and the return value is the matched text (which can be the empty string) or
+# None, if no match occurred
+
+# Match functions, the name of which starts with 'optional_', must never return
+# None, but should return the empty string if no match occurs.
+# Match functions, the name of which does not start with 'optional_', should
+# on the contrary always return `None` if no match occurs!
+
+def last_value(text: Union[StringView, str], stack: List[str]) -> str:
+    """Matches `text` with the most recent value on the capture stack.
+    This is the default case when retrieving captured substrings."""
+    value = stack[-1]
+    return value if text.startswith(value) else None
 
 
-def last_value(stack: List[str]) -> str:
-    """Returns the last value on the cpature stack. This is the default case
-    when retrieving cpatured substrings."""
-    return stack[-1]
+def optional_last_value(text: Union[StringView, str], stack: List[str]) -> str:
+    """Matches `text` with the most recent value on the capture stack or
+    with the empty string, i.e. `optional_match` never returns `None` but
+    either the value on the stack or the empty string.
+    Use case: Implement shorthand notation for matching tags, i.e.:
+        Good Morning, Mrs. <emph>Smith</>!
+    """
+    value = stack[-1]
+    return value if text.startswith(value) else ""
 
 
-def counterpart(stack: List[str]) -> str:
+def matching_bracket(text: Union[StringView, str], stack: List[str]) -> str:
     """Returns a closing bracket for the opening bracket on the capture stack,
     i.e. if "[" was captured, "]" will be retrieved."""
     value = stack[-1]
-    return value.replace("(", ")").replace("[", "]").replace("{", "}").replace("<", ">")
+    value = value.replace("(", ")").replace("[", "]").replace("{", "}").replace("<", ">")
+    return value if text.startswith(value) else None
 
 
-def accumulate(stack: List[str]) -> str:
-    """Returns an accumulation of all values on the stack.
-    By the way: I cannot remember any reasonable use case for this!?"""
-    return "".join(stack) if len(stack) > 1 else stack[-1]  # provoke IndexError if stack empty
-
-
-class Retrieve(Parser):
+class Retrieve(UnaryParser):
     """
     Matches if the following text starts with the value of a particular
     variable. As a variable in this context means a stack of values,
@@ -2480,51 +2652,77 @@ class Retrieve(Parser):
     Attributes:
         symbol: The parser that has stored the value to be retrieved, in
             other words: "the observed parser"
-        rfilter: a procedure that through which the processing to the
+        match_func: a procedure that through which the processing to the
             retrieved symbols is channeled. In the simplest case it merely
             returns the last string stored by the observed parser. This can
             be (mis-)used to execute any kind of semantic action.
     """
 
-    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
-        super(Retrieve, self).__init__()
-        self.symbol = symbol
-        self.filter = rfilter if rfilter else last_value
+    def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
+        super(Retrieve, self).__init__(symbol)
+        self.match = match_func if match_func else last_value
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.symbol, self.filter)
-        copy_parser_attrs(self, duplicate)
+        symbol = copy.deepcopy(self.parser, memo)
+        duplicate = self.__class__(symbol, self.match)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
+    @property
+    def symbol_pname(self) -> str:
+        """Returns the watched symbol's pname, properly, i.e. even in cases
+        where the symbol's parser is shielded by a Forward-parser"""
+        return self.parser.pname or cast(Forward, self.parser).parser.pname
+
+    def get_tag_name(self) -> str:
+        """Returns a tag name for the retrieved node. If the Retrieve-parser
+        has a tag name, this overrides the tag name of the retrieved symbol's
+        parser."""
+        if self.anonymous or not self.tag_name:
+            if self.parser.pname:
+                return self.parser.tag_name
+            # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
+            return cast(Forward, self.parser).parser.tag_name
+        return self.tag_name
+
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        # the following indirection allows the call() method to be called
-        # from subclass without triggering the parser guard a second time
-        return self.retrieve_and_match(text)
+        # auto-capture on first use if symbol was not captured before
+        # ("or"-clause needed, because Forward parsers do not have a pname)
+        if len(self.grammar.variables__[self.symbol_pname]) == 0:
+            _ = self.parser(text)   # auto-capture value
+        node, text_ = self.retrieve_and_match(text)
+        return node, text_
 
     def __repr__(self):
-        return ':' + self.symbol.repr
+        return ':' + self.parser.repr
 
     def retrieve_and_match(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """
-        Retrieves variable from stack through the filter function passed to
+        Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
         the following text. Returns a Node containing the value or `None`
         accordingly.
         """
+        # `or self.parser.parser.pname` needed, because Forward-Parsers do not have a pname
         try:
-            stack = self.grammar.variables__[self.symbol.pname]
-            value = self.filter(stack)
+            stack = self.grammar.variables__[self.symbol_pname]
+            value = self.match(text, stack)
         except (KeyError, IndexError):
-            node = Node(self.tag_name, '').with_pos(self.grammar.document_length__ - text.__len__())
-            self.grammar.tree__.new_error(
-                node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol.pname))
-            return node, text
-        if text.startswith(value):
-            if self.drop_content:
-                return EMPTY_NODE, text[len(value):]
-            return Node(self.tag_name, value), text[len(value):]
-        else:
+            tn = self.get_tag_name()
+            if self.match.__name__.startswith('optional_'):
+                # returns a None match if parser is optional but there was no value to retrieve
+                return None, text
+            else:
+                node = Node(tn, '').with_pos(self.grammar.document_length__ - text.__len__())
+                self.grammar.tree__.new_error(
+                    node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
+                    Error.UNDEFINED_RETRIEVE)
+                return node, text
+        if value is None:
             return None, text
+        elif self.drop_content:
+            return EMPTY_NODE, text[len(value):]
+        return Node(self.get_tag_name(), value), text[len(value):]
 
 
 class Pop(Retrieve):
@@ -2538,32 +2736,36 @@ class Pop(Retrieve):
     The constructor parameter `symbol` determines which variable is
     used.
     """
-    def __init__(self, symbol: Parser, rfilter: RetrieveFilter = None) -> None:
-        super(Pop, self).__init__(symbol, rfilter)
+    def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
+        super(Pop, self).__init__(symbol, match_func)
 
     def reset(self):
         super(Pop, self).reset()
         self.values = []
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.symbol, self.filter)
-        copy_parser_attrs(self, duplicate)
+        symbol = copy.deepcopy(self.parser, memo)
+        duplicate = self.__class__(symbol, self.match)
+        copy_parser_base_attrs(self, duplicate)
         duplicate.values = self.values[:]
         return duplicate
 
     def _rollback(self):
-        return self.grammar.variables__[self.symbol.pname].append(self.values.pop())
+        self.grammar.variables__[self.symbol_pname].append(self.values.pop())
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, txt = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
-            self.values.append(self.grammar.variables__[self.symbol.pname].pop())
+            self.values.append(self.grammar.variables__[self.symbol_pname].pop())
             location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
         return node, txt
 
     def __repr__(self):
-        return '::' + self.symbol.repr
+        stack = self.grammar.variables__.get(self.symbol_pname, [])
+        content = (' "%s"' % stack[-1]) if stack else ''
+        prefix = ':?' if self.match.__name__.startswith('optional_') else '::'
+        return prefix + self.parser.repr + content
 
 
 ########################################################################
@@ -2639,9 +2841,9 @@ class Forward(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
-        # duplicate.pname = self.pname  # Forward-Parsers should never have a name!
+        duplicate.pname = self.pname        # Forward-Parsers should not have a name!
         duplicate.anonymous = self.anonymous
-        duplicate.tag_name = self.tag_name
+        duplicate.tag_name = self.tag_name  # Forward-Parser should not have a tag name!
         memo[id(self)] = duplicate
         parser = copy.deepcopy(self.parser, memo)
         duplicate.parser = parser

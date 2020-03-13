@@ -24,7 +24,7 @@ from DHParser import is_filename, load_if_file, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    last_value, counterpart, accumulate, PreprocessorFunc, \
+    last_value, matching_bracket, PreprocessorFunc, \
     Node, TransformationDict, Whitespace, \
     traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
@@ -223,4 +223,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: BibTeXCompiler.py [FILENAME]")
+        print("Usage: BibTeXParser.py [FILENAME]")

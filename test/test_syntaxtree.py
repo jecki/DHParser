@@ -226,12 +226,12 @@ class TestNode:
     def test_select_context(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
         contexts = []
-        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+        for ctx in tree.select_context_if(lambda ctx: ctx[-1].tag_name >= 'd',
                                           include_root=True, reverse=False):
             contexts.append(''.join(nd.tag_name for nd in ctx))
         assert contexts == ['ad', 'af', 'afg']
         contexts = []
-        for ctx in tree.select_context_if(lambda nd: nd.tag_name >= 'd',
+        for ctx in tree.select_context_if(lambda ctx: ctx[-1].tag_name >= 'd',
                                           include_root=True, reverse=True):
             contexts.append(''.join(nd.tag_name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
@@ -249,7 +249,7 @@ class TestNode:
         tree = parse_sxpr('(A (B 1) (C 1) (B 2))')
         assert 'B' in tree
         assert 'X' not in tree
-        assert tree['B'].equals(Node('B', '1'))
+        assert tree.pick_child('B').equals(Node('B', '1'))
         item_w_value_2 = lambda nd: nd.content == '2'
         assert item_w_value_2 in tree
         item_w_value_4 = lambda nd: nd.content == '4'
@@ -534,7 +534,7 @@ class TestSerialization:
         all_tags = {'XML', 'T', 'L'}
         assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == "Hallo Welt!"
         # tags with attributes will never be ommitted
-        tree['T'].attr['class'] = "kursiv"
+        tree.pick_child('T').attr['class'] = "kursiv"
         assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == \
                '<T class="kursiv">Hallo</T> Welt!'
 

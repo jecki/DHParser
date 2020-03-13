@@ -20,22 +20,26 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import start_logging, is_filename, load_if_file, Grammar, Compiler, nil_preprocessor, \
-    PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, Unordered, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
+    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
-    collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, \
+    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \
+    TOKEN_PTYPE, remove_nodes, remove_content, remove_brackets, change_tag_name, \
+    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, access_thread_locals, get_config_value
+    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
+    trace_history, has_descendant, neg, has_parent
 
 
 #######################################################################
@@ -66,7 +70,6 @@ class XMLSnippetGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'//'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -125,6 +128,7 @@ class XMLSnippetGrammar(Grammar):
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
+
 def get_grammar() -> XMLSnippetGrammar:
     """Returns a thread/process-exclusive XMLSnippetGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
@@ -206,16 +210,19 @@ XMLSnippet_AST_transformation_table = {
 }
 
 
-def XMLSnippetTransform() -> TransformationFunc:
+def CreateXMLSnippetTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
     return partial(traverse, processing_table=XMLSnippet_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        THREAD_LOCALS = access_thread_locals()
-        transformer = THREAD_LOCALS.XMLSnippet_1_transformer_singleton
+        transformer = THREAD_LOCALS.XMLSnippet_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.XMLSnippet_1_transformer_singleton = XMLSnippetTransform()
-        transformer = THREAD_LOCALS.XMLSnippet_1_transformer_singleton
+        THREAD_LOCALS.XMLSnippet_00000001_transformer_singleton = CreateXMLSnippetTransformer()
+        transformer = THREAD_LOCALS.XMLSnippet_00000001_transformer_singleton
     return transformer
 
 
@@ -235,6 +242,7 @@ class XMLSnippetCompiler(Compiler):
     def reset(self):
         super().reset()
         # initialize your variables here, not in the constructor!
+
     def on_document(self, node):
         return self.fallback_compiler(node)
 
@@ -387,11 +395,13 @@ class XMLSnippetCompiler(Compiler):
 
 
 def get_compiler() -> XMLSnippetCompiler:
+    """Returns a thread/process-exclusive XMLSnippetCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.XMLSnippet_1_compiler_singleton
+        compiler = THREAD_LOCALS.XMLSnippet_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.XMLSnippet_1_compiler_singleton = XMLSnippetCompiler()
-        compiler = THREAD_LOCALS.XMLSnippet_1_compiler_singleton
+        THREAD_LOCALS.XMLSnippet_00000001_compiler_singleton = XMLSnippetCompiler()
+        compiler = THREAD_LOCALS.XMLSnippet_00000001_compiler_singleton
     return compiler
 
 
@@ -401,29 +411,34 @@ def get_compiler() -> XMLSnippetCompiler:
 #
 #######################################################################
 
-
-def compile_src(source, log_dir=''):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    start_logging(log_dir)
-    compiler = get_compiler()
-    cname = compiler.__class__.__name__
-    result = compile_source(source, get_preprocessor(),
-                            get_grammar(),
-                            get_transformer(), compiler)
-    return result
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
+    return result_tuple
 
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
     if os.path.exists(grammar_path):
-        if not recompile_grammar(grammar_path, force=False,
-                                  notify=lambda:print('recompiling ' + grammar_path)):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
     else:
         print('Could not check whether grammar requires recompiling, '
               'because grammar was not found at: ' + grammar_path)
@@ -433,7 +448,11 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
-        result, errors, ast = compile_src(file_name, log_dir)
+            set_config_value('history_tracking', True)
+            set_config_value('resume_notices', True)
+            set_config_value('log_syntax_trees', set(('cst', 'ast')))
+        start_logging(log_dir)
+        result, errors, _ = compile_src(file_name)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
@@ -441,6 +460,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+            print(result.serialize() if isinstance(result, Node) else result)
     else:
-        print("Usage: XMLSnippetCompiler.py [FILENAME]")
+        print("Usage: XMLSnippetParser.py [FILENAME]")

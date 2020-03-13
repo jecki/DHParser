@@ -24,7 +24,7 @@ import os
 import sys
 
 sys.path.extend([os.path.join('..', '..'), '..', '.'])
-flag = os.path.exists('LyrikCompiler.py')
+flag = os.path.exists('LyrikParser.py')
 
 from DHParser.dsl import recompile_grammar
 
@@ -38,9 +38,9 @@ if not recompile_grammar('.', force=True):
 # in particular for those reading the Tutorial in the Introduction
 
 if not flag:
-    with open('LyrikCompiler.py', 'r') as f:
+    with open('LyrikParser.py', 'r') as f:
         script = f.read()
     i = script.find('import sys') + 10
     script = script[:i] + "\nsys.path.extend([os.path.join('..', '..'), '..', '.'])\n" + script [i:]
-    with open('LyrikCompiler.py', 'w') as f:
+    with open('LyrikParser.py', 'w') as f:
         f.write(script)

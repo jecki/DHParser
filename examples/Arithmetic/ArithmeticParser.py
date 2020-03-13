@@ -22,20 +22,20 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Drop, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, lean_left, \
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
     collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, access_thread_locals, get_config_value
+    error_on, recompile_grammar, left_associative, access_thread_locals, get_config_value
 
 
 #######################################################################
@@ -44,11 +44,11 @@ from DHParser import start_logging, is_filename, load_if_file, \
 #
 #######################################################################
 
-def ArithmeticRightRecursivePreprocessor(text):
+def ArithmeticPreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return ArithmeticRightRecursivePreprocessor
+    return ArithmeticPreprocessor
 
 
 #######################################################################
@@ -57,68 +57,46 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class ArithmeticRightRecursiveGrammar(Grammar):
-    r"""Parser for an ArithmeticRightRecursive source file.
+class ArithmeticGrammar(Grammar):
+    r"""Parser for an Arithmetic source file.
     """
-    element = Forward()
     expression = Forward()
-    sign = Forward()
-    tail = Forward()
-    term = Forward()
-    source_hash__ = "3d81c718b586fbd4490776d2cd4e3e53"
+    source_hash__ = "4197ddd06ba30244927f160c6f46e30f"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'#.*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    VARIABLE = RegExp('[a-dj-z]')
-    NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
-    MINUS = RegExp('-')
-    PLUS = RegExp('\\+')
-    i = Token("i")
-    e = Token("e")
-    pi = Alternative(Drop(Token("pi")), Drop(Token("π")))
-    special = Alternative(pi, e)
-    number = Synonym(NUMBER)
-    log = Series(Series(Drop(Token('log(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
-    tan = Series(Series(Drop(Token('tan(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
-    cos = Series(Series(Drop(Token('cos(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
-    sin = Series(Series(Drop(Token('sin(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
-    function = Alternative(sin, cos, tan, log)
-    group = Series(Drop(Token("(")), expression, Drop(Token(")")), mandatory=1)
-    tail_value = Alternative(special, function, VARIABLE, group)
-    tail_pow = Series(tail_value, Option(i), Drop(Token("^")), element)
-    tail_elem = Alternative(tail_pow, tail_value)
-    value = Series(Alternative(number, tail_value), Option(i))
-    pow = Series(value, Drop(Token("^")), Option(sign), element)
-    element.set(Alternative(pow, value))
-    sign.set(Alternative(PLUS, MINUS))
-    seq = Series(tail_elem, tail)
-    tail.set(Series(Alternative(seq, tail_elem), Option(i)))
-    factor = Series(Option(sign), Alternative(Series(Option(element), tail), element), dwsp__)
-    div = Series(factor, Series(Drop(Token("/")), dwsp__), term)
-    mul = Series(factor, Series(Drop(Token("*")), dwsp__), term)
-    term.set(Alternative(mul, div, factor))
-    sub = Series(term, Series(Drop(Token("-")), dwsp__), expression)
-    add = Series(term, Series(Drop(Token("+")), dwsp__), expression)
-    expression.set(Alternative(add, sub, term))
+    VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
+    NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
+    NEGATIVE = RegExp('[-]')
+    POSITIVE = RegExp('[+]')
+    DIV = Series(Token("/"), dwsp__)
+    MUL = Series(Token("*"), dwsp__)
+    MINUS = Series(Token("-"), dwsp__)
+    PLUS = Series(Token("+"), dwsp__)
+    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
+    sign = Alternative(POSITIVE, NEGATIVE)
+    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
+    term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
     root__ = expression
     
-def get_grammar() -> ArithmeticRightRecursiveGrammar:
-    """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
+
+def get_grammar() -> ArithmeticGrammar:
+    """Returns a thread/process-exclusive ArithmeticGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton = ArithmeticRightRecursiveGrammar()
+        THREAD_LOCALS.Arithmetic_00000001_grammar_singleton = ArithmeticGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
+            THREAD_LOCALS.Arithmetic_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -132,41 +110,28 @@ def get_grammar() -> ArithmeticRightRecursiveGrammar:
 #
 #######################################################################
 
+def group_no_asterix_mul(context):
+    pass
+    # TODO: Find an algorithm, here
 
-ArithmeticRightRecursive_AST_transformation_table = {
-    # AST Transformations for the ArithmeticRightRecursive-grammar
-    # "<": flatten_anonymous_nodes,
-    "special, number, function, tail_value, tail_elem, tail, value, "
-    "element, factor, term, expression":
-        [replace_by_single_child],
-    "pi": [replace_content_by('π')],
-    "tail_pow": [change_tag_name('pow')],
-    "add, sub": [lean_left({'sub', 'add'})],
-    "mul, div": [lean_left({'mul', 'div'})]
+Arithmetic_AST_transformation_table = {
+    # AST Transformations for the Arithmetic-grammar
+    "expression, term": [left_associative, replace_by_single_child],
+    "factor, sign": replace_by_single_child,
+    "group": [remove_tokens('(', ')'), replace_by_single_child],
 }
 
 
-def ArithmeticRightRecursiveTransform() -> TransformationFunc:
-    def transformation_func(cst: Node, pass_1, pass_2):
-        """Special transformation function requires two passes, because
-        otherwise elimination of grouping nodes (pass 2) would interfere
-        with the adjustment of the tree structure to the left-associativity
-        of the `add`, `sub`, `mul` and `div` operators."""
-        traverse(cst, pass_1)
-        traverse(cst, pass_2)
-    return partial(transformation_func,
-                   pass_1=ArithmeticRightRecursive_AST_transformation_table.copy(),
-                   pass_2={'group': [replace_by_single_child]}.copy())
-
+def ArithmeticTransform() -> TransformationFunc:
+    return partial(traverse, processing_table=Arithmetic_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     try:
         THREAD_LOCALS = access_thread_locals()
-        transformer = THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton = \
-            ArithmeticRightRecursiveTransform()
-        transformer = THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton
+        THREAD_LOCALS.Arithmetic_00000001_transformer_singleton = ArithmeticTransform()
+        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
     return transformer
 
 
@@ -176,12 +141,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class ArithmeticRightRecursiveCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a ArithmeticRightRecursive source file.
+class ArithmeticCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a Arithmetic source file.
     """
 
     def __init__(self):
-        super(ArithmeticRightRecursiveCompiler, self).__init__()
+        super(ArithmeticCompiler, self).__init__()
 
     def reset(self):
         super().reset()
@@ -202,12 +167,13 @@ class ArithmeticRightRecursiveCompiler(Compiler):
     #     return node
 
 
-def get_compiler() -> ArithmeticRightRecursiveCompiler:
+def get_compiler() -> ArithmeticCompiler:
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton = ArithmeticRightRecursiveCompiler()
-        compiler = THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton
+        THREAD_LOCALS.Arithmetic_00000001_compiler_singleton = ArithmeticCompiler()
+        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
     return compiler
 
 
@@ -232,11 +198,11 @@ def compile_src(source, log_dir=''):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False,
                                   notify=lambda:print('recompiling ' + grammar_path)):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -259,4 +225,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: ArithmeticRightRecursiveCompiler.py [FILENAME]")
+        print("Usage: ArithmeticParser.py [FILENAME]")

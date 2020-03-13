@@ -118,8 +118,14 @@ class EBNFCPUBoundTasks:
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
     def compile_EBNF(self, text: str):
-        print('compile_EBNF')
-        from DHParser.ebnf import compile_ebnf
+        from DHParser.compile import compile_source
+        from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
+            get_ebnf_compiler
+        compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
+        result, messages, _ = compile_source(
+            text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
+        # TODO: return errors as well as (distilled) information about symbols for code propositions
+        return None
 
 
 class EBNFBlockingTasks:
@@ -171,7 +177,7 @@ class EBNFLanguageServerProtocol:
     #                 'will be emitted instead of the stock message, if a mandatory element '
     #                 'violation occured within the given parser. (DHParser-extension to EBNF)'],
     #                ['_filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
-    #                 'Name of a Python-filter-function that is applied when retrieving a stored '
+    #                 'Name of a Python-match-function that is applied when retrieving a stored '
     #                 'symbol. (DHParser-extension to EBNF)']]
 
 
@@ -296,11 +302,11 @@ def run_server(host, port, log_path=None):
     if dhparserdir not in sys.path:
         sys.path.append(dhparserdir)
     try:
-        from EBNFCompiler import compile_src
+        from EBNFParser import compile_src
     except ModuleNotFoundError:
         from tst_EBNF_grammar import recompile_grammar
         recompile_grammar(os.path.join(scriptpath, 'EBNF.ebnf'), force=False)
-        from EBNFCompiler import compile_src
+        from EBNFParser import compile_src
     from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:

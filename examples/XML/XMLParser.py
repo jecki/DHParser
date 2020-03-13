@@ -7,33 +7,39 @@
 #######################################################################
 
 
-from collections import OrderedDict
+import collections
 from functools import partial
 import os
 import sys
 
-dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if dhparser_path not in sys.path:
-    sys.path.append(dhparser_path)
+dhparser_parentdir = os.path.abspath(r'../..')
+if dhparser_parentdir not in sys.path:
+    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import start_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
-    Lookbehind, Lookahead, Alternative, Pop, Synonym, AllOf, SomeOf, Unordered, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
+    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
-    RootNode, Node, TransformationFunc, TransformationDict, Token, Drop, \
-    traverse, remove_children_if, is_anonymous, access_thread_locals, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
+    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    is_empty, collapse, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, has_content, apply_if, get_config_value, \
-    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, PLACEHOLDER
+    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \
+    TOKEN_PTYPE, remove_nodes, remove_content, remove_brackets, change_tag_name, \
+    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
+    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
+    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
+    trace_history, has_descendant, neg, has_parent
 
 
 #######################################################################
@@ -72,7 +78,6 @@ class XMLGrammar(Grammar):
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'//'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -177,6 +182,7 @@ class XMLGrammar(Grammar):
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
+
 def get_grammar() -> XMLGrammar:
     """Returns a thread/process-exclusive XMLGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
@@ -199,7 +205,6 @@ def get_grammar() -> XMLGrammar:
 # AST SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
-
 
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
@@ -304,17 +309,19 @@ XML_AST_transformation_table = {
 }
 
 
-def XMLTransform() -> TransformationFunc:
+def CreateXMLTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
     return partial(traverse, processing_table=XML_AST_transformation_table.copy())
 
-
 def get_transformer() -> TransformationFunc:
-    global thread_local_XML_transformer_singleton
+    """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = thread_local_XML_transformer_singleton
-    except NameError:
-        thread_local_XML_transformer_singleton = XMLTransform()
-        transformer = thread_local_XML_transformer_singleton
+        transformer = THREAD_LOCALS.XML_00000001_transformer_singleton
+    except AttributeError:
+        THREAD_LOCALS.XML_00000001_transformer_singleton = CreateXMLTransformer()
+        transformer = THREAD_LOCALS.XML_00000001_transformer_singleton
     return transformer
 
 
@@ -711,12 +718,13 @@ class XMLCompiler(Compiler):
 
 
 def get_compiler() -> XMLCompiler:
-    global thread_local_XML_compiler_singleton
+    """Returns a thread/process-exclusive XMLCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = thread_local_XML_compiler_singleton
-    except NameError:
-        thread_local_XML_compiler_singleton = XMLCompiler()
-        compiler = thread_local_XML_compiler_singleton
+        compiler = THREAD_LOCALS.XML_00000001_compiler_singleton
+    except AttributeError:
+        THREAD_LOCALS.XML_00000001_compiler_singleton = XMLCompiler()
+        compiler = THREAD_LOCALS.XML_00000001_compiler_singleton
     return compiler
 
 
@@ -726,44 +734,48 @@ def get_compiler() -> XMLCompiler:
 #
 #######################################################################
 
-
-def compile_src(source, log_dir=''):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    start_logging(log_dir)
-    compiler = get_compiler()
-    cname = compiler.__class__.__name__
-    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
-    result = compile_source(source, get_preprocessor(),
-                            get_grammar(),
-                            get_transformer(), compiler)
-    return result
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
+    return result_tuple
 
 
 if __name__ == "__main__":
+    # recompile grammar if needed
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
+    if os.path.exists(grammar_path):
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
+            with open(error_file, encoding="utf-8") as f:
+                print(f.read())
+            sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
+    else:
+        print('Could not check whether grammar requires recompiling, '
+              'because grammar was not found at: ' + grammar_path)
+
     if len(sys.argv) > 1:
-        argv = sys.argv[:]
-        xml = False
-        if '-xml' in argv:
-            argv.remove('-xml')
-            xml = True
-        if '-x' in argv:
-            argv.remove('-x')
-            xml = True
-        try:
-            grammar_file_name = os.path.basename(__file__).replace('Compiler.py', '.ebnf')
-            if grammar_changed(XMLGrammar, grammar_file_name):
-                print("Grammar has changed. Please recompile Grammar first.")
-                sys.exit(1)
-        except FileNotFoundError:
-            print('Could not check for changed grammar, because grammar file "%s" was not found!'
-                  % grammar_file_name)    
-        file_name, log_dir = argv[1], ''
-        if file_name in ['-d', '--debug'] and len(argv) > 2:
-            file_name, log_dir = argv[2], 'LOGS'
-            del argv[2]
-        result, errors, ast = compile_src(file_name, log_dir)
+        # compile file
+        file_name, log_dir = sys.argv[1], ''
+        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
+            file_name, log_dir = sys.argv[2], 'LOGS'
+            set_config_value('history_tracking', True)
+            set_config_value('resume_notices', True)
+            set_config_value('log_syntax_trees', set(('cst', 'ast')))
+        start_logging(log_dir)
+        result, errors, _ = compile_src(file_name)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
@@ -771,14 +783,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            if xml:
-                output = result.customized_XML() if isinstance(result, RootNode) else result
-            else:
-                output = result.serialize()
-            if len(argv) > 2:
-                with open(argv[2], 'w', encoding='utf-8') as f:
-                    f.write(output)
-            else:
-                print(output)
+            print(result.serialize() if isinstance(result, Node) else result)
     else:
-        print("Usage: XMLCompiler.py [FILENAME]")
+        print("Usage: XMLParser.py [FILENAME]")

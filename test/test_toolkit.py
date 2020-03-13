@@ -172,7 +172,8 @@ class TestTypeSystemSupport:
     def test_issubtype(self):
         assert issubtype(typing.List, collections.abc.Sequence)
         assert issubtype(typing.Tuple, type(tuple()))
-
+        assert issubtype(typing.Callable, collections.abc.Callable)
+        assert issubtype(typing.Tuple[typing.Callable], tuple)
 
 
 if __name__ == "__main__":

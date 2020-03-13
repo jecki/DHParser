@@ -65,10 +65,15 @@ __all__ = ('typing',
            'escape_re',
            'escape_control_characters',
            'is_filename',
+           'relative_path',
            'concurrent_ident',
            'unrepr',
            'abbreviate_middle',
            'escape_formatstr',
+           'as_identifier',
+           'as_list',
+           'first',
+           'last',
            'linebreaks',
            'line_col',
            'text_pos',
@@ -163,11 +168,11 @@ def escape_re(strg: str) -> str:
 
 
 def escape_control_characters(strg: str) -> str:
+    r"""
+    Replace all control characters (e.g. `\n` `\t`) as well as the
+    forward slash `/` in a string by their backslashed representation.
     """
-    Replace all control characters (e.g. \n \t) in a string by their backslashed representation.
-    """
-
-    return repr(strg).replace('\\\\', '\\')[1:-1]
+    return repr(strg).replace('\\\\', '\\').replace('/', '\\/')[1:-1]
 
 
 def lstrip_docstring(docstring: str) -> str:
@@ -190,10 +195,30 @@ def is_filename(strg: str) -> bool:
     """
     Tries to guess whether string ``strg`` is a file name.
     """
-
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
     #   and strg.select_if('*') < 0 and strg.select_if('?') < 0
+
+
+@cython.locals(i=cython.int, L=cython.int)
+def relative_path(from_path: str, to_path: str) -> str:
+    """Returns the relative path in order to open a file from
+    `to_path` when the script is runing in `from_path`. Example:
+
+        >>> relative_path('project/common/dir_A', 'project/dir_B')
+        '../../dir_B'
+    """
+    from_path = os.path.normpath(os.path.abspath(from_path)).replace('\\', '/')
+    to_path = os.path.normpath(os.path.abspath(to_path)).replace('\\', '/')
+    if from_path and from_path[-1] != '/':
+        from_path += '/'
+    if to_path and to_path[-1] != '/':
+        to_path += '/'
+    i = 0
+    L = min(len(from_path), len(to_path))
+    while i < L and from_path[i] == to_path[i]:
+        i += 1
+    return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
 
 
 def concurrent_ident() -> str:
@@ -256,6 +281,59 @@ def escape_formatstr(s: str) -> str:
     return s
 
 
+RX_IDENTIFIER = re.compile(r'\w+')
+RX_NON_IDENTIFIER = re.compile(r'[^\w]+')
+
+
+def as_identifier(s: str, replacement: str = "_") -> str:
+    r"""Converts a string to an identifier that matches /\w+/ by
+    substituting any character not matching /\w/ with the given
+    replacement string:
+
+    >>> as_identifier('EBNF-m')
+    'EBNF_m'
+    """
+    ident = []
+    i = 0
+    while i < len(s):
+        m = RX_IDENTIFIER.match(s, i)
+        if m:
+            ident.append(m.group(0))
+            rng = m.span(0)
+            i += rng[1] - rng[0]
+        m = RX_NON_IDENTIFIER.match(s, i)
+        if m:
+            rng = m.span(0)
+            delta = rng[1] - rng[0]
+            ident.append(replacement * delta)
+            i += rng[1] - rng[0]
+    return ''.join(ident)
+
+
+def as_list(item_or_sequence) -> List[Any]:
+    """Turns an arbitrary sequence or a single item into a list. In case of
+    a single item, the list contains this element as its sole item."""
+    if isinstance(item_or_sequence, Iterable):
+        return list(item_or_sequence)
+    return [item_or_sequence]
+
+
+def first(item_or_sequence: Union[Sequence, Any]) -> Any:
+    """Returns an item or a the first item of a sequence of items."""
+    if isinstance(item_or_sequence, Sequence):
+        return item_or_sequence[0]
+    else:
+        return item_or_sequence
+
+
+def last(item_or_sequence: Union[Sequence, Any]) -> Any:
+    """Returns an item or a the first item of a sequence of items."""
+    if isinstance(item_or_sequence, Sequence):
+        return item_or_sequence[-1]
+    else:
+        return item_or_sequence
+
+
 #######################################################################
 #
 # type system support
@@ -273,10 +351,12 @@ def issubtype(sub_type, base_type) -> bool:
             ot = t.__origin__
             if ot is Union:
                 try:
-                    return tuple(a.__origin__ for a in t.__args__)
+                    return tuple((a.__origin__ if a.__origin__ is not None else a)
+                                 for a in t.__args__)
                 except AttributeError:
                     try:
-                        return tuple(a.__origin__ for a in t.__union_args__)
+                        return tuple((a.__origin__ if a.__origin__ is not None else a)
+                                     for a in t.__union_args__)
                     except AttributeError:
                         return t.__args__
         except AttributeError:
@@ -351,7 +431,6 @@ def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
     See http://spec.commonmark.org/0.28/#fenced-code-blocks for more
     information on fenced code blocks in common mark documents.
     """
-
     if is_filename(text_or_file):
         with open(text_or_file, 'r', encoding='utf-8') as f:
             markdown = f.read()

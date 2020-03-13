@@ -22,10 +22,10 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Drop, Synonym, AllOf, SomeOf, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, accumulate, PreprocessorFunc, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
@@ -44,11 +44,11 @@ from DHParser import start_logging, is_filename, load_if_file, \
 #
 #######################################################################
 
-def ArithmeticPreprocessor(text):
+def ArithmeticSimplePreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return ArithmeticPreprocessor
+    return ArithmeticSimplePreprocessor
 
 
 #######################################################################
@@ -57,15 +57,14 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class ArithmeticGrammar(Grammar):
-    r"""Parser for an Arithmetic source file.
+class ArithmeticSimpleGrammar(Grammar):
+    r"""Parser for an ArithmeticSimple source file.
     """
     expression = Forward()
-    source_hash__ = "4197ddd06ba30244927f160c6f46e30f"
+    source_hash__ = "057a467fa65d6c91e5658319e2c9469f"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'#.*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -76,27 +75,28 @@ class ArithmeticGrammar(Grammar):
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
-    DIV = Series(Token("/"), dwsp__)
-    MUL = Series(Token("*"), dwsp__)
-    MINUS = Series(Token("-"), dwsp__)
-    PLUS = Series(Token("+"), dwsp__)
+    div = Series(Token("/"), dwsp__)
+    mul = Series(Token("*"), dwsp__)
+    sub = Series(Token("-"), dwsp__)
+    add = Series(Token("+"), dwsp__)
     group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
-    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
-    term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
-    expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
+    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
+    term = Series(factor, ZeroOrMore(Series(Alternative(div, mul), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(add, sub), term))))
     root__ = expression
     
-def get_grammar() -> ArithmeticGrammar:
-    """Returns a thread/process-exclusive ArithmeticGrammar-singleton."""
+
+def get_grammar() -> ArithmeticSimpleGrammar:
+    """Returns a thread/process-exclusive ArithmeticSimpleGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.Arithmetic_00000001_grammar_singleton = ArithmeticGrammar()
+        THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton = ArithmeticSimpleGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.Arithmetic_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
+            THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -114,24 +114,25 @@ def group_no_asterix_mul(context):
     pass
     # TODO: Find an algorithm, here
 
-Arithmetic_AST_transformation_table = {
-    # AST Transformations for the Arithmetic-grammar
+ArithmeticSimple_AST_transformation_table = {
+    # AST Transformations for the ArithmeticSimple-grammar
     "expression, term": [left_associative, replace_by_single_child],
     "factor, sign": replace_by_single_child,
-    "group": [remove_tokens('(', ')'), replace_by_single_child],
+    "group": [replace_by_single_child],
 }
 
 
-def ArithmeticTransform() -> TransformationFunc:
-    return partial(traverse, processing_table=Arithmetic_AST_transformation_table.copy())
+def ArithmeticSimpleTransform() -> TransformationFunc:
+    return partial(traverse, processing_table=ArithmeticSimple_AST_transformation_table.copy())
+
 
 def get_transformer() -> TransformationFunc:
     try:
         THREAD_LOCALS = access_thread_locals()
-        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.Arithmetic_00000001_transformer_singleton = ArithmeticTransform()
-        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
+        THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton = ArithmeticSimpleTransform()
+        transformer = THREAD_LOCALS.ArithmeticSimple_00000001_transformer_singleton
     return transformer
 
 
@@ -141,12 +142,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class ArithmeticCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a Arithmetic source file.
+class ArithmeticSimpleCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a ArithmeticSimple source file.
     """
 
     def __init__(self):
-        super(ArithmeticCompiler, self).__init__()
+        super(ArithmeticSimpleCompiler, self).__init__()
 
     def reset(self):
         super().reset()
@@ -167,13 +168,12 @@ class ArithmeticCompiler(Compiler):
     #     return node
 
 
-def get_compiler() -> ArithmeticCompiler:
-    THREAD_LOCALS = access_thread_locals()
+def get_compiler() -> ArithmeticSimpleCompiler:
     try:
-        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.Arithmetic_00000001_compiler_singleton = ArithmeticCompiler()
-        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
+        THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton = ArithmeticSimpleCompiler()
+        compiler = THREAD_LOCALS.ArithmeticSimple_00000001_compiler_singleton
     return compiler
 
 
@@ -189,20 +189,21 @@ def compile_src(source, log_dir=''):
     """
     start_logging(log_dir)
     compiler = get_compiler()
-    cname = compiler.__class__.__name__
     result_tuple = compile_source(source, get_preprocessor(),
                                   get_grammar(),
                                   get_transformer(), compiler)
     return result_tuple
 
 
+
+
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False,
                                   notify=lambda:print('recompiling ' + grammar_path)):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -225,4 +226,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: ArithmeticCompiler.py [FILENAME]")
+        print("Usage: ArithmeticSimpleParser.py [FILENAME]")

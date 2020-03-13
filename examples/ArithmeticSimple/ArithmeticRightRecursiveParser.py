@@ -25,19 +25,18 @@ from DHParser import start_logging, is_filename, load_if_file, \
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
-    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets
+    error_on, recompile_grammar, left_associative, lean_left, access_thread_locals, \
+    get_config_value
 
 
 #######################################################################
@@ -46,11 +45,11 @@ from DHParser import start_logging, is_filename, load_if_file, \
 #
 #######################################################################
 
-def yamlPreprocessor(text):
+def ArithmeticRightRecursivePreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return yamlPreprocessor
+    return ArithmeticRightRecursivePreprocessor
 
 
 #######################################################################
@@ -59,51 +58,47 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class yamlGrammar(Grammar):
-    r"""Parser for a yaml source file.
+class ArithmeticRightRecursiveGrammar(Grammar):
+    r"""Parser for an ArithmeticRightRecursive source file.
     """
-    element = Forward()
-    value = Forward()
-    source_hash__ = "9660424d926b901b9654279f23e6c1f1"
+    expression = Forward()
+    term = Forward()
+    source_hash__ = "9f9acd23245ae0a07680aa9cfda7952f"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
-    COMMENT__ = r'(?:\/\/|#).*'
+    COMMENT__ = r'#.*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
-    FRAC = Option(Series(Drop(Token(".")), RegExp('[0-9]+')))
-    INT = Alternative(Series(Option(Drop(Token("-"))), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
-    HEX = RegExp('[0-9a-fA-F]')
-    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), Series(RegExp('\\\\u'), HEX, HEX, HEX, HEX))
-    CHARACTERS = ZeroOrMore(Alternative(RegExp('[^"\\\\]+'), ESCAPE))
-    null = Series(Token("null"), dwsp__)
-    bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
-    number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Token('"')), CHARACTERS, Drop(Token('"')), dwsp__)
-    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), value)))), Series(Drop(Token("]")), dwsp__))
-    member = Series(string, Series(Drop(Token(":")), dwsp__), element)
-    object = Series(Series(Drop(Token("{")), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), member)))), Series(Drop(Token("}")), dwsp__))
-    value.set(Alternative(object, array, string, number, bool, null))
-    element.set(Synonym(value))
-    json = Series(dwsp__, element, EOF)
-    root__ = json
+    VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
+    NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
+    NEGATIVE = RegExp('[-]')
+    POSITIVE = RegExp('[+]')
+    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
+    sign = Alternative(POSITIVE, NEGATIVE)
+    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
+    div = Series(factor, Series(Drop(Token("/")), dwsp__), term)
+    mul = Series(factor, Series(Drop(Token("*")), dwsp__), term)
+    term.set(Alternative(mul, div, factor))
+    sub = Series(term, Series(Drop(Token("-")), dwsp__), expression)
+    add = Series(term, Series(Drop(Token("+")), dwsp__), expression)
+    expression.set(Alternative(add, sub, term))
+    root__ = expression
     
-def get_grammar() -> yamlGrammar:
-    """Returns a thread/process-exclusive yamlGrammar-singleton."""
+
+def get_grammar() -> ArithmeticRightRecursiveGrammar:
+    """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.yaml_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.yaml_00000001_grammar_singleton = yamlGrammar()
+        THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton = ArithmeticRightRecursiveGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.yaml_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.yaml_00000001_grammar_singleton
+            THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -117,43 +112,38 @@ def get_grammar() -> yamlGrammar:
 #
 #######################################################################
 
-yaml_AST_transformation_table = {
-    # AST Transformations for the yaml-grammar
-    "<": flatten,
-    "json": [],
-    "element": [],
-    "value": [],
-    "object": [],
-    "member": [],
-    "array": [],
-    "string": [],
-    "number": [],
-    "bool": [],
-    "null": [],
-    "CHARACTERS": [],
-    "ESCAPE": [],
-    "HEX": [],
-    "INT": [],
-    "FRAC": [],
-    "EXP": [],
-    "EOF": [],
-    "*": replace_by_single_child
+ArithmeticRightRecursive_AST_transformation_table = {
+    # AST Transformations for the ArithmeticRightRecursive-grammar
+    "sign, factor, term, expression": [replace_by_single_child],
+    "add, sub": [lean_left({'sub', 'add'})],
+    "mul, div": [lean_left({'mul', 'div'})],
 }
 
 
-def CreateyamlTransformer() -> TransformationFunc:
+def CreateArithmeticRightRecursiveTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=yaml_AST_transformation_table.copy())
+    def transformation_func(cst: Node, pass_1, pass_2):
+        """Special transformation function requires two passes, because
+        otherwise elimination of grouping nodes (pass 2) would interfere
+        with the adjustment of the tree structure to the left-associativity
+        of the `add`, `sub`, `mul` and `div` operators."""
+        traverse(cst, pass_1)
+        traverse(cst, pass_2)
+    return partial(transformation_func,
+                   pass_1=ArithmeticRightRecursive_AST_transformation_table.copy(),
+                   pass_2={'group': [replace_by_single_child]}.copy())
+
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     try:
         THREAD_LOCALS = access_thread_locals()
-        transformer = THREAD_LOCALS.yaml_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.yaml_00000001_transformer_singleton = CreateyamlTransformer()
-        transformer = THREAD_LOCALS.yaml_00000001_transformer_singleton
+        THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton = \
+            CreateArithmeticRightRecursiveTransformer()
+        transformer = THREAD_LOCALS.ArithmeticRightRecursive_00000001_transformer_singleton
     return transformer
 
 
@@ -163,76 +153,64 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class yamlCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a yaml source file.
+class ArithmeticRightRecursiveCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a ArithmeticRightRecursive source file.
     """
 
     def __init__(self):
-        super(yamlCompiler, self).__init__()
+        super(ArithmeticRightRecursiveCompiler, self).__init__()
 
     def reset(self):
         super().reset()
         # initialize your variables here, not in the constructor!
 
-    def on_json(self, node):
+    def on_expression(self, node):
         return self.fallback_compiler(node)
 
-    # def on_element(self, node):
+    # def on_add(self, node):
     #     return node
 
-    # def on_value(self, node):
+    # def on_sub(self, node):
     #     return node
 
-    # def on_object(self, node):
+    # def on_term(self, node):
     #     return node
 
-    # def on_member(self, node):
+    # def on_mul(self, node):
     #     return node
 
-    # def on_array(self, node):
+    # def on_div(self, node):
     #     return node
 
-    # def on_string(self, node):
+    # def on_factor(self, node):
     #     return node
 
-    # def on_number(self, node):
+    # def on_sign(self, node):
     #     return node
 
-    # def on_bool(self, node):
+    # def on_group(self, node):
     #     return node
 
-    # def on_null(self, node):
+    # def on_POSITIVE(self, node):
     #     return node
 
-    # def on_CHARACTERS(self, node):
+    # def on_NEGATIVE(self, node):
     #     return node
 
-    # def on_ESCAPE(self, node):
+    # def on_NUMBER(self, node):
     #     return node
 
-    # def on_HEX(self, node):
-    #     return node
-
-    # def on_INT(self, node):
-    #     return node
-
-    # def on_FRAC(self, node):
-    #     return node
-
-    # def on_EXP(self, node):
-    #     return node
-
-    # def on_EOF(self, node):
+    # def on_VARIABLE(self, node):
     #     return node
 
 
-def get_compiler() -> yamlCompiler:
-    """Returns a thread/process-exclusive yamlCompiler-singleton."""
+def get_compiler() -> ArithmeticRightRecursiveCompiler:
+    """Returns a thread/process-exclusive ArithmeticRightRecursiveCompiler-singleton."""
     try:
-        compiler = THREAD_LOCALS.yaml_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.yaml_00000001_compiler_singleton = yamlCompiler()
-        compiler = THREAD_LOCALS.yaml_00000001_compiler_singleton
+        THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton = ArithmeticRightRecursiveCompiler()
+        compiler = THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton
     return compiler
 
 
@@ -242,11 +220,13 @@ def get_compiler() -> yamlCompiler:
 #
 #######################################################################
 
+
 def compile_src(source, log_dir=''):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     start_logging(log_dir)
     compiler = get_compiler()
+    cname = compiler.__class__.__name__
     result_tuple = compile_source(source, get_preprocessor(),
                                   get_grammar(),
                                   get_transformer(), compiler)
@@ -255,11 +235,11 @@ def compile_src(source, log_dir=''):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False,
                                   notify=lambda:print('recompiling ' + grammar_path)):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -272,7 +252,7 @@ if __name__ == "__main__":
         file_name, log_dir = sys.argv[1], ''
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
-        result, errors, _ = compile_src(file_name, log_dir)
+        result, errors, ast = compile_src(file_name, log_dir)
         if errors:
             cwd = os.getcwd()
             rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
@@ -282,4 +262,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: yamlCompiler.py [FILENAME]")
+        print("Usage: ArithmeticRightRecursiveParser.py [FILENAME]")

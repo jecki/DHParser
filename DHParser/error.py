@@ -93,6 +93,7 @@ class Error:
     MALFORMED_ERROR_STRING                   = ErrorCode(1060)
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
     REDEFINED_DIRECTIVE                      = ErrorCode(1080)
+    UNDEFINED_RETRIEVE                       = ErrorCode(1090)
 
     # fatal errors
 

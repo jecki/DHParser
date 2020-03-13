@@ -50,7 +50,7 @@ if __name__ == "__main__":
     sys.path.append('.')
     # must be appended after module creation, because otherwise an ImportError is raised under Windows
 
-    from BibTeXCompiler import get_grammar, get_transformer
+    from BibTeXParser import get_grammar, get_transformer
 
     error_report = testing.grammar_suite('test_grammar', get_grammar,
                                          get_transformer, report='REPORT', verbose=True)

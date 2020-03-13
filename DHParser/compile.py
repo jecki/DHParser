@@ -37,6 +37,7 @@ compiler object.
 import copy
 import functools
 import os
+import traceback
 from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
@@ -175,9 +176,20 @@ class Compiler:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
-        children = node.children  # type: Tuple[Node, ...]
-        if children:
-            node.result = tuple(self.compile(nd) for nd in children)
+        result = []
+        if node.children:
+            for child in node.children:
+                nd = self.compile(child)
+                if not isinstance(nd, Node):
+                    tn = node.tag_name
+                    raise TypeError(
+                        'Fallback compiler for Node `%s` received a value of type '
+                        '`%s` from child `%s` instead of the required return type `Node`. '
+                        'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
+                        'method `on_%s(self, node)` in class `%s` to avoid this error!'
+                        % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
+                result.append(nd)
+            node.result = tuple(result)
         return node
 
     def compile(self, node: Node) -> Any:
@@ -234,6 +246,17 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 GrammarCallable = Union[Grammar, Callable[[str], RootNode], functools.partial]
 CompilerCallable = Union[Compiler, Callable[[Node], Any], functools.partial]
 ResultTuple = Tuple[Optional[Any], List[Error], Optional[Node]]
+
+
+def filter_stacktrace(stacktrace: List[str]) -> List[str]:
+    """Removes those frames from a formatted stacktrace that are located
+    within the DHParser-code."""
+    for n, frame in enumerate(stacktrace):
+        i = frame.find('"')
+        k = frame.find('"', i + 1)
+        if frame.find("DHParser", i, k) < 0:
+            break
+    return stacktrace[n:]
 
 
 def compile_source(source: str,
@@ -332,13 +355,16 @@ def compile_source(source: str,
                 try:
                     result = compiler(syntax_tree)
                 except Exception as e:
+                    # raise e
                     node = syntax_tree  # type: Node
                     if isinstance(compiler, Compiler) and compiler.context:
                         node = compiler.context[-1]
+                    st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+                    trace = ''.join(filter_stacktrace(st))
                     syntax_tree.new_error(
                         node, "Compilation failed, most likely, due to errors earlier "
-                              "in the processing pipeline. Crash Message: %s: %s"
-                              % (e.__class__.__name__, str(e)),
+                              "in the processing pipeline. Crash Message: %s: %s\n%s"
+                              % (e.__class__.__name__, str(e), trace),
                         Error.COMPILER_CRASH)
             else:
                 # assume Python crashes are programming mistakes, so let
@@ -373,7 +399,7 @@ class TreeProcessor(Compiler):
 
 def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
     """Process a tree with the tree-processor `tp` only if no fatal error
-    has occurred so far. Process, but catch any Python exceptions, in case
+    has occurred so far. Catch any Python exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
     Don't catch Python-exceptions if no errors have occurred earlier.
 
@@ -402,10 +428,12 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
                 tree = tp(tree)
             except Exception as e:
                 node = tp.context[-1] if tp.context else tree
+                st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+                trace = ''.join(filter_stacktrace(st))
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "in the processing pipeline. Crash Message: %s: %s"
-                          % (e.__class__.__name__, str(e)),
+                          "in the processing pipeline. Crash Message: %s: %s\n%s"
+                          % (e.__class__.__name__, str(e), trace),
                     Error.TREE_PROCESSING_CRASH)
         else:
             # assume Python crashes are programming mistakes, so let

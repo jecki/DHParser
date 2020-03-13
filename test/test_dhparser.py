@@ -40,8 +40,15 @@ class TestDHParserCommandLineTool:
     def setup(self):
         self.cwd = os.getcwd()
         os.chdir(scriptpath)
-        if not os.path.exists('test_dhparser_data'):
-            os.mkdir('test_dhparser_data')
+        # avoid race-condition
+        counter = 10
+        while counter > 0:
+            try:
+                os.mkdir('test_dhparser_data')
+                counter = 0
+            except FileExistsError:
+                time.sleep(1)
+                counter -= 1
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
         self.python = sys.executable + ' '
 
@@ -62,12 +69,12 @@ class TestDHParserCommandLineTool:
         # test compiler creation and execution
         system(self.python + '../DHParser/scripts/dhparser.py test_dhparser_data/neu ' + self.nulldevice)
         system(self.python + 'test_dhparser_data/neu/tst_neu_grammar.py ' + self.nulldevice)
-        system(self.python + 'test_dhparser_data/neu/neuCompiler.py test_dhparser_data/neu/example.dsl '
+        system(self.python + 'test_dhparser_data/neu/neuParser.py test_dhparser_data/neu/example.dsl '
                   '>test_dhparser_data/neu/example.xml')
         with open('test_dhparser_data/neu/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('document') >= 0, xml
-        os.remove('test_dhparser_data/neu/neuCompiler.py')
+        os.remove('test_dhparser_data/neu/neuParser.py')
         os.remove('test_dhparser_data/neu/example.xml')
 
         # test server

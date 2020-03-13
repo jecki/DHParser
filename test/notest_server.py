@@ -134,6 +134,8 @@ class TestServer:
             assert b'already connected' in data
             await asyncio.sleep(0.01)
             assert service_reader.at_eof()
+            service_writer.close()
+            if sys.version_info >= (3, 7):  await service_writer.wait_closed()
 
             service_reader, service_writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             service_writer.write(json_rpc('identify', {}).encode())
@@ -141,6 +143,8 @@ class TestServer:
             assert b'already connected' in data
             await asyncio.sleep(0.01)
             assert service_reader.at_eof()
+            service_writer.close()
+            if sys.version_info >= (3, 7):  await service_writer.wait_closed()
 
             main_writer.close()
             if sys.version_info >= (3, 7):  await main_writer.wait_closed()
@@ -473,6 +477,9 @@ class TestLanguageServer:
 
             response = await send(json_rpc('exit', {}))
             assert response == '', response
+
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
 
         asyncio_run(sequence_test())
 
