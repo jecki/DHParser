@@ -124,9 +124,9 @@ cdef class NegativeLookbehind(Lookbehind):
 cdef class Capture(UnaryParser):
     pass
 
-cdef class Retrieve(Parser):
-    cdef public object symbol
+cdef class Retrieve(UnaryParser):
     cdef public object filter
+    cdef public object match
 
 cdef class Pop(Retrieve):
     cdef public list values

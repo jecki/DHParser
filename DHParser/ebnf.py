@@ -1657,7 +1657,7 @@ class EBNFCompiler(Compiler):
         parser_class = self.PREFIX_TABLE[prefix]
         result = self.non_terminal(node, parser_class)
         if prefix[:2] == '<-':
-            def verify(node):
+            def verify(node: Optional[Node]):
                 nd = node
                 if len(nd.children) >= 1:
                     nd = nd.children[0]
@@ -1675,7 +1675,7 @@ class EBNFCompiler(Compiler):
                                               "-parsers, not: " + nd.tag_name)
 
             if not result.startswith('RegExp('):
-                self.deferred_tasks.append(partial(verify, node= node))
+                self.deferred_tasks.append(lambda :verify(node))
         return result
 
 
