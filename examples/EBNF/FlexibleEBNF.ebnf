@@ -9,16 +9,16 @@
 #: top-level
 
 syntax     = [~//] { definition | directive } §EOF
-definition = symbol §:DEF expression :ENDL
+definition = symbol §:DEF~ expression :ENDL~
 directive  = "@" §symbol "="
              (regexp | literal | symbol)
              { "," (regexp | literal | symbol) }
 
 #: components
 
-expression = sequence { :OR sequence }
+expression = sequence { :OR~ sequence }
 sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
-             { :AND ["§"] ( interleave | lookaround ) }
+             { :AND~ ["§"] ( interleave | lookaround ) }
 interleave = term { "°" ["§"] term }
 lookaround = flowmarker (oneormore | pure_elem)
 term       = oneormore | repetition | option | pure_elem
@@ -59,7 +59,7 @@ EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
 
 #: delimiters
 
-DEF        = "=" | ":=" | "::="
-OR         = "|" | "/"
-AND        = "," | ""
-ENDL       = ";" | ""
+DEF        = `=` | `:=` | `::=`
+OR         = `|` | `/`
+AND        = `,` | ``
+ENDL       = `;` | ``

@@ -73,9 +73,9 @@ class FlexibleEBNFGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "b6cb8380c80a0ceeeffc71a8761e1f17"
+    source_hash__ = "7d0821ca4b634b6da341a614570d47f5"
     anonymous__ = re.compile('pure_elem$')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     comment_rx__ = re.compile(COMMENT__)
@@ -83,10 +83,10 @@ class FlexibleEBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    ENDL = Capture(Alternative(Series(Token(";"), dwsp__), Series(Token(""), dwsp__)))
-    AND = Capture(Alternative(Series(Token(","), dwsp__), Series(Token(""), dwsp__)))
-    OR = Capture(Alternative(Series(Token("|"), dwsp__), Series(Token("/"), dwsp__)))
-    DEF = Capture(Alternative(Series(Token("="), dwsp__), Series(Token(":="), dwsp__), Series(Token("::="), dwsp__)))
+    ENDL = Capture(Alternative(Token(";"), Token("")))
+    AND = Capture(Alternative(Token(","), Token("")))
+    OR = Capture(Alternative(Token("|"), Token("/")))
+    DEF = Capture(Alternative(Token("="), Token(":="), Token("::=")))
     EOF = Series(NegativeLookahead(RegExp('.')), Option(Pop(DEF, match_func=optional_last_value)), Option(Pop(OR, match_func=optional_last_value)), Option(Pop(AND, match_func=optional_last_value)), Option(Pop(ENDL, match_func=optional_last_value)))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
@@ -104,10 +104,10 @@ class FlexibleEBNFGrammar(Grammar):
     term = Alternative(oneormore, repetition, option, pure_elem)
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem))
     interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__), Option(Series(Token("§"), dwsp__)), term)))
-    sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround))))
-    expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), sequence))))
+    sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround))))
+    expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Retrieve(DEF), expression, Retrieve(ENDL), mandatory=1)
+    definition = Series(symbol, Retrieve(DEF), dwsp__, expression, Retrieve(ENDL), dwsp__, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
