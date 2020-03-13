@@ -219,7 +219,7 @@ def main():
             elif os.path.exists(sys.argv[1]) and os.path.isfile(sys.argv[1]):
                 _errors = compile_on_disk(sys.argv[1])
                 if _errors:
-                    print('\n\n'.join(str(err) for err in _errors))
+                    print('\n'.join(str(err) for err in _errors))
                     sys.exit(1)
             else:
                 create_project(sys.argv[1])

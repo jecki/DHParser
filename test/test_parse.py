@@ -32,7 +32,8 @@ from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE
+    Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
+    GrammarError
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     compile_ebnf, DHPARSER_IMPORTS
@@ -643,6 +644,19 @@ class TestPopRetrieve:
     @staticmethod
     def has_tag_name(node, name):
         return node.tag_name == name # and not isinstance(node.parser, Retrieve)
+
+    def test_capture_assertions(self):
+        try:
+            _ = Capture(Drop(Whitespace(r'\s*')))
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+        try:
+            _ = Capture(Series(Token(' '), Drop(Whitespace(r'\s*'))))
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+        _ = Capture(RegExp(r'\w+'))
 
     def test_compile_mini_language(self):
         assert self.minilang_parser

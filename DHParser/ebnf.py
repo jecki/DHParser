@@ -1327,10 +1327,13 @@ class EBNFCompiler(Compiler):
 
         grammar_python_src = self.assemble_parser(definitions)
         if get_config_value('static_analysis') == 'early':
+            import DHParser.parse
             try:
+                DHParser.parse.STATIC_ANALYSIS_PENDING = True
                 grammar_class = compile_python_object(
-                    DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR)
-                    + grammar_python_src, self.grammar_name)
+                    DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) +
+                    # '\nimport DHParser.parse\nDHParser.parse.STATIC_ANALYSIS_PENDING = True\n' +
+                    grammar_python_src, self.grammar_name)
                 _ = grammar_class()
                 grammar_python_src = grammar_python_src.replace(
                     'static_analysis_pending__ = [True]',
@@ -1342,6 +1345,8 @@ class EBNFCompiler(Compiler):
                     symdef_node = self.rules[sym][0]
                     err.pos = self.rules[sym][0].pos
                     self.tree.add_error(symdef_node, err)
+            finally:
+                DHParser.parse.STATIC_ANALYSIS_PENDING = False
         return grammar_python_src
 
 

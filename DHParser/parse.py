@@ -215,9 +215,14 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
-ApplyFunc = Callable[['Parser'], None]
+ApplyFunc = Callable[['Parser'], Optional[bool]]  # A return value of True stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[[StringView], Tuple[Optional[Node], StringView]]
+
+# The global flag STATIC_ANALYSIS_PENGING signals the constructors
+# of Parser-classes not to raise exceptions for errors that will
+# be reported more preciseley in the static analysis
+STATIC_ANALYSIS_PENDING = False
 
 
 class Parser:
@@ -565,11 +570,11 @@ class Parser:
         """
         return tuple()
 
-    def _apply(self, func: Callable[['Parser'], None],
-               flip: Callable[[Callable, Set[Callable]], bool]) -> bool:
+    def _apply(self, func: ApplyFunc, flag_cycle: FlagFunc) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
-        descendant parsers, if any exist.
+        descendant parsers as long as `func()` returns `None` or `False`.
+        Otherwise stops the further application of `func` and returns `True`.
 
         In order to break cycles, function `flip` is called, which should
         return `True`, if this parser has already been visited. If not, it
@@ -579,18 +584,33 @@ class Parser:
         class Parser or any of its descendants. The entry point for external
         calls is the method `apply()` without underscore!
         """
-        if flip(func, self.cycle_detection):
-            return False
-        else:
-            func(self)
-            for parser in self.sub_parsers():
-                parser._apply(func, flip)
-            return True
+        if not flag_cycle(func, self.cycle_detection):
+            if func(self):
+                return True
+            else:
+                for parser in self.sub_parsers():
+                    if parser._apply(func, flag_cycle):
+                        return True
+                return False
+        return False
 
-    def apply(self, func: Callable[['Parser'], None]):
+    def apply(self, func: ApplyFunc) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
-        descendant parsers, if any exist. Traversal is pre-order.
+        descendant parsers as long as `func()` returns `None` or `False`.
+        Traversal is pre-order. Stops the further application of `func` and
+        returns `True` once `func` has returned `True`.
+
+        If `func` has been applied to all descendant parsers without issuing
+        a stop signal by returning `True`, `False` is returned.
+
+        This use of the return value allows to use the `apply`-method both
+        to issue tests on all descendant parsers (including self) which may be
+        decided already after some parsers have been visited without any need
+        to visit further parsers. At the same time `apply` can be used to simply
+        `apply` a procedure to all descendant parsers (including self) without
+        worrying about forgetting the return value of procedure, because a
+        return value of `None` means "carry on".
         """
         def positive_flip(f: Callable[['Parser'], None], flagged: Set[Callable]) -> bool:
             """Returns True, if function `f` has already been applied to this
@@ -613,9 +633,14 @@ class Parser:
                 return False
 
         if func in self.cycle_detection:
-            self._apply(func, negative_flip)
+            return self._apply(func, negative_flip)
         else:
-            self._apply(func, positive_flip)
+            return self._apply(func, positive_flip)
+
+    def static_analysis(self) -> Optional[List['GrammarErrorType']]:
+        """Analyses the parser for logical errors after the grammar has been
+        instantiated."""
+        return None
 
 
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
@@ -1364,11 +1389,13 @@ class Grammar:
         """
         error_list = []  # type: List[GrammarErrorType]
 
-        # disabled, because no use case as of now
-        # def visit_parser(parser: Parser) -> None:
-        #     nonlocal error_list
-        #
-        # self.root_parser__.apply(visit_parser)
+        def visit_parser(parser: Parser) -> None:
+            nonlocal error_list
+            errors = parser.static_analysis()
+            if errors is not None:
+                error_list.extend(errors)
+
+        self.root_parser__.apply(visit_parser)
         return error_list
 
 
@@ -2573,8 +2600,9 @@ class Capture(UnaryParser):
     contained parser's name. This requires the contained parser to be named.
     """
     def __init__(self, parser: Parser) -> None:
-        assert not parser.drop_content, \
-            "Cannot capture content of returned by parser, the content of which will be dropped!"
+        if not STATIC_ANALYSIS_PENDING and parser.apply(lambda p: p.drop_content):
+            raise ValueError('Captured parser "%s" contained parsers that drop content, '
+                             'which can lead to unintended results!' % str(parser))
         super(Capture, self).__init__(parser)
 
     def _rollback(self):
@@ -2598,6 +2626,14 @@ class Capture(UnaryParser):
 
     def __repr__(self):
         return self.parser.repr
+
+    def static_analysis(self) -> Optional[List[GrammarErrorType]]:
+        if self.parser.apply(lambda p: p.drop_content):
+            return [(self.pname, self, Error(
+                'Captured symbol "%s" contains parsers that drop content!' % self.pname,
+                0, Error.SYMBOL_UNFIT_TO_CAPTURE))]
+        return None
+
 
 
 MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]

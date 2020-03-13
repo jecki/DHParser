@@ -94,6 +94,7 @@ class Error:
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
     REDEFINED_DIRECTIVE                      = ErrorCode(1080)
     UNDEFINED_RETRIEVE                       = ErrorCode(1090)
+    SYMBOL_UNFIT_TO_CAPTURE                  = ErrorCode(1100)
 
     # fatal errors
 
