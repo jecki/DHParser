@@ -28,11 +28,12 @@ import bisect
 import copy
 import json
 import sys
-from typing import Callable, cast, Iterator, Sequence, List, Set, Union, Tuple, \
-    Container, Optional, Dict
+from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
+    Tuple, Container, Optional, Dict
 
-from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION, get_config_value
+from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
+    SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, JSON_SERIALIZATION, \
+    SMART_SERIALIZATION, get_config_value
 from DHParser.error import Error, ErrorCode
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col
@@ -1198,11 +1199,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
 
+        def clean(tag_name: str) -> str:
+            if tag_name.startswith(':'):
+                return '__' + tag_name[1:]
+            return tag_name
+
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             if node.tag_name in omit_tags and not node.has_attr():
                 return ''
-            txt = ['<', node.tag_name]
+            txt = ['<', clean(node.tag_name)]
             if node.has_attr():
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
@@ -1224,7 +1230,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in empty_tags or (node.tag_name in omit_tags and not node.has_attr()):
                 return ''
-            return '\n</' + node.tag_name + '>'
+            return '\n</' + clean(node.tag_name) + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""

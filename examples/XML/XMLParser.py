@@ -31,7 +31,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_nodes, remove_content, remove_brackets, change_tag_name, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
@@ -76,7 +76,7 @@ class XMLGrammar(Grammar):
     markupdecl = Forward()
     source_hash__ = "4cd0cef2b3f3559b014e4d34e5d8b1f6"
     anonymous__ = re.compile('..(?<=^)')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'//'
     comment_rx__ = re.compile(COMMENT__)
@@ -116,7 +116,7 @@ class XMLGrammar(Grammar):
     EntityValue = Alternative(Series(Drop(Token('"')), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), Drop(Token('"'))), Series(Drop(Token("'")), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), Drop(Token("'"))))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Token('=')), dwsp__, AttValue, mandatory=2)
-    TagName = Capture(Name)
+    TagName = Capture(Synonym(Name))
     emptyElement = Series(Drop(Token('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Token('/>')))
     ETag = Series(Drop(Token('</')), Pop(TagName), dwsp__, Drop(Token('>')), mandatory=1)
     STag = Series(Drop(Token('<')), TagName, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Token('>')))
@@ -208,7 +208,7 @@ def get_grammar() -> XMLGrammar:
 
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
-    "<": [flatten, remove_empty, remove_anonymous_tokens, remove_whitespace, remove_nodes("S")],
+    "<": [flatten, remove_empty, remove_anonymous_tokens, remove_whitespace, remove_children("S")],
     "document": [flatten(lambda context: context[-1].tag_name == 'prolog', recursive=False)],
     "prolog": [],
     "XMLDecl": [],
@@ -348,7 +348,7 @@ def get_transformer() -> TransformationFunc:
 #     for nd in node.result:
 #         if nd.parser.name == 'Attribute':
 #             node.attr[nd['Name'].content] = nd['AttValue'].content
-#     remove_nodes(context, {'Attribute'})
+#     remove_children(context, {'Attribute'})
 
 
 class XMLCompiler(Compiler):

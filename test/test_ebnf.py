@@ -27,13 +27,13 @@ from multiprocessing import Pool
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.toolkit import compile_python_object, re
+from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
 from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_decompiler, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import CompilationError, compileDSL, grammar_instance, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
@@ -805,19 +805,29 @@ class TestInterleaveResume:
         assert len(st.errors) == 1
 
 
-class TestEBNFDecompile:
-    def test_sameflavor(self):
-        """Check if compiling a decompiled AST yields the same AST."""
-        grammar = get_ebnf_grammar()
-        transform = get_ebnf_transformer()
-        decompile = get_ebnf_decompiler()
-        st1 = grammar(EBNF)
-        transform(st1)
-        decompiled_EBNF = decompile(st1)
-        st2 = grammar(decompiled_EBNF)
-        assert st2.error_flag == 0
-        transform(st2)
-        assert st1.equals(st2)
+ArithmeticEBNF = r"""
+@ drop = whitespace   # <- there is no alternative syntax for directives!!!
+
+expression ::= term, { ("+" | "-"), term};
+term       ::= factor, { ("*" | "/"), factor};
+factor     ::= [sign], (NUMBER | VARIABLE | group), { VARIABLE | group };
+sign       ::= `+` | `-`;
+group      ::= "(", expression, ")";
+
+NUMBER     ::= /(?:0|(?:[1-9]\d*))(?:\.\d+)?/, ~;
+VARIABLE   ::= /[A-Za-z]/, ~;
+"""
+
+
+class TestAlternativeEBNFSyntax:
+    def test_alt_syntax(self):
+        code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
+        assert not ast.error_flag
+        arithmetic_grammer = compile_python_object(
+            DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) + code)
+        arithmetic_parser = arithmetic_grammer()
+        st = arithmetic_parser('2 + 3 * (-4 + 1)')
+        assert str(st) == "2+3*(-4+1)"
 
 
 

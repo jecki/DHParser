@@ -31,7 +31,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
     collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
+    remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
@@ -63,7 +63,7 @@ class ArithmeticSimpleGrammar(Grammar):
     expression = Forward()
     source_hash__ = "057a467fa65d6c91e5658319e2c9469f"
     anonymous__ = re.compile('..(?<=^)')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*'
     comment_rx__ = re.compile(COMMENT__)

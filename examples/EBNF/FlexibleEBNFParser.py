@@ -37,7 +37,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_nodes, remove_content, remove_brackets, change_tag_name, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
@@ -349,6 +349,6 @@ if __name__ == "__main__":
                 print(rel_path + ':' + str(error))
             sys.exit(1)
         else:
-            print(result.serialize() if isinstance(result, Node) else result)
+            print(result.serialize('xml') if isinstance(result, Node) else result)
     else:
         print("Usage: FlexibleEBNFParser.py [FILENAME]")

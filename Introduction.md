@@ -373,7 +373,7 @@ scroll down to the AST section, you'll see something like this:
         # AST Transformations for the Lyrik-grammar
         "<": remove_empty,
         "bibliographisches":
-            [flatten, remove_nodes('NZ'), remove_whitespace, remove_tokens],
+            [flatten, remove_children('NZ'), remove_whitespace, remove_tokens],
         "autor": [],
         "werk": [],
         "untertitel": [],
@@ -392,9 +392,9 @@ scroll down to the AST section, you'll see something like this:
         "ziel":
             [reduce_single_child, remove_whitespace, reduce_single_child],
         "gedicht, strophe, text":
-            [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ')],
+            [flatten, remove_children('LEERZEILE'), remove_children('NZ')],
         "titel, serie":
-            [flatten, remove_nodes('LEERZEILE'), remove_nodes('NZ'),
+            [flatten, remove_children('LEERZEILE'), remove_children('NZ'),
              collapse],
         "zeile": [strip],
         "vers":

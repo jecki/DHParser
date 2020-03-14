@@ -573,7 +573,7 @@ Node	../examples/LaTeX/LaTeXCompiler.py	/^    flatten, is_empty, collapse, repla
 Node	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
 Node	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 Node	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-Node	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+Node	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 Node	../test/test_syntaxtree.py	/^from DHParser.syntaxtree import Node, mock_syntax_tree, TOKEN_PTYPE$/;"	kind:namespace	line:27
 OneOrMore	../DHParser/ebnf.py	/^    Compiler, PreprocessorFunc$/;"	kind:namespace	line:26
 OneOrMore	../DHParser/parser.py	/^class OneOrMore(UnaryOperator):$/;"	kind:class	line:1418
@@ -905,7 +905,7 @@ TransformationFunc	../examples/LaTeX/LaTeXCompiler.py	/^    flatten, is_empty, c
 TransformationFunc	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
 TransformationFunc	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 TransformationFunc	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-TransformationFunc	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+TransformationFunc	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 TransformationProc	../DHParser/transform.py	/^TransformationProc = Callable[[List[Node]], None]$/;"	kind:variable	line:76
 TransformerFactoryFunc	../DHParser/dsl.py	/^    PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc$/;"	kind:namespace	line:26
 TransformerFactoryFunc	../DHParser/ebnf.py	/^TransformerFactoryFunc = Callable[[], TransformationFunc]$/;"	kind:variable	line:249
@@ -1560,7 +1560,7 @@ collapse	../examples/LaTeX/LaTeXCompiler.py	/^    flatten, is_empty, collapse, r
 collapse	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
 collapse	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 collapse	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-collapse	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+collapse	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 collect_errors	../DHParser/syntaxtree.py	/^            -> List[Error]:$/;"	kind:member	line:386
 collect_symbols.py	../DevScripts/collect_symbols.py	1;"	kind:file	line:1
 collections	../DHParser/VERALTET/cstringview.pyx	/^import collections$/;"	kind:namespace	line:26
@@ -1751,7 +1751,7 @@ flatten	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_conte
 flatten	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 flatten	../examples/MLW/VERALTET/MLW_compiler.py	/^    WHITESPACE_KEYWORD, TOKEN_KEYWORD$/;"	kind:namespace	line:21
 flatten	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-flatten	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+flatten	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 flatten	../test/test_syntaxtree.py	/^    replace_by_single_child, flatten, remove_expendables$/;"	kind:namespace	line:29
 flatten	../test/test_testing.py	/^    replace_by_single_child, content_from_sinlge_child, flatten$/;"	kind:namespace	line:31
 flatten_sxpr	../DHParser/syntaxtree.py	/^def flatten_sxpr(sxpr: str) -> str:$/;"	kind:function	line:168
@@ -1901,7 +1901,7 @@ has_errors	../test/test_ebnf.py	/^from DHParser.error import has_errors$/;"	kind
 has_fenced_code	../DHParser/toolkit.py	/^def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:$/;"	kind:function	line:237
 has_fenced_code	../test/test_toolkit.py	/^from DHParser.toolkit import has_fenced_code, load_if_file, logging, log_dir, is_logging, re$/;"	kind:namespace	line:29
 has_name	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-has_name	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+has_name	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 hashlib	../DHParser/toolkit.py	/^import hashlib$/;"	kind:namespace	line:35
 hline	../examples/LaTeX/LaTeXCompiler.py	/^    hline = _Token("\\\\hline")$/;"	kind:variable	line:264
 html	../DHParser/parser.py	/^import html$/;"	kind:namespace	line:60
@@ -1988,7 +1988,7 @@ is_whitespace	../examples/EBNF/EBNF_variantCompiler.py	/^    keep_children, is_o
 is_whitespace	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
 is_whitespace	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 is_whitespace	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-is_whitespace	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+is_whitespace	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 isatty	../DHParser/foreign_typing.py	/^    def isatty(self) -> bool:$/;"	kind:member	line:2044
 item	../examples/LaTeX/LaTeXCompiler.py	/^    item = Series(_Token("\\\\item"), Option(WSPC), sequence)$/;"	kind:variable	line:293
 itemize	../examples/LaTeX/LaTeXCompiler.py	/^    itemize = Series(_Token("\\\\begin{itemize}"), Option(WSPC), ZeroOrMore(item), _Token("\\\\end{itemize}"), mandatory=3)$/;"	kind:variable	line:295
@@ -2699,7 +2699,7 @@ content_from_sinlge_child	../examples/MLW/MLWCompiler.py	/^    keep_children, is
 content_from_sinlge_child	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 content_from_sinlge_child	../examples/MLW/VERALTET/MLW_compiler.py	/^    WHITESPACE_KEYWORD, TOKEN_KEYWORD$/;"	kind:namespace	line:21
 content_from_sinlge_child	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-content_from_sinlge_child	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+content_from_sinlge_child	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 content_from_sinlge_child	../test/test_syntaxtree.py	/^    replace_by_single_child, flatten, remove_expendables$/;"	kind:namespace	line:29
 content_from_sinlge_child	../test/test_testing.py	/^    replace_by_single_child, content_from_sinlge_child, flatten$/;"	kind:namespace	line:31
 regex	../test/re_slow_testcase.py	/^    import regex$/;"	kind:namespace	line:19
@@ -2740,7 +2740,7 @@ remove_empty	../examples/EBNF/EBNF_variantCompiler.py	/^    keep_children, is_on
 remove_empty	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
 remove_empty	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 remove_empty	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-remove_empty	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+remove_empty	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 remove_expendables	../DHParser/ebnf.py	/^    remove_tokens, flatten, forbid, assert_content, remove_infix_operator$/;"	kind:namespace	line:31
 remove_expendables	../DHParser/transform.py	/^remove_expendables = remove_children_if(is_expendable)  # partial(remove_children_if, condition=is_expendable)$/;"	kind:variable	line:522
 remove_expendables	../examples/BibTeX/BibTeXCompiler.py	/^    WHITESPACE_PTYPE, TOKEN_PTYPE$/;"	kind:namespace	line:32
@@ -2769,15 +2769,15 @@ remove_last	../examples/EBNF/EBNF_variantCompiler.py	/^    keep_children, is_one
 remove_last	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
 remove_last	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 remove_last	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-remove_last	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
-remove_nodes	../DHParser/transform.py	/^def remove_nodes(context: List[Node], tag_names: AbstractSet[str]):$/;"	kind:function	line:539
-remove_nodes	../examples/BibTeX/BibTeXCompiler.py	/^    WHITESPACE_PTYPE, TOKEN_PTYPE$/;"	kind:namespace	line:32
-remove_nodes	../examples/EBNF/EBNFCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-remove_nodes	../examples/EBNF/EBNF_variantCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-remove_nodes	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
-remove_nodes	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-remove_nodes	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-remove_nodes	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+remove_last	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
+remove_children	../DHParser/transform.py	/^def remove_children(context: List[Node], tag_names: AbstractSet[str]):$/;"	kind:function	line:539
+remove_children	../examples/BibTeX/BibTeXCompiler.py	/^    WHITESPACE_PTYPE, TOKEN_PTYPE$/;"	kind:namespace	line:32
+remove_children	../examples/EBNF/EBNFCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
+remove_children	../examples/EBNF/EBNF_variantCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
+remove_children	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
+remove_children	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
+remove_children	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
+remove_children	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 remove_single_child	../DHParser/transform.py	/^remove_single_child = apply_if(keep_children(slice(0)), lambda nd: len(nd.children) == 1)$/;"	kind:variable	line:527
 remove_tokens	../DHParser/ebnf.py	/^    remove_tokens, flatten, forbid, assert_content, remove_infix_operator$/;"	kind:namespace	line:31
 remove_tokens	../DHParser/transform.py	/^def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):$/;"	kind:function	line:531
@@ -2788,7 +2788,7 @@ remove_tokens	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has
 remove_tokens	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 remove_tokens	../examples/MLW/VERALTET/MLW_compiler.py	/^    WHITESPACE_KEYWORD, TOKEN_KEYWORD$/;"	kind:namespace	line:21
 remove_tokens	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-remove_tokens	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+remove_tokens	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 remove_whitespace	../DHParser/transform.py	/^remove_whitespace = remove_children_if(is_whitespace)  # partial(remove_children_if, condition=is_whitespace)$/;"	kind:variable	line:520
 remove_whitespace	../examples/BibTeX/BibTeXCompiler.py	/^    WHITESPACE_PTYPE, TOKEN_PTYPE$/;"	kind:namespace	line:32
 remove_whitespace	../examples/EBNF/EBNFCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
@@ -2811,7 +2811,7 @@ replace_by_single_child	../examples/MLW/MLWCompiler.py	/^    keep_children, is_o
 replace_by_single_child	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 replace_by_single_child	../examples/MLW/VERALTET/MLW_compiler.py	/^    WHITESPACE_KEYWORD, TOKEN_KEYWORD$/;"	kind:namespace	line:21
 replace_by_single_child	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-replace_by_single_child	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+replace_by_single_child	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 replace_by_single_child	../test/test_syntaxtree.py	/^    replace_by_single_child, flatten, remove_expendables$/;"	kind:namespace	line:29
 replace_by_single_child	../test/test_testing.py	/^    replace_by_single_child, content_from_sinlge_child, flatten$/;"	kind:namespace	line:31
 replace_child	../DHParser/transform.py	/^def replace_child(node: Node):$/;"	kind:function	line:268
@@ -2823,7 +2823,7 @@ replace_content	../examples/LaTeX/LaTeXCompiler.py	/^    flatten, is_empty, coll
 replace_content	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:28
 replace_content	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 replace_content	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-replace_content	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+replace_content	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 replace_or_reduce	../DHParser/transform.py	/^def replace_or_reduce(context: List[Node], condition: Callable=is_named):$/;"	kind:function	line:326
 replace_or_reduce	../examples/BibTeX/BibTeXCompiler.py	/^    WHITESPACE_PTYPE, TOKEN_PTYPE$/;"	kind:namespace	line:32
 replace_or_reduce	../examples/EBNF/EBNFCompiler.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
@@ -3180,7 +3180,7 @@ traverse	../examples/MLW/MLWCompiler.py	/^    keep_children, is_one_of, has_cont
 traverse	../examples/MLW/MLWCompiler_save.py	/^    keep_children, is_one_of, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
 traverse	../examples/MLW/VERALTET/MLW_compiler.py	/^    WHITESPACE_KEYWORD, TOKEN_KEYWORD$/;"	kind:namespace	line:21
 traverse	../examples/Tutorial/LyrikCompiler.py	/^    keep_children, has_name, has_content, apply_if, remove_first, remove_last$/;"	kind:namespace	line:29
-traverse	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_nodes, remove_empty, has_name$/;"	kind:namespace	line:27
+traverse	../examples/Tutorial/LyrikCompiler_example.py	/^    remove_children, remove_empty, has_name$/;"	kind:namespace	line:27
 traverse	../test/test_syntaxtree.py	/^    replace_by_single_child, flatten, remove_expendables$/;"	kind:namespace	line:29
 traverse	../test/test_testing.py	/^    replace_by_single_child, content_from_sinlge_child, flatten$/;"	kind:namespace	line:31
 traverse_recursive	../DHParser/transform.py	/^    def traverse_recursive(context):$/;"	kind:function	line:224

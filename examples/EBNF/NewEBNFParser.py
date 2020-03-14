@@ -81,7 +81,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \\
-    TOKEN_PTYPE, remove_nodes, remove_content, remove_brackets, change_tag_name, \\
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \\
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
@@ -120,7 +120,7 @@ class NewEBNFGrammar(Grammar):
     expression = Forward()
     source_hash__ = "abd9bf9a97d8534bd6d7eaf27e1e4b8b"
     anonymous__ = re.compile('pure_elem$')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     comment_rx__ = re.compile(COMMENT__)

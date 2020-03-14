@@ -102,7 +102,7 @@ __all__ = ('TransformationDict',
            'keep_nodes',
            'keep_content',
            'remove_children_if',
-           'remove_nodes',
+           'remove_children',
            'remove_content',
            # 'remove_first',
            # 'remove_last',
@@ -1321,7 +1321,7 @@ def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
 
 # TODO: refactor to "remove_children"!?
 @transformation_factory(collections.abc.Set)
-def remove_nodes(context: List[Node], tag_names: AbstractSet[str]):
+def remove_children(context: List[Node], tag_names: AbstractSet[str]):
     """Removes children by tag name."""
     remove_children_if(context, partial(is_one_of, tag_name_set=tag_names))
 

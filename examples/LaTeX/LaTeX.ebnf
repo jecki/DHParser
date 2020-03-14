@@ -167,7 +167,7 @@ SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 LINEFEED   = /[\\][\\]/
 
-NAME       = /\w+/~
+NAME       = /\w+/
 INTEGER    = /\d+/~
 
 TEXT       = /(?:[^\\%$&\{\}\[\]\n]+(?:\n(?![ \t]*\n))?)+/

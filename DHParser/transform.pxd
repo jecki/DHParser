@@ -62,7 +62,7 @@ cpdef normalize_whitespace(context)
 # cpdef remove_children_if(context: List[Node], condition: Callable)
 # cpdef remove_brackets(context: List[Node])
 # cpdef remove_tokens(context: List[Node], tokens: AbstractSet[str] = ?)
-# cpdef remove_nodes(context: List[Node], tag_names: AbstractSet[str])
+# cpdef remove_children(context: List[Node], tag_names: AbstractSet[str])
 # cpdef remove_content(context: List[Node], regexp: str)
 # cpdef error_on(context: List[Node], condition: Callable,
 #              error_msg: str, error_code: ErrorCode)
