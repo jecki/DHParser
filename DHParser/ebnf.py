@@ -202,7 +202,7 @@ class EBNFGrammar(Grammar):
     #: delimiters
 
     DEF        = `=` | `:=` | `::=`
-    OR         = `|` | `/`
+    OR         = `|`
     AND        = `,` | ``
     ENDL       = `;` | ``
     """
@@ -220,7 +220,7 @@ class EBNFGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     ENDL = Capture(Alternative(Token(";"), Token("")))
     AND = Capture(Alternative(Token(","), Token("")))
-    OR = Capture(Alternative(Token("|"), Token("/")))
+    OR = Capture(Token("|"))
     DEF = Capture(Alternative(Token("="), Token(":="), Token("::=")))
     EOF = Series(NegativeLookahead(RegExp('.')),
                  Option(Pop(DEF, match_func=optional_last_value)),

@@ -60,6 +60,6 @@ EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
 #: delimiters
 
 DEF        = `=` | `:=` | `::=`
-OR         = `|` | `/`
+OR         = `|`
 AND        = `,` | ``
 ENDL       = `;` | ``

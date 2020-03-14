@@ -73,7 +73,7 @@ class FlexibleEBNFGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "7d0821ca4b634b6da341a614570d47f5"
+    source_hash__ = "4fea3c06a47697f754ff7f60def16f2f"
     anonymous__ = re.compile('pure_elem$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -85,7 +85,7 @@ class FlexibleEBNFGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     ENDL = Capture(Alternative(Token(";"), Token("")))
     AND = Capture(Alternative(Token(","), Token("")))
-    OR = Capture(Alternative(Token("|"), Token("/")))
+    OR = Capture(Token("|"))
     DEF = Capture(Alternative(Token("="), Token(":="), Token("::=")))
     EOF = Series(NegativeLookahead(RegExp('.')), Option(Pop(DEF, match_func=optional_last_value)), Option(Pop(OR, match_func=optional_last_value)), Option(Pop(AND, match_func=optional_last_value)), Option(Pop(ENDL, match_func=optional_last_value)))
     whitespace = Series(RegExp('~'), dwsp__)
