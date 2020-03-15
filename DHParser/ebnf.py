@@ -351,8 +351,8 @@ EBNF_AST_transformation_table = {
         [replace_by_single_child],
     "flowmarker, retrieveop":
         [reduce_single_child],
-    "group": [
-        remove_brackets, replace_by_single_child],
+    "group":
+        [remove_brackets],
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets, # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
@@ -1448,6 +1448,17 @@ class EBNFCompiler(Compiler):
         repetitions = []
         filtered_result, custom_args = self._error_customization(node)
         for child in filtered_result:
+            if child.tag_name == "group":
+                assert len(child.children) == 1
+                if child.children[0].tag_name == 'repetition':
+                    child.tag_name = "option"
+                    child.children[0].tag_name = "oneormore"
+                elif child.children[0].tag_name == 'option':
+                    child = child.children[0]
+                else:
+                    repetitions.append((1, 1))
+                    children.append(child.children[0])
+                    continue
             if child.tag_name == "oneormore":
                 repetitions.append((1, INFINITE))
                 assert len(child.children) == 1
@@ -1545,8 +1556,10 @@ class EBNFCompiler(Compiler):
 
 
     def on_group(self, node) -> str:
-        raise EBNFCompilerError("Group nodes should have been eliminated by "
-                                "AST transformation!")
+        assert len(node.children) == 1
+        return self.compile(node.children[0])
+        # raise EBNFCompilerError("Group nodes should have been eliminated by "
+        #                         "AST transformation!")
 
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!

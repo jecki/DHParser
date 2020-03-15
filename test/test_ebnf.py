@@ -804,6 +804,27 @@ class TestInterleaveResume:
         st = gr('EXY EXYZ.')
         assert len(st.errors) == 1
 
+    def test_interleave_groups(self):
+        def mini_suite(gr):
+            st = gr("AAAB")
+            assert not st.errors
+            st = gr("BAAA")
+            assert not st.errors
+            st = gr("B")
+            assert not st.errors, str(st.errors)
+
+        lang = """document = { `A` } ° `B`\n"""
+        gr = grammar_provider(lang)()
+        mini_suite(gr)
+        st = gr('AABAA')
+        assert not st.errors
+
+        lang = """document = ({ `A` }) ° `B`\n"""
+        gr = grammar_provider(lang)()
+        mini_suite(gr)
+        st = gr('AABAA')
+        assert st.errors
+
 
 ArithmeticEBNF = r"""
 @ drop = whitespace   # <- there is no alternative syntax for directives!!!
