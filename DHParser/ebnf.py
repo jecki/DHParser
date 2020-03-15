@@ -145,22 +145,23 @@ class EBNFGrammar(Grammar):
     @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
     @ whitespace = /\s*/                            # whitespace includes linefeed
     @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-    @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
-    @ anonymous  = pure_elem
+    @ anonymous  = pure_elem, EOF, AND, OR, ENDL, DEF   # eliminate nodes if possible
+    @ drop       = whitespace, EOF, AND, OR, ENDL, DEF  # do not include content in the concrete syntax tree
+
 
     #: top-level
 
     syntax     = [~//] { definition | directive } §EOF
-    definition = symbol §:DEF~ expression :ENDL~
+    definition = symbol §DEF~ expression ENDL~
     directive  = "@" §symbol "="
                  (regexp | literal | symbol)
                  { "," (regexp | literal | symbol) }
 
     #: components
 
-    expression = sequence { :OR~ sequence }
+    expression = sequence { OR~ sequence }
     sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
-                 { :AND~ ["§"] ( interleave | lookaround ) }
+                 { AND~ ["§"] ( interleave | lookaround ) }
     interleave = term { "°" ["§"] term }
     lookaround = flowmarker (oneormore | pure_elem)
     term       = oneormore | repetition | option | pure_elem
@@ -197,19 +198,18 @@ class EBNFGrammar(Grammar):
     regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
     whitespace = /~/~                               # insignificant whitespace
 
-    EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
-
     #: delimiters
 
-    DEF        = `=` | `:=` | `::=`
-    OR         = `|`
-    AND        = `,` | ``
-    ENDL       = `;` | ``
+    DEF        = `=`                                # alternative: `:=` or `::=`
+    OR         = `|`                                # alternative: `/` (requires different regex-delimiter!)
+    AND        = ``                                 # alternative: `,`
+    ENDL       = ``                                 # alternatvie: `;`
+
+    EOF        = !/./                               # if needed, add: [:?DEF] [:?OR] [:?AND] [:?ENDL]
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "7d0821ca4b634b6da341a614570d47f5"
-    anonymous__ = re.compile('pure_elem$')
+    anonymous__ = re.compile('pure_elem$|EOF$|AND$|OR$|ENDL$|DEF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
@@ -218,15 +218,11 @@ class EBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    ENDL = Capture(Alternative(Token(";"), Token("")))
-    AND = Capture(Alternative(Token(","), Token("")))
-    OR = Capture(Token("|"))
-    DEF = Capture(Alternative(Token("="), Token(":="), Token("::=")))
-    EOF = Series(NegativeLookahead(RegExp('.')),
-                 Option(Pop(DEF, match_func=optional_last_value)),
-                 Option(Pop(OR, match_func=optional_last_value)),
-                 Option(Pop(AND, match_func=optional_last_value)),
-                 Option(Pop(ENDL, match_func=optional_last_value)))
+    EOF = Drop(Drop(NegativeLookahead(RegExp('.'))))
+    ENDL = Drop(Token(""))
+    AND = Drop(Token(""))
+    OR = Drop(Token("|"))
+    DEF = Drop(Token("="))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
@@ -242,8 +238,7 @@ class EBNFGrammar(Grammar):
     oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression,
                                    Series(Token("}+"), dwsp__)),
                             Series(element, Series(Token("+"), dwsp__)))
-    group = Series(Series(Token("("), dwsp__), expression,
-                   Series(Token(")"), dwsp__), mandatory=1)
+    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
     retrieveop = Alternative(Series(Token("::"), dwsp__),
                              Series(Token(":?"), dwsp__),
                              Series(Token(":"), dwsp__))
@@ -257,15 +252,14 @@ class EBNFGrammar(Grammar):
     interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__),
                                                 Option(Series(Token("§"), dwsp__)), term)))
     sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround),
-                      ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Token("§"), dwsp__)),
+                      ZeroOrMore(Series(AND, dwsp__, Option(Series(Token("§"), dwsp__)),
                                         Alternative(interleave, lookaround))))
-    expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
+    expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__),
                        Alternative(regexp, literal, symbol),
                        ZeroOrMore(Series(Series(Token(","), dwsp__),
                                          Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Retrieve(DEF), dwsp__,
-                        expression, Retrieve(ENDL), dwsp__, mandatory=1)
+    definition = Series(symbol, DEF, dwsp__, expression, ENDL, dwsp__, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))),
                     ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax

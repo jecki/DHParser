@@ -1021,8 +1021,8 @@ class NewEBNFCompiler(Compiler):
             elif defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
-            # if self.drop_flag:
-            #     defn = 'Drop(%s)' % defn
+            if self.drop_flag:
+                defn = 'Drop(%s)' % defn
             # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
             from traceback import extract_tb, format_list

@@ -828,29 +828,29 @@ class TestInterleaveResume:
         assert st.errors
 
 
-ArithmeticEBNF = r"""
-@ drop = whitespace   # <- there is no alternative syntax for directives!!!
-
-expression ::= term, { ("+" | "-"), term};
-term       ::= factor, { ("*" | "/"), factor};
-factor     ::= [sign], (NUMBER | VARIABLE | group), { VARIABLE | group };
-sign       ::= `+` | `-`;
-group      ::= "(", expression, ")";
-
-NUMBER     ::= /(?:0|(?:[1-9]\d*))(?:\.\d+)?/, ~;
-VARIABLE   ::= /[A-Za-z]/, ~;
-"""
-
-
-class TestAlternativeEBNFSyntax:
-    def test_alt_syntax(self):
-        code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
-        assert not ast.error_flag
-        arithmetic_grammer = compile_python_object(
-            DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) + code)
-        arithmetic_parser = arithmetic_grammer()
-        st = arithmetic_parser('2 + 3 * (-4 + 1)')
-        assert str(st) == "2+3*(-4+1)"
+# ArithmeticEBNF = r"""
+# @ drop = whitespace   # <- there is no alternative syntax for directives!!!
+#
+# expression ::= term, { ("+" | "-"), term};
+# term       ::= factor, { ("*" | "/"), factor};
+# factor     ::= [sign], (NUMBER | VARIABLE | group), { VARIABLE | group };
+# sign       ::= `+` | `-`;
+# group      ::= "(", expression, ")";
+#
+# NUMBER     ::= /(?:0|(?:[1-9]\d*))(?:\.\d+)?/, ~;
+# VARIABLE   ::= /[A-Za-z]/, ~;
+# """
+#
+#
+# class TestAlternativeEBNFSyntax:
+#     def test_alt_syntax(self):
+#         code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
+#         assert not ast.error_flag
+#         arithmetic_grammer = compile_python_object(
+#             DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) + code)
+#         arithmetic_parser = arithmetic_grammer()
+#         st = arithmetic_parser('2 + 3 * (-4 + 1)')
+#         assert str(st) == "2+3*(-4+1)"
 
 
 
