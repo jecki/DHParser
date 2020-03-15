@@ -42,7 +42,7 @@ from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re,
     unrepr, compile_python_object, DHPARSER_PARENTDIR, RX_NEVER_MATCH
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_empty, remove_children, \
-    remove_tokens, flatten, forbid, assert_content
+    remove_tokens, flatten, forbid, assert_content, apply_unless, has_parent
 from DHParser.versionnumber import __version__
 
 
@@ -95,7 +95,7 @@ except ImportError:
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \\
-    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
@@ -111,7 +111,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \\
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
-    trace_history, has_descendant, neg, has_parent, optional_last_value
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value
 '''
 
 
@@ -513,7 +513,7 @@ class EBNFDirectives:
                 expression. The closest match is the point of reentry
                 for after a parsing error has error occurred. Other
                 than the skip field, this configures resuming after
-                the failing parser (`parser.Series` or `parser.AllOf`)
+                the failing parser (`parser.Series` or `parser.Interleave`)
                 has returned.
 
         drop:   A set that may contain the elements `DROP_TOKEN` and
@@ -1276,7 +1276,9 @@ class EBNFCompiler(Compiler):
                 else:
                     if self.anonymous_regexp == RX_NEVER_MATCH:
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
-                                            ' Should be one of %s.' % (content, str(DROP_VALUES)))
+                                            'Should be one of %s or an anonymous parser, where '
+                                            'the "@anonymous"-directive must preceed the '
+                                            '@drop-directive.' % (content, str(DROP_VALUES)))
                     else:
                         self.tree.new_error(
                             node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '

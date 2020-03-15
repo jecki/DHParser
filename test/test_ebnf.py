@@ -820,6 +820,8 @@ class TestInterleaveResume:
         assert not st.errors
 
         lang = """document = ({ `A` }) ° `B`\n"""
+        # code, errors, ast = compile_ebnf(lang, 'InterleaveTest', True)
+        # print(ast.as_sxpr())
         gr = grammar_provider(lang)()
         mini_suite(gr)
         st = gr('AABAA')

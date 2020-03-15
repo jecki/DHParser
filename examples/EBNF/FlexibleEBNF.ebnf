@@ -3,8 +3,9 @@
 @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ drop       = whitespace, DEF, OR, AND, ENDL, EOF  # do not include these even in the concrete syntax tree
-@ anonymous  = pure_elem
+@ anonymous  = pure_elem, EOF
+@ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
+
 
 #: top-level
 

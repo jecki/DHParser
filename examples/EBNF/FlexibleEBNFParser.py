@@ -45,7 +45,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
-    trace_history, has_descendant, neg, has_parent, optional_last_value
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value
 
 
 #######################################################################
@@ -73,8 +73,8 @@ class FlexibleEBNFGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "4fea3c06a47697f754ff7f60def16f2f"
-    anonymous__ = re.compile('pure_elem$')
+    source_hash__ = "ee9bb06eb025ac0cabad051be9e81457"
+    anonymous__ = re.compile('pure_elem$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
@@ -87,7 +87,7 @@ class FlexibleEBNFGrammar(Grammar):
     AND = Capture(Alternative(Token(","), Token("")))
     OR = Capture(Token("|"))
     DEF = Capture(Alternative(Token("="), Token(":="), Token("::=")))
-    EOF = Series(NegativeLookahead(RegExp('.')), Option(Pop(DEF, match_func=optional_last_value)), Option(Pop(OR, match_func=optional_last_value)), Option(Pop(AND, match_func=optional_last_value)), Option(Pop(ENDL, match_func=optional_last_value)))
+    EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value))))))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)

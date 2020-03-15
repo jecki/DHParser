@@ -31,7 +31,7 @@ from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
-    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
+    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError
 from DHParser import compile_source
@@ -485,20 +485,20 @@ class TestSeries:
 class TestAllOfSomeOf:
     def test_allOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
-        prefixes = AllOf(TKN("A"), TKN("B"))
+        prefixes = Interleave(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
 
     def test_allOf_completeness(self):
         """Test that an error is raised if not  all parsers of an AllOf-List
         match."""
-        prefixes = AllOf(TKN("A"), TKN("B"))
+        prefixes = Interleave(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('B').error_flag
 
     def test_allOf_redundance(self):
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
-        prefixes = AllOf(TKN("A"), TKN("B"), TKN("A"))
+        prefixes = Interleave(TKN("A"), TKN("B"), TKN("A"))
         assert Grammar(prefixes)('A A B').content == 'A A B'
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
@@ -506,17 +506,21 @@ class TestAllOfSomeOf:
 
     def test_someOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
-        prefixes = SomeOf(TKN("A"), TKN("B"))
+        prefixes = Interleave(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
-        prefixes = SomeOf(TKN("B"), TKN("A"))
+        st = Grammar(prefixes)('B')
+        assert st.error_flag
+        prefixes = Interleave(TKN("B"), TKN("A"), repetitions=((0, 1), (0, 1)))
         assert Grammar(prefixes)('A B').content == 'A B'
-        assert Grammar(prefixes)('B').content == 'B'
+        st = Grammar(prefixes)('B')
+        assert not st.error_flag
+        assert st.content == 'B'
 
     def test_someOf_redundance(self):
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
-        prefixes = SomeOf(TKN("A"), TKN("B"), TKN("A"))
+        prefixes = Interleave(TKN("A"), TKN("B"), TKN("A"))
         assert Grammar(prefixes)('A A B').content == 'A A B'
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'

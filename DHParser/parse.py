@@ -76,9 +76,6 @@ __all__ = ('ParserError',
            'MandatoryNary',
            'Series',
            'Alternative',
-           'AllOf',
-           'SomeOf',
-           'Unordered',
            'INFINITE',
            'Interleave',
            'Required',
@@ -521,6 +518,13 @@ class Parser:
         the results or None as well as the text at the position right behind
         the matching string."""
         raise NotImplementedError
+
+    def is_optional(self) -> Optional[bool]:
+        """Returns `True`, if the parser can never fails, i.e. never yields
+        `None`, instead of a node. Returns `False`, if the parser can fail.
+        Returns `None` if it is not known whether the parser can fail.
+        """
+        return None
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         """Sets a proxy that replaces the _parse()-method. The original
@@ -1798,12 +1802,15 @@ class Option(UnaryParser):
     def __init__(self, parser: Parser) -> None:
         super(Option, self).__init__(parser)
         # assert isinstance(parser, Parser)
-        assert not isinstance(parser, Option), \
+        assert not parser.is_optional(), \
             "Redundant nesting of options: %s(%s)" % (self.ptype, parser.pname)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
         return self._return_value(node), text
+
+    def is_optional(self) -> Optional[bool]:
+        return True
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -1879,7 +1886,7 @@ class OneOrMore(UnaryParser):
 
     def __init__(self, parser: Parser) -> None:
         super(OneOrMore, self).__init__(parser)
-        assert not isinstance(parser, Option), \
+        assert not parser.is_optional(), \
             "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
             "%s(%s)" % (self.ptype, parser.pname)
 
@@ -2158,8 +2165,9 @@ class Alternative(NaryParser):
         assert len(parsers) >= 1
         assert len(set(parsers)) == len(parsers)
         # only the last alternative may be optional. Could this be checked at compile time?
-        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
-            "Parser-specification Error: only the last alternative may be optional!"
+        assert all(not p.is_optional() for p in parsers[:-1]), \
+            "Parser-specification Error: Only the last alternative may be optional!" \
+            "Otherwise alternatives after the first optional alternative will never be parsed."
         super(Alternative, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2202,160 +2210,27 @@ class Alternative(NaryParser):
         return self
 
 
-class AllOf(MandatoryNary):
-    """
-    DEPRECATED, will be removed soon, use Interleave instead!!!
+INFINITE = 2**30
 
-    Matches if all elements of a list of parsers match. Each parser must
-    match exactly once. Other than in a sequence, the order in which
-    the parsers match is arbitrary, however.
 
-    Example::
+class Interleave(MandatoryNary):
+    """Parse elements in arbitrary order.
 
-        >>> prefixes = AllOf(TKN("A"), TKN("B"))
+    Examples::
+        >>> prefixes = Interleave(TKN("A"), TKN("B"))
         >>> Grammar(prefixes)('A B').content
         'A B'
         >>> Grammar(prefixes)('B A').content
         'B A'
 
-    Note: The semantics of the mandatory-parameter differs for `AllOf` from
-    that of `Series`: Rather than the position of the sub-parser starting
-    from which all following parsers cause the Series-parser to raise an
-    Error instead of returning a non-match, an error is raised if and only
-    if the parsers up to (but not including the one at) the mandatory-position
-    have already been exhausted, i.e. have already captured content for the
-    AllOf-parser. Otherwise no error is raised, but just a non-match is
-    returned.
-
-    EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
-
-    EBNF-Example:  ``set = <letter letter_or_digit>``
-    """
-
-    def __init__(self, *parsers: Parser,
-                 mandatory: int = NO_MANDATORY,
-                 err_msgs: MessagesType = [],
-                 skip: ResumeList = []) -> None:
-        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
-            "Only the last parser from unordered sequence may be optional!"
-        if len(parsers) == 1 and isinstance(parsers[0], Series):
-            parsers = parsers[0].parsers
-            if self.mandatory == NO_MANDATORY:
-                self.mandatory = parsers[0].mandatory
-        assert len(parsers) > 1, "AllOf requires at least two sub-parsers."
-        super(AllOf, self).__init__(*parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
-
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        results = ()  # type: Tuple[Node, ...]
-        text_ = text  # type: StringView
-        parsers = list(self.parsers)  # type: List[Parser]
-        error = None  # type: Optional[Error]
-        while parsers:
-            for i, parser in enumerate(parsers):
-                node, text__ = parser(text_)
-                if node is not None:
-                    if node._result or not node.tag_name.startswith(':'):
-                        # drop anonymous empty nodes
-                        results += (node,)
-                        text_ = text__
-                    del parsers[i]
-                    break
-            else:
-                for i, p in enumerate(self.parsers):
-                    if p in parsers and i < self.mandatory:
-                        return None, text
-                reloc = self.get_reentry_point(text_)
-                expected = '< ' + ' '.join([parser.repr for parser in parsers]) + ' >'
-                error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
-                results += (err_node,)
-                if reloc < 0:
-                    parsers = []
-        assert len(results) <= len(self.parsers) \
-            or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        nd = self._return_values(results)  # type: Node
-        if error and reloc < 0:
-            raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
-                              text, error, first_throw=True)
-        return nd, text_
-
-    def __repr__(self):
-        return '< ' + ' '.join(parser.repr for parser in self.parsers) + ' >'
-
-
-class SomeOf(NaryParser):
-    """
-    DEPRECATED, will be removed soon, use Interleave instead!!!
-
-    Matches if at least one element of a list of parsers match. No parser
-    can match more than once.
-
-    Example::
-
-        >>> prefixes = SomeOf(TKN("A"), TKN("B"))
+        >>> prefixes = Interleave(TKN("A"), TKN("B"), repetitions=((0, 1), (0, 1)))
         >>> Grammar(prefixes)('A B').content
         'A B'
         >>> Grammar(prefixes)('B A').content
         'B A'
         >>> Grammar(prefixes)('B').content
         'B'
-
-    EBNF-Notation: ``<... ...>``    (sequence of parsers enclosed by angular brackets)
-
-    EBNF-Example:  ``set = <letter letter_or_digit>``
     """
-
-    def __init__(self, *parsers: Parser) -> None:
-        if len(parsers) == 1 and isinstance(parsers[0], Alternative):
-            parsers = parsers[0].parsers
-        assert len(parsers) > 1, "SomeOf requires at least two sub-parsers."
-        assert all(not isinstance(p, Option) for p in parsers[:-1]), \
-            "Only the last parser from unordered alternative may be optional!"
-        super(SomeOf, self).__init__(*parsers)
-
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        results = ()  # type: Tuple[Node, ...]
-        text_ = text  # type: StringView
-        parsers = list(self.parsers)  # type: List[Parser]
-        while parsers:
-            for i, parser in enumerate(parsers):
-                node, text__ = parser(text_)
-                if node is not None:
-                    if node._result or not node.tag_name.startswith(':'):
-                        # drop anonymous empty nodes
-                        results += (node,)
-                        text_ = text__
-                    del parsers[i]
-                    break
-            else:
-                parsers = []
-        assert len(results) <= len(self.parsers)
-        if results:
-            return self._return_values(results), text_
-        else:
-            return None, text
-
-    def __repr__(self):
-        return '< ' + ' | '.join(parser.repr for parser in self.parsers) + ' >'
-
-
-def Unordered(parser: NaryParser) -> NaryParser:
-    """
-    Returns an AllOf- or SomeOf-parser depending on whether `parser`
-    is a Series (AllOf) or an Alternative (SomeOf).
-    """
-    if isinstance(parser, Series):
-        return AllOf(parser)
-    elif isinstance(parser, Alternative):
-        return SomeOf(parser)
-    else:
-        raise AssertionError("Unordered can take only Series or Alternative as parser.")
-
-
-INFINITE = 2**30
-
-
-class Interleave(MandatoryNary):
-    """Parse elements in arbitrary order."""
 
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
@@ -2363,7 +2238,7 @@ class Interleave(MandatoryNary):
                  skip: ResumeList = [],
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
         assert len(set(parsers)) == len(parsers)
-        assert all(not isinstance(parser, Option)
+        assert all(not parser.is_optional()
                    and not isinstance(parser, FlowParser) for parser in parsers)
         super(Interleave, self).__init__(
             *parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
@@ -2423,6 +2298,9 @@ class Interleave(MandatoryNary):
             raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
                               text, error, first_throw=True)
         return nd, text_
+
+    def is_optional(self) -> Optional[bool]:
+        return all(r[0] == 0 for r in self.repetitions)
 
     def __repr__(self):
         return ' ° '.join(parser.repr for parser in self.parsers)

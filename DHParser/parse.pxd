@@ -100,10 +100,9 @@ cdef class Alternative(NaryParser):
     pass
 
 cdef class AllOf(MandatoryNary):
-    cdef public int num_parsers
-
-cdef class SomeOf(NaryParser):
-    pass
+    cdef public object repetitions
+    cdef public object non_mandatory
+    cdef public object parsers_set
 
 cdef class FlowParser(UnaryParser):
     pass

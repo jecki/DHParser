@@ -90,8 +90,10 @@ __all__ = ('TransformationDict',
            'has_attr',
            'attr_equals',
            'has_content',
+           'has_ancestor',
            'has_parent',
            'has_descendant',
+           'has_child',
            'has_sibling',
            'lstrip',
            'rstrip',
@@ -585,31 +587,45 @@ def has_content(context: List[Node], regexp: str) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_parent(context: List[Node], tag_name_set: AbstractSet[str], ancestry: int = 1) -> bool:
+def has_ancestor(context: List[Node], tag_name_set: AbstractSet[str], ancestry: int = 1) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the context before the last node in the context.
-    :param ancestry: determines how deep `has_parent` should dive into
+    :param ancestry: determines how deep `has_ancestor` should dive into
         the ancestry. "1" means only the immediate parents wil be considered,
         "2" means also the grandparents, ans so on.
     """
     assert ancestry > 0
-    for i in range(2, max(ancestry + 2, len(context) + 1)):
+    for i in range(2, min(ancestry + 2, len(context) + 1)):
         if context[-i].tag_name in tag_name_set:
             return True
     return False
 
 
 @transformation_factory(collections.abc.Set)
+def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Checks whether the immediate predecessor in the context has one of the
+    given tags."""
+    return has_ancestor(context, tag_name_set, 1)
+
+
+@transformation_factory(collections.abc.Set)
 def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
-                   stop_level: int = 1) -> bool:
-    assert stop_level > 0
+                   generations: int = 1) -> bool:
+    assert generations > 0
     for child in context[-1].children:
         if child.tag_name in tag_name_set:
             return True
-        if stop_level > 1 and has_descendant(context + [child], tag_name_set, stop_level - 1):
+        if generations > 1 and has_descendant(context + [child], tag_name_set, generations - 1):
             return True
     return False
+
+
+@transformation_factory(collections.abc.Set)
+def has_child(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Checks whether at least one child (i.e. immediate descendant) has one of
+    the given tags."""
+    return has_descendant(context, tag_name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
