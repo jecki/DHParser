@@ -72,8 +72,8 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \\
-    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \\
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
@@ -118,8 +118,8 @@ class NewEBNFGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "abd9bf9a97d8534bd6d7eaf27e1e4b8b"
-    anonymous__ = re.compile('pure_elem$')
+    source_hash__ = "a2198dcd8cdb4df82eaaf264e262fbf1"
+    anonymous__ = re.compile('pure_elem$|EOF$|AND$|OR$|ENDL$|DEF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
@@ -128,7 +128,11 @@ class NewEBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = NegativeLookahead(RegExp('.'))
+    EOF = Drop(Drop(NegativeLookahead(RegExp('.'))))
+    ENDL = Drop(Token(""))
+    AND = Drop(Token(""))
+    OR = Drop(Token("|"))
+    DEF = Drop(Token("="))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
@@ -140,15 +144,15 @@ class NewEBNFGrammar(Grammar):
     group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
     retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":?"), dwsp__), Series(Token(":"), dwsp__))
     flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), literal, plaintext, regexp, whitespace, group))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, whitespace, group))
     pure_elem = Series(element, NegativeLookahead(RegExp('[?*+]')), mandatory=1)
     term = Alternative(oneormore, repetition, option, pure_elem)
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem))
     interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__), Option(Series(Token("§"), dwsp__)), term)))
-    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround)))
-    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
+    sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround))))
+    expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
+    definition = Series(symbol, DEF, dwsp__, expression, ENDL, dwsp__, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     
@@ -1017,8 +1021,8 @@ class NewEBNFCompiler(Compiler):
             elif defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
-            # if self.drop_flag:
-            #     defn = 'Drop(%s)' % defn
+            if self.drop_flag:
+                defn = 'Drop(%s)' % defn
             # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
             from traceback import extract_tb, format_list

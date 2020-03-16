@@ -505,7 +505,7 @@ class EBNFDirectives:
         skip:  mapping of symbols to a list of search expressions. A
                 search expressions can be either a string ot a regular
                 expression. The closest match is the point of reentry
-                for the series- or allof-parser when a mandatory item
+                for the series- or interleave-parser when a mandatory item
                 failed to match the following text.
 
         resume:  mapping of symbols to a list of search expressions. A
@@ -1198,8 +1198,8 @@ class EBNFCompiler(Compiler):
             if defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
-            # if self.drop_flag:
-            #     defn = 'Drop(%s)' % defn
+            if self.drop_flag:
+                defn = 'Drop(%s)' % defn
             # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
             from traceback import extract_tb, format_list
@@ -1393,7 +1393,7 @@ class EBNFCompiler(Compiler):
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
         """Generates the customization arguments (mantary, error_msgs, skip) for
-        `MandatoryNary`-parsers (Series, Allof, ...)."""
+        `MandatoryNary`-parsers (Series, Interleave, ...)."""
         mandatory_marker = []
         filtered_children = []  # type: List[Node]
         for nd in node.children:
