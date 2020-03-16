@@ -1,6 +1,6 @@
 # XML
 
-This is a complete XML-Parser, see: https://www.w3.org/TR/REC-xml/
+This is a complete XML-Parser, see: <https://www.w3.org/TR/REC-xml/>
 
 Author: Eckhart Arnold <eckhart.arnold@posteo.de>
 

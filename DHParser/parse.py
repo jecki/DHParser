@@ -2158,7 +2158,7 @@ class Alternative(NaryParser):
 
     EBNF-Notation: ``... | ...``
 
-    EBNF-Example:  ``sentence = /\d+\.\d+/ | /\d+/``
+    EBNF-Example:  ``number = /\d+\.\d+/ | /\d+/``
     """
 
     def __init__(self, *parsers: Parser) -> None:
@@ -2217,7 +2217,7 @@ class Interleave(MandatoryNary):
     """Parse elements in arbitrary order.
 
     Examples::
-        >>> prefixes = Interleave(TKN("A"), TKN("B"))
+        >>> prefixes = TKN("A") * TKN("B")
         >>> Grammar(prefixes)('A B').content
         'A B'
         >>> Grammar(prefixes)('B A').content
@@ -2230,6 +2230,10 @@ class Interleave(MandatoryNary):
         'B A'
         >>> Grammar(prefixes)('B').content
         'B'
+
+    EBNF-Notation: ``... ° ...``
+
+    EBNF-Example:  ``float =  { /\d/ }+ ° /\./``
     """
 
     def __init__(self, *parsers: Parser,
@@ -2303,7 +2307,11 @@ class Interleave(MandatoryNary):
         return all(r[0] == 0 for r in self.repetitions)
 
     def __repr__(self):
-        return ' ° '.join(parser.repr for parser in self.parsers)
+        def rep(parser: Parser) -> str:
+            return '(' + parser.repr + ')' \
+                if isinstance(parser, Series) or isinstance(parser, Alternative) else parser.repr
+
+        return ' ° '.join(rep(parser) for parser in self.parsers)
 
     def _prepare_combined(self, other: Parser) -> Tuple[Tuple[Parser], int, List[Tuple[int, int]]]:
         """Returns the other's parsers and repetitions if `other` is an Interleave-parser,

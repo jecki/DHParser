@@ -20,8 +20,9 @@ directive  = "@" §symbol "="
 expression = sequence { :OR~ sequence }
 sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
              { :AND~ ["§"] ( interleave | lookaround ) }
-interleave = term { "°" ["§"] term }
-lookaround = flowmarker (oneormore | pure_elem)
+interleave = difference { "°" ["§"] difference }
+lookaround = flowmarker § (oneormore | pure_elem)
+difference = term ["-" § (oneormore | pure_elem)]
 term       = oneormore | repetition | option | pure_elem
 
 #: elements
@@ -56,11 +57,12 @@ plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat 
 regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
 whitespace = /~/~                               # insignificant whitespace
 
-EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
-
 #: delimiters
 
 DEF        = `=` | `:=` | `::=`
 OR         = `|`
 AND        = `,` | ``
 ENDL       = `;` | ``
+
+EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+
