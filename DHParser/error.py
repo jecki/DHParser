@@ -79,7 +79,7 @@ class Error:
     LEFT_RECURSION_WARNING                   = ErrorCode(140)
 
     UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
-    CANNOT_VERIFY_TRANTABLE_WARNING          = ErrorCode(620)
+    CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)
 
     # error codes
 
@@ -94,7 +94,12 @@ class Error:
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
     REDEFINED_DIRECTIVE                      = ErrorCode(1080)
     UNDEFINED_RETRIEVE                       = ErrorCode(1090)
-    SYMBOL_UNFIT_TO_CAPTURE                  = ErrorCode(1100)
+
+    # EBNF-specific static analysis errors
+
+    SYMBOL_UNFIT_TO_CAPTURE                  = ErrorCode(1510)
+    LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
+
 
     # fatal errors
 

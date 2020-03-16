@@ -2403,6 +2403,14 @@ class Lookahead(FlowParser):
     def __repr__(self):
         return '&' + self.parser.repr
 
+    def static_analysis(self) -> Optional[List[GrammarErrorType]]:
+        if self.parser.is_optional():
+            return [(self.pname, self, Error(
+                'Lookahead %s does not make sense with optional parser "%s"!' \
+                % (self.pname, str(self.parser)),
+                0, Error.LOOKAHEAD_WITH_OPTIONAL_PARSER))]
+        return None
+
 
 class NegativeLookahead(Lookahead):
     """
@@ -2435,6 +2443,14 @@ class Lookbehind(FlowParser):
         else:  # p is of type PlainText
             self.text = cast(Token, p).text
         super(Lookbehind, self).__init__(parser)
+
+    # def __deepcopy__(self, memo):
+    #     if self.regexp is None:
+    #         duplicate = self.__class__(RegExp(self.regexp))
+    #     else:
+    #         duplicate = self.__class__(Token(self.text))
+    #     copy_parser_base_attrs(self, duplicate)
+    #     return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         backwards_text = self.grammar.reversed__[text.__len__():]
