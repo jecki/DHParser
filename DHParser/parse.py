@@ -299,6 +299,11 @@ class Parser:
 
         _grammar:  A reference to the Grammar object to which the parser
                 is attached.
+
+        _symbol:  The name of the closest named parser to which this
+                parser is connected in a grammar. If pname is not the
+                empty string, this will become the same as pname, when
+                the property `symbol` is read for the first time.
     """
 
     def __init__(self) -> None:
@@ -315,6 +320,7 @@ class Parser:
             self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
         except NameError:
             pass
+        self._symbol = ''             # type: str
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -339,6 +345,14 @@ class Parser:
         """Returns a type name for the parser. By default this is the name of
         the parser class with an added leading colon ':'. """
         return ':' + self.__class__.__name__
+
+    @property
+    def symbol(self) -> str:
+        """Returns the symbol with which the parser is associated in a grammar.
+        This is the closest parser with a pname that contains this parser."""
+        if not self._symbol:
+            self._symbol = self.grammar.associated_symbol(self).pname
+        return self._symbol
 
     @property
     def repr(self) -> str:
@@ -637,7 +651,7 @@ class Parser:
             return self._apply(func, positive_flip)
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
-        return (self.pname, self, Error(msg, 0, code))
+        return (self.symbol, self, Error(msg, 0, code))
 
     def static_analysis(self) -> Optional[List['AnalysisError']]:
         """Analyses the parser for logical errors after the grammar has been
@@ -1405,6 +1419,33 @@ class Grammar:
         return '\n'.join(ebnf)
 
 
+    def associated_symbol(self, parser: Parser) -> Optional[Parser]:
+        r"""Returns the closest named parser that contains `parser`.
+        If `parser` is a named parser itself, `parser` is returned.
+        If `parser` is not connected to any symbol in the Grammar,
+        `None` is returned.
+
+        >>> i = RegExp(r'\w+')
+        >>> word = Series(i, Whitespace(r'\s*'))
+        >>> word.pname = 'word'
+        >>> gr = Grammar(word)
+        >>> gr.associated_symbol(i).pname
+        word
+        """
+        symbol = None   # type: Optional[Parser]
+
+        def find_symbol_for_parser(p: Parser) -> Optional[bool]:
+            nonlocal symbol
+            if p.pname:
+                symbol = p
+            return parser in p.sub_parsers()
+
+        if parser.pname:
+            return parser
+        self.root_parser__.apply(find_symbol_for_parser)
+        return symbol
+
+
     def static_analysis(self) -> List[AnalysisError]:
         """
         Checks the parser tree statically for possible errors.
@@ -1418,7 +1459,7 @@ class Grammar:
         """
         error_list = []  # type: List[AnalysisError]
 
-        def visit_parser(parser: Parser) -> None:
+        def visit_parser(parser: Parser) -> Optional[bool]:
             nonlocal error_list
             errors = parser.static_analysis()
             if errors is not None:
@@ -1768,6 +1809,12 @@ class UnaryParser(MetaParser):
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return (self.parser,)
 
+    def location_info(self) -> str:
+        """Returns a description of the location of the parser within the grammar
+        for the purpose of transparent erorr reporting."""
+        return "%s: %s%s(%s%s)" % (self.symbol, self.pname or '_', self.ptype,
+                                   self.parser.pname or '_', self.parser.ptype)
+
 
 class NaryParser(MetaParser):
     """
@@ -1802,6 +1849,11 @@ class NaryParser(MetaParser):
                 % (self.pname, self.ptype, str(self)), Error.NARY_WITHOUT_PARSERS)]
         return None
 
+    def location_info(self) -> str:
+        """Returns a description of the location of the parser within the grammar
+        for the purpose of transparent erorr reporting."""
+        return "%s: %s%s = %s'" % (self.symbol, self.pname or '_', self.ptype, str(self))
+
 
 class Option(UnaryParser):
     r"""
@@ -1833,9 +1885,6 @@ class Option(UnaryParser):
 
     def __init__(self, parser: Parser) -> None:
         super(Option, self).__init__(parser)
-        # assert isinstance(parser, Parser)
-        assert not parser.is_optional(), \
-            "Redundant nesting of options: %s(%s)" % (self.ptype, parser.pname)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, text = self.parser(text)
@@ -1847,6 +1896,15 @@ class Option(UnaryParser):
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.pname else self.parser.repr) + ']'
+
+    def static_analysis(self) -> Optional[List['AnalysisError']]:
+        # assert not self.parser.is_optional(), \
+        #     "Redundant nesting of options: %s(%s)" % (self.ptype, self.parser.pname)
+        if self.parser.is_optional():
+            return [self.static_error(
+                "Nesting of optional parser is not allowed in " + self.location_info(),
+                Error.BADLY_NESTED_OPTIONAL_PARSER)]
+        return None
 
 
 class ZeroOrMore(Option):
@@ -1951,9 +2009,8 @@ class OneOrMore(UnaryParser):
     def static_analysis(self) -> Optional[List[AnalysisError]]:
         if self.parser.is_optional():
             return [self.static_error(
-                "Use ZeroOrMore instead of nesting OneOrMore with an optional parser: " \
-                "%s:%s(%s:%s)" % (self.ptype, self.pname, self.parser.ptype, self.parser.pname),
-                Error.BADLY_NESTED_OPTIONAL_PARSER)]
+                "Use ZeroOrMore instead of nesting OneOrMore with an optional parser in " \
+                + self.location_info(), Error.BADLY_NESTED_OPTIONAL_PARSER)]
         return None
 
 
@@ -2098,8 +2155,8 @@ class MandatoryNary(NaryParser):
             msg.append('Illegal value %i for mandatory-parameter in a parser with %i elements!'
                   % (self.mandatory, length))
         if msg:
-            msg.insert(0, 'Illegal configuration of mandatory Nary-parser %s:%s = %s'
-                          % (self.pname, self.ptype, str(self)))
+            msg.insert(0, 'Illegal configuration of mandatory Nary-parser '
+                       + self.location_info())
             return[self.static_error('\n'.join(msg), Error.BAD_MANDATORY_SETUP)]
         return None
 
@@ -2275,11 +2332,11 @@ class Alternative(NaryParser):
         errors = super().static_analysis() or []
         if len(set(self.parsers)) != len(self.parsers):
             errors.append(self.static_error(
-                'Duplicate parsers in %s:%s = %s' % (self.pname, self.ptype, str(self)),
+                'Duplicate parsers in ' + self.location_info(),
                 Error.DUPLICATE_PARSERS_IN_ALTERNATIVE))
         if not all(not p.is_optional() for p in self.parsers[:-1]):
             errors.append(self.static_error(
-                "Parser-specification Error in %s:%s = %s: " % (self.pname, self.ptype, str(self))
+                "Parser-specification Error in " + self.location_info()
                 + "\nOnly the very last alternative may be optional! \nOtherwise, "
                 "alternatives after the first optional alternative will never be parsed.",
                 Error.BAD_ORDER_OF_ALTERNATIVES))
@@ -2432,7 +2489,7 @@ class Interleave(MandatoryNary):
                    for parser in self.parsers):
             return [self.static_error(
                 "Flow-operators and optional parsers are neither allowed nor needed inside "
-                "of interleave-parser %s:%s = %s !" % (self.ptype, self.pname, str(self)),
+                "of interleave-parser " + self.location_info(),
                 Error.BADLY_NESTED_OPTIONAL_PARSER)]
         return None
 
