@@ -81,6 +81,7 @@ class Error:
     UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
     CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)
     CAPTURE_DROPPED_CONTENT_WARNING          = ErrorCode(630)
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING      = ErrorCode(630)
 
     # error codes
 
@@ -95,6 +96,8 @@ class Error:
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
     REDEFINED_DIRECTIVE                      = ErrorCode(1080)
     UNDEFINED_RETRIEVE                       = ErrorCode(1090)
+    DIRECTIVE_FOR_NONEXISTANT_SYMBOL         = ErrorCode(1100)
+    INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
 
     # EBNF-specific static analysis errors
 

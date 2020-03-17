@@ -1435,7 +1435,7 @@ class Grammar:
         symbol = None   # type: Optional[Parser]
 
         def find_symbol_for_parser(p: Parser) -> Optional[bool]:
-            nonlocal symbol
+            nonlocal symbol, parser
             if p.pname:
                 symbol = p
             return parser in p.sub_parsers()
@@ -1898,12 +1898,10 @@ class Option(UnaryParser):
                       and not self.parser.pname else self.parser.repr) + ']'
 
     def static_analysis(self) -> Optional[List['AnalysisError']]:
-        # assert not self.parser.is_optional(), \
-        #     "Redundant nesting of options: %s(%s)" % (self.ptype, self.parser.pname)
         if self.parser.is_optional():
             return [self.static_error(
-                "Nesting of optional parser is not allowed in " + self.location_info(),
-                Error.BADLY_NESTED_OPTIONAL_PARSER)]
+                "Redundant nesting of optional parser in " + self.location_info(),
+                Error.OPTIONAL_REDUNDANTLY_NESTED_WARNING)]
         return None
 
 

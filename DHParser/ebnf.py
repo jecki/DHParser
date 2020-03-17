@@ -108,10 +108,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \\
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, any_of, \\
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
-    trace_history, has_descendant, neg, has_ancestor, optional_last_value
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
+    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
+    has_attr, has_parent
 '''
 
 
@@ -631,10 +633,11 @@ class EBNFCompiler(Compiler):
 
         directives:  A record of all directives and their default values.
 
-        defined_directives:  A set of all directives that have already been
-                defined. With the exception of those directives contained
-                in EBNFCompiler.REPEATABLE_DIRECTIVES, directives must only
-                be defined once.
+        defined_directives:  A dictionary of all directives that have already
+                been defined, mapped onto the list of nodes where they have
+                been (re-)defined. With the exception of those directives
+                contained in EBNFCompiler.REPEATABLE_DIRECTIVES, directives
+                must only be defined once.
 
         consumed_custom_errors:  A set of symbols for which a custom error
                 has been defined and(!) consumed during compilation. This
@@ -721,7 +724,7 @@ class EBNFCompiler(Compiler):
         self.root_symbol = ""           # type: str
         self.drop_flag = False          # type: bool
         self.directives = EBNFDirectives()   # type: EBNFDirectives
-        self.defined_directives = set()      # type: Set[str]
+        self.defined_directives = dict()     # type: Dict[str, List[Node]]
         self.consumed_custom_errors = set()  # type: Set[str]
         self.consumed_skip_rules = set()     # type: Set[str]
         self.anonymous_regexp = re.compile(get_config_value('default_anonymous_regexp'))
@@ -920,6 +923,15 @@ class EBNFCompiler(Compiler):
             rule_repr[-1] = rule_repr[-1] + '}'
             return rule_name, indent.join(rule_repr)
 
+        def verify_directive_against_symbol(directive: str, related_symbol: str):
+            """Adds an error if the symbol that the directive relates to
+            does not exist."""
+            if related_symbol not in self.rules:
+                nd = self.defined_directives[directive][0]
+                self.tree.new_error(nd, 'Directive "%s" relates to a symbol that is '
+                                    'nowhere defined!' % directive,
+                                    Error.DIRECTIVE_FOR_NONEXISTANT_SYMBOL)
+
         # execute deferred tasks, for example semantic checks that cannot
         # be done before the symbol table is complete
 
@@ -967,6 +979,7 @@ class EBNFCompiler(Compiler):
         resume_rules = dict()  # type: Dict[str, List[ReprType]]
         for symbol, raw_rules in self.directives.resume.items():
             refined_rules = []  # type: List[ReprType]
+            verify_directive_against_symbol(symbol + '_resume', symbol)
             for rule in raw_rules:
                 if isinstance(rule, unrepr) and rule.s.isidentifier():
                     try:
@@ -979,7 +992,8 @@ class EBNFCompiler(Compiler):
                         refined_rules.append(refined)
                     else:
                         self.tree.new_error(nd, 'Symbol "%s" cannot be used in resume rule, since'
-                                                ' it represents neither literal nor regexp!')
+                                            ' it represents neither literal nor regexp!',
+                                            Error.INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
                 else:
                     refined_rules.append(rule)
             resume_rules[symbol] = refined_rules
@@ -991,6 +1005,7 @@ class EBNFCompiler(Compiler):
         skip_rules = dict()  # # type: Dict[str, List[ReprType]]
         for symbol, skip in self.directives.skip.items():
             rules = []  # type: List[ReprType]
+            verify_directive_against_symbol(symbol + '_skip', symbol)
             for search in skip:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -1019,6 +1034,7 @@ class EBNFCompiler(Compiler):
         error_messages = dict()  # type: Dict[str, List[Tuple[ReprType, ReprType]]]
         for symbol, err_msgs in self.directives.error.items():
             custom_errors = []  # type: List[List[ReprType, ReprType]]
+            verify_directive_against_symbol(symbol + '_error', symbol)
             for search, message in err_msgs:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -1215,13 +1231,13 @@ class EBNFCompiler(Compiler):
         key = node.children[0].content
         assert key not in self.directives.tokens
 
-        if key not in self.REPEATABLE_DIRECTIVES and not key.endswith('_error'):
-            if key in self.defined_directives:
-                self.tree.new_error(node, 'Directive "%s" has already been defined earlier. '
-                                    % key + 'Later definition will be ignored!',
-                                    code=Error.REDEFINED_DIRECTIVE)
-                return ""
-            self.defined_directives.add(key)
+        if key not in self.REPEATABLE_DIRECTIVES and not key.endswith('_error') \
+                and key in self.defined_directives:
+            self.tree.new_error(node, 'Directive "%s" has already been defined earlier. '
+                                % key + 'Later definition will be ignored!',
+                                code=Error.REDEFINED_DIRECTIVE)
+            return ""
+        self.defined_directives.setdefault(key, []).append(node)
 
         def check_argnum(n: int = 1):
             if len(node.children) > n + 1:
