@@ -102,7 +102,7 @@ class TestParserClass:
         gr = MyGrammar()
         regex = gr['word'].parsers[-1].parser
         result = gr.associated_symbol(regex).symbol
-        # assert result == 'word', result
+        assert result == 'word', result
 
 
 class TestInfiLoopsAndRecursion:
