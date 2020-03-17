@@ -144,18 +144,36 @@ ALL_NODES = lambda nd: True
 
 def create_match_function(criterion: CriteriaType) -> Callable:
     """
-    Returns a valid match function (Node -> bool) for the given criterion.
-    Match functions are used to find an select particular nodes from a
+    Returns a valid match-function (Node -> bool) for the given criterion.
+    Match-functions are used to find an select particular nodes from a
     tree of nodes.
     """
     if isinstance(criterion, Node):
-        return lambda nd: nd == criterion
+        return lambda nd: nd.equals(criterion)
     elif isinstance(criterion, str):
         return lambda nd: nd.tag_name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.tag_name in criterion
+    raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
+
+
+def create_context_match_function(criterion: CriteriaType) -> Callable:
+    """
+    Returns a valid context-match-function (List[Node] -> bool) for the
+    given criterion. Context-match-functions are used to find and select
+    particular contexts (lists of ancestors up to and including a particular
+    node) from a tree of nodes.
+    """
+    if isinstance(criterion, Node):
+        return lambda ctx: ctx[-1].equals(criterion)
+    elif isinstance(criterion, str):
+        return lambda ctx: ctx[-1].tag_name == criterion
+    elif callable(criterion):
+        return cast(Callable, criterion)
+    elif isinstance(criterion, Container):
+        return lambda ctx: ctx[-1].tag_name in criterion
     raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
 
 
@@ -376,7 +394,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self.children = result
                 self._result = result or ''
             else:
-                assert result is not None
+                # assert isinstance(result, StringView) \
+                #     or isinstance(result, str)
                 self.children = tuple()
                 self._result = result
 
@@ -395,6 +414,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     child.with_pos(offset)
                 else:
                     offset = child._pos
+                prev = child
 
     @property
     def result(self) -> Union[Tuple['Node', ...], StringView, str]:
@@ -594,10 +614,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node']:
+    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', Sequence['Node']]:
         """
-        Returns the child node with the given index if ``index_or_tagname`` is
-        an integer or the first child node with the given tag name. Examples::
+        Returns the child node with the given index if ``key`` is
+        an integer or all child-nodes with the given tag name. Examples::
 
             >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
             >>> flatten_sxpr(tree[0].as_sxpr())
@@ -609,7 +629,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             key(str): A criterion (tag name(s), match function, node) or
                 an index of the child that shall be returned.
         Returns:
-            Node: All nodes which have a given tag name.
+            Node: The node with the given index (always type Node),
+                all nodes which have a given tag name (type Node if there
+                exists only one or type Tuple[Node] if there are more than
+                one).
         Raises:
             KeyError:   if no matching child was found.
             IndexError: if key was an integer index that did not exist
@@ -619,22 +642,44 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.children[key]
         else:
             mf = create_match_function(key)
-            for child in self.children:
-                if mf(child):
-                    return child
+            items = tuple(child for child in self.children if mf(child))
+            if items:
+                return items if len(items) >= 2 else items[0]
             raise IndexError('index out of range') if isinstance(key, int) \
                 else KeyError(str(key))
 
-    def get(self, index_or_tagname: Union[CriteriaType, int],
-            surrogate: Union['Node', Iterator['Node']]) -> Union['Node', Iterator['Node']]:
-        """Returns the child node with the given index if ``index_or_tagname``
+    def __delitem__(self, key: Union[CriteriaType, int]):
+        """
+        Removes children from the node.
+        :param key:  A criterion (tag name(s), match function, node) or
+                an index of the child(ren) that shall be removed.
+        """
+        if isinstance(key, int):
+            if 0 <= key < len(self.children):
+                raise IndexError("index %s out of range [0, %i[" % (key, len(self.children)))
+            self.result = self.children[:key] + self.children[key + 1:]
+        else:
+            assert not isinstance(self.result, str)
+            mf = create_match_function(key)
+            self.result = tuple(child for child in self.children if not mf(child))
+
+    def get(self, key: Union[CriteriaType, int],
+            surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
+        """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
         child with the given index or tag_name exists, the ``surrogate`` is
         returned instead. This mimics the behaviour of Python's dictionary's
         get-method.
+        The type of the return value is always the same type as that of the
+        surrogate. If the surrogate is a Node, but there are several items
+        matching key, then the first of these will be returned.
         """
         try:
-            return self[index_or_tagname]
+            items = self[key]
+            if isinstance(surrogate, Sequence):
+                return items if isinstance(items, Sequence) else (items,)
+            else:
+                return items[0] if isinstance(items, Sequence) else items
         except KeyError:
             return surrogate
 
@@ -745,7 +790,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self.select_if(create_match_function(criterion), include_root, reverse)
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
-        """Returns an iterator over all direct children of a node that"""
+        """Returns an iterator over all direct children of a node that fulfill `criterion`."""
         # if not self.children and self.result:
         #     raise ValueError("Leaf-Node %s does not have any children to iterate over"
         #                      % self.serialize())
@@ -764,13 +809,29 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the given criterion which can be either a match-function or a tag-name or
         a container of tag-names.
 
-        This function is mostly just syntactic sugar for
+        This function is syntactic sugar for
         ``next(node.select(criterion, False))``. However, rather than
         raising a StopIterationError if no descendant with the given tag-name
         exists, it returns None.
         """
         try:
             return next(self.select(criterion, include_root=False, reverse=reverse))
+        except StopIteration:
+            return None
+
+    def pick_child(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
+        """
+        Picks the first child (or last if run in reverse mode) descendant that fulfills
+        the given criterion which can be either a match-function or a tag-name or
+        a container of tag-names.
+
+        This function is syntactic sugar for
+        ``next(node.select_children(criterion, False))``. However, rather than
+        raising a StopIterationError if no descendant with the given tag-name
+        exists, it returns None.
+        """
+        try:
+            return next(self.select_children(criterion, reverse=reverse))
         except StopIteration:
             return None
 
@@ -803,21 +864,25 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_context_if(self, match_function: Callable,
                           include_root: bool = False,
-                          reverse: bool = False) -> Iterator[List['Node']]:
+                          reverse: bool = False,
+                          parent_context=[]) -> Iterator[List['Node']]:
         """
         Like `Node.select_if()` but yields the entire context (i.e. list of
         descendants, the last one being the matching node) instead of just
-        the matching nodes.
+        the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
+        receives the complete context as argument, rather than just the last node!
         """
-        if include_root and match_function(self):
-            yield [self]
+        context = parent_context + [self]
+        if include_root and match_function(context):
+            yield context
         child_iterator = reversed(self.children) if reverse else self.children
         for child in child_iterator:
-            if match_function(child):
-                yield [self, child]
+            child_context = context + [child]
+            if match_function(child_context):
+                yield child_context
             if child.children:
-                for context in child.select_context_if(match_function, False, reverse):
-                    yield [self] + context
+                for matched in child.select_context_if(match_function, False, reverse, context):
+                    yield matched
 
     def select_context(self, criterion: CriteriaType,
                        include_root: bool = False,
@@ -827,7 +892,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
-        return self.select_context_if(create_match_function(criterion), include_root, reverse)
+        return self.select_context_if(create_context_match_function(criterion),
+                                      include_root, reverse)
 
     def pick_context(self, criterion: CriteriaType,
                      reverse: bool = False) -> Optional[List['Node']]:
@@ -847,7 +913,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         relative to `self` is returned.
         """
         end = 0
-        for ctx in self.select_context_if(lambda nd: not nd.children, include_root=True):
+        for ctx in self.select_context_if(lambda ctx: not ctx[-1].children, include_root=True):
             end = end + len(ctx[-1])
             if location < end:
                 return ctx
@@ -1555,15 +1621,6 @@ class RootNode(Node):
                            empty_tags=self.empty_tags)
 
 
-class DHParser_JSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Node):
-            return cast(Node, obj).to_json_obj()
-        elif isinstance(obj, Error):
-            return str(cast(Error, obj))
-        return json.JSONEncoder.default(self, obj)
-
-
 #######################################################################
 #
 # S-expression- and XML-parsers and JSON-reader
@@ -1798,6 +1855,19 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
     _, tree = parse_full_content(xml[start:])
     assert _.match(RX_WHITESPACE_TAIL), _
     return tree
+
+
+class DHParser_JSONEncoder(json.JSONEncoder):
+    """A JSON-encoder that also encodes syntaxtree.Node- and error.Error-objects
+    as valid json objects. Error-objects are encoded as strings. Node-objects
+    are encoded using Node.as_json.
+    """
+    def default(self, obj):
+        if isinstance(obj, Node):
+            return cast(Node, obj).to_json_obj()
+        elif isinstance(obj, Error):
+            return str(cast(Error, obj))
+        return json.JSONEncoder.default(self, obj)
 
 
 def parse_json_syntaxtree(json_str: str) -> Node:

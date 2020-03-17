@@ -72,7 +72,7 @@ class TestCompilerGeneration:
         self.tmp = os.path.join('test', self.tmpname) if os.path.isdir('test/') else self.tmpname
         self.trivial_text = u"""Es war ein Koenig in Thule.\n"""
         self.grammar_name = os.path.join(self.tmp, "TestCompilerGeneration.ebnf")
-        self.compiler_name = os.path.join(self.tmp, "TestCompilerGenerationCompiler.py")
+        self.compiler_name = os.path.join(self.tmp, "TestCompilerGenerationParser.py")
         self.text_name = os.path.join(self.tmp, "TestCompilerGeneration_text.txt")
         self.result_name = os.path.join(self.tmp, "TestCompilerGeneration_text.xml")
         if not os.path.exists(self.tmp):
@@ -143,7 +143,7 @@ class TestCompilerGeneration:
         assert output == result.as_xml(), str(result)
 
         sys.path.append(self.tmp)
-        from TestCompilerGenerationCompiler import compile_src
+        from TestCompilerGenerationParser import compile_src
         result, errors, ast = compile_src(self.trivial_text)
 
 

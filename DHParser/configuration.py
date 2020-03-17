@@ -315,7 +315,7 @@ CONFIG_PRESET['log_syntax_trees'] = set()
 #           classes, though.
 # 'none' -  no static analysis at all.
 # Default value: "none"
-CONFIG_PRESET['static_analysis'] = "none"
+CONFIG_PRESET['static_analysis'] = "early"
 
 # DHParser.ebnfy.EBNFCompiler class adds the the EBNF-grammar to the
 # docstring of the generated Grammar-class

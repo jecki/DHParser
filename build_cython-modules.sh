@@ -13,10 +13,10 @@ rm DHParser/*.so
 
 export CFLAGS="-O3 -march=native -mtune=native"
 
-if hash clang 2>/dev/null; then
-  export CC=clang; python3 setup.py build_ext --inplace
-else
+# if hash clang 2>/dev/null; then
+#   export CC=clang; python3 setup.py build_ext --inplace
+# else
   python3 setup.py build_ext --inplace
-fi
+# fi
 strip `ls DHParser/*.so`
 

@@ -71,7 +71,7 @@ RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
 # RE_VALUE = r'(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
 #            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
 RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
-RX_COMMENT = re.compile(r'\s*#.*\n')
+RX_COMMENT = re.compile(r'\s*[#;].*\n')
 
 
 def unit_from_config(config_str, filename):
@@ -274,7 +274,7 @@ POSSIBLE_ARTIFACTS = frozenset((
 
 def md_codeblock(code: str) -> str:
     """Formats a piece of code as Markdown inline-code or code-block,
-    depending on whethter it stretches over several lines or not."""
+    depending on whether it stretches over several lines or not."""
     if '\n' not in code:
         return '`' + code + '`'
     else:
@@ -326,15 +326,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     def has_lookahead(parser_name: str) -> bool:
         """Returns True if the parser or any of its descendant parsers is a
         Lookahead parser."""
-        lookahead_found = False
-
-        def find_lookahead(p: Parser):
-            nonlocal lookahead_found
-            if not lookahead_found:
-                lookahead_found = isinstance(p, Lookahead)
-
-        parser[parser_name].apply(find_lookahead)
-        return lookahead_found
+        return parser[parser_name].apply(lambda p: isinstance(p, Lookahead))
+        # lookahead_found = False
+        #
+        # def find_lookahead(p: Parser):
+        #     nonlocal lookahead_found
+        #     if not lookahead_found:
+        #         lookahead_found = isinstance(p, Lookahead)
+        #
+        # parser[parser_name].apply(find_lookahead)
+        # return lookahead_found
 
     def lookahead_artifact(syntax_tree: Node):
         """
@@ -361,7 +362,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             for parent in syntax_tree.select_if(lambda node: any(child.tag_name == ZOMBIE_TAG
                                                                  for child in node.children),
                                                 include_root=True, reverse=True):
-                zombie = parent[ZOMBIE_TAG]
+                zombie = parent.pick_child(ZOMBIE_TAG)
                 zombie.tag_name = '__TESTING_ARTIFACT__'
                 zombie.result = 'Artifact can be ignored. Be aware, though, that also the ' \
                                 'tree structure may not be the same as in a non-testing ' \
@@ -441,12 +442,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         ast_errors.append('\n')
                         errata.append('\t' + '\n\t'.join(
                             str(msg).replace('\n', '\n\t\t') for msg in ast_errors))
-                    else:
-                        errata.append('Match test "%s" for parser "%s" failed:'
-                                      '\n\tExpr.:  %s\n\n\t%s\n\n' %
-                                      (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                       '\n\t'.join(
-                                           str(m).replace('\n', '\n\t\t') for m in ast_errors)))
+                    # else:  # should not be reported, because AST can be tested independently!!!
+                    #     errata.append('Match test "%s" for parser "%s" failed on AST:'
+                    #                   '\n\tExpr.:  %s\n\n\t%s\n\n' %
+                    #                   (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
+                    #                    '\n\t'.join(
+                    #                        str(m).replace('\n', '\n\t\t') for m in ast_errors)))
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))

@@ -3,7 +3,7 @@
 #cython: c_string_type=unicode
 #cython: c_string_encoding=utf-8
 
-# cpdef copy_parser_attrs(src, duplicate)
+# cpdef copy_parser_base_attrs(src, duplicate)
 
 cdef class Parser:
     cdef public str pname
@@ -28,7 +28,7 @@ cdef class Parser:
 
 # cpdef mixin_comment(whitespace, str)
 
-# cpdef mixin_noempty(whitespace)
+# cpdef mixin_nonempty(whitespace)
 
 cdef class Grammar:
     cdef dict __dict__
@@ -124,9 +124,9 @@ cdef class NegativeLookbehind(Lookbehind):
 cdef class Capture(UnaryParser):
     pass
 
-cdef class Retrieve(Parser):
-    cdef public object symbol
+cdef class Retrieve(UnaryParser):
     cdef public object filter
+    cdef public object match
 
 cdef class Pop(Retrieve):
     cdef public list values

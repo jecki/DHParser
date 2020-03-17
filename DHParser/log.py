@@ -361,6 +361,9 @@ class HistoryRecord:
             '-&gt;', '<span>&shy;-&gt;</span>')
         status = html.escape(self.status)
         excerpt = html.escape(self.excerpt)
+        if excerpt.startswith(' '):
+            stripped = excerpt.lstrip()
+            excerpt = "&nbsp;" * (len(excerpt) - len(stripped)) + stripped
         classes = list(HistoryRecord.Snapshot_Fields)
         idx = {field_name: i for i, field_name in enumerate(classes)}
         classes[idx['status']] = 'error' if status.startswith('ERROR') else status.lower()

@@ -1,70 +1,46 @@
-# ebnf.py - EBNF -> Python-Parser compilation for DHParser
-#
-# Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-#                 Bavarian Academy of Sciences an Humanities (badw.de)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.  See the License for the specific language governing
-# permissions and limitations under the License.
+#!/usr/bin/env python3
 
-
-"""
-Module ``ebnf`` provides a self-hosting parser for EBNF-Grammars as
-well as an EBNF-compiler that compiles an EBNF-Grammar into a
-DHParser based Grammar class that can be executed to parse source text
-conforming to this grammar into contrete syntax trees.
-"""
+#######################################################################
+#
+# SYMBOLS SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
 
 
 from collections import OrderedDict
 from functools import partial
 import keyword
 import os
+import sys
 from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any
 
+try:
+    scriptpath = os.path.dirname(__file__)
+except NameError:
+    scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
+if dhparser_parentdir not in sys.path:
+    sys.path.append(dhparser_parentdir)
+
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
-from DHParser.configuration import access_thread_locals, get_config_value
+from DHParser.configuration import access_thread_locals, get_config_value, set_config_value
+from DHParser.dsl import recompile_grammar
 from DHParser.error import Error
+from DHParser.log import start_logging
 from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
-    Token, GrammarError, Whitespace, INFINITE
+    Token, GrammarError, Whitespace
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
     unrepr, compile_python_object, DHPARSER_PARENTDIR, RX_NEVER_MATCH
+from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_empty, \
     remove_tokens, flatten, forbid, assert_content
 from DHParser.versionnumber import __version__
-
-
-__all__ = ('get_ebnf_preprocessor',
-           'get_ebnf_grammar',
-           'get_ebnf_transformer',
-           'get_ebnf_decompiler',
-           'get_ebnf_compiler',
-           'parse_ebnf',
-           'transform_ebnf',
-           'compile_ebnf_ast',
-           'EBNFGrammar',
-           'EBNFTransform',
-           'EBNFDecompiler',
-           'EBNFCompilerError',
-           'EBNFCompiler',
-           'grammar_changed',
-           'compile_ebnf',
-           'PreprocessorFactoryFunc',
-           'ParserFactoryFunc',
-           'TransformerFactoryFunc',
-           'CompilerFactoryFunc')
 
 
 ########################################################################
@@ -96,7 +72,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \\
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \\
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
@@ -117,92 +93,32 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 '''
 
 
-########################################################################
+#######################################################################
 #
-# EBNF scanning
+# PREPROCESSOR SECTION - Can be edited. Changes will be preserved.
 #
-########################################################################
+#######################################################################
+
+def NewEBNFPreprocessor(text):
+    return text, lambda i: i
 
 
-def get_ebnf_preprocessor() -> PreprocessorFunc:
-    """
-    Returns the preprocessor function for the EBNF compiler.
-    As of now, no preprocessing is needed for EBNF-sources. Therefore,
-    just a dummy function is returned.
-    """
-    return nil_preprocessor
+def get_preprocessor() -> PreprocessorFunc:
+    return NewEBNFPreprocessor
 
 
-########################################################################
+#######################################################################
 #
-# EBNF parsing
+# PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!
 #
-########################################################################
+#######################################################################
 
-
-class EBNFGrammar(Grammar):
-    r"""
-    Parser for an EBNF source file, with this grammar:
-
-    @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-    @ whitespace = /\s*/                            # whitespace includes linefeed
-    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-    @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
-    @ anonymous  = pure_elem                        # remove this element early, if possible
-
-    #: top-level
-
-    syntax     = [~//] { definition | directive } §EOF
-    definition = symbol §"=" expression
-    directive  = "@" §symbol "="
-                 (regexp | literal | symbol)
-                 { "," (regexp | literal | symbol) }
-
-    #: components
-
-    expression = sequence { "|" sequence }
-    sequence   = { ["§"] ( interleave | lookaround ) }+  # "§" means all following terms mandatory
-    interleave = term { "°" ["§"] term }
-    lookaround = flowmarker (oneormore | pure_elem)
-    term       = oneormore | repetition | option | pure_elem
-
-    #: elements
-
-    pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
-    element    = [retrieveop] symbol !"="           # negative lookahead to be sure it's not a definition
-               | literal
-               | plaintext
-               | regexp
-               | whitespace
-               | group
-
-    #: flow-operators
-
-    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-               | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
-    retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
-
-    #: groups
-
-    group      = "(" §expression ")"
-    oneormore  = "{" expression "}+" | element "+"
-    repetition = "{" §expression "}" | element "*"
-    option     = "[" §expression "]" | element "?"
-
-    #: leaf-elements
-
-    symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
-    literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
-               | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
-    plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
-    regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-    whitespace = /~/~                               # insignificant whitespace
-
-    EOF = !/./
+class NewEBNFGrammar(Grammar):
+    r"""Parser for a NewEBNF source file.
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "d69cbf8e455c989628fc2dd75aa97bb6"
+    source_hash__ = "abd9bf9a97d8534bd6d7eaf27e1e4b8b"
     anonymous__ = re.compile('pure_elem$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
@@ -216,362 +132,92 @@ class EBNFGrammar(Grammar):
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
-                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
-    option = Alternative(Series(Series(Token("["), dwsp__), expression,
-                                Series(Token("]"), dwsp__), mandatory=1),
-                         Series(element, Series(Token("?"), dwsp__)))
-    repetition = Alternative(Series(Series(Token("{"), dwsp__), expression,
-                                    Series(Token("}"), dwsp__), mandatory=1),
-                             Series(element, Series(Token("*"), dwsp__)))
-    oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression,
-                                   Series(Token("}+"), dwsp__)),
-                            Series(element, Series(Token("+"), dwsp__)))
-    group = Series(Series(Token("("), dwsp__), expression,
-                   Series(Token(")"), dwsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), dwsp__),
-                             Series(Token(":?"), dwsp__),
-                             Series(Token(":"), dwsp__))
-    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__),
-                             Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
-    element.set(Alternative(Series(Option(retrieveop), symbol,
-                                   NegativeLookahead(Series(Token("="), dwsp__))),
-                            literal, plaintext, regexp, whitespace, group))
+    option = Alternative(Series(Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=1), Series(element, Series(Token("?"), dwsp__)))
+    repetition = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}"), dwsp__), mandatory=1), Series(element, Series(Token("*"), dwsp__)))
+    oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}+"), dwsp__)), Series(element, Series(Token("+"), dwsp__)))
+    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
+    retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":?"), dwsp__), Series(Token(":"), dwsp__))
+    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), literal, plaintext, regexp, whitespace, group))
     pure_elem = Series(element, NegativeLookahead(RegExp('[?*+]')), mandatory=1)
     term = Alternative(oneormore, repetition, option, pure_elem)
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem))
-    interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__),
-                                                Option(Series(Token("§"), dwsp__)), term)))
-    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)),
-                                Alternative(interleave, lookaround)))
+    interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__), Option(Series(Token("§"), dwsp__)), term)))
+    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround)))
     expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
-    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__),
-                       Alternative(regexp, literal, symbol),
-                       ZeroOrMore(Series(Series(Token(","), dwsp__),
-                                         Alternative(regexp, literal, symbol))), mandatory=1)
+    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
     definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
-    syntax = Series(Option(Series(dwsp__, RegExp(''))),
-                    ZeroOrMore(Alternative(definition, directive)),
-                    EOF, mandatory=2)
+    syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
+    
 
-
-def grammar_changed(grammar_class, grammar_source: str) -> bool:
-    """
-    Returns ``True`` if ``grammar_class`` does not reflect the latest
-    changes of ``grammar_source``
-
-    Parameters:
-        grammar_class:  the parser class representing the grammar
-            or the file name of a compiler suite containing the grammar
-        grammar_source:  File name or string representation of the
-            EBNF code of the grammar
-
-    Returns (bool):
-        True, if the source text of the grammar is different from the
-        source from which the grammar class was generated
-    """
-    grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
-    if isinstance(grammar_class, str):
-        # grammar_class = load_compiler_suite(grammar_class)[1]
-        with open(grammar_class, 'r', encoding='utf8') as f:
-            pycode = f.read()
-        m = re.search(r'class \w*\(Grammar\)', pycode)
-        if m:
-            m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
-                          pycode[m.span()[1]:])
-            return not (m and m.groups() and m.groups()[-1] == chksum)
-        else:
-            return True
-    else:
-        return chksum != grammar_class.source_hash__
-
-
-def get_ebnf_grammar() -> EBNFGrammar:
-    """Returns a thread-local EBNF-Grammar-object for parsing EBNF sources."""
+def get_grammar() -> NewEBNFGrammar:
+    """Returns a thread/process-exclusive NewEBNFGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.ebnf_grammar_singleton
-        return grammar
+        grammar = THREAD_LOCALS.NewEBNF_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.ebnf_grammar_singleton = EBNFGrammar()
-        return THREAD_LOCALS.ebnf_grammar_singleton
+        THREAD_LOCALS.NewEBNF_00000001_grammar_singleton = NewEBNFGrammar()
+        if hasattr(get_grammar, 'python_src__'):
+            THREAD_LOCALS.NewEBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.NewEBNF_00000001_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
+    return grammar
 
 
-def parse_ebnf(ebnf: str) -> Node:
-    """Parses and EBNF-source-text and returns the concrete syntax tree
-    of the EBNF-code.."""
-    return get_ebnf_grammar()(ebnf)
-
-
-########################################################################
+#######################################################################
 #
-# EBNF concrete to abstract syntax tree transformation and validation
+# AST SECTION - Can be edited. Changes will be preserved.
 #
-########################################################################
+#######################################################################
 
-
-EBNF_AST_transformation_table = {
-    # AST Transformations for EBNF-grammar
-    "<":
-        [remove_empty],
-    "syntax":
-        [],
-    "directive, definition":
-        [flatten, remove_tokens('@', '=', ',')],
-    "expression":
-        [replace_by_single_child, flatten, remove_tokens('|')],
-    "sequence":
-        [replace_by_single_child, flatten],
-    "interleave":
-        [replace_by_single_child, flatten, remove_tokens('°')],
-    "lookaround":
-        [],
-    "term, pure_elem, element":
-        [replace_by_single_child],
-    "flowmarker, retrieveop":
-        [reduce_single_child],
-    "group": [
-        remove_brackets, replace_by_single_child],
+NewEBNF_AST_transformation_table = {
+    # AST Transformations for the NewEBNF-grammar
+    "<": [remove_empty],
+    "syntax": [],
+    "directive, definition": [flatten, remove_tokens('@', '=', ',')],
+    "expression": [replace_by_single_child, flatten, remove_tokens('|')],
+    "sequence, interleave": [replace_by_single_child, flatten],
+    "term, pure_elem, element": [replace_by_single_child],
+    "flowmarker, retrieveop": [reduce_single_child],
+    "group": [remove_brackets, replace_by_single_child],
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets, # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
-    "symbol, literal, regexp":
-        [reduce_single_child],
-    (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        [reduce_single_child],
-    "*":
-        [replace_by_single_child]
+    "symbol, literal, regexp": [reduce_single_child],
+    (TOKEN_PTYPE, WHITESPACE_PTYPE): [reduce_single_child],
+    "*": [replace_by_single_child]
 }
 
 
-def EBNFTransform() -> TransformationFunc:
-    return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
+
+def CreateNewEBNFTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
+    return partial(traverse, processing_table=NewEBNF_AST_transformation_table.copy())
 
 
-def get_ebnf_transformer() -> TransformationFunc:
+def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.EBNF_transformer_singleton
+        transformer = THREAD_LOCALS.NewEBNF_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.EBNF_transformer_singleton = EBNFTransform()
-        transformer = THREAD_LOCALS.EBNF_transformer_singleton
+        THREAD_LOCALS.NewEBNF_00000001_transformer_singleton = CreateNewEBNFTransformer()
+        transformer = THREAD_LOCALS.NewEBNF_00000001_transformer_singleton
     return transformer
 
 
-def transform_ebnf(cst: Node) -> None:
-    """Transforms the contrete-syntax-tree of an EBNF-source-code
-    into the abstract-syntax-tree. The transformation changes the
-    syntaxtree in place. No value is returned."""
-    get_ebnf_transformer()(cst)
-
-
-########################################################################
+#######################################################################
 #
-# Decompiling ASTs back to EBNF-Text (UNFINISHED AND EXPERIMENTAL!!!)
+# COMPILER SECTION - Can be edited. Changes will be preserved.
 #
-########################################################################
-
-class EBNFDecompiler(Compiler):
-    """Converts AST representing an EBNF-syntax-description back to
-    EBNF-text."""
-
-    def __init__(self):
-        super(EBNFDecompiler, self).__init__()
-
-    def reset(self):
-        super().reset()
-        # initialize your variables here, not in the constructor!
-
-    def fallback_compiler(self, node: Node) -> Any:
-        """Fallback for flowmarker, retrieveop, symbol, literal, plaintest,
-        regexp, whitespace and Token."""
-        return [node.content]
-
-    def on_ZOMBIE__(self, node: Node) -> str:
-        result = ['Errors in abstract syntax tree of EBNF-grammar! Reconstructing fragments: ']
-        result.extend([str(self.compile(child)) for child in node.children])
-        return '\n\n'.join(result)
-
-    def on_syntax(self, node):
-        return '\n'.join(''.join(self.compile(child)) for child in node.children)
-
-    def on_definition(self, node):
-        children = node.children
-        assert len(children) == 2
-        return self.compile(children[0]) + [' = '] + self.compile(children[1])
-
-    def on_directive(self, node):
-        children = node.children
-        assert children
-        result = ['@'] + self.compile(children[0])
-        if len(children) > 1:
-            result.extend([' = '] + self.compile(children[1]))
-        for child in children[2:]:
-            result.extend([' , '] + self.compile(child))
-        return result
-
-    def on_expression(self, node):
-        result = ['('] if self.context[-2].tag_name == "sequence" else []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' | ')
-        result.pop()
-        if self.context[-2].tag_name == "sequence":
-            result.append(')')
-        return result
-
-    def on_sequence(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' ')
-        result.pop()
-        return result
-
-    def on_term(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-        return result
-
-    def on_unordered(self, node):
-        assert len(node.children) == 1
-        return ['<'] + self.compile(node.children[0]) + ['>']
-
-    # def on_interleave(self, node):
-    #     return node
-
-    def on_oneormore(self, node):
-        assert len(node.children) == 1
-        return ['{ '] + self.compile(node.children[0]) + [' }+']
-
-    def on_repetition(self, node):
-        assert len(node.children) == 1
-        return ['{ '] + self.compile(node.children[0]) + [' }']
-
-    def on_option(self, node):
-        assert len(node.children) == 1
-        return ['['] + self.compile(node.children[0]) + [']']
-
-    # def on_element(self, node):
-    #     return node
-
-
-class ModernEBNFDecompiler(EBNFDecompiler):
-    """Converts AST representing an EBNF-syntax-description back to
-    EBNF-text in a modern Relax-NG type syntax."""
-
-    def __init__(self):
-        super(ModernEBNFDecompiler, self).__init__()
-
-    def reset(self):
-        super().reset()
-        # initialize your variables here, not in the constructor!
-
-    def fallback_compiler(self, node: Node) -> Any:
-        """Fallback for flowmarker, retrieveop, symbol, literal, plaintest,
-        regexp, whitespace and Token."""
-        return [node.content]
-
-    def on_ZOMBIE__(self, node: Node) -> str:
-        result = ['Errors in abstract syntax tree of EBNF-grammar! Reconstructing fragments: ']
-        result.extend([str(self.compile(child)) for child in node.children])
-        return '\n\n'.join(result)
-
-    def on_syntax(self, node):
-        return '\n'.join(''.join(self.compile(child)) for child in node.children)
-
-    def on_definition(self, node):
-        children = node.children
-        assert len(children) == 2
-        return self.compile(children[0]) + [' = '] + self.compile(children[1])
-
-    def on_directive(self, node):
-        children = node.children
-        assert children
-        result = ['@'] + self.compile(children[0])
-        if len(children) > 1:
-            result.extend([' = '] + self.compile(children[1]))
-        for child in children[2:]:
-            result.extend([' , '] + self.compile(child))
-        return result
-
-    def on_expression(self, node):
-        result = ['('] if self.context[-2].tag_name == "sequence" else []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' | ')
-        result.pop()
-        if self.context[-2].tag_name == "sequence":
-            result.append(')')
-        return result
-
-    def on_sequence(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' ')
-        result.pop()
-        return result
-
-    def on_term(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-        return result
-
-    def on_unordered(self, node):
-        # TODO: return interleaved
-        assert len(node.children) == 1
-        return ['<'] + self.compile(node.children[0]) + ['>']
-
-    # def on_interleave(self, node):
-    #     return node
-
-    def postfixed(self, node: Node, postfix: str):
-        assert len(node.children) == 1
-        assert postfix in ('?', '*', '+')
-        if len(node.children[0].children) > 1:
-            return ['('] + self.compile(node.children[0]) + [')' + postfix]
-        else:
-            return self.compile(node.children[0]) + [postfix]
-
-    def on_oneormore(self, node: Node) -> str:
-        return self.postfixed(node, '+')
-
-    def on_repetition(self, node: Node) -> str:
-        return self.postfixed(node, '*')
-
-    def on_option(self, node: Node) -> str:
-        return self.postfixed(node, '?')
-
-    # def on_element(self, node):
-    #     return node
-
-
-def get_ebnf_decompiler() -> EBNFGrammar:
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        decompiler = THREAD_LOCALS.ebnf_decompiler_singleton  # type: EBNFDecompiler
-        return decompiler
-    except AttributeError:
-        THREAD_LOCALS.ebnf_decompiler_singleton = EBNFDecompiler()
-        return THREAD_LOCALS.ebnf_decompiler_singleton
-
-
-########################################################################
-#
-# EBNF abstract syntax tree to Python parser compilation
-#
-########################################################################
-
+#######################################################################
 
 PreprocessorFactoryFunc = Callable[[], PreprocessorFunc]
 ParserFactoryFunc = Callable[[], Grammar]
@@ -744,7 +390,7 @@ class EBNFCompilerError(CompilerError):
     pass
 
 
-class EBNFCompiler(Compiler):
+class NewEBNFCompiler(Compiler):
     """
     Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
@@ -873,19 +519,19 @@ class EBNFCompiler(Compiler):
                 "Potentially due to erroneous AST transformation."
     PREFIX_TABLE = {'§': 'Required',
                     '&': 'Lookahead', '!': 'NegativeLookahead',
-                    '<-&': 'Lookbehind', '<-!': 'NegativeLookbehind',
+                    '-&': 'Lookbehind', '-!': 'NegativeLookbehind',
                     '::': 'Pop', ':?': 'Pop', ':': 'Retrieve'}
     REPEATABLE_DIRECTIVES = {'tokens'}
 
 
     def __init__(self, grammar_name="DSL", grammar_source=""):
         self.grammar_id = 0  # type: int
-        super(EBNFCompiler, self).__init__()  # calls the reset()-method
+        super(NewEBNFCompiler, self).__init__()  # calls the reset()-method
         self.set_grammar_name(grammar_name, grammar_source)
 
 
     def reset(self):
-        super(EBNFCompiler, self).reset()
+        super(NewEBNFCompiler, self).reset()
         self._result = ''               # type: str
         self.re_flags = set()           # type: Set[str]
         self.rules = OrderedDict()      # type: OrderedDict[str, List[Node]]
@@ -1107,37 +753,33 @@ class EBNFCompiler(Compiler):
         # provide for capturing of symbols that are variables, i.e. the
         # value of which will be retrieved at some point during the parsing process
 
-        # The following is needed for cases, where the first retrival-use of a symbol
-        # follows its definition
-
         if self.variables:
             for i in range(len(definitions)):
-                if definitions[i][0] in self.variables:  # \
-                        # and not definitions[i][1].startswith('Capture('):
+                if definitions[i][0] in self.variables:
                     definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
 
         # add special fields for Grammar class
 
         if DROP_WSPC in self.directives.drop or DROP_TOKEN in self.directives.drop:
-            definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
-                                'Drop(Whitespace(%s))' % EBNFCompiler.WHITESPACE_KEYWORD))
-        definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
-                            'Whitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
-        definitions.append((EBNFCompiler.WHITESPACE_KEYWORD,
-                            ("mixin_comment(whitespace=" + EBNFCompiler.RAW_WS_KEYWORD
-                             + ", comment=" + EBNFCompiler.COMMENT_KEYWORD + ")")))
-        if EBNFCompiler.RAW_WS_PARSER_KEYWORD in self.required_keywords:
-            definitions.append((EBNFCompiler.RAW_WS_PARSER_KEYWORD,
-                                "Whitespace(%s)" % EBNFCompiler.RAW_WS_KEYWORD))
-        definitions.append((EBNFCompiler.RAW_WS_KEYWORD,
+            definitions.append((NewEBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
+                                'Drop(Whitespace(%s))' % NewEBNFCompiler.WHITESPACE_KEYWORD))
+        definitions.append((NewEBNFCompiler.WHITESPACE_PARSER_KEYWORD,
+                            'Whitespace(%s)' % NewEBNFCompiler.WHITESPACE_KEYWORD))
+        definitions.append((NewEBNFCompiler.WHITESPACE_KEYWORD,
+                            ("mixin_comment(whitespace=" + NewEBNFCompiler.RAW_WS_KEYWORD
+                             + ", comment=" + NewEBNFCompiler.COMMENT_KEYWORD + ")")))
+        if NewEBNFCompiler.RAW_WS_PARSER_KEYWORD in self.required_keywords:
+            definitions.append((NewEBNFCompiler.RAW_WS_PARSER_KEYWORD,
+                                "Whitespace(%s)" % NewEBNFCompiler.RAW_WS_KEYWORD))
+        definitions.append((NewEBNFCompiler.RAW_WS_KEYWORD,
                             "r'{}'".format(self.directives.whitespace)))
-        comment_rx = ("re.compile(%s)" % EBNFCompiler.COMMENT_KEYWORD) \
+        comment_rx = ("re.compile(%s)" % NewEBNFCompiler.COMMENT_KEYWORD) \
             if self.directives.comment else "RX_NEVER_MATCH"
-        if EBNFCompiler.COMMENT_PARSER_KEYWORD in self.required_keywords:
-            definitions.append((EBNFCompiler.COMMENT_PARSER_KEYWORD,
-                                "RegExp(%s)" % EBNFCompiler.COMMENT_RX_KEYWORD))
-        definitions.append((EBNFCompiler.COMMENT_RX_KEYWORD, comment_rx))
-        definitions.append((EBNFCompiler.COMMENT_KEYWORD,
+        if NewEBNFCompiler.COMMENT_PARSER_KEYWORD in self.required_keywords:
+            definitions.append((NewEBNFCompiler.COMMENT_PARSER_KEYWORD,
+                                "RegExp(%s)" % NewEBNFCompiler.COMMENT_RX_KEYWORD))
+        definitions.append((NewEBNFCompiler.COMMENT_RX_KEYWORD, comment_rx))
+        definitions.append((NewEBNFCompiler.COMMENT_KEYWORD,
                             "r'{}'".format(self.directives.comment)))
 
         # prepare and add resume-rules
@@ -1327,13 +969,10 @@ class EBNFCompiler(Compiler):
 
         grammar_python_src = self.assemble_parser(definitions)
         if get_config_value('static_analysis') == 'early':
-            import DHParser.parse
             try:
-                DHParser.parse.STATIC_ANALYSIS_PENDING = True
                 grammar_class = compile_python_object(
-                    DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) +
-                    # '\nimport DHParser.parse\nDHParser.parse.STATIC_ANALYSIS_PENDING = True\n' +
-                    grammar_python_src, self.grammar_name)
+                    DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR)
+                    + grammar_python_src, self.grammar_name)
                 _ = grammar_class()
                 grammar_python_src = grammar_python_src.replace(
                     'static_analysis_pending__ = [True]',
@@ -1345,8 +984,6 @@ class EBNFCompiler(Compiler):
                     symdef_node = self.rules[sym][0]
                     err.pos = self.rules[sym][0].pos
                     self.tree.add_error(symdef_node, err)
-            finally:
-                DHParser.parse.STATIC_ANALYSIS_PENDING = False
         return grammar_python_src
 
 
@@ -1358,7 +995,7 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(first, 'First definition of rule "%s" '
                                     'followed by illegal redefinitions.' % rule)
             self.tree.new_error(node, 'A rule "%s" has already been defined earlier.' % rule)
-        elif rule in EBNFCompiler.RESERVED_SYMBOLS:
+        elif rule in NewEBNFCompiler.RESERVED_SYMBOLS:
             self.tree.new_error(node, 'Symbol "%s" is a reserved symbol.' % rule)
         elif not sane_parser_name(rule):
             self.tree.new_error(node, 'Illegal symbol "%s". Symbols must not start or '
@@ -1374,10 +1011,10 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             defn = self.compile(node.children[1])
-            # if rule in self.variables:
-            #     defn = 'Capture(%s)' % defn
-                # self.variables.remove(rule)
-            if defn.find("(") < 0:
+            if rule in self.variables:
+                defn = 'Capture(%s)' % defn
+                self.variables.remove(rule)
+            elif defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
             # if self.drop_flag:
@@ -1387,7 +1024,7 @@ class EBNFCompiler(Compiler):
             from traceback import extract_tb, format_list
             trace = ''.join(format_list((extract_tb(error.__traceback__))))
             errmsg = "%s (TypeError: %s;\n%s)\n%s" \
-                     % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
+                     % (NewEBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             rule, defn = rule + ':error', '"' + errmsg + '"'
         finally:
@@ -1558,7 +1195,7 @@ class EBNFCompiler(Compiler):
         if (parser_class == "Series" and node.tag_name not in self.directives.drop
             and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
             and all((arg.startswith('Drop(RegExp(') or arg.startswith('Drop(Token(')
-                     or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
+                     or arg in NewEBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
             arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
         if self.drop_flag:
             return 'Drop(' + parser_class + '(' + ', '.join(arguments) + '))'
@@ -1625,31 +1262,6 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(mock_node, 'Series', custom_args)
 
 
-    def on_interleave(self, node) -> str:
-        children = []
-        repetitions = []
-        filtered_result, custom_args = self._error_customization(node)
-        for child in filtered_result:
-            if child.tag_name == "oneormore":
-                repetitions.append((1, INFINITE))
-                assert len(child.children) == 1
-                children.append(child.children[0])
-            elif child.tag_name == "repetition":
-                repetitions.append((0, INFINITE))
-                assert len(child.children) == 1
-                children.append(child.children[0])
-            elif child.tag_name == "option":
-                repetitions.append((0, 1))
-                assert len(child.children) == 1
-                children.append(child.children[0])
-            else:
-                repetitions.append((1, 1))
-                children.append(child)
-        custom_args.append('repetitions={}'.format(repetitions))
-        mock_node = Node(node.tag_name, tuple(children))
-        return self.non_terminal(mock_node, 'Interleave', custom_args)
-
-
     def on_lookaround(self, node: Node) -> str:
         assert node.children
         assert len(node.children) == 2
@@ -1662,7 +1274,7 @@ class EBNFCompiler(Compiler):
         parser_class = self.PREFIX_TABLE[prefix]
         result = self.non_terminal(node, parser_class)
         if prefix[:2] == '<-':
-            def verify(node: Optional[Node]):
+            def verify(node):
                 nd = node
                 if len(nd.children) >= 1:
                     nd = nd.children[0]
@@ -1680,14 +1292,14 @@ class EBNFCompiler(Compiler):
                                               "-parsers, not: " + nd.tag_name)
 
             if not result.startswith('RegExp('):
-                self.deferred_tasks.append(lambda :verify(node))
+                self.deferred_tasks.append(partial(verify, node= node))
         return result
 
 
     def on_element(self, node: Node) -> str:
         assert node.children
         assert len(node.children) == 2
-        assert node.children[0].tag_name == "retrieveop"
+        assert node.children[0].tag_name == "retrieve_op"
         assert node.children[1].tag_name == "symbol"
         prefix = node.children[0].content  # type: str
         arg = node.children[1].content     # type: str
@@ -1730,6 +1342,27 @@ class EBNFCompiler(Compiler):
         raise EBNFCompilerError("Group nodes should have been eliminated by "
                                 "AST transformation!")
 
+    def on_unordered(self, node) -> str:
+        # return self.non_terminal(node, 'Unordered')
+        assert len(node.children) == 1
+        nd = node.children[0]
+        if nd.tag_name == "sequence":
+            filtered_result, custom_args = self._error_customization(nd)
+            mock_node = Node(nd.tag_name, filtered_result)
+            return self.non_terminal(mock_node, 'AllOf', custom_args)
+        elif nd.tag_name == "expression":
+            if any(c.tag_name == TOKEN_PTYPE and nd.content == '§' for c in nd.children):
+                self.tree.new_error(node, "No mandatory items § allowed in SomeOf-operator!")
+            # args = ', '.join(self.compile(child) for child in nd.children)
+            return self.non_terminal(nd, 'SomeOf')  # "SomeOf(" + args + ")"
+        else:
+            # if a sequence or expression has only one element, it will have
+            # been reduced during AST-transformation. Thus, if the tag-name of
+            # a child of unordered is neither "sequence" nor "expression", there
+            # are too few arguments for "unordered".
+            self.tree.new_error(node, "Unordered sequence or alternative "
+                                      "requires at least two elements.")
+            return ""
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = node.content  # ; assert result == cast(str, node.result)
@@ -1743,8 +1376,8 @@ class EBNFCompiler(Compiler):
                 self.symbols[symbol] = node
             if symbol in self.rules:
                 self.recursive.add(symbol)
-            if symbol in EBNFCompiler.KEYWORD_SUBSTITUTION:
-                keyword = EBNFCompiler.KEYWORD_SUBSTITUTION[symbol]
+            if symbol in NewEBNFCompiler.KEYWORD_SUBSTITUTION:
+                keyword = NewEBNFCompiler.KEYWORD_SUBSTITUTION[symbol]
                 self.required_keywords.add(keyword)
                 return keyword
             elif symbol.endswith('__'):
@@ -1800,7 +1433,7 @@ class EBNFCompiler(Compiler):
             from traceback import extract_tb, format_list
             trace = ''.join(format_list(extract_tb(error.__traceback__)))
             errmsg = "%s (AttributeError: %s;\n%s)\n%s" \
-                     % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
+                     % (NewEBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             return '"' + errmsg + '"'
         return self.REGEXP_PARSER(', '.join([arg] + name))
@@ -1811,43 +1444,157 @@ class EBNFCompiler(Compiler):
 
 
 
-def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
+# class NewEBNFCompiler(Compiler):
+#     """Compiler for the abstract-syntax-tree of a NewEBNF source file.
+#     """
+#
+#     def __init__(self):
+#         super(NewEBNFCompiler, self).__init__()
+#
+#     def reset(self):
+#         super().reset()
+#         # initialize your variables here, not in the constructor!
+#
+#     def on_syntax(self, node):
+#         return self.fallback_compiler(node)
+#
+#     # def on_definition(self, node):
+#     #     return node
+#
+#     # def on_directive(self, node):
+#     #     return node
+#
+#     # def on_expression(self, node):
+#     #     return node
+#
+#     # def on_sequence(self, node):
+#     #     return node
+#
+#     # def on_interleave(self, node):
+#     #     return node
+#
+#     # def on_term(self, node):
+#     #     return node
+#
+#     # def on_pure_elem(self, node):
+#     #     return node
+#
+#     # def on_element(self, node):
+#     #     return node
+#
+#     # def on_flowmarker(self, node):
+#     #     return node
+#
+#     # def on_retrieveop(self, node):
+#     #     return node
+#
+#     # def on_group(self, node):
+#     #     return node
+#
+#     # def on_oneormore(self, node):
+#     #     return node
+#
+#     # def on_repetition(self, node):
+#     #     return node
+#
+#     # def on_option(self, node):
+#     #     return node
+#
+#     # def on_symbol(self, node):
+#     #     return node
+#
+#     # def on_literal(self, node):
+#     #     return node
+#
+#     # def on_plaintext(self, node):
+#     #     return node
+#
+#     # def on_regexp(self, node):
+#     #     return node
+#
+#     # def on_whitespace(self, node):
+#     #     return node
+#
+#     # def on_EOF(self, node):
+#     #     return node
+
+
+
+def get_compiler(grammar_name="", grammar_source="") -> NewEBNFCompiler:
+    """Returns a thread/process-exclusive NewEBNFCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.ebnf_compiler_singleton
+        compiler = THREAD_LOCALS.NewEBNF_00000001_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
-        return compiler
     except AttributeError:
-        compiler = EBNFCompiler(grammar_name, grammar_source)
+        THREAD_LOCALS.NewEBNF_00000001_compiler_singleton = NewEBNFCompiler()
+        compiler = THREAD_LOCALS.NewEBNF_00000001_compiler_singleton
         compiler.set_grammar_name(grammar_name, grammar_source)
-        THREAD_LOCALS.ebnf_compiler_singleton = compiler
-        return compiler
+    return compiler
 
 
 def compile_ebnf_ast(ast: Node) -> str:
     """Compiles the abstract-syntax-tree of an EBNF-source-text into
     python code of a class derived from `parse.Grammar` that can
     parse text following the grammar describend with the EBNF-code."""
-    return get_ebnf_compiler()(ast)
+    return get_compiler()(ast)
 
 
-########################################################################
+#######################################################################
 #
-# EBNF compiler
+# END OF DHPARSER-SECTIONS
 #
-########################################################################
+#######################################################################
 
-def compile_ebnf(ebnf_source: str, branding: str = 'DSL', preserve_AST: bool = False) \
-        -> ResultTuple:
+def compile_src(source):
+    """Compiles ``source`` and returns (result, errors, ast).
     """
-    Compiles an `ebnf_source` (file_name or EBNF-string) and returns
-    a tuple of the python code of the compiler, a list of warnings or errors
-    and the abstract syntax tree of the EBNF-source.
-    This function is merely syntactic sugar.
-    """
-    return compile_source(ebnf_source,
-                          get_ebnf_preprocessor(),
-                          get_ebnf_grammar(),
-                          get_ebnf_transformer(),
-                          get_ebnf_compiler(branding, ebnf_source),
-                          preserve_AST=preserve_AST)
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
+    return result_tuple
+
+
+if __name__ == "__main__":
+    # recompile grammar if needed
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
+    if os.path.exists(grammar_path):
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
+            with open(error_file, encoding="utf-8") as f:
+                print(f.read())
+            sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
+    else:
+        print('Could not check whether grammar requires recompiling, '
+              'because grammar was not found at: ' + grammar_path)
+
+    if len(sys.argv) > 1:
+        # compile file
+        file_name, log_dir = sys.argv[1], ''
+        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
+            file_name, log_dir = sys.argv[2], 'LOGS'
+            set_config_value('history_tracking', True)
+            set_config_value('resume_notices', True)
+            set_config_value('log_syntax_trees', set(('cst', 'ast')))
+        start_logging(log_dir)
+        result, errors, _ = compile_src(file_name)
+        if errors:
+            cwd = os.getcwd()
+            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
+            for error in errors:
+                print(rel_path + ':' + str(error))
+            sys.exit(1)
+        else:
+            print(result.serialize() if isinstance(result, Node) else result)
+    else:
+        print("Usage: NewEBNFParser.py [FILENAME]")

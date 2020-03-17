@@ -37,7 +37,8 @@ from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
 from DHParser.transform import TransformationFunc, TransformationDict
-from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, compile_python_object, re
+from DHParser.toolkit import DHPARSER_DIR, DHPARSER_PARENTDIR, load_if_file, is_python_code, \
+    compile_python_object, re, as_identifier, is_filename, relative_path
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
     Callable, Generator
 
@@ -80,7 +81,7 @@ AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
 END_SECTIONS_MARKER = "END OF DHPARSER-SECTIONS"
 
-DHPARSER_MAIN = read_template('DSLCompiler.pyi')
+DHPARSER_MAIN = read_template('DSLParser.pyi')
 
 
 class DSLException(Exception):
@@ -154,7 +155,9 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             resume_logging(log_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), grammar_src)
-        grammar_class = compile_python_object(DHPARSER_IMPORTS + parser_py, r'\w+Grammar$')
+        imports = DHPARSER_IMPORTS.format(
+            dhparser_parentdir=relative_path('.', DHPARSER_PARENTDIR))
+        grammar_class = compile_python_object(imports + parser_py, r'\w+Grammar$')
         if inspect.isclass(grammar_class) and issubclass(grammar_class, Grammar):
             parser_root = grammar_class()
         else:
@@ -225,8 +228,8 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     compiler.
 
     Args:
-        ebnf_src(str):  Either the file name of an EBNF grammar or
-            the EBNF grammar itself as a string.
+        ebnf_src(str):  Either the file name of an EBNF-grammar or
+            the EBNF-grammar itself as a string.
         branding (str):  Branding name for the compiler suite source
             code.
     Returns:
@@ -234,9 +237,14 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     Raises:
         CompilationError if any errors occurred during compilation
     """
+    if is_filename(ebnf_src):
+        relative_dhpath = relative_path(os.path.dirname(ebnf_src), DHPARSER_PARENTDIR)
+    else:
+        relative_dhpath = relative_path(os.path.dirname('.'), DHPARSER_PARENTDIR)
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
-           SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_IMPORTS,
+           SECTION_MARKER.format(marker=SYMBOLS_SECTION),
+           DHPARSER_IMPORTS.format(dhparser_parentdir = relative_dhpath),
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
@@ -268,12 +276,26 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> ParserFactoryFunc:
             append_log(log_name, grammar_src)
         else:
             print(grammar_src)
-    grammar_factory = compile_python_object(DHPARSER_IMPORTS + grammar_src,
+    imports = DHPARSER_IMPORTS.format(dhparser_parentdir = relative_path('.', DHPARSER_PARENTDIR))
+    grammar_factory = compile_python_object(imports + grammar_src,
                                             r'get_(?:\w+_)?grammar$')
     if callable(grammar_factory):
         grammar_factory.python_src__ = grammar_src
         return grammar_factory
     raise ValueError('Could not compile grammar provider!')
+
+
+def split_source(file_name: str, file_content: str) -> Tuple[str]:
+    """Splits the `file_content` into the seven sections: intro, imports,
+    preprocessor_py, parser_py, ast_py, compiler_py, outro.
+    Raises a value error, if the number of sections if not equal to 7.
+    """
+    sections = RX_SECTION_MARKER.split(file_content)
+    ls = len(sections)
+    if ls != 7:
+        raise ValueError('File "%s" contains %i instead of 7 sections. Please '
+                         'delete or repair file manually.' % (file_name, ls))
+    return sections
 
 
 def load_compiler_suite(compiler_suite: str) -> \
@@ -290,14 +312,11 @@ def load_compiler_suite(compiler_suite: str) -> \
     global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
-    imports = DHPARSER_IMPORTS
+    dhpath = relative_path(os.path.dirname('.'), DHPARSER_PARENTDIR)
+    imports = DHPARSER_IMPORTS.format(dhparser_parentdir = dhpath)
     if is_python_code(compiler_suite):
-        try:
-            _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = \
-                RX_SECTION_MARKER.split(source)
-        except ValueError:
-            raise ValueError('File "' + compiler_suite + '" seems to be corrupted. '
-                             'Please delete or repair file manually.')
+        sections = split_source(compiler_suite, source)
+        _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = sections
         # TODO: Compile in one step and pick parts from namespace later ?
         preprocessor = compile_python_object(imports + preprocessor_py,
                                              r'get_(?:\w+_)?preprocessor$')
@@ -389,8 +408,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     Parameters:
         source_file(str):  The file name of the source text to be
             compiled.
-        compiler_suite(str):  The file name of the compiler suite
-            (usually ending with 'Compiler.py'), with which the source
+        compiler_suite(str):  The file name of the parser/compiler-suite
+            (usually ending with 'Parser.py'), with which the source
             file shall be compiled. If this is left empty, the source
             file is assumed to be an EBNF-Grammar that will be compiled
             with the internal EBNF-Compiler.
@@ -407,7 +426,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
     rootname = os.path.splitext(filepath)[0]
-    compiler_name = os.path.basename(rootname)
+    dhpath = relative_path(os.path.dirname(rootname), DHPARSER_PARENTDIR)
+    compiler_name = as_identifier(os.path.basename(rootname))
     if compiler_suite:
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
         compiler1 = cfactory()
@@ -437,11 +457,12 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             DHPARSER_MAIN
         f = None
         try:
-            f = open(rootname + 'Compiler.py', 'r', encoding="utf-8")
+            parser_name = rootname + 'Parser.py'
+            f = open(parser_name, 'r', encoding="utf-8")
             source = f.read()
-            sections = RX_SECTION_MARKER.split(source)
+            sections = split_source(parser_name, source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
-            ast_trans_python_src = DHPARSER_IMPORTS + ast
+            ast_trans_python_src = DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath) + ast
             ast_trans_table = dict()  # type: TransformationDict
             try:
                 ast_trans_table = compile_python_object(ast_trans_python_src,
@@ -463,10 +484,6 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             # TODO: Verify compiler
         except (PermissionError, FileNotFoundError, IOError):
             intro, imports, preprocessor, _, ast, compiler, outro = '', '', '', '', '', '', ''
-        except ValueError:
-            name = '"' + rootname + 'Compiler.py"'
-            raise ValueError('Could not identify all required sections in ' + name
-                             + '. Please delete or repair ' + name + ' manually!')
         finally:
             if f:
                 f.close()
@@ -477,7 +494,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         if RX_WHITESPACE.fullmatch(outro):
             outro = DHPARSER_MAIN.format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
-            imports = DHParser.ebnf.DHPARSER_IMPORTS
+            imports = DHParser.ebnf.DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath)
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
@@ -485,7 +502,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         if RX_WHITESPACE.fullmatch(compiler):
             compiler = ebnf_compiler.gen_compiler_skeleton()
 
-        compilerscript = rootname + 'Compiler.py'
+        compilerscript = rootname + 'Parser.py'
         try:
             f = open(compilerscript, 'w', encoding="utf-8")
             f.write(intro)
@@ -542,7 +559,7 @@ def recompile_grammar(ebnf_filename, force=False,
                       notify: Callable = lambda: None) -> bool:
     """
     Re-compiles an EBNF-grammar if necessary, that is, if either no
-    corresponding 'XXXXCompiler.py'-file exists or if that file is
+    corresponding 'XXXXParser.py'-file exists or if that file is
     outdated.
 
     Parameters:
@@ -568,7 +585,7 @@ def recompile_grammar(ebnf_filename, force=False,
         return success
 
     base, _ = os.path.splitext(ebnf_filename)
-    compiler_name = base + 'Compiler.py'
+    compiler_name = base + 'Parser.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
     messages = []  # type: Iterable[Error]
     if (not os.path.exists(compiler_name) or force

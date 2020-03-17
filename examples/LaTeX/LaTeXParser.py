@@ -61,11 +61,10 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "678cf594491b6ade65a4dd1f20897e61"
+    source_hash__ = "eec38ff3979d07f4dc4d4699dee8b080"
     anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'%.*'
     comment_rx__ = re.compile(COMMENT__)
     comment__ = RegExp(comment_rx__)
@@ -166,6 +165,7 @@ class LaTeXGrammar(Grammar):
     latexdoc = Series(preamble, document)
     root__ = latexdoc
     
+
 def get_grammar() -> LaTeXGrammar:
     """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
@@ -652,7 +652,7 @@ def compile_src(source):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     parser_update = False
 
     def notify():
@@ -662,7 +662,7 @@ if __name__ == "__main__":
 
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False, notify=notify):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -690,4 +690,4 @@ if __name__ == "__main__":
         else:
             print(result.customized_XML() if isinstance(result, Node) else result)
     else:
-        print("Usage: LaTeXCompiler.py [FILENAME]")
+        print("Usage: LaTeXParser.py [FILENAME]")

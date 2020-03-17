@@ -102,11 +102,11 @@ the script "tst_poetry_grammar.py"::
 This will run through the unit-tests in the grammar_tests directory and print
 their success or failure on the screen. If you check the contents of your
 project directory after running the script, you might notice that there now
-exists a new file "poetryCompiler.py" in the project directory. This is an
+exists a new file "poetryParser.py" in the project directory. This is an
 auto-generated compiler-script for our DSL. You can use this script to compile
 any source file of your DSL, like "example.dsl". Let's try::
 
-    $ python poetryCompiler.py example.dsl
+    $ python poetryParser.py example.dsl
 
 The output is a block of pseudo-XML, looking like this::
 
@@ -226,7 +226,7 @@ with a text editor and add a full stop::
 
 Now, try to compile "examples.dsl" with the compile-script::
 
-    $ python poetryCompiler.py example.dsl
+    $ python poetryParser.py example.dsl
     example.dsl:1:29: Error (1010): EOF expected; ".\n " found!
     example.dsl:1:30: Error (1040): Parser stopped before end! trying to recover...
 
@@ -403,7 +403,7 @@ and you'll see that no errors get reported any more.
 Finally, we can recompile out "example.dsl"-file, and by its XML output we can
 tell that it worked::
 
-    $ python poetryCompiler.py example.dsl
+    $ python poetryParser.py example.dsl
 
 So far, we have seen *in nuce* how the development workflow for building up
 a DSL-grammar goes. Let's take this a step further by adding more capabilities
@@ -508,7 +508,7 @@ about this subtlety and introduce the same error again. With a test case we
 can reduce the risk of such a regression error. This time the tests run
 through, nicely. So let's try the parser on our new example::
 
-    $ python poetryCompiler.py macbeth.dsl
+    $ python poetryParser.py macbeth.dsl
     macbeth.dsl:1:1: Error: EOF expected; "Life’s but" found!
 
 That is strange. Obviously, there is an error right at the beginning (line 1
@@ -531,7 +531,7 @@ where the parser reached the farthest into the text. In order to receive the
 parsing history, you need to run the compiler-script again with the debugging
 option::
 
-    $ python poetryCompiler.py --debug macbeth.dsl
+    $ python poetryParser.py --debug macbeth.dsl
 
 You will receive the same error messages as before. but this time various
 kinds of debugging information have been written into a newly created
@@ -608,7 +608,7 @@ just described. Now both the tests and the compilation of the file
 Controlling abstract-syntax-tree generation
 -------------------------------------------
 
-Compiling the example "macbeth.dsl" with the command ``python poetryCompiler.py
+Compiling the example "macbeth.dsl" with the command ``python poetryParser.py
 macbeth.dsl``, you might find yourself not being able to avoid the impression
 that the output is rather verbose. Just looking at the beginning of the
 output, we find::
@@ -673,7 +673,7 @@ can easily write your own. How does this look like? ::
     "*": replace_by_single_child
     }
 
-You'll find this table in the script ``poetryCompiler.py``, which is also the
+You'll find this table in the script ``poetryParser.py``, which is also the
 place where you edit the table, because then it is automatically used when
 compiling your DSL-sources. Now, AST-Transformation works as follows: The whole
 tree is scanned, starting at the deepest level and applying the specified
@@ -684,7 +684,7 @@ reached the transformations for its descendant nodes have already been applied.
 
 As you can see, the transformation-table contains an entry for every known
 parser, i.e. "document", "sentence", "part", "WORD", "EOF". (If any of these are
-missing in the table of your ``poetryCompiler.py``, add them now!) In the
+missing in the table of your ``poetryParser.py``, add them now!) In the
 template you'll also find transformations for the anonymous parser
 ":Token" as well as some curious entries such as "*" and "<". The
 latter are considered to be "jokers". The transformations related to the
@@ -702,7 +702,7 @@ transformation ``reduce_single_child`` eliminates a single child node by
 attaching the child's children or content directly to the parent node. We'll see
 what this means and how this works, briefly.
 
-.. caution:: Once the compiler-script "xxxxCompiler.py" has been generated, the
+.. caution:: Once the compiler-script "xxxxParser.py" has been generated, the
     *only* part that is changed after editing and extending the grammar is the
     parser-part of this script (i.e. the class derived from class Grammar),
     because this part is completely auto-generated and can therefore be
@@ -739,7 +739,7 @@ in the compiler-script should be changed as follows::
 
     "WORD": [remove_whitespace, reduce_single_child],
 
-Running the "poetryCompiler.py"-script on "macbeth.dsl" again, yields::
+Running the "poetryParser.py"-script on "macbeth.dsl" again, yields::
 
     <document>
       <sentence>

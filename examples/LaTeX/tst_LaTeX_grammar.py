@@ -66,7 +66,7 @@ if __name__ == '__main__':
     else:
         recompile_grammar('LaTeX.ebnf', force=True)
         sys.path.append('.')
-        from LaTeXCompiler import get_grammar, get_transformer
+        from LaTeXParser import get_grammar, get_transformer
         error_report = run_grammar_tests(glob_pattern=arg)
         if error_report:
             print('\n')

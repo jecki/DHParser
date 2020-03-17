@@ -192,7 +192,7 @@ def run_server(host, port, log_path=None):
         with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
-    from DSLCompiler import compile_src
+    from DSLParser import compile_src
     from DHParser.server import Server, gen_lsp_table
     config_filename = get_config_filename()
     try:

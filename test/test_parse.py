@@ -32,9 +32,11 @@ from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
-    UnknownParserError, MetaParser, EMPTY_NODE
+    Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
+    GrammarError
 from DHParser import compile_source
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, DHPARSER_IMPORTS
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
+    compile_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import grammar_provider
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
@@ -49,6 +51,7 @@ class TestWhitespace:
 
     def test_non_empty_derivation(self):
         pass
+
 
 class TestParserError:
     def test_parser_error_str(self):
@@ -472,6 +475,12 @@ class TestSeries:
     #     print(parser.python_src__)
     #     print(parser_class.python_src__)
 
+    def test_ebnf_serialization(self):
+        ebnf_grammar = get_ebnf_grammar()
+        # TODO: Add test here
+        ebnf = ebnf_grammar.as_ebnf()
+        # print(ebnf)
+
 
 class TestAllOfSomeOf:
     def test_allOf_order(self):
@@ -479,9 +488,6 @@ class TestAllOfSomeOf:
         prefixes = AllOf(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
-        # aternative Form
-        prefixes = AllOf(Series(TKN("B"), TKN("A")))
-        assert Grammar(prefixes)('A B').content == 'A B'
 
     def test_allOf_completeness(self):
         """Test that an error is raised if not  all parsers of an AllOf-List
@@ -503,8 +509,7 @@ class TestAllOfSomeOf:
         prefixes = SomeOf(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
-        # aternative Form
-        prefixes = SomeOf(Alternative(TKN("B"), TKN("A")))
+        prefixes = SomeOf(TKN("B"), TKN("A"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B').content == 'B'
 
@@ -516,6 +521,37 @@ class TestAllOfSomeOf:
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
         assert Grammar(prefixes)('A B B').error_flag
+
+
+class TestInterleave:
+    def test_interleave_most_simple(self):
+        letterset = Interleave(Token("A"), Token("B"), Token("C"))
+        gr = Grammar(letterset)
+        st = gr('ABC')
+        assert not st.errors, str(st.errors)
+        assert st.content == "ABC"
+        st = gr('BCA')
+        assert not st.errors
+        assert st.content == "BCA"
+        st = gr('BCBA')
+        assert st.errors
+        st = gr('AB')
+        assert st.errors
+
+    def test_interleave(self):
+        letterset = Interleave(Token("A"), Token("B"), Token("C"),
+                               repetitions=[(1, 1000), (0, 1), (1, 1)])
+        gr = Grammar(letterset)
+        st = gr('AABC')
+        assert not st.errors
+        st = gr('BACAAA')
+        assert not st.errors
+        st = gr('ABCC')
+        assert st.errors
+        st = gr('AAACAAA')
+        assert not st.errors
+        st = gr('AAABAAA')
+        assert st.errors
 
 
 class TestErrorRecovery:
@@ -534,11 +570,11 @@ class TestErrorRecovery:
         assert 'Skipping' in str(st.errors_sorted[1])
 
 
-    def test_AllOf_skip(self):
+    def test_Interleave_skip(self):
         lang = """
         document = allof | /.*/
         @allof_skip = /[A-Z]/
-        allof = < "A" §"B" "C" "D" >
+        allof = "A" ° §"B" ° "C" ° "D"
         """
         parser = grammar_provider(lang)()
         st = parser('CADB')
@@ -555,8 +591,10 @@ class TestErrorRecovery:
         assert st['allof'].content == "A__D"
         st = parser('CA_D')
         assert st['allof'].content == "CA_D"
+        st = parser('A_CB')
+        assert st['allof'].content == "A_CB"
         st = parser('BC_A')
-        assert st['allof'].content == "BC_A"
+        assert 'allof' not in st
 
 
 class TestPopRetrieve:
@@ -568,7 +606,7 @@ class TestPopRetrieve:
         text           = /[^`]+/
         """
     mini_lang2 = r"""
-        @braces_filter=counterpart
+        @braces_filter=matching_bracket
         document       = { text | codeblock }
         codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
         braces         = opening_braces
@@ -588,25 +626,43 @@ class TestPopRetrieve:
         name           = /\w+/~
         text           = /[^<>]+/
         """
+    mini_lang4 = r"""
+        document       = { text | env }
+        env            = opentag document closetag
+        opentag        = "<" name ">"
+        closetag       = "</" :?name ">"
+        name           = /\w+/~
+        text           = /[^<>]+/        
+    """
 
     def setup(self):
         self.minilang_parser = grammar_provider(self.mini_language)()
         self.minilang_parser2 = grammar_provider(self.mini_lang2)()
         self.minilang_parser3 = grammar_provider(self.mini_lang3)()
+        self.minilang_parser4 = grammar_provider(self.mini_lang4)()
 
     @staticmethod
-    def opening_delimiter(node, name):
+    def has_tag_name(node, name):
         return node.tag_name == name # and not isinstance(node.parser, Retrieve)
 
-    @staticmethod
-    def closing_delimiter(node):
-        return node.tag_name in {':Pop', ':Retrieve'}
-        # return isinstance(node.parser, Retrieve)
+    def test_capture_assertions(self):
+        try:
+            _ = Capture(Drop(Whitespace(r'\s*')))
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+        try:
+            _ = Capture(Series(Token(' '), Drop(Whitespace(r'\s*'))))
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+        _ = Capture(RegExp(r'\w+'))
 
     def test_compile_mini_language(self):
         assert self.minilang_parser
         assert self.minilang_parser2
         assert self.minilang_parser3
+        assert self.minilang_parser4
 
     def test_stackhandling(self):
         ambigous_opening = "<ABCnormal> normal tag <ABCnormal*>"
@@ -629,6 +685,33 @@ class TestPopRetrieve:
         syntax_tree = self.minilang_parser3(proper)
         assert not syntax_tree.error_flag, str(syntax_tree.errors_sorted)
 
+    def test_optional_match(self):
+        test1 = '<info>Hey, you</info>'
+        st = self.minilang_parser4(test1)
+        assert not st.error_flag
+        test12 = '<info>Hey, <emph>you</emph></info>'
+        st = self.minilang_parser4(test1)
+        assert not st.error_flag
+        test2 = '<info>Hey, you</>'
+        st = self.minilang_parser4(test2)
+        assert not st.error_flag
+        test3 = '<info>Hey, <emph>you</></>'
+        st = self.minilang_parser4(test3)
+        assert not st.error_flag
+        test4 = '<info>Hey, <emph>you</></info>'
+        st = self.minilang_parser4(test4)
+        assert not st.error_flag
+
+    def test_rollback_behaviour_of_optional_match(self):
+        test1 = '<info>Hey, you</info*>'
+        st = self.minilang_parser4(test1)
+        assert not self.minilang_parser4.variables__['name']
+        assert st.error_flag
+        test2 = '<info>Hey, you</*>'
+        st = self.minilang_parser4(test2)
+        assert not self.minilang_parser4.variables__['name']
+        assert st.error_flag
+
     def test_cache_neutrality(self):
         """Test that packrat-caching does not interfere with the variable-
         changing parsers: Capture and Retrieve."""
@@ -649,9 +732,11 @@ class TestPopRetrieve:
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
         syntax_tree = self.minilang_parser(teststr)
-        assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="delimiter"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
+        assert not syntax_tree.errors_sorted, \
+            ''.join(str(error) for error in syntax_tree.errors_sorted)
+        matchf = partial(self.has_tag_name, name="delimiter")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
         assert delim == pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
@@ -667,8 +752,9 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="delimiter"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
+        matchf = partial(self.has_tag_name, name="delimiter")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
         assert delim == pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
@@ -677,9 +763,11 @@ class TestPopRetrieve:
         teststr = "Anfang {{{code block }} <- keine Ende-Zeichen ! }}} Ende"
         syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="braces"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
-        assert len(delim) == len(pop) and delim != pop
+        matchf = partial(self.has_tag_name, name="braces")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
+        assert len(delim) == len(pop)
+        assert delim != pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_single_line.cst")
 
@@ -694,11 +782,63 @@ class TestPopRetrieve:
             """
         syntax_tree = self.minilang_parser2(teststr)
         assert not syntax_tree.errors_sorted
-        delim = str(next(syntax_tree.select_if(partial(self.opening_delimiter, name="braces"))))
-        pop = str(next(syntax_tree.select_if(self.closing_delimiter)))
+        matchf = partial(self.has_tag_name, name="braces")
+        delim = str(next(syntax_tree.select_if(matchf)))
+        pop = str(next(syntax_tree.select_if(matchf, reverse=True)))
         assert len(delim) == len(pop) and delim != pop
         if is_logging():
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
+
+    def test_autoretrieve(self):
+        lang = r"""
+            document   = { definition } § EOF
+            definition = symbol :defsign value
+            symbol     = /\w+/~                      
+            defsign    = "=" | ":="
+            value      = /\d+/~
+            EOF        = !/./ [:?defsign]   # eat up captured defsigns
+        """
+        # code, _, _ = compile_ebnf(lang)
+        # print(code)
+        parser = grammar_provider(lang)()
+        st = parser("X := 1")
+        assert not st.error_flag
+        st1 = st
+        st = parser("")
+        assert not st.error_flag
+
+        lines = [line for line in lang.split('\n') if line.strip()]
+        eof_line = lines.pop()
+        lines.insert(1, eof_line)
+        lang = '\n'.join(lines)
+        parser = grammar_provider(lang)()
+        st = parser("X := 1")
+        assert not st.errors
+        assert st.equals(st1)
+
+        del lines[1]
+        lines.insert(2, eof_line)
+        lang = '\n'.join(lines)
+        parser = grammar_provider(lang)()
+        st = parser("X := 1")
+        assert not st.errors
+        assert st.equals(st1)
+
+        # and, finally...
+        lang_variant = r"""
+            document   = { definition } § EOF
+            symbol     = /\w+/~                      
+            defsign    = "=" | ":="
+            value      = /\d+/~
+            EOF        = !/./ :?defsign   # eat up captured defsign, only if it has been retrieved
+            definition = symbol :defsign value
+        """
+        parser = grammar_provider(lang_variant)()
+        st = parser("X := 1")
+        assert not st.errors
+        assert st.equals(st1)
+        st = parser('')
+        assert "EOF expected" in str(st.errors)
 
 
 class TestWhitespaceHandling:
@@ -1043,6 +1183,55 @@ class TestMetaParser:
         gr = grammar_provider(minilang)()
         cst = gr("2x")
         assert bool(cst.pick('MUL')), "Named empty nodes should not be dropped!!!"
+
+
+class TestParserCombining:
+    def test_series(self):
+        parser = RegExp(r'\d+') + RegExp(r'\.')
+        assert isinstance(parser, Series)
+        parser += RegExp(r'\d+')
+        assert isinstance(parser, Series)
+        assert len(parser.parsers) == 3
+        parser = Token(">") + parser
+        assert isinstance(parser, Series)
+        assert len(parser.parsers) == 4
+        parser = parser + Token("<")
+        assert isinstance(parser, Series)
+        assert len(parser.parsers) == 5
+
+    def test_alternative(self):
+        parser = RegExp(r'\d+') | RegExp(r'\.')
+        assert isinstance(parser, Alternative)
+        parser |= RegExp(r'\d+')
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 3
+        parser = Token(">") | parser
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 4
+        parser = parser | Token("<")
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 5
+
+    def test_interleave(self):
+        parser = RegExp(r'\d+') * RegExp(r'\.')
+        assert isinstance(parser, Interleave)
+        parser *= RegExp(r'\d+')
+        assert isinstance(parser, Interleave)
+        assert len(parser.parsers) == 3
+        parser = Token(">") * parser
+        assert isinstance(parser, Interleave)
+        assert len(parser.parsers) == 4
+        parser = parser * Token("<")
+        assert isinstance(parser, Interleave)
+        assert len(parser.parsers) == 5
+
+    def test_mixed_combinations(self):
+        parser = RegExp(r'\d+') +  RegExp(r'\.') + RegExp(r'\d+') | RegExp(r'\d+')
+        assert isinstance(parser, Alternative)
+        assert len(parser.parsers) == 2
+        assert isinstance(parser.parsers[0], Series)
+        assert len(parser.parsers[0].parsers) == 3
+        assert isinstance(parser.parsers[1], RegExp)
 
 
 if __name__ == "__main__":

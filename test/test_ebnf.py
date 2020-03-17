@@ -33,8 +33,8 @@ from DHParser import compile_source
 from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
-from DHParser.dsl import CompilationError, compileDSL, grammar_provider
+    EBNFDirectives, get_ebnf_decompiler, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
+from DHParser.dsl import CompilationError, compileDSL, grammar_instance, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
 
@@ -256,68 +256,84 @@ class TestCompilerErrors:
         assert not bool(messages), messages
 
 
+EBNF = r"""
+# EBNF-Grammar in EBNF
+
+@ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+@ whitespace = /\s*/                            # whitespace includes linefeed
+@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+@ drop       = whitespace                       # do not include whitespace in concrete syntax tree
+@ anonymous  = pure_elem, element
+
+#: top-level
+
+syntax     = [~//] { definition | directive } §EOF
+definition = symbol §"=" expression
+directive  = "@" §symbol "="
+             (regexp | literal | symbol)
+             { "," (regexp | literal | symbol) }
+
+#: components
+
+expression = sequence { "|" sequence }
+sequence   = { ["§"] ( interleave | lookaround ) }+  # "§" means all following terms mandatory
+interleave = term { "°" ["§"] term }
+lookaround = flowmarker (oneormore | pure_elem)
+term       = oneormore | repetition | option | pure_elem
+
+#: elements
+
+pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
+element    = [retrieveop] symbol !"="           # negative lookahead to be sure it's not a definition
+           | literal
+           | plaintext
+           | regexp
+           | whitespace
+           | group
+
+#: flow-operators
+
+flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+           | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
+retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+
+#: groups
+
+group      = "(" §expression ")"
+oneormore  = "{" expression "}+" | element "+"
+repetition = "{" §expression "}" | element "*"
+option     = "[" §expression "]" | element "?"
+
+#: leaf-elements
+
+symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
+literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
+           | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+whitespace = /~/~                               # insignificant whitespace
+
+EOF = !/./
+"""
+
+
 class TestSelfHosting:
-    grammar = r"""
-        # EBNF-Grammar in EBNF
-
-        @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-        @ whitespace = /\s*/                            # whitespace includes linefeed
-        @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-        @ drop       = whitespace                       # no whitespace in concrete syntax tree
-        
-        syntax     = [~//] { definition | directive } §EOF
-        definition = symbol §"=" expression
-        directive  = "@" §symbol "=" (regexp | literal | symbol) { "," (regexp | literal | symbol) }
-        
-        expression = term { "|" term }
-        term       = { ["§"] factor }+                       # "§" means all following factors mandatory
-        factor     = [flowmarker] [retrieveop] symbol !"="   # negative lookahead to be sure it's not a definition
-                   | [flowmarker] literal
-                   | [flowmarker] plaintext
-                   | [flowmarker] regexp
-                   | [flowmarker] whitespace
-                   | [flowmarker] oneormore
-                   | [flowmarker] group
-                   | [flowmarker] unordered
-                   | repetition
-                   | option
-        
-        flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-                   | "-!" | "-&"                        # '-' negative lookbehind, '-&' positive lookbehind
-        retrieveop = "::" | ":"                         # '::' pop, ':' retrieve
-        
-        group      = "(" §expression ")"
-        unordered  = "<" §expression ">"                # elements of expression in arbitrary order
-        oneormore  = "{" expression "}+"
-        repetition = "{" §expression "}"
-        option     = "[" §expression "]"
-        
-        symbol     = /(?!\d)\w+/~                       # e.g. expression, factor, parameter_list
-        literal    = /"(?:[^"]|\\")*?"/~                # e.g. "(", '+', 'while'
-                   | /'(?:[^']|\\')*?'/~                # whitespace following literals will be ignored tacitly.
-        plaintext  = /`(?:[^"]|\\")*?`/~                # like literal but does not eat whitespace
-        regexp     = /\/(?:\\(?:\/)|[^\/])*?\//~        # e.g. /\w+/, ~/#.*(?:\n|$)/~
-        whitespace = /~/~                               # insignificant whitespace
-        
-        EOF = !/./
-        """
-
     def test_self(self):
         compiler_name = "EBNF"
-        compiler = get_ebnf_compiler(compiler_name, self.grammar)
+        compiler = get_ebnf_compiler(compiler_name, EBNF)
         parser = get_ebnf_grammar()
-        result, errors, syntax_tree = compile_source(self.grammar, None, parser,
+        result, errors, syntax_tree = compile_source(EBNF, None, parser,
                                             get_ebnf_transformer(), compiler)
         assert not errors, str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser
-        compileDSL(self.grammar, nil_preprocessor, result, get_ebnf_transformer(), compiler)
+        compileDSL(EBNF, nil_preprocessor, result, get_ebnf_transformer(), compiler)
 
     def multiprocessing_task(self):
         compiler_name = "EBNF"
-        compiler = get_ebnf_compiler(compiler_name, self.grammar)
+        compiler = get_ebnf_compiler(compiler_name, EBNF)
         parser = get_ebnf_grammar()
-        result, errors, syntax_tree = compile_source(self.grammar, None, parser,
+        result, errors, syntax_tree = compile_source(EBNF, None, parser,
                                             get_ebnf_transformer(), compiler)
         return errors
 
@@ -407,7 +423,7 @@ class TestFlowControlOperators:
         lang = r"""
             document = ws sequence doc_end ws         
             sequence = { !end word ws }+
-            doc_end  = -&SUCC_LB end        
+            doc_end  = <-&SUCC_LB end        
             ws       = /\s*/
             end      = /END/
             word     = /\w+/
@@ -467,15 +483,18 @@ class TestWhitespace:
         assert not cst.error_flag
 
 
-class TestAllSome:
+class TestInterleave:
     def test_all(self):
-        ebnf = 'prefix = <"A" "B">'
+        ebnf = 'prefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
+        assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
+        assert grammar('A B').content == 'A B'
 
     def test_some(self):
-        ebnf = 'prefix = <"A" | "B">'
+        ebnf = 'prefix = "A"? ° "B"?'
         grammar = grammar_provider(ebnf)()
+        assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
         assert grammar('B').content == 'B'
 
@@ -634,7 +653,6 @@ class TestCustomizedResumeParsing:
 
         content = 'ALPHA acb BETA bad GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -643,7 +661,6 @@ class TestCustomizedResumeParsing:
 
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
-        # print(cst.as_sxpr())
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
@@ -717,24 +734,23 @@ class TestInSeriesResume:
         assert len(errors) >= 1  # cannot really recover from permutation errors
 
 
-class TestAllOfResume:
+class TestInterleaveResume:
     def setup(self):
         lang = """
             document = allof
             @ allof_error = '{} erwartet, {} gefunden :-('
             @ allof_skip = "D", "E", "F", "G"
-            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G" 
         """
         self.gr = grammar_provider(lang)()
 
     def test_garbage_added(self):
-        st = self.gr('GFCBAED')
+        st = self.gr('BAGFCED')
         assert not st.error_flag
-        st = self.gr('GFCB XYZ AED')
+        st = self.gr('BAG FC XYZ ED')
         errors = st.errors_sorted
         assert errors[0].code == Error.MANDATORY_CONTINUATION
         assert str(errors[0]).find(':-(') >= 0
-
 
     def test_allof_resume_later(self):
         lang = """
@@ -742,7 +758,7 @@ class TestAllOfResume:
             @ flow_resume = "."
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
-            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G"
             series = "E" "X" "Y" "Z"
         """
         gr = grammar_provider(lang)()
@@ -758,7 +774,6 @@ class TestAllOfResume:
         st = gr('FCB_GAED.')
         assert len(st.errors_sorted) == 1
 
-
     def test_complex_resume_task(self):
         lang = """
             document = flow { flow } "."
@@ -766,7 +781,7 @@ class TestAllOfResume:
             flow = allof | series
             @ allof_error = '{} erwartet, {} gefunden :-('
             @ allof_resume = "E", "A"
-            allof = < "A" "B" § "C" "D" "E" "F" "G" >
+            allof = "A" ° "B" ° §"C" °"D" ° "E" ° "F" ° "G"
             @ series_resume = "E", "A"
             series = "E" "X" §"Y" "Z"
         """
@@ -779,11 +794,31 @@ class TestAllOfResume:
         assert not st.error_flag
         st = gr('EDXYZ.')
         assert st.error_flag
-        assert len(st.errors_sorted) == 1
-        st = gr('FCB_GAED.')
-        assert len(st.errors_sorted) == 2
+        assert len(st.errors) == 1
+        st = gr('A_BCDEFG.')
+        assert len(st.errors) == 1 and st.errors[0].code == Error.PARSER_DID_NOT_MATCH
+        st = gr('AB_CDEFG.')
+        # mandatory continuation error kicks in only, if the parsers before
+        # the §-sign have been exhausted!
+        assert len(st.errors) == 2 and st.errors_sorted[1].code == Error.MANDATORY_CONTINUATION
         st = gr('EXY EXYZ.')
-        assert len(st.errors_sorted) == 1
+        assert len(st.errors) == 1
+
+
+class TestEBNFDecompile:
+    def test_sameflavor(self):
+        """Check if compiling a decompiled AST yields the same AST."""
+        grammar = get_ebnf_grammar()
+        transform = get_ebnf_transformer()
+        decompile = get_ebnf_decompiler()
+        st1 = grammar(EBNF)
+        transform(st1)
+        decompiled_EBNF = decompile(st1)
+        st2 = grammar(decompiled_EBNF)
+        assert st2.error_flag == 0
+        transform(st2)
+        assert st1.equals(st2)
+
 
 
 if __name__ == "__main__":

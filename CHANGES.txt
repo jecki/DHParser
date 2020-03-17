@@ -3,14 +3,16 @@ DHParser Version 0.9.1
 
 - for debugging, notices informing about where the parser resumes after
   an error can be added to the error messages. (See config-parameter
-  "resume_notices".)
+  "resume_notices" and '@ resume_XXXX' as well as '@ skip_XXX'-directives.)
 - added support for tag-less parsers: i.e. parser that are assigned to a
   symbol that matches a certain regular expression, say, a leading underscore
   will be treated as anonymous parsers
 - extended support for dropping of content during parsing-stage, now any
   tag-less parser's content can be dropped, not only that of the Token
   and Whitespace-parsers
-- resuming after an error does not jump in to commentaries, any more (bugfix!)
+- AllOf- and SomeOf-parsers have been exchanged in favor of a more flexible
+  "interleave"-parser
+- better parsing history (now moved from parse.py to the new trace.py-module)
 - some speed optimizations
 - refactoring: history tracking has been moved from parse.py to module 
   trace.py (new) and log.py

@@ -24,14 +24,14 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, counterpart, PreprocessorFunc, is_empty, remove_if, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if,\
+    keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
@@ -46,11 +46,11 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def Lyrik_explicit_whitespacePreprocessor(text):
+def json_fail_tolerantPreprocessor(text):
     return text, lambda i: i
 
 def get_preprocessor() -> PreprocessorFunc:
-    return Lyrik_explicit_whitespacePreprocessor
+    return json_fail_tolerantPreprocessor
 
 
 #######################################################################
@@ -59,57 +59,66 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class Lyrik_explicit_whitespaceGrammar(Grammar):
-    r"""Parser for a Lyrik_explicit_whitespace source file.
+class json_fail_tolerantGrammar(Grammar):
+    r"""Parser for a json_fail_tolerant source file.
     """
-    source_hash__ = "082c362ff149f702e7b1b76032b5febb"
+    _element = Forward()
+    source_hash__ = "6410f8962393b80b827883f8593d859c"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
-    COMMENT__ = r''
-    comment_rx__ = RX_NEVER_MATCH
-    WHITESPACE__ = r'[\t ]*'
+    error_messages__ = {'member': [[re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!']],
+                        'string': [[re.compile(r'\\'), 'Illegal escape sequence "{1}" Allowed values are \\/, \\\\, \\b, \\n, \\r, \\t, or \\u.'],
+                                   [re.compile(r'(?=)'), 'Illegal character "{1}" in string.']],
+                        '_OBJECT_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']],
+                        '_ARRAY_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']]}
+    skip_rules__ = {'string': [re.compile(r'(?=")')]}
+    resume_rules__ = {'object': [re.compile(r'(?:[^{}]|(?:\{.*\}))*\}\s*')],
+                      'array': [re.compile(r'(?:[^\[\]]|(?:\[.*\]))*\]\s*')],
+                      'member': [re.compile(r'(?=(?:"[^"\n]+"\s*:)|\}|,)')],
+                      '_OBJECT_SEPARATOR': [re.compile(r'(?=)')],
+                      '_ARRAY_SEPARATOR': [re.compile(r'(?=)')]}
+    COMMENT__ = r'(?:\/\/|#).*'
+    comment_rx__ = re.compile(COMMENT__)
+    WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    L = Series(RegExp('[ \\t]+'), dwsp__)
-    ENDE = NegativeLookahead(RegExp('.'))
-    JAHRESZAHL = RegExp('\\d\\d\\d\\d')
-    LEERZEILE = Series(RegExp('\\n[ \\t]*(?=\\n)'), dwsp__)
-    NZ = RegExp('\\n')
-    ZEICHENFOLGE = RegExp('[^ \\n<>]+')
-    NAME = RegExp('\\w+\\.?')
-    WORT = RegExp('\\w+')
-    vers = OneOrMore(Series(ZEICHENFOLGE, Option(L)))
-    strophe = OneOrMore(Series(NZ, vers))
-    text = OneOrMore(Series(strophe, ZeroOrMore(LEERZEILE)))
-    zeile = OneOrMore(Series(ZEICHENFOLGE, Option(L)))
-    titel = OneOrMore(Series(NZ, Option(L), zeile, OneOrMore(LEERZEILE)))
-    serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
-    ziel = Series(ZEICHENFOLGE, dwsp__)
-    verknüpfung = Series(Series(Drop(Token("<")), dwsp__), ziel, Series(Drop(Token(">")), dwsp__))
-    namenfolge = OneOrMore(Series(NAME, Option(L)))
-    wortfolge = OneOrMore(Series(WORT, Option(L)))
-    jahr = Series(JAHRESZAHL, dwsp__)
-    ort = Series(wortfolge, Option(verknüpfung))
-    untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Series(Drop(Token(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
-    autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), werk, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), ort, Series(Drop(Token(",")), dwsp__), Option(Series(NZ, dwsp__)), jahr, Series(Drop(Token(".")), dwsp__), mandatory=1)
-    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
-    root__ = gedicht
+    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Token("]"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_ARRAY_SEPARATOR"])
+    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Token("}"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_OBJECT_SEPARATOR"])
+    _EOF = NegativeLookahead(RegExp('.'))
+    EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
+    DOT = Token(".")
+    FRAC = Option(Series(DOT, RegExp('[0-9]+')))
+    NEG = Token("-")
+    INT = Alternative(Series(Option(NEG), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
+    UNICODE = Series(Series(Drop(Token("\\u")), dwsp__), HEX, HEX)
+    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
+    PLAIN = RegExp('[^"\\\\]+')
+    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
+    null = Series(Token("null"), dwsp__)
+    bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
+    number = Series(INT, FRAC, EXP, dwsp__)
+    string = Series(Drop(Token('"')), _CHARACTERS, Drop(Token('"')), dwsp__, mandatory=1, err_msgs=error_messages__["string"], skip=skip_rules__["string"])
+    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(_ARRAY_SEPARATOR, _element, mandatory=1)))), Series(Drop(Token("]")), dwsp__))
+    member = Series(string, Series(Drop(Token(":")), dwsp__), _element, mandatory=1, err_msgs=error_messages__["member"])
+    object = Series(Series(Drop(Token("{")), dwsp__), member, ZeroOrMore(Series(_OBJECT_SEPARATOR, member, mandatory=1)), Series(Drop(Token("}")), dwsp__), mandatory=3)
+    _element.set(Alternative(object, array, string, number, bool, null))
+    json = Series(dwsp__, _element, _EOF)
+    root__ = json
     
-def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
-    """Returns a thread/process-exclusive Lyrik_explicit_whitespaceGrammar-singleton."""
+
+def get_grammar() -> json_fail_tolerantGrammar:
+    """Returns a thread/process-exclusive json_fail_tolerantGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
+        grammar = THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton = Lyrik_explicit_whitespaceGrammar()
+        THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton = json_fail_tolerantGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_grammar_singleton
+            THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -123,51 +132,48 @@ def get_grammar() -> Lyrik_explicit_whitespaceGrammar:
 #
 #######################################################################
 
-Lyrik_explicit_whitespace_AST_transformation_table = {
-    # AST Transformations for the Lyrik_explicit_whitespace-grammar
+json_fail_tolerant_AST_transformation_table = {
+    # AST Transformations for the json_fail_tolerant-grammar
     "<": flatten,
-    "gedicht": [],
-    "bibliographisches": [],
-    "autor": [],
-    "werk": [],
-    "untertitel": [],
-    "ort": [],
-    "jahr": [],
-    "wortfolge": [],
-    "namenfolge": [],
-    "verknüpfung": [],
-    "ziel": [],
-    "serie": [],
-    "titel": [],
-    "zeile": [],
-    "text": [],
-    "strophe": [],
-    "vers": [],
-    "WORT": [],
-    "NAME": [],
-    "ZEICHENFOLGE": [],
-    "NZ": [],
-    "LEERZEILE": [],
-    "JAHRESZAHL": [],
-    "ENDE": [],
-    "L": [],
+    "json": [],
+    "_element": [],
+    "object": [],
+    "member": [],
+    "array": [],
+    "string": [],
+    "number": [],
+    "bool": [],
+    "null": [],
+    "_CHARACTERS": [],
+    "PLAIN": [],
+    "ESCAPE": [],
+    "UNICODE": [],
+    "HEX": [],
+    "INT": [],
+    "NEG": [],
+    "FRAC": [],
+    "DOT": [],
+    "EXP": [],
+    "_EOF": [],
+    "_OBJECT_SEPARATOR": [],
+    "_ARRAY_SEPARATOR": [],
     "*": replace_by_single_child
 }
 
 
-def CreateLyrik_explicit_whitespaceTransformer() -> TransformationFunc:
+def Createjson_fail_tolerantTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=Lyrik_explicit_whitespace_AST_transformation_table.copy())
+    return partial(traverse, processing_table=json_fail_tolerant_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
+        transformer = THREAD_LOCALS.json_fail_tolerant_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton = CreateLyrik_explicit_whitespaceTransformer()
-        transformer = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_transformer_singleton
+        THREAD_LOCALS.json_fail_tolerant_00000001_transformer_singleton = Createjson_fail_tolerantTransformer()
+        transformer = THREAD_LOCALS.json_fail_tolerant_00000001_transformer_singleton
     return transformer
 
 
@@ -177,101 +183,92 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class Lyrik_explicit_whitespaceCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a Lyrik_explicit_whitespace source file.
+class json_fail_tolerantCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a json_fail_tolerant source file.
     """
 
     def __init__(self):
-        super(Lyrik_explicit_whitespaceCompiler, self).__init__()
+        super(json_fail_tolerantCompiler, self).__init__()
 
     def reset(self):
         super().reset()
         # initialize your variables here, not in the constructor!
 
-    def on_gedicht(self, node):
+    def on_json(self, node):
         return self.fallback_compiler(node)
 
-    # def on_bibliographisches(self, node):
+    # def on__element(self, node):
     #     return node
 
-    # def on_autor(self, node):
+    # def on_object(self, node):
     #     return node
 
-    # def on_werk(self, node):
+    # def on_member(self, node):
     #     return node
 
-    # def on_untertitel(self, node):
+    # def on_array(self, node):
     #     return node
 
-    # def on_ort(self, node):
+    # def on_string(self, node):
     #     return node
 
-    # def on_jahr(self, node):
+    # def on_number(self, node):
     #     return node
 
-    # def on_wortfolge(self, node):
+    # def on_bool(self, node):
     #     return node
 
-    # def on_namenfolge(self, node):
+    # def on_null(self, node):
     #     return node
 
-    # def on_verknüpfung(self, node):
+    # def on__CHARACTERS(self, node):
     #     return node
 
-    # def on_ziel(self, node):
+    # def on_PLAIN(self, node):
     #     return node
 
-    # def on_serie(self, node):
+    # def on_ESCAPE(self, node):
     #     return node
 
-    # def on_titel(self, node):
+    # def on_UNICODE(self, node):
     #     return node
 
-    # def on_zeile(self, node):
+    # def on_HEX(self, node):
     #     return node
 
-    # def on_text(self, node):
+    # def on_INT(self, node):
     #     return node
 
-    # def on_strophe(self, node):
+    # def on_NEG(self, node):
     #     return node
 
-    # def on_vers(self, node):
+    # def on_FRAC(self, node):
     #     return node
 
-    # def on_WORT(self, node):
+    # def on_DOT(self, node):
     #     return node
 
-    # def on_NAME(self, node):
+    # def on_EXP(self, node):
     #     return node
 
-    # def on_ZEICHENFOLGE(self, node):
+    # def on__EOF(self, node):
     #     return node
 
-    # def on_NZ(self, node):
+    # def on__OBJECT_SEPARATOR(self, node):
     #     return node
 
-    # def on_LEERZEILE(self, node):
-    #     return node
-
-    # def on_JAHRESZAHL(self, node):
-    #     return node
-
-    # def on_ENDE(self, node):
-    #     return node
-
-    # def on_L(self, node):
+    # def on__ARRAY_SEPARATOR(self, node):
     #     return node
 
 
-def get_compiler() -> Lyrik_explicit_whitespaceCompiler:
-    """Returns a thread/process-exclusive Lyrik_explicit_whitespaceCompiler-singleton."""
+def get_compiler() -> json_fail_tolerantCompiler:
+    """Returns a thread/process-exclusive json_fail_tolerantCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
+        compiler = THREAD_LOCALS.json_fail_tolerant_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton = Lyrik_explicit_whitespaceCompiler()
-        compiler = THREAD_LOCALS.Lyrik_explicit_whitespace_00000002_compiler_singleton
+        THREAD_LOCALS.json_fail_tolerant_00000001_compiler_singleton = json_fail_tolerantCompiler()
+        compiler = THREAD_LOCALS.json_fail_tolerant_00000001_compiler_singleton
     return compiler
 
 
@@ -291,7 +288,7 @@ def compile_src(source):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Compiler.py', '.ebnf')
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     parser_update = False
 
     def notify():
@@ -301,7 +298,7 @@ if __name__ == "__main__":
 
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False, notify=notify):
-            error_file = os.path.basename(__file__).replace('Compiler.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -329,4 +326,4 @@ if __name__ == "__main__":
         else:
             print(result.as_xml() if isinstance(result, Node) else result)
     else:
-        print("Usage: Lyrik_explicit_whitespaceCompiler.py [FILENAME]")
+        print("Usage: json_fail_tolerantParser.py [FILENAME]")

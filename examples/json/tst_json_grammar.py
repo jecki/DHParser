@@ -65,7 +65,7 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptpath, 'json.ebnf'),
                           force=False)
         sys.path.append('.')
-        from jsonCompiler import get_grammar, get_transformer
+        from jsonParser import get_grammar, get_transformer
         error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')

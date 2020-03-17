@@ -75,7 +75,7 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptpath, 'Arithmetic.ebnf'),
                           force=False)
         sys.path.append('.')
-        from ArithmeticCompiler import get_grammar, get_transformer
+        from ArithmeticParser import get_grammar, get_transformer
         error_report = run_grammar_tests(glob_pattern=arg)
         if error_report:
             print('\n')

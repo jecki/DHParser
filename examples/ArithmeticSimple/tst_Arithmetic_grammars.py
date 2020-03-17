@@ -79,7 +79,7 @@ if __name__ == '__main__':
         sys.path.append('.')
 
         failure = False
-        from ArithmeticSimpleCompiler import get_grammar, get_transformer
+        from ArithmeticSimpleParser import get_grammar, get_transformer
         print('Testing "ArithmeticSimple"')
         error_report = run_grammar_tests(glob_pattern=arg)
         if error_report:
@@ -87,7 +87,7 @@ if __name__ == '__main__':
             print(error_report)
             failure = True
 
-        from ArithmeticRightRecursiveCompiler import get_grammar, get_transformer
+        from ArithmeticRightRecursiveParser import get_grammar, get_transformer
         print('Testing "ArithmeticRightRecursive"')
         error_report = run_grammar_tests(glob_pattern=arg)
         if error_report:
