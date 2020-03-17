@@ -1425,12 +1425,12 @@ class Grammar:
         If `parser` is not connected to any symbol in the Grammar,
         `None` is returned.
 
-        >>> i = RegExp(r'\w+')
-        >>> word = Series(i, Whitespace(r'\s*'))
+        >>> anonymous_re = RegExp(r'\w+')
+        >>> word = Series(anonymous_re, Whitespace(r'\s*'))
         >>> word.pname = 'word'
         >>> gr = Grammar(word)
-        >>> gr.associated_symbol(i).pname
-        word
+        >>> gr.associated_symbol(anonymous_re).pname
+        'word'
         """
         symbol = None   # type: Optional[Parser]
 
