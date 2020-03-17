@@ -651,16 +651,18 @@ class TestPopRetrieve:
 
     def test_capture_assertions(self):
         try:
-            _ = Capture(Drop(Whitespace(r'\s*')))
-            assert False, "ValueError expected!"
-        except ValueError:
+            _ = Grammar(Capture(Drop(Whitespace(r'\s*'))))
+            assert False, "GrammarError expected!"
+        except GrammarError as ge:
             pass
         try:
-            _ = Capture(Series(Token(' '), Drop(Whitespace(r'\s*'))))
+            _ = Grammar(Capture(Series(Token(' '), Drop(Whitespace(r'\s*')))))
             assert False, "ValueError expected!"
-        except ValueError:
+        except GrammarError:
             pass
-        _ = Capture(RegExp(r'\w+'))
+        cp = Capture(RegExp(r'\w+'))
+        cp.pname = "capture"
+        _ = Grammar(cp)
 
     def test_compile_mini_language(self):
         assert self.minilang_parser
@@ -1236,6 +1238,18 @@ class TestParserCombining:
         assert isinstance(parser.parsers[0], Series)
         assert len(parser.parsers[0].parsers) == 3
         assert isinstance(parser.parsers[1], RegExp)
+
+
+class TestStaticAnalysis:
+    def test_1(self):
+        p = Capture(Drop(Whitespace(" ")))
+        try:
+            gr = Grammar(p)
+            assert False, "GrammarError expected"
+        except GrammarError:
+            pass
+
+
 
 
 if __name__ == "__main__":

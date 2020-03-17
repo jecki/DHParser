@@ -233,19 +233,12 @@ class TestCompilerErrors:
         assert messages
 
     def test_undefined_symbols(self):
-        """Use of undefined symbols should be reported.
-        """
-        # save = get_config_value('static_analysis')
-        # set_config_value('static_analysis', 'early')
-
         ebnf = """syntax = { intermediary }
                   intermediary = "This symbol is " [ badly_spelled ] "!"
                   bedly_spilled = "wrong" """
         result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
             get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
         assert messages
-
-        # set_config_value('static_analysis', save)
 
     def test_no_error(self):
         """But reserved symbols should not be repoted as undefined.

@@ -36,7 +36,7 @@ from typing import Callable, cast, List, Tuple, Set, Dict, \
     DefaultDict, Sequence, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error
+from DHParser.error import Error, ErrorCode, is_error
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -51,7 +51,7 @@ __all__ = ('ParserError',
            'ParseFunc',
            'Parser',
            'UnknownParserError',
-           'GrammarErrorType',
+           'AnalysisError',
            'GrammarError',
            'Grammar',
            'PreprocessorToken',
@@ -215,11 +215,6 @@ def reentry_point(rest: StringView,
 ApplyFunc = Callable[['Parser'], Optional[bool]]  # A return value of True stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[[StringView], Tuple[Optional[Node], StringView]]
-
-# The global flag STATIC_ANALYSIS_PENGING signals the constructors
-# of Parser-classes not to raise exceptions for errors that will
-# be reported more preciseley in the static analysis
-STATIC_ANALYSIS_PENDING = False
 
 
 class Parser:
@@ -641,7 +636,10 @@ class Parser:
         else:
             return self._apply(func, positive_flip)
 
-    def static_analysis(self) -> Optional[List['GrammarErrorType']]:
+    def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
+        return (self.pname, self, Error(msg, 0, code))
+
+    def static_analysis(self) -> Optional[List['AnalysisError']]:
         """Analyses the parser for logical errors after the grammar has been
         instantiated."""
         return None
@@ -730,14 +728,15 @@ class UnknownParserError(KeyError):
     is referred to that does not exist."""
 
 
-GrammarErrorType = Tuple[str, Parser, Error]      # TODO: replace with a named tuple?
+AnalysisError = Tuple[str, Parser, Error]      # pname, parser, error
+# TODO: replace with a named tuple?
 
 
 class GrammarError(Exception):
     """GrammarError will be raised if static analysis reveals errors
     in the grammar.
     """
-    def __init__(self, static_analysis_result: List[GrammarErrorType]):
+    def __init__(self, static_analysis_result: List[AnalysisError]):
         assert static_analysis_result  # must not be empty
         self.errors = static_analysis_result
 
@@ -858,6 +857,9 @@ class Grammar:
                 (by DHParser.ebnf.EBNFCompiler) and then be set to false in the
                 definition of the grammar class already.
 
+        static_analysis_errors__: A list of errors and warnings that were found in the
+                static analysis
+
         python__src__:  For the purpose of debugging and inspection, this field can
                  take the python src of the concrete grammar class
                  (see `dsl.grammar_provider`).
@@ -928,6 +930,17 @@ class Grammar:
                 In some situations it may drastically increase parsing time, so
                 it is safer to leave it on. (Default: on)
 
+        # mirrored class attributes:
+
+        static_analysis_pending__: A pointer to the class attribute of the same name.
+                (See the description above.) If the class is instantiated with a
+                parser, this pointer will be overwritten with an instance variable
+                that serves the same function.
+
+        static_analysis_errors__: A pointer to the class attribute of the same name.
+                (See the description above.) If the class is instantiated with a
+                parser, this pointer will be overwritten with an instance variable
+                that serves the same function.
 
         # tracing and debugging support
 
@@ -1002,7 +1015,7 @@ class Grammar:
     COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
     static_analysis_pending__ = [True]  # type: List[bool]
-
+    static_analysis_errors__ = []  # type: List[AnalysisError]
 
     @classmethod
     def _assign_parser_names__(cls):
@@ -1075,18 +1088,30 @@ class Grammar:
         # on demand (see Grammar.__getitem__()).
         # (Usually, all parsers should be connected to the root object. But
         # during testing and development this does not need to be the case.)
-        self.root_parser__ = copy.deepcopy(root) if root else copy.deepcopy(self.__class__.root__)
+        if root:
+            self.root_parser__ = copy.deepcopy(root)
+            self.static_analysis_pending__ = [True]  # type: List[bool]
+            self.static_analysis_errors__ = []       # type: List[AnalysisError]
+        else:
+            self.root_parser__ = copy.deepcopy(self.__class__.root__)
+            self.static_analysis_pending__ = self.__class__.static_analysis_pending__
+            self.static_analysis_errors__ = self.__class__.static_analysis_errors__
         self.root_parser__.apply(self._add_parser__)
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
 
-        if self.__class__.static_analysis_pending__ \
+        if self.static_analysis_pending__ \
                 and get_config_value('static_analysis') in {'early', 'late'}:
             try:
                 result = self.static_analysis()
-                if result:
+                # clears any stored errors without overwriting the pointer
+                while self.static_analysis_errors__:
+                    self.static_analysis_errors__.pop()
+                self.static_analysis_errors__.extend(result)
+                has_errors = any(is_error(tpl[-1].code) for tpl in result)
+                if has_errors:
                     raise GrammarError(result)
-                self.__class__.static_analysis_pending__.pop()
+                self.static_analysis_pending__.pop()
             except (NameError, AttributeError):
                 pass  # don't fail the initialization of PLACEHOLDER
 
@@ -1380,18 +1405,18 @@ class Grammar:
         return '\n'.join(ebnf)
 
 
-    def static_analysis(self) -> List[GrammarErrorType]:
+    def static_analysis(self) -> List[AnalysisError]:
         """
-        EXPERIMENTAL!!!
+        Checks the parser tree statically for possible errors.
 
-        Checks the parser tree statically for possible errors. At the moment,
-        no checks are implemented
+        This function is called by the constructor of class Grammar and does
+        not need to be called externally.
 
         :return: a list of error-tuples consisting of the narrowest containing
             named parser (i.e. the symbol on which the failure occurred),
             the actual parser that failed and an error object.
         """
-        error_list = []  # type: List[GrammarErrorType]
+        error_list = []  # type: List[AnalysisError]
 
         def visit_parser(parser: Parser) -> None:
             nonlocal error_list
@@ -1770,6 +1795,13 @@ class NaryParser(MetaParser):
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return self.parsers
 
+    def static_analysis(self) -> Optional[List['AnalysisError']]:
+        if len(self.parsers) == 0:
+            return [self.static_error(
+                'Nary parser %s:%s = %s requires at least on argument'
+                % (self.pname, self.ptype, str(self)), Error.NARY_WITHOUT_PARSERS)]
+        return None
+
 
 class Option(UnaryParser):
     r"""
@@ -1886,9 +1918,9 @@ class OneOrMore(UnaryParser):
 
     def __init__(self, parser: Parser) -> None:
         super(OneOrMore, self).__init__(parser)
-        assert not parser.is_optional(), \
-            "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
-            "%s(%s)" % (self.ptype, parser.pname)
+        # assert not parser.is_optional(), \
+        #     "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
+        #     "%s(%s)" % (self.ptype, parser.pname)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -1915,6 +1947,14 @@ class OneOrMore(UnaryParser):
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.pname else self.parser.repr) + '}+'
+
+    def static_analysis(self) -> Optional[List[AnalysisError]]:
+        if self.parser.is_optional():
+            return [self.static_error(
+                "Use ZeroOrMore instead of nesting OneOrMore with an optional parser: " \
+                "%s:%s(%s:%s)" % (self.ptype, self.pname, self.parser.ptype, self.parser.pname),
+                Error.BADLY_NESTED_OPTIONAL_PARSER)]
+        return None
 
 
 MessagesType = List[Tuple[Union[str, Any], str]]
@@ -1949,16 +1989,16 @@ class MandatoryNary(NaryParser):
         if mandatory < 0:
             mandatory += length
 
-        assert not (mandatory == NO_MANDATORY and err_msgs), \
-            'Custom error messages require that parameter "mandatory" is set!'
-        assert not (mandatory == NO_MANDATORY and skip), \
-            'Search expressions for skipping text require that parameter "mandatory" is set!'
-        assert length > 0, \
-            'Number of elements %i is below minimum length of 1' % length
-        assert length < NO_MANDATORY, \
-            'Number of elemnts %i of series exceeds maximum length of %i' % (length, NO_MANDATORY)
-
-        assert 0 <= mandatory < length or mandatory == NO_MANDATORY
+        # assert not (mandatory == NO_MANDATORY and err_msgs), \
+        #     'Custom error messages require that parameter "mandatory" is set!'
+        # assert not (mandatory == NO_MANDATORY and skip), \
+        #     'Search expressions for skipping text require that parameter "mandatory" is set!'
+        # assert length > 0, \
+        #     'Number of elements %i is below minimum length of 1' % length
+        # assert length < NO_MANDATORY, \
+        #     'Number of elemnts %i of series exceeds maximum length of %i' % (length, NO_MANDATORY)
+        #
+        # assert 0 <= mandatory < length or mandatory == NO_MANDATORY
 
         self.mandatory = mandatory  # type: int
         self.err_msgs = err_msgs    # type: MessagesType
@@ -2040,6 +2080,28 @@ class MandatoryNary(NaryParser):
             # signal error to tracer directly, because this error is not raised!
             grammar.most_recent_error__ = ParserError(err_node, text_, error, first_throw=False)
         return error, err_node, text_[i:]
+
+    def static_analysis(self) -> Optional[List['AnalysisError']]:
+        msg = []
+        length = len(self.parsers)
+        if self.mandatory == NO_MANDATORY and self.err_msgs:
+            msg.append('Custom error messages require that parameter "mandatory" is set!')
+        elif self.mandatory == NO_MANDATORY and self.skip:
+            msg.append('Search expressions for skipping text require parameter '
+                       '"mandatory" to be set!')
+        elif length == 0:
+            msg.append('Number of elements %i is below minimum length of 1' % length)
+        elif length >= NO_MANDATORY:
+            msg.append('Number of elemnts %i of series exceeds maximum length of %i' \
+                  % (length, NO_MANDATORY))
+        elif not (0 <= self.mandatory < length or self.mandatory == NO_MANDATORY):
+            msg.append('Illegal value %i for mandatory-parameter in a parser with %i elements!'
+                  % (self.mandatory, length))
+        if msg:
+            msg.insert(0, 'Illegal configuration of mandatory Nary-parser %s:%s = %s'
+                          % (self.pname, self.ptype, str(self)))
+            return[self.static_error('\n'.join(msg), Error.BAD_MANDATORY_SETUP)]
+        return None
 
 
 class Series(MandatoryNary):
@@ -2162,12 +2224,12 @@ class Alternative(NaryParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        assert len(parsers) >= 1
-        assert len(set(parsers)) == len(parsers)
-        # only the last alternative may be optional. Could this be checked at compile time?
-        assert all(not p.is_optional() for p in parsers[:-1]), \
-            "Parser-specification Error: Only the last alternative may be optional!" \
-            "Otherwise alternatives after the first optional alternative will never be parsed."
+        # assert len(parsers) >= 1
+        # assert len(set(parsers)) == len(parsers)
+        # # only the last alternative may be optional. Could this be checked at compile time?
+        # assert all(not p.is_optional() for p in parsers[:-1]), \
+        #     "Parser-specification Error: Only the last alternative may be optional!" \
+        #     "Otherwise alternatives after the first optional alternative will never be parsed."
         super(Alternative, self).__init__(*parsers)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2209,12 +2271,26 @@ class Alternative(NaryParser):
         self.parsers += other_parsers
         return self
 
+    def static_analysis(self) -> Optional[List['AnalysisError']]:
+        errors = super().static_analysis() or []
+        if len(set(self.parsers)) != len(self.parsers):
+            errors.append(self.static_error(
+                'Duplicate parsers in %s:%s = %s' % (self.pname, self.ptype, str(self)),
+                Error.DUPLICATE_PARSERS_IN_ALTERNATIVE))
+        if not all(not p.is_optional() for p in self.parsers[:-1]):
+            errors.append(self.static_error(
+                "Parser-specification Error in %s:%s = %s: " % (self.pname, self.ptype, str(self))
+                + "\nOnly the very last alternative may be optional! \nOtherwise, "
+                "alternatives after the first optional alternative will never be parsed.",
+                Error.BAD_ORDER_OF_ALTERNATIVES))
+        return errors or None
+
 
 INFINITE = 2**30
 
 
 class Interleave(MandatoryNary):
-    """Parse elements in arbitrary order.
+    r"""Parse elements in arbitrary order.
 
     Examples::
         >>> prefixes = TKN("A") * TKN("B")
@@ -2241,9 +2317,6 @@ class Interleave(MandatoryNary):
                  err_msgs: MessagesType = [],
                  skip: ResumeList = [],
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
-        assert len(set(parsers)) == len(parsers)
-        assert all(not parser.is_optional()
-                   and not isinstance(parser, FlowParser) for parser in parsers)
         super(Interleave, self).__init__(
             *parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
         if len(repetitions) == 0:
@@ -2353,6 +2426,16 @@ class Interleave(MandatoryNary):
         self.repetitions = repetitions
         return self
 
+    def static_analysis(self) -> Optional[List['AnalysisError']]:
+        # assert len(set(parsers)) == len(parsers)  # commented out, because this could make sense
+        if not all(not parser.is_optional() and not isinstance(parser, FlowParser)
+                   for parser in self.parsers):
+            return [self.static_error(
+                "Flow-operators and optional parsers are neither allowed nor needed inside "
+                "of interleave-parser %s:%s = %s !" % (self.ptype, self.pname, str(self)),
+                Error.BADLY_NESTED_OPTIONAL_PARSER)]
+        return None
+
 
 ########################################################################
 #
@@ -2411,7 +2494,7 @@ class Lookahead(FlowParser):
     def __repr__(self):
         return '&' + self.parser.repr
 
-    def static_analysis(self) -> Optional[List[GrammarErrorType]]:
+    def static_analysis(self) -> Optional[List[AnalysisError]]:
         if self.parser.is_optional():
             return [(self.pname, self, Error(
                 'Lookahead %s does not make sense with optional parser "%s"!' \
@@ -2502,9 +2585,6 @@ class Capture(UnaryParser):
     contained parser's name. This requires the contained parser to be named.
     """
     def __init__(self, parser: Parser) -> None:
-        if not STATIC_ANALYSIS_PENDING and parser.apply(lambda p: p.drop_content):
-            raise ValueError('Captured parser "%s" contained parsers that drop content, '
-                             'which can lead to unintended results!' % str(parser))
         super(Capture, self).__init__(parser)
 
     def _rollback(self):
@@ -2515,8 +2595,7 @@ class Capture(UnaryParser):
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
-                "Cannot capture content of returned by parser, the content of which " \
-                "will be dropped!"
+                "Cannot capture content from parsers that drop content!"
             self.grammar.variables__[self.pname].append(node.content)
             location = self.grammar.document_length__ - text.__len__()
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
@@ -2529,12 +2608,20 @@ class Capture(UnaryParser):
     def __repr__(self):
         return self.parser.repr
 
-    def static_analysis(self) -> Optional[List[GrammarErrorType]]:
+    def static_analysis(self) -> Optional[List[AnalysisError]]:
+        errors = []
+        if not self.pname:
+            errors.append((self.pname, self, Error(
+                'Capture only works as named parser! Error in parser: ' + str(self),
+                0, Error.CAPTURE_WITHOUT_PARSERNAME
+            )))
         if self.parser.apply(lambda p: p.drop_content):
-            return [(self.pname, self, Error(
-                'Captured symbol "%s" contains parsers that drop content!' % self.pname,
-                0, Error.SYMBOL_UNFIT_TO_CAPTURE))]
-        return None
+            errors.append((self.pname, self, Error(
+                'Captured symbol "%s" contains parsers that drop content, '
+                'which can lead to unintended results!' % (self.pname or str(self)),
+                0, Error.CAPTURE_DROPPED_CONTENT_WARNING
+            )))
+        return errors or None
 
 
 
