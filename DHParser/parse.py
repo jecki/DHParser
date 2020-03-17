@@ -1068,7 +1068,10 @@ class Grammar:
                     else:
                         parser.pname = entry
                         parser.anonymous = anonymous
-            cls.parser_initialization__[0] = "done"
+            if cls != Grammar:
+                cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
+                # cls.parser_initialization__[0] = "done"
+                pass
 
 
     def __init__(self, root: Parser = None) -> None:
@@ -1107,6 +1110,8 @@ class Grammar:
             self.static_analysis_pending__ = [True]  # type: List[bool]
             self.static_analysis_errors__ = []       # type: List[AnalysisError]
         else:
+            assert self.__class__ == Grammar or self.__class__.root__ != PARSER_PLACEHOLDER, \
+                "Please add `root__` field to definition of class " + self.__class__.__name__
             self.root_parser__ = copy.deepcopy(self.__class__.root__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__

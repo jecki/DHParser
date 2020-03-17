@@ -1048,22 +1048,22 @@ class EBNFCompiler(Compiler):
             definitions.append(pp_rules(self.ERR_MSGS_KEYWORD, error_messages))
 
         for symbol in self.directives.error.keys():
-            if symbol not in self.consumed_custom_errors:
-                try:
-                    def_node = self.rules[symbol][0]
-                    self.tree.new_error(
-                        def_node, 'Customized error message for symbol "{}" will never be used, '
-                        'because the mandatory marker "§" appears nowhere in its definiendum!'
-                        .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
-                except KeyError:
-                    def match_function(nd: Node) -> bool:
-                        return bool(nd.children) and nd.children[0].content.startswith(symbol + '_')
-                    dir_node = self.tree.pick(match_function)
-                    if dir_node:
-                        directive = dir_node.children[0].content
-                        self.tree.new_error(
-                            dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
-                            .format(directive, directive.split('_')[0]))
+            if symbol in self.rules and symbol not in self.consumed_custom_errors:
+                # try:
+                def_node = self.rules[symbol][0]
+                self.tree.new_error(
+                    def_node, 'Customized error message for symbol "{}" will never be used, '
+                    'because the mandatory marker "§" appears nowhere in its definiendum!'
+                    .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                # except KeyError:
+                #     def match_function(nd: Node) -> bool:
+                #         return bool(nd.children) and nd.children[0].content.startswith(symbol + '_')
+                #     dir_node = self.tree.pick(match_function)
+                #     if dir_node:
+                #         directive = dir_node.children[0].content
+                #         self.tree.new_error(
+                #             dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
+                #             .format(directive, directive.split('_')[0]))
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class

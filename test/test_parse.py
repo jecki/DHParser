@@ -94,6 +94,16 @@ class TestParserClass:
         s3 = ", ".join(l)
         assert s1 == s2 == s3
 
+    def test_symbol(self):
+        class MyGrammar(Grammar):
+            wrong = Token('wrong')
+            word = OneOrMore(wrong) + Whitespace(r'\s*') + OneOrMore(RegExp(r'\w+'))
+            root__ = word
+        gr = MyGrammar()
+        regex = gr['word'].parsers[-1].parser
+        result = gr.associated_symbol(regex).symbol
+        # assert result == 'word', result
+
 
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion1(self):
@@ -282,7 +292,7 @@ class TestRegex:
         assert node.tag_name == "regex"
         assert str(node) == 'abc+def'
 
-    def text_ignore_case(self):
+    def test_ignore_case(self):
         mlregex = r"""
         @ ignorecase = True
         regex = /alpha/
@@ -292,9 +302,8 @@ class TestRegex:
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
-        node, rest = parser.regex('Alpha')
+        node, rest = parser.regex(StringView('Alpha'))
         assert node
-        assert not node.error_flag
         assert rest == ''
         assert node.tag_name == "regex"
         assert str(node) == 'Alpha'
@@ -308,9 +317,8 @@ class TestRegex:
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
-        node, rest = parser.regex('Alpha')
-        assert node.error_flag
-
+        node, rest = parser.regex(StringView('Alpha'))
+        assert node is None
 
     def test_token(self):
         tokenlang = r"""
@@ -572,7 +580,6 @@ class TestErrorRecovery:
         st = parser('AB_D')
         assert len(st.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in st.errors)
         assert 'Skipping' in str(st.errors_sorted[1])
-
 
     def test_Interleave_skip(self):
         lang = """
@@ -1039,7 +1046,6 @@ class TestReentryAfterError:
         # test regex-defined resume rule
         grammar = grammar_provider(lang)()
         mini_suite(grammar)
-
 
     def test_unambiguous_error_location(self):
         lang = r"""
