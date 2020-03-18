@@ -326,7 +326,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     def has_lookahead(parser_name: str) -> bool:
         """Returns True if the parser or any of its descendant parsers is a
         Lookahead parser."""
-        return parser[parser_name].apply(lambda p: isinstance(p, Lookahead))
+        return parser[parser_name].apply(lambda ctx: isinstance(ctx[-1], Lookahead))
         # lookahead_found = False
         #
         # def find_lookahead(p: Parser):

@@ -22,6 +22,7 @@ limitations under the License.
 import os
 import sys
 from functools import partial
+from typing import List
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
@@ -82,7 +83,8 @@ class TestParserClass:
             """
         gr = grammar_provider(minilang)()
         l = []
-        def visitor(p: Parser):
+        def visitor(context: List[Parser]):
+            p = context[-1]
             l.append(p.pname + p.ptype)
         gr.root__.apply(visitor)
         s1 = ", ".join(l)

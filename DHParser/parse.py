@@ -212,7 +212,8 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
-ApplyFunc = Callable[['Parser'], Optional[bool]]  # A return value of True stops any further application
+ApplyFunc = Callable[[List['Parser']], Optional[bool]]
+        # The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[[StringView], Tuple[Optional[Node], StringView]]
 
@@ -583,7 +584,7 @@ class Parser:
         """
         return tuple()
 
-    def _apply(self, func: ApplyFunc, flag_cycle: FlagFunc) -> bool:
+    def _apply(self, func: ApplyFunc, context: List['Parser'], flip: FlagFunc) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers as long as `func()` returns `None` or `False`.
@@ -597,12 +598,12 @@ class Parser:
         class Parser or any of its descendants. The entry point for external
         calls is the method `apply()` without underscore!
         """
-        if not flag_cycle(func, self.cycle_detection):
-            if func(self):
+        if not flip(func, self.cycle_detection):
+            if func(context + [self]):
                 return True
             else:
                 for parser in self.sub_parsers():
-                    if parser._apply(func, flag_cycle):
+                    if parser._apply(func, context + [self], flip):
                         return True
                 return False
         return False
@@ -646,9 +647,9 @@ class Parser:
                 return False
 
         if func in self.cycle_detection:
-            return self._apply(func, negative_flip)
+            return self._apply(func, [], negative_flip)
         else:
-            return self._apply(func, positive_flip)
+            return self._apply(func, [], positive_flip)
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
         return (self.symbol, self, Error(msg, 0, code))
@@ -1187,11 +1188,12 @@ class Grammar:
         return self._reversed__
 
 
-    def _add_parser__(self, parser: Parser) -> None:
+    def _add_parser__(self, context: List[Parser]) -> None:
         """
         Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
+        parser = context[-1]
         if parser.pname:
             # prevent overwriting instance variables or parsers of a different class
             assert (parser.pname not in self.__dict__
@@ -1430,20 +1432,24 @@ class Grammar:
         If `parser` is not connected to any symbol in the Grammar,
         `None` is returned.
 
-        >>> anonymous_re = RegExp(r'\w+')
-        >>> word = Series(anonymous_re, Whitespace(r'\s*'))
+        >>> word = Series(RegExp(r'\w+'), Whitespace(r'\s*'))
         >>> word.pname = 'word'
         >>> gr = Grammar(word)
+        >>> anonymous_re = gr['word'].parsers[0]
         >>> gr.associated_symbol(anonymous_re).pname
         'word'
         """
         symbol = None   # type: Optional[Parser]
 
-        def find_symbol_for_parser(p: Parser) -> Optional[bool]:
+        def find_symbol_for_parser(context: List[Parser]) -> Optional[bool]:
             nonlocal symbol, parser
-            if p.pname:
-                symbol = p
-            return parser in p.sub_parsers()
+            if parser in context[-1].sub_parsers():
+                for p in reversed(context):
+                    if p.pname:
+                        # save the name of the closest containing named parser
+                        symbol = p
+                        return True  # stop searching
+            return False  # continue searching
 
         if parser.pname:
             return parser
@@ -1464,8 +1470,9 @@ class Grammar:
         """
         error_list = []  # type: List[AnalysisError]
 
-        def visit_parser(parser: Parser) -> Optional[bool]:
+        def visit_parser(context: List[Parser]) -> Optional[bool]:
             nonlocal error_list
+            parser = context[-1]
             errors = parser.static_analysis()
             if errors is not None:
                 error_list.extend(errors)
@@ -2675,7 +2682,7 @@ class Capture(UnaryParser):
                 'Capture only works as named parser! Error in parser: ' + str(self),
                 0, Error.CAPTURE_WITHOUT_PARSERNAME
             )))
-        if self.parser.apply(lambda p: p.drop_content):
+        if self.parser.apply(lambda plist: plist[-1].drop_content):
             errors.append((self.pname, self, Error(
                 'Captured symbol "%s" contains parsers that drop content, '
                 'which can lead to unintended results!' % (self.pname or str(self)),
