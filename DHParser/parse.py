@@ -2887,19 +2887,18 @@ class Synonym(UnaryParser):
         super(Synonym, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        # circumvent Parser.__call__ as an optimization (dangerous?)
-        node, text = self.parser._parse(text)
+        node, text = self.parser(text)
         if node is not None:
             if self.drop_content:
                 return EMPTY_NODE, text
-            # if self.anonymous:
-            #     if node.tag_name[0] != ':':  # implies != EMPTY_NODE
-            #         node.tag_name = self.tag_name
-            # else:
             if not self.anonymous:
                 if node == EMPTY_NODE:
                     return Node(self.tag_name, ''), text
-                node.tag_name = self.tag_name
+                if node.tag_name.startswith(':'):
+                    # eliminate anonymous child-node on the fly
+                    node.tag_name = self.tag_name
+                else:
+                    return Node(self.tag_name, (node,)), text
         return node, text
 
     def __repr__(self):
@@ -2950,10 +2949,6 @@ class Forward(Parser):
         `Synonym`, which might be a meaningful marker for the syntax tree,
         parser Forward should never appear in the syntax tree.
         """
-        return self.parser(text)
-
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        # for the exceptional case in class Synonym where the ._parse method is called directly
         return self.parser(text)
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
