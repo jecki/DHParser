@@ -400,6 +400,16 @@ class TestSynonymDetection:
         grammar = grammar_provider(ebnf)()
         assert grammar['a'].pname == 'a', grammar['a'].pname
         assert grammar['b'].pname == 'b', grammar['b'].pname
+        assert grammar('b').as_sxpr() == '(a (b "b"))'
+
+    def test_synonym_anonymous_elimination(self):
+        ebnf = """@ anonymous = _b
+                  a = _b
+                  _b = /b/
+        """
+        grammar = grammar_provider(ebnf)()
+        assert grammar['a'].pname == 'a', grammar['a'].pname
+        assert grammar['_b'].pname == '_b', grammar['_b'].pname
         assert grammar('b').as_sxpr() == '(a "b")'
 
 
