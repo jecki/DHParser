@@ -2901,6 +2901,9 @@ class Synonym(UnaryParser):
                     return Node(self.tag_name, (node,)), text
         return node, text
 
+    def __str__(self):
+        return self.pname + (' = ' if self.pname else '') + self.parser.repr
+
     def __repr__(self):
         return self.pname or self.parser.repr
 

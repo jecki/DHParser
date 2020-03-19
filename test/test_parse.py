@@ -417,6 +417,7 @@ class TestGrammar:
         gr = grammar_provider("@drop = whitespace, token" + lang)()
         st = gr('eins 1 zwei2drei 3')
         st = gr('-3')
+        assert str(gr['S']) == "S = ~", str(gr['S'])
 
 
 class TestSeries:
