@@ -410,7 +410,7 @@ scroll down to the AST section, you'll see something like this:
             [reduce_single_child],
         "ENDE": [],
         ":Whitespace":
-            replace_content(lambda node: " "),
+            transform_content(lambda node: " "),
         "*": replace_by_single_child
     }
 

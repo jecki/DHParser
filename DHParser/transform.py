@@ -65,8 +65,8 @@ __all__ = ('TransformationDict',
            'replace_tag_names',
            'collapse',
            'collapse_children_if',
-           'replace_content',
-           'replace_content_by',
+           'transform_content',
+           'replace_content_with',
            'add_attributes',
            'normalize_whitespace',
            'merge_adjacent',
@@ -123,6 +123,8 @@ __all__ = ('TransformationDict',
            'node_maker',
            'delimit_children',
            'positions_of',
+           'PositionType',
+           'normalize_position_representation',
            'insert',
            'add_error',
            'error_on',
@@ -915,9 +917,8 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
     node.result = tuple(result)
 
 
-# TODO: rename to filer- or transform-content
 @transformation_factory(collections.abc.Callable)
-def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
+def transform_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
     """
     Replaces the content of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
@@ -926,9 +927,8 @@ def replace_content(context: List[Node], func: Callable):  # Callable[[Node], Re
     node.result = func(node.result)
 
 
-# TODO: rename to replace_content_with
 @transformation_factory  # (str)
-def replace_content_by(context: List[Node], content: str):  # Callable[[Node], ResultType]
+def replace_content_with(context: List[Node], content: str):  # Callable[[Node], ResultType]
     """
     Replaces the content of the node with the given text content.
     """
@@ -1423,22 +1423,34 @@ def delimiter_positions(context: List[Node]):
     return tuple(range(1, len(context[-1].children)))
 
 
+PositionType = Union[int, tuple, Callable]
+
+
+def normalize_position_representation(context: List[Node], position: PositionType) -> Tuple[int]:
+    """Converts a position-representation in any of the forms that `PositionType`
+    allows into a (possibly empty) tuple of integers."""
+    if callable(position):
+        position = position(context)
+    if isinstance(position, int):
+        return (position,)
+    elif not position:  # empty tuple or None
+        return ()
+    else:
+        # assert isinstance(position, tuple) and all(isinstance(i, int) for i in position)
+        return position
+
+
 @transformation_factory(int, tuple, collections.abc.Callable)
-def insert(context: List[Node], position: Union[int, tuple, Callable], node_factory: Callable):
+def insert(context: List[Node], position: PositionType, node_factory: Callable):
     """
     Inserts a delimiter at a specific position within the children. If
     `position` is `None` nothing will be inserted.
     Example:
         insert(pos_of('paragraph'), node_maker('LF', '\n'))
     """
-    if callable(position):
-        position = position(context)
-    if isinstance(position, int):
-        pos_tuple = (position,)
-    elif not position:  # empty tuple or None
+    pos_tuple = normalize_position_representation(context, position)
+    if not pos_tuple:
         return
-    else:
-        pos_tuple = position
     node = context[-1]
     children = list(node.children)
     assert children or not node.result, "Cannot add nodes to a leaf-node!"
