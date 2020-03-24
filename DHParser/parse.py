@@ -2042,7 +2042,7 @@ class MandatoryNary(NaryParser):
                 strings for that matter) and error messages that are chosen
                 if the regular expression matches the text where the error
                 occurred.
-        skip_list: A list of regular expressions. The rest of the text is searched for
+        skip: A list of regular expressions. The rest of the text is searched for
                 each of these. The closest match is the point where parsing will be
                 resumed.
     """
