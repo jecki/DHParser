@@ -7,6 +7,14 @@
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
 
 
+# re-entry-rules for resuming after parsing-error
+@ definition_resume = /\n\s*(?=@|\w+\w*=)/
+@ directive_resume  = /\n\s*(?=@|\w+\w*=)/
+
+# specialized error messages for certain cases
+
+@ definition_error  = /,/, 'Delimiter "," not expected in definition. Either this was meant to be a directive and the directive symbol @ is missing or the error is due to inconsistent use of the comma as a delimiter for the elements of a sequence.'
+
 #: top-level
 
 syntax     = [~//] { definition | directive } §EOF

@@ -1187,6 +1187,10 @@ class EBNFCompiler(Compiler):
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
         rule = node.children[0].content
+        if rule.endswith('_error') or rule.endswith('_skip') \
+                or rule.endswith('_resume') or rule.endswith('_filter'):
+            self.tree.new_error(node, 'Symbol name "%s" suggests directive, ' % rule +
+                                'but directive marker @ is missing...', Error.WARNING)
         if rule in self.rules:
             first = self.rules[rule][0]
             if not id(first) in self.tree.error_nodes:

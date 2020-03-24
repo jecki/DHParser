@@ -120,6 +120,7 @@ __all__ = ('TransformationDict',
            'forbid',
            'require',
            'assert_content',
+           'AT_THE_END',
            'node_maker',
            'delimit_children',
            'positions_of',
@@ -1372,6 +1373,9 @@ NodeGenerator = Callable[[], Node]
 DynamicResultType = Union[Tuple[NodeGenerator, ...], NodeGenerator, str]
 
 
+AT_THE_END = 2**32   # VERY VERY last position in a tuple of childe nodes
+
+
 def node_maker(tag_name: str,
                result: DynamicResultType,
                attributes: dict={}) -> Callable:
@@ -1444,7 +1448,9 @@ def normalize_position_representation(context: List[Node], position: PositionTyp
 def insert(context: List[Node], position: PositionType, node_factory: Callable):
     """
     Inserts a delimiter at a specific position within the children. If
-    `position` is `None` nothing will be inserted.
+    `position` is `None` nothing will be inserted. Position values
+    greater or equal the number of children mean that the delimiter will
+    be appended to the tuple of children.
     Example:
         insert(pos_of('paragraph'), node_maker('LF', '\n'))
     """
@@ -1457,7 +1463,7 @@ def insert(context: List[Node], position: PositionType, node_factory: Callable):
     L = len(children)
     pos_tuple = sorted(tuple((p if p >= 0 else (p + L)) for p in pos_tuple), reverse=True)
     for n in pos_tuple:
-        assert 0 <= n <= L, "position %i exceeds insertion bounds 0 <= pos <= %i" % (n, L)
+        n = min(L, n)
         text_pos = (children[n-1].pos + len(children[n-1])) if n > 0 else node.pos
         children.insert(n, node_factory().with_pos(text_pos))
     node.result = tuple(children)

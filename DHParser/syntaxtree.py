@@ -181,6 +181,17 @@ def create_context_match_function(criterion: CriteriaType) -> Callable:
 RX_AMP = re.compile(r'&(?!\w+;)')
 
 
+def clean_anonymous_tag_name(tag_name: str) -> str:
+    """Cleans anonymous tag-names for serialization, so that the colon does not
+    lead to invalid XML:
+    >>> clean_anonymous_tag_name(':Series')
+    'ANONYMOUS_Series__'
+    """
+    if tag_name.startswith(':'):
+        return 'ANONYMOUS_%s__' % tag_name[1:]
+    return tag_name
+
+
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
     """
     Represents a node in the concrete or abstract syntax tree.
@@ -1199,16 +1210,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
 
-        def clean(tag_name: str) -> str:
-            if tag_name.startswith(':'):
-                return '__' + tag_name[1:]
-            return tag_name
-
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             if node.tag_name in omit_tags and not node.has_attr():
                 return ''
-            txt = ['<', clean(node.tag_name)]
+            txt = ['<', clean_anonymous_tag_name(node.tag_name)]
             if node.has_attr():
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
@@ -1230,7 +1236,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in empty_tags or (node.tag_name in omit_tags and not node.has_attr()):
                 return ''
-            return '\n</' + clean(node.tag_name) + '>'
+            return '\n</' + clean_anonymous_tag_name(node.tag_name) + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
