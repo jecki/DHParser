@@ -15,6 +15,7 @@ cdef class Parser:
     cdef object recursion_counter
     cdef object cycle_detection
     cdef object _parse_proxy
+    cdef str _symbol
 
     cpdef _parse(self, text)
     cpdef reset(self)
@@ -23,7 +24,7 @@ cdef class Parser:
     # def __or__(self, other)
     cpdef _parse(self, text)
     cpdef set_proxy(self, proxy)
-    cpdef _apply(self, func, flip)
+    cpdef _apply(self, func, context, flip)
     cpdef apply(self, func)
 
 # cpdef mixin_comment(whitespace, str)

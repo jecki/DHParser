@@ -203,7 +203,7 @@ def is_filename(strg: str) -> bool:
 @cython.locals(i=cython.int, L=cython.int)
 def relative_path(from_path: str, to_path: str) -> str:
     """Returns the relative path in order to open a file from
-    `to_path` when the script is runing in `from_path`. Example:
+    `to_path` when the script is running in `from_path`. Example:
 
         >>> relative_path('project/common/dir_A', 'project/dir_B')
         '../../dir_B'
@@ -259,7 +259,7 @@ class unrepr:
     def __repr__(self) -> str:
         return self.s
 
-
+@cython.locals(max_length=cython.int, length=cython.int, a=cython.int, b=cython.int)
 def abbreviate_middle(s: str, max_length: int) -> str:
     """Shortens string `s` by replacing the middle part with an ellipsis
     sign ` ... ` if the size of the string exceeds `max_length`."""
@@ -285,6 +285,7 @@ RX_IDENTIFIER = re.compile(r'\w+')
 RX_NON_IDENTIFIER = re.compile(r'[^\w]+')
 
 
+@cython.locals(i=cython.int, delta=cython.int)
 def as_identifier(s: str, replacement: str = "_") -> str:
     r"""Converts a string to an identifier that matches /\w+/ by
     substituting any character not matching /\w/ with the given
@@ -306,7 +307,7 @@ def as_identifier(s: str, replacement: str = "_") -> str:
             rng = m.span(0)
             delta = rng[1] - rng[0]
             ident.append(replacement * delta)
-            i += rng[1] - rng[0]
+            i += delta  # rng[1] - rng[0]
     return ''.join(ident)
 
 
@@ -529,6 +530,7 @@ def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
     return line, column
 
 
+@cython.returns(cython.int)
 @cython.locals(line=cython.int, column=cython.int, i=cython.int)
 def text_pos(text: Union[StringView, str],
              line: int, column: int,

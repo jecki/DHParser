@@ -52,7 +52,7 @@ class TestErrorSupport:
         assert (l, c) == (2 + offset, 10), str((l, c))
         try:
             l, c = line_col(lbreaks, -1)
-            assert False, "ValueError expected for negative position."
+            assert False, "ValueError expected for negative position, not %i, %i." % (l, c)
         except ValueError:
             pass
         try:

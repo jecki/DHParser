@@ -16,6 +16,8 @@ DHParser Version 0.9.1
   possible mistakes
 - better parsing history (now moved from parse.py to the new trace.py-module)
 - some speed optimizations
+- refactoring: history tracking has been moved from parse.py to module 
+  trace.py (new) and log.py
 
 
 DHParser Version 0.9.0 (20.10.2019)
