@@ -326,7 +326,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     def has_lookahead(parser_name: str) -> bool:
         """Returns True if the parser or any of its descendant parsers is a
         Lookahead parser."""
-        return parser[parser_name].apply(lambda p: isinstance(p, Lookahead))
+        return parser[parser_name].apply(lambda ctx: isinstance(ctx[-1], Lookahead))
         # lookahead_found = False
         #
         # def find_lookahead(p: Parser):
@@ -465,9 +465,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if "ast" in tests and len(errata) == errflag:
                 compare = parse_tree(get(tests, "ast", test_name))
                 if compare:
-                    from DHParser.transform import traverse, remove_nodes
-                    traverse(ast, {'*': remove_nodes({'__TESTING_ARTIFACT__'})})
-                    traverse(compare, {'*': remove_nodes({'__TESTING_ARTIFACT__'})})
+                    from DHParser.transform import traverse, remove_children
+                    traverse(ast, {'*': remove_children({'__TESTING_ARTIFACT__'})})
+                    traverse(compare, {'*': remove_children({'__TESTING_ARTIFACT__'})})
                     if not compare.equals(ast):
                         errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                       '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'

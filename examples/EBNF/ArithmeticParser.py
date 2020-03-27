@@ -12,7 +12,13 @@ from functools import partial
 import os
 import sys
 
-dhparser_parentdir = os.path.abspath(r'../..')
+try:
+    scriptpath = os.path.dirname(__file__)
+except NameError:
+    scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
     sys.path.append(dhparser_parentdir)
 
@@ -22,7 +28,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
@@ -36,10 +42,10 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    chain, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
-    trace_history, has_descendant, neg, has_ancestor
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value
 
 
 #######################################################################
@@ -48,11 +54,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def ClassicEBNFPreprocessor(text):
+def ArithmeticPreprocessor(text):
     return text, lambda i: i
 
+
 def get_preprocessor() -> PreprocessorFunc:
-    return ClassicEBNFPreprocessor
+    return ArithmeticPreprocessor
 
 
 #######################################################################
@@ -61,52 +68,40 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class ClassicEBNFGrammar(Grammar):
-    r"""Parser for a ClassicEBNF source file.
+class ArithmeticGrammar(Grammar):
+    r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "a7929c507e1b8319071d18dc9eaccdf7"
+    source_hash__ = "23d588c351da60bb265947d5314d13cc"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'#.*(?:\n|$)'
+    COMMENT__ = r'#.*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = NegativeLookahead(RegExp('.'))
-    whitespace = Series(RegExp('~'), dwsp__)
-    regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
-    plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
-    symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
-    option = Series(Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=1)
-    repetition = Series(Series(Token("{"), dwsp__), expression, Series(Token("}"), dwsp__), mandatory=1)
-    oneormore = Series(Series(Token("{"), dwsp__), expression, Series(Token("}+"), dwsp__))
-    unordered = Series(Series(Token("<"), dwsp__), expression, Series(Token(">"), dwsp__), mandatory=1)
-    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":"), dwsp__))
-    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("-!"), dwsp__), Series(Token("-&"), dwsp__))
-    factor = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
-    term = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), factor))
-    expression.set(Series(term, ZeroOrMore(Series(Series(Token("|"), dwsp__), term))))
-    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
-    syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
-    root__ = syntax
+    VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
+    NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
+    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
+    sign = Alternative(Drop(Token("+")), Drop(Token("-")))
+    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
+    term = Series(factor, ZeroOrMore(Series(Alternative(Series(Drop(Token("*")), dwsp__), Series(Drop(Token("/")), dwsp__)), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(Series(Drop(Token("+")), dwsp__), Series(Drop(Token("-")), dwsp__)), term))))
+    root__ = expression
     
 
-def get_grammar() -> ClassicEBNFGrammar:
-    """Returns a thread/process-exclusive ClassicEBNFGrammar-singleton."""
+def get_grammar() -> ArithmeticGrammar:
+    """Returns a thread/process-exclusive ArithmeticGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.ClassicEBNF_00000001_grammar_singleton
+        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.ClassicEBNF_00000001_grammar_singleton = ClassicEBNFGrammar()
+        THREAD_LOCALS.Arithmetic_00000001_grammar_singleton = ArithmeticGrammar()
         if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.ClassicEBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.ClassicEBNF_00000001_grammar_singleton
+            THREAD_LOCALS.Arithmetic_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
@@ -120,50 +115,35 @@ def get_grammar() -> ClassicEBNFGrammar:
 #
 #######################################################################
 
-ClassicEBNF_AST_transformation_table = {
-    # AST Transformations for EBNF-grammar
-    "<":
-        [remove_empty],  # remove_whitespace
-    "syntax":
-        [],  # otherwise '"*": replace_by_single_child' would be applied
-    "directive, definition":
-        [flatten, remove_tokens('@', '=', ',')],
-    "expression":
-        [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
-    "sequence":
-        [replace_by_single_child, flatten],  # supports both idioms:
-    # "{ term }+" and "term { term }"
-    "term, flowmarker, retrieveop":
-        replace_by_single_child,
-    "group":
-        [remove_brackets, replace_by_single_child],
-    "unordered":
-        remove_brackets,
-    "oneormore, repetition, option":
-        [reduce_single_child, remove_brackets,
-         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
-    "symbol, literal, regexp":
-        reduce_single_child,
-    (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        reduce_single_child,
-    "*":
-        replace_by_single_child
+Arithmetic_AST_transformation_table = {
+    # AST Transformations for the Arithmetic-grammar
+    "<": flatten,
+    "expression": [],
+    "term": [],
+    "factor": [],
+    "sign": [],
+    "group": [],
+    "NUMBER": [],
+    "VARIABLE": [],
+    "*": replace_by_single_child
 }
 
 
-def CreateClassicEBNFTransformer() -> TransformationFunc:
+
+def CreateArithmeticTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=ClassicEBNF_AST_transformation_table.copy())
+    return partial(traverse, processing_table=Arithmetic_AST_transformation_table.copy())
+
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.ClassicEBNF_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.ClassicEBNF_00000001_transformer_singleton = CreateClassicEBNFTransformer()
-        transformer = THREAD_LOCALS.ClassicEBNF_00000001_transformer_singleton
+        THREAD_LOCALS.Arithmetic_00000001_transformer_singleton = CreateArithmeticTransformer()
+        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
     return transformer
 
 
@@ -173,83 +153,48 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class ClassicEBNFCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a ClassicEBNF source file.
+class ArithmeticCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a Arithmetic source file.
     """
 
     def __init__(self):
-        super(ClassicEBNFCompiler, self).__init__()
+        super(ArithmeticCompiler, self).__init__()
 
     def reset(self):
         super().reset()
         # initialize your variables here, not in the constructor!
 
-    def on_syntax(self, node):
+    def on_expression(self, node):
         return self.fallback_compiler(node)
-
-    # def on_definition(self, node):
-    #     return node
-
-    # def on_directive(self, node):
-    #     return node
-
-    # def on_expression(self, node):
-    #     return node
-
-    # def on_sequence(self, node):
-    #     return node
 
     # def on_term(self, node):
     #     return node
 
-    # def on_flowmarker(self, node):
+    # def on_factor(self, node):
     #     return node
 
-    # def on_retrieveop(self, node):
+    # def on_sign(self, node):
     #     return node
 
     # def on_group(self, node):
     #     return node
 
-    # def on_unordered(self, node):
+    # def on_NUMBER(self, node):
     #     return node
 
-    # def on_oneormore(self, node):
-    #     return node
-
-    # def on_repetition(self, node):
-    #     return node
-
-    # def on_option(self, node):
-    #     return node
-
-    # def on_symbol(self, node):
-    #     return node
-
-    # def on_literal(self, node):
-    #     return node
-
-    # def on_plaintext(self, node):
-    #     return node
-
-    # def on_regexp(self, node):
-    #     return node
-
-    # def on_whitespace(self, node):
-    #     return node
-
-    # def on_EOF(self, node):
+    # def on_VARIABLE(self, node):
     #     return node
 
 
-def get_compiler() -> ClassicEBNFCompiler:
-    """Returns a thread/process-exclusive ClassicEBNFCompiler-singleton."""
+
+def get_compiler() -> ArithmeticCompiler:
+    """Returns a thread/process-exclusive ArithmeticCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.ClassicEBNF_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.ClassicEBNF_00000001_compiler_singleton = ClassicEBNFCompiler()
-        compiler = THREAD_LOCALS.ClassicEBNF_00000001_compiler_singleton
+        THREAD_LOCALS.Arithmetic_00000001_compiler_singleton = ArithmeticCompiler()
+        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
     return compiler
 
 
@@ -310,4 +255,4 @@ if __name__ == "__main__":
         else:
             print(result.serialize() if isinstance(result, Node) else result)
     else:
-        print("Usage: ClassicEBNFParser.py [FILENAME]")
+        print("Usage: ArithmeticParser.py [FILENAME]")

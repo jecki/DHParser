@@ -65,8 +65,8 @@ __all__ = ('TransformationDict',
            'replace_tag_names',
            'collapse',
            'collapse_children_if',
-           'replace_content',
-           'replace_content_by',
+           'transform_content',
+           'replace_content_with',
            'add_attributes',
            'normalize_whitespace',
            'merge_adjacent',
@@ -90,8 +90,10 @@ __all__ = ('TransformationDict',
            'has_attr',
            'attr_equals',
            'has_content',
+           'has_ancestor',
            'has_parent',
            'has_descendant',
+           'has_child',
            'has_sibling',
            'lstrip',
            'rstrip',
@@ -102,7 +104,7 @@ __all__ = ('TransformationDict',
            'keep_nodes',
            'keep_content',
            'remove_children_if',
-           'remove_nodes',
+           'remove_children',
            'remove_content',
            # 'remove_first',
            # 'remove_last',
@@ -118,9 +120,12 @@ __all__ = ('TransformationDict',
            'forbid',
            'require',
            'assert_content',
+           'AT_THE_END',
            'node_maker',
            'delimit_children',
            'positions_of',
+           'PositionType',
+           'normalize_position_representation',
            'insert',
            'add_error',
            'error_on',
@@ -585,31 +590,45 @@ def has_content(context: List[Node], regexp: str) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_parent(context: List[Node], tag_name_set: AbstractSet[str], ancestry: int = 1) -> bool:
+def has_ancestor(context: List[Node], tag_name_set: AbstractSet[str], ancestry: int = 1) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the context before the last node in the context.
-    :param ancestry: determines how deep `has_parent` should dive into
+    :param ancestry: determines how deep `has_ancestor` should dive into
         the ancestry. "1" means only the immediate parents wil be considered,
         "2" means also the grandparents, ans so on.
     """
     assert ancestry > 0
-    for i in range(2, max(ancestry + 2, len(context) + 1)):
+    for i in range(2, min(ancestry + 2, len(context) + 1)):
         if context[-i].tag_name in tag_name_set:
             return True
     return False
 
 
 @transformation_factory(collections.abc.Set)
+def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Checks whether the immediate predecessor in the context has one of the
+    given tags."""
+    return has_ancestor(context, tag_name_set, 1)
+
+
+@transformation_factory(collections.abc.Set)
 def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
-                   stop_level: int = 1) -> bool:
-    assert stop_level > 0
+                   generations: int = 1) -> bool:
+    assert generations > 0
     for child in context[-1].children:
         if child.tag_name in tag_name_set:
             return True
-        if stop_level > 1 and has_descendant(context + [child], tag_name_set, stop_level - 1):
+        if generations > 1 and has_descendant(context + [child], tag_name_set, generations - 1):
             return True
     return False
+
+
+@transformation_factory(collections.abc.Set)
+def has_child(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+    """Checks whether at least one child (i.e. immediate descendant) has one of
+    the given tags."""
+    return has_descendant(context, tag_name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
@@ -899,9 +918,8 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
     node.result = tuple(result)
 
 
-# TODO: rename to filer- or transform-content
 @transformation_factory(collections.abc.Callable)
-def replace_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
+def transform_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
     """
     Replaces the content of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
@@ -910,9 +928,8 @@ def replace_content(context: List[Node], func: Callable):  # Callable[[Node], Re
     node.result = func(node.result)
 
 
-# TODO: rename to replace_content_with
 @transformation_factory  # (str)
-def replace_content_by(context: List[Node], content: str):  # Callable[[Node], ResultType]
+def replace_content_with(context: List[Node], content: str):  # Callable[[Node], ResultType]
     """
     Replaces the content of the node with the given text content.
     """
@@ -1321,7 +1338,7 @@ def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
 
 # TODO: refactor to "remove_children"!?
 @transformation_factory(collections.abc.Set)
-def remove_nodes(context: List[Node], tag_names: AbstractSet[str]):
+def remove_children(context: List[Node], tag_names: AbstractSet[str]):
     """Removes children by tag name."""
     remove_children_if(context, partial(is_one_of, tag_name_set=tag_names))
 
@@ -1354,6 +1371,9 @@ def remove_if(context: List[Node], condition: Callable):
 
 NodeGenerator = Callable[[], Node]
 DynamicResultType = Union[Tuple[NodeGenerator, ...], NodeGenerator, str]
+
+
+AT_THE_END = 2**32   # VERY VERY last position in a tuple of childe nodes
 
 
 def node_maker(tag_name: str,
@@ -1407,29 +1427,43 @@ def delimiter_positions(context: List[Node]):
     return tuple(range(1, len(context[-1].children)))
 
 
-@transformation_factory(int, tuple, collections.abc.Callable)
-def insert(context: List[Node], position: Union[int, tuple, Callable], node_factory: Callable):
-    """
-    Inserts a delimiter at a specific position within the children. If
-    `position` is `None` nothing will be inserted.
-    Example:
-        insert(pos_of('paragraph'), node_maker('LF', '\n'))
-    """
+PositionType = Union[int, tuple, Callable]
+
+
+def normalize_position_representation(context: List[Node], position: PositionType) -> Tuple[int]:
+    """Converts a position-representation in any of the forms that `PositionType`
+    allows into a (possibly empty) tuple of integers."""
     if callable(position):
         position = position(context)
     if isinstance(position, int):
-        pos_tuple = (position,)
+        return (position,)
     elif not position:  # empty tuple or None
-        return
+        return ()
     else:
-        pos_tuple = position
+        # assert isinstance(position, tuple) and all(isinstance(i, int) for i in position)
+        return position
+
+
+@transformation_factory(int, tuple, collections.abc.Callable)
+def insert(context: List[Node], position: PositionType, node_factory: Callable):
+    """
+    Inserts a delimiter at a specific position within the children. If
+    `position` is `None` nothing will be inserted. Position values
+    greater or equal the number of children mean that the delimiter will
+    be appended to the tuple of children.
+    Example:
+        insert(pos_of('paragraph'), node_maker('LF', '\n'))
+    """
+    pos_tuple = normalize_position_representation(context, position)
+    if not pos_tuple:
+        return
     node = context[-1]
     children = list(node.children)
     assert children or not node.result, "Cannot add nodes to a leaf-node!"
     L = len(children)
     pos_tuple = sorted(tuple((p if p >= 0 else (p + L)) for p in pos_tuple), reverse=True)
     for n in pos_tuple:
-        assert 0 <= n <= L, "position %i exceeds insertion bounds 0 <= pos <= %i" % (n, L)
+        n = min(L, n)
         text_pos = (children[n-1].pos + len(children[n-1])) if n > 0 else node.pos
         children.insert(n, node_factory().with_pos(text_pos))
     node.result = tuple(children)

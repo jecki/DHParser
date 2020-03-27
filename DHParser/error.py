@@ -79,7 +79,9 @@ class Error:
     LEFT_RECURSION_WARNING                   = ErrorCode(140)
 
     UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
-    CANNOT_VERIFY_TRANTABLE_WARNING          = ErrorCode(620)
+    CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)
+    CAPTURE_DROPPED_CONTENT_WARNING          = ErrorCode(630)
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING      = ErrorCode(630)
 
     # error codes
 
@@ -94,7 +96,18 @@ class Error:
     AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
     REDEFINED_DIRECTIVE                      = ErrorCode(1080)
     UNDEFINED_RETRIEVE                       = ErrorCode(1090)
-    SYMBOL_UNFIT_TO_CAPTURE                  = ErrorCode(1100)
+    DIRECTIVE_FOR_NONEXISTANT_SYMBOL         = ErrorCode(1100)
+    INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
+
+    # EBNF-specific static analysis errors
+
+    CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
+    LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
+    BADLY_NESTED_OPTIONAL_PARSER             = ErrorCode(1530)
+    NARY_WITHOUT_PARSERS                     = ErrorCode(1540)
+    BAD_MANDATORY_SETUP                      = ErrorCode(1550)
+    DUPLICATE_PARSERS_IN_ALTERNATIVE         = ErrorCode(1560)
+    BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
 
     # fatal errors
 

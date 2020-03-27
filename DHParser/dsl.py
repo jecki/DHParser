@@ -475,7 +475,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
                 else:
                     err_str = 'Exception {} while compiling AST-Tansformation: {}' \
                               .format(str(type(e)), str(e))
-                messages.append(Error(err_str, 0, Error.CANNOT_VERIFY_TRANTABLE_WARNING))
+                messages.append(Error(err_str, 0, Error.CANNOT_VERIFY_TRANSTABLE_WARNING))
                 if is_logging():
                     with open(os.path.join(log_dir(), rootname + '_AST_src.py'), 'w',
                               encoding='utf-8') as f:

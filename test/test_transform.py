@@ -30,7 +30,7 @@ from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
     tree_sanity_check, flatten_sxpr
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
-    remove_tokens, transformation_factory, has_parent, contains_only_whitespace, \
+    remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     is_insignificant_whitespace, merge_adjacent, is_one_of, swap_attributes, delimit_children, \
     positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes
 from typing import AbstractSet, List, Sequence, Tuple
@@ -168,10 +168,15 @@ class TestConditionalTransformations:
     """Tests conditional transformations."""
 
     def test_has_parent(self):
-        context = [Node('A', 'alpha'),
+        context = [Node('C', 'alpha'),
                    Node('B', 'beta'),
-                   Node('C', 'gamma')]
-        assert has_parent(context, {'A'}, 2)
+                   Node('A', 'gamma')]
+        assert not has_ancestor(context, {'A'})
+        assert has_ancestor(context, {'B'})
+        assert not has_ancestor(context, {'C'})
+        assert has_ancestor(context, {'C'}, 2)
+
+        assert not has_parent(context, {'A'})
         assert has_parent(context, {'B'})
         assert not has_parent(context, {'C'})
 

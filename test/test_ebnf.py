@@ -27,13 +27,13 @@ from multiprocessing import Pool
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.toolkit import compile_python_object, re
+from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
 from DHParser.error import has_errors, Error
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_decompiler, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import CompilationError, compileDSL, grammar_instance, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
@@ -233,19 +233,12 @@ class TestCompilerErrors:
         assert messages
 
     def test_undefined_symbols(self):
-        """Use of undefined symbols should be reported.
-        """
-        # save = get_config_value('static_analysis')
-        # set_config_value('static_analysis', 'early')
-
         ebnf = """syntax = { intermediary }
                   intermediary = "This symbol is " [ badly_spelled ] "!"
                   bedly_spilled = "wrong" """
         result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
             get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
         assert messages
-
-        # set_config_value('static_analysis', save)
 
     def test_no_error(self):
         """But reserved symbols should not be repoted as undefined.
@@ -407,6 +400,16 @@ class TestSynonymDetection:
         grammar = grammar_provider(ebnf)()
         assert grammar['a'].pname == 'a', grammar['a'].pname
         assert grammar['b'].pname == 'b', grammar['b'].pname
+        assert grammar('b').as_sxpr() == '(a (b "b"))'
+
+    def test_synonym_anonymous_elimination(self):
+        ebnf = """@ anonymous = _b
+                  a = _b
+                  _b = /b/
+        """
+        grammar = grammar_provider(ebnf)()
+        assert grammar['a'].pname == 'a', grammar['a'].pname
+        assert grammar['_b'].pname == '_b', grammar['_b'].pname
         assert grammar('b').as_sxpr() == '(a "b")'
 
 
@@ -804,20 +807,53 @@ class TestInterleaveResume:
         st = gr('EXY EXYZ.')
         assert len(st.errors) == 1
 
+    def test_interleave_groups(self):
+        def mini_suite(gr):
+            st = gr("AAAB")
+            assert not st.errors
+            st = gr("BAAA")
+            assert not st.errors
+            st = gr("B")
+            assert not st.errors, str(st.errors)
 
-class TestEBNFDecompile:
-    def test_sameflavor(self):
-        """Check if compiling a decompiled AST yields the same AST."""
-        grammar = get_ebnf_grammar()
-        transform = get_ebnf_transformer()
-        decompile = get_ebnf_decompiler()
-        st1 = grammar(EBNF)
-        transform(st1)
-        decompiled_EBNF = decompile(st1)
-        st2 = grammar(decompiled_EBNF)
-        assert st2.error_flag == 0
-        transform(st2)
-        assert st1.equals(st2)
+        lang = """document = { `A` } ° `B`\n"""
+        gr = grammar_provider(lang)()
+        mini_suite(gr)
+        st = gr('AABAA')
+        assert not st.errors
+
+        lang = """document = ({ `A` }) ° `B`\n"""
+        # code, errors, ast = compile_ebnf(lang, 'InterleaveTest', True)
+        # print(ast.as_sxpr())
+        gr = grammar_provider(lang)()
+        mini_suite(gr)
+        st = gr('AABAA')
+        assert st.errors
+
+
+ArithmeticEBNF = r"""
+@ drop = whitespace   # <- there is no alternative syntax for directives!!!
+
+expression ::= term, { ("+" | "-"), term};
+term       ::= factor, { ("*" | "/"), factor};
+factor     ::= [sign], (NUMBER | VARIABLE | group), { VARIABLE | group };
+sign       ::= `+` | `-`;
+group      ::= "(", expression, ")";
+
+NUMBER     ::= /(?:0|(?:[1-9]\d*))(?:\.\d+)?/, ~;
+VARIABLE   ::= /[A-Za-z]/, ~;
+"""
+
+
+class TestAlternativeEBNFSyntax:
+    def test_alt_syntax(self):
+        code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
+        assert not ast.error_flag
+        arithmetic_grammer = compile_python_object(
+            DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) + code)
+        arithmetic_parser = arithmetic_grammer()
+        st = arithmetic_parser('2 + 3 * (-4 + 1)')
+        assert str(st) == "2+3*(-4+1)"
 
 
 

@@ -76,10 +76,11 @@ class TestParseXML:
 
     def test_plaintext_handling(self):
         tree = parse_xml('<a>alpha <b>beta</b> gamma</a>')
-        assert flatten_sxpr(tree.as_sxpr()) == \
-               '(a (:Token "alpha ") (b "beta") (:Token " gamma"))'
+        assert flatten_sxpr(tree.as_sxpr()) == '(a (:Token "alpha ") (b "beta") (:Token " gamma"))'
         tree = parse_xml(' <a>  <b>beta</b>  </a> ')
-        assert flatten_xml(tree.as_xml()) == '<a><:Token>  </:Token><b>beta</b><:Token>  </:Token></a>'
+        assert flatten_xml(tree.as_xml()) == \
+               '<a><ANONYMOUS_Token__>  </ANONYMOUS_Token__><b>beta</b>' \
+               '<ANONYMOUS_Token__>  </ANONYMOUS_Token__></a>'
         assert tree.as_xml(inline_tags={'a'}, omit_tags={':Token'}) == '<a>  <b>beta</b>  </a>'
         tree = parse_xml(' <a>\n  <b>beta</b>\n</a> ')
         assert tree.as_xml(inline_tags={'a'}) == '<a><b>beta</b></a>'

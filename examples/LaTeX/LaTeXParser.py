@@ -27,7 +27,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     flatten, is_empty, collapse, replace_content, remove_brackets, strip, \
-    is_one_of, replace_content_by, remove_tokens, remove_nodes, TOKEN_PTYPE, Error, \
+    is_one_of, replace_content_by, remove_tokens, remove_children, TOKEN_PTYPE, Error, \
     access_thread_locals, recompile_grammar, get_config_value
 from DHParser.log import start_logging
 
@@ -61,9 +61,9 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "eec38ff3979d07f4dc4d4699dee8b080"
+    source_hash__ = "868c3a15cca559424d54119c6848c38d"
     anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'%.*'
     comment_rx__ = re.compile(COMMENT__)
@@ -87,7 +87,7 @@ class LaTeXGrammar(Grammar):
     LINE = RegExp('[^\\\\%$&\\{\\}\\[\\]\\n]+')
     TEXT = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\n]+(?:\\n(?![ \\t]*\\n))?)+')
     INTEGER = Series(RegExp('\\d+'), dwsp__)
-    NAME = Capture(Series(RegExp('\\w+'), dwsp__))
+    NAME = Capture(RegExp('\\w+'))
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
@@ -251,7 +251,7 @@ LaTeX_AST_transformation_table = {
     "block_environment": replace_by_single_child,
     "known_environment": replace_by_single_child,
     "generic_block": [],
-    "begin_generic_block, end_generic_block": [remove_nodes({'NEW_LINE', 'LFF'}), replace_by_single_child],
+    "begin_generic_block, end_generic_block": [remove_children({'NEW_LINE', 'LFF'}), replace_by_single_child],
     "itemize, enumerate": [remove_brackets, flatten],
     "item": [],
     "figure": [],

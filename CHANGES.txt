@@ -12,6 +12,8 @@ DHParser Version 0.9.1
   and Whitespace-parsers
 - AllOf- and SomeOf-parsers have been exchanged in favor of a more flexible
   "interleave"-parser
+- (some) static analysis of the generated parser during ebnf-compilation for
+  possible mistakes
 - better parsing history (now moved from parse.py to the new trace.py-module)
 - some speed optimizations
 - refactoring: history tracking has been moved from parse.py to module 

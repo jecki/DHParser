@@ -61,14 +61,15 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             target = target[:7] + '...'
         if mre.first_throw:
             # resume notice
-            notice = Error('Resuming from parser "{}" with parser "{}" at point: {}'
+            notice = Error('Resuming from parser "{}" with parser "{}" at line {}, column {}: {}'
                            .format(mre.node.tag_name, grammar.call_stack__[-1][0],
-                                   repr(target)),
+                                   *grammar.line_col__(target), repr(target)),
                            grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
         else:
             # skip notice
-            notice = Error('Skipping within parser {} to point {}'
-                           .format(grammar.call_stack__[-1][0], repr(target)),
+            notice = Error('Skipping within parser {} to line {}, column{}: {}'
+                           .format(grammar.call_stack__[-1][0], *grammar.line_col__(target),
+                                   repr(target)),
                            self._grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
         if grammar.resume_notices__:
             grammar.tree__.add_error(mre.node, notice)
@@ -122,8 +123,8 @@ def all_descendants(root: Parser) -> List[Parser]:
     """Returns a list with the parser `root` and all of its descendants."""
     descendants = []
 
-    def visit(parser: Parser):
-        descendants.append(parser)
+    def visit(context: List[Parser]):
+        descendants.append(context[-1])
     root.apply(visit)
     return descendants
 

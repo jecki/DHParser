@@ -22,6 +22,7 @@ limitations under the License.
 import os
 import sys
 from functools import partial
+from typing import List
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
@@ -31,7 +32,7 @@ from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history
 from DHParser.error import Error, is_error
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
-    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, AllOf, SomeOf, \
+    RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError
 from DHParser import compile_source
@@ -82,7 +83,8 @@ class TestParserClass:
             """
         gr = grammar_provider(minilang)()
         l = []
-        def visitor(p: Parser):
+        def visitor(context: List[Parser]):
+            p = context[-1]
             l.append(p.pname + p.ptype)
         gr.root__.apply(visitor)
         s1 = ", ".join(l)
@@ -93,6 +95,16 @@ class TestParserClass:
         gr.root__.apply(visitor)
         s3 = ", ".join(l)
         assert s1 == s2 == s3
+
+    def test_symbol(self):
+        class MyGrammar(Grammar):
+            wrong = Token('wrong')
+            word = OneOrMore(wrong) + Whitespace(r'\s*') + OneOrMore(RegExp(r'\w+'))
+            root__ = word
+        gr = MyGrammar()
+        regex = gr['word'].parsers[-1].parser
+        result = gr.associated_symbol(regex).symbol
+        assert result == 'word', result
 
 
 class TestInfiLoopsAndRecursion:
@@ -282,7 +294,7 @@ class TestRegex:
         assert node.tag_name == "regex"
         assert str(node) == 'abc+def'
 
-    def text_ignore_case(self):
+    def test_ignore_case(self):
         mlregex = r"""
         @ ignorecase = True
         regex = /alpha/
@@ -292,9 +304,8 @@ class TestRegex:
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
-        node, rest = parser.regex('Alpha')
+        node, rest = parser.regex(StringView('Alpha'))
         assert node
-        assert not node.error_flag
         assert rest == ''
         assert node.tag_name == "regex"
         assert str(node) == 'Alpha'
@@ -308,9 +319,8 @@ class TestRegex:
         assert result
         assert not messages
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
-        node, rest = parser.regex('Alpha')
-        assert node.error_flag
-
+        node, rest = parser.regex(StringView('Alpha'))
+        assert node is None
 
     def test_token(self):
         tokenlang = r"""
@@ -485,20 +495,20 @@ class TestSeries:
 class TestAllOfSomeOf:
     def test_allOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
-        prefixes = AllOf(TKN("A"), TKN("B"))
+        prefixes = Interleave(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
 
     def test_allOf_completeness(self):
         """Test that an error is raised if not  all parsers of an AllOf-List
         match."""
-        prefixes = AllOf(TKN("A"), TKN("B"))
+        prefixes = Interleave(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('B').error_flag
 
     def test_allOf_redundance(self):
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
-        prefixes = AllOf(TKN("A"), TKN("B"), TKN("A"))
+        prefixes = Interleave(TKN("A"), TKN("B"), TKN("A"))
         assert Grammar(prefixes)('A A B').content == 'A A B'
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
@@ -506,17 +516,21 @@ class TestAllOfSomeOf:
 
     def test_someOf_order(self):
         """Test that parsers of an AllOf-List can match in arbitrary order."""
-        prefixes = SomeOf(TKN("A"), TKN("B"))
+        prefixes = Interleave(TKN("A"), TKN("B"))
         assert Grammar(prefixes)('A B').content == 'A B'
         assert Grammar(prefixes)('B A').content == 'B A'
-        prefixes = SomeOf(TKN("B"), TKN("A"))
+        st = Grammar(prefixes)('B')
+        assert st.error_flag
+        prefixes = Interleave(TKN("B"), TKN("A"), repetitions=((0, 1), (0, 1)))
         assert Grammar(prefixes)('A B').content == 'A B'
-        assert Grammar(prefixes)('B').content == 'B'
+        st = Grammar(prefixes)('B')
+        assert not st.error_flag
+        assert st.content == 'B'
 
     def test_someOf_redundance(self):
         """Test that one and the same parser may be listed several times
         and must be matched several times accordingly."""
-        prefixes = SomeOf(TKN("A"), TKN("B"), TKN("A"))
+        prefixes = Interleave(TKN("A"), TKN("B"), TKN("A"))
         assert Grammar(prefixes)('A A B').content == 'A A B'
         assert Grammar(prefixes)('A B A').content == 'A B A'
         assert Grammar(prefixes)('B A A').content == 'B A A'
@@ -568,7 +582,6 @@ class TestErrorRecovery:
         st = parser('AB_D')
         assert len(st.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in st.errors)
         assert 'Skipping' in str(st.errors_sorted[1])
-
 
     def test_Interleave_skip(self):
         lang = """
@@ -647,16 +660,18 @@ class TestPopRetrieve:
 
     def test_capture_assertions(self):
         try:
-            _ = Capture(Drop(Whitespace(r'\s*')))
-            assert False, "ValueError expected!"
-        except ValueError:
+            _ = Grammar(Capture(Drop(Whitespace(r'\s*'))))
+            assert False, "GrammarError expected!"
+        except GrammarError as ge:
             pass
         try:
-            _ = Capture(Series(Token(' '), Drop(Whitespace(r'\s*'))))
+            _ = Grammar(Capture(Series(Token(' '), Drop(Whitespace(r'\s*')))))
             assert False, "ValueError expected!"
-        except ValueError:
+        except GrammarError:
             pass
-        _ = Capture(RegExp(r'\w+'))
+        cp = Capture(RegExp(r'\w+'))
+        cp.pname = "capture"
+        _ = Grammar(cp)
 
     def test_compile_mini_language(self):
         assert self.minilang_parser
@@ -1034,7 +1049,6 @@ class TestReentryAfterError:
         grammar = grammar_provider(lang)()
         mini_suite(grammar)
 
-
     def test_unambiguous_error_location(self):
         lang = r"""
             @ drop        = whitespace, token  # drop tokens and whitespace early
@@ -1232,6 +1246,18 @@ class TestParserCombining:
         assert isinstance(parser.parsers[0], Series)
         assert len(parser.parsers[0].parsers) == 3
         assert isinstance(parser.parsers[1], RegExp)
+
+
+class TestStaticAnalysis:
+    def test_1(self):
+        p = Capture(Drop(Whitespace(" ")))
+        try:
+            gr = Grammar(p)
+            assert False, "GrammarError expected"
+        except GrammarError:
+            pass
+
+
 
 
 if __name__ == "__main__":

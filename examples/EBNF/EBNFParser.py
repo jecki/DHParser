@@ -12,9 +12,15 @@ from functools import partial
 import os
 import sys
 
-dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if dhparser_path not in sys.path:
-    sys.path.append(dhparser_path)
+try:
+    scriptpath = os.path.dirname(__file__)
+except NameError:
+    scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
+if dhparser_parentdir not in sys.path:
+    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
@@ -22,7 +28,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Drop, Synonym, AllOf, SomeOf, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
@@ -30,14 +36,16 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_nodes, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, \
+    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
+    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
-    error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
-    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets, ErrorCode
+    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value
 
 
 #######################################################################
@@ -48,6 +56,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 
 def EBNFPreprocessor(text):
     return text, lambda i: i
+
 
 def get_preprocessor() -> PreprocessorFunc:
     return EBNFPreprocessor
@@ -65,7 +74,7 @@ class EBNFGrammar(Grammar):
     expression = Forward()
     source_hash__ = "4a574f623ce70c32a47e8f742b6948e2"
     anonymous__ = re.compile('..(?<=^)')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     comment_rx__ = re.compile(COMMENT__)
@@ -119,42 +128,37 @@ def get_grammar() -> EBNFGrammar:
 #######################################################################
 
 EBNF_AST_transformation_table = {
-    # AST Transformations for EBNF-grammar
-    "<":
-        [remove_empty, remove_whitespace],
-    "syntax":
-        [],  # otherwise '"*": replace_by_single_child' would be applied
-    "directive, definition":
-        [flatten, remove_tokens('@', '=', ',')],
-    "expression":
-        [replace_by_single_child, flatten, remove_tokens('|')],  # remove_infix_operator],
-    "sequence":
-        [replace_by_single_child, flatten],  # supports both idioms:
-                                             # "{ term }+" and "term { term }"
-    "term, flowmarker, retrieveop":
-        replace_by_single_child,
-    "group":
-        [remove_brackets, replace_by_single_child],
-    "unordered":
-        remove_brackets,
-    "oneormore, repetition, option":
-        [reduce_single_child, remove_brackets,
-         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
-    "symbol, literal, regexp":
-        reduce_single_child,
-    (TOKEN_PTYPE, WHITESPACE_PTYPE):
-        reduce_single_child,
-    # "list_":
-    #     [flatten, remove_infix_operator],
-    "*":
-        replace_by_single_child
+    # AST Transformations for the EBNF-grammar
+    "<": flatten,
+    "syntax": [],
+    "definition": [],
+    "directive": [],
+    "expression": [],
+    "sequence": [],
+    "term": [],
+    "flowmarker": [],
+    "retrieveop": [],
+    "group": [],
+    "unordered": [],
+    "oneormore": [],
+    "repetition": [],
+    "option": [],
+    "symbol": [],
+    "literal": [],
+    "plaintext": [],
+    "regexp": [],
+    "whitespace": [],
+    "EOF": [],
+    "*": replace_by_single_child
 }
+
 
 
 def CreateEBNFTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
+
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
@@ -242,6 +246,7 @@ class EBNFCompiler(Compiler):
     #     return node
 
 
+
 def get_compiler() -> EBNFCompiler:
     """Returns a thread/process-exclusive EBNFCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
@@ -270,13 +275,23 @@ def compile_src(source):
 if __name__ == "__main__":
     # recompile grammar if needed
     grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
     if os.path.exists(grammar_path):
-        if not recompile_grammar(grammar_path, force=False,
-                                  notify=lambda:print('recompiling ' + grammar_path)):
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
             error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
     else:
         print('Could not check whether grammar requires recompiling, '
               'because grammar was not found at: ' + grammar_path)
@@ -287,7 +302,8 @@ if __name__ == "__main__":
         if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
             file_name, log_dir = sys.argv[2], 'LOGS'
             set_config_value('history_tracking', True)
-            set_config_value('log_syntax_trees', {'cst', 'ast'})
+            set_config_value('resume_notices', True)
+            set_config_value('log_syntax_trees', set(('cst', 'ast')))
         start_logging(log_dir)
         result, errors, _ = compile_src(file_name)
         if errors:

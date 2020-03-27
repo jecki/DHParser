@@ -28,11 +28,12 @@ import bisect
 import copy
 import json
 import sys
-from typing import Callable, cast, Iterator, Sequence, List, Set, Union, Tuple, \
-    Container, Optional, Dict
+from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
+    Tuple, Container, Optional, Dict
 
-from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION, SMART_SERIALIZATION, get_config_value
+from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
+    SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, JSON_SERIALIZATION, \
+    SMART_SERIALIZATION, get_config_value
 from DHParser.error import Error, ErrorCode
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col
@@ -178,6 +179,17 @@ def create_context_match_function(criterion: CriteriaType) -> Callable:
 
 
 RX_AMP = re.compile(r'&(?!\w+;)')
+
+
+def clean_anonymous_tag_name(tag_name: str) -> str:
+    """Cleans anonymous tag-names for serialization, so that the colon does not
+    lead to invalid XML:
+    >>> clean_anonymous_tag_name(':Series')
+    'ANONYMOUS_Series__'
+    """
+    if tag_name.startswith(':'):
+        return 'ANONYMOUS_%s__' % tag_name[1:]
+    return tag_name
 
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
@@ -1202,7 +1214,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             if node.tag_name in omit_tags and not node.has_attr():
                 return ''
-            txt = ['<', node.tag_name]
+            txt = ['<', clean_anonymous_tag_name(node.tag_name)]
             if node.has_attr():
                 txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
@@ -1224,7 +1236,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in empty_tags or (node.tag_name in omit_tags and not node.has_attr()):
                 return ''
-            return '\n</' + node.tag_name + '>'
+            return '\n</' + clean_anonymous_tag_name(node.tag_name) + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""

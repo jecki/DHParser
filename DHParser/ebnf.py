@@ -33,30 +33,28 @@ from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.error import Error
-from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
-    Drop, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
-    Token, GrammarError, Whitespace, INFINITE
+from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, Drop, \
+    NegativeLookahead, Alternative, Series, Option, ZeroOrMore, Token, Capture, Retrieve, Pop, \
+    optional_last_value, GrammarError, Whitespace, INFINITE
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
     unrepr, compile_python_object, DHPARSER_PARENTDIR, RX_NEVER_MATCH
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
-    reduce_single_child, replace_by_single_child, remove_empty, \
-    remove_tokens, flatten, forbid, assert_content
+    reduce_single_child, replace_by_single_child, remove_empty, remove_children, \
+    remove_tokens, flatten, forbid, assert_content, apply_unless, has_parent
 from DHParser.versionnumber import __version__
 
 
 __all__ = ('get_ebnf_preprocessor',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
-           'get_ebnf_decompiler',
            'get_ebnf_compiler',
            'parse_ebnf',
            'transform_ebnf',
            'compile_ebnf_ast',
            'EBNFGrammar',
            'EBNFTransform',
-           'EBNFDecompiler',
            'EBNFCompilerError',
            'EBNFCompiler',
            'grammar_changed',
@@ -97,23 +95,25 @@ except ImportError:
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \\
-    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \\
-    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \\
-    TOKEN_PTYPE, remove_nodes, remove_content, remove_brackets, change_tag_name, \\
+    merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \\
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \\
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \\
+    transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \\
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \\
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, any_of, \\
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
-    trace_history, has_descendant, neg, has_parent, optional_last_value
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
+    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
+    has_attr, has_parent
 '''
 
 
@@ -148,20 +148,21 @@ class EBNFGrammar(Grammar):
     @ whitespace = /\s*/                            # whitespace includes linefeed
     @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
     @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
-    @ anonymous  = pure_elem                        # remove this element early, if possible
+    @ anonymous  = pure_elem
 
     #: top-level
 
     syntax     = [~//] { definition | directive } §EOF
-    definition = symbol §"=" expression
+    definition = symbol §:DEF~ expression :ENDL~
     directive  = "@" §symbol "="
                  (regexp | literal | symbol)
                  { "," (regexp | literal | symbol) }
 
     #: components
 
-    expression = sequence { "|" sequence }
-    sequence   = { ["§"] ( interleave | lookaround ) }+  # "§" means all following terms mandatory
+    expression = sequence { :OR~ sequence }
+    sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
+                 { :AND~ ["§"] ( interleave | lookaround ) }
     interleave = term { "°" ["§"] term }
     lookaround = flowmarker (oneormore | pure_elem)
     term       = oneormore | repetition | option | pure_elem
@@ -169,7 +170,7 @@ class EBNFGrammar(Grammar):
     #: elements
 
     pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
-    element    = [retrieveop] symbol !"="           # negative lookahead to be sure it's not a definition
+    element    = [retrieveop] symbol !DEF           # negative lookahead to be sure it's not a definition
                | literal
                | plaintext
                | regexp
@@ -198,13 +199,20 @@ class EBNFGrammar(Grammar):
     regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
     whitespace = /~/~                               # insignificant whitespace
 
-    EOF = !/./
+    EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
+
+    #: delimiters
+
+    DEF        = `=` | `:=` | `::=`
+    OR         = `|`
+    AND        = `,` | ``
+    ENDL       = `;` | ``
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "d69cbf8e455c989628fc2dd75aa97bb6"
+    source_hash__ = "7d0821ca4b634b6da341a614570d47f5"
     anonymous__ = re.compile('pure_elem$')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*(?:\n|$)'
     comment_rx__ = re.compile(COMMENT__)
@@ -212,7 +220,15 @@ class EBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = NegativeLookahead(RegExp('.'))
+    ENDL = Capture(Alternative(Token(";"), Token("")))
+    AND = Capture(Alternative(Token(","), Token("")))
+    OR = Capture(Token("|"))
+    DEF = Capture(Alternative(Token("="), Token(":="), Token("::=")))
+    EOF = Series(NegativeLookahead(RegExp('.')),
+                 Option(Pop(DEF, match_func=optional_last_value)),
+                 Option(Pop(OR, match_func=optional_last_value)),
+                 Option(Pop(AND, match_func=optional_last_value)),
+                 Option(Pop(ENDL, match_func=optional_last_value)))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
@@ -235,25 +251,25 @@ class EBNFGrammar(Grammar):
                              Series(Token(":"), dwsp__))
     flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__),
                              Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
-    element.set(Alternative(Series(Option(retrieveop), symbol,
-                                   NegativeLookahead(Series(Token("="), dwsp__))),
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)),
                             literal, plaintext, regexp, whitespace, group))
     pure_elem = Series(element, NegativeLookahead(RegExp('[?*+]')), mandatory=1)
     term = Alternative(oneormore, repetition, option, pure_elem)
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem))
     interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__),
                                                 Option(Series(Token("§"), dwsp__)), term)))
-    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)),
-                                Alternative(interleave, lookaround)))
-    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
+    sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround),
+                      ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Token("§"), dwsp__)),
+                                        Alternative(interleave, lookaround))))
+    expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__),
                        Alternative(regexp, literal, symbol),
                        ZeroOrMore(Series(Series(Token(","), dwsp__),
                                          Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
+    definition = Series(symbol, Retrieve(DEF), dwsp__,
+                        expression, Retrieve(ENDL), dwsp__, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))),
-                    ZeroOrMore(Alternative(definition, directive)),
-                    EOF, mandatory=2)
+                    ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
 
 
@@ -319,12 +335,16 @@ EBNF_AST_transformation_table = {
         [remove_empty],
     "syntax":
         [],
-    "directive, definition":
+    "directive":
         [flatten, remove_tokens('@', '=', ',')],
+    "definition":
+        [flatten, remove_children('DEF', 'ENDL'),
+         remove_tokens('=')],  # remove_tokens('=') is only for backwards-compatibility
     "expression":
-        [replace_by_single_child, flatten, remove_tokens('|')],
+        [replace_by_single_child, flatten, remove_children('OR'),
+         remove_tokens('|')],  # remove_tokens('|') is only for backwards-compatibility
     "sequence":
-        [replace_by_single_child, flatten],
+        [replace_by_single_child, flatten, remove_children('AND')],
     "interleave":
         [replace_by_single_child, flatten, remove_tokens('°')],
     "lookaround":
@@ -333,8 +353,8 @@ EBNF_AST_transformation_table = {
         [replace_by_single_child],
     "flowmarker, retrieveop":
         [reduce_single_child],
-    "group": [
-        remove_brackets, replace_by_single_child],
+    "group":
+        [remove_brackets],
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets, # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
@@ -342,6 +362,8 @@ EBNF_AST_transformation_table = {
         [reduce_single_child],
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [reduce_single_child],
+    "EOF, DEF, OR, AND, ENDL":
+        [],
     "*":
         [replace_by_single_child]
 }
@@ -366,204 +388,6 @@ def transform_ebnf(cst: Node) -> None:
     into the abstract-syntax-tree. The transformation changes the
     syntaxtree in place. No value is returned."""
     get_ebnf_transformer()(cst)
-
-
-########################################################################
-#
-# Decompiling ASTs back to EBNF-Text (UNFINISHED AND EXPERIMENTAL!!!)
-#
-########################################################################
-
-class EBNFDecompiler(Compiler):
-    """Converts AST representing an EBNF-syntax-description back to
-    EBNF-text."""
-
-    def __init__(self):
-        super(EBNFDecompiler, self).__init__()
-
-    def reset(self):
-        super().reset()
-        # initialize your variables here, not in the constructor!
-
-    def fallback_compiler(self, node: Node) -> Any:
-        """Fallback for flowmarker, retrieveop, symbol, literal, plaintest,
-        regexp, whitespace and Token."""
-        return [node.content]
-
-    def on_ZOMBIE__(self, node: Node) -> str:
-        result = ['Errors in abstract syntax tree of EBNF-grammar! Reconstructing fragments: ']
-        result.extend([str(self.compile(child)) for child in node.children])
-        return '\n\n'.join(result)
-
-    def on_syntax(self, node):
-        return '\n'.join(''.join(self.compile(child)) for child in node.children)
-
-    def on_definition(self, node):
-        children = node.children
-        assert len(children) == 2
-        return self.compile(children[0]) + [' = '] + self.compile(children[1])
-
-    def on_directive(self, node):
-        children = node.children
-        assert children
-        result = ['@'] + self.compile(children[0])
-        if len(children) > 1:
-            result.extend([' = '] + self.compile(children[1]))
-        for child in children[2:]:
-            result.extend([' , '] + self.compile(child))
-        return result
-
-    def on_expression(self, node):
-        result = ['('] if self.context[-2].tag_name == "sequence" else []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' | ')
-        result.pop()
-        if self.context[-2].tag_name == "sequence":
-            result.append(')')
-        return result
-
-    def on_sequence(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' ')
-        result.pop()
-        return result
-
-    def on_term(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-        return result
-
-    def on_unordered(self, node):
-        assert len(node.children) == 1
-        return ['<'] + self.compile(node.children[0]) + ['>']
-
-    # def on_interleave(self, node):
-    #     return node
-
-    def on_oneormore(self, node):
-        assert len(node.children) == 1
-        return ['{ '] + self.compile(node.children[0]) + [' }+']
-
-    def on_repetition(self, node):
-        assert len(node.children) == 1
-        return ['{ '] + self.compile(node.children[0]) + [' }']
-
-    def on_option(self, node):
-        assert len(node.children) == 1
-        return ['['] + self.compile(node.children[0]) + [']']
-
-    # def on_element(self, node):
-    #     return node
-
-
-class ModernEBNFDecompiler(EBNFDecompiler):
-    """Converts AST representing an EBNF-syntax-description back to
-    EBNF-text in a modern Relax-NG type syntax."""
-
-    def __init__(self):
-        super(ModernEBNFDecompiler, self).__init__()
-
-    def reset(self):
-        super().reset()
-        # initialize your variables here, not in the constructor!
-
-    def fallback_compiler(self, node: Node) -> Any:
-        """Fallback for flowmarker, retrieveop, symbol, literal, plaintest,
-        regexp, whitespace and Token."""
-        return [node.content]
-
-    def on_ZOMBIE__(self, node: Node) -> str:
-        result = ['Errors in abstract syntax tree of EBNF-grammar! Reconstructing fragments: ']
-        result.extend([str(self.compile(child)) for child in node.children])
-        return '\n\n'.join(result)
-
-    def on_syntax(self, node):
-        return '\n'.join(''.join(self.compile(child)) for child in node.children)
-
-    def on_definition(self, node):
-        children = node.children
-        assert len(children) == 2
-        return self.compile(children[0]) + [' = '] + self.compile(children[1])
-
-    def on_directive(self, node):
-        children = node.children
-        assert children
-        result = ['@'] + self.compile(children[0])
-        if len(children) > 1:
-            result.extend([' = '] + self.compile(children[1]))
-        for child in children[2:]:
-            result.extend([' , '] + self.compile(child))
-        return result
-
-    def on_expression(self, node):
-        result = ['('] if self.context[-2].tag_name == "sequence" else []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' | ')
-        result.pop()
-        if self.context[-2].tag_name == "sequence":
-            result.append(')')
-        return result
-
-    def on_sequence(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-            if result[-1] != "§":
-                result.append(' ')
-        result.pop()
-        return result
-
-    def on_term(self, node):
-        result = []
-        for child in node.children:
-            result.extend(self.compile(child))
-        return result
-
-    def on_unordered(self, node):
-        # TODO: return interleaved
-        assert len(node.children) == 1
-        return ['<'] + self.compile(node.children[0]) + ['>']
-
-    # def on_interleave(self, node):
-    #     return node
-
-    def postfixed(self, node: Node, postfix: str):
-        assert len(node.children) == 1
-        assert postfix in ('?', '*', '+')
-        if len(node.children[0].children) > 1:
-            return ['('] + self.compile(node.children[0]) + [')' + postfix]
-        else:
-            return self.compile(node.children[0]) + [postfix]
-
-    def on_oneormore(self, node: Node) -> str:
-        return self.postfixed(node, '+')
-
-    def on_repetition(self, node: Node) -> str:
-        return self.postfixed(node, '*')
-
-    def on_option(self, node: Node) -> str:
-        return self.postfixed(node, '?')
-
-    # def on_element(self, node):
-    #     return node
-
-
-def get_ebnf_decompiler() -> EBNFGrammar:
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        decompiler = THREAD_LOCALS.ebnf_decompiler_singleton  # type: EBNFDecompiler
-        return decompiler
-    except AttributeError:
-        THREAD_LOCALS.ebnf_decompiler_singleton = EBNFDecompiler()
-        return THREAD_LOCALS.ebnf_decompiler_singleton
 
 
 ########################################################################
@@ -683,7 +507,7 @@ class EBNFDirectives:
         skip:  mapping of symbols to a list of search expressions. A
                 search expressions can be either a string ot a regular
                 expression. The closest match is the point of reentry
-                for the series- or allof-parser when a mandatory item
+                for the series- or interleave-parser when a mandatory item
                 failed to match the following text.
 
         resume:  mapping of symbols to a list of search expressions. A
@@ -691,7 +515,7 @@ class EBNFDirectives:
                 expression. The closest match is the point of reentry
                 for after a parsing error has error occurred. Other
                 than the skip field, this configures resuming after
-                the failing parser (`parser.Series` or `parser.AllOf`)
+                the failing parser (`parser.Series` or `parser.Interleave`)
                 has returned.
 
         drop:   A set that may contain the elements `DROP_TOKEN` and
@@ -809,10 +633,11 @@ class EBNFCompiler(Compiler):
 
         directives:  A record of all directives and their default values.
 
-        defined_directives:  A set of all directives that have already been
-                defined. With the exception of those directives contained
-                in EBNFCompiler.REPEATABLE_DIRECTIVES, directives must only
-                be defined once.
+        defined_directives:  A dictionary of all directives that have already
+                been defined, mapped onto the list of nodes where they have
+                been (re-)defined. With the exception of those directives
+                contained in EBNFCompiler.REPEATABLE_DIRECTIVES, directives
+                must only be defined once.
 
         consumed_custom_errors:  A set of symbols for which a custom error
                 has been defined and(!) consumed during compilation. This
@@ -899,7 +724,7 @@ class EBNFCompiler(Compiler):
         self.root_symbol = ""           # type: str
         self.drop_flag = False          # type: bool
         self.directives = EBNFDirectives()   # type: EBNFDirectives
-        self.defined_directives = set()      # type: Set[str]
+        self.defined_directives = dict()     # type: Dict[str, List[Node]]
         self.consumed_custom_errors = set()  # type: Set[str]
         self.consumed_skip_rules = set()     # type: Set[str]
         self.anonymous_regexp = re.compile(get_config_value('default_anonymous_regexp'))
@@ -1098,6 +923,15 @@ class EBNFCompiler(Compiler):
             rule_repr[-1] = rule_repr[-1] + '}'
             return rule_name, indent.join(rule_repr)
 
+        def verify_directive_against_symbol(directive: str, related_symbol: str):
+            """Adds an error if the symbol that the directive relates to
+            does not exist."""
+            if related_symbol not in self.rules:
+                nd = self.defined_directives[directive][0]
+                self.tree.new_error(nd, 'Directive "%s" relates to a symbol that is '
+                                    'nowhere defined!' % directive,
+                                    Error.DIRECTIVE_FOR_NONEXISTANT_SYMBOL)
+
         # execute deferred tasks, for example semantic checks that cannot
         # be done before the symbol table is complete
 
@@ -1145,6 +979,7 @@ class EBNFCompiler(Compiler):
         resume_rules = dict()  # type: Dict[str, List[ReprType]]
         for symbol, raw_rules in self.directives.resume.items():
             refined_rules = []  # type: List[ReprType]
+            verify_directive_against_symbol(symbol + '_resume', symbol)
             for rule in raw_rules:
                 if isinstance(rule, unrepr) and rule.s.isidentifier():
                     try:
@@ -1157,7 +992,8 @@ class EBNFCompiler(Compiler):
                         refined_rules.append(refined)
                     else:
                         self.tree.new_error(nd, 'Symbol "%s" cannot be used in resume rule, since'
-                                                ' it represents neither literal nor regexp!')
+                                            ' it represents neither literal nor regexp!',
+                                            Error.INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
                 else:
                     refined_rules.append(rule)
             resume_rules[symbol] = refined_rules
@@ -1169,6 +1005,7 @@ class EBNFCompiler(Compiler):
         skip_rules = dict()  # # type: Dict[str, List[ReprType]]
         for symbol, skip in self.directives.skip.items():
             rules = []  # type: List[ReprType]
+            verify_directive_against_symbol(symbol + '_skip', symbol)
             for search in skip:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -1197,6 +1034,7 @@ class EBNFCompiler(Compiler):
         error_messages = dict()  # type: Dict[str, List[Tuple[ReprType, ReprType]]]
         for symbol, err_msgs in self.directives.error.items():
             custom_errors = []  # type: List[List[ReprType, ReprType]]
+            verify_directive_against_symbol(symbol + '_error', symbol)
             for search, message in err_msgs:
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
@@ -1210,22 +1048,22 @@ class EBNFCompiler(Compiler):
             definitions.append(pp_rules(self.ERR_MSGS_KEYWORD, error_messages))
 
         for symbol in self.directives.error.keys():
-            if symbol not in self.consumed_custom_errors:
-                try:
-                    def_node = self.rules[symbol][0]
-                    self.tree.new_error(
-                        def_node, 'Customized error message for symbol "{}" will never be used, '
-                        'because the mandatory marker "§" appears nowhere in its definiendum!'
-                        .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
-                except KeyError:
-                    def match_function(nd: Node) -> bool:
-                        return bool(nd.children) and nd.children[0].content.startswith(symbol + '_')
-                    dir_node = self.tree.pick(match_function)
-                    if dir_node:
-                        directive = dir_node.children[0].content
-                        self.tree.new_error(
-                            dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
-                            .format(directive, directive.split('_')[0]))
+            if symbol in self.rules and symbol not in self.consumed_custom_errors:
+                # try:
+                def_node = self.rules[symbol][0]
+                self.tree.new_error(
+                    def_node, 'Customized error message for symbol "{}" will never be used, '
+                    'because the mandatory marker "§" appears nowhere in its definiendum!'
+                    .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                # except KeyError:
+                #     def match_function(nd: Node) -> bool:
+                #         return bool(nd.children) and nd.children[0].content.startswith(symbol + '_')
+                #     dir_node = self.tree.pick(match_function)
+                #     if dir_node:
+                #         directive = dir_node.children[0].content
+                #         self.tree.new_error(
+                #             dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
+                #             .format(directive, directive.split('_')[0]))
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -1327,31 +1165,32 @@ class EBNFCompiler(Compiler):
 
         grammar_python_src = self.assemble_parser(definitions)
         if get_config_value('static_analysis') == 'early':
-            import DHParser.parse
+            errors = []
             try:
-                DHParser.parse.STATIC_ANALYSIS_PENDING = True
                 grammar_class = compile_python_object(
                     DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) +
-                    # '\nimport DHParser.parse\nDHParser.parse.STATIC_ANALYSIS_PENDING = True\n' +
-                    grammar_python_src, self.grammar_name)
-                _ = grammar_class()
+                    grammar_python_src, (self.grammar_name or "DSL") + "Grammar")
+                errors = grammar_class().static_analysis_errors__
                 grammar_python_src = grammar_python_src.replace(
                     'static_analysis_pending__ = [True]',
                     'static_analysis_pending__ = []  # type: List[bool]', 1)
             except NameError:
-                pass  # undefined name in the grammar are already caught and reported
-            except GrammarError as error:
-                for sym, _, err in error.errors:
-                    symdef_node = self.rules[sym][0]
-                    err.pos = self.rules[sym][0].pos
-                    self.tree.add_error(symdef_node, err)
-            finally:
-                DHParser.parse.STATIC_ANALYSIS_PENDING = False
+                pass  # undefined names in the grammar are already caught and reported
+            except GrammarError as ge:
+                errors = ge.errors
+            for sym, _, err in errors:
+                symdef_node = self.rules[sym][0]
+                err.pos = self.rules[sym][0].pos
+                self.tree.add_error(symdef_node, err)
         return grammar_python_src
 
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
         rule = node.children[0].content
+        if rule.endswith('_error') or rule.endswith('_skip') \
+                or rule.endswith('_resume') or rule.endswith('_filter'):
+            self.tree.new_error(node, 'Symbol name "%s" suggests directive, ' % rule +
+                                'but directive marker @ is missing...', Error.WARNING)
         if rule in self.rules:
             first = self.rules[rule][0]
             if not id(first) in self.tree.error_nodes:
@@ -1374,14 +1213,11 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             defn = self.compile(node.children[1])
-            # if rule in self.variables:
-            #     defn = 'Capture(%s)' % defn
-                # self.variables.remove(rule)
             if defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
-            # if self.drop_flag:
-            #     defn = 'Drop(%s)' % defn
+            if self.drop_flag:
+                defn = 'Drop(%s)' % defn
             # TODO: Recursively drop all contained parsers for optimization
         except TypeError as error:
             from traceback import extract_tb, format_list
@@ -1399,13 +1235,13 @@ class EBNFCompiler(Compiler):
         key = node.children[0].content
         assert key not in self.directives.tokens
 
-        if key not in self.REPEATABLE_DIRECTIVES and not key.endswith('_error'):
-            if key in self.defined_directives:
-                self.tree.new_error(node, 'Directive "%s" has already been defined earlier. '
-                                    % key + 'Later definition will be ignored!',
-                                    code=Error.REDEFINED_DIRECTIVE)
-                return ""
-            self.defined_directives.add(key)
+        if key not in self.REPEATABLE_DIRECTIVES and not key.endswith('_error') \
+                and key in self.defined_directives:
+            self.tree.new_error(node, 'Directive "%s" has already been defined earlier. '
+                                % key + 'Later definition will be ignored!',
+                                code=Error.REDEFINED_DIRECTIVE)
+            return ""
+        self.defined_directives.setdefault(key, []).append(node)
 
         def check_argnum(n: int = 1):
             if len(node.children) > n + 1:
@@ -1458,7 +1294,9 @@ class EBNFCompiler(Compiler):
                 else:
                     if self.anonymous_regexp == RX_NEVER_MATCH:
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
-                                            ' Should be one of %s.' % (content, str(DROP_VALUES)))
+                                            'Should be one of %s or an anonymous parser, where '
+                                            'the "@anonymous"-directive must preceed the '
+                                            '@drop-directive.' % (content, str(DROP_VALUES)))
                     else:
                         self.tree.new_error(
                             node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
@@ -1573,7 +1411,7 @@ class EBNFCompiler(Compiler):
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
         """Generates the customization arguments (mantary, error_msgs, skip) for
-        `MandatoryNary`-parsers (Series, Allof, ...)."""
+        `MandatoryNary`-parsers (Series, Interleave, ...)."""
         mandatory_marker = []
         filtered_children = []  # type: List[Node]
         for nd in node.children:
@@ -1630,6 +1468,17 @@ class EBNFCompiler(Compiler):
         repetitions = []
         filtered_result, custom_args = self._error_customization(node)
         for child in filtered_result:
+            if child.tag_name == "group":
+                assert len(child.children) == 1
+                if child.children[0].tag_name == 'repetition':
+                    child.tag_name = "option"
+                    child.children[0].tag_name = "oneormore"
+                elif child.children[0].tag_name == 'option':
+                    child = child.children[0]
+                else:
+                    repetitions.append((1, 1))
+                    children.append(child.children[0])
+                    continue
             if child.tag_name == "oneormore":
                 repetitions.append((1, INFINITE))
                 assert len(child.children) == 1
@@ -1727,8 +1576,10 @@ class EBNFCompiler(Compiler):
 
 
     def on_group(self, node) -> str:
-        raise EBNFCompilerError("Group nodes should have been eliminated by "
-                                "AST transformation!")
+        assert len(node.children) == 1
+        return self.compile(node.children[0])
+        # raise EBNFCompilerError("Group nodes should have been eliminated by "
+        #                         "AST transformation!")
 
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
