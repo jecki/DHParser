@@ -342,7 +342,7 @@ class TestRegex:
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         result = parser(testdoc)
         # log_parsing_history(parser, "test.log")
-        assert not result.error_flag
+        assert not result.error_flag, str(result.errors_sorted)
 
 
 class TestGrammar:
@@ -704,7 +704,7 @@ class TestPopRetrieve:
     def test_optional_match(self):
         test1 = '<info>Hey, you</info>'
         st = self.minilang_parser4(test1)
-        assert not st.error_flag
+        assert not st.error_flag, str(st.errors_sorted)
         test12 = '<info>Hey, <emph>you</emph></info>'
         st = self.minilang_parser4(test1)
         assert not st.error_flag

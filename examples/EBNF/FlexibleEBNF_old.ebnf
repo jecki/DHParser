@@ -7,33 +7,21 @@
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
 
 
-# re-entry-rules for resuming after parsing-error
-@ definition_resume = /\n\s*(?=@|\w+\w*=)/
-@ directive_resume  = /\n\s*(?=@|\w+\w*=)/
-
-# specialized error messages for certain cases
-
-@ definition_error  = /,/, 'Delimiter "," not expected in definition. Either this was meant to '
-                           'be a directive and the directive symbol @ is missing or the error is '
-                           'due to inconsistent use of the comma as a delimiter for the elements '
-                           'of a sequence.'
-
 #: top-level
 
 syntax     = [~//] { definition | directive } §EOF
 definition = symbol §:DEF~ expression :ENDL~
 directive  = "@" §symbol "="
-             (regexp | literals | symbol)
-             { "," (regexp | literals | symbol) }
+             (regexp | literal | symbol)
+             { "," (regexp | literal | symbol) }
 
 #: components
 
 expression = sequence { :OR~ sequence }
 sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
              { :AND~ ["§"] ( interleave | lookaround ) }
-interleave = difference { "°" ["§"] difference }
-lookaround = flowmarker § (oneormore | pure_elem)
-difference = term ["-" § (oneormore | pure_elem)]
+interleave = term { "°" ["§"] term }
+lookaround = flowmarker (oneormore | pure_elem)
 term       = oneormore | repetition | option | pure_elem
 
 #: elements
@@ -62,7 +50,6 @@ option     = "[" §expression "]" | element "?"
 #: leaf-elements
 
 symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
-literals   = { literal }+                       # string chaining, only allowed in directives!
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
@@ -77,4 +64,3 @@ AND        = `,` | ``
 ENDL       = `;` | ``
 
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
-

@@ -34,13 +34,12 @@ from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_sourc
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.error import Error
 from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, Drop, \
-    NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, Token, \
-    Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, INFINITE
+    NegativeLookahead, Alternative, Series, Option, ZeroOrMore, Token, Capture, Retrieve, Pop, \
+    optional_last_value, GrammarError, Whitespace, INFINITE
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
-from DHParser.toolkit import load_if_file, escape_re, escape_control_characters, md5, \
-    sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
-    RX_NEVER_MATCH
+from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
+    unrepr, compile_python_object, DHPARSER_PARENTDIR, RX_NEVER_MATCH
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, remove_empty, remove_children, \
     remove_tokens, flatten, forbid, assert_content, apply_unless, has_parent
@@ -209,54 +208,70 @@ class EBNFGrammar(Grammar):
     AND        = `,` | ``
     ENDL       = `;` | ``
     """
-    AND = Forward()
-    DEF = Forward()
-    ENDL = Forward()
-    OR = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "c1e15d681796de8731d634be579585ab"
-    anonymous__ = re.compile('pure_elem$|EOF$')
+    source_hash__ = "7d0821ca4b634b6da341a614570d47f5"
+    anonymous__ = re.compile('pure_elem$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'definition': [[re.compile(r','), 'Delimiter "," not expected in definition. Either this was meant to be a directive and the directive symbol @ is missing or the error is due to inconsistent use of the comma as a delimiter for the elements of a sequence.']]}
-    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*=)')],
-                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*=)')]}
     COMMENT__ = r'#.*(?:\n|$)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))))))
-    ENDL.set(Capture(Alternative(Token(";"), Token(""))))
-    AND.set(Capture(Alternative(Token(","), Token(""))))
-    OR.set(Capture(Token("|")))
-    DEF.set(Capture(Alternative(Token("="), Token(":="), Token("::="))))
+    ENDL = Capture(Alternative(Token(";"), Token("")))
+    AND = Capture(Alternative(Token(","), Token("")))
+    OR = Capture(Token("|"))
+    DEF = Capture(Alternative(Token("="), Token(":="), Token("::=")))
+    EOF = Series(NegativeLookahead(RegExp('.')),
+                 Option(Pop(DEF, match_func=optional_last_value)),
+                 Option(Pop(OR, match_func=optional_last_value)),
+                 Option(Pop(AND, match_func=optional_last_value)),
+                 Option(Pop(ENDL, match_func=optional_last_value)))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
-    literals = OneOrMore(literal)
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
+                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
-    option = Alternative(Series(Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=1), Series(element, Series(Token("?"), dwsp__)))
-    repetition = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}"), dwsp__), mandatory=1), Series(element, Series(Token("*"), dwsp__)))
-    oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}+"), dwsp__)), Series(element, Series(Token("+"), dwsp__)))
-    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":?"), dwsp__), Series(Token(":"), dwsp__))
-    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, whitespace, group))
+    option = Alternative(Series(Series(Token("["), dwsp__), expression,
+                                Series(Token("]"), dwsp__), mandatory=1),
+                         Series(element, Series(Token("?"), dwsp__)))
+    repetition = Alternative(Series(Series(Token("{"), dwsp__), expression,
+                                    Series(Token("}"), dwsp__), mandatory=1),
+                             Series(element, Series(Token("*"), dwsp__)))
+    oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression,
+                                   Series(Token("}+"), dwsp__)),
+                            Series(element, Series(Token("+"), dwsp__)))
+    group = Series(Series(Token("("), dwsp__), expression,
+                   Series(Token(")"), dwsp__), mandatory=1)
+    retrieveop = Alternative(Series(Token("::"), dwsp__),
+                             Series(Token(":?"), dwsp__),
+                             Series(Token(":"), dwsp__))
+    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__),
+                             Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)),
+                            literal, plaintext, regexp, whitespace, group))
     pure_elem = Series(element, NegativeLookahead(RegExp('[?*+]')), mandatory=1)
     term = Alternative(oneormore, repetition, option, pure_elem)
-    difference = Series(term, Option(Series(Series(Token("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
-    lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
-    interleave = Series(difference, ZeroOrMore(Series(Series(Token("°"), dwsp__), Option(Series(Token("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround))))
+    lookaround = Series(flowmarker, Alternative(oneormore, pure_elem))
+    interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__),
+                                                Option(Series(Token("§"), dwsp__)), term)))
+    sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround),
+                      ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Token("§"), dwsp__)),
+                                        Alternative(interleave, lookaround))))
     expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
-    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literals, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literals, symbol))), mandatory=1)
-    definition = Series(symbol, Retrieve(DEF), dwsp__, expression, Retrieve(ENDL), dwsp__, mandatory=1, err_msgs=error_messages__["definition"])
-    syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
+    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__),
+                       Alternative(regexp, literal, symbol),
+                       ZeroOrMore(Series(Series(Token(","), dwsp__),
+                                         Alternative(regexp, literal, symbol))), mandatory=1)
+    definition = Series(symbol, Retrieve(DEF), dwsp__,
+                        expression, Retrieve(ENDL), dwsp__, mandatory=1)
+    syntax = Series(Option(Series(dwsp__, RegExp(''))),
+                    ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
+
 
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """
@@ -553,11 +568,6 @@ class EBNFCompilerError(CompilerError):
     """Error raised by `EBNFCompiler` class. (Not compilation errors
     in the strict sense, see `CompilationError` in module ``dsl.py``)"""
     pass
-
-
-# def escape_backslash(s: str) -> str:
-#     """Replaces backslashes by double backslash and newline by r'\n'."""
-#     return s.replace('\\', r'\\').replace('\n', r'\n')
 
 
 class EBNFCompiler(Compiler):
@@ -1222,25 +1232,8 @@ class EBNFCompiler(Compiler):
             self.drop_flag = False
         return rule, defn
 
-    @staticmethod
-    def join_literals(nd):
-        assert nd.tag_name == "literals"
-        parts = [nd.children[0].content[:-1]]
-        for child in nd.children[1:-1]:
-            parts.append(child.content[1:-1])
-        parts.append(nd.children[-1].content[1:])
-        nd.result = "".join(parts)
-        nd.tag_name = "literal"
-
 
     def on_directive(self, node: Node) -> str:
-        for child in node.children:
-            if child.tag_name == "literal":
-                child.result = escape_control_characters(child.content)
-            elif child.tag_name == "literals":
-                self.join_literals(child)
-                child.result = escape_control_characters(child.content)
-
         key = node.children[0].content
         assert key not in self.directives.tokens
 
@@ -1630,9 +1623,8 @@ class EBNFCompiler(Compiler):
             return 'dwsp__'
         return 'wsp__'
 
-
     def on_literal(self, node: Node) -> str:
-        center = self.TOKEN_PARSER(escape_control_characters(node.content))
+        center = self.TOKEN_PARSER(node.content.replace('\\', r'\\'))
         force = DROP_TOKEN in self.directives.drop
         left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
         right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
@@ -1642,7 +1634,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_plaintext(self, node: Node) -> str:
-        tk = escape_control_characters(node.content)
+        tk = node.content.replace('\\', r'\\')
         rpl = '"' if tk.find('"') < 0 else "'" if tk.find("'") < 0 else ''
         if rpl:
             tk = rpl + tk[1:-1] + rpl

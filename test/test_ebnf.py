@@ -624,6 +624,17 @@ class TestErrorCustomizationErrors:
         result, messages, ast = compile_ebnf(lang)
         assert len(messages) == 1
 
+    def test_long_error_message(self):
+        lang = """
+            document = series
+            @series_error = 'an error message that spreads\n over ' 
+                            'several strings'
+            series = "A" § "B" "C"
+            """
+        parser = grammar_provider(lang)()
+        result = parser('ADX')
+        assert "several strings" in str(result.errors)
+
 
 class TestCustomizedResumeParsing:
     def setup(self):
