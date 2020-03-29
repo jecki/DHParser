@@ -23,7 +23,6 @@ import os
 import re
 import sys
 
-from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, MANDATORY_CONTINUATION_AT_EOF
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
@@ -34,6 +33,8 @@ REVEAL = False
 from DHParser import grammar_provider, all_descendants, \
     set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
     set_config_value, resume_notices_on, Error
+from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
+    MANDATORY_CONTINUATION_AT_EOF
 
 
 def get_history(name, show: bool = REVEAL) -> str:
