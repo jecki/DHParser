@@ -47,29 +47,26 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # `parse.MandatoryElementsParser.mandatory_violation()`
         mre = grammar.most_recent_error__  # type: ParserError
         grammar.most_recent_error__ = None
-        errors = [mre.error]  # List[Error]
-        # loc = location - mre.error.pos  # len(mre.node) - gap
+        errors = [mre.error]  # type: List[Error]
         text_ = grammar.document__[mre.error.pos:]
-        lc = line_col(grammar.document_lbreaks__, mre.error.pos)
-        target = text
-        if len(target) >= 10:
-            target = target[:7] + '...'
+        lc = line_col(grammar.document_lbreaks__, self.grammar.document_length__ - len(text))
+        target = text if len(text) <= 10 else text[:7] + '...'
         if mre.first_throw:
-            # resume notice
-            notice = Error('Resuming from parser "{}" with parser "{}" at line {}, column {}: {}'
-                           .format(mre.node.tag_name, grammar.call_stack__[-1][0],
-                                   *grammar.line_col__(text), repr(target)),
-                           mre.error.pos, Error.RESUME_NOTICE)
+            notice = Error(  # resume notice
+                'Resuming from parser "{}" with parser "{}" at line {}, column {}: {}'
+                .format(mre.node.tag_name, grammar.call_stack__[-1][0], *lc, repr(target)),
+                mre.error.pos, Error.RESUME_NOTICE)
         else:
-            # skip notice
-            notice = Error('Skipping within parser {} to line {}, column {}: {}'
-                           .format(grammar.call_stack__[-1][0], *grammar.line_col__(text),
-                                   repr(target)), mre.error.pos, Error.RESUME_NOTICE)
+            notice = Error(  # skip notice
+                'Skipping within parser {} to line {}, column {}: {}'
+                .format(grammar.call_stack__[-1][0], *lc, repr(target)),
+                mre.error.pos, Error.RESUME_NOTICE)
         if grammar.resume_notices__:
             grammar.tree__.add_error(mre.node, notice)
         errors.append(notice)
         grammar.history__.append(HistoryRecord(
-            getattr(mre, 'frozen_callstack', grammar.call_stack__), mre.node, text_, lc, errors))
+            getattr(mre, 'frozen_callstack', grammar.call_stack__), mre.node, text_,
+            line_col(grammar.document_lbreaks__, mre.error.pos), errors))
 
     grammar.call_stack__.append(
         ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")

@@ -50,7 +50,7 @@ element    = [retrieveop] symbol !DEF           # negative lookahead to be sure 
 
 flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
            | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
-retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+retr$ieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
 
 #: groups
 
@@ -62,7 +62,7 @@ option     = "[" §expression "]" | element "?"
 #: leaf-elements
 
 symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
-literals   = { literal }+                       # string chaining, only allowed in directives!
+$literals   = { literal }+                       # string chaining, only allowed in directives!
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace

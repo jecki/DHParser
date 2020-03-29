@@ -1401,15 +1401,6 @@ class Grammar:
             else (self.document__.__len__() + 1)
 
 
-    def line_col__(self, text: Union[StringView, str]) -> Tuple[int, int]:
-        """
-        Returns the line and column where text is located in the document.
-        Does not check, whether text is actually a substring of the currently
-        parsed document.
-        """
-        return line_col(self.document_lbreaks__, self.document_length__ - len(text))
-
-
     def as_ebnf(self) -> str:
         """
         Serializes the Grammar object as a grammar-description in the
