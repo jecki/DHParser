@@ -19,6 +19,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import copy
 import os
 import sys
 from functools import partial
@@ -30,14 +31,14 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history
-from DHParser.error import Error, is_error
+from DHParser.error import Error, is_error, adjust_error_locations
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
-    compile_ebnf, DHPARSER_IMPORTS
+    parse_ebnf, DHPARSER_IMPORTS
 from DHParser.dsl import grammar_provider
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
@@ -930,6 +931,88 @@ class TestBorderlineCases:
         assert not cst.error_flag
 
 
+EBNF_with_Errors = r"""# Test code with errors. All places marked by a "$" should yield and error
+
+@ comment    = /#.*(?:\n|$)/
+@ whitespace = /\s*/
+@ literalws  = right
+@ anonymous  = pure_elem, EOF
+@ drop       = whitespace, EOF
+
+
+# re-entry-rules for resuming after parsing-error
+@ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
+@ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
+
+# specialized error messages for certain cases
+
+@ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
+                           'be a directive and the directive symbol @ is missing\nor the error is '
+                           'due to inconsistent use of the comma as a delimiter\nfor the elements '
+                           'of a sequence.'
+
+#: top-level
+
+syntax     = [~//] { definition | directive } §EOF
+definition = symbol §:DEF~ expression :ENDL~
+directive  = "@" §symbol "="
+             (regexp | literals | symbol)
+             { "," (regexp | literals | symbol) }
+
+#: components
+
+expression = sequence { :OR~ sequence }
+sequence   = ["§"] ( interleave | lookaround )
+             { :AND~ ["§"] ( interleave | lookaround ) }
+interleave = difference { "°" ["§"] difference }
+lookaround = flowmarker § (oneormore | pure_elem)
+difference = term ["-" § (oneormore $ pure_elem)]               # <- ERROR
+term       = oneormore | repetition | option | pure_elem        # resuming expected her
+
+#: elements
+
+pure_elem  = element § !/[?*+]/
+element    = [retrieveop] symbol !DEF
+           | literal
+           | plaintext
+           | regexp
+           | whitespace
+           | group$                                             # <- ERROR
+
+#: flow-operators
+
+flowmarker = "!"  | "&"                                         # resuming expected her
+           | "<-!" | "<-&"
+retr$ieveop = "::" | ":?" | ":"
+
+#: groups
+
+group      = "(" §expression ")"
+oneormore  = "{" expression "}+" | element "+"
+repetition = "{" §expressi$on "}" | element "*"                 # <- ERROR
+option     = "[" §expression "]" | element "?"                  # resuming expected here
+
+#: leaf-elements
+
+symbol     = /(?!\d)\w+/~
+$literals   = { literal }+                                      # <- ERROR
+literal    = /"(?:(?<!\\)\\"|[^"])*?"/~                         # resuming expected her
+           | /'(?:(?<!\\)\\'|[^'])*?'/~
+plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~
+regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~
+whitespace = /~/~
+
+#: delimiters
+
+DEF        = `=` | `:=` | `::=`
+OR         = `|`
+AND        = `,` | ``
+ENDL       = `;` | ``
+
+EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
+"""
+
+
 class TestReentryAfterError:
     def setup(self):
         lang = """
@@ -1071,6 +1154,18 @@ class TestReentryAfterError:
         gr = grammar_provider(lang)()
         cst = gr(test_case)
         assert any(err.code == Error.MANDATORY_CONTINUATION for err in cst.errors)
+
+    def test_bigfattest(self):
+        gr = copy.deepcopy(get_ebnf_grammar())
+        resume_notices_on(gr)
+        cst = gr(EBNF_with_Errors)
+        adjust_error_locations(cst.errors, EBNF_with_Errors)
+        locations = []
+        for error in cst.errors_sorted:
+            locations.append((error.line, error.column))
+        assert locations == [(36, 37), (37, 1), (47, 19), (51, 1), (53, 5),
+                             (57, 1), (59, 27), (60, 1), (65, 1), (66, 1)]
+
 
 
 class TestConfiguredErrorMessages:

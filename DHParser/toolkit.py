@@ -26,6 +26,7 @@ functions that are very generic.
 
 import ast
 import bisect
+import functools
 import hashlib
 import io
 import multiprocessing
@@ -508,6 +509,7 @@ def compile_python_object(python_src: str, catch_obj_regex="DSL") -> Any:
 
 
 @cython.locals(i=cython.int)
+@functools.lru_cache()
 def linebreaks(text: Union[StringView, str]) -> List[int]:
     """
     Returns a list of indices all line breaks in the text.

@@ -1,10 +1,10 @@
-# EBNF-Grammar in EBNF
+# Test code with errors. All places marked by a "$" should yield and error
 
-@ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
-@ whitespace = /\s*/                            # whitespace includes linefeed
-@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+@ comment    = /#.*(?:\n|$)/
+@ whitespace = /\s*/
+@ literalws  = right
 @ anonymous  = pure_elem, EOF
-@ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
+@ drop       = whitespace, EOF
 
 
 # re-entry-rules for resuming after parsing-error
@@ -29,45 +29,45 @@ directive  = "@" §symbol "="
 #: components
 
 expression = sequence { :OR~ sequence }
-sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
+sequence   = ["§"] ( interleave | lookaround )
              { :AND~ ["§"] ( interleave | lookaround ) }
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
-difference = term ["-" § (oneormore ; pure_elem)]
-term       = oneormore | repetition | option | pure_elem
+difference = term ["-" § (oneormore $ pure_elem)]               # <- ERROR
+term       = oneormore | repetition | option | pure_elem        # resuming expected her
 
 #: elements
 
-pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
-element    = [retrieveop] symbol !DEF           # negative lookahead to be sure it's not a definition
+pure_elem  = element § !/[?*+]/
+element    = [retrieveop] symbol !DEF
            | literal
            | plaintext
            | regexp
            | whitespace
-           | group;
+           | group$                                             # <- ERROR
 
 #: flow-operators
 
-flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-           | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
-retr$ieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+flowmarker = "!"  | "&"                                         # resuming expected her
+           | "<-!" | "<-&"
+retr$ieveop = "::" | ":?" | ":"
 
 #: groups
 
 group      = "(" §expression ")"
 oneormore  = "{" expression "}+" | element "+"
-repetition = "{" §expressi$$$on "}" | element "*"
-option     = "[" §expression "]" | element "?"
+repetition = "{" §expressi$on "}" | element "*"                 # <- ERROR
+option     = "[" §expression "]" | element "?"                  # resuming expected here
 
 #: leaf-elements
 
-symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
-$literals   = { literal }+                       # string chaining, only allowed in directives!
-literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
-           | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
-plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
-regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-whitespace = /~/~                               # insignificant whitespace
+symbol     = /(?!\d)\w+/~
+$literals   = { literal }+                                      # <- ERROR
+literal    = /"(?:(?<!\\)\\"|[^"])*?"/~                         # resuming expected her
+           | /'(?:(?<!\\)\\'|[^'])*?'/~
+plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~
+regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~
+whitespace = /~/~
 
 #: delimiters
 
@@ -76,5 +76,5 @@ OR         = `|`
 AND        = `,` | ``
 ENDL       = `;` | ``
 
-EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
 

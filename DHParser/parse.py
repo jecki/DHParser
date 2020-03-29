@@ -182,7 +182,7 @@ def reentry_point(rest: StringView,
     def entry_point(search_func, search_rule) -> int:
         a, b = next_comment()
         k, length = search_func(search_rule)
-        while a < b <= k:
+        while a < b <= k + length:
             a, b = next_comment()
         # find next as long as start or end point of resume regex are inside a comment
         while (a < k < b) or (a < k + length < b):
@@ -1073,6 +1073,23 @@ class Grammar:
                 cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
                 # cls.parser_initialization__[0] = "done"
                 pass
+
+
+    def __deepcopy__(self, memo):
+        """Deepcopy method of the parser. Upon instantiation of a Grammar-
+        object, parsers will be deep-copied to the Grammar object. If a
+        derived parser-class changes the signature of the `__init__`-constructor,
+        `__deepcopy__`-method must be replaced (i.e. overridden without
+        calling the same method from the superclass) by the derived class.
+        """
+        duplicate = self.__class__(self.root_parser__)
+        duplicate.history_tracking__ = self.history_tracking__
+        duplicate.resume_notices__ = self.resume_notices__
+        duplicate.flatten_tree__ = self.flatten_tree__
+        duplicate.left_recursion_depth__ = self.left_recursion_depth__
+        duplicate.max_parser_dropouts__ = self.max_parser_dropouts__
+        duplicate.reentry_search_window__ = self.reentry_search_window__
+        return duplicate
 
 
     def __init__(self, root: Parser = None) -> None:
