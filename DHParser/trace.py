@@ -47,14 +47,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # `parse.MandatoryElementsParser.mandatory_violation()`
         mre = grammar.most_recent_error__  # type: ParserError
         grammar.most_recent_error__ = None
-
         errors = [mre.error]  # List[Error]
-        # ignore inflated length due to gap jumping (see parse.Parser.__call__)
-        loc = 0  # type: int
-        for nd in mre.node.select_if(lambda n: True, include_root=True):
-            if not nd.children and nd.tag_name != ZOMBIE_TAG:
-                loc += len(nd)
-        text_ = mre.rest[loc:]
+        # loc = location - mre.error.pos  # len(mre.node) - gap
+        text_ = grammar.document__[mre.error.pos:]
         lc = line_col(grammar.document_lbreaks__, mre.error.pos)
         target = text
         if len(target) >= 10:
@@ -63,14 +58,13 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             # resume notice
             notice = Error('Resuming from parser "{}" with parser "{}" at line {}, column {}: {}'
                            .format(mre.node.tag_name, grammar.call_stack__[-1][0],
-                                   *grammar.line_col__(target), repr(target)),
-                           grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
+                                   *grammar.line_col__(text), repr(target)),
+                           mre.error.pos, Error.RESUME_NOTICE)
         else:
             # skip notice
-            notice = Error('Skipping within parser {} to line {}, column{}: {}'
-                           .format(grammar.call_stack__[-1][0], *grammar.line_col__(target),
-                                   repr(target)),
-                           self._grammar.document_length__ - len(text_), Error.RESUME_NOTICE)
+            notice = Error('Skipping within parser {} to line {}, column {}: {}'
+                           .format(grammar.call_stack__[-1][0], *grammar.line_col__(text),
+                                   repr(target)), mre.error.pos, Error.RESUME_NOTICE)
         if grammar.resume_notices__:
             grammar.tree__.add_error(mre.node, notice)
         errors.append(notice)
