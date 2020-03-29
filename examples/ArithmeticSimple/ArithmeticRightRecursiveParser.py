@@ -22,19 +22,19 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
-    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+    collapse, collapse_children_if, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
+    forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, access_thread_locals, \
     get_config_value
 

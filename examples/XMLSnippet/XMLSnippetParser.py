@@ -22,19 +22,19 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
-    Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, \
+    merge_adjacent, collapse, collapse_children_if, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    replace_content, replace_content_by, forbid, assert_content, remove_infix_operator, \
+    forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
     COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
@@ -102,10 +102,10 @@ class XMLSnippetGrammar(Grammar):
     PEReference = Series(Drop(Token('%')), Name, Drop(Token(';')))
     EntityRef = Series(Drop(Token('&')), Name, Drop(Token(';')))
     Reference = Alternative(EntityRef, CharRef)
-    PubidLiteral = Alternative(Series(Drop(Token('"')), Option(PubidChars), Drop(Token('"'))), Series(Drop(Token("'")), Option(PubidCharsSingleQuoted), Drop(Token("'"))))
-    SystemLiteral = Alternative(Series(Drop(Token('"')), RegExp('[^"]*'), Drop(Token('"'))), Series(Drop(Token("'")), RegExp("[^']*"), Drop(Token("'"))))
-    AttValue = Alternative(Series(Drop(Token('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Token('"'))), Series(Drop(Token("'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Token("'"))))
-    EntityValue = Alternative(Series(Drop(Token('"')), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), Drop(Token('"'))), Series(Drop(Token("'")), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), Drop(Token("'"))))
+    PubidLiteral = Alternative(Series(Drop(Token('"')), Option(PubidChars), Drop(Token('"'))), Series(Drop(Token("\'")), Option(PubidCharsSingleQuoted), Drop(Token("\'"))))
+    SystemLiteral = Alternative(Series(Drop(Token('"')), RegExp('[^"]*'), Drop(Token('"'))), Series(Drop(Token("\'")), RegExp("[^']*"), Drop(Token("\'"))))
+    AttValue = Alternative(Series(Drop(Token('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Token('"'))), Series(Drop(Token("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Token("\'"))))
+    EntityValue = Alternative(Series(Drop(Token('"')), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), Drop(Token('"'))), Series(Drop(Token("\'")), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), Drop(Token("\'"))))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Token('=')), dwsp__, AttValue, mandatory=2)
     TagName = Capture(Synonym(Name))
@@ -118,11 +118,11 @@ class XMLSnippetGrammar(Grammar):
     doctypedecl = Series(Drop(Token('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Option(Series(Drop(Token('[')), intSubset, Drop(Token(']')), dwsp__)), Drop(Token('>')))
     No = Token('no')
     Yes = Token('yes')
-    SDDecl = Series(dwsp__, Drop(Token('standalone')), dwsp__, Drop(Token('=')), dwsp__, Alternative(Alternative(Series(Drop(Token("'")), Yes), Series(No, Drop(Token("'")))), Alternative(Series(Drop(Token('"')), Yes), Series(No, Drop(Token('"'))))))
+    SDDecl = Series(dwsp__, Drop(Token('standalone')), dwsp__, Drop(Token('=')), dwsp__, Alternative(Alternative(Series(Drop(Token("\'")), Yes), Series(No, Drop(Token("\'")))), Alternative(Series(Drop(Token('"')), Yes), Series(No, Drop(Token('"'))))))
     EncName = RegExp('[A-Za-z][A-Za-z0-9._\\-]*')
-    EncodingDecl = Series(dwsp__, Drop(Token('encoding')), dwsp__, Drop(Token('=')), dwsp__, Alternative(Series(Drop(Token("'")), EncName, Drop(Token("'"))), Series(Drop(Token('"')), EncName, Drop(Token('"')))))
+    EncodingDecl = Series(dwsp__, Drop(Token('encoding')), dwsp__, Drop(Token('=')), dwsp__, Alternative(Series(Drop(Token("\'")), EncName, Drop(Token("\'"))), Series(Drop(Token('"')), EncName, Drop(Token('"')))))
     VersionNum = RegExp('[0-9]+\\.[0-9]+')
-    VersionInfo = Series(dwsp__, Drop(Token('version')), dwsp__, Drop(Token('=')), dwsp__, Alternative(Series(Drop(Token("'")), VersionNum, Drop(Token("'"))), Series(Drop(Token('"')), VersionNum, Drop(Token('"')))))
+    VersionInfo = Series(dwsp__, Drop(Token('version')), dwsp__, Drop(Token('=')), dwsp__, Alternative(Series(Drop(Token("\'")), VersionNum, Drop(Token("\'"))), Series(Drop(Token('"')), VersionNum, Drop(Token('"')))))
     XMLDecl = Series(Drop(Token('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(Token('?>')))
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     document = Series(prolog, element, Option(Misc), EOF)

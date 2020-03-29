@@ -29,7 +29,7 @@ from DHParser import is_filename, load_if_file, \
     traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    is_empty, collapse, replace_content, remove_children, remove_content, remove_brackets, change_tag_name, \
+    is_empty, collapse, remove_children, remove_content, remove_brackets, change_tag_name, \
     keep_children, is_one_of, has_content, apply_if, \
     WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS
 from DHParser.transform import TransformationFunc

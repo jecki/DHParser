@@ -118,7 +118,7 @@ class NewEBNFGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    source_hash__ = "a2198dcd8cdb4df82eaaf264e262fbf1"
+    source_hash__ = "76c3585d66f24c504f9e4c14918ea82c"
     anonymous__ = re.compile('pure_elem$|EOF$|AND$|OR$|ENDL$|DEF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

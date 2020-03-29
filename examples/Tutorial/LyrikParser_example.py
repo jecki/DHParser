@@ -26,7 +26,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
     PreprocessorFunc, TransformationDict, remove_empty, reduce_single_child, \
     Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, remove_whitespace, \
-    flatten, is_empty, collapse, replace_content, remove_brackets, \
+    flatten, is_empty, collapse, remove_brackets, transform_content, \
     is_one_of, rstrip, strip, remove_tokens, remove_children, peek, \
     is_insignificant_whitespace, TOKEN_PTYPE, access_thread_locals
 from DHParser.log import start_logging
@@ -174,7 +174,7 @@ Lyrik_AST_transformation_table = {
         [reduce_single_child],
     "ENDE": [],
     ":Whitespace":
-        replace_content(lambda node: " "),
+        transform_content(lambda node: " "),
     "*": replace_by_single_child
 }
 

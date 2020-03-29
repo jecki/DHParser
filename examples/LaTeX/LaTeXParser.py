@@ -26,9 +26,10 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
-    flatten, is_empty, collapse, replace_content, remove_brackets, strip, \
-    is_one_of, replace_content_by, remove_tokens, remove_children, TOKEN_PTYPE, Error, \
-    access_thread_locals, recompile_grammar, get_config_value
+    flatten, is_empty, collapse, remove_brackets, strip, \
+    is_one_of, remove_tokens, remove_children, TOKEN_PTYPE, Error, \
+    access_thread_locals, recompile_grammar, get_config_value, \
+    transform_content, replace_content_with, resume_notices_on, set_tracer, trace_history
 from DHParser.log import start_logging
 
 
@@ -75,11 +76,11 @@ class LaTeXGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = RegExp('(?!.)')
     BACKSLASH = RegExp('[\\\\]')
-    _LB = RegExp('\\s*?\\n|$')
+    _LB = Drop(RegExp('\\s*?\\n|$'))
     NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('\\n')))
-    _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
-    _WSPC = Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+'))))))
-    _PARSEP = Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC))))
+    _GAP = Drop(Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__)))
+    _WSPC = Drop(Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+')))))))
+    _PARSEP = Drop(Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC)))))
     S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), NegativeLookahead(_GAP), wsp__)
     LFF = Series(NEW_LINE, Option(_WSPC))
     LF = Series(NEW_LINE, ZeroOrMore(Series(comment__, whitespace__)))
@@ -289,7 +290,7 @@ LaTeX_AST_transformation_table = {
     "CMDNAME": [remove_whitespace, reduce_single_child],
     "TXTCOMMAND": [remove_whitespace, reduce_single_child],
     "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
-    "ESCAPED": [replace_content(lambda node: str(node)[1:])],
+    "ESCAPED": [transform_content(lambda node: str(node)[1:])],
     "BRACKETS": [],
     "TEXTCHUNK": [],
     "LF": [],
@@ -297,7 +298,7 @@ LaTeX_AST_transformation_table = {
     "LB": [],
     "BACKSLASH": [],
     "EOF": [],
-    "PARSEP": [replace_content_by('\n\n')],
+    "PARSEP": [replace_content_with('\n\n')],
     ":Whitespace, WSPC, S": streamline_whitespace,
     "*": replace_by_single_child
 }
