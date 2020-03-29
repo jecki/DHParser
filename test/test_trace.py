@@ -23,6 +23,8 @@ import os
 import re
 import sys
 
+from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, MANDATORY_CONTINUATION_AT_EOF
+
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
@@ -190,7 +192,7 @@ class TestErrorReporting:
         for record in gr.history__:
             if record.status.startswith(record.ERROR):
                 assert record.excerpt == '_D'
-                if record.errors[0].code == Error.PARSER_STOPPED_BEFORE_END:
+                if record.errors[0].code == PARSER_STOPPED_BEFORE_END:
                     break
         else:
             assert False, "Missing Error!"
@@ -241,7 +243,7 @@ class TestErrorReporting:
             assert not tree.errors
 
             tree = grammar('abDxyz')
-            mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
+            mandatory_cont = (MANDATORY_CONTINUATION, MANDATORY_CONTINUATION_AT_EOF)
             assert len(tree.errors) > 1 and tree.errors[0].code in mandatory_cont
             reveal(grammar, 'trace_resume_complex_1')
 

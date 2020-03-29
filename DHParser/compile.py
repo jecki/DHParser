@@ -45,7 +45,8 @@ from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMap
 from DHParser.syntaxtree import Node, RootNode
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
-from DHParser.error import adjust_error_locations, is_error, is_fatal, Error
+from DHParser.error import adjust_error_locations, is_error, is_fatal, Error, \
+    TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH
 from DHParser.log import log_parsing_history, log_ST, is_logging
 from DHParser.toolkit import load_if_file, is_filename
 
@@ -336,7 +337,7 @@ def compile_source(source: str,
                 syntax_tree.new_error(syntax_tree,
                                       "AST-Transformation failed due to earlier parser errors. "
                                       "Crash Message: %s: %s" % (e.__class__.__name__, str(e)),
-                                      Error.AST_TRANSFORM_CRASH)
+                                      AST_TRANSFORM_CRASH)
         else:
             transformer(syntax_tree)
 
@@ -365,7 +366,7 @@ def compile_source(source: str,
                         node, "Compilation failed, most likely, due to errors earlier "
                               "in the processing pipeline. Crash Message: %s: %s\n%s"
                               % (e.__class__.__name__, str(e), trace),
-                        Error.COMPILER_CRASH)
+                        COMPILER_CRASH)
             else:
                 # assume Python crashes are programming mistakes, so let
                 # the exceptions through
@@ -434,7 +435,7 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
                     node, "Tree-processing failed, most likely, due to errors earlier in "
                           "in the processing pipeline. Crash Message: %s: %s\n%s"
                           % (e.__class__.__name__, str(e), trace),
-                    Error.TREE_PROCESSING_CRASH)
+                    TREE_PROCESSING_CRASH)
         else:
             # assume Python crashes are programming mistakes, so let
             # the exceptions through

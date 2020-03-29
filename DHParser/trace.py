@@ -26,7 +26,7 @@ Grammar-object.
 
 from typing import Tuple, Optional, List, Iterable, Union
 
-from DHParser.error import Error
+from DHParser.error import Error, RESUME_NOTICE
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import freeze_callstack, HistoryRecord
@@ -64,11 +64,11 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             notice = Error(  # resume notice
                 'Resuming from parser "{}" at position {}:{} with parser "{}": {}'
                 .format(mre.node.tag_name, *lc, resumer, repr(target)),
-                resume_pos, Error.RESUME_NOTICE)
+                resume_pos, RESUME_NOTICE)
         else:
             notice = Error(  # skip notice
                 'Skipping from position {}:{} within parser {}: {}'
-                .format(*lc, resumer, repr(target)), resume_pos, Error.RESUME_NOTICE)
+                .format(*lc, resumer, repr(target)), resume_pos, RESUME_NOTICE)
         if grammar.resume_notices__:
             grammar.tree__.add_error(mre.node, notice)
         errors.append(notice)

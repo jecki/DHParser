@@ -38,7 +38,8 @@ import sys
 from typing import Dict, List, Union, cast
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, is_error, adjust_error_locations
+from DHParser.error import Error, is_error, adjust_error_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
+    PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
@@ -266,9 +267,9 @@ def get_report(test_unit) -> str:
 
 
 POSSIBLE_ARTIFACTS = frozenset((
-    Error.PARSER_LOOKAHEAD_MATCH_ONLY,
-    Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
-    Error.MANDATORY_CONTINUATION_AT_EOF
+    PARSER_LOOKAHEAD_MATCH_ONLY,
+    PARSER_LOOKAHEAD_FAILURE_ONLY,
+    MANDATORY_CONTINUATION_AT_EOF
 ))
 
 
@@ -349,13 +350,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             return False
         raw_errors = cast(RootNode, syntax_tree).errors_sorted
         is_artifact = ({e.code for e in raw_errors}
-                       <= {Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
-                           # Error.PARSER_STOPPED_BEFORE_END,
-                           Error.PARSER_LOOKAHEAD_MATCH_ONLY}
+                       <= {PARSER_LOOKAHEAD_FAILURE_ONLY,
+                           # PARSER_STOPPED_BEFORE_END,
+                           PARSER_LOOKAHEAD_MATCH_ONLY}
                        or (len(raw_errors) == 1
-                           and (raw_errors[-1].code == Error.PARSER_LOOKAHEAD_MATCH_ONLY
+                           and (raw_errors[-1].code == PARSER_LOOKAHEAD_MATCH_ONLY
                                 #  case 2:  mandatory lookahead failure at end of text
-                                or raw_errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF)))
+                                or raw_errors[-1].code == MANDATORY_CONTINUATION_AT_EOF)))
         if is_artifact:
             # don't remove zombie node with error message at the end
             # but change it's tag_name to indicate that it is an artifact!

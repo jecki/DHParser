@@ -34,7 +34,7 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
     SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, JSON_SERIALIZATION, \
     SMART_SERIALIZATION, get_config_value
-from DHParser.error import Error, ErrorCode
+from DHParser.error import Error, ErrorCode, ERROR
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col
 
@@ -1573,7 +1573,7 @@ class RootNode(Node):
     def new_error(self,
                   node: Node,
                   message: str,
-                  code: ErrorCode = Error.ERROR) -> 'RootNode':
+                  code: ErrorCode = ERROR) -> 'RootNode':
         """
         Adds an error to this tree, locating it at a specific node.
         Parameters:

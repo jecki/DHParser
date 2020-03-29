@@ -32,7 +32,9 @@ from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, 
 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
 from DHParser.configuration import access_thread_locals, get_config_value
-from DHParser.error import Error
+from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING, REDEFINED_DIRECTIVE, \
+    UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, DIRECTIVE_FOR_NONEXISTANT_SYMBOL, \
+    UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING
 from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, Drop, \
     Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, Token, \
     Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, INFINITE
@@ -874,7 +876,7 @@ class EBNFCompiler(Compiler):
             if entry not in symbols and not entry.startswith(":"):
                 messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
                                        'the transformation table!') % (entry, self.grammar_name),
-                                      0, Error.UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
+                                      0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
         return messages
 
     def verify_compiler(self, compiler):
@@ -970,7 +972,7 @@ class EBNFCompiler(Compiler):
                 nd = self.defined_directives[directive][0]
                 self.tree.new_error(nd, 'Directive "%s" relates to a symbol that is '
                                     'nowhere defined!' % directive,
-                                    Error.DIRECTIVE_FOR_NONEXISTANT_SYMBOL)
+                                    DIRECTIVE_FOR_NONEXISTANT_SYMBOL)
 
         # execute deferred tasks, for example semantic checks that cannot
         # be done before the symbol table is complete
@@ -1033,7 +1035,7 @@ class EBNFCompiler(Compiler):
                     else:
                         self.tree.new_error(nd, 'Symbol "%s" cannot be used in resume rule, since'
                                             ' it represents neither literal nor regexp!',
-                                            Error.INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
+                                            INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
                 else:
                     refined_rules.append(rule)
             resume_rules[symbol] = refined_rules
@@ -1065,7 +1067,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(
                         def_node, '"Skip-rules" for symbol "{}" will never be used, '
                         'because the mandatory marker "§" appears nowhere in its definiendum!'
-                        .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                        .format(symbol), UNUSED_ERROR_HANDLING_WARNING)
                 except KeyError:
                     pass  # error has already been notified earlier!
 
@@ -1094,7 +1096,7 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(
                     def_node, 'Customized error message for symbol "{}" will never be used, '
                     'because the mandatory marker "§" appears nowhere in its definiendum!'
-                    .format(symbol), Error.UNUSED_ERROR_HANDLING_WARNING)
+                    .format(symbol), UNUSED_ERROR_HANDLING_WARNING)
                 # except KeyError:
                 #     def match_function(nd: Node) -> bool:
                 #         return bool(nd.children) and nd.children[0].content.startswith(symbol + '_')
@@ -1166,7 +1168,7 @@ class EBNFCompiler(Compiler):
         for leftover in defined_symbols:
             self.tree.new_error(self.rules[leftover][0],
                                 ('Rule "%s" is not connected to parser root "%s" !') %
-                                (leftover, self.root_symbol), Error.WARNING)
+                                (leftover, self.root_symbol), WARNING)
 
         # set root_symbol parser and assemble python grammar definition
 
@@ -1230,7 +1232,7 @@ class EBNFCompiler(Compiler):
         if rule.endswith('_error') or rule.endswith('_skip') \
                 or rule.endswith('_resume') or rule.endswith('_filter'):
             self.tree.new_error(node, 'Symbol name "%s" suggests directive, ' % rule +
-                                'but directive marker @ is missing...', Error.WARNING)
+                                'but directive marker @ is missing...', WARNING)
         if rule in self.rules:
             first = self.rules[rule][0]
             if not id(first) in self.tree.error_nodes:
@@ -1296,7 +1298,7 @@ class EBNFCompiler(Compiler):
                 and key in self.defined_directives:
             self.tree.new_error(node, 'Directive "%s" has already been defined earlier. '
                                 % key + 'Later definition will be ignored!',
-                                code=Error.REDEFINED_DIRECTIVE)
+                                code=REDEFINED_DIRECTIVE)
             return ""
         self.defined_directives.setdefault(key, []).append(node)
 
@@ -1381,7 +1383,7 @@ class EBNFCompiler(Compiler):
             if redeclared:
                 self.tree.new_error(node, 'Tokens %s have already been declared earlier. '
                                     % str(redeclared) + 'Later declaration will be ignored',
-                                    code=Error.REDECLARED_TOKEN_WARNING)
+                                    code=REDECLARED_TOKEN_WARNING)
             self.directives.tokens |= tokens - redeclared
 
         elif key.endswith('_filter'):
@@ -1476,7 +1478,7 @@ class EBNFCompiler(Compiler):
                 mandatory_marker.append(len(filtered_children))
                 if len(mandatory_marker) > 1:
                     self.tree.new_error(nd, 'One mandatory marker (§) is sufficient to declare '
-                                        'the rest of the elements as mandatory.', Error.WARNING)
+                                        'the rest of the elements as mandatory.', WARNING)
             else:
                 filtered_children.append(nd)
         custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
@@ -1490,7 +1492,7 @@ class EBNFCompiler(Compiler):
                         node, "Cannot apply customized error messages unambiguously, because "
                         "symbol {} contains more than one parser with a mandatory marker '§' "
                         "in its definiens.".format(current_symbol),
-                        Error.AMBIGUOUS_ERROR_HANDLING)
+                        AMBIGUOUS_ERROR_HANDLING)
                 else:
                     # use class field instead or direct representation of error messages!
                     custom_args.append('err_msgs={err_msgs_name}["{symbol}"]'
@@ -1504,7 +1506,7 @@ class EBNFCompiler(Compiler):
                         node, "Cannot apply 'skip-rules' unambigiously, because symbol "
                         "{} contains more than one parser with a mandatory marker '§' "
                         "in its definiens.".format(current_symbol),
-                        Error.AMBIGUOUS_ERROR_HANDLING)
+                        AMBIGUOUS_ERROR_HANDLING)
                 else:
                     # use class field instead or direct representation of error messages!
                     custom_args.append('skip={skip_rules_name}["{symbol}"]'

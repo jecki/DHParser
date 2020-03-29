@@ -30,7 +30,8 @@ from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_whitespace, remove_empty, \
     replace_by_single_child, reduce_single_child, flatten
 from DHParser.dsl import grammar_provider
-from DHParser.error import Error
+from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
+    MANDATORY_CONTINUATION_AT_EOF
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
     clean_report
 from DHParser.trace import set_tracer, trace_history
@@ -315,12 +316,12 @@ class TestLookahead:
         set_tracer(gr, trace_history)
         # Case 1: Lookahead string is part of the test case; parser fails but for the lookahead
         result = gr(self.cases['category']['match'][1], 'category')
-        assert any(e.code in (Error.PARSER_LOOKAHEAD_FAILURE_ONLY,
-                              Error.PARSER_LOOKAHEAD_MATCH_ONLY)
+        assert any(e.code in (PARSER_LOOKAHEAD_FAILURE_ONLY,
+                              PARSER_LOOKAHEAD_MATCH_ONLY)
                    for e in result.errors), str(result.errors)
         # Case 2: Lookahead string is not part of the test case; parser matches but for the mandatory continuation
         result = gr(self.cases['category']['match'][2], 'category')
-        assert any(e.code == Error.MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
+        assert any(e.code == MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
         errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac,
                               'REPORT_TestLookahead')
         assert not errata, str(errata)

@@ -31,7 +31,8 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history
-from DHParser.error import Error, is_error, adjust_error_locations
+from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CONTINUATION, PARSER_DID_NOT_MATCH, \
+    MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
@@ -61,7 +62,7 @@ class TestParserError:
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
     def test_false_lookahead_only_message(self):
-        """Error.PARSER_LOOKAHEAD_*_ONLY errors must not be reported if there
+        """PARSER_LOOKAHEAD_*_ONLY errors must not be reported if there
         no lookahead parser in the history!"""
         lang = """
         word = letters { letters | `-` letters }
@@ -198,21 +199,21 @@ class TestInfiLoopsAndRecursion:
     #     try:
     #         parser_class = grammar_provider(minilang)
     #     except CompilationError as error:
-    #         assert all(e.code == Error.INFINITE_LOOP for e in error.errors)
+    #         assert all(e.code == INFINITE_LOOP for e in error.errors)
     #     save = get_config_value('static_analysis')
     #     set_config_value('static_analysis', 'late')
     #     provider = grammar_provider(minilang)
     #     try:
     #         parser = provider()
     #     except GrammarError as error:
-    #         assert error.errors[0][2].code == Error.INFINITE_LOOP
+    #         assert error.errors[0][2].code == INFINITE_LOOP
     #     set_config_value('static_analysis', 'none')
     #     parser = provider()
     #     snippet = " "
     #     syntax_tree = parser(snippet)
-    #     assert any(e.code == Error.INFINITE_LOOP for e in syntax_tree.errors)
+    #     assert any(e.code == INFINITE_LOOP for e in syntax_tree.errors)
     #     res = parser.static_analysis()
-    #     assert res and res[0][2].code == Error.INFINITE_LOOP
+    #     assert res and res[0][2].code == INFINITE_LOOP
     #     minilang = """not_forever = { / / } \n"""
     #     parser = grammar_provider(minilang)()
     #     res = parser.static_analysis()
@@ -400,7 +401,7 @@ class TestGrammar:
         st = gr('eins')
         assert not st.errors
         st = gr('eins zwei')
-        assert st.errors[0].code == Error.PARSER_STOPPED_BEFORE_END
+        assert st.errors[0].code == PARSER_STOPPED_BEFORE_END
         st = gr('eins zwei', complete_match=False)
         assert not st.errors
 
@@ -447,10 +448,10 @@ class TestSeries:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
 
     def test_series_composition(self):
         TA, TB, TC, TD, TE = (TKN(b) for b in "ABCDE")
@@ -462,9 +463,9 @@ class TestSeries:
         st = parser("ABCDE");  assert not st.error_flag
         st = parser("A_CDE");  assert not st.error_flag
         st = parser("AB_DE");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         st = parser("ABC_E");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
 
         combined = Alternative(s2 + s1, RegExp('.*'))
         parser = Grammar(combined)
@@ -474,7 +475,7 @@ class TestSeries:
         st = parser("DE_BC");  assert not st.error_flag
         st = parser("DEA_C");  assert not st.error_flag
         st = parser("DEAB_");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
 
     # def test_boundary_cases(self):
     #     lang = """
@@ -582,7 +583,7 @@ class TestErrorRecovery:
         assert len(st.errors) == 1  # no additional "stopped before end"-error!
         resume_notices_on(parser)
         st = parser('AB_D')
-        assert len(st.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in st.errors)
+        assert len(st.errors) == 2 and any(err.code == RESUME_NOTICE for err in st.errors)
         assert 'Skipping' in str(st.errors_sorted[1])
 
     def test_Interleave_skip(self):
@@ -916,9 +917,9 @@ class TestBorderlineCases:
         cst = gr('X', 'parser')
         assert not cst.error_flag
         cst = gr(' ', 'parser')
-        assert cst.error_flag and cst.errors_sorted[0].code == Error.PARSER_DID_NOT_MATCH
+        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_DID_NOT_MATCH
         cst = gr('', 'parser')
-        assert cst.error_flag and cst.errors_sorted[0].code == Error.PARSER_DID_NOT_MATCH
+        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_DID_NOT_MATCH
 
     def test_matching(self):
         minilang = """parser = /.?/"""
@@ -926,7 +927,7 @@ class TestBorderlineCases:
         cst = gr(' ', 'parser')
         assert not cst.error_flag
         cst = gr('  ', 'parser')
-        assert cst.error_flag and cst.errors_sorted[0].code == Error.PARSER_STOPPED_BEFORE_END
+        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_STOPPED_BEFORE_END
         cst = gr('', 'parser')
         assert not cst.error_flag
 
@@ -1087,7 +1088,7 @@ class TestReentryAfterError:
         assert len(cst.errors_sorted) == 1
         resume_notices_on(gr)
         cst = gr(content)
-        assert len(cst.errors) == 2 and any(err.code == Error.RESUME_NOTICE for err in cst.errors)
+        assert len(cst.errors) == 2 and any(err.code == RESUME_NOTICE for err in cst.errors)
 
     def test_several_resume_rules_innermost_rule_matching(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -1122,7 +1123,7 @@ class TestReentryAfterError:
             tree = grammar('abc/*x*/xyz')
             assert not tree.errors
             tree = grammar('abDxyz')
-            mandatory_cont = (Error.MANDATORY_CONTINUATION, Error.MANDATORY_CONTINUATION_AT_EOF)
+            mandatory_cont = (MANDATORY_CONTINUATION, MANDATORY_CONTINUATION_AT_EOF)
             assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
             tree = grammar('abD/*x*/xyz')
             assert len(tree.errors) == 1 and tree.errors[0].code in mandatory_cont
@@ -1153,7 +1154,7 @@ class TestReentryAfterError:
             }"""
         gr = grammar_provider(lang)()
         cst = gr(test_case)
-        assert any(err.code == Error.MANDATORY_CONTINUATION for err in cst.errors)
+        assert any(err.code == MANDATORY_CONTINUATION for err in cst.errors)
 
     def test_bigfattest(self):
         gr = copy.deepcopy(get_ebnf_grammar())
@@ -1178,8 +1179,8 @@ class TestConfiguredErrorMessages:
             """
         parser = grammar_provider(lang)()
         st = parser("AB_D");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MALFORMED_ERROR_STRING
-        assert st.errors_sorted[1].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MALFORMED_ERROR_STRING
+        assert st.errors_sorted[1].code == MANDATORY_CONTINUATION
 
 
 class TestUnknownParserError:

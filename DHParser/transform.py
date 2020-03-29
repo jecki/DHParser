@@ -34,7 +34,7 @@ import operator
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Optional, Text
 
-from DHParser.error import Error, ErrorCode
+from DHParser.error import Error, ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode, parse_sxpr, flatten_sxpr
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython, \
@@ -1484,7 +1484,7 @@ def delimit_children(context: List[Node], node_factory: Callable):
 
 # @transformation_factory
 @transformation_factory(str)
-def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = Error.ERROR):
+def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = ERROR):
     """
     Raises an error unconditionally. This makes sense in case illegal paths are
     encoded in the syntax to provide more accurate error messages.
@@ -1499,14 +1499,14 @@ def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = Error
         cast(RootNode, context[0].new_error(
             node, 'Schlüssel %s nicht erlaubt in Format-Zeichenkette: "%s"! '
             'Erlaubt sind "tag_name", "content", "pos"' % (str(key_error), error_msg),
-            Error.AST_TRANSFORM_CRASH))
+            AST_TRANSFORM_CRASH))
 
 
 @transformation_factory(collections.abc.Callable)
 def error_on(context: List[Node],
              condition: Callable,
              error_msg: str = '',
-             error_code: ErrorCode = Error.ERROR):
+             error_code: ErrorCode = ERROR):
     """
     Checks for `condition`; adds an error or warning message if condition is not met.
     """
@@ -1529,13 +1529,13 @@ def error_on(context: List[Node],
 #     if not condition(context):
 #         if warning:
 #             node.add_error(warning % node.tag_name if warning.find("%s") > 0 else warning,
-#                            Error.WARNING)
+#                            WARNING)
 #         else:
 #             cond_name = condition.__name__ if hasattr(condition, '__name__') \
 #                         else condition.__class__.__name__ if hasattr(condition, '__class__') \
 #                         else '<unknown>'
 #             context[0].new_error(node, "transform.warn_on: Failed to meet condition " + cond_name,
-#                                  Error.WARNING)
+#                                  WARNING)
 
 
 assert_has_children = error_on(lambda nd: nd.children, 'Element "%s" has no children')

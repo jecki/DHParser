@@ -30,7 +30,8 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
-from DHParser.error import has_errors, Error
+from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CONTINUATION, REDEFINED_DIRECTIVE, \
+    UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
@@ -519,11 +520,11 @@ class TestErrorCustomization:
         st = parser("ABCD");  assert not st.error_flag
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "a user defined error message"
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "a user defined error message"
 
     def test_customized_error_case_sensitive(self):
@@ -535,7 +536,7 @@ class TestErrorCustomization:
             """
         parser = grammar_provider(lang)()
         st = parser("ABC_");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "a user defined error message"
 
     def test_multiple_error_messages(self):
@@ -551,20 +552,20 @@ class TestErrorCustomization:
             """
         parser = grammar_provider(lang)()
         st = parser("AB*D");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "the asterix is wrong in this place"
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "the underscore is wrong in this place"
         st = parser("ABiD");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message.startswith('wrong letter')
         st = parser("AB+D");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message == "fallback error message"
         st = parser("ABCi");  assert st.error_flag
-        assert st.errors_sorted[0].code == Error.MANDATORY_CONTINUATION
+        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert st.errors_sorted[0].message.startswith('C cannot be followed by')
 
 
@@ -580,7 +581,7 @@ class TestErrorCustomizationErrors:
             assert False, "CompilationError because of ambiguous error message exptected!"
         except CompilationError as compilation_error:
             err = compilation_error.errors[0]
-            assert err.code == Error.AMBIGUOUS_ERROR_HANDLING, str(compilation_error)
+            assert err.code == AMBIGUOUS_ERROR_HANDLING, str(compilation_error)
 
     def test_unsed_error_customization(self):
         lang = """
@@ -590,7 +591,7 @@ class TestErrorCustomizationErrors:
             other = "X" | "Y" | "Z"
             """
         result, messages, ast = compile_ebnf(lang)
-        assert messages[0].code == Error.UNUSED_ERROR_HANDLING_WARNING
+        assert messages[0].code == UNUSED_ERROR_HANDLING_WARNING
 
     def test_multiple_resume_definitions(self):
         lang = """
@@ -600,7 +601,7 @@ class TestErrorCustomizationErrors:
             series = "A" §"B" "C" "D" "E" "F" "G"
             """
         result, messages, ast = compile_ebnf(lang)
-        assert messages[0].code == Error.REDEFINED_DIRECTIVE
+        assert messages[0].code == REDEFINED_DIRECTIVE
 
     def test_multiple_skip_definitions(self):
         lang = """
@@ -610,7 +611,7 @@ class TestErrorCustomizationErrors:
             series = "A" §"B" "C" "D" "E" "F" "G"
             """
         result, messages, ast = compile_ebnf(lang)
-        assert messages[0].code == Error.REDEFINED_DIRECTIVE
+        assert messages[0].code == REDEFINED_DIRECTIVE
 
     def test_erreneous_skip_definitions(self):
         lang = """
@@ -723,24 +724,24 @@ class TestInSeriesResume:
         assert not st.error_flag
         st = self.gr('AB XYZ CDEFG')
         errors = st.errors_sorted
-        assert len(errors) == 1 and errors[0].code == Error.MANDATORY_CONTINUATION
+        assert len(errors) == 1 and errors[0].code == MANDATORY_CONTINUATION
         st = self.gr('AB XYZ CDE XYZ FG')
         errors = st.errors_sorted
-        assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
+        assert len(errors) == 2 and all(err.code == MANDATORY_CONTINUATION for err in errors)
         st = self.gr('AB XYZ CDE XNZ FG')  # fails to resume parsing
         errors = st.errors_sorted
-        assert len(errors) >= 1 and errors[0].code == Error.MANDATORY_CONTINUATION
+        assert len(errors) >= 1 and errors[0].code == MANDATORY_CONTINUATION
 
     def test_series_gap(self):
         st = self.gr('ABDEFG')
         errors = st.errors_sorted
-        assert len(errors) == 1 and errors[0].code == Error.MANDATORY_CONTINUATION
+        assert len(errors) == 1 and errors[0].code == MANDATORY_CONTINUATION
         st = self.gr('ABXEFG')  # two missing, one wrong element added
         errors = st.errors_sorted
-        assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
+        assert len(errors) == 2 and all(err.code == MANDATORY_CONTINUATION for err in errors)
         st = self.gr('AB_DE_G')
         errors = st.errors_sorted
-        assert len(errors) == 2 and all(err.code == Error.MANDATORY_CONTINUATION for err in errors)
+        assert len(errors) == 2 and all(err.code == MANDATORY_CONTINUATION for err in errors)
 
     def test_series_permutation(self):
         st = self.gr('ABEDFG')
@@ -763,7 +764,7 @@ class TestInterleaveResume:
         assert not st.error_flag
         st = self.gr('BAG FC XYZ ED')
         errors = st.errors_sorted
-        assert errors[0].code == Error.MANDATORY_CONTINUATION
+        assert errors[0].code == MANDATORY_CONTINUATION
         assert str(errors[0]).find(':-(') >= 0
 
     def test_allof_resume_later(self):
@@ -810,11 +811,11 @@ class TestInterleaveResume:
         assert st.error_flag
         assert len(st.errors) == 1
         st = gr('A_BCDEFG.')
-        assert len(st.errors) == 1 and st.errors[0].code == Error.PARSER_DID_NOT_MATCH
+        assert len(st.errors) == 1 and st.errors[0].code == PARSER_DID_NOT_MATCH
         st = gr('AB_CDEFG.')
         # mandatory continuation error kicks in only, if the parsers before
         # the §-sign have been exhausted!
-        assert len(st.errors) == 2 and st.errors_sorted[1].code == Error.MANDATORY_CONTINUATION
+        assert len(st.errors) == 2 and st.errors_sorted[1].code == MANDATORY_CONTINUATION
         st = gr('EXY EXYZ.')
         assert len(st.errors) == 1
 

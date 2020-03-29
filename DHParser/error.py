@@ -56,64 +56,65 @@ class ErrorCode(int):
     pass
 
 
+# error levels
+
+NO_ERROR = ErrorCode(0)
+NOTICE   = ErrorCode(1)
+WARNING  = ErrorCode(100)
+ERROR    = ErrorCode(1000)
+FATAL    = ErrorCode(10000)
+HIGHEST  = FATAL
+
+# notice codes
+
+RESUME_NOTICE                            = ErrorCode(50)
+
+# warning codes
+
+REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
+UNUSED_ERROR_HANDLING_WARNING            = ErrorCode(130)
+LEFT_RECURSION_WARNING                   = ErrorCode(140)
+
+UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
+CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)
+CAPTURE_DROPPED_CONTENT_WARNING          = ErrorCode(630)
+OPTIONAL_REDUNDANTLY_NESTED_WARNING      = ErrorCode(630)
+
+# error codes
+
+MANDATORY_CONTINUATION                   = ErrorCode(1010)
+MANDATORY_CONTINUATION_AT_EOF            = ErrorCode(1015)
+PARSER_DID_NOT_MATCH                     = ErrorCode(1020)
+PARSER_LOOKAHEAD_FAILURE_ONLY            = ErrorCode(1030)
+PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
+PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1045)
+CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
+MALFORMED_ERROR_STRING                   = ErrorCode(1060)
+AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
+REDEFINED_DIRECTIVE                      = ErrorCode(1080)
+UNDEFINED_RETRIEVE                       = ErrorCode(1090)
+DIRECTIVE_FOR_NONEXISTANT_SYMBOL         = ErrorCode(1100)
+INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
+
+# EBNF-specific static analysis errors
+
+CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
+LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
+BADLY_NESTED_OPTIONAL_PARSER             = ErrorCode(1530)
+NARY_WITHOUT_PARSERS                     = ErrorCode(1540)
+BAD_MANDATORY_SETUP                      = ErrorCode(1550)
+DUPLICATE_PARSERS_IN_ALTERNATIVE         = ErrorCode(1560)
+BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
+
+# fatal errors
+
+TREE_PROCESSING_CRASH                    = ErrorCode(10100)
+COMPILER_CRASH                           = ErrorCode(10200)
+AST_TRANSFORM_CRASH                      = ErrorCode(10300)
+
+
 class Error:
     __slots__ = ['message', 'code', '_pos', 'orig_pos', 'line', 'column']
-
-    # error levels
-
-    NO_ERROR = ErrorCode(0)
-    NOTICE   = ErrorCode(1)
-    WARNING  = ErrorCode(100)
-    ERROR    = ErrorCode(1000)
-    FATAL    = ErrorCode(10000)
-    HIGHEST  = FATAL
-
-    # notice codes
-
-    RESUME_NOTICE                           = ErrorCode(50)
-
-    # warning codes
-
-    REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
-    UNUSED_ERROR_HANDLING_WARNING            = ErrorCode(130)
-    LEFT_RECURSION_WARNING                   = ErrorCode(140)
-
-    UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
-    CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)
-    CAPTURE_DROPPED_CONTENT_WARNING          = ErrorCode(630)
-    OPTIONAL_REDUNDANTLY_NESTED_WARNING      = ErrorCode(630)
-
-    # error codes
-
-    MANDATORY_CONTINUATION                   = ErrorCode(1010)
-    MANDATORY_CONTINUATION_AT_EOF            = ErrorCode(1015)
-    PARSER_DID_NOT_MATCH                     = ErrorCode(1020)
-    PARSER_LOOKAHEAD_FAILURE_ONLY            = ErrorCode(1030)
-    PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
-    PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1045)
-    CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
-    MALFORMED_ERROR_STRING                   = ErrorCode(1060)
-    AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
-    REDEFINED_DIRECTIVE                      = ErrorCode(1080)
-    UNDEFINED_RETRIEVE                       = ErrorCode(1090)
-    DIRECTIVE_FOR_NONEXISTANT_SYMBOL         = ErrorCode(1100)
-    INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
-
-    # EBNF-specific static analysis errors
-
-    CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
-    LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
-    BADLY_NESTED_OPTIONAL_PARSER             = ErrorCode(1530)
-    NARY_WITHOUT_PARSERS                     = ErrorCode(1540)
-    BAD_MANDATORY_SETUP                      = ErrorCode(1550)
-    DUPLICATE_PARSERS_IN_ALTERNATIVE         = ErrorCode(1560)
-    BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
-
-    # fatal errors
-
-    TREE_PROCESSING_CRASH                    = ErrorCode(10100)
-    COMPILER_CRASH                           = ErrorCode(10200)
-    AST_TRANSFORM_CRASH                      = ErrorCode(10300)
 
     def __init__(self, message: str, pos: int, code: ErrorCode = ERROR,
                  orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
@@ -153,11 +154,11 @@ class Error:
     @property
     def severity(self):
         """Returns a string representation of the error level, e.g. "warning"."""
-        if self.code < Error.WARNING:
+        if self.code < WARNING:
             return "Notice"
-        elif self.code < Error.ERROR:
+        elif self.code < ERROR:
             return "Warning"
-        elif self.code < Error.FATAL:
+        elif self.code < FATAL:
             return "Error"
         else:
             return "Fatal"
@@ -172,22 +173,22 @@ class Error:
 
 def is_warning(code: int) -> bool:
     """Returns True, if error is merely a warning or a message."""
-    return code < Error.ERROR
+    return code < ERROR
 
 
 def is_error(code: int) -> bool:
     """Returns True, if error is a (fatal) error, not just a warning."""
-    return code >= Error.ERROR
+    return code >= ERROR
 
 
 def is_fatal(code: int) -> bool:
     """Returns True, ir error is fatal. Fatal errors are typically raised
     when a crash (i.e. Python exception) occurs at later stages of the
     processing pipline (e.g. ast transformation, compiling). """
-    return code >= Error.FATAL
+    return code >= FATAL
 
 
-# def Warning(message: str, pos, code: ErrorCode = Error.WARNING,
+# def Warning(message: str, pos, code: ErrorCode = WARNING,
 #             orig_pos: int = -1, line: int = -1, column: int = -1) -> Error:
 #     """
 #     Syntactic sugar for creating Error-objects that contain only a warning.
@@ -195,11 +196,11 @@ def is_fatal(code: int) -> bool:
 #     """
 #     if not is_warning(code):
 #         raise ValueError("Tried to create a warning with a error code {}. "
-#                          "Warning codes must be smaller than {}".format(code, Error.ERROR))
+#                          "Warning codes must be smaller than {}".format(code, ERROR))
 #     return Error(message, pos, code, orig_pos, line, column)
 
 
-def has_errors(messages: Iterable[Error], level: int = Error.ERROR) -> bool:
+def has_errors(messages: Iterable[Error], level: int = ERROR) -> bool:
     """
     Returns True, if at least one entry in `messages` has at
     least the given error `level`.
@@ -210,7 +211,7 @@ def has_errors(messages: Iterable[Error], level: int = Error.ERROR) -> bool:
     return False
 
 
-def only_errors(messages: Iterable[Error], level: int = Error.ERROR) -> Iterator[Error]:
+def only_errors(messages: Iterable[Error], level: int = ERROR) -> Iterator[Error]:
     """
     Returns an Iterator that yields only those messages that have
     at least the given error level.

@@ -36,7 +36,13 @@ from typing import Callable, cast, List, Tuple, Set, Dict, \
     DefaultDict, Sequence, Union, Optional, Any
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, ErrorCode, is_error
+from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
+    LEFT_RECURSION_WARNING, UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
+    PARSER_DID_NOT_MATCH, PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, \
+    MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
+    CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
+    BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING, NARY_WITHOUT_PARSERS, CAPTURE_STACK_NOT_EMPTY
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -443,7 +449,7 @@ class Parser:
                 elif pe.first_throw:
                     # TODO: Is this case still needed with module "trace"?
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
-                elif grammar.tree__.errors[-1].code == Error.MANDATORY_CONTINUATION_AT_EOF:
+                elif grammar.tree__.errors[-1].code == MANDATORY_CONTINUATION_AT_EOF:
                     # try to create tree as faithful as possible
                     node = Node(self.tag_name, pe.node).with_pos(location)
                 else:
@@ -466,7 +472,7 @@ class Parser:
                                 node, Error("Left recursion encountered. "
                                             "Refactor grammar to avoid slow parsing.",
                                             node.pos if node else location,
-                                            Error.LEFT_RECURSION_WARNING))
+                                            LEFT_RECURSION_WARNING))
                             # error_id = id(node)
                             grammar.last_recursion_location__ = location
                     # don't overwrite any positive match (i.e. node not None) in the cache
@@ -1299,11 +1305,11 @@ class Grammar:
                     self.tree__.new_error(
                         result, 'Parser "%s" only did not match empty document '
                                 'because of lookahead' % str(parser),
-                        Error.PARSER_LOOKAHEAD_FAILURE_ONLY)
+                        PARSER_LOOKAHEAD_FAILURE_ONLY)
                 else:
                     self.tree__.new_error(
                         result, 'Parser "%s" did not match empty document.' % str(parser),
-                        Error.PARSER_DID_NOT_MATCH)
+                        PARSER_DID_NOT_MATCH)
 
         # copy to local variable, so break condition can be triggered manually
         max_parser_dropouts = self.max_parser_dropouts__
@@ -1322,10 +1328,10 @@ class Grammar:
                     if lookahead_failure_only(parser):
                         error_msg = 'Parser "%s" only did not match because of lookahead! ' \
                                     % str(parser) + err_info
-                        error_code = Error.PARSER_LOOKAHEAD_FAILURE_ONLY
+                        error_code = PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
                         error_msg = 'Parser "%s" did not match!' % str(parser) + err_info
-                        error_code = Error.PARSER_DID_NOT_MATCH
+                        error_code = PARSER_DID_NOT_MATCH
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
@@ -1337,7 +1343,7 @@ class Grammar:
                     if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
-                        error_code = Error.PARSER_LOOKAHEAD_MATCH_ONLY
+                        error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
                         error_msg = "Parser stopped before end" \
@@ -1347,7 +1353,7 @@ class Grammar:
                                 if len(stitches) < self.max_parser_dropouts__
                                 else " too often!" if self.max_parser_dropouts__ > 1 else "!"
                                      + " Terminating parser.")
-                        error_code = Error.PARSER_STOPPED_BEFORE_END
+                        error_code = PARSER_STOPPED_BEFORE_END
                 stitch = Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches))
                 stitches.append(stitch)
                 error = Error(error_msg, stitch.pos, error_code)
@@ -1366,7 +1372,7 @@ class Grammar:
         if any(self.variables__.values()):
             error_msg = "Capture-stack not empty after end of parsing: " \
                 + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
-            error_code = Error.CAPTURE_STACK_NOT_EMPTY
+            error_code = CAPTURE_STACK_NOT_EMPTY
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
@@ -1867,7 +1873,7 @@ class NaryParser(MetaParser):
         if len(self.parsers) == 0:
             return [self.static_error(
                 'Nary parser %s:%s = %s requires at least on argument'
-                % (self.pname, self.ptype, str(self)), Error.NARY_WITHOUT_PARSERS)]
+                % (self.pname, self.ptype, str(self)), NARY_WITHOUT_PARSERS)]
         return None
 
     def location_info(self) -> str:
@@ -1922,7 +1928,7 @@ class Option(UnaryParser):
         if self.parser.is_optional():
             return [self.static_error(
                 "Redundant nesting of optional parser in " + self.location_info(),
-                Error.OPTIONAL_REDUNDANTLY_NESTED_WARNING)]
+                OPTIONAL_REDUNDANTLY_NESTED_WARNING)]
         return None
 
 
@@ -2029,7 +2035,7 @@ class OneOrMore(UnaryParser):
         if self.parser.is_optional():
             return [self.static_error(
                 "Use ZeroOrMore instead of nesting OneOrMore with an optional parser in " \
-                + self.location_info(), Error.BADLY_NESTED_OPTIONAL_PARSER)]
+                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER)]
         return None
 
 
@@ -2138,7 +2144,7 @@ class MandatoryNary(NaryParser):
                 except (ValueError, KeyError, IndexError) as e:
                     error = Error("Malformed error format string »{}« leads to »{}«"
                                   .format(message, str(e)),
-                                  location, Error.MALFORMED_ERROR_STRING)
+                                  location, MALFORMED_ERROR_STRING)
                     grammar.tree__.add_error(err_node, error)
         else:
             if grammar.history_tracking__:
@@ -2149,8 +2155,8 @@ class MandatoryNary(NaryParser):
                 msg = '%s expected by parser %s, »%s« found!' % (expected, repr(pname), found)
             else:
                 msg = '%s expected, »%s« found!' % (expected, found)
-        error = Error(msg, location, Error.MANDATORY_CONTINUATION_AT_EOF
-                      if (failed_on_lookahead and not text_) else Error.MANDATORY_CONTINUATION)
+        error = Error(msg, location, MANDATORY_CONTINUATION_AT_EOF
+                      if (failed_on_lookahead and not text_) else MANDATORY_CONTINUATION)
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
@@ -2176,7 +2182,7 @@ class MandatoryNary(NaryParser):
         if msg:
             msg.insert(0, 'Illegal configuration of mandatory Nary-parser '
                        + self.location_info())
-            return[self.static_error('\n'.join(msg), Error.BAD_MANDATORY_SETUP)]
+            return[self.static_error('\n'.join(msg), BAD_MANDATORY_SETUP)]
         return None
 
 
@@ -2352,13 +2358,13 @@ class Alternative(NaryParser):
         if len(set(self.parsers)) != len(self.parsers):
             errors.append(self.static_error(
                 'Duplicate parsers in ' + self.location_info(),
-                Error.DUPLICATE_PARSERS_IN_ALTERNATIVE))
+                DUPLICATE_PARSERS_IN_ALTERNATIVE))
         if not all(not p.is_optional() for p in self.parsers[:-1]):
             errors.append(self.static_error(
                 "Parser-specification Error in " + self.location_info()
                 + "\nOnly the very last alternative may be optional! \nOtherwise, "
                 "alternatives after the first optional alternative will never be parsed.",
-                Error.BAD_ORDER_OF_ALTERNATIVES))
+                BAD_ORDER_OF_ALTERNATIVES))
         return errors or None
 
 
@@ -2509,7 +2515,7 @@ class Interleave(MandatoryNary):
             return [self.static_error(
                 "Flow-operators and optional parsers are neither allowed nor needed inside "
                 "of interleave-parser " + self.location_info(),
-                Error.BADLY_NESTED_OPTIONAL_PARSER)]
+                BADLY_NESTED_OPTIONAL_PARSER)]
         return None
 
 
@@ -2546,7 +2552,7 @@ def Required(parser: Parser) -> Parser:
 #             text_ = text[i:]
 #             self.grammar.tree__.new_error(node,
 #                                           '%s expected; "%s" found!' % (str(self.parser),
-#                                           text[:10]), code=Error.MANDATORY_CONTINUATION)
+#                                           text[:10]), code=MANDATORY_CONTINUATION)
 #         return node, text_
 #
 #     def __repr__(self):
@@ -2575,7 +2581,7 @@ class Lookahead(FlowParser):
             return [(self.pname, self, Error(
                 'Lookahead %s does not make sense with optional parser "%s"!' \
                 % (self.pname, str(self.parser)),
-                0, Error.LOOKAHEAD_WITH_OPTIONAL_PARSER))]
+                0, LOOKAHEAD_WITH_OPTIONAL_PARSER))]
         return None
 
 
@@ -2689,13 +2695,13 @@ class Capture(UnaryParser):
         if not self.pname:
             errors.append((self.pname, self, Error(
                 'Capture only works as named parser! Error in parser: ' + str(self),
-                0, Error.CAPTURE_WITHOUT_PARSERNAME
+                0, CAPTURE_WITHOUT_PARSERNAME
             )))
         if self.parser.apply(lambda plist: plist[-1].drop_content):
             errors.append((self.pname, self, Error(
                 'Captured symbol "%s" contains parsers that drop content, '
                 'which can lead to unintended results!' % (self.pname or str(self)),
-                0, Error.CAPTURE_DROPPED_CONTENT_WARNING
+                0, CAPTURE_DROPPED_CONTENT_WARNING
             )))
         return errors or None
 
@@ -2818,7 +2824,7 @@ class Retrieve(UnaryParser):
                 node = Node(tn, '') # .with_pos(self.grammar.document_length__ - text.__len__())
                 self.grammar.tree__.new_error(
                     node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
-                    Error.UNDEFINED_RETRIEVE)
+                    UNDEFINED_RETRIEVE)
                 return node, text
         if value is None:
             return None, text
