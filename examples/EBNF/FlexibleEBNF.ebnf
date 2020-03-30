@@ -3,11 +3,11 @@
 @ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ anonymous  = pure_elem, FOLLOW_UP, EOF
+@ anonymous  = pure_elem, FOLLOW_UP, SYM_REGEX, EOF
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
 
-
 # re-entry-rules for resuming after parsing-error
+
 @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
 @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
 
@@ -22,8 +22,10 @@
 
 syntax     = [~//] { definition | directive } EOF
 definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
-directive  = "@" §symbol "=" (regexp | literals | symbol)
-             { "," (regexp | literals | symbol) } & FOLLOW_UP
+directive  = "@" §symbol "=" (regexp | literals | procedure | symbol)
+             { "," (regexp | literals | procedure | symbol) } & FOLLOW_UP
+literals   = { literal }+                       # string chaining, only allowed in directives!
+procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
 FOLLOW_UP  = `@` | symbol | EOF
 
@@ -62,8 +64,8 @@ option     = "[" §expression "]" | element "?"
 
 #: leaf-elements
 
-symbol     = /(?!\d)\w+/~                       # e.g. expression, term, parameter_list
-literals   = { literal }+                       # string chaining, only allowed in directives!
+symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
+SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace

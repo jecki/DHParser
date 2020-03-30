@@ -372,6 +372,10 @@ EBNF_AST_transformation_table = {
         [],
     "directive":
         [flatten, remove_tokens('@', '=', ',')],
+    "procedure":
+        [remove_tokens('()'), reduce_single_child],
+    "literals":
+        [replace_by_single_child],
     "definition":
         [flatten, remove_children('DEF', 'ENDL'),
          remove_tokens('=')],  # remove_tokens('=') is only for backwards-compatibility
@@ -395,8 +399,6 @@ EBNF_AST_transformation_table = {
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
     "symbol, literal, regexp":
         [reduce_single_child],
-    "literals":
-        [replace_by_single_child],
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [reduce_single_child],
     "EOF, DEF, OR, AND, ENDL":
@@ -815,17 +817,11 @@ class EBNFCompiler(Compiler):
                                     '"gen_transformer_Skeleton()"!')
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
-                      '    # AST Transformations for the ' + self.grammar_name + '-grammar']
-        transtable.append('    "<": flatten,')
+                      '    # AST Transformations for the ' + self.grammar_name + '-grammar',
+                      '    "<": flatten,']
         for name in self.rules:
             transformations = '[]'
-            # rule = self.definitions[name]
-            # if rule.startswith('Alternative'):
-            #     transformations = '[replace_or_reduce]'
-            # elif rule.startswith('Synonym'):
-            #     transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        # transtable.append('    ":Token": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
         return '\n'.join(transtable)
@@ -840,8 +836,8 @@ class EBNFCompiler(Compiler):
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')
         compiler = ['class ' + self.grammar_name + 'Compiler(Compiler):',
-                    '    """Compiler for the abstract-syntax-tree of a '
-                    + self.grammar_name + ' source file.',
+                    '    """Compiler for the abstract-syntax-tree of a ' +
+                    self.grammar_name + ' source file.',
                     '    """', '',
                     '    def __init__(self):',
                     '        super(' + self.grammar_name + 'Compiler, self).__init__()',
@@ -988,8 +984,7 @@ class EBNFCompiler(Compiler):
 
         if self.variables:
             for i in range(len(definitions)):
-                if definitions[i][0] in self.variables:  # \
-                        # and not definitions[i][1].startswith('Capture('):
+                if definitions[i][0] in self.variables:
                     definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
 
         # add special fields for Grammar class
@@ -1097,15 +1092,6 @@ class EBNFCompiler(Compiler):
                     def_node, 'Customized error message for symbol "{}" will never be used, '
                     'because the mandatory marker "§" appears nowhere in its definiendum!'
                     .format(symbol), UNUSED_ERROR_HANDLING_WARNING)
-                # except KeyError:
-                #     def match_function(nd: Node) -> bool:
-                #         return bool(nd.children) and nd.children[0].content.startswith(symbol + '_')
-                #     dir_node = self.tree.pick(match_function)
-                #     if dir_node:
-                #         directive = dir_node.children[0].content
-                #         self.tree.new_error(
-                #             dir_node, 'Directive "{}" relates to undefined symbol "{}"!'
-                #             .format(directive, directive.split('_')[0]))
 
         # prepare parser class header and docstring and
         # add EBNF grammar to the doc string of the parser class
@@ -1167,7 +1153,7 @@ class EBNFCompiler(Compiler):
         remove_connections(self.root_symbol)
         for leftover in defined_symbols:
             self.tree.new_error(self.rules[leftover][0],
-                                ('Rule "%s" is not connected to parser root "%s" !') %
+                                'Rule "%s" is not connected to parser root "%s" !' %
                                 (leftover, self.root_symbol), WARNING)
 
         # set root_symbol parser and assemble python grammar definition
@@ -1432,14 +1418,6 @@ class EBNFCompiler(Compiler):
             else:
                 self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
                                     (key, ', '.join(list(self.directives.keys()))))
-        #
-        # try:
-        #     if symbol not in self.symbols:
-        #         # remember first use of symbol, so that dangling references or
-        #         # redundant definitions or usages of symbols can be detected later
-        #         self.symbols[symbol] = node
-        # except NameError:
-        #     pass  # no symbol was referred to in directive
 
         return ""
 

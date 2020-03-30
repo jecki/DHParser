@@ -77,8 +77,8 @@ class FlexibleEBNFGrammar(Grammar):
     OR = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "b8aba5567e4900b076113b7257dec06f"
-    anonymous__ = re.compile('pure_elem$|FOLLOW_UP$|EOF$')
+    source_hash__ = "f4647c9f5c7dd17ee7f07cbdb1659491"
+    anonymous__ = re.compile('pure_elem$|FOLLOW_UP$|SYM_REGEX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [[re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.']]}
@@ -99,8 +99,8 @@ class FlexibleEBNFGrammar(Grammar):
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
-    literals = OneOrMore(literal)
-    symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
+    SYM_REGEX = RegExp('(?!\\d)\\w+')
+    symbol = Series(SYM_REGEX, dwsp__)
     option = Alternative(Series(Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=1), Series(element, Series(Token("?"), dwsp__)))
     repetition = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}"), dwsp__), mandatory=1), Series(element, Series(Token("*"), dwsp__)))
     oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}+"), dwsp__)), Series(element, Series(Token("+"), dwsp__)))
@@ -116,7 +116,9 @@ class FlexibleEBNFGrammar(Grammar):
     sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround))))
     expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     FOLLOW_UP = Alternative(Token("@"), symbol, EOF)
-    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literals, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literals, symbol))), Lookahead(FOLLOW_UP), mandatory=1)
+    procedure = Series(SYM_REGEX, Series(Token("()"), dwsp__))
+    literals = OneOrMore(literal)
+    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literals, procedure, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literals, procedure, symbol))), Lookahead(FOLLOW_UP), mandatory=1)
     definition = Series(symbol, Retrieve(DEF), dwsp__, expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1, err_msgs=error_messages__["definition"])
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
