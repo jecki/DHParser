@@ -1064,6 +1064,8 @@ class EBNFCompiler(Compiler):
                         search = self._gen_search_rule(nd)
                     except IndexError:
                         search = ''
+                    except KeyError:
+                        pass
                 custom_errors.append((search, message))
             error_messages[symbol] = custom_errors
         if error_messages:

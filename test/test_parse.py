@@ -40,7 +40,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
-from DHParser.dsl import grammar_provider
+from DHParser.dsl import grammar_provider, create_parser
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
@@ -1114,17 +1114,17 @@ class TestReentryAfterError:
             block_B = "x" "y" "z"
             """
         proc = """
-def next_valid_letter(text: StringView, start: int) -> Tuple[int, int]:
+def next_valid_letter(text, start):
     while start < len(text):
         if str(text[start]) in 'abcxyz':
-            return start, 1
+            return start, 0
+        start += 1
     return -1, 0
 """
-        code, errors, ast = compile_ebnf(lang)
-        code += proc
-
-        tree = gr('ab*xyz')
-        print(tree.as_sxpr())
+        parser = create_parser(lang, additional_code=proc)
+        tree = parser('ab*xyz')
+        assert 'block_A' in tree and 'block_B' in tree
+        assert tree.pick('ZOMBIE__')
 
 
     def test_skip_comment_on_resume(self):

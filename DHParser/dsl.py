@@ -20,6 +20,7 @@ Module ``dsl`` contains various functions to support the
 compilation of domain specific languages based on an EBNF-grammar.
 """
 
+import functools
 import inspect
 import os
 import platform
@@ -50,6 +51,7 @@ __all__ = ('DefinitionError',
            'raw_compileEBNF',
            'compileEBNF',
            'grammar_provider',
+           'create_parser',
            'compile_on_disk',
            'recompile_grammar')
 
@@ -253,7 +255,8 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     return '\n'.join(src)
 
 
-def grammar_provider(ebnf_src: str, branding="DSL") -> ParserFactoryFunc:
+@functools.lru_cache
+def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str='') -> ParserFactoryFunc:
     """
     Compiles an EBNF-grammar and returns a grammar-parser provider
     function for that grammar.
@@ -263,6 +266,9 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> ParserFactoryFunc:
             the EBNF-grammar itself as a string.
         branding (str or bool):  Branding name for the compiler
             suite source code.
+        additional_code: Python code added to the generated source. This typically
+            contains the source code of semantic actions referred to in the
+            generated source, e.g. filter-functions, resume-point-search-functions
 
     Returns:
         A provider function for a grammar object for texts in the
@@ -277,12 +283,20 @@ def grammar_provider(ebnf_src: str, branding="DSL") -> ParserFactoryFunc:
         else:
             print(grammar_src)
     imports = DHPARSER_IMPORTS.format(dhparser_parentdir = relative_path('.', DHPARSER_PARENTDIR))
-    grammar_factory = compile_python_object(imports + grammar_src,
+    grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                             r'get_(?:\w+_)?grammar$')
     if callable(grammar_factory):
         grammar_factory.python_src__ = grammar_src
         return grammar_factory
     raise ValueError('Could not compile grammar provider!')
+
+
+def create_parser(ebnf_src: str, branding="DSL", additional_code: str='') -> Grammar:
+    """Compiles the ebnf source into a callable Grammar-object. This is
+    essentially syntactic sugar for `grammar_provider(ebnf)()`.
+    """
+    grammar_factory = grammar_provider(ebnf_src, branding, additional_code)
+    return grammar_factory()
 
 
 def split_source(file_name: str, file_content: str) -> Tuple[str]:
