@@ -61,8 +61,7 @@ class SerializingTestCompiler(Compiler):
 
 
 class TestCompilerClass:
-    def setup(self):
-        self.original = parse_sxpr('(A (B "1") (C (D (E "2") (F "3"))))')
+    original = parse_sxpr('(A (B "1") (C (D (E "2") (F "3"))))')
 
     def test_zero_compiler(self):
         """Tests the fallback-method and boilerplate of the compiler."""

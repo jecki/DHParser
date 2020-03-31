@@ -128,7 +128,9 @@ class ParserError(Exception):
         return "%i: %s    %s" % (self.node.pos, str(self.rest[:25]), repr(self.node))
 
 
-ResumeList = List[RxPatternType]  # list of regular expressiones
+ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressiones
+ReentryPointAlgorithm = Callable[[StringView, int], Tuple[int, int]]
+# (text, start point) => (reentry point, match length)
 
 
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
@@ -145,7 +147,8 @@ def reentry_point(rest: StringView,
     Args:
         rest:  The rest of the parsed text or, in other words, the point where
             a ParserError was thrown.
-        rules: A list of regular expressions. The rest of the text is searched for
+        rules: A list of strings, regular expressions or callable, i.e.
+            reentry-point-search-functions. The rest of the text is searched for
             each of these. The closest match is the point where parsing will be
             resumed.
         comment_regex: A regular expression object that matches comments.
@@ -171,9 +174,10 @@ def reentry_point(rest: StringView,
                 comments = None
         return -1, -2
 
-    # def str_search(s, start: int = 0) -> Tuple[int, int]:
-    #     nonlocal rest
-    #     return rest.find(s, start, start + search_window), len(s)
+    @cython.locals(start=cython.int)
+    def str_search(s, start: int = 0) -> Tuple[int, int]:
+        nonlocal rest
+        return rest.find(s, start, start + search_window), len(s)
 
     @cython.locals(start=cython.int, end=cython.int)
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
@@ -183,6 +187,10 @@ def reentry_point(rest: StringView,
             begin, end = m.span()
             return rest.index(begin), end - begin
         return -1, 0
+
+    def algorithm_search(func: Callable, start: int = 0):
+        nonlocal rest
+        return func(rest, start)
 
     @cython.locals(a=cython.int, b=cython.int, k=cython.int, length=cython.int)
     def entry_point(search_func, search_rule) -> int:
@@ -200,9 +208,13 @@ def reentry_point(rest: StringView,
     # find closest match
     for rule in rules:
         comments = rest.finditer(comment_regex)
-        assert not isinstance(rule, str), \
-            'Strings not allowed as search rules, use a regular expression instead.'
-        pos = entry_point(rx_search, rule)
+        if callable(rule):
+            search_func = algorithm_search
+        elif isinstance(rule, str):
+            search_func = str_search
+        else:
+            search_func = rx_search
+        pos = entry_point(search_func, rule)
         closest_match = min(pos, closest_match)
 
     # in case no rule matched return -1
@@ -2039,7 +2051,7 @@ class OneOrMore(UnaryParser):
         return None
 
 
-MessagesType = List[Tuple[Union[str, Any], str]]
+MessagesType = List[Tuple[Union[str, RxPatternType, Callable], str]]
 NO_MANDATORY = 2**30
 
 
@@ -2054,9 +2066,9 @@ class MandatoryNary(NaryParser):
                 parameter might change depending on the sub-class implementing
                 it.
         err_msgs:  A list of pairs of regular expressions (or simple
-                strings for that matter) and error messages that are chosen
-                if the regular expression matches the text where the error
-                occurred.
+                strings or boolean valued functions) and error messages
+                that are chosen if the regular expression matches the text
+                where the error occurred.
         skip: A list of regular expressions. The rest of the text is searched for
                 each of these. The closest match is the point where parsing will be
                 resumed.
@@ -2136,8 +2148,12 @@ class MandatoryNary(NaryParser):
         err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
         found = text_[:10].replace('\n', '\\n ') + '...'
         for search, message in self.err_msgs:
-            rxs = not isinstance(search, str)
-            if (rxs and text_.match(search)) or (not rxs and text_.startswith(search)):
+            is_func = callable(search)           # search rule is a function: StringView -> bool
+            is_str = isinstance(search, str)     # search rule is a simple string
+            is_rxs = not is_func and not is_str  # search rule is a regular expression
+            if (is_func and search(text_)) \
+                    or (is_rxs and text_.match(search)) \
+                    or (is_str and text_.startswith(search)):
                 try:
                     msg = message.format(expected, found)
                     break

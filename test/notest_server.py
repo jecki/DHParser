@@ -20,7 +20,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# Quite slow under MS Windows, threrefore renamed to notest_server.py
+# Quite slow under MS Windows! Therefore, renamed to notest_server.py
 # so that it not regularly called when running pytest/nosetest on
 # the test directory.
 
@@ -59,9 +59,9 @@ def compiler_dummy(src: str, log_dir: str='') -> str:
     return src
 
 
-def long_running(duration: float) -> str:
+def long_running(duration: float) -> float:
     time.sleep(float(duration))
-    return(duration)
+    return duration
 
 
 def send_request(request: str, expect_response: bool = True) -> str:
@@ -91,13 +91,10 @@ def json_rpc(method: str, params: dict) -> str:
 
 
 class TestServer:
-    # def test_server(self):
-    #     cs = Server(compiler_dummy)
-    #     cs.run_server()
+    spawn = multiprocessing.get_start_method() == "spawn"
 
     def setup(self):
         stop_server('127.0.0.1', TEST_PORT)
-        self.spawn = multiprocessing.get_start_method() == "spawn"
 
     def teardown(self):
         stop_server('127.0.0.1', TEST_PORT)

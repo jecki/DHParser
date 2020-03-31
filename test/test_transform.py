@@ -227,8 +227,7 @@ class TestConditionalTransformations:
         assert str(cst) == "faciterculasim.bona fide"
 
 class TestComplexTransformations:
-    def setup(self):
-        self.Text = 'Text'  # TOKEN_PTYPE
+    Text = 'Text'  # TOKEN_PTYPE
 
     def test_collapse_children_if_plain(self):
         xml = "<EINZEILER><DEU_WORT>spectat</DEU_WORT><WS> </WS><DEU_WORT>ad</DEU_WORT>" +\

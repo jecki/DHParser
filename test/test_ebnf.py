@@ -30,8 +30,8 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
-from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CONTINUATION, REDEFINED_DIRECTIVE, \
-    UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
+from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CONTINUATION, \
+    REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
@@ -143,10 +143,11 @@ class TestEBNFParser:
         }
     }
 
+    EBNF = get_ebnf_grammar()
+
     def setup(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
-        self.EBNF = get_ebnf_grammar()
 
     def teardown(self):
         clean_report('REPORT_TestEBNFParser')
@@ -340,10 +341,9 @@ class TestSelfHosting:
 
 
 class TestBoundaryCases:
-    def setup(self):
-        self.gr = get_ebnf_grammar()
-        self.tr = get_ebnf_transformer()
-        self.cp = get_ebnf_compiler()
+    gr = get_ebnf_grammar()
+    tr = get_ebnf_transformer()
+    cp = get_ebnf_compiler()
 
     def test_empty_grammar(self):
         t = self.gr("")
@@ -638,23 +638,22 @@ class TestErrorCustomizationErrors:
 
 
 class TestCustomizedResumeParsing:
-    def setup(self):
-        lang = r"""
-            @ alpha_resume = "BETA", "GAMMA"
-            @ beta_resume = GAMMA_RE
-            @ bac_resume = /(?=GA\w+)/
-            document = alpha [beta] gamma "."
-            alpha = "ALPHA" abc
-                abc = §"a" "b" "c"
-              beta = "BETA" (bac | bca)
-                bac = "b" "a" §"c"
-                bca = "b" "c" §"a"
-              gamma = "GAMMA" §(cab | cba)
-                cab = "c" "a" §"b"
-                cba = "c" "b" §"a"
-            GAMMA_RE = /(?=GA\w+)/
-            """
-        self.gr = grammar_provider(lang)()
+    lang = r"""
+        @ alpha_resume = "BETA", "GAMMA"
+        @ beta_resume = GAMMA_RE
+        @ bac_resume = /(?=GA\w+)/
+        document = alpha [beta] gamma "."
+        alpha = "ALPHA" abc
+            abc = §"a" "b" "c"
+          beta = "BETA" (bac | bca)
+            bac = "b" "a" §"c"
+            bca = "b" "c" §"a"
+          gamma = "GAMMA" §(cab | cba)
+            cab = "c" "a" §"b"
+            cba = "c" "b" §"a"
+        GAMMA_RE = /(?=GA\w+)/
+        """
+    gr = grammar_provider(lang)()
 
     def test_several_resume_rules_innermost_rule_matching(self):
         gr = self.gr
@@ -750,14 +749,13 @@ class TestInSeriesResume:
 
 
 class TestInterleaveResume:
-    def setup(self):
-        lang = """
-            document = allof
-            @ allof_error = '{} erwartet, {} gefunden :-('
-            @ allof_skip = "D", "E", "F", "G"
-            allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G" 
-        """
-        self.gr = grammar_provider(lang)()
+    lang = """
+        document = allof
+        @ allof_error = '{} erwartet, {} gefunden :-('
+        @ allof_skip = "D", "E", "F", "G"
+        allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G" 
+    """
+    gr = grammar_provider(lang)()
 
     def test_garbage_added(self):
         st = self.gr('BAGFCED')

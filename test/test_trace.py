@@ -160,19 +160,20 @@ class TestTrace:
 
 
 class TestErrorReporting:
+    lang = """
+    document = alpha [beta] gamma "."
+      alpha = "ALPHA" abc
+        abc = §"a" "b" "c"
+      beta = "BETA" (bac | bca)
+        bac = "b" "a" §"c"
+        bca = "b" "c" §"a"
+      gamma = "GAMMA" §(cab | cba)
+        cab = "c" "a" §"b"
+        cba = "c" "b" §"a"
+    """
+    gr = grammar_provider(lang)()
+
     def setup(self):
-        lang = """
-        document = alpha [beta] gamma "."
-          alpha = "ALPHA" abc
-            abc = §"a" "b" "c"
-          beta = "BETA" (bac | bca)
-            bac = "b" "a" §"c"
-            bca = "b" "c" §"a"
-          gamma = "GAMMA" §(cab | cba)
-            cab = "c" "a" §"b"
-            cba = "c" "b" §"a"
-        """
-        self.gr = grammar_provider(lang)()
         start_logging()
 
     def teardown(self):

@@ -222,13 +222,12 @@ class TestInfiLoopsAndRecursion:
 
 
 class TestFlowControl:
-    def setup(self):
-        self.t1 = """
-        All work and no play
-        makes Jack a dull boy
-        END
-        """
-        self.t2 = "All word and not play makes Jack a dull boy END\n"
+    t1 = """
+         All work and no play
+         makes Jack a dull boy
+         END
+         """
+    t2 = "All word and not play makes Jack a dull boy END\n"
 
     def test_lookbehind(self):
         ws = RegExp(r'\s*')
@@ -348,17 +347,16 @@ class TestRegex:
 
 
 class TestGrammar:
-    def setup(self):
-        grammar = r"""@whitespace = horizontal
-        haupt        = textzeile LEERZEILE
-        textzeile    = { WORT }+
-        WORT         = /[^ \t]+/~
-        LEERZEILE    = /\n[ \t]*(?=\n)/~
-        """
-        self.pyparser, messages, _ = compile_source(grammar, None, get_ebnf_grammar(),
-                                    get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
-        assert self.pyparser
-        assert not messages
+    grammar = r"""@whitespace = horizontal
+    haupt        = textzeile LEERZEILE
+    textzeile    = { WORT }+
+    WORT         = /[^ \t]+/~
+    LEERZEILE    = /\n[ \t]*(?=\n)/~
+    """
+    pyparser, messages, _ = compile_source(grammar, None, get_ebnf_grammar(),
+                                           get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
+    assert pyparser
+    assert not messages
 
     def test_pos_values_initialized(self):
         # checks whether pos values in the parsing result and in the
@@ -868,9 +866,7 @@ class TestWhitespaceHandling:
         ar = /A/
         br = /B/
         """
-
-    def setup(self):
-        self.gr = grammar_provider(self.minilang)()
+    gr = grammar_provider(minilang)()
 
     def test_token_whitespace(self):
         st = self.gr("AB", 'doc')
@@ -1015,19 +1011,18 @@ EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
 
 
 class TestReentryAfterError:
-    def setup(self):
-        lang = """
-        document = alpha [beta] gamma "."
-          alpha = "ALPHA" abc
-            abc = §"a" "b" "c"
-          beta = "BETA" (bac | bca)
-            bac = "b" "a" §"c"
-            bca = "b" "c" §"a"
-          gamma = "GAMMA" §(cab | cba)
-            cab = "c" "a" §"b"
-            cba = "c" "b" §"a"
-        """
-        self.gr = grammar_provider(lang)()
+    testlang = """
+    document = alpha [beta] gamma "."
+      alpha = "ALPHA" abc
+        abc = §"a" "b" "c"
+      beta = "BETA" (bac | bca)
+        bac = "b" "a" §"c"
+        bca = "b" "c" §"a"
+      gamma = "GAMMA" §(cab | cba)
+        cab = "c" "a" §"b"
+        cba = "c" "b" §"a"
+    """
+    gr = grammar_provider(testlang)()
 
     def test_no_resume_rules(self):
         gr = self.gr;  gr.resume_rules = dict()
@@ -1194,19 +1189,18 @@ class TestUnknownParserError:
 
 
 class TestEarlyTokenWhitespaceDrop:
-    def setup(self):
-        self.lang = r"""
-            @ drop = token, whitespace
-            expression = term  { ("+" | "-") term}
-            term       = factor  { ("*"|"/") factor}
-            factor     = number | variable | "("  expression  ")"
-                       | constant | fixed
-            variable   = /[a-z]/~
-            number     = /\d+/~
-            constant   = "A" | "B"
-            fixed      = "X"
-            """
-        self.gr = grammar_provider(self.lang)()
+    lang = r"""
+        @ drop = token, whitespace
+        expression = term  { ("+" | "-") term}
+        term       = factor  { ("*"|"/") factor}
+        factor     = number | variable | "("  expression  ")"
+                   | constant | fixed
+        variable   = /[a-z]/~
+        number     = /\d+/~
+        constant   = "A" | "B"
+        fixed      = "X"
+        """
+    gr = grammar_provider(lang)()
 
     def test_drop(self):
         cst = self.gr('4 + 3 * 5')
@@ -1223,12 +1217,11 @@ class TestEarlyTokenWhitespaceDrop:
 
 
 class TestMetaParser:
-    def setup(self):
-        self.mp = MetaParser()
-        self.mp.grammar = Grammar()  # override placeholder warning
-        self.mp.pname = "named"
-        self.mp.anonymous = False
-        self.mp.tag_name = self.mp.pname
+    mp = MetaParser()
+    mp.grammar = Grammar()  # override placeholder warning
+    mp.pname = "named"
+    mp.anonymous = False
+    mp.tag_name = mp.pname
 
     def test_return_value(self):
         save = get_config_value('flatten_tree')

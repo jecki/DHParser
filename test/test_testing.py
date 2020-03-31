@@ -223,14 +223,6 @@ class TestGrammarTest:
         errata = grammar_unit(self.failure_cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
         assert len(errata) == 3, str(errata)
 
-    # def test_get_report(self):
-    #     parser_fac = grammar_provider(ARITHMETIC_EBNF)
-    #     trans_fac = lambda : ARITHMETIC_EBNFTransform
-    #     reset_unit(self.cases)
-    #     grammar_unit(self.cases, parser_fac, trans_fac)
-    #     report = get_report(self.cases)
-    #     assert report.find('### CST') >= 0
-
     def test_fail_failtest(self):
         """Failure test should not pass if it failed because the parser is unknown."""
         fcases = {}
@@ -286,11 +278,12 @@ class TestLookahead:
         }
     }
 
+    grammar_fac = grammar_provider(EBNF)
+    trans_fac = lambda: partial(traverse, processing_table={"*": [flatten, remove_empty]})
+
     def setup(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
-        self.grammar_fac = grammar_provider(TestLookahead.EBNF)
-        self.trans_fac = lambda : partial(traverse, processing_table={"*": [flatten, remove_empty]})
 
     def teardown(self):
         clean_report('REPORT_TestLookahead')
@@ -307,12 +300,12 @@ class TestLookahead:
             Rivers:
                 Nile   
             """
-        grammar = self.grammar_fac()
+        grammar = TestLookahead.grammar_fac()
         cst = grammar(doc)
         assert not cst.error_flag
 
     def test_unit_lookahead(self):
-        gr = self.grammar_fac()
+        gr = TestLookahead.grammar_fac()
         set_tracer(gr, trace_history)
         # Case 1: Lookahead string is part of the test case; parser fails but for the lookahead
         result = gr(self.cases['category']['match'][1], 'category')
@@ -322,10 +315,10 @@ class TestLookahead:
         # Case 2: Lookahead string is not part of the test case; parser matches but for the mandatory continuation
         result = gr(self.cases['category']['match'][2], 'category')
         assert any(e.code == MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
-        errata = grammar_unit(self.cases, self.grammar_fac, self.trans_fac,
+        errata = grammar_unit(self.cases, TestLookahead.grammar_fac, TestLookahead.trans_fac,
                               'REPORT_TestLookahead')
         assert not errata, str(errata)
-        errata = grammar_unit(self.fail_cases, self.grammar_fac, self.trans_fac,
+        errata = grammar_unit(self.fail_cases, TestLookahead.grammar_fac, TestLookahead.trans_fac,
                               'REPORT_TestLookahead')
         assert errata
 

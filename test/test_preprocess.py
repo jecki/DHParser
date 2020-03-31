@@ -58,10 +58,10 @@ class TestMakeToken:
 
 
 class TestSourceMapping:
-    def setup(self):
-        self.code = "All persons are mortal AND Socrates is a person YIELDS Socrates is mortal"
-        self.tokenized = self.code.replace('AND', make_token('CONJUNCTION', 'AND')) \
-            .replace('YIELDS', make_token('IMPLICATION', 'YIELDS'))
+    code = "All persons are mortal AND Socrates is a person YIELDS Socrates is mortal"
+    tokenized = code.replace('AND', make_token('CONJUNCTION', 'AND')) \
+        .replace('YIELDS', make_token('IMPLICATION', 'YIELDS'))
+
 
     def test_tokenized_to_original_mapping(self):
         srcmap = tokenized_to_original_mapping(self.tokenized)
@@ -84,67 +84,67 @@ class TestSourceMapping:
         pos = source_map(0, srcmap)
 
 
+def preprocess_indentation(src: str) -> str:
+    transformed = []
+    indent_level = 0
+    for line in src.split('\n'):
+        indent = len(line) - len(line.lstrip()) if line.strip() else indent_level * 4
+        assert indent % 4 == 0
+        if indent > indent_level * 4:
+            assert indent == (indent_level + 1) * 4, str(indent)  # indent must be 4 spaces
+            indent_level += 1
+            line = make_token('BEGIN_INDENT') + line
+        elif indent <= (indent_level - 1) * 4:
+            while indent <= (indent_level - 1) * 4:
+                line = make_token('END_INDENT') + line
+                indent_level -= 1
+            assert indent == (indent_level + 1) * 4  # indent must be 4 spaces
+        else:
+            assert indent == indent_level * 4
+        transformed.append(line)
+    while indent_level > 0:
+        transformed[-1] += make_token('END_INDENT')
+        indent_level -= 1
+    tokenized = '\n'.join(transformed)
+    # print(prettyprint_tokenized(tokenized))
+    return tokenized
+
+def preprocess_comments(src: str) -> Tuple[str, SourceMapFunc]:
+    lines = src.split('\n')
+    positions, offsets = [0], [0]
+    pos = 0
+    for i, line in enumerate(lines):
+        comment_pos = line.find('#')
+        if comment_pos >= 0:
+            pos += comment_pos
+            lines[i] = line[:comment_pos]
+            positions.append(pos - offsets[-1])
+            offsets.append(offsets[-1] + len(line) - comment_pos)
+        pos += len(lines[i])
+    positions.append(pos)
+    offsets.append(offsets[-1])
+    return '\n'.join(lines), partial(source_map, srcmap=SourceMap(positions, offsets))
+
+
 class TestTokenParsing:
-    def preprocess_indentation(self, src: str) -> str:
-        transformed = []
-        indent_level = 0
-        for line in src.split('\n'):
-            indent = len(line) - len(line.lstrip()) if line.strip() else indent_level * 4
-            assert indent % 4 == 0
-            if indent > indent_level * 4:
-                assert indent == (indent_level + 1) * 4, str(indent)  # indent must be 4 spaces
-                indent_level += 1
-                line = make_token('BEGIN_INDENT') + line
-            elif indent <= (indent_level - 1) * 4:
-                while indent <= (indent_level - 1) * 4:
-                    line = make_token('END_INDENT') + line
-                    indent_level -= 1
-                assert indent == (indent_level + 1) * 4  # indent must be 4 spaces
-            else:
-                assert indent == indent_level * 4
-            transformed.append(line)
-        while indent_level > 0:
-            transformed[-1] += make_token('END_INDENT')
-            indent_level -= 1
-        tokenized = '\n'.join(transformed)
-        # print(prettyprint_tokenized(tokenized))
-        return tokenized
-
-    def preprocess_comments(self, src: str) -> Tuple[str, SourceMapFunc]:
-        lines = src.split('\n')
-        positions, offsets = [0], [0]
-        pos = 0
-        for i, line in enumerate(lines):
-            comment_pos = line.find('#')
-            if comment_pos >= 0:
-                pos += comment_pos
-                lines[i] = line[:comment_pos]
-                positions.append(pos - offsets[-1])
-                offsets.append(offsets[-1] + len(line) - comment_pos)
-            pos += len(lines[i])
-        positions.append(pos)
-        offsets.append(offsets[-1])
-        return '\n'.join(lines), partial(source_map, srcmap=SourceMap(positions, offsets))
-
-    def setup(self):
-        self.ebnf = r"""
-            @ tokens     = BEGIN_INDENT, END_INDENT
-            @ whitespace = /[ \t]*/ 
-            block       = { line | indentBlock }+
-            line        = ~/[^\x1b\x1c\x1d\n]*\n/
-            indentBlock = BEGIN_INDENT block END_INDENT
-            """
-        set_config_value('max_parser_dropouts', 3)
-        self.grammar = grammar_provider(self.ebnf)()
-        self.code = lstrip_docstring("""
-            def func(x, y):
-                if x > 0:         # a comment
-                    if y > 0:
-                        print(x)  # another comment
-                        print(y)
-            """)
-        self.tokenized = self.preprocess_indentation(self.code)
-        self.srcmap = tokenized_to_original_mapping(self.tokenized)
+    ebnf = r"""
+        @ tokens     = BEGIN_INDENT, END_INDENT
+        @ whitespace = /[ \t]*/ 
+        block       = { line | indentBlock }+
+        line        = ~/[^\x1b\x1c\x1d\n]*\n/
+        indentBlock = BEGIN_INDENT block END_INDENT
+        """
+    set_config_value('max_parser_dropouts', 3)
+    grammar = grammar_provider(ebnf)()
+    code = lstrip_docstring("""
+        def func(x, y):
+            if x > 0:         # a comment
+                if y > 0:
+                    print(x)  # another comment
+                    print(y)
+        """)
+    tokenized = preprocess_indentation(code)
+    srcmap = tokenized_to_original_mapping(tokenized)
 
     def verify_mapping(self, teststr, orig_text, preprocessed_text, mapping):
         mapped_pos = preprocessed_text.find(teststr)
@@ -180,7 +180,7 @@ class TestTokenParsing:
             previous_index = index
 
     def test_non_token_preprocessor(self):
-        tokenized, mapping = self.preprocess_comments(self.code)
+        tokenized, mapping = preprocess_comments(self.code)
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
@@ -188,7 +188,7 @@ class TestTokenParsing:
         self.verify_mapping("print(y)", self.code, tokenized, mapping)
 
     def test_chained_preprocessors(self):
-        pchain = chain_preprocessors(self.preprocess_comments, self.preprocess_indentation)
+        pchain = chain_preprocessors(preprocess_comments, preprocess_indentation)
         tokenized, mapping = pchain(self.code)
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
@@ -198,7 +198,7 @@ class TestTokenParsing:
 
     def test_error_position(self):
         orig_src = self.code.replace('#', '\x1b')
-        prepr = chain_preprocessors(self.preprocess_comments, self.preprocess_indentation)
+        prepr = chain_preprocessors(preprocess_comments, preprocess_indentation)
         self.grammar.max_parser_dropouts__ = 3
         result, messages, syntaxtree = compile_source(orig_src, prepr, self.grammar,
                                                       lambda i: i, lambda i: i)

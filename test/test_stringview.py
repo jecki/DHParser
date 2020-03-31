@@ -151,14 +151,13 @@ class TestStringView:
 
 
 class TestTextBuffer:
-    def setup(self):
-        self.test_text = "\n".join([
-        "To be or not to be",
-        "that is the question.",
-        "Whether it is nobler in mind to suffer",
-        "the slings and arrows of misfortune,",
-        "or, by opposing them, end them."
-        ])
+    test_text = "\n".join([
+    "To be or not to be",
+    "that is the question.",
+    "Whether it is nobler in mind to suffer",
+    "the slings and arrows of misfortune,",
+    "or, by opposing them, end them."
+    ])
 
     def test_buffer_update(self):
         t = TextBuffer(self.test_text)
