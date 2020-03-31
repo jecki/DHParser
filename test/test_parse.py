@@ -23,7 +23,7 @@ import copy
 import os
 import sys
 from functools import partial
-from typing import List
+from typing import List, Tuple
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
@@ -39,7 +39,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     GrammarError
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
-    parse_ebnf, DHPARSER_IMPORTS
+    parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
 from DHParser.dsl import grammar_provider
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
@@ -1009,7 +1009,6 @@ ENDL       = `;` | ``
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
 """
 
-
 class TestReentryAfterError:
     testlang = """
     document = alpha [beta] gamma "."
@@ -1105,6 +1104,28 @@ class TestReentryAfterError:
         assert cst.pick('alpha').content.startswith('ALPHA')
         # there should be only two error messages
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 2
+
+    def test_algorithmic_resume(self):
+        lang = r"""
+            document = block_A block_B
+            @ block_A_resume = next_valid_letter()
+            @ block_A_skip = next_valid_letter()
+            block_A = "a" §"b" "c"
+            block_B = "x" "y" "z"
+            """
+        proc = """
+def next_valid_letter(text: StringView, start: int) -> Tuple[int, int]:
+    while start < len(text):
+        if str(text[start]) in 'abcxyz':
+            return start, 1
+    return -1, 0
+"""
+        code, errors, ast = compile_ebnf(lang)
+        code += proc
+
+        tree = gr('ab*xyz')
+        print(tree.as_sxpr())
+
 
     def test_skip_comment_on_resume(self):
         lang = r"""

@@ -900,6 +900,11 @@ class EBNFCompiler(Compiler):
         elif nd.tag_name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks
             return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
+        elif nd.tag_name == 'procedure':
+            return unrepr(nd.content)
+        elif nd.tag_name != 'symbol':
+            self.tree.new_error(nd, 'Only regular expressions, string literals and external '
+                                'procedures are allowed as search rules, but not: ' + nd.tag_name)
         return ''
 
 
@@ -998,12 +1003,16 @@ class EBNFCompiler(Compiler):
                     except IndexError:
                         nd = self.tree
                         refined = ""
+                    except KeyError:
+                        # rule represents a procedure name
+                        refined = rule
                     if refined:
                         refined_rules.append(refined)
                     else:
-                        self.tree.new_error(nd, 'Symbol "%s" cannot be used in resume rule, since'
-                                            ' it represents neither literal nor regexp!',
-                                            INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
+                        self.tree.new_error(
+                            nd, 'Symbol "%s" cannot be used in resume rule, since it represents '
+                            'neither literal nor regexp nor procedure!',
+                            INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
                 else:
                     refined_rules.append(rule)
             resume_rules[symbol] = refined_rules
@@ -1023,6 +1032,9 @@ class EBNFCompiler(Compiler):
                         search = self._gen_search_rule(nd)
                     except IndexError:
                         search = ''
+                    except KeyError:
+                        # rule represents a procedure name
+                        pass
                 rules.append(search)
             skip_rules[symbol] = rules
         if skip_rules:

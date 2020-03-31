@@ -131,6 +131,7 @@ class ParserError(Exception):
 ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressiones
 ReentryPointAlgorithm = Callable[[StringView, int], Tuple[int, int]]
 # (text, start point) => (reentry point, match length)
+# A return value of (-1, x) means that no reentry point before the end of the document was found
 
 
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
