@@ -2068,7 +2068,7 @@ def to_interleave(parser: Parser) -> Parser:
 class Counted(UnaryParser):
     """Counted applies a parser for a number of repetitions within a given range, i.e.
     the parser must at least for the lower bound number of repetitions in order to
-    match and it matches at most the upper bound number of repetitions.
+    match and it matches at most the upper bound number of repetitions. Examples:
 
     >>> A2_4 = Counted(Token('A'), (2, 4))
     >>> A2_4
@@ -2087,6 +2087,9 @@ class Counted(UnaryParser):
     `A` ° `B`
     >>> Grammar(moves)('BBA').content
     'BBA'
+
+    While a Counted-parser could be treated as a special case of Interleave-parser,
+    defining a dedicated class makes the purpose clearer and runs slightly faster.
     """
     def __init__(self, parser: Parser, repetitions: Tuple[int, int]) -> None:
         super(Counted, self).__init__(parser)
