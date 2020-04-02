@@ -70,14 +70,14 @@ cdef class RegExp(Parser):
 cdef class Whitespace(RegExp):
     pass
 
-cdef class MetaParser(Parser):
+cdef class CombinedParser(Parser):
     cpdef _return_value(self, node)
     cpdef _return_values(self, results)
 
-cdef class UnaryParser(MetaParser):
+cdef class UnaryParser(CombinedParser):
     cdef public object parser
 
-cdef class NaryParser(MetaParser):
+cdef class NaryParser(CombinedParser):
     cdef public object parsers
 
 cdef class Option(UnaryParser):

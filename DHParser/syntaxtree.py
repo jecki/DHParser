@@ -1516,7 +1516,7 @@ class RootNode(Node):
         duplicate.tag_name = self.tag_name
         return duplicate
 
-    def swallow(self, node: Node) -> 'RootNode':
+    def swallow(self, node: Optional[Node]) -> 'RootNode':
         """
         Put `self` in the place of `node` by copying all its data.
         Returns self.
@@ -1528,6 +1528,9 @@ class RootNode(Node):
         It is possible to add errors to a RootNode object, before it
         has actually swallowed the root of the syntax tree.
         """
+        if node is None:
+            self.tag_name = EMPTY_PTYPE
+            return self
         self._result = node._result
         self.children = node.children
         self._pos = node._pos

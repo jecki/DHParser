@@ -35,7 +35,7 @@ from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CO
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
-    Interleave, UnknownParserError, MetaParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
+    Interleave, UnknownParserError, CombinedParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -1238,7 +1238,7 @@ class TestEarlyTokenWhitespaceDrop:
 
 
 class TestMetaParser:
-    mp = MetaParser()
+    mp = CombinedParser()
     mp.grammar = Grammar()  # override placeholder warning
     mp.pname = "named"
     mp.anonymous = False

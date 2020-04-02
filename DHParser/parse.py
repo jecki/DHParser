@@ -70,7 +70,7 @@ __all__ = ('ParserError',
            'DropRegExp',
            'mixin_comment',
            'mixin_nonempty',
-           'MetaParser',
+           'CombinedParser',
            'UnaryParser',
            'NaryParser',
            'Drop',
@@ -540,6 +540,8 @@ class Parser:
         """
         if isinstance(other, Interleave):
             return cast(Interleave, other).__rmul__(self)
+        elif isinstance(other, Counted):
+            return cast(Counted, other).__rmul__(self)
         return Interleave(self, other)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1396,8 +1398,7 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
-        if result:
-            self.tree__.swallow(result)
+        self.tree__.swallow(result)
         self.start_parser__ = None
         # self.history_tracking__ = save_history_tracking
         return self.tree__
@@ -1752,16 +1753,19 @@ class Whitespace(RegExp):
 ########################################################################
 
 
-class MetaParser(Parser):
-    """Class Meta-Parser contains functions for the optimization of
-    return values of parsers that call other parsers (i.e descendants
-    of classes UnaryParser and NaryParser).
+class CombinedParser(Parser):
+    """Class CombinedParser is the base class for all parsers that
+    call ("combine") other parsers. It contains functions for the
+    optimization of return values of such parser
+    (i.e descendants of classes UnaryParser and NaryParser).
 
     The optimization consists in flattening the tree by eliminating
     anonymous nodes. This is the same as what the function
     DHParser.transform.flatten() does, only at an earlier stage.
     The reasoning is that the earlier the tree is reduced, the less work
-    remains to do at all the later processing stages.
+    remains to do at all later processing stages. As these typically run
+    through all nodes of the syntax tree, this results in a considerable
+    speed up.
     """
 
     def _return_value(self, node: Optional[Node]) -> Node:
@@ -1824,7 +1828,7 @@ class MetaParser(Parser):
         return Node(self.tag_name, results)  # unoptimized code
 
 
-class UnaryParser(MetaParser):
+class UnaryParser(CombinedParser):
     """
     Base class of all unary parsers, i.e. parser that contains
     one and only one other parser, like the optional parser for example.
@@ -1856,7 +1860,7 @@ class UnaryParser(MetaParser):
                                    self.parser.pname or '_', self.parser.ptype)
 
 
-class NaryParser(MetaParser):
+class NaryParser(CombinedParser):
     """
     Base class of all Nnary parsers, i.e. parser that
     contains one or more other parsers, like the alternative
@@ -2014,9 +2018,6 @@ class OneOrMore(UnaryParser):
 
     def __init__(self, parser: Parser) -> None:
         super(OneOrMore, self).__init__(parser)
-        # assert not parser.is_optional(), \
-        #     "Use ZeroOrMore instead of nesting OneOrMore and Option: " \
-        #     "%s(%s)" % (self.ptype, parser.pname)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
@@ -2052,6 +2053,91 @@ class OneOrMore(UnaryParser):
         return None
 
 
+INFINITE = 2**30
+
+
+def to_interleave(parser: Parser) -> Parser:
+    """Converts a `Counted`-parser into an `Interleave`-parser. Any other
+    parser is simply passed through."""
+    if isinstance(parser, Counted):
+        return Interleave(cast(Counted, parser).parser,
+                          repetitions=[cast(Counted, parser).repetitions])
+    return parser
+
+
+class Counted(UnaryParser):
+    """Counted applies a parser for a number of repetitions within a given range, i.e.
+    the parser must at least for the lower bound number of repetitions in order to
+    match and it matches at most the upper bound number of repetitions.
+
+    >>> A2_4 = Counted(Token('A'), (2, 4))
+    >>> A2_4
+    `A`(2,4)
+    >>> Grammar(A2_4)('AA').content
+    'AA'
+    >>> Grammar(A2_4)('AAAAA', complete_match=False).content
+    'AAAA'
+    >>> Grammar(A2_4)('A', complete_match=False).content
+    ''
+    >>> moves = OneOrMore(Counted(Token('A'), (1, 3)) + Counted(Token('B'), (1, 3)))
+    >>> Grammar(moves)('AAABABBAA').content
+    'AAABABBAA'
+    >>> moves = Counted(Token('A'), (0, 3)) * Counted(Token('B'), (0, 3))
+    >>> moves
+    `A` ° `B`
+    >>> Grammar(moves)('BBA').content
+    'BBA'
+    """
+    def __init__(self, parser: Parser, repetitions: Tuple[int, int]) -> None:
+        super(Counted, self).__init__(parser)
+        self.repetitions = repetitions
+
+    def __deepcopy__(self, memo):
+        parser = copy.deepcopy(self.parser, memo)
+        duplicate = self.__class__(parser, self.repetitions)
+        copy_parser_base_attrs(self, duplicate)
+        return duplicate
+
+    def _parse(self, text: StringView):
+        results = ()  # Tuple[Node, ...]
+        text_ = text
+        for _ in range(self.repetitions[0]):
+            node, text_ = self.parser(text_)
+            if node is None:
+                return None, text
+            results += (node,)
+        for _ in range(self.repetitions[1] - self.repetitions[0]):
+            node, text_ = self.parser(text_)
+            if node is None:
+                break
+            results += (node,)
+        return self._return_values(results), text_
+
+    def is_optional(self) -> Optional[bool]:
+        return self.repetitions[0] == 0
+
+    def __repr__(self):
+        return self.parser.repr + str(self.repetitions).replace(' ', '')
+
+    def __mul__(self, other: Parser) -> 'Interleave':
+        return Interleave.__mul__(to_interleave(self), to_interleave(other))
+
+    def __rmul__(self, other: Parser) -> 'Interleave':
+        return Interleave.__rmul__(to_interleave(self), to_interleave(other))
+
+    def __imul__(self, other: Parser) -> 'Interleave':
+        return Interleave.__imul__(to_interleave(self), to_interleave(other))
+
+    def static_analysis(self) -> Optional[List['AnalysisError']]:
+        a, b = self.repetitions
+        if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
+            return [self.static_error(
+                'Repetition count [a=%i, b=%i] for parser %s violates requirement '
+                '0 <= a <= b <= infinity = 2^30 !' % (a, b, str(self))
+            )]
+        return None
+
+
 MessagesType = List[Tuple[Union[str, RxPatternType, Callable], str]]
 NO_MANDATORY = 2**30
 
@@ -2083,17 +2169,6 @@ class MandatoryNary(NaryParser):
         length = len(self.parsers)
         if mandatory < 0:
             mandatory += length
-
-        # assert not (mandatory == NO_MANDATORY and err_msgs), \
-        #     'Custom error messages require that parameter "mandatory" is set!'
-        # assert not (mandatory == NO_MANDATORY and skip), \
-        #     'Search expressions for skipping text require that parameter "mandatory" is set!'
-        # assert length > 0, \
-        #     'Number of elements %i is below minimum length of 1' % length
-        # assert length < NO_MANDATORY, \
-        #     'Number of elemnts %i of series exceeds maximum length of %i' % (length, NO_MANDATORY)
-        #
-        # assert 0 <= mandatory < length or mandatory == NO_MANDATORY
 
         self.mandatory = mandatory  # type: int
         self.err_msgs = err_msgs    # type: MessagesType
@@ -2385,7 +2460,7 @@ class Alternative(NaryParser):
         return errors or None
 
 
-INFINITE = 2**30
+
 
 
 class Interleave(MandatoryNary):
@@ -2434,7 +2509,7 @@ class Interleave(MandatoryNary):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, text: StringView) :
+    def _parse(self, text: StringView):
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         counter = [0] * len(self.parsers)
@@ -2488,6 +2563,7 @@ class Interleave(MandatoryNary):
     def _prepare_combined(self, other: Parser) -> Tuple[Tuple[Parser], int, List[Tuple[int, int]]]:
         """Returns the other's parsers and repetitions if `other` is an Interleave-parser,
         otherwise returns ((other,),), [(1, 1])."""
+        other = to_interleave(other)
         other_parsers = cast('Interleave', other).parsers if isinstance(other, Interleave) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         other_repetitions = cast('Interleave', other).repetitions \
@@ -2528,11 +2604,17 @@ class Interleave(MandatoryNary):
     def static_analysis(self) -> Optional[List['AnalysisError']]:
         # assert len(set(parsers)) == len(parsers)  # commented out, because this could make sense
         if not all(not parser.is_optional() and not isinstance(parser, FlowParser)
-                   for parser in self.parsers):
+                   and not isinstance(parser, Counted) for parser in self.parsers):
             return [self.static_error(
-                "Flow-operators and optional parsers are neither allowed nor needed inside "
-                "of interleave-parser " + self.location_info(),
+                "Flow-operators, Counted-parsers and optional parsers are neither allowed "
+                "nor needed inside of an interleave-parser " + self.location_info(),
                 BADLY_NESTED_OPTIONAL_PARSER)]
+        for parser, (a, b) in zip(self.parsers, self.repetitions):
+            if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
+                return [self.static_error(
+                    'Repetition count [a=%i, b=%i] for parser %s violates requirement '
+                    '0 <= a <= b <= infinity = 2^30 !' % (a, b, str(parser))
+                )]
         return None
 
 
@@ -2553,27 +2635,6 @@ class FlowParser(UnaryParser):
 
 def Required(parser: Parser) -> Parser:
     return Series(parser, mandatory=0)
-
-
-# class Required(FlowParser):
-#     """OBSOLETE. Use mandatory-parameter of Series-parser instead!
-#     """
-#     RX_ARGUMENT = re.compile(r'\s(\S)')
-#
-#     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-#         node, text_ = self.parser(text)
-#         if not node:
-#             m = text.search(Required.RX_ARGUMENT)  # re.search(r'\s(\S)', text)
-#             i = max(1, text.index(m.regs[1][0])) if m else 1
-#             node = Node(self, text[:i])
-#             text_ = text[i:]
-#             self.grammar.tree__.new_error(node,
-#                                           '%s expected; "%s" found!' % (str(self.parser),
-#                                           text[:10]), code=MANDATORY_CONTINUATION)
-#         return node, text_
-#
-#     def __repr__(self):
-#         return '§' + self.parser.repr
 
 
 class Lookahead(FlowParser):
@@ -2617,7 +2678,7 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowParser):
     """
     Matches, if the contained parser would match backwards. Requires
-    the contained parser to be a RegExp, _RE, PlainText or _Token parser.
+    the contained parser to be a RegExp, _RE, Token parser.
 
     EXPERIMENTAL
     """
@@ -2630,7 +2691,7 @@ class Lookbehind(FlowParser):
         self.text = ''  # type: str
         if isinstance(p, RegExp):
             self.regexp = cast(RegExp, p).regexp
-        else:  # p is of type PlainText
+        else:  # p is of type Token
             self.text = cast(Token, p).text
         super(Lookbehind, self).__init__(parser)
 
