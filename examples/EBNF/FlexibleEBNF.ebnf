@@ -11,6 +11,7 @@
 @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
 @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
 
+
 # specialized error messages for certain cases
 
 @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
@@ -18,16 +19,19 @@
                            'due to inconsistent use of the comma as a delimiter\nfor the elements '
                            'of a sequence.'
 
+
 #: top-level
 
 syntax     = [~//] { definition | directive } EOF
 definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
+
 directive  = "@" §symbol "=" (regexp | literals | procedure | symbol)
              { "," (regexp | literals | procedure | symbol) } & FOLLOW_UP
 literals   = { literal }+                       # string chaining, only allowed in directives!
 procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
 FOLLOW_UP  = `@` | symbol | EOF
+
 
 #: components
 
@@ -39,6 +43,7 @@ lookaround = flowmarker § (oneormore | pure_elem)
 difference = term ["-" § (oneormore | pure_elem)]
 term       = oneormore | repetition | option | pure_elem
 
+
 #: elements
 
 pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
@@ -49,11 +54,13 @@ element    = [retrieveop] symbol !DEF           # negative lookahead to be sure 
            | whitespace
            | group
 
+
 #: flow-operators
 
 flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
            | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
 retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+
 
 #: groups
 
@@ -61,6 +68,7 @@ group      = "(" §expression ")"
 oneormore  = "{" expression "}+" | element "+"
 repetition = "{" §expression "}" | element "*"
 option     = "[" §expression "]" | element "?"
+
 
 #: leaf-elements
 
@@ -71,6 +79,7 @@ literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
 regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
 whitespace = /~/~                               # insignificant whitespace
+
 
 #: delimiters
 
