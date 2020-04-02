@@ -728,14 +728,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :raises: ValueError, if no child matching the criterion `what` was found.
         """
         assert 0 <= start < stop
-        i = start
         mf = create_match_function(what)
-        for child in self.children[start:stop]:
+        for i, child in enumerate(self.children[start:stop]):
             if mf(child):
-                return i
-            i += 1
-            if i >= stop:
-                break
+                return i + start
         raise ValueError("Node identified by '%s' not among child-nodes." % str(what))
 
     @cython.locals(i=cython.int)
