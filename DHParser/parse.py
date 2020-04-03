@@ -540,8 +540,6 @@ class Parser:
         """
         if isinstance(other, Interleave):
             return cast(Interleave, other).__rmul__(self)
-        elif isinstance(other, Counted):
-            return cast(Counted, other).__rmul__(self)
         return Interleave(self, other)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -2068,25 +2066,28 @@ def to_interleave(parser: Parser) -> Parser:
 class Counted(UnaryParser):
     """Counted applies a parser for a number of repetitions within a given range, i.e.
     the parser must at least for the lower bound number of repetitions in order to
-    match and it matches at most the upper bound number of repetitions. Examples:
+    match and it matches at most the upper bound number of repetitions.
+
+    Examples:
 
     >>> A2_4 = Counted(Token('A'), (2, 4))
     >>> A2_4
     `A`(2,4)
-    >>> Grammar(A2_4)('AA').content
-    'AA'
-    >>> Grammar(A2_4)('AAAAA', complete_match=False).content
-    'AAAA'
-    >>> Grammar(A2_4)('A', complete_match=False).content
-    ''
+    >>> Grammar(A2_4)('AA').as_sxpr()
+    '(:Counted (:Token "A") (:Token "A"))'
+    >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
+    '(:Counted (:Token "A") (:Token "A") (:Token "A") (:Token "A"))'
+    >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
+    '(:EMPTY)'
     >>> moves = OneOrMore(Counted(Token('A'), (1, 3)) + Counted(Token('B'), (1, 3)))
-    >>> Grammar(moves)('AAABABBAA').content
-    'AAABABBAA'
-    >>> moves = Counted(Token('A'), (0, 3)) * Counted(Token('B'), (0, 3))
+    >>> result = Grammar(moves)('AAABABB')
+    >>> result.tag_name, result.content
+    (':OneOrMore', 'AAABABB')
+    >>> moves = Counted(Token('A'), (2, 3)) * Counted(Token('B'), (2, 3))
     >>> moves
-    `A` ° `B`
-    >>> Grammar(moves)('BBA').content
-    'BBA'
+    `A`(2,3) ° `B`(2,3)
+    >>> Grammar(moves)('AAABB').as_sxpr()
+    '(:Interleave (:Token "A") (:Token "A") (:Token "A") (:Token "B") (:Token "B"))'
 
     While a Counted-parser could be treated as a special case of Interleave-parser,
     defining a dedicated class makes the purpose clearer and runs slightly faster.
@@ -2121,15 +2122,6 @@ class Counted(UnaryParser):
 
     def __repr__(self):
         return self.parser.repr + str(self.repetitions).replace(' ', '')
-
-    def __mul__(self, other: Parser) -> 'Interleave':
-        return Interleave.__mul__(to_interleave(self), to_interleave(other))
-
-    def __rmul__(self, other: Parser) -> 'Interleave':
-        return Interleave.__rmul__(to_interleave(self), to_interleave(other))
-
-    def __imul__(self, other: Parser) -> 'Interleave':
-        return Interleave.__imul__(to_interleave(self), to_interleave(other))
 
     def static_analysis(self) -> Optional[List['AnalysisError']]:
         a, b = self.repetitions
@@ -2607,10 +2599,10 @@ class Interleave(MandatoryNary):
     def static_analysis(self) -> Optional[List['AnalysisError']]:
         # assert len(set(parsers)) == len(parsers)  # commented out, because this could make sense
         if not all(not parser.is_optional() and not isinstance(parser, FlowParser)
-                   and not isinstance(parser, Counted) for parser in self.parsers):
+                   for parser in self.parsers):
             return [self.static_error(
-                "Flow-operators, Counted-parsers and optional parsers are neither allowed "
-                "nor needed inside of an interleave-parser " + self.location_info(),
+                "Flow-operators and optional parsers are neither allowed "
+                "nor needed in an interleave-parser " + self.location_info(),
                 BADLY_NESTED_OPTIONAL_PARSER)]
         for parser, (a, b) in zip(self.parsers, self.repetitions):
             if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
