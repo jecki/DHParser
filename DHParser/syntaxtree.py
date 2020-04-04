@@ -50,6 +50,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'ChildrenType',
            'CriteriaType',
            'ALL_NODES',
+           'LEAF_NODES',
+           'BRANCH_NODES',
            'Node',
            'FrozenNode',
            'EMPTY_NODE',
@@ -141,6 +143,8 @@ def flatten_xml(xml: str) -> str:
 # - a function Node -> bool
 CriteriaType = Union['Node', str, Container[str], Callable]
 ALL_NODES = lambda nd: True
+LEAF_NODES = lambda nd: not nd.children
+BRANCH_NODES = lambda nd: bool(nd.children)
 
 
 def create_match_function(criterion: CriteriaType) -> Callable:
