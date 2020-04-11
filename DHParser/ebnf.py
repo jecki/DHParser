@@ -490,6 +490,21 @@ DROP_VALUES = {DROP_TOKEN, DROP_WSPC, DROP_REGEXP}
 ReprType = Union[str, unrepr]
 
 
+KNOWN_DIRECTIVES = {
+    'comment': 'Regular expression for comments, e.g. /#.*(?:\n|$)/',
+    'whitespace': 'Regular expression for whitespace, e.g. /\s*/',
+    'literalws': 'Controls implicit whitespace adjacent to literals: left, right, both, none',
+    'ignorecase': 'Controls case-sensitivity: on, off',
+    '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
+    'anonymous': 'List of symbols that are NOT to appear as tag-names',
+    'drop': 'List of tags to be dropped early from syntax tree, '
+            'special values: token, whitespace, regexp',
+    '$SYMBOL_filer': 'Function that transforms captured values of the givensymbol on retrieval',
+    '$SYMBOL_error': 'Pair of regular epxression an custom error message if regex matches',
+    '$SYMBOL_skip': 'List of regexes or functions to find reentry point after an error',
+    '$SYMBOL_resume': 'List or regexes or functions to find reentry point for parent parser'
+}
+
 class EBNFDirectives:
     """
     A Record that keeps information about compiler directives
@@ -1409,8 +1424,8 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Directive "%s" must be used as postfix not prefix to '
                                     'the symbolname. Please, write: "%s"' % (kl[0], proper_usage))
             else:
-                self.tree.new_error(node, 'Unknown directive %s ! (Known ones are %s .)' %
-                                    (key, ', '.join(list(self.directives.keys()))))
+                self.tree.new_error(node, 'Unknown directive %s ! (Known directives: %s.)' %
+                                    (key, ', '.join(k for k in KNOWN_DIRECTIVES.keys())))
 
         return ""
 

@@ -5,6 +5,8 @@
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ anonymous  = pure_elem, FOLLOW_UP, SYM_REGEX, EOF
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
+@ RNG_BRACE_filter = matching_bracket()
+
 
 # re-entry-rules for resuming after parsing-error
 
@@ -41,7 +43,7 @@ sequence   = ["§"] ( interleave | lookaround )  # "§" means all following term
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
 difference = term ["-" § (oneormore | pure_elem)]
-term       = oneormore | repetition | option | pure_elem
+term       = oneormore | counted | repetition | option | pure_elem
 
 
 #: elements
@@ -64,29 +66,42 @@ retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, '
 
 #: groups
 
-group      = "(" §expression ")"
-oneormore  = "{" expression "}+" | element "+"
-repetition = "{" §expression "}" | element "*"
-option     = "[" §expression "]" | element "?"
+group      = "(" !multiplier §expression ")"
+oneormore  = "{" !multiplier expression "}+" | element "+"
+repetition = "{" !multiplier §expression "}" | element "*" !multiplier
+option     = !char_range "[" §expression "]" | element "?"
+counted    = element RANGE | element '*' multiplier | multiplier '*' §element
+
+RANGE      = RNG_BRACE multiplier :RNG_DELIM multiplier ::RNG_BRACE
+multiplier = /\d+/
 
 
 #: leaf-elements
 
 symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
-SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
 regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+character  = :CHAR_LEADIN HEXNUM
+char_range = '[' character '-' character ']'
 whitespace = /~/~                               # insignificant whitespace
 
+SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
+HEXNUM     = /[A-Fa-f0-9]/+
 
 #: delimiters
 
 DEF        = `=` | `:=` | `::=`
-OR         = `|`
+OR         = `|`  # removed due to ambiguity: `/`
 AND        = `,` | ``
 ENDL       = `;` | ``
 
-EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+RNG_BRACE  = :BRACE_SIGN
+BRACE_SIGN = `{` | `(`
+RNG_DELIM  = `,`
 
+CH_LEADIN  = `0x`  # removed due to ambiguity: `#x`
+
+EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+           [:?RNG_DELIM] [:?BRACE_SIGN]
