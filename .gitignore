@@ -51,3 +51,4 @@ docs/*
 **/node_modules
 *.py.cfg
 examples/LaTeX/testdata/*.xml
+venv/*

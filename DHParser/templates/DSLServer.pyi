@@ -257,7 +257,7 @@ def start_server_daemon(host, port):
             countdown = 0
         except ConnectionRefusedError:
             time.sleep(delay)
-            delay += 0.0
+            delay += 0.025
             countdown -= 1
     if result is None:
         print('Could not start server or establish connection in time :-(')

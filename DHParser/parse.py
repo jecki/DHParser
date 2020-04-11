@@ -2004,7 +2004,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "{/\\w+,?/ ~}+ `.` ~" did not match! >>> '
+        ' <<< Error on "." | Parser "{/\\\\w+,?/ ~}+ `.` ~" did not match! >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node(':EMPTY', '')
@@ -2284,7 +2284,7 @@ class Series(MandatoryNary):
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser "/(?!\\d)\\w/ /\\w*/ ~" did not match! >>> '
+        ' <<< Error on "1_variable" | Parser "/(?!\\\\d)\\\\w/ /\\\\w*/ ~" did not match! >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
 
