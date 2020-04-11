@@ -53,6 +53,8 @@ element    = [retrieveop] symbol !DEF           # negative lookahead to be sure 
            | literal
            | plaintext
            | regexp
+           | char_range
+           | character
            | whitespace
            | group
 
@@ -70,10 +72,10 @@ group      = "(" !multiplier §expression ")"
 oneormore  = "{" !multiplier expression "}+" | element "+"
 repetition = "{" !multiplier §expression "}" | element "*" !multiplier
 option     = !char_range "[" §expression "]" | element "?"
-counted    = element RANGE | element '*' multiplier | multiplier '*' §element
+counted    = element RANGE | element :TIMES~ multiplier | multiplier :TIMES~ §element
 
-RANGE      = RNG_BRACE multiplier :RNG_DELIM multiplier ::RNG_BRACE
-multiplier = /\d+/
+RANGE      = RNG_BRACE~ multiplier :RNG_DELIM~ multiplier ::RNG_BRACE~
+multiplier = /\d+/~
 
 
 #: leaf-elements
@@ -83,12 +85,12 @@ literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
 regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-character  = :CHAR_LEADIN HEXNUM
+character  = :CH_LEADIN HEXCODE
 char_range = '[' character '-' character ']'
 whitespace = /~/~                               # insignificant whitespace
 
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
-HEXNUM     = /[A-Fa-f0-9]/+
+HEXCODE    = /[A-Fa-f0-9]/+
 
 #: delimiters
 
@@ -100,8 +102,10 @@ ENDL       = `;` | ``
 RNG_BRACE  = :BRACE_SIGN
 BRACE_SIGN = `{` | `(`
 RNG_DELIM  = `,`
+TIMES      = `*`
 
 CH_LEADIN  = `0x`  # removed due to ambiguity: `#x`
 
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
-           [:?RNG_DELIM] [:?BRACE_SIGN]
+           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES]
+
