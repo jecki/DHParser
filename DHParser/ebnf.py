@@ -361,6 +361,8 @@ EBNF_AST_transformation_table = {
         [replace_by_single_child, flatten, remove_tokens('°')],
     "lookaround":
         [],
+    "difference":
+        [remove_tokens('-'), replace_by_single_child],
     "term, pure_elem, element":
         [replace_by_single_child],
     "flowmarker, retrieveop":
@@ -1560,6 +1562,11 @@ class EBNFCompiler(Compiler):
                 self.deferred_tasks.append(lambda :verify(node))
         return result
 
+    def on_difference(self, node: Node) -> str:
+        assert len(node.children) == 2, str(node.as_sxpr())
+        left = self.compile(node.children[0])
+        right = self.compile(node.children[1])
+        return "Series(NegativeLookahead(%s), %s)" % (right, left)
 
     def on_element(self, node: Node) -> str:
         assert node.children

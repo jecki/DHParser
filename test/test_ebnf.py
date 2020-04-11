@@ -35,7 +35,7 @@ from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CO
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
-from DHParser.dsl import CompilationError, compileDSL, grammar_instance, grammar_provider
+from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
 
@@ -865,6 +865,17 @@ class TestAlternativeEBNFSyntax:
         st = arithmetic_parser('2 + 3 * (-4 + 1)')
         assert str(st) == "2+3*(-4+1)"
 
+
+class TestSyntaxExtensions:
+    def test_difference(self):
+        lang = """
+            doc = /[A-Z]/ - /[D-F]/
+        """
+        parser = create_parser(lang)
+        st = parser("A")
+        assert not st.errors and st.tag_name == "doc" and st.content == "A"
+        st = parser("E")
+        assert st.errors and any(e.code == PARSER_DID_NOT_MATCH for e in st.errors)
 
 
 if __name__ == "__main__":
