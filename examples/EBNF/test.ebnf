@@ -1,6 +1,7 @@
 # hey, you
 
-doc = char | char_range | multiple1 | multiple2 | multiple3 | mutliple4
+doc = re | char | char_range | multiple1 | multiple2 | multiple3 | mutliple4
+re = /abc*/
 char = #x32  # shell-style comment
 char_range = [#xDFF88-#xEEFF00]   /*
         C-style comment

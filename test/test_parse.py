@@ -36,7 +36,7 @@ from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CO
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, UnknownParserError, CombinedParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
-    GrammarError
+    GrammarError, Counted, Always, INFINITE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
@@ -192,6 +192,32 @@ class TestInfiLoopsAndRecursion:
     def test_break_inifnite_loop_OneOrMore(self):
         forever = OneOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
+
+    def test_break_infinite_loop_Counted(self):
+        forever = Counted(Always(), (0, INFINITE))
+        result = Grammar(forever)('')  # if this takes very long, something is wrong
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
+        forever = Counted(Always(), (5, INFINITE))
+        result = Grammar(forever)('')  # if this takes very long, something is wrong
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
+        forever = Counted(Always(), (INFINITE, INFINITE))
+        result = Grammar(forever)('')  # if this takes very long, something is wrong
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
+        forever = Counted(Always(), (1000, 1000000000000))
+        result = Grammar(forever)('')  # if this takes very long, something is wrong
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
+
+    def test_break_infinite_loop_Interleave(self):
+        forever = Interleave(Always(), repetitions = [(0, INFINITE)])
+        result = Grammar(forever)('')  # if this takes very long, something is wrong
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
+        forever = Interleave(Always(), Always(),
+                             repetitions = [(5, INFINITE), (INFINITE, INFINITE)])
+        result = Grammar(forever)('')  # if this takes very long, something is wrong
+        assert repr(result) == "Node(':EMPTY', '')", repr(result)
+        forever = Interleave(Always(), repetitions = [(1000, 1000000000000)])
+        result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
     # def test_infinite_loops(self):

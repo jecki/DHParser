@@ -42,7 +42,7 @@ from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
-    OPTIONAL_REDUNDANTLY_NESTED_WARNING, NARY_WITHOUT_PARSERS, CAPTURE_STACK_NOT_EMPTY
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING, NARY_WITHOUT_PARSERS, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -60,6 +60,8 @@ __all__ = ('ParserError',
            'AnalysisError',
            'GrammarError',
            'Grammar',
+           'Always',
+           'Never',
            'PreprocessorToken',
            'Token',
            'DropToken',
@@ -1536,9 +1538,20 @@ GRAMMAR_PLACEHOLDER = Grammar()
 
 ########################################################################
 #
-# _Token and Regular Expression parser classes (i.e. leaf classes)
+# Special parser classes: Alway, Never, PreprocessorToken (leaf classes)
 #
 ########################################################################
+
+class Always(Parser):
+    """A parser that always matches, but does not capture anything."""
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        return EMPTY_NODE, text
+
+
+class Never(Parser):
+    """A parser that never matches."""
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        return None, text
 
 
 class PreprocessorToken(Parser):
@@ -1598,6 +1611,12 @@ class PreprocessorToken(Parser):
                 return Node(self.tag_name, text[len(self.pname) + 2:end]), text[end + 1:]
         return None, text
 
+
+########################################################################
+#
+# _Token and Regular Expression parser classes (leaf classes)
+#
+########################################################################
 
 class Token(Parser):
     """
@@ -1817,7 +1836,10 @@ class CombinedParser(Parser):
                         nr.extend(child.children)
                     elif child._result or child.tag_name[0] != ':':
                         nr.append(child)
-                return Node(self.tag_name, tuple(nr))
+                if nr or not self.anonymous:
+                    return Node(self.tag_name, tuple(nr))
+                else:
+                    return EMPTY_NODE
             return Node(self.tag_name, results)  # unoptimized code
         elif N == 1:
             return self._return_value(results[0])
@@ -1974,17 +1996,17 @@ class ZeroOrMore(Option):
     @cython.locals(n=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
-        len = text.__len__()
-        n = len + 1  # type: int
-        while len < n:  # text and len(text) < n:
-            n = len
+        length = text.__len__()
+        n = length + 1  # type: int
+        while length < n:  # text and length(text) < n:
+            n = length
             node, text = self.parser(text)
-            len = text.__len__()
+            length = text.__len__()
             if node is None:
                 break
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
-            if len == n:
+            if length == n:
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         return nd, text
@@ -2023,18 +2045,18 @@ class OneOrMore(UnaryParser):
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         match_flag = False
-        len = text.__len__()
-        n = len + 1  # type: int
-        while len < n:  # text_ and len(text_) < n:
-            n = len
+        length = text.__len__()
+        n = length + 1  # type: int
+        while length < n:  # text_ and len(text_) < n:
+            n = length
             node, text_ = self.parser(text_)
-            len = text_.__len__()
+            length = text_.__len__()
             if node is None:
                 break
             match_flag = True
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
                 results += (node,)
-            if len == n:
+            if length == n:
                 break  # avoid infinite loop
         if not match_flag:
             return None, text
@@ -2107,16 +2129,25 @@ class Counted(UnaryParser):
     def _parse(self, text: StringView):
         results = ()  # Tuple[Node, ...]
         text_ = text
+        length = text_.__len__()
         for _ in range(self.repetitions[0]):
             node, text_ = self.parser(text_)
             if node is None:
                 return None, text
             results += (node,)
+            n = length
+            length = text_.__len__()
+            if length == n:
+                break  # avoid infinite loop
         for _ in range(self.repetitions[1] - self.repetitions[0]):
             node, text_ = self.parser(text_)
             if node is None:
                 break
             results += (node,)
+            n = length
+            length = text_.__len__()
+            if length == n:
+                break  # avoid infinite loop
         return self._return_values(results), text_
 
     def is_optional(self) -> Optional[bool]:
@@ -2130,8 +2161,8 @@ class Counted(UnaryParser):
         if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
             return [self.static_error(
                 'Repetition count [a=%i, b=%i] for parser %s violates requirement '
-                '0 <= a <= b <= infinity = 2^30 !' % (a, b, str(self))
-            )]
+                '0 <= a <= b <= infinity = 2^30' % (a, b, str(self)),
+                BAD_REPETITION_COUNT)]
         return None
 
 
@@ -2457,9 +2488,6 @@ class Alternative(NaryParser):
         return errors or None
 
 
-
-
-
 class Interleave(MandatoryNary):
     r"""Parse elements in arbitrary order.
 
@@ -2512,6 +2540,7 @@ class Interleave(MandatoryNary):
         counter = [0] * len(self.parsers)
         consumed = set()  # type: Set[Parser]
         error = None  # type: Optional[Error]
+        length = text_.__len__()
         while True:
             # there is an order of testing, but no promise about the order of testing, here!
             for i, parser in enumerate(self.parsers):
@@ -2541,6 +2570,10 @@ class Interleave(MandatoryNary):
                 results += (err_node,)
                 if reloc < 0:
                     break
+            n = length
+            length = text_.__len__()
+            if length == n:
+                break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:
             raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
@@ -2610,8 +2643,8 @@ class Interleave(MandatoryNary):
             if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
                 return [self.static_error(
                     'Repetition count [a=%i, b=%i] for parser %s violates requirement '
-                    '0 <= a <= b <= infinity = 2^30 !' % (a, b, str(parser))
-                )]
+                    '0 <= a <= b <= infinity = 2^30' % (a, b, str(parser)),
+                    BAD_REPETITION_COUNT)]
         return None
 
 

@@ -84,6 +84,7 @@ __all__ = ('ErrorCode',
            'BAD_MANDATORY_SETUP',
            'DUPLICATE_PARSERS_IN_ALTERNATIVE',
            'BAD_ORDER_OF_ALTERNATIVES',
+           'BAD_REPETITION_COUNT',
            'TREE_PROCESSING_CRASH',
            'COMPILER_CRASH',
            'AST_TRANSFORM_CRASH')
@@ -142,6 +143,7 @@ NARY_WITHOUT_PARSERS                     = ErrorCode(1540)
 BAD_MANDATORY_SETUP                      = ErrorCode(1550)
 DUPLICATE_PARSERS_IN_ALTERNATIVE         = ErrorCode(1560)
 BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
+BAD_REPETITION_COUNT                     = ErrorCode(1580)
 
 # fatal errors
 

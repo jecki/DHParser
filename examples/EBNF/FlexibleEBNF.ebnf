@@ -1,8 +1,31 @@
 # EBNF-Grammar in EBNF
 
-@ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\//
-    # comments can be either C-Style: /* ... */ or
-    # python-style: # ... \n, excluding, however, character markers: #x20
+# This grammar is tuned for flexibility, that is, it supports as many
+# different flavors of EBNF as possible. However, this flexibility
+# comes at the cost of some ambiguities. In particular:
+#
+#    1. the alternative OR-operator / could be mistaken for the start
+#       of a regular expression and vice versa, and
+#    2- character ranges [a-z] can be mistaken for optional blocks
+#       and vice versa
+#
+# A strategy to avoid these amnbiguities is to replace the `free_char`-
+# and the `no_regex_heursitics`-parser by a never matching parser.
+# As a consequence, you loose the alternative OR-operator and character
+# ranges can only be specified with the character codes (e.g. 0x41),
+# rather than the character itself (e.g. A). Of course, ambiguities can
+# and should also be avoided by not using all the syntactic variants
+# made possible by this EBNF-grammar within one and the same EBNF-
+# document. However, by the setting the free_char and no_regex-heuristics
+# parser to "never match", the parser can still help you to avoid mistakes
+# arising from ambiguity which you would have to pay attention to
+# otherwise.
+
+
+@ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
+    # comments can be either C-Style: /* ... */
+    # or pascal/modula/oberon-style: (* ... *)
+    # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ anonymous  = pure_elem, FOLLOW_UP, SYM_REGEX, EOF
@@ -29,8 +52,8 @@
 syntax     = [~//] { definition | directive } EOF
 definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
 
-directive  = "@" §symbol "=" (regexp | literals | procedure | symbol)
-             { "," (regexp | literals | procedure | symbol) } & FOLLOW_UP
+directive  = "@" §symbol "=" (regexp | literals | procedure | symbol !DEF)
+             { "," (regexp | literals | procedure | symbol !DEF) } & FOLLOW_UP
 literals   = { literal }+                       # string chaining, only allowed in directives!
 procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
@@ -51,7 +74,7 @@ term       = oneormore | counted | repetition | option | pure_elem
 #: elements
 
 pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
-element    = [retrieveop] symbol !DEF           # negative lookahead to be sure it's not a definition
+element    = [retrieveop] symbol !:DEF           # negative lookahead to be sure it's not a definition
            | literal
            | plaintext
            | regexp
@@ -70,13 +93,14 @@ retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, '
 
 #: groups
 
-group      = "(" !multiplier §expression ")"
-oneormore  = "{" !multiplier expression "}+" | element "+"
-repetition = "{" !multiplier §expression "}" | element "*" !multiplier
+group      = "(" no_range §expression ")"
+oneormore  = "{" no_range expression "}+" | element "+"
+repetition = "{" no_range §expression "}" | element "*" no_range
 option     = !char_range "[" §expression "]" | element "?"
-counted    = element RANGE | element :TIMES~ multiplier | multiplier :TIMES~ §element
+counted    = element range | element :TIMES~ multiplier | multiplier :TIMES~ §element
 
-RANGE      = RNG_BRACE~ multiplier [:RNG_DELIM~ multiplier] ::RNG_BRACE~
+range      = RNG_BRACE~ multiplier [:RNG_DELIM~ multiplier] ::RNG_BRACE~
+no_range   = !multiplier | &multiplier :TIMES
 multiplier = /\d+/~
 
 
@@ -86,28 +110,38 @@ symbol     = SYM_REGEX ~                        # e.g. expression, term, paramet
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
-regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+# regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+char_range = `[` !(literal | plaintext | regexp )
+                 (character | free_char)
+                 [ `-` (character | free_char) { character | free_char } ] `]`
 character  = :CH_LEADIN HEXCODE
-char_range = '[' character '-' character ']'
+free_char  = /[^\n(){}\[\]\/\\]/ | /\\[\n(){}\[\]\/\\]/
 whitespace = /~/~                               # insignificant whitespace
 
+RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
 HEXCODE    = /[A-Fa-f0-9]/+
 
 #: delimiters
 
-DEF        = `=` | `:=` | `::=`
-OR         = `|`  # removed due to ambiguity: `/`
+DEF        = `=` | `:=` | `::=` | `<-`
+OR         = `|` | `/` &no_regex_heuristics
 AND        = `,` | ``
 ENDL       = `;` | ``
 
 RNG_BRACE  = :BRACE_SIGN
-BRACE_SIGN = `{`
+BRACE_SIGN = `{` | `(`
 RNG_DELIM  = `,`
 TIMES      = `*`
 
+RE_LEADIN  = `/` | `^/`
+RE_LEADOUT = `/`
+
 CH_LEADIN  = `0x` | `#x`
 
+no_regex_heuristics = &` ` !/[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
-           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES]
+           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
