@@ -6,20 +6,19 @@
 #
 #    1. the alternative OR-operator / could be mistaken for the start
 #       of a regular expression and vice versa, and
-#    2- character ranges [a-z] can be mistaken for optional blocks
+#    2. character ranges [a-z] can be mistaken for optional blocks
 #       and vice versa
 #
-# A strategy to avoid these amnbiguities is to replace the `free_char`-
-# and the `no_regex_heursitics`-parser by a never matching parser.
-# As a consequence, you loose the alternative OR-operator and character
-# ranges can only be specified with the character codes (e.g. 0x41),
-# rather than the character itself (e.g. A). Of course, ambiguities can
-# and should also be avoided by not using all the syntactic variants
-# made possible by this EBNF-grammar within one and the same EBNF-
-# document. However, by the setting the free_char and no_regex-heuristics
-# parser to "never match", the parser can still help you to avoid mistakes
-# arising from ambiguity which you would have to pay attention to
-# otherwise.
+# A strategy to avoid these ambiguities is to do all of the following:
+#
+#     - replace the free_char-parser by a never matching parser
+#     - if this is done, it is safe to replace the literal_heuristics-
+#       parser by an always matching parser
+#     - replace the regex_heuristics by an always matching parser
+#
+# Ambiguities can also be avoided by NOT using all the syntactic variants
+# made possible by this EBNF-grammar within one and the same EBNF-document.
+
 
 
 @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
@@ -28,7 +27,7 @@
     # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ anonymous  = pure_elem, FOLLOW_UP, SYM_REGEX, EOF
+@ anonymous  = pure_elem, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
 @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
@@ -73,15 +72,18 @@ term       = oneormore | counted | repetition | option | pure_elem
 
 #: elements
 
-pure_elem  = element § !/[?*+]/                 # element strictly without a suffix
-element    = [retrieveop] symbol !:DEF           # negative lookahead to be sure it's not a definition
+pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
+element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure it's not a definition
            | literal
            | plaintext
            | regexp
-           | char_range
-           | character
+           | char_range ~
+           | character ~
            | whitespace
            | group
+
+
+ANY_SUFFIX = /[?*+]/
 
 
 #: flow-operators
@@ -110,23 +112,25 @@ symbol     = SYM_REGEX ~                        # e.g. expression, term, paramet
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+           | /´(?:(?<!\\)\\´|[^´])*?´/~
 regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-char_range = `[` !(literal | plaintext | regexp )
-                 (character | free_char)
-                 [ `-` (character | free_char) { character | free_char } ] `]`
-character  = :CH_LEADIN HEXCODE
-free_char  = /[^\n(){}\[\]\/\\]/ | /\\[\n(){}\[\]\/\\]/
+char_range = `[` !literal_heuristics
+                 [`^`] (character | free_char) { [`-`] character | free_char } `]`
+character  = :CH_LEADIN HEXCODE | any_char
+free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
+any_char   = `.`
 whitespace = /~/~                               # insignificant whitespace
 
 RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
 HEXCODE    = /[A-Fa-f0-9]/+
 
+
 #: delimiters
 
 DEF        = `=` | `:=` | `::=` | `<-`
-OR         = `|` | `/` &no_regex_heuristics
+OR         = `|` | `/` !regex_heuristics
 AND        = `,` | ``
 ENDL       = `;` | ``
 
@@ -135,12 +139,22 @@ BRACE_SIGN = `{` | `(`
 RNG_DELIM  = `,`
 TIMES      = `*`
 
-RE_LEADIN  = `/` | `^/`
+RE_LEADIN  = `/` &regex_heuristics | `^/`
 RE_LEADOUT = `/`
 
 CH_LEADIN  = `0x` | `#x`
 
-no_regex_heuristics = &` ` !/[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+#: heuristics
+
+literal_heuristics = /"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
+                   | /'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
+                   | /`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
+                   | /´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
+                   | /\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
+                  # /"[^\]]*"/ | /'[^\]]*'/ | /`[^\]]*`/ | /´[^\]]*´/ | /\[^\]]*\//
+regex_heuristics = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+
+#: EOF
 
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
            [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
