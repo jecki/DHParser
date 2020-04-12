@@ -82,24 +82,24 @@ class FlexibleEBNFGrammar(Grammar):
     character = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "1956b2c15ca9715dfd6b5e5f86c869e9"
+    source_hash__ = "962e48ea1622c9b397ef94805c4588ad"
     anonymous__ = re.compile('pure_elem$|FOLLOW_UP$|SYM_REGEX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
     resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
-    COMMENT__ = r'#.*(?:\n|$)'
+    COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))))))
-    CH_LEADIN.set(Capture(Token("0x")))
+    CH_LEADIN.set(Capture(Alternative(Token("0x"), Token("#x"))))
     TIMES.set(Capture(Token("*")))
     RNG_DELIM.set(Capture(Token(",")))
-    BRACE_SIGN.set(Capture(Alternative(Token("{"), Token("("))))
+    BRACE_SIGN.set(Capture(Token("{")))
     RNG_BRACE = Capture(Retrieve(BRACE_SIGN))
     ENDL.set(Capture(Alternative(Token(";"), Token(""))))
     AND.set(Capture(Alternative(Token(","), Token(""))))
@@ -115,7 +115,7 @@ class FlexibleEBNFGrammar(Grammar):
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     multiplier = Series(RegExp('\\d+'), dwsp__)
-    RANGE = Series(RNG_BRACE, dwsp__, multiplier, Retrieve(RNG_DELIM), dwsp__, multiplier, Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
+    RANGE = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
     counted = Alternative(Series(element, RANGE), Series(element, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, element, mandatory=3))
     option = Alternative(Series(NegativeLookahead(char_range), Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=2), Series(element, Series(Token("?"), dwsp__)))
     repetition = Alternative(Series(Series(Token("{"), dwsp__), NegativeLookahead(multiplier), expression, Series(Token("}"), dwsp__), mandatory=2), Series(element, Series(Token("*"), dwsp__), NegativeLookahead(multiplier)))

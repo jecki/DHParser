@@ -721,6 +721,8 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     use directives inside comments (which isn't recommended, anyway).
     """
     if comment:
+        whitespace = '(?:' + whitespace + ')'
+        comment = '(?:' + comment + ')'
         return '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
     return whitespace
 

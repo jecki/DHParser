@@ -1,11 +1,13 @@
 # EBNF-Grammar in EBNF
 
-@ comment    = /#.*(?:\n|$)/                    # comments start with '#' and eat all chars up to and including '\n'
+@ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\//
+    # comments can be either C-Style: /* ... */ or
+    # python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ anonymous  = pure_elem, FOLLOW_UP, SYM_REGEX, EOF
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
-@ RNG_BRACE_filter = matching_bracket()
+@ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
 
 # re-entry-rules for resuming after parsing-error
@@ -74,7 +76,7 @@ repetition = "{" !multiplier §expression "}" | element "*" !multiplier
 option     = !char_range "[" §expression "]" | element "?"
 counted    = element RANGE | element :TIMES~ multiplier | multiplier :TIMES~ §element
 
-RANGE      = RNG_BRACE~ multiplier :RNG_DELIM~ multiplier ::RNG_BRACE~
+RANGE      = RNG_BRACE~ multiplier [:RNG_DELIM~ multiplier] ::RNG_BRACE~
 multiplier = /\d+/~
 
 
@@ -100,11 +102,11 @@ AND        = `,` | ``
 ENDL       = `;` | ``
 
 RNG_BRACE  = :BRACE_SIGN
-BRACE_SIGN = `{` | `(`
+BRACE_SIGN = `{`
 RNG_DELIM  = `,`
 TIMES      = `*`
 
-CH_LEADIN  = `0x`  # removed due to ambiguity: `#x`
+CH_LEADIN  = `0x` | `#x`
 
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
            [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES]

@@ -1,7 +1,10 @@
-doc = char | char_range | multiple1 | multiple2 | multiple3
-char = 0x32
-char_range = [0xDFF88-0xEEFF00]
-multiple1 = `a` * 3
-multiple2 = `b`(2,5)
-multiple3 = 4 * `c`
+# hey, you
 
+doc = char | char_range | multiple1 | multiple2 | multiple3 | mutliple4
+char = #x32  # shell-style comment
+char_range = [#xDFF88-#xEEFF00]   /*
+        C-style comment
+*/  multiple1 = `a` * 3
+multiple2 = 4 * `b`
+multiple3 = `c`{3}
+multiple4 = `d`{2,5}
