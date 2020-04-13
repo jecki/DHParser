@@ -12,7 +12,7 @@
 # A strategy to avoid these ambiguities is to do all of the following:
 #
 #     - replace the free_char-parser by a never matching parser
-#     - if this is done, it is safe to replace the literal_heuristics-
+#     - if this is done, it is safe to replace the char_range_heuristics-
 #       parser by an always matching parser
 #     - replace the regex_heuristics by an always matching parser
 #
@@ -101,7 +101,7 @@ repetition = "{" no_range §expression "}" | element "*" no_range
 option     = !char_range "[" §expression "]" | element "?"
 counted    = element range | element :TIMES~ multiplier | multiplier :TIMES~ §element
 
-range      = RNG_BRACE~ multiplier [:RNG_DELIM~ multiplier] ::RNG_BRACE~
+range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
 no_range   = !multiplier | &multiplier :TIMES
 multiplier = /\d+/~
 
@@ -115,19 +115,17 @@ plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat 
            | /´(?:(?<!\\)\\´|[^´])*?´/~
 regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-char_range = `[` !literal_heuristics
+char_range = `[` &char_range_heuristics
                  [`^`] (character | free_char) { [`-`] character | free_char } `]`
 character  = :CH_LEADIN HEXCODE | any_char
 free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
 any_char   = `.`
 whitespace = /~/~                               # insignificant whitespace
 
-RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
-SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
-HEXCODE    = /[A-Fa-f0-9]/+
-
-
 #: delimiters
+
+EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
 DEF        = `=` | `:=` | `::=` | `<-`
 OR         = `|` | `/` !regex_heuristics
@@ -146,16 +144,21 @@ CH_LEADIN  = `0x` | `#x`
 
 #: heuristics
 
-literal_heuristics = /"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
-                   | /'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
-                   | /`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
-                   | /´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
-                   | /\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-                  # /"[^\]]*"/ | /'[^\]]*'/ | /`[^\]]*`/ | /´[^\]]*´/ | /\[^\]]*\//
-regex_heuristics = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+char_range_heuristics  = ! ( /[\n\t ]/
+                           | ~ literal_heuristics
+                           | [`:`|`::`|`:?`] SYM_REGEX /\s*\]/ )
+literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
+                       | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
+                       | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
+                       | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
+                       | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
+regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
 
-#: EOF
 
-EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
-           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
+#: basic-regexes
+
+RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
+SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
+HEXCODE    = /[A-Fa-f0-9]/+
+
 

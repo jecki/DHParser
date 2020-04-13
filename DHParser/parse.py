@@ -62,6 +62,7 @@ __all__ = ('ParserError',
            'Grammar',
            'Always',
            'Never',
+           'AnyChar',
            'PreprocessorToken',
            'Token',
            'DropToken',
@@ -1552,6 +1553,16 @@ class Never(Parser):
     """A parser that never matches."""
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         return None, text
+
+
+class AnyChar(Parser):
+    """A parser that returns the next unicode character of the document
+    whatever that is. The parser fails only at the very end of the text."""
+    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+        if len(text) >= 1:
+            return Node(self.tag_name, text[:1]), text[1:]
+        else:
+            return None, text
 
 
 class PreprocessorToken(Parser):

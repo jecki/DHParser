@@ -155,7 +155,7 @@ class TestEBNFParser:
 
     def test_RE(self):
         gr = get_ebnf_grammar()
-        m = gr.regexp.parsers[0].regexp.match(r'/[\\\\]/ xxx /')
+        m = gr.regexp.parsers[1].regexp.match(r'[\\\\]/ xxx ')
         rs = m.group()
         assert rs.find('x') < 0, rs.group()
         rx = re.compile(rs[1:-1])
@@ -446,7 +446,7 @@ class TestFlowControlOperators:
         are correctly reported as such.
         """
         lang1 = r"nonsense == /\w+/~  # wrong_equal_sign "
-        lang2 = "nonsense = [^{}%]+  # someone forgot the '/'-delimiters for regular expressions\n"
+        lang2 = "nonsense = [ ^{}%]+  # someone forgot the '/'-delimiters for regular expressions\n"
         try:
             parser_class = grammar_provider(lang1)
             assert False, "Compilation error expected."

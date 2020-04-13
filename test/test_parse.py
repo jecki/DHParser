@@ -656,7 +656,7 @@ class TestPopRetrieve:
         """
     mini_lang3 = r"""
         document       = { text | env }
-        env            = (specialtag | opentag) text [closespecial | closetag]
+        env            = (specialtag | opentag) text [ closespecial | closetag ]
         opentag        = "<" name ">"
         specialtag     = "<" /ABC/ !name ">"
         closetag       = close_slash | close_star
@@ -838,7 +838,7 @@ class TestPopRetrieve:
             symbol     = /\w+/~                      
             defsign    = "=" | ":="
             value      = /\d+/~
-            EOF        = !/./ [:?defsign]   # eat up captured defsigns
+            EOF        = !/./ [ :?defsign ]   # eat up captured defsigns
         """
         # code, _, _ = compile_ebnf(lang)
         # print(code)
@@ -1184,7 +1184,7 @@ def next_valid_letter(text, start):
            
             json       = ~ value EOF
             value      = object | string 
-            object     = "{" [member { "," §member }] "}"
+            object     = "{" [ member { "," §member } ] "}"
             member     = string §":" value
             string     = `"` CHARACTERS `"` ~
 
