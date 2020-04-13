@@ -31,16 +31,18 @@ import os
 from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any
 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
-from DHParser.configuration import access_thread_locals, get_config_value
+from DHParser.configuration import access_thread_locals, get_config_value, \
+    EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
+    EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING
-from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, Drop, \
-    Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, Token, \
-    Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, INFINITE, \
-    matching_bracket
+from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
+    Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
+    Token, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
+    INFINITE, matching_bracket, ParseFunc
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, EMPTY_NODE
 from DHParser.toolkit import load_if_file, escape_re, escape_control_characters, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
     RX_NEVER_MATCH
@@ -216,6 +218,70 @@ class EBNFGrammar(Grammar):
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
 
+    free_char_parsefunc__ = free_char._parse
+    char_range_heuristics_parsefunc__ = char_range_heuristics._parse
+    regex_heuristics_parserfunc__ = regex_heuristics._parse
+
+    @property
+    def mode(self) -> str:
+        def which(p: Parser) -> str:
+            if p._parse.__qualname__ == 'Never._parse':
+                return 'never'
+            elif p._parse.__qualname__ == 'Always._parse':
+                return 'always'
+            else:
+                return 'custom'
+        signature = (
+            which(self.free_char),
+            which(self.regex_heuristics),
+            which(self.char_range_heuristics)
+        )
+        if signature == ('custom', 'custom', 'custom'):
+            return EBNF_ANY_SYNTAX_HEURISTICAL
+        elif signature == ('never', 'always', 'always'):
+            return EBNF_ANY_SYNTAX_STRICT  # or EBNF_CLASSIC_SYNTAX
+        elif signature == ('custom', 'never', 'always'):
+            return EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+        elif signature == ('custom', 'always', 'always'):
+            return EBNF_REGULAR_EXPRESSION_SYNTAX
+        else:
+            return "undefined"
+
+    @mode.setter
+    def mode(self, mode: str):
+        def set_parsefunc(p: Parser, f: ParseFunc):
+            method = f.__get__(p, type(p))  # bind function f to parser p
+            if p._parse == p._parse_proxy:
+                p._parse_proxy = method
+            p._parse = method
+
+        always = Always._parse
+        never = Never._parse
+        if mode == EBNF_ANY_SYNTAX_HEURISTICAL:
+            set_parsefunc(self.free_char, self.free_char_parsefunc__)
+            set_parsefunc(self.regex_heuristics, self.regex_heuristics_parserfunc__)
+            set_parsefunc(self.char_range_heuristics, self.char_range_heuristics_parsefunc__)
+        elif mode in (EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX):
+            set_parsefunc(self.free_char, never)
+            set_parsefunc(self.regex_heuristics, always)
+            set_parsefunc(self.char_range_heuristics, always)
+        elif mode == EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX:
+            set_parsefunc(self.free_char, self.free_char_parsefunc__)
+            set_parsefunc(self.regex_heuristics, never)
+            set_parsefunc(self.char_range_heuristics, always)
+        elif  mode == EBNF_REGULAR_EXPRESSION_SYNTAX:
+            set_parsefunc(self.free_char, self.free_char_parsefunc__)
+            set_parsefunc(self.regex_heuristics, always)
+            set_parsefunc(self.char_range_heuristics, always)
+        else:
+            raise ValueError('Mode must be one of: ' + ', '.join((
+                EBNF_ANY_SYNTAX_HEURISTICAL,
+                EBNF_ANY_SYNTAX_STRICT,
+                EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX,
+                EBNF_REGULAR_EXPRESSION_SYNTAX,
+                EBNF_CLASSIC_SYNTAX
+            )))
+
 
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """
@@ -254,10 +320,11 @@ def get_ebnf_grammar() -> EBNFGrammar:
     THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.ebnf_grammar_singleton
-        return grammar
     except AttributeError:
         THREAD_LOCALS.ebnf_grammar_singleton = EBNFGrammar()
-        return THREAD_LOCALS.ebnf_grammar_singleton
+        grammar = THREAD_LOCALS.ebnf_grammar_singleton
+    grammar.mode = get_config_value('syntax_variant')
+    return grammar
 
 
 def parse_ebnf(ebnf: str) -> Node:

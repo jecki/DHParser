@@ -30,6 +30,9 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source
+from DHParser.configuration import access_thread_locals, get_config_value, \
+    EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
+    EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
 from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CONTINUATION, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
@@ -876,6 +879,48 @@ class TestSyntaxExtensions:
         assert not st.errors and st.tag_name == "doc" and st.content == "A"
         st = parser("E")
         assert st.errors and any(e.code == PARSER_DID_NOT_MATCH for e in st.errors)
+
+
+class TestModeSetting:
+    testdoc = """# hey, you
+
+        doc = sequence | re | char | char_range | char_range2 | multiple1 | multiple2 | multiple3 | mutliple4
+        sequence = '</' Name S? '>'
+        re = /abc*/
+        char = #x32  # shell-style comment
+        char_range = [#xDFF88-#xEEFF00]   /*
+                C-style comment
+        */ char_range2 = [-'()+,./:=?;!*#@$_%]
+        multiple1 = `a` * 3
+        multiple2 = 4 * `b`
+        multiple3 = `c`{3}
+        multiple4 = `d`{2,5}
+        Name = /\w+/
+        S    = /\s*/
+        """
+
+    def test_setmode_getmode(self):
+        gr = get_ebnf_grammar()
+        gr.mode = EBNF_ANY_SYNTAX_STRICT
+        assert gr.mode == EBNF_ANY_SYNTAX_STRICT
+        gr.mode = EBNF_REGULAR_EXPRESSION_SYNTAX
+        assert gr.mode == EBNF_REGULAR_EXPRESSION_SYNTAX
+        gr.mode = EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+        assert gr.mode == EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+        gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
+        assert gr.mode == EBNF_ANY_SYNTAX_HEURISTICAL
+
+        gr.mode = EBNF_CLASSIC_SYNTAX
+        assert gr.mode == EBNF_ANY_SYNTAX_STRICT
+
+    def test_heuristic_mode(self):
+        gr = get_ebnf_grammar()
+        gr.mode = EBNF_ANY_SYNTAX_STRICT
+        st = gr(self.testdoc)
+        assert st.errors
+        gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
+        st = gr(self.testdoc)
+        assert not st.errors
 
 
 if __name__ == "__main__":

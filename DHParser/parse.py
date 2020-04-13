@@ -337,7 +337,7 @@ class Parser:
         self.tag_name = self.ptype    # type: str
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         # this indirection is required for Cython-compatibility
-        self._parse_proxy = self._parse    # type: ParseFunc
+        self._parse_proxy = self._parse  # type: ParseFunc
         # self.proxied = None           # type: Optional[ParseFunc]
         try:
             self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
@@ -559,11 +559,9 @@ class Parser:
         return None
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
-        """Sets a proxy that replaces the _parse()-method. The original
-        parse-method is copied to the `proxied`-filed of the Parser object and
-        can be called by the proxy. Call `set_proxy` with `None` to remove
-        a previously set proxy. Typical use case is the installation of a
-        tracing debugger. See module `trace`.
+        """Sets a proxy that replaces the _parse()-method. Call `set_proxy`
+        with `None` to remove a previously set proxy. Typical use case is
+        the installation of a tracing debugger. See module `trace`.
         """
         if proxy is None:
             self._parse_proxy = self._parse
