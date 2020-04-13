@@ -37,7 +37,7 @@ from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CO
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report
 
@@ -491,6 +491,16 @@ class TestWhitespace:
 
 
 class TestInterleave:
+    def test_counted(self):
+        ebnf = 'prefix = "abc"{2,5}\n'
+        ast = parse_ebnf(ebnf)
+        transform_ebnf(ast)
+        print(ast.as_sxpr())
+        grammar = create_parser(ebnf)
+        print(grammar)
+        st = grammar('abcabc')
+        print(st)
+
     def test_all(self):
         ebnf = 'prefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()

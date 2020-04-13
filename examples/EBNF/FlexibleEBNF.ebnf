@@ -133,7 +133,7 @@ AND        = `,` | ``
 ENDL       = `;` | ``
 
 RNG_BRACE  = :BRACE_SIGN
-BRACE_SIGN = `{` | `(`
+BRACE_SIGN = `{`  # | `(`
 RNG_DELIM  = `,`
 TIMES      = `*`
 

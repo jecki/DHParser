@@ -375,8 +375,10 @@ EBNF_AST_transformation_table = {
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets, # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
-    "symbol, literal, regexp":
+    "symbol, literal":
         [reduce_single_child],
+    "regexp":
+        [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
     (TOKEN_PTYPE, WHITESPACE_PTYPE):
         [reduce_single_child],
     "EOF, DEF, OR, AND, ENDL":
@@ -1572,7 +1574,7 @@ class EBNFCompiler(Compiler):
                             nd = symlist[0].children[1]
                         break
                 content = nd.content
-                if (nd.tag_name != "regexp" or content[:1] != '/' or content[-1:] != '/'):
+                if nd.tag_name != "regexp":   # outdated: or content[:1] != '/' or content[-1:] != '/'):
                     self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
                                               "-parsers, not: " + nd.tag_name)
 
@@ -1703,9 +1705,8 @@ class EBNFCompiler(Compiler):
     def on_regexp(self, node: Node) -> str:
         rx = node.content
         name = []   # type: List[str]
-        assert rx[0] == '/' and rx[-1] == '/'
         try:
-            arg = repr(self._check_rx(node, rx[1:-1].replace(r'\/', '/')))
+            arg = repr(self._check_rx(node, rx.replace(r'\/', '/')))
         except AttributeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list(extract_tb(error.__traceback__)))
