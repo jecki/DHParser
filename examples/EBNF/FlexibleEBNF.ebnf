@@ -78,8 +78,9 @@ element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure 
            | literal
            | plaintext
            | regexp
-           | char_range ~
+           | char_range
            | character ~
+           | any_char
            | whitespace
            | group
 
@@ -104,7 +105,7 @@ counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~
 
 range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
 no_range   = !multiplier | &multiplier :TIMES
-multiplier = /\d+/~
+multiplier = /[1-9]\d*/~
 
 
 #: leaf-elements
@@ -117,10 +118,10 @@ plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat 
 regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
 char_range = `[` &char_range_heuristics
-                 [`^`] (character | free_char) { [`-`] character | free_char } `]`
-character  = :CH_LEADIN HEXCODE | any_char
+                 [`^`] (character | free_char) { [`-`] character | free_char } "]"
+character  = :CH_LEADIN HEXCODE
 free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
-any_char   = `.`
+any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
 
 #: delimiters
@@ -160,6 +161,6 @@ regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
 
 RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
-HEXCODE    = /[A-Fa-f0-9]/+
+HEXCODE    = /[A-Fa-f0-9]{1,8}/
 
 

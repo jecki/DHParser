@@ -99,7 +99,7 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \\
     Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Counted, Interleave, INFINITE, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
@@ -152,7 +152,7 @@ class EBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "7f4164dc50f55c06e05902dd0ab2090b"
+    source_hash__ = "3bda01686407a47a9fd0a709bda53ae3"
     anonymous__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -165,7 +165,7 @@ class EBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    HEXCODE = OneOrMore(RegExp('[A-Fa-f0-9]'))
+    HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
     regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
@@ -176,7 +176,7 @@ class EBNFGrammar(Grammar):
     RE_LEADIN = Capture(Alternative(Series(Token("/"), Lookahead(regex_heuristics)), Token("^/")))
     TIMES = Capture(Token("*"))
     RNG_DELIM = Capture(Token(","))
-    BRACE_SIGN = Capture(Token("{"))
+    BRACE_SIGN = Capture(Alternative(Token("{"), Token("(")))
     RNG_BRACE = Capture(Retrieve(BRACE_SIGN))
     ENDL = Capture(Alternative(Token(";"), Token("")))
     AND = Capture(Alternative(Token(","), Token("")))
@@ -184,15 +184,15 @@ class EBNFGrammar(Grammar):
     DEF = Capture(Alternative(Token("="), Token(":="), Token("::="), Token("<-")))
     EOF = Drop(Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value)))))))
     whitespace = Series(RegExp('~'), dwsp__)
-    any_char = Token(".")
+    any_char = Series(Token("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
-    character = Alternative(Series(Retrieve(CH_LEADIN), HEXCODE), any_char)
-    char_range = Series(Token("["), Lookahead(char_range_heuristics), Option(Token("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Token("-")), character), free_char)), Token("]"))
+    character = Series(Retrieve(CH_LEADIN), HEXCODE)
+    char_range = Series(Token("["), Lookahead(char_range_heuristics), Option(Token("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Token("-")), character), free_char)), Series(Token("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
-    multiplier = Series(RegExp('\\d+'), dwsp__)
+    multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
     no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
     range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
     counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
@@ -203,7 +203,7 @@ class EBNFGrammar(Grammar):
     retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":?"), dwsp__), Series(Token(":"), dwsp__))
     flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
     ANY_SUFFIX = RegExp('[?*+]')
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, Series(char_range, dwsp__), Series(character, dwsp__), whitespace, group))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group))
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
     countable.set(Alternative(option, oneormore, element))
     term = Alternative(oneormore, counted, repetition, option, pure_elem)
@@ -388,14 +388,15 @@ EBNF_AST_transformation_table = {
     "regexp":
         [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
     "char_range":
-        [],
+        [flatten],
     "character":
-        [],
+        [remove_children('CH_LEADIN'), reduce_single_child],
     "free_char":
         [],
     (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
         [reduce_single_child],
-    "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, RE_LEADIN, RE_LEADOUT":
+    "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, " \
+    "RE_LEADIN, RE_LEADOUT, CH_LEADIN":
         [],
     "*":
         [replace_by_single_child]
@@ -1795,8 +1796,36 @@ class EBNFCompiler(Compiler):
         return self.REGEXP_PARSER(', '.join([arg] + name))
 
 
-    def on_free_char(self, node: Node) -> str:
-        return ''
+    def on_char_range(self, node) -> str:
+        for child in node.children:
+            if child.tag_name == 'character':
+                child.result = self.extract_character(child)
+            elif child.tag_name == 'free_char':
+                child.result = self.extract_free_char(child)
+        return "RegExp('[%s]')" % node.content
+
+
+    def extract_character(self, node: Node) -> str:
+        hexcode = node.content
+        if len(hexcode) > 4:
+            assert len(hexcode) <= 8
+            code = '\\U' + (8 - len(hexcode)) * '0' + hexcode
+        elif len(hexcode) > 2:
+            code = '\\u' + (4 - len(hexcode)) * '0' + hexcode
+        else:
+            code = '\\x' + (2 - len(hexcode)) * '0' + hexcode
+        return code
+
+
+    def on_character(self, node: Node) -> str:
+        return "RegExp('%s')" % self.extract_character(node)
+
+
+    def extract_free_char(self, node: Node) -> str:
+        assert len(node.content) == 1
+        bytestr = node.content.encode('unicode-escape')
+        return bytestr.decode()
+
 
     def on_any_char(self, node: Node) -> str:
         return 'AnyChar()'

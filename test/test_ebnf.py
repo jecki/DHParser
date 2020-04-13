@@ -518,6 +518,14 @@ class TestInterleave:
         st = grammar('bbb')
         assert not st.errors
 
+    def test_illegal_multiplier(self):
+        lang = 'doc = "a" * 3'
+        st = parse_ebnf(lang)
+        assert not st.errors
+        lang_wrong = 'doc = "a" * 0'
+        st = parse_ebnf(lang_wrong)
+        assert st.errors
+
     def test_all(self):
         ebnf = 'prefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
@@ -937,6 +945,31 @@ class TestSyntaxExtensions:
         st = parser("E")
         assert st.errors and any(e.code == PARSER_DID_NOT_MATCH for e in st.errors)
 
+    def test_any_char(self):
+        lang = 'doc = "A".'
+        parser = create_parser(lang)
+        st = parser('A翿')
+        assert st.as_sxpr() == '(doc (:Token "A") (:AnyChar "翿"))'
+
+    def test_character(self):
+        lang = 'doc = 0xe4'
+        parser = create_parser(lang)
+        st = parser('ä')
+        assert not st.errors
+        lang = 'doc = #xe4'
+        parser = create_parser(lang)
+        st = parser('ä')
+        assert not st.errors
+        lang = 'doc = 0x37F'
+        parser = create_parser(lang)
+        st = parser('Ϳ')
+        assert not st.errors
+
+    def test_char_range(self):
+        # TODO: simple char ranges, e.g. 0x25-0x3F
+        # TODO: switch syntax to heustic mode + special
+        #       char-range, e.g. [^A-Za-z_]
+        pass
 
 class TestModeSetting:
     testdoc = """# hey, you
