@@ -29,7 +29,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
-from DHParser import compile_source
+from DHParser import compile_source, INFINITE, Interleave
 from DHParser.configuration import access_thread_locals, get_config_value, \
     EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
     EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
@@ -492,14 +492,31 @@ class TestWhitespace:
 
 class TestInterleave:
     def test_counted(self):
-        ebnf = 'prefix = "abc"{2,5}\n'
-        ast = parse_ebnf(ebnf)
-        transform_ebnf(ast)
-        print(ast.as_sxpr())
+        ebnf = 'test   = form_1 | form_2 | form_3 | form_4 | "non optional" form_5 | form_6\n' \
+               'form_1 = "a"{2,4}' \
+               'form_2 = "b"{3}' \
+               'form_3 = "c"*3' \
+               'form_4 = 2*"d"' \
+               'form_5 = ["e"]*3' \
+               'form_6 = 5*{"f"}+'
+        # ast = parse_ebnf(ebnf)
+        # transform_ebnf(ast)
+        # print(ast.as_sxpr())
         grammar = create_parser(ebnf)
-        print(grammar)
-        st = grammar('abcabc')
-        print(st)
+        assert grammar.form_6.repetitions == (5, INFINITE)
+        assert grammar.form_5.repetitions == (0, 3)
+        assert grammar.form_4.repetitions == (2, 2)
+        assert grammar.form_3.repetitions == (3, 3)
+        assert grammar.form_2.repetitions == (3, 3)
+        assert grammar.form_1.repetitions == (2, 4)
+        st = grammar('a')
+        assert st.errors
+        st = grammar('aaaaa')
+        assert st.errors
+        st = grammar('aaaa')
+        assert not st.errors
+        st = grammar('bbb')
+        assert not st.errors
 
     def test_all(self):
         ebnf = 'prefix = "A" ° "B"'
@@ -514,6 +531,36 @@ class TestInterleave:
         assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
         assert grammar('B').content == 'B'
+
+    def test_interleave_counted(self):
+        ebnf = 'prefix = "A"{1,5} ° "B"{2,3}'
+        grammar = create_parser(ebnf)
+        assert isinstance(grammar.prefix, Interleave)
+        assert grammar.prefix.repetitions == [(1, 5), (2, 3)]
+        st = grammar('ABABA')
+        assert not st.errors
+        st = grammar('BBA')
+        assert not st.errors
+
+    def test_grouping_1(self):
+        ebnf = 'prefix = ("A"{1,5}) ° ("B"{2,3})'
+        grammar = create_parser(ebnf)
+        assert isinstance(grammar.prefix, Interleave)
+        assert grammar.prefix.repetitions == [(1, 1), (1, 1)]
+        st = grammar('ABABA')
+        assert st.errors
+        st = grammar('BBA')
+        assert not st.errors
+
+    def test_grouping_2(self):
+        ebnf = 'prefix = ("A"{1,5}) ° ("B"{2,3})'
+        grammar = create_parser(ebnf)
+        assert isinstance(grammar.prefix, Interleave)
+        assert grammar.prefix.repetitions == [(1, 1), (1, 1)]
+        st = grammar('ABABA')
+        assert st.errors
+        st = grammar('BBA')
+        assert not st.errors
 
 
 class TestErrorCustomization:

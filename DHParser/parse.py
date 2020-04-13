@@ -86,6 +86,7 @@ __all__ = ('ParserError',
            'Series',
            'Alternative',
            'INFINITE',
+           'Counted',
            'Interleave',
            'Required',
            'Lookahead',
@@ -1858,6 +1859,11 @@ class CombinedParser(Parser):
             return Node(self.tag_name, ())
         return Node(self.tag_name, results)  # unoptimized code
 
+    def location_info(self) -> str:
+        """Returns a description of the location of the parser within the grammar
+        for the purpose of transparent erorr reporting."""
+        return '%s%s in definition of "%s" as %s' % (self.pname or '_', self.ptype, self.symbol, str(self))
+
 
 class UnaryParser(CombinedParser):
     """
@@ -1883,12 +1889,12 @@ class UnaryParser(CombinedParser):
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return (self.parser,)
-
-    def location_info(self) -> str:
-        """Returns a description of the location of the parser within the grammar
-        for the purpose of transparent erorr reporting."""
-        return "%s: %s%s(%s%s)" % (self.symbol, self.pname or '_', self.ptype,
-                                   self.parser.pname or '_', self.parser.ptype)
+    #
+    # def location_info(self) -> str:
+    #     """Returns a description of the location of the parser within the grammar
+    #     for the purpose of transparent error reporting."""
+    #     return "%s: %s%s(%s%s)" % (self.symbol, self.pname or '_', self.ptype,
+    #                                self.parser.pname or '_', self.parser.ptype)
 
 
 class NaryParser(CombinedParser):
@@ -1923,11 +1929,6 @@ class NaryParser(CombinedParser):
                 'Nary parser %s:%s = %s requires at least on argument'
                 % (self.pname, self.ptype, str(self)), NARY_WITHOUT_PARSERS)]
         return None
-
-    def location_info(self) -> str:
-        """Returns a description of the location of the parser within the grammar
-        for the purpose of transparent erorr reporting."""
-        return "%s: %s%s = %s'" % (self.symbol, self.pname or '_', self.ptype, str(self))
 
 
 class Option(UnaryParser):
@@ -2163,7 +2164,7 @@ class Counted(UnaryParser):
         return self.repetitions[0] == 0
 
     def __repr__(self):
-        return self.parser.repr + str(self.repetitions).replace(' ', '')
+        return self.parser.repr + "{%i,%i}" % self.repetitions
 
     def static_analysis(self) -> Optional[List['AnalysisError']]:
         a, b = self.repetitions
@@ -2489,10 +2490,14 @@ class Alternative(NaryParser):
                 'Duplicate parsers in ' + self.location_info(),
                 DUPLICATE_PARSERS_IN_ALTERNATIVE))
         if not all(not p.is_optional() for p in self.parsers[:-1]):
+            for i, p in enumerate(self.parsers):
+                if p.is_optional():
+                    break
             errors.append(self.static_error(
                 "Parser-specification Error in " + self.location_info()
-                + "\nOnly the very last alternative may be optional! \nOtherwise, "
-                "alternatives after the first optional alternative will never be parsed.",
+                + "\nOnly the very last alternative may be optional! "
+                + 'Parser "%s" at position %i out of %i is optional'
+                %(p.tag_name, i + 1, len(self.parsers)),
                 BAD_ORDER_OF_ALTERNATIVES))
         return errors or None
 

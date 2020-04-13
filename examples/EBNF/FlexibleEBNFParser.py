@@ -71,10 +71,11 @@ def get_preprocessor() -> PreprocessorFunc:
 class FlexibleEBNFGrammar(Grammar):
     r"""Parser for a FlexibleEBNF source file.
     """
+    countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "b59637e04eb37014683f4ab1608adf9a"
-    anonymous__ = re.compile('pure_elem$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "7f4164dc50f55c06e05902dd0ab2090b"
+    anonymous__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -97,7 +98,7 @@ class FlexibleEBNFGrammar(Grammar):
     RE_LEADIN = Capture(Alternative(Series(Token("/"), Lookahead(regex_heuristics)), Token("^/")))
     TIMES = Capture(Token("*"))
     RNG_DELIM = Capture(Token(","))
-    BRACE_SIGN = Capture(Alternative(Token("{"), Token("(")))
+    BRACE_SIGN = Capture(Token("{"))
     RNG_BRACE = Capture(Retrieve(BRACE_SIGN))
     ENDL = Capture(Alternative(Token(";"), Token("")))
     AND = Capture(Alternative(Token(","), Token("")))
@@ -116,7 +117,7 @@ class FlexibleEBNFGrammar(Grammar):
     multiplier = Series(RegExp('\\d+'), dwsp__)
     no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
     range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
-    counted = Alternative(Series(element, range), Series(element, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, element, mandatory=3))
+    counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
     option = Alternative(Series(NegativeLookahead(char_range), Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=2), Series(element, Series(Token("?"), dwsp__)))
     repetition = Alternative(Series(Series(Token("{"), dwsp__), no_range, expression, Series(Token("}"), dwsp__), mandatory=2), Series(element, Series(Token("*"), dwsp__), no_range))
     oneormore = Alternative(Series(Series(Token("{"), dwsp__), no_range, expression, Series(Token("}+"), dwsp__)), Series(element, Series(Token("+"), dwsp__)))
@@ -126,6 +127,7 @@ class FlexibleEBNFGrammar(Grammar):
     ANY_SUFFIX = RegExp('[?*+]')
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, Series(char_range, dwsp__), Series(character, dwsp__), whitespace, group))
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
+    countable.set(Alternative(option, oneormore, element))
     term = Alternative(oneormore, counted, repetition, option, pure_elem)
     difference = Series(term, Option(Series(Series(Token("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
@@ -137,7 +139,7 @@ class FlexibleEBNFGrammar(Grammar):
     literals = OneOrMore(literal)
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))), Lookahead(FOLLOW_UP), mandatory=1)
     definition = Series(symbol, Retrieve(DEF), dwsp__, expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1, err_msgs=error_messages__["definition"])
-    syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF)
+    syntax = Series(Option(dwsp__), ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
     
 

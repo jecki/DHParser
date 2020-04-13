@@ -27,7 +27,7 @@
     # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ anonymous  = pure_elem, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+@ anonymous  = pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
 @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
@@ -72,6 +72,7 @@ term       = oneormore | counted | repetition | option | pure_elem
 
 #: elements
 
+countable  = option | oneormore | element
 pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
 element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure it's not a definition
            | literal
@@ -99,7 +100,7 @@ group      = "(" no_range §expression ")"
 oneormore  = "{" no_range expression "}+" | element "+"
 repetition = "{" no_range §expression "}" | element "*" no_range
 option     = !char_range "[" §expression "]" | element "?"
-counted    = element range | element :TIMES~ multiplier | multiplier :TIMES~ §element
+counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~ §countable
 
 range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
 no_range   = !multiplier | &multiplier :TIMES
@@ -133,7 +134,7 @@ AND        = `,` | ``
 ENDL       = `;` | ``
 
 RNG_BRACE  = :BRACE_SIGN
-BRACE_SIGN = `{`  # | `(`
+BRACE_SIGN = `{` | `(`
 RNG_DELIM  = `,`
 TIMES      = `*`
 

@@ -100,7 +100,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \\
+    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Counted, Interleave, INFINITE, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
@@ -149,10 +149,11 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 class EBNFGrammar(Grammar):
     r"""Parser for a FlexibleEBNF source file.
     """
+    countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "b59637e04eb37014683f4ab1608adf9a"
-    anonymous__ = re.compile('pure_elem$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "7f4164dc50f55c06e05902dd0ab2090b"
+    anonymous__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -175,7 +176,7 @@ class EBNFGrammar(Grammar):
     RE_LEADIN = Capture(Alternative(Series(Token("/"), Lookahead(regex_heuristics)), Token("^/")))
     TIMES = Capture(Token("*"))
     RNG_DELIM = Capture(Token(","))
-    BRACE_SIGN = Capture(Alternative(Token("{"), Token("(")))
+    BRACE_SIGN = Capture(Token("{"))
     RNG_BRACE = Capture(Retrieve(BRACE_SIGN))
     ENDL = Capture(Alternative(Token(";"), Token("")))
     AND = Capture(Alternative(Token(","), Token("")))
@@ -194,7 +195,7 @@ class EBNFGrammar(Grammar):
     multiplier = Series(RegExp('\\d+'), dwsp__)
     no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
     range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
-    counted = Alternative(Series(element, range), Series(element, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, element, mandatory=3))
+    counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
     option = Alternative(Series(NegativeLookahead(char_range), Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=2), Series(element, Series(Token("?"), dwsp__)))
     repetition = Alternative(Series(Series(Token("{"), dwsp__), no_range, expression, Series(Token("}"), dwsp__), mandatory=2), Series(element, Series(Token("*"), dwsp__), no_range))
     oneormore = Alternative(Series(Series(Token("{"), dwsp__), no_range, expression, Series(Token("}+"), dwsp__)), Series(element, Series(Token("+"), dwsp__)))
@@ -204,6 +205,7 @@ class EBNFGrammar(Grammar):
     ANY_SUFFIX = RegExp('[?*+]')
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, Series(char_range, dwsp__), Series(character, dwsp__), whitespace, group))
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
+    countable.set(Alternative(option, oneormore, element))
     term = Alternative(oneormore, counted, repetition, option, pure_elem)
     difference = Series(term, Option(Series(Series(Token("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
@@ -215,7 +217,7 @@ class EBNFGrammar(Grammar):
     literals = OneOrMore(literal)
     directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))), Lookahead(FOLLOW_UP), mandatory=1)
     definition = Series(symbol, Retrieve(DEF), dwsp__, expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1, err_msgs=error_messages__["definition"])
-    syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF)
+    syntax = Series(Option(dwsp__), ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
 
     free_char_parsefunc__ = free_char._parse
@@ -375,6 +377,10 @@ EBNF_AST_transformation_table = {
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets, # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
+    "counted":
+        [remove_children('TIMES')],
+    "range":
+        [remove_children('BRACE_SIGN', 'RNG_BRACE', 'RNG_DELIM')],
     "symbol, literal":
         [reduce_single_child],
     "regexp":
@@ -1541,10 +1547,14 @@ class EBNFCompiler(Compiler):
                 repetitions.append((0, 1))
                 assert len(child.children) == 1
                 children.append(child.children[0])
+            elif child.tag_name == "counted":
+                what, r = self.extract_counted(child)
+                repetitions.append(r)
+                children.append(what)
             else:
                 repetitions.append((1, 1))
                 children.append(child)
-        custom_args.append('repetitions={}'.format(repetitions))
+        custom_args.append('repetitions=' + str(repetitions).replace(str(INFINITE), 'INFINITE'))
         mock_node = Node(node.tag_name, tuple(children))
         return self.non_terminal(mock_node, 'Interleave', custom_args)
 
@@ -1554,7 +1564,7 @@ class EBNFCompiler(Compiler):
         assert len(node.children) == 2
         assert node.children[0].tag_name == 'flowmarker'
         prefix = node.children[0].content
-        arg_node = node.children[1]
+        # arg_node = node.children[1]
         node.result = node.children[1:]
         assert prefix in {'&', '!', '<-&', '<-!'}
 
@@ -1573,7 +1583,7 @@ class EBNFCompiler(Compiler):
                         if len(symlist) == 1:
                             nd = symlist[0].children[1]
                         break
-                content = nd.content
+                # content = nd.content
                 if nd.tag_name != "regexp":   # outdated: or content[:1] != '/' or content[-1:] != '/'):
                     self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
                                               "-parsers, not: " + nd.tag_name)
@@ -1633,8 +1643,68 @@ class EBNFCompiler(Compiler):
     def on_group(self, node) -> str:
         assert len(node.children) == 1
         return self.compile(node.children[0])
-        # raise EBNFCompilerError("Group nodes should have been eliminated by "
-        #                         "AST transformation!")
+
+
+    def extract_range(self, node) -> Tuple[int, int]:
+        """Returns the range-value of a range-node as a tuple of two integers.
+        """
+        assert node.tag_name == "range"
+        assert all(child.tag_name == 'multiplier' for child in node.children)
+        if len(node.children) == 2:
+            r = (int(node.children[0].content), int(node.children[1].content))
+            if r[0] > r[1]:
+                self.tree.new_error(
+                    node, "Upper bound %i of range is greater than lower bound %i!" % r)
+                return r[1], r[0]
+            return r
+        else:
+            assert len(node.children) == 1
+            return (int(node.children[0].content), int(node.children[0].content))
+
+
+    def extract_counted(self, node) -> Tuple[Node, Tuple[int, int]]:
+        """Returns the content of a counted-node in a normalized form:
+        (node, (n, m)) where node is root of the sub-parser that is counted,
+        i.e. repeated n or n upto m times.
+        """
+        assert node.tag_name == 'counted'
+        assert len(node.children) == 2
+        range = node.get('range', None)
+        if range:
+            r = self.extract_range(range)
+            what = node.children[0]
+            assert what.tag_name != 'range'
+        else:  # multiplier specified instead of range
+            if node.children[0].tag_name == 'multiplier':
+                m = int(node.children[0].content)
+                what = node.children[1]
+            else:
+                assert node.children[1].tag_name == 'multiplier'
+                m = int(node.children[1].content)
+                what = node.children[0]
+            if what.tag_name == 'option':
+                what = what.children[0]
+                r = (0, m)
+            elif what.tag_name == 'oneormore':
+                what = what.children[0]
+                r = (m, INFINITE)
+            elif what.tag_name == 'repetition':
+                self.tree.new_error(
+                    node, 'Counting zero or more repetitions of something does not make sense! '
+                    'Its still zero or more repetitions all the same.')
+                what = what.children[0]
+                r = (0, INFINITE)
+            else:
+                r = (m, m)
+        return what, r
+
+
+    def on_counted(self, node) -> str:
+        what, r = self.extract_counted(node)
+        # whatstr = self.compile(what)
+        rstr = str(r).replace(str(INFINITE), 'INFINITE')
+        mock_node = Node(node.tag_name, (what,))
+        return self.non_terminal(mock_node, 'Counted', ['repetitions=' + rstr])
 
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
