@@ -381,13 +381,21 @@ EBNF_AST_transformation_table = {
         [remove_children('TIMES')],
     "range":
         [remove_children('BRACE_SIGN', 'RNG_BRACE', 'RNG_DELIM')],
-    "symbol, literal":
+    "symbol, literal, any_char":
         [reduce_single_child],
+    "plaintext":
+        [],
     "regexp":
         [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
-    (TOKEN_PTYPE, WHITESPACE_PTYPE):
+    "char_range":
+        [],
+    "character":
+        [],
+    "free_char":
+        [],
+    (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
         [reduce_single_child],
-    "EOF, DEF, OR, AND, ENDL":
+    "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, RE_LEADIN, RE_LEADOUT":
         [],
     "*":
         [replace_by_single_child]
@@ -1785,6 +1793,13 @@ class EBNFCompiler(Compiler):
             self.tree.new_error(node, errmsg)
             return '"' + errmsg + '"'
         return self.REGEXP_PARSER(', '.join([arg] + name))
+
+
+    def on_free_char(self, node: Node) -> str:
+        return ''
+
+    def on_any_char(self, node: Node) -> str:
+        return 'AnyChar()'
 
 
     def on_whitespace(self, node: Node) -> str:
