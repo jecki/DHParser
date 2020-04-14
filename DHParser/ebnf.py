@@ -388,14 +388,14 @@ EBNF_AST_transformation_table = {
     "regexp":
         [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
     "char_range":
-        [flatten],
+        [flatten, remove_tokens('[', ']')],
     "character":
         [remove_children('CH_LEADIN'), reduce_single_child],
     "free_char":
         [],
     (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
         [reduce_single_child],
-    "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, " \
+    "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, "
     "RE_LEADIN, RE_LEADOUT, CH_LEADIN":
         [],
     "*":
@@ -511,8 +511,8 @@ ReprType = Union[str, unrepr]
 
 
 KNOWN_DIRECTIVES = {
-    'comment': 'Regular expression for comments, e.g. /#.*(?:\n|$)/',
-    'whitespace': 'Regular expression for whitespace, e.g. /\s*/',
+    'comment': r'Regular expression for comments, e.g. /#.*(?:\n|$)/',
+    'whitespace': r'Regular expression for whitespace, e.g. /\s*/',
     'literalws': 'Controls implicit whitespace adjacent to literals: left, right, both, none',
     'ignorecase': 'Controls case-sensitivity: on, off',
     '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
