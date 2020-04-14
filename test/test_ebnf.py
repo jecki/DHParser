@@ -966,9 +966,6 @@ class TestSyntaxExtensions:
         assert not st.errors
 
     def test_simple_char_range(self):
-        # TODO: simple char ranges, e.g. 0x25-0x3F
-        # TODO: switch syntax to heustic mode + special
-        #       char-range, e.g. [^A-Za-z_]
         set_config_value('syntax_variant', EBNF_ANY_SYNTAX_STRICT)
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
         # print(raw_compileEBNF(lang).result)
