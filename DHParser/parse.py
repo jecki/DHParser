@@ -2406,26 +2406,33 @@ class Series(MandatoryNary):
         return self
 
 
-def starting_string(parser: Parser) -> Optional[str]:
-    """If parser starts with a fixed string, this will be returned."""
-    # TODO: Are tests for cycles needed?
-    if isinstance(parser, Token):
-        return cast(Token, parser).text
-    elif isinstance(parser, Series) or isinstance(parser, Alternative):
-        return starting_string(cast(NaryParser, parser).parsers[0])
-    elif isinstance(parser, Synonym) or isinstance(parser, OneOrMore) \
-            or isinstance(parser, Lookahead):
-        return starting_string(cast(UnaryParser, parser).parser)
-    elif isinstance(parser, Counted):
-        counted = cast(Counted, parser)  # type: Counted
-        if not counted.is_optional():
-            return starting_string(counted.parser)
-    elif isinstance(parser, Interleave):
-        interleave = cast(Interleave, parser)
-        if interleave.repetitions[0][0] >= 1:
-            return starting_string(interleave.parsers[0])
-    else:
-        return None
+def starting_string(parser: Parser) -> str:
+    """If parser starts with a fixed string, this will be returned.
+    """
+    # keep track of already visited parsers to avoid infinite circles
+    been_there = set()  # type: Set[Parser]
+
+    def find_starting_string(p: Parser) -> str:
+        nonlocal been_there
+        if p not in been_there:
+            been_there.add(p)
+            if isinstance(p, Token):
+                return cast(Token, p).text
+            elif isinstance(p, Series) or isinstance(p, Alternative):
+                return starting_string(cast(NaryParser, p).parsers[0])
+            elif isinstance(p, Synonym) or isinstance(p, OneOrMore) \
+                    or isinstance(p, Lookahead):
+                return starting_string(cast(UnaryParser, p).parser)
+            elif isinstance(p, Counted):
+                counted = cast(Counted, p)  # type: Counted
+                if not counted.is_optional():
+                    return starting_string(counted.parser)
+            elif isinstance(p, Interleave):
+                interleave = cast(Interleave, p)
+                if interleave.repetitions[0][0] >= 1:
+                    return starting_string(interleave.parsers[0])
+        return ""
+    return find_starting_string(parser)
 
 
 class Alternative(NaryParser):
@@ -2516,6 +2523,15 @@ class Alternative(NaryParser):
                 + 'Parser "%s" at position %i out of %i is optional'
                 %(p.tag_name, i + 1, len(self.parsers)),
                 BAD_ORDER_OF_ALTERNATIVES))
+        for i in range(2, len(self.parsers)):
+            fixed_start = starting_string(self.parsers[i])
+            if fixed_start:
+                for k in range(i):
+                    st = self.grammar(fixed_start, self.parsers[k], complete_match=False)
+                    if not st.errors and len(st) >= 1:
+                        errors.append(self.static_error(
+                            "Pre-empted Alternative."
+                        ))
         return errors or None
 
 
