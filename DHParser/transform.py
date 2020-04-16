@@ -404,7 +404,7 @@ def condition_guard(value) -> bool:
 
 
 def apply_transformations(context: List[Node], transformation: Union[Callable, Sequence[Callable]]):
-    """Applies a sinlge or a sequence of transformations to a context."""
+    """Applies a single or a sequence of transformations to a context."""
     if callable(transformation):
         transformation_guard(transformation(context))
     else:
@@ -866,10 +866,8 @@ def collapse(context: List[Node]):
 def collapse_children_if(context: List[Node], condition: Callable, target_tag: str):
     """
     (Recursively) merges the content of all adjacent child nodes that
-    fulfill the given `condition` into a single leaf node. If the adjacent child
-    nodes have different tag_names or tag_names starting with the marker for an
-    anonymous node ":", then `target_tag` is used as the tag name for
-    the resulting node. Nodes that do not fulfil the condition will be preserved.
+    fulfill the given `condition` into a single leaf node with the tag-name
+    `taget_tag`. Nodes that do not fulfil the condition will be preserved.
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
     >>> tree = parse_sxpr(sxpr)
@@ -882,20 +880,31 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
     assert isinstance(target_tag, str)  # TODO: Delete this when safe
 
     node = context[-1]
+    if not node.children:
+        return  # do nothing if its a leaf node
     package = []  # type: List[Node]
     result = []  # type: List[Node]
 
+    # def find_tag_name() -> str:
+    #     nonlocal package, target_tag
+    #     favorite = ''
+    #     tag_count = {'': 0}
+    #     for nd in package:
+    #         if not nd.tag_name.startswith(':'):
+    #             tag_count[nd.tag_name] = tag_count.get(nd.tag_name, 0) + 1
+    #             if tag_count[nd.tag_name] > tag_count[favorite]:
+    #                 favorite = nd.tag_name
+    #     return favorite or target_tag
+
     def close_package():
-        nonlocal package
+        nonlocal package, target_tag
         if package:
-            tag_name = package[0].tag_name
-            if tag_name.startswith(':') or any(nd.tag_name != tag_name for nd in package):
-                tag_name = target_tag
+            # tag_name = package[0].tag_name
+            # if tag_name.startswith(':') or any(nd.tag_name != tag_name for nd in package):
+            #     tag_name = target_tag
             s = "".join(nd.content for nd in package)
-            # pivot = package[0].tag_name
-            # target_tag = pivot if all(nd.tag_name == pivot for nd in package) else target_tag
             # TODO: update attributes
-            result.append(Node(tag_name, s))
+            result.append(Node(target_tag, s))
             package = []
 
     for child in node.children:
