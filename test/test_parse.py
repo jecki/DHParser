@@ -1394,7 +1394,11 @@ class TestStaticAnalysis:
         except GrammarError:
             pass
 
-
+    def test_cyclical_ebnf_error(self):
+        lang = "doc = { doc }  # this parser never reaches a leaf parser."
+        lang2 = "doc = word | sentence  # a more convoluted example" \
+                "word = [sentence] doc" \
+                "sentence = { word }+ | sentence"
 
 
 if __name__ == "__main__":

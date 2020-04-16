@@ -42,7 +42,7 @@ from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
-    OPTIONAL_REDUNDANTLY_NESTED_WARNING, NARY_WITHOUT_PARSERS, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -1912,6 +1912,8 @@ class NaryParser(CombinedParser):
     def __init__(self, *parsers: Parser) -> None:
         super(NaryParser, self).__init__()
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
+        if len(parsers) == 0:
+            raise ValueError('Cannot initialize NaryParser with zero parsers.')
         self.parsers = parsers  # type: Tuple[Parser, ...]
 
     def __deepcopy__(self, memo):
@@ -1922,13 +1924,6 @@ class NaryParser(CombinedParser):
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return self.parsers
-
-    def static_analysis(self) -> Optional[List['AnalysisError']]:
-        if len(self.parsers) == 0:
-            return [self.static_error(
-                'Nary parser %s:%s = %s requires at least on argument'
-                % (self.pname, self.ptype, str(self)), NARY_WITHOUT_PARSERS)]
-        return None
 
 
 class Option(UnaryParser):
@@ -2409,6 +2404,28 @@ class Series(MandatoryNary):
         self.parsers += other_parsers
         self.mandatory = self.combined_mandatory(self, other)
         return self
+
+
+def starting_string(parser: Parser) -> Optional[str]:
+    """If parser starts with a fixed string, this will be returned."""
+    # TODO: Are tests for cycles needed?
+    if isinstance(parser, Token):
+        return cast(Token, parser).text
+    elif isinstance(parser, Series) or isinstance(parser, Alternative):
+        return starting_string(cast(NaryParser, parser).parsers[0])
+    elif isinstance(parser, Synonym) or isinstance(parser, OneOrMore) \
+            or isinstance(parser, Lookahead):
+        return starting_string(cast(UnaryParser, parser).parser)
+    elif isinstance(parser, Counted):
+        counted = cast(Counted, parser)  # type: Counted
+        if not counted.is_optional():
+            return starting_string(counted.parser)
+    elif isinstance(parser, Interleave):
+        interleave = cast(Interleave, parser)
+        if interleave.repetitions[0][0] >= 1:
+            return starting_string(interleave.parsers[0])
+    else:
+        return None
 
 
 class Alternative(NaryParser):

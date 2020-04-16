@@ -32,13 +32,13 @@ from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source, INFINITE, Interleave
 from DHParser.configuration import access_thread_locals, get_config_value, \
     EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
-    EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+    EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX, set_config_value
 from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CONTINUATION, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
-from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
+from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
 from DHParser.testing import grammar_unit, clean_report
 
 
@@ -965,14 +965,35 @@ class TestSyntaxExtensions:
         st = parser('Ϳ')
         assert not st.errors
 
-    def test_char_range(self):
-        # TODO: simple char ranges, e.g. 0x25-0x3F
-        # TODO: switch syntax to heustic mode + special
-        #       char-range, e.g. [^A-Za-z_]
-        pass
+    def test_simple_char_range(self):
+        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_STRICT)
+        lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
+        # print(raw_compileEBNF(lang).result)
+        parser = create_parser(lang)
+        st = parser('賌')
+        assert st.as_sxpr() == '(Char "賌")'
+
+    def test_full_char_range(self):
+        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_HEURISTICAL)
+        lang = """
+            Identifier <- IdentStart IdentCont* Spacing
+            IdentCont  <- IdentStart / [0-9] 
+            IdentStart <- [a-zA-Z_]
+            Spacing    <- (´ ´ / ´\t´ / ´\n´)*      
+            """
+        # print(raw_compileEBNF(lang).result)
+        parser = create_parser(lang)
+        st = parser('marke_8')
+        assert not st.errors
+        st = parser('t3vp ')
+        assert not st.errors
+        st = parser('3tvp ')
+        assert st.errors
+        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_STRICT)
+
 
 class TestModeSetting:
-    testdoc = """# hey, you
+    testdoc = r"""# hey, you
 
         doc = sequence | re | char | char_range | char_range2 | multiple1 | multiple2 | multiple3 | mutliple4
         sequence = '</' Name S? '>'
