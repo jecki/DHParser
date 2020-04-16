@@ -2408,6 +2408,7 @@ class Series(MandatoryNary):
 
 def starting_string(parser: Parser) -> Optional[str]:
     """If parser starts with a fixed string, this will be returned."""
+    # TODO: Are tests for cycles needed?
     if isinstance(parser, Token):
         return cast(Token, parser).text
     elif isinstance(parser, Series) or isinstance(parser, Alternative):
