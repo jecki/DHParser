@@ -170,7 +170,7 @@ class EBNFGrammar(Grammar):
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
     regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
-    char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n\\t ]'), Series(dwsp__, literal_heuristics), Series(Option(Alternative(Token(":"), Token("::"), Token(":?"))), SYM_REGEX, RegExp('\\s*\\]'))))
+    char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n\\t ]'), Series(dwsp__, literal_heuristics), Series(Option(Alternative(Token("::"), Token(":?"), Token(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
     CH_LEADIN = Capture(Alternative(Token("0x"), Token("#x")))
     RE_LEADOUT = Capture(Token("/"))
     RE_LEADIN = Capture(Alternative(Series(Token("/"), Lookahead(regex_heuristics)), Token("^/")))

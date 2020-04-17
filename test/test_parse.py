@@ -256,18 +256,25 @@ class TestFlowControl:
     t2 = "All word and not play makes Jack a dull boy END\n"
 
     def test_lookbehind(self):
-        ws = RegExp(r'\s*')
-        end = RegExp("END")
+        ws = RegExp(r'\s*');  ws.pname = "ws"
+        end = RegExp("END");  end.pname = "end"
         doc_end = Lookbehind(RegExp('\\s*?\\n')) + end
-        word = RegExp(r'\w+')
+        word = RegExp(r'\w+');  word.pname = "word"
         sequence = OneOrMore(NegativeLookahead(end) + word + ws)
         document = ws + sequence + doc_end + ws
-
         parser = Grammar(document)
         cst = parser(self.t1)
         assert not cst.error_flag, cst.as_sxpr()
         cst = parser(self.t2)
         assert cst.error_flag, cst.as_sxpr()
+
+        cst = parser(self.t2, parser['ws'], complete_match=False)
+        assert cst.did_match() and len(cst) == 0 and not cst.errors
+        cst = parser(self.t2, parser['word'], complete_match=False)
+        assert cst.did_match() and cst.content == "All" and not cst.errors
+        cst = parser(self.t2, parser['end'], complete_match=False)
+        assert not cst.did_match()
+
 
     def test_lookbehind_indirect(self):
         class LookbehindTestGrammar(Grammar):

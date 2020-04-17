@@ -34,7 +34,7 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
     SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, JSON_SERIALIZATION, \
     SMART_SERIALIZATION, get_config_value
-from DHParser.error import Error, ErrorCode, ERROR
+from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col
 
@@ -234,7 +234,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     uninitialized.
 
     Examples:
-    TODO: Add some exmpales here!
+    TODO: Add some examples here!
 
     Attributes and Properties:
         tag_name (str):  The name of the node, which is either its
@@ -1458,7 +1458,10 @@ class RootNode(Node):
 
     def __init__(self, node: Optional[Node] = None):
         super().__init__('__not_yet_ready__', '')
-        self.clear_errors()
+        self.errors = []               # type: List[Error]
+        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
+        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
+        self.error_flag = 0
         if node is not None:
             self.swallow(node)
         # customization for XML-Representation
@@ -1472,10 +1475,11 @@ class RootNode(Node):
         Removes all error messages. This can be used to keep the error messages
         of different subsequent phases of tree-processing separate.
         """
-        self.errors = []               # type: List[Error]
-        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
-        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
-        self.error_flag = 0
+        raise NotImplementedError
+        # self.errors = []               # type: List[Error]
+        # self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
+        # self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
+        # self.error_flag = 0
 
     def __str__(self):
         errors = self.errors_sorted
@@ -1524,8 +1528,12 @@ class RootNode(Node):
         It is possible to add errors to a RootNode object, before it
         has actually swallowed the root of the syntax tree.
         """
+        if self.tag_name != '__not_yet_ready__':
+            raise AssertionError('RootNode.swallow() has already been called!')
         if node is None:
-            self.tag_name = EMPTY_PTYPE
+            self.tag_name = ZOMBIE_TAG
+            self.with_pos(0)
+            self.new_error(self, 'Parser did not match!', PARSER_STOPPED_BEFORE_END)
             return self
         self._result = node._result
         self.children = node.children
@@ -1620,6 +1628,19 @@ class RootNode(Node):
         """
         self.errors.sort(key=lambda e: e.pos)
         return self.errors
+
+    def did_match(self) -> bool:
+        """Returns True, if the parser that has generated this tree did
+        match, False otherwise. Depending on wether the Grammar-object that
+        that generated the syntax tree was called with `complete_match=True`
+        or not this requires either the complete document to have been
+        matched or only the beginning.
+
+        Note: That if the parser did match, this does not mean that it must
+        have matched without errors. It simply means the no
+        PARSER_STOPPED_BEFORE_END-error has occurred."""
+        return self.tag_name != '__not_yet_ready__' \
+            and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
 
     def customized_XML(self):
         """

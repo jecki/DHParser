@@ -1178,10 +1178,12 @@ class Grammar:
     def __str__(self):
         return self.__class__.__name__
 
+
     def __getitem__(self, key):
         try:
             return self.__dict__[key]
         except KeyError:
+            p = getattr(self, key, None)
             parser_template = getattr(self.__class__, key, None)
             if parser_template:
                 # add parser to grammar object on the fly...
@@ -1190,6 +1192,7 @@ class Grammar:
                 assert self[key] == parser
                 return self[key]
             raise UnknownParserError('Unknown parser "%s" !' % key)
+
 
     def __contains__(self, key):
         return key in self.__dict__ or hasattr(self, key)
@@ -2530,8 +2533,10 @@ class Alternative(NaryParser):
                     st = self.grammar(fixed_start, self.parsers[k], complete_match=False)
                     if not st.errors and len(st) >= 1:
                         errors.append(self.static_error(
-                            "Pre-empted Alternative."
-                        ))
+                            "Parser-specification Error in " + self.location_info()
+                            + "\nAlternative %i will never be reached, because its starting-"
+                            'string "%s" is already captured by earlier alternative %i !'
+                            % (i + 1, fixed_start, k + 1), BAD_ORDER_OF_ALTERNATIVES))
         return errors or None
 
 
