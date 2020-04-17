@@ -247,6 +247,12 @@ class TestInfiLoopsAndRecursion:
     #     set_config_value('static_analysis', save)
 
 
+# class TestStaticAnalysis:
+#     def test_alternative(self):
+#         lang = 'doc = "A" | "AB"'
+#         parser = create_parser(lang)
+
+
 class TestFlowControl:
     t1 = """
          All work and no play

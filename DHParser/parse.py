@@ -2526,6 +2526,9 @@ class Alternative(NaryParser):
                 + 'Parser "%s" at position %i out of %i is optional'
                 %(p.tag_name, i + 1, len(self.parsers)),
                 BAD_ORDER_OF_ALTERNATIVES))
+        # check for errors like "A" | "AB" where "AB" would never be reached,
+        # because a substring at the beginning is already caught by an earlier
+        # alternative
         for i in range(2, len(self.parsers)):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
