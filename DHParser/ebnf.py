@@ -227,9 +227,9 @@ class EBNFGrammar(Grammar):
     @property
     def mode(self) -> str:
         def which(p: Parser) -> str:
-            if p._parse.__qualname__ == 'Never._parse':
+            if p._parse_proxy.__qualname__ == 'Never._parse':
                 return 'never'
-            elif p._parse.__qualname__ == 'Always._parse':
+            elif p._parse_proxy.__qualname__ == 'Always._parse':
                 return 'always'
             else:
                 return 'custom'
@@ -253,9 +253,9 @@ class EBNFGrammar(Grammar):
     def mode(self, mode: str):
         def set_parsefunc(p: Parser, f: ParseFunc):
             method = f.__get__(p, type(p))  # bind function f to parser p
-            if p._parse == p._parse_proxy:
-                p._parse_proxy = method
-            p._parse = method
+            # if p._parse == p._parse_proxy:
+            p._parse_proxy = method
+            # p._parse = method
 
         always = Always._parse
         never = Never._parse

@@ -118,7 +118,7 @@ class ParserError(Exception):
 
     Currently, the only case when a `ParserError` is thrown (and not some
     different kind of error like `UnknownParserError`) is when a `Series`-
-    or `AllOf`-parser detects a missing mandatory element.
+    or `Interleave`-parser detects a missing mandatory element.
     """
     def __init__(self, node: Node, rest: StringView, error: Error, first_throw: bool):
         assert node is not None
@@ -720,7 +720,7 @@ def collect_leaf_parsers(starting_point: Parser,
     """
     lp_dict = {starting_point: cache.get(starting_point, set())}  # type: Dict[Parser, Set[Parser]]
 
-    def associate_leaf_parsers(context: Parser):
+    def associate_leaf_parsers(context: List[Parser]):
         parser = context[-1]
         if parser not in context[:-1]:
             if parser in cache:
@@ -2168,7 +2168,7 @@ class Counted(UnaryParser):
     """
     def __init__(self, parser: Parser, repetitions: Tuple[int, int]) -> None:
         super(Counted, self).__init__(parser)
-        self.repetitions = repetitions
+        self.repetitions = repetitions  # type: Tuple[int, int]
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
@@ -2176,6 +2176,7 @@ class Counted(UnaryParser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
+    @cython.locals(n=cython.int, length=cython.int)
     def _parse(self, text: StringView):
         results = ()  # Tuple[Node, ...]
         text_ = text
@@ -2206,6 +2207,7 @@ class Counted(UnaryParser):
     def __repr__(self):
         return self.parser.repr + "{%i,%i}" % self.repetitions
 
+    @cython.locals(a=cython.int, b=cython.int)
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
         a, b = self.repetitions
@@ -2239,7 +2241,6 @@ class MandatoryNary(NaryParser):
                 each of these. The closest match is the point where parsing will be
                 resumed.
     """
-
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
                  err_msgs: MessagesType = [],
@@ -2281,7 +2282,7 @@ class MandatoryNary(NaryParser):
         is attached, and the text segment where parsing is to continue.
 
         This is a helper function that abstracts functionality that is
-        needed by the AllOf- as well as the Series-parser.
+        needed by the Interleave- as well as the Series-parser.
 
         :param parser: the grammar
         :param text_: the point, where the mandatory violation. As usual the
@@ -2623,6 +2624,7 @@ class Interleave(MandatoryNary):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
+    @cython.locals(i=cython.int, n=cython.int, length=cython.int, reloc=cython.int)
     def _parse(self, text: StringView):
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
@@ -2720,6 +2722,7 @@ class Interleave(MandatoryNary):
         self.repetitions = repetitions
         return self
 
+    @cython.locals(a=cython.int, b=cython.int)
     def static_analysis(self) -> List['AnalysisError']:
         # assert len(set(parsers)) == len(parsers)  # commented out, because this could make sense
         errors = super().static_analysis()
