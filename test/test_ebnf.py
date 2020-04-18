@@ -33,7 +33,7 @@ from DHParser import compile_source, INFINITE, Interleave
 from DHParser.configuration import access_thread_locals, get_config_value, \
     EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
     EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX, set_config_value
-from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CONTINUATION, \
+from DHParser.error import has_errors, Error, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
@@ -877,7 +877,7 @@ class TestInterleaveResume:
         assert st.error_flag
         assert len(st.errors) == 1
         st = gr('A_BCDEFG.')
-        assert len(st.errors) == 1 and st.errors[0].code == PARSER_DID_NOT_MATCH
+        assert len(st.errors) == 1 and st.errors[0].code == PARSER_STOPPED_BEFORE_END
         st = gr('AB_CDEFG.')
         # mandatory continuation error kicks in only, if the parsers before
         # the §-sign have been exhausted!
@@ -943,7 +943,7 @@ class TestSyntaxExtensions:
         st = parser("A")
         assert not st.errors and st.tag_name == "doc" and st.content == "A"
         st = parser("E")
-        assert st.errors and any(e.code == PARSER_DID_NOT_MATCH for e in st.errors)
+        assert st.errors and any(e.code == PARSER_STOPPED_BEFORE_END for e in st.errors)
 
     def test_any_char(self):
         lang = 'doc = "A".'

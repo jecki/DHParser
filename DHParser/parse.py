@@ -33,12 +33,12 @@ for an example.
 from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, Dict, \
-    DefaultDict, Sequence, Union, Optional, Any
+    DefaultDict, Sequence, Union, Optional
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
     LEFT_RECURSION_WARNING, UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
-    PARSER_DID_NOT_MATCH, PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, \
+    PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
@@ -375,7 +375,12 @@ class Parser:
         """Returns the symbol with which the parser is associated in a grammar.
         This is the closest parser with a pname that contains this parser."""
         if not self._symbol:
-            self._symbol = self.grammar.associated_symbol(self).pname
+            try:
+                self._symbol = self.grammar.associated_symbol(self).pname
+            except AttributeError:
+                # return an empty string, if parser is not connected to grammar,
+                # but be sure not to save the empty string in self._symbol
+                return ''
         return self._symbol
 
     @property
@@ -675,10 +680,10 @@ class Parser:
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
         return (self.symbol, self, Error(msg, 0, code))
 
-    def static_analysis(self) -> Optional[List['AnalysisError']]:
+    def static_analysis(self) -> List['AnalysisError']:
         """Analyses the parser for logical errors after the grammar has been
         instantiated."""
-        return None
+        return []
 
 
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
@@ -704,6 +709,38 @@ PARSER_PLACEHOLDER = Parser()
 def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     """Returns True, if `parser` is `None` or merely a placeholder for a parser."""
     return not parser or parser.ptype == ":Parser"
+
+
+def collect_leaf_parsers(starting_point: Parser,
+                         cache: Dict[Parser, Set[Parser]] = dict()) -> Set[Parser]:
+    """Retrieves all leaf-parsers that can be reached (or might be called
+    for that matter) a given parser (`starting_point`). Since a combined
+    parser that does not ever reach a leaf-parser, the the returned list
+    should never be empty, if the parser ensemble is well-designed.
+    """
+    lp_dict = {starting_point: cache.get(starting_point, set())}  # type: Dict[Parser, Set[Parser]]
+
+    def associate_leaf_parsers(context: Parser):
+        parser = context[-1]
+        if parser not in context[:-1]:
+            if parser in cache:
+                for p in context:
+                    if p not in cache:
+                        lp_dict.setdefault(p, set()).update(cache[parser])
+            else:
+                sub_parsers = parser.sub_parsers()
+                if sub_parsers:
+                    for p in sub_parsers:
+                        associate_leaf_parsers(context + [p])
+                else:  # it's a leaf-parser, now associate all it's parents with it
+                    for p in context:
+                        if p not in cache:
+                            lp_dict.setdefault(p, set()).add(parser)
+
+    associate_leaf_parsers([starting_point])
+    cache.update(lp_dict)
+
+    return cache[starting_point]
 
 
 ########################################################################
@@ -1162,18 +1199,18 @@ class Grammar:
 
         if self.static_analysis_pending__ \
                 and get_config_value('static_analysis') in {'early', 'late'}:
-            try:
-                result = self.static_analysis()
-                # clears any stored errors without overwriting the pointer
-                while self.static_analysis_errors__:
-                    self.static_analysis_errors__.pop()
-                self.static_analysis_errors__.extend(result)
-                has_errors = any(is_error(tpl[-1].code) for tpl in result)
-                if has_errors:
-                    raise GrammarError(result)
-                self.static_analysis_pending__.pop()
-            except (NameError, AttributeError):
-                pass  # don't fail the initialization of PLACEHOLDER
+            # try:
+            result = self.static_analysis()
+            # clears any stored errors without overwriting the pointer
+            while self.static_analysis_errors__:
+                self.static_analysis_errors__.pop()
+            self.static_analysis_errors__.extend(result)
+            has_errors = any(is_error(tpl[-1].code) for tpl in result)
+            if has_errors:
+                raise GrammarError(result)
+            self.static_analysis_pending__.pop()
+            # except (NameError, AttributeError) as e:
+            #     pass  # don't fail the initialization of PLACEHOLDER
 
     def __str__(self):
         return self.__class__.__name__
@@ -1286,10 +1323,6 @@ class Grammar:
             def is_lookahead(tag_name: str) -> bool:
                 return (tag_name in self and isinstance(self[tag_name], Lookahead)
                         or tag_name[0] == ':' and issubclass(eval(tag_name[1:]), Lookahead))
-            # for h in reversed(self.history__[:-1]):
-            #     for tn, pos in h.call_stack:
-            #         if is_lookahead(tn) and h.status == HistoryRecord.MATCH:
-            #              print(h.call_stack, pos, h.line_col)
             last_record = self.history__[-2] if len(self.history__) > 1 \
                 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
@@ -1329,7 +1362,7 @@ class Grammar:
                 else:
                     self.tree__.new_error(
                         result, 'Parser "%s" did not match empty document.' % str(parser),
-                        PARSER_DID_NOT_MATCH)
+                        PARSER_STOPPED_BEFORE_END)
 
         # copy to local variable, so break condition can be triggered manually
         max_parser_dropouts = self.max_parser_dropouts__
@@ -1351,7 +1384,7 @@ class Grammar:
                         error_code = PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
                         error_msg = 'Parser "%s" did not match!' % str(parser) + err_info
-                        error_code = PARSER_DID_NOT_MATCH
+                        error_code = PARSER_STOPPED_BEFORE_END
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
@@ -1459,11 +1492,11 @@ class Grammar:
         return '\n'.join(ebnf)
 
 
-    def associated_symbol(self, parser: Parser) -> Optional[Parser]:
+    def associated_symbol(self, parser: Parser) -> Parser:
         r"""Returns the closest named parser that contains `parser`.
         If `parser` is a named parser itself, `parser` is returned.
         If `parser` is not connected to any symbol in the Grammar,
-        `None` is returned.
+        an AttributeError is raised.
 
         >>> word = Series(RegExp(r'\w+'), Whitespace(r'\s*'))
         >>> word.pname = 'word'
@@ -1487,6 +1520,9 @@ class Grammar:
         if parser.pname:
             return parser
         self.root_parser__.apply(find_symbol_for_parser)
+        if symbol is None:
+            raise AttributeError('Parser %s (%i) is not contained in Grammar!'
+                                 % (str(parser), id(parser)))
         return symbol
 
 
@@ -1507,10 +1543,18 @@ class Grammar:
             nonlocal error_list
             parser = context[-1]
             errors = parser.static_analysis()
-            if errors is not None:
-                error_list.extend(errors)
+            error_list.extend(errors)
 
         self.root_parser__.apply(visit_parser)
+
+        cache = dict()  # type: Dict[Parser, Set[Parser]]
+        # for DEBUGGING: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
+        for parser in self.all_parsers__: # self.all_parsers__:
+            if parser.pname and not collect_leaf_parsers(parser, cache):
+                error_list.append((parser.symbol, parser, Error(
+                    'Parser %s is entirely cyclical and, therefore, cannot even '
+                    'touch the parsed document' % parser.location_info(),
+                    0, PARSER_NEVER_TOUCHES_DOCUMENT)))
         return error_list
 
 
@@ -1588,7 +1632,7 @@ class PreprocessorToken(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.pname)
-        # duplicate.pname = self.pname
+        copy_parser_base_attrs(self, duplicate)
         duplicate.anonymous = self.anonymous
         duplicate.tag_name = self.tag_name
         return duplicate
@@ -1971,12 +2015,13 @@ class Option(UnaryParser):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.pname else self.parser.repr) + ']'
 
-    def static_analysis(self) -> Optional[List['AnalysisError']]:
+    def static_analysis(self) -> List['AnalysisError']:
+        errors = super().static_analysis()
         if self.parser.is_optional():
-            return [self.static_error(
+            errors.append(self.static_error(
                 "Redundant nesting of optional parser in " + self.location_info(),
-                OPTIONAL_REDUNDANTLY_NESTED_WARNING)]
-        return None
+                OPTIONAL_REDUNDANTLY_NESTED_WARNING))
+        return errors
 
 
 class ZeroOrMore(Option):
@@ -2045,10 +2090,6 @@ class OneOrMore(UnaryParser):
 
     EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
-
-    def __init__(self, parser: Parser) -> None:
-        super(OneOrMore, self).__init__(parser)
-
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
@@ -2075,12 +2116,13 @@ class OneOrMore(UnaryParser):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.pname else self.parser.repr) + '}+'
 
-    def static_analysis(self) -> Optional[List[AnalysisError]]:
+    def static_analysis(self) -> List[AnalysisError]:
+        errors = super().static_analysis()
         if self.parser.is_optional():
-            return [self.static_error(
+            errors.append(self.static_error(
                 "Use ZeroOrMore instead of nesting OneOrMore with an optional parser in " \
-                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER)]
-        return None
+                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
+        return errors
 
 
 INFINITE = 2**30
@@ -2104,20 +2146,20 @@ class Counted(UnaryParser):
 
     >>> A2_4 = Counted(Token('A'), (2, 4))
     >>> A2_4
-    `A`(2,4)
+    `A`{2,4}
     >>> Grammar(A2_4)('AA').as_sxpr()
     '(:Counted (:Token "A") (:Token "A"))'
     >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
     '(:Counted (:Token "A") (:Token "A") (:Token "A") (:Token "A"))'
     >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
-    '(:EMPTY)'
+    '(ZOMBIE__ `(Error (1040): Parser did not match!))'
     >>> moves = OneOrMore(Counted(Token('A'), (1, 3)) + Counted(Token('B'), (1, 3)))
     >>> result = Grammar(moves)('AAABABB')
     >>> result.tag_name, result.content
     (':OneOrMore', 'AAABABB')
     >>> moves = Counted(Token('A'), (2, 3)) * Counted(Token('B'), (2, 3))
     >>> moves
-    `A`(2,3) ° `B`(2,3)
+    `A`{2,3} ° `B`{2,3}
     >>> Grammar(moves)('AAABB').as_sxpr()
     '(:Interleave (:Token "A") (:Token "A") (:Token "A") (:Token "B") (:Token "B"))'
 
@@ -2164,14 +2206,15 @@ class Counted(UnaryParser):
     def __repr__(self):
         return self.parser.repr + "{%i,%i}" % self.repetitions
 
-    def static_analysis(self) -> Optional[List['AnalysisError']]:
+    def static_analysis(self) -> List['AnalysisError']:
+        errors = super().static_analysis()
         a, b = self.repetitions
         if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
-            return [self.static_error(
+            errors.append(self.static_error(
                 'Repetition count [a=%i, b=%i] for parser %s violates requirement '
                 '0 <= a <= b <= infinity = 2^30' % (a, b, str(self)),
-                BAD_REPETITION_COUNT)]
-        return None
+                BAD_REPETITION_COUNT))
+        return errors
 
 
 MessagesType = List[Tuple[Union[str, RxPatternType, Callable], str]]
@@ -2291,7 +2334,8 @@ class MandatoryNary(NaryParser):
             grammar.most_recent_error__ = ParserError(err_node, text_, error, first_throw=False)
         return error, err_node, text_[i:]
 
-    def static_analysis(self) -> Optional[List['AnalysisError']]:
+    def static_analysis(self) -> List['AnalysisError']:
+        errors = super().static_analysis()
         msg = []
         length = len(self.parsers)
         if self.mandatory == NO_MANDATORY and self.err_msgs:
@@ -2310,8 +2354,8 @@ class MandatoryNary(NaryParser):
         if msg:
             msg.insert(0, 'Illegal configuration of mandatory Nary-parser '
                        + self.location_info())
-            return[self.static_error('\n'.join(msg), BAD_MANDATORY_SETUP)]
-        return None
+            errors.append(self.static_error('\n'.join(msg), BAD_MANDATORY_SETUP))
+        return errors
 
 
 class Series(MandatoryNary):
@@ -2461,16 +2505,6 @@ class Alternative(NaryParser):
 
     EBNF-Example:  ``number = /\d+\.\d+/ | /\d+/``
     """
-
-    def __init__(self, *parsers: Parser) -> None:
-        # assert len(parsers) >= 1
-        # assert len(set(parsers)) == len(parsers)
-        # # only the last alternative may be optional. Could this be checked at compile time?
-        # assert all(not p.is_optional() for p in parsers[:-1]), \
-        #     "Parser-specification Error: Only the last alternative may be optional!" \
-        #     "Otherwise alternatives after the first optional alternative will never be parsed."
-        super(Alternative, self).__init__(*parsers)
-
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         for parser in self.parsers:
             node, text_ = parser(text)
@@ -2510,8 +2544,8 @@ class Alternative(NaryParser):
         self.parsers += other_parsers
         return self
 
-    def static_analysis(self) -> Optional[List['AnalysisError']]:
-        errors = super().static_analysis() or []
+    def static_analysis(self) -> List['AnalysisError']:
+        errors = super().static_analysis()
         if len(set(self.parsers)) != len(self.parsers):
             errors.append(self.static_error(
                 'Duplicate parsers in ' + self.location_info(),
@@ -2540,7 +2574,7 @@ class Alternative(NaryParser):
                             + "\nAlternative %i will never be reached, because its starting-"
                             'string "%s" is already captured by earlier alternative %i !'
                             % (i + 1, fixed_start, k + 1), BAD_ORDER_OF_ALTERNATIVES))
-        return errors or None
+        return errors
 
 
 class Interleave(MandatoryNary):
@@ -2686,21 +2720,22 @@ class Interleave(MandatoryNary):
         self.repetitions = repetitions
         return self
 
-    def static_analysis(self) -> Optional[List['AnalysisError']]:
+    def static_analysis(self) -> List['AnalysisError']:
         # assert len(set(parsers)) == len(parsers)  # commented out, because this could make sense
+        errors = super().static_analysis()
         if not all(not parser.is_optional() and not isinstance(parser, FlowParser)
                    for parser in self.parsers):
-            return [self.static_error(
+            errors.append(self.static_error(
                 "Flow-operators and optional parsers are neither allowed "
                 "nor needed in an interleave-parser " + self.location_info(),
-                BADLY_NESTED_OPTIONAL_PARSER)]
+                BADLY_NESTED_OPTIONAL_PARSER))
         for parser, (a, b) in zip(self.parsers, self.repetitions):
             if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
-                return [self.static_error(
+                errors.append(self.static_error(
                     'Repetition count [a=%i, b=%i] for parser %s violates requirement '
                     '0 <= a <= b <= infinity = 2^30' % (a, b, str(parser)),
-                    BAD_REPETITION_COUNT)]
-        return None
+                    BAD_REPETITION_COUNT))
+        return errors
 
 
 ########################################################################
@@ -2739,13 +2774,14 @@ class Lookahead(FlowParser):
     def __repr__(self):
         return '&' + self.parser.repr
 
-    def static_analysis(self) -> Optional[List[AnalysisError]]:
+    def static_analysis(self) -> List[AnalysisError]:
+        errors = super().static_analysis()
         if self.parser.is_optional():
-            return [(self.pname, self, Error(
+            errors.append((self.pname, self, Error(
                 'Lookahead %s does not make sense with optional parser "%s"!' \
                 % (self.pname, str(self.parser)),
-                0, LOOKAHEAD_WITH_OPTIONAL_PARSER))]
-        return None
+                0, LOOKAHEAD_WITH_OPTIONAL_PARSER)))
+        return errors
 
 
 class NegativeLookahead(Lookahead):
@@ -2779,14 +2815,6 @@ class Lookbehind(FlowParser):
         else:  # p is of type Token
             self.text = cast(Token, p).text
         super(Lookbehind, self).__init__(parser)
-
-    # def __deepcopy__(self, memo):
-    #     if self.regexp is None:
-    #         duplicate = self.__class__(RegExp(self.regexp))
-    #     else:
-    #         duplicate = self.__class__(Token(self.text))
-    #     copy_parser_base_attrs(self, duplicate)
-    #     return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         backwards_text = self.grammar.reversed__[text.__len__():]
@@ -2853,8 +2881,8 @@ class Capture(UnaryParser):
     def __repr__(self):
         return self.parser.repr
 
-    def static_analysis(self) -> Optional[List[AnalysisError]]:
-        errors = []
+    def static_analysis(self) -> List[AnalysisError]:
+        errors = super().static_analysis()
         if not self.pname:
             errors.append((self.pname, self, Error(
                 'Capture only works as named parser! Error in parser: ' + str(self),
@@ -2866,7 +2894,7 @@ class Capture(UnaryParser):
                 'which can lead to unintended results!' % (self.pname or str(self)),
                 0, CAPTURE_DROPPED_CONTENT_WARNING
             )))
-        return errors or None
+        return errors
 
 
 
@@ -3014,12 +3042,12 @@ class Pop(Retrieve):
         super(Pop, self).reset()
         self.values = []
 
-    def __deepcopy__(self, memo):
-        symbol = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(symbol, self.match)
-        copy_parser_base_attrs(self, duplicate)
-        duplicate.values = self.values[:]
-        return duplicate
+    # def __deepcopy__(self, memo):
+    #     symbol = copy.deepcopy(self.parser, memo)
+    #     duplicate = self.__class__(symbol, self.match)
+    #     copy_parser_base_attrs(self, duplicate)
+    #     duplicate.values = self.values[:]
+    #     return duplicate
 
     def _rollback(self):
         self.grammar.variables__[self.symbol_pname].append(self.values.pop())
@@ -3086,7 +3114,7 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
-class Forward(Parser):
+class Forward(UnaryParser):
     r"""
     Forward allows to declare a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
@@ -3108,18 +3136,19 @@ class Forward(Parser):
     """
 
     def __init__(self):
-        super(Forward, self).__init__()
-        self.parser = PARSER_PLACEHOLDER  # type: Parser
+        super(Forward, self).__init__(PARSER_PLACEHOLDER)
+        # self.parser = PARSER_PLACEHOLDER  # type: Parser
         self.cycle_reached = False
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
+        memo[id(self)] = duplicate
+        copy_parser_base_attrs(self, duplicate)
+        parser = copy.deepcopy(self.parser, memo)
+        duplicate.parser = parser
         duplicate.pname = self.pname        # Forward-Parsers should not have a name!
         duplicate.anonymous = self.anonymous
         duplicate.tag_name = self.tag_name  # Forward-Parser should not have a tag name!
-        memo[id(self)] = duplicate
-        parser = copy.deepcopy(self.parser, memo)
-        duplicate.parser = parser
         duplicate.drop_content = parser.drop_content
         return duplicate
 
@@ -3169,7 +3198,7 @@ class Forward(Parser):
         self.parser = parser
         self.drop_content = parser.drop_content
 
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        if is_parser_placeholder(self.parser):
-            return tuple()
-        return (self.parser,)
+    # def sub_parsers(self) -> Tuple[Parser, ...]:
+    #     if is_parser_placeholder(self.parser):
+    #         return tuple()
+    #     return (self.parser,)

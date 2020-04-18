@@ -31,8 +31,9 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history
-from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CONTINUATION, PARSER_DID_NOT_MATCH, \
-    MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END
+from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CONTINUATION, \
+    MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
+    PARSER_NEVER_TOUCHES_DOCUMENT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, UnknownParserError, CombinedParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
@@ -148,7 +149,6 @@ class TestInfiLoopsAndRecursion:
             Value   = /[0-9.]+/~ | '(' §Expr ')'
             """
         parser = grammar_provider(minilang)()
-        assert parser
         snippet = "8 * 4"
         syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
@@ -204,7 +204,7 @@ class TestInfiLoopsAndRecursion:
         forever = Counted(Always(), (INFINITE, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Counted(Always(), (1000, 1000000000000))
+        forever = Counted(Always(), (1000, INFINITE - 1))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
@@ -216,7 +216,7 @@ class TestInfiLoopsAndRecursion:
                              repetitions = [(5, INFINITE), (INFINITE, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Interleave(Always(), repetitions = [(1000, 1000000000000)])
+        forever = Interleave(Always(), repetitions = [(1000, INFINITE - 1)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
@@ -395,7 +395,7 @@ class TestGrammar:
     pyparser, messages, _ = compile_source(grammar, None, get_ebnf_grammar(),
                                            get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
     assert pyparser
-    assert not messages
+    assert not messages, str(messages)
 
     def test_pos_values_initialized(self):
         # checks whether pos values in the parsing result and in the
@@ -952,9 +952,9 @@ class TestBorderlineCases:
         cst = gr('X', 'parser')
         assert not cst.error_flag
         cst = gr(' ', 'parser')
-        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_DID_NOT_MATCH
+        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_STOPPED_BEFORE_END
         cst = gr('', 'parser')
-        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_DID_NOT_MATCH
+        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_STOPPED_BEFORE_END
 
     def test_matching(self):
         minilang = """parser = /.?/"""
@@ -1399,7 +1399,14 @@ class TestParserCombining:
 
 
 class TestStaticAnalysis:
-    def test_1(self):
+    def setup(self):
+        self.static_analysis = get_config_value('static_analysis')
+        set_config_value('static_analysis', 'early')
+
+    def teardown(self):
+        set_config_value('static_analysis', self.static_analysis)
+
+    def test_cannot_capture_dropped_content(self):
         p = Capture(Drop(Whitespace(" ")))
         try:
             gr = Grammar(p)
@@ -1408,10 +1415,22 @@ class TestStaticAnalysis:
             pass
 
     def test_cyclical_ebnf_error(self):
-        lang = "doc = { doc }  # this parser never reaches a leaf parser."
-        lang2 = "doc = word | sentence  # a more convoluted example" \
-                "word = [sentence] doc" \
-                "sentence = { word }+ | sentence"
+        doc = Token('proper');  doc.pname = "doc"
+        grammar = Grammar(doc)
+        # grammar.static_analysis()
+        lang = "doc = 'proper'  # this works!"
+        lang1 = "doc = { doc }  # this parser never reaches a leaf parser."
+        lang2 = """doc = word | sentence  # a more convoluted example
+                word = [sentence] doc 
+                sentence = { word }+ | sentence"""
+        code, errors, ast = compile_ebnf(lang, preserve_AST=True)
+        assert not ast.errors
+        code, errors, ast = compile_ebnf(lang1, preserve_AST=True)
+        assert any(e.code == PARSER_NEVER_TOUCHES_DOCUMENT for e in errors)
+        code, errors, ast = compile_ebnf(lang2, preserve_AST=True)
+        assert any(e.code == PARSER_NEVER_TOUCHES_DOCUMENT for e in errors)
+        # for e in errors:
+        #     print(e)
 
 
 if __name__ == "__main__":
