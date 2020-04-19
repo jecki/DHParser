@@ -711,8 +711,8 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     return not parser or parser.ptype == ":Parser"
 
 
-def collect_leaf_parsers(starting_point: Parser,
-                         cache: Dict[Parser, Set[Parser]] = dict()) -> Set[Parser]:
+def leaf_parsers(starting_point: Parser,
+                 cache: Dict[Parser, Set[Parser]] = dict()) -> Set[Parser]:
     """Retrieves all leaf-parsers that can be reached (or might be called
     for that matter) a given parser (`starting_point`). Since a combined
     parser that does not ever reach a leaf-parser, the the returned list
@@ -1550,7 +1550,7 @@ class Grammar:
         cache = dict()  # type: Dict[Parser, Set[Parser]]
         # for DEBUGGING: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
         for parser in self.all_parsers__: # self.all_parsers__:
-            if parser.pname and not collect_leaf_parsers(parser, cache):
+            if parser.pname and not leaf_parsers(parser, cache):
                 error_list.append((parser.symbol, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even '
                     'touch the parsed document' % parser.location_info(),

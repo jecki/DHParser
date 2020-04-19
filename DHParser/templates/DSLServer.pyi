@@ -248,16 +248,16 @@ def start_server_daemon(host, port):
     except OSError:
         subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)],
                              start_new_session=True)
-    countdown = 20
-    delay = 0.05
+    countdown = 25
+    delay = 0.01
     result = None
-    while countdown > 0:
+    while countdown > 0 and delay < 25:
         try:
             result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
             countdown = 0
         except ConnectionRefusedError:
             time.sleep(delay)
-            delay += 0.025
+            delay *= 1.25
             countdown -= 1
     if result is None:
         print('Could not start server or establish connection in time :-(')
