@@ -14,10 +14,9 @@ cdef class Parser:
     cdef object visited
     cdef object recursion_counter
     cdef object cycle_detection
-    cdef object _parse_proxy
+    cdef public object _parse_proxy
     cdef str _symbol
 
-    cpdef _parse(self, text)
     cpdef reset(self)
     # def __call__(self, StringView text)
     # def __add__(self, other)
@@ -89,6 +88,9 @@ cdef class ZeroOrMore(Option):
 cdef class OneOrMore(UnaryParser):
     pass
 
+cdef class Counted(UnaryParser):
+    cdef public (int, int) repetitions
+
 cdef class MandatoryNary(NaryParser):
     cdef public int mandatory
     cdef public object err_msgs
@@ -100,7 +102,7 @@ cdef class Series(MandatoryNary):
 cdef class Alternative(NaryParser):
     pass
 
-cdef class AllOf(MandatoryNary):
+cdef class Interleave(MandatoryNary):
     cdef public object repetitions
     cdef public object non_mandatory
     cdef public object parsers_set
@@ -134,6 +136,5 @@ cdef class Pop(Retrieve):
 cdef class Synonym(UnaryParser):
     pass
 
-cdef class Forward(Parser):
-    cdef public object parser
+cdef class Forward(UnaryParser):
     cdef public bint cycle_reached

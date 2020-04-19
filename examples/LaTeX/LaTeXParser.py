@@ -27,7 +27,7 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     flatten, is_empty, collapse, remove_brackets, strip, \
-    is_one_of, remove_tokens, remove_children, TOKEN_PTYPE, Error, \
+    is_one_of, remove_tokens, remove_children, TOKEN_PTYPE, WARNING, \
     access_thread_locals, recompile_grammar, get_config_value, \
     transform_content, replace_content_with, resume_notices_on, set_tracer, trace_history
 from DHParser.log import start_logging
@@ -536,7 +536,7 @@ class LaTeXCompiler(Compiler):
                     else:
                         self.tree.new_error(node, 'Only one document language supported. '
                                             'Using %s, ignoring %s.'
-                                            % (self.metadata['language'], it), Error.WARNING)
+                                            % (self.metadata['language'], it), WARNING)
         if node['block'].content in self.KNOWN_DOCUMENT_CLASSES:
             self.metadata['documentclass'] = node['block'].content
         return node

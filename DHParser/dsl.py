@@ -255,7 +255,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     return '\n'.join(src)
 
 
-@functools.lru_cache
+@functools.lru_cache()
 def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str='') -> ParserFactoryFunc:
     """
     Compiles an EBNF-grammar and returns a grammar-parser provider

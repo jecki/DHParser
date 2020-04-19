@@ -65,8 +65,8 @@ import os
 import subprocess
 import sys
 import time
-from typing import Callable, Coroutine, Optional, Union, Dict, List, Tuple, Sequence, Set, \
-    Iterator, Iterable, Any, cast, Type
+from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, Sequence, \
+    Set, Iterator, Iterable, Any, cast, Type
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
@@ -211,7 +211,7 @@ def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
                 return s
 
 
-def asyncio_run(coroutine: Coroutine, loop=None) -> Any:
+def asyncio_run(coroutine: Awaitable, loop=None) -> Any:
     """Backward compatible version of Pyhon3.7's `asyncio.run()`"""
     if sys.version_info >= (3, 7):
         return asyncio.run(coroutine)

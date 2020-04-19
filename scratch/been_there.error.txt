@@ -1,0 +1,31 @@
+
+Running TestInfiLoopsAndRecursion.test_direct_left_recursion2
+140202417032496 ex <class 'DHParser.parse.Alternative'> 2
+140202417214968 expr <class 'DHParser.parse.Synonym'> 1
+140202417214968 expr <class 'DHParser.parse.Synonym'>
+140202417032496 ex <class 'DHParser.parse.Alternative'>
+[]
+
+Traceback (most recent call last):
+  File "test_parse.py", line 1432, in <module>
+    runner("", globals())
+  File "/home/eckhart/Entwicklung/DHParser/DHParser/testing.py", line 854, in runner
+    run_tests_in_class(cls_name, namespace, methods)
+  File "/home/eckhart/Entwicklung/DHParser/DHParser/testing.py", line 774, in run_tests_in_class
+    func()
+  File "test_parse.py", line 138, in test_direct_left_recursion2
+    parser = grammar_provider(minilang)()
+  File "/home/eckhart/Entwicklung/DHParser/DHParser/dsl.py", line 278, in grammar_provider
+    get_ebnf_transformer(), get_ebnf_compiler(branding, ebnf_src))
+  File "/home/eckhart/Entwicklung/DHParser/DHParser/dsl.py", line 199, in compileDSL
+    raise CompilationError(only_errors(messages), src, grammar_src, AST, result)
+DHParser.dsl.CompilationError: 2:13: Error (1020): Parser expr:Synonym in definition of "expr" as expr = ex is entirely cyclical and, therefore, cannot even touch the parsed document
+
+
+Running TestInfiLoopsAndRecursion.test_direct_left_recursion2
+139757817540280 expr <class 'DHParser.parse.Synonym'> 1
+139757817456456 ex <class 'DHParser.parse.Alternative'> 2
+[]
+139757817456456 ex <class 'DHParser.parse.Alternative'>
+139757817540280 expr <class 'DHParser.parse.Synonym'>
+

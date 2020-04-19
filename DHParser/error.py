@@ -66,7 +66,7 @@ __all__ = ('ErrorCode',
            'OPTIONAL_REDUNDANTLY_NESTED_WARNING',
            'MANDATORY_CONTINUATION',
            'MANDATORY_CONTINUATION_AT_EOF',
-           'PARSER_DID_NOT_MATCH',
+           'PARSER_NEVER_TOUCHES_DOCUMENT',
            'PARSER_LOOKAHEAD_FAILURE_ONLY',
            'PARSER_STOPPED_BEFORE_END',
            'PARSER_LOOKAHEAD_MATCH_ONLY',
@@ -80,10 +80,10 @@ __all__ = ('ErrorCode',
            'CAPTURE_WITHOUT_PARSERNAME',
            'LOOKAHEAD_WITH_OPTIONAL_PARSER',
            'BADLY_NESTED_OPTIONAL_PARSER',
-           'NARY_WITHOUT_PARSERS',
            'BAD_MANDATORY_SETUP',
            'DUPLICATE_PARSERS_IN_ALTERNATIVE',
            'BAD_ORDER_OF_ALTERNATIVES',
+           'BAD_REPETITION_COUNT',
            'TREE_PROCESSING_CRASH',
            'COMPILER_CRASH',
            'AST_TRANSFORM_CRASH')
@@ -121,7 +121,7 @@ OPTIONAL_REDUNDANTLY_NESTED_WARNING      = ErrorCode(630)
 
 MANDATORY_CONTINUATION                   = ErrorCode(1010)
 MANDATORY_CONTINUATION_AT_EOF            = ErrorCode(1015)
-PARSER_DID_NOT_MATCH                     = ErrorCode(1020)
+PARSER_NEVER_TOUCHES_DOCUMENT            = ErrorCode(1020)
 PARSER_LOOKAHEAD_FAILURE_ONLY            = ErrorCode(1030)
 PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
 PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1045)
@@ -138,10 +138,10 @@ INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
 CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
 LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
 BADLY_NESTED_OPTIONAL_PARSER             = ErrorCode(1530)
-NARY_WITHOUT_PARSERS                     = ErrorCode(1540)
 BAD_MANDATORY_SETUP                      = ErrorCode(1550)
 DUPLICATE_PARSERS_IN_ALTERNATIVE         = ErrorCode(1560)
 BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
+BAD_REPETITION_COUNT                     = ErrorCode(1580)
 
 # fatal errors
 

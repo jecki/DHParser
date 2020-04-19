@@ -390,7 +390,7 @@ def isgenerictype(t):
 #
 #######################################################################
 
-RX_FILEPATH = re.compile(r'[^ \t][^\n\t?*]+(?<![ \t])')  # r'[\w/:. \\]+'
+RX_FILEPATH = re.compile(r'[^ \t][^\n\t?*=]+(?<![ \t])')  # r'[\w/:. \\]+'
 
 
 def load_if_file(text_or_file) -> str:

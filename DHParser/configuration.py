@@ -256,10 +256,10 @@ CONFIG_PRESET['resume_notices'] = False
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
 XML_SERIALIZATION = "XML"
-SXPRESSION_SERIALIZATION = "S-expression"
-COMPACT_SERIALIZATION = "compact"
-SMART_SERIALIZATION = "smart"
 JSON_SERIALIZATION = "json"
+SMART_SERIALIZATION = "smart"
+COMPACT_SERIALIZATION = "compact"
+SXPRESSION_SERIALIZATION = "S-expression"
 
 SERIALIZATIONS = frozenset({XML_SERIALIZATION,
                             SXPRESSION_SERIALIZATION,
@@ -329,6 +329,36 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 # regular expression that matches no string whatsoever.
 # Default value: r'..(?<=^)'  # never match.
 CONFIG_PRESET['default_anonymous_regexp'] = r'..(?<=^)'
+
+
+# Default value for the brand of EBNF that DHParser accepts
+# 'classic'     - relatively closest to the ISO-standard, i.e. uses [] and {}
+#       for optional and zero or more elements, respectively. Does not allow
+#       the ?, +, * suffixes. Allows the specification of character-ranges
+#       within square brackets only with the ordinal unicode numbers,
+#       not with the characters itself, i.e. [0x41-0x5A]
+# 'regex-like'  - similar to regular expression syntax, allows ?, +, *
+#       suffixes for optional, one or more repetitions, zero or more
+#       repetitions, but not {} or []. Allows character-ranges within
+#       square bracket in any form.
+# 'peg-like' - like regex-like, but uses / instead of | for the
+#       alternative-parser. Does not allow regular expressions between, i.e.
+#       / ... / within the EBNF-code!
+# 'strict'      - allows both classic and regex-like syntax to be mixed, but
+#       allows character ranges within square brackets with oridinal values,
+#       only. Uses | as delimiter for alternatives.
+# 'heuristic'   - the most liberal mode, allows about everything. However,
+#       because it employs heuristics to distinguish ambiguous cases, it
+#       may lead to unexcpeted errors and require the user to resolve the
+#       ambiguieties
+
+EBNF_CLASSIC_SYNTAX = "classic"
+EBNF_ANY_SYNTAX_STRICT = "strict"
+EBNF_ANY_SYNTAX_HEURISTICAL = "heuristic"
+EBNF_REGULAR_EXPRESSION_SYNTAX = "regex-like"
+EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX = "peg-like"
+
+CONFIG_PRESET['syntax_variant'] = EBNF_ANY_SYNTAX_STRICT
 
 
 ########################################################################

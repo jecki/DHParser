@@ -29,13 +29,16 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
-from DHParser import compile_source
-from DHParser.error import has_errors, Error, PARSER_DID_NOT_MATCH, MANDATORY_CONTINUATION, \
+from DHParser import compile_source, INFINITE, Interleave
+from DHParser.configuration import access_thread_locals, get_config_value, \
+    EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
+    EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX, set_config_value
+from DHParser.error import has_errors, Error, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS
-from DHParser.dsl import CompilationError, compileDSL, grammar_instance, grammar_provider
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
+from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
 from DHParser.testing import grammar_unit, clean_report
 
 
@@ -155,7 +158,7 @@ class TestEBNFParser:
 
     def test_RE(self):
         gr = get_ebnf_grammar()
-        m = gr.regexp.parsers[0].regexp.match(r'/[\\\\]/ xxx /')
+        m = gr.regexp.parsers[1].regexp.match(r'[\\\\]/ xxx ')
         rs = m.group()
         assert rs.find('x') < 0, rs.group()
         rx = re.compile(rs[1:-1])
@@ -446,7 +449,7 @@ class TestFlowControlOperators:
         are correctly reported as such.
         """
         lang1 = r"nonsense == /\w+/~  # wrong_equal_sign "
-        lang2 = "nonsense = [^{}%]+  # someone forgot the '/'-delimiters for regular expressions\n"
+        lang2 = "nonsense = [ ^{}%]+  # someone forgot the '/'-delimiters for regular expressions\n"
         try:
             parser_class = grammar_provider(lang1)
             assert False, "Compilation error expected."
@@ -488,6 +491,41 @@ class TestWhitespace:
 
 
 class TestInterleave:
+    def test_counted(self):
+        ebnf = 'test   = form_1 | form_2 | form_3 | form_4 | "non optional" form_5 | form_6\n' \
+               'form_1 = "a"{2,4}' \
+               'form_2 = "b"{3}' \
+               'form_3 = "c"*3' \
+               'form_4 = 2*"d"' \
+               'form_5 = ["e"]*3' \
+               'form_6 = 5*{"f"}+'
+        # ast = parse_ebnf(ebnf)
+        # transform_ebnf(ast)
+        # print(ast.as_sxpr())
+        grammar = create_parser(ebnf)
+        assert grammar.form_6.repetitions == (5, INFINITE)
+        assert grammar.form_5.repetitions == (0, 3)
+        assert grammar.form_4.repetitions == (2, 2)
+        assert grammar.form_3.repetitions == (3, 3)
+        assert grammar.form_2.repetitions == (3, 3)
+        assert grammar.form_1.repetitions == (2, 4)
+        st = grammar('a')
+        assert st.errors
+        st = grammar('aaaaa')
+        assert st.errors
+        st = grammar('aaaa')
+        assert not st.errors
+        st = grammar('bbb')
+        assert not st.errors
+
+    def test_illegal_multiplier(self):
+        lang = 'doc = "a" * 3'
+        st = parse_ebnf(lang)
+        assert not st.errors
+        lang_wrong = 'doc = "a" * 0'
+        st = parse_ebnf(lang_wrong)
+        assert st.errors
+
     def test_all(self):
         ebnf = 'prefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
@@ -501,6 +539,36 @@ class TestInterleave:
         assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
         assert grammar('B').content == 'B'
+
+    def test_interleave_counted(self):
+        ebnf = 'prefix = "A"{1,5} ° "B"{2,3}'
+        grammar = create_parser(ebnf)
+        assert isinstance(grammar.prefix, Interleave)
+        assert grammar.prefix.repetitions == [(1, 5), (2, 3)]
+        st = grammar('ABABA')
+        assert not st.errors
+        st = grammar('BBA')
+        assert not st.errors
+
+    def test_grouping_1(self):
+        ebnf = 'prefix = ("A"{1,5}) ° ("B"{2,3})'
+        grammar = create_parser(ebnf)
+        assert isinstance(grammar.prefix, Interleave)
+        assert grammar.prefix.repetitions == [(1, 1), (1, 1)]
+        st = grammar('ABABA')
+        assert st.errors
+        st = grammar('BBA')
+        assert not st.errors
+
+    def test_grouping_2(self):
+        ebnf = 'prefix = ("A"{1,5}) ° ("B"{2,3})'
+        grammar = create_parser(ebnf)
+        assert isinstance(grammar.prefix, Interleave)
+        assert grammar.prefix.repetitions == [(1, 1), (1, 1)]
+        st = grammar('ABABA')
+        assert st.errors
+        st = grammar('BBA')
+        assert not st.errors
 
 
 class TestErrorCustomization:
@@ -809,7 +877,7 @@ class TestInterleaveResume:
         assert st.error_flag
         assert len(st.errors) == 1
         st = gr('A_BCDEFG.')
-        assert len(st.errors) == 1 and st.errors[0].code == PARSER_DID_NOT_MATCH
+        assert len(st.errors) == 1 and st.errors[0].code == PARSER_STOPPED_BEFORE_END
         st = gr('AB_CDEFG.')
         # mandatory continuation error kicks in only, if the parsers before
         # the §-sign have been exhausted!
@@ -865,6 +933,105 @@ class TestAlternativeEBNFSyntax:
         st = arithmetic_parser('2 + 3 * (-4 + 1)')
         assert str(st) == "2+3*(-4+1)"
 
+
+class TestSyntaxExtensions:
+    def test_difference(self):
+        lang = """
+            doc = /[A-Z]/ - /[D-F]/
+        """
+        parser = create_parser(lang)
+        st = parser("A")
+        assert not st.errors and st.tag_name == "doc" and st.content == "A"
+        st = parser("E")
+        assert st.errors and any(e.code == PARSER_STOPPED_BEFORE_END for e in st.errors)
+
+    def test_any_char(self):
+        lang = 'doc = "A".'
+        parser = create_parser(lang)
+        st = parser('A翿')
+        assert st.as_sxpr() == '(doc (:Token "A") (:AnyChar "翿"))'
+
+    def test_character(self):
+        lang = 'doc = 0xe4'
+        parser = create_parser(lang)
+        st = parser('ä')
+        assert not st.errors
+        lang = 'doc = #xe4'
+        parser = create_parser(lang)
+        st = parser('ä')
+        assert not st.errors
+        lang = 'doc = 0x37F'
+        parser = create_parser(lang)
+        st = parser('Ϳ')
+        assert not st.errors
+
+    def test_simple_char_range(self):
+        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_STRICT)
+        lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
+        # print(raw_compileEBNF(lang).result)
+        parser = create_parser(lang)
+        st = parser('賌')
+        assert st.as_sxpr() == '(Char "賌")'
+
+    def test_full_char_range(self):
+        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_HEURISTICAL)
+        lang = """
+            Identifier <- IdentStart IdentCont* Spacing
+            IdentCont  <- IdentStart / [0-9] 
+            IdentStart <- [a-zA-Z_]
+            Spacing    <- (´ ´ / ´\t´ / ´\n´)*      
+            """
+        # print(raw_compileEBNF(lang).result)
+        parser = create_parser(lang)
+        st = parser('marke_8')
+        assert not st.errors
+        st = parser('t3vp ')
+        assert not st.errors
+        st = parser('3tvp ')
+        assert st.errors
+        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_STRICT)
+
+
+class TestModeSetting:
+    testdoc = r"""# hey, you
+
+        doc = sequence | re | char | char_range | char_range2 | multiple1 | multiple2 | multiple3 | mutliple4
+        sequence = '</' Name S? '>'
+        re = /abc*/
+        char = #x32  # shell-style comment
+        char_range = [#xDFF88-#xEEFF00]   /*
+                C-style comment
+        */ char_range2 = [-'()+,./:=?;!*#@$_%]
+        multiple1 = `a` * 3
+        multiple2 = 4 * `b`
+        multiple3 = `c`{3}
+        multiple4 = `d`{2,5}
+        Name = /\w+/
+        S    = /\s*/
+        """
+
+    def test_setmode_getmode(self):
+        gr = get_ebnf_grammar()
+        gr.mode = EBNF_ANY_SYNTAX_STRICT
+        assert gr.mode == EBNF_ANY_SYNTAX_STRICT
+        gr.mode = EBNF_REGULAR_EXPRESSION_SYNTAX
+        assert gr.mode == EBNF_REGULAR_EXPRESSION_SYNTAX
+        gr.mode = EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+        assert gr.mode == EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+        gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
+        assert gr.mode == EBNF_ANY_SYNTAX_HEURISTICAL
+
+        gr.mode = EBNF_CLASSIC_SYNTAX
+        assert gr.mode == EBNF_ANY_SYNTAX_STRICT
+
+    def test_heuristic_mode(self):
+        gr = get_ebnf_grammar()
+        gr.mode = EBNF_ANY_SYNTAX_STRICT
+        st = gr(self.testdoc)
+        assert st.errors
+        gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
+        st = gr(self.testdoc)
+        assert not st.errors
 
 
 if __name__ == "__main__":
