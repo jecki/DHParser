@@ -722,20 +722,22 @@ def leaf_parsers(starting_point: Parser,
 
     def associate_leaf_parsers(context: List[Parser]):
         parser = context[-1]
-        if parser not in context[:-1]:
-            if parser in cache:
+        if parser in cache:
+            for p in context:
+                if p not in cache:
+                    lp_dict.setdefault(p, set()).update(cache[parser])
+        else:
+            sub_parsers = parser.sub_parsers()
+            if sub_parsers:
+                for p in sub_parsers:
+                    if p not in context:
+                        context.append(p)
+                        associate_leaf_parsers(context)
+                        context.pop()
+            else:  # it's a leaf-parser, now associate all it's parents with it
                 for p in context:
                     if p not in cache:
-                        lp_dict.setdefault(p, set()).update(cache[parser])
-            else:
-                sub_parsers = parser.sub_parsers()
-                if sub_parsers:
-                    for p in sub_parsers:
-                        associate_leaf_parsers(context + [p])
-                else:  # it's a leaf-parser, now associate all it's parents with it
-                    for p in context:
-                        if p not in cache:
-                            lp_dict.setdefault(p, set()).add(parser)
+                        lp_dict.setdefault(p, set()).add(parser)
 
     associate_leaf_parsers([starting_point])
     cache.update(lp_dict)
@@ -1332,21 +1334,20 @@ class Grammar:
                         for h in self.history__[:-1])
 
         # assert isinstance(document, str), type(document)
+        parser = self[start_parser] if isinstance(start_parser, str) else start_parser
+        assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
+                                       " %s vs. %s" % (str(self), str(parser.grammar))
         if self._dirty_flag__:
             self._reset__()
-            for parser in self.all_parsers__:
-                parser.reset()
+            parser.apply(lambda ctx: ctx[-1].reset())
         else:
             self._dirty_flag__ = True
 
+        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = -1  # rollback location
-        parser = self[start_parser] if isinstance(start_parser, str) else start_parser
-        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
-        assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
-                                       " %s vs. %s" % (str(self), str(parser.grammar))
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         rest = self.document__
@@ -1538,19 +1539,25 @@ class Grammar:
             the actual parser that failed and an error object.
         """
         error_list = []  # type: List[AnalysisError]
+        leaf_state = dict()  # type: Dict[Parser, Optional[bool]]
 
-        def visit_parser(context: List[Parser]) -> Optional[bool]:
-            nonlocal error_list
-            parser = context[-1]
-            errors = parser.static_analysis()
-            error_list.extend(errors)
-
-        self.root_parser__.apply(visit_parser)
+        def has_leaf_parsers(p: Parser) -> bool:
+            if p in leaf_state:
+                return p
+            leaf_state[p] = None
+            sub_list = p.sub_parsers()
+            if sub_list:
+                state = any(has_leaf_parsers(s) for s in sub_list)
+            else:
+                state = True
+            leaf_state[p] = state
+            return True
 
         cache = dict()  # type: Dict[Parser, Set[Parser]]
         # for DEBUGGING: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
         for parser in self.all_parsers__: # self.all_parsers__:
-            if parser.pname and not leaf_parsers(parser, cache):
+            error_list.extend(parser.static_analysis())
+            if parser.pname and not has_leaf_parsers(parser):
                 error_list.append((parser.symbol, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even '
                     'touch the parsed document' % parser.location_info(),
@@ -2521,9 +2528,9 @@ class Alternative(NaryParser):
             return ' | '.join(parser.repr for parser in self.parsers)
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
-    def reset(self):
-        super(Alternative, self).reset()
-        return self
+    # def reset(self):
+    #     super(Alternative, self).reset()
+    #     return self
 
     # The following operator definitions add syntactical sugar, so one can write:
     # `RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')` instead of:
