@@ -711,40 +711,6 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     return not parser or parser.ptype == ":Parser"
 
 
-def leaf_parsers(starting_point: Parser,
-                 cache: Dict[Parser, Set[Parser]] = dict()) -> Set[Parser]:
-    """Retrieves all leaf-parsers that can be reached (or might be called
-    for that matter) a given parser (`starting_point`). Since a combined
-    parser that does not ever reach a leaf-parser, the the returned list
-    should never be empty, if the parser ensemble is well-designed.
-    """
-    lp_dict = {starting_point: cache.get(starting_point, set())}  # type: Dict[Parser, Set[Parser]]
-
-    def associate_leaf_parsers(context: List[Parser]):
-        parser = context[-1]
-        if parser in cache:
-            for p in context:
-                if p not in cache:
-                    lp_dict.setdefault(p, set()).update(cache[parser])
-        else:
-            sub_parsers = parser.sub_parsers()
-            if sub_parsers:
-                for p in sub_parsers:
-                    if p not in context:
-                        context.append(p)
-                        associate_leaf_parsers(context)
-                        context.pop()
-            else:  # it's a leaf-parser, now associate all it's parents with it
-                for p in context:
-                    if p not in cache:
-                        lp_dict.setdefault(p, set()).add(parser)
-
-    associate_leaf_parsers([starting_point])
-    cache.update(lp_dict)
-
-    return cache[starting_point]
-
-
 ########################################################################
 #
 # Grammar class, central administration of all parser of a grammar
@@ -1541,21 +1507,33 @@ class Grammar:
         error_list = []  # type: List[AnalysisError]
         leaf_state = dict()  # type: Dict[Parser, Optional[bool]]
 
-        def has_leaf_parsers(p: Parser) -> bool:
-            if p in leaf_state:
-                return p
-            leaf_state[p] = None
-            sub_list = p.sub_parsers()
-            if sub_list:
-                state = any(has_leaf_parsers(s) for s in sub_list)
-            else:
-                state = True
-            leaf_state[p] = state
-            return True
+        def has_leaf_parsers(prsr: Parser) -> bool:
+            def leaf_parsers(p: Parser) -> Optional[bool]:
+                if p in leaf_state:
+                    return leaf_state[p]
+                sub_list = p.sub_parsers()
+                if sub_list:
+                    leaf_state[p] = None
+                    state = any(leaf_parsers(s) for s in sub_list)
+                    if not state and any(leaf_state[s] is None for s in sub_list):
+                        state = None
+                else:
+                    state = True
+                leaf_state[p] = state
+                return state
+
+            # remove parsers with unknown state (None) from cache
+            state_unknown = [p for p, s in leaf_state.items() if s is None]
+            for p in state_unknown:
+                del leaf_state[p]
+
+            result = leaf_parsers(prsr) or False
+            leaf_state[prsr] = result
+            return result
 
         cache = dict()  # type: Dict[Parser, Set[Parser]]
-        # for DEBUGGING: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
-        for parser in self.all_parsers__: # self.all_parsers__:
+        # for debugging: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
+        for parser in self.all_parsers__:
             error_list.extend(parser.static_analysis())
             if parser.pname and not has_leaf_parsers(parser):
                 error_list.append((parser.symbol, parser, Error(
@@ -2461,6 +2439,8 @@ class Series(MandatoryNary):
         return self
 
 
+histogramm = dict()
+
 def starting_string(parser: Parser) -> str:
     """If parser starts with a fixed string, this will be returned.
     """
@@ -2474,18 +2454,18 @@ def starting_string(parser: Parser) -> str:
             if isinstance(p, Token):
                 return cast(Token, p).text
             elif isinstance(p, Series) or isinstance(p, Alternative):
-                return starting_string(cast(NaryParser, p).parsers[0])
+                return find_starting_string(cast(NaryParser, p).parsers[0])
             elif isinstance(p, Synonym) or isinstance(p, OneOrMore) \
                     or isinstance(p, Lookahead):
-                return starting_string(cast(UnaryParser, p).parser)
+                return find_starting_string(cast(UnaryParser, p).parser)
             elif isinstance(p, Counted):
                 counted = cast(Counted, p)  # type: Counted
                 if not counted.is_optional():
-                    return starting_string(counted.parser)
+                    return find_starting_string(counted.parser)
             elif isinstance(p, Interleave):
                 interleave = cast(Interleave, p)
                 if interleave.repetitions[0][0] >= 1:
-                    return starting_string(interleave.parsers[0])
+                    return find_starting_string(interleave.parsers[0])
         return ""
     return find_starting_string(parser)
 
@@ -3208,7 +3188,7 @@ class Forward(UnaryParser):
         self.parser = parser
         self.drop_content = parser.drop_content
 
-    # def sub_parsers(self) -> Tuple[Parser, ...]:
-    #     if is_parser_placeholder(self.parser):
-    #         return tuple()
-    #     return (self.parser,)
+    def sub_parsers(self) -> Tuple[Parser, ...]:
+        if is_parser_placeholder(self.parser):
+            return tuple()
+        return (self.parser,)
