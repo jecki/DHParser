@@ -50,7 +50,13 @@ __all__ = ('WHITESPACE_PTYPE',
            'ChildrenType',
            'CriteriaType',
            'ALL_NODES',
+           'LEAF_NODES',
+           'BRANCH_NODES',
            'Node',
+           'predecessor',
+           'successor',
+           'serialize_context',
+           'context_sanity_check',
            'FrozenNode',
            'EMPTY_NODE',
            'tree_sanity_check',
@@ -141,6 +147,8 @@ def flatten_xml(xml: str) -> str:
 # - a function Node -> bool
 CriteriaType = Union['Node', str, Container[str], Callable]
 ALL_NODES = lambda nd: True
+LEAF_NODES = lambda nd: not nd.children
+BRANCH_NODES = lambda nd: nd.children
 
 
 def create_match_function(criterion: CriteriaType) -> Callable:
@@ -811,19 +819,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if match_function(child):
                     yield child
 
-    def pick(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
+    def pick(self, criterion: CriteriaType,
+             include_root: bool = False,
+             reverse: bool = False) -> Optional['Node']:
         """
         Picks the first (or last if run in reverse mode) descendant that fulfills
         the given criterion which can be either a match-function or a tag-name or
         a container of tag-names.
 
         This function is syntactic sugar for
-        ``next(node.select(criterion, False))``. However, rather than
+        ``next(node.select(criterion, ...))``. However, rather than
         raising a StopIterationError if no descendant with the given tag-name
         exists, it returns None.
         """
         try:
-            return next(self.select(criterion, include_root=False, reverse=reverse))
+            return next(self.select(criterion,
+                                    include_root=include_root, reverse=reverse))
         except StopIteration:
             return None
 
@@ -904,13 +915,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                                       include_root, reverse)
 
     def pick_context(self, criterion: CriteriaType,
+                     include_root: bool = False,
                      reverse: bool = False) -> Optional[List['Node']]:
         """
         Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
         relative to `self` is returned.
         """
         try:
-            return next(self.select_context(criterion, include_root=False, reverse=reverse))
+            return next(self.select_context(criterion,
+                                            include_root=include_root, reverse=reverse))
         except StopIteration:
             return None
 
@@ -1348,6 +1361,66 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                              % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
 
 
+# Navigate contexts ###################################################
+
+
+@cython.locals(i=cython.int, k=cython.int)
+def predecessor(context: List[Node]) -> Optional[Node]:
+    """Returns the predecessor of the last Node in the context. The
+    predecessor is the sibling of the same parent Node preceding the
+    the node, or if it already is the first sibling, the parent's
+    sibling preceeding the parent, or grand-parente's sibling and
+    so on. In case no predecessor is found when the first ancestor has
+    been reached, None is returned."""
+    assert isinstance(context, list)
+    node = context[-1]
+    for i in range(len(context) - 2, -1, -1):
+        siblings = context[i].children
+        if node is not siblings[0]:
+            for k in range(1, len(siblings)):
+                if node is siblings[k]:
+                    return siblings[k - 1]
+            raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
+                                 % (i, i+1))
+        node = context[i]
+    return None
+
+
+@cython.locals(i=cython.int, k=cython.int)
+def successor(context: List[Node]) -> Optional[Node]:
+    """Returns the successor of the last Node in the context. The
+    successor is the sibling of the same parent Node succeeding the
+    the node, or if it already is the last sibling, the parent's
+    sibling succeeding the parent, or grand-parente's sibling and
+    so on. In case no successor is found when the first ancestor has
+    been reached, None is returned."""
+    assert isinstance(context, list)
+    node = context[-1]
+    for i in range(len(context) - 2, -1, -1):
+        siblings = context[i].children
+        if node is not siblings[-1]:
+            for k in range(len(siblings) - 2, -1, -1):
+                if node is siblings[k]:
+                    return siblings[k + 1]
+            raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
+                                 % (i, i+1))
+        node = context[i]
+    return None
+
+
+def serialize_context(context: List[Node], with_content: bool = False, delimiter: str = ' <- '):
+    l = [nd.tag_name + ((':' + nd.content) if with_content else '') for nd in context]
+    return delimiter.join(l)
+
+
+def context_sanity_check(context: List[Node]) -> bool:
+    return all(context[i] in context[i - 1].children for i in range(1, len(context)))
+
+
+
+# FrozenNode ##########################################################
+
+
 ChildrenType = Tuple[Node, ...]
 StrictResultType = Union[ChildrenType, StringView, str]
 ResultType = Union[ChildrenType, Node, StringView, str]
@@ -1422,6 +1495,9 @@ def tree_sanity_check(tree: Node) -> bool:
             return False
         node_set.add(node)
     return True
+
+
+# Tree of nodes #######################################################
 
 
 class RootNode(Node):
