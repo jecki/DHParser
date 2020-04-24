@@ -2554,6 +2554,8 @@ class Alternative(NaryParser):
         # check for errors like "A" | "AB" where "AB" would never be reached,
         # because a substring at the beginning is already caught by an earlier
         # alternative
+        # WARNING: This can become time-consuming!!!
+        # EXPERIMENTAL
 
         def does_preempt(start, parser):
             cst = self.grammar(start, parser, complete_match=False)

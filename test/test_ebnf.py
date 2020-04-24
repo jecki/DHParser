@@ -407,11 +407,13 @@ class TestSynonymDetection:
         assert grammar('b').as_sxpr() == '(a (b "b"))'
 
     def test_synonym_anonymous_elimination(self):
-        ebnf = """@ anonymous = _b
+        ebnf = """@ anonymous = /_\w+$/
                   a = _b
                   _b = /b/
         """
         grammar = grammar_provider(ebnf)()
+        assert not grammar['a'].anonymous
+        assert grammar['_b'].anonymous
         assert grammar['a'].pname == 'a', grammar['a'].pname
         assert grammar['_b'].pname == '_b', grammar['_b'].pname
         assert grammar('b').as_sxpr() == '(a "b")'
@@ -660,6 +662,45 @@ class TestErrorCustomizationErrors:
             """
         result, messages, ast = compile_ebnf(lang)
         assert messages[0].code == UNUSED_ERROR_HANDLING_WARNING
+
+    def test_indirect_mandatory_marker(self):
+        lang = r"""
+            @comment = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/
+            document = alles
+            
+            @alles_skip = /E|3|$/
+            alles = (anfang | "1") (mitte | "2") (ende | "3") [COMMENT__]
+            
+            @anfang_resume = /M|2/
+            anfang = `A` §"NFANG"
+            
+            @mitte_resume = /E|3/
+            mitte = `M` §"ITTE"
+            
+            ende = "ENDE"
+        """
+        assert lang.find("@mitte_") >= 0
+        result, messages, ast = compile_ebnf(lang)
+        assert any(m.code == UNUSED_ERROR_HANDLING_WARNING for m in messages)
+
+        l2 = [zeile for zeile in lang.split('\n') if not zeile.lstrip().startswith('@mitte_')]
+        lang2 = '\n'.join(l2)
+        assert lang2.find('@mitte_') < 0
+        result, messages, ast = compile_ebnf(lang2)
+        assert not messages
+
+        l3 = [zeile for zeile in l2 if not zeile.lstrip().startswith('mitte')]
+        lang3 = '\n'.join(l3).replace('mitte', '(`M` §"ITTE")')
+        result, messages, ast = compile_ebnf(lang3)
+        assert not messages
+
+        parser = create_parser(lang3)
+        cst = parser('ANFANGMITTEENDE')
+        assert not cst.errors
+        cst = parser('ANFANGMISSEENDE')
+        assert cst.errors
+        assert 'alles' in cst and 'ZOMBIE__' in cst['alles'] and 'ende' in cst['alles']
+
 
     def test_multiple_resume_definitions(self):
         lang = """

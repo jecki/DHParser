@@ -952,6 +952,20 @@ class EBNFCompiler(Compiler):
             search_list.append(rule if rule else unrepr(child.content.strip()))
         return search_list
 
+    def referred_symbols(self, symbol: str) -> Set[str]:
+        """Returns the set of all symbols that are directly or indirectly
+        referred to in the definition of `symbol`."""
+        collected = set()  # type: Set[str]
+
+        def gather(sym: str):
+            referred = self.rules[sym]
+            for nd in referred[1:]:
+                s = nd.content
+                if s not in collected and s not in EBNFCompiler.RESERVED_SYMBOLS:
+                    collected.add(s)
+                    gather(s)
+        gather(symbol)
+        return collected
 
     def assemble_parser(self, definitions: List[Tuple[str, str]]) -> str:
         """
@@ -1079,14 +1093,22 @@ class EBNFCompiler(Compiler):
 
         for symbol in self.directives.skip.keys():
             if symbol not in self.consumed_skip_rules:
-                try:
-                    def_node = self.rules[symbol][0]
-                    self.tree.new_error(
-                        def_node, '"Skip-rules" for symbol "{}" will never be used, '
-                        'because the mandatory marker "§" appears nowhere in its definiendum!'
-                        .format(symbol), UNUSED_ERROR_HANDLING_WARNING)
-                except KeyError:
-                    pass  # error has already been notified earlier!
+                # check for indirectly reachable unconsumed mandatory markers
+                for s in self.referred_symbols(symbol):
+                    if s not in self.directives.skip and s not in self.directives.resume:
+                        if self.definitions[s].find('mandatory=') >= 0:
+                            self.consumed_skip_rules.add(symbol)
+                            break
+                else:
+                    try:
+                        def_node = self.rules[symbol][0]
+                        self.tree.new_error(
+                            def_node, '"Skip-rules" for symbol "{}" will never be used, beacuse '
+                            'the mandatory marker "§" does not appear in its definiendum or has '
+                            'already been consumed earlier.'
+                            .format(symbol), UNUSED_ERROR_HANDLING_WARNING)
+                    except KeyError:
+                        pass  # error has already been notified earlier!
 
         # prepare and add customized error-messages
 
@@ -1475,7 +1497,7 @@ class EBNFCompiler(Compiler):
 
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
-        """Generates the customization arguments (mantary, error_msgs, skip) for
+        """Generates the customization arguments (mandatory, error_msgs, skip) for
         `MandatoryNary`-parsers (Series, Interleave, ...)."""
         mandatory_marker = []
         filtered_children = []  # type: List[Node]

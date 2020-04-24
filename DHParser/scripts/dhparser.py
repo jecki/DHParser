@@ -223,7 +223,7 @@ def main():
                     if sys.argv[1].lower() in ('-cpu', '--cpu'):
                         _errors = cpu_profile(func, 1)
                     else:
-                        _errors = mem_profile(func, 1)
+                        _errors = mem_profile(func)
                     if _errors:
                         print('\n'.join(str(err) for err in _errors))
                         sys.exit(1)
