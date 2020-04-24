@@ -1335,7 +1335,7 @@ class EBNFCompiler(Compiler):
         elif key == 'anonymous':
             if node.children[1].tag_name == "regexp":
                 check_argnum()
-                re_pattern = node.children[1].content[1:-1]
+                re_pattern = node.children[1].content
                 if re.match(re_pattern, ''):
                     self.tree.new_error(
                         node, "The regular expression r'%s' matches any symbol, "

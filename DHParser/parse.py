@@ -1161,6 +1161,8 @@ class Grammar:
             self.root_parser__ = copy.deepcopy(self.__class__.root__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
+        self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
+
         self.root_parser__.apply(self._add_parser__)
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
@@ -2439,34 +2441,34 @@ class Series(MandatoryNary):
         return self
 
 
-histogramm = dict()
-
 def starting_string(parser: Parser) -> str:
     """If parser starts with a fixed string, this will be returned.
     """
     # keep track of already visited parsers to avoid infinite circles
-    been_there = set()  # type: Set[Parser]
+    been_there = parser.grammar.static_analysis_caches__.setdefault('starting_strings', dict())  # type: Dict[Parser, str]
 
     def find_starting_string(p: Parser) -> str:
         nonlocal been_there
-        if p not in been_there:
-            been_there.add(p)
+        if p in been_there:
+            return been_there[p]
+        else:
+            been_there[p] = ""
             if isinstance(p, Token):
-                return cast(Token, p).text
+                been_there[p] = cast(Token, p).text
             elif isinstance(p, Series) or isinstance(p, Alternative):
-                return find_starting_string(cast(NaryParser, p).parsers[0])
+                been_there[p] = find_starting_string(cast(NaryParser, p).parsers[0])
             elif isinstance(p, Synonym) or isinstance(p, OneOrMore) \
                     or isinstance(p, Lookahead):
-                return find_starting_string(cast(UnaryParser, p).parser)
+                been_there[p] = find_starting_string(cast(UnaryParser, p).parser)
             elif isinstance(p, Counted):
                 counted = cast(Counted, p)  # type: Counted
                 if not counted.is_optional():
-                    return find_starting_string(counted.parser)
+                    been_there[p] = find_starting_string(counted.parser)
             elif isinstance(p, Interleave):
                 interleave = cast(Interleave, p)
                 if interleave.repetitions[0][0] >= 1:
-                    return find_starting_string(interleave.parsers[0])
-        return ""
+                    been_there[p] = find_starting_string(interleave.parsers[0])
+            return been_there[p]
     return find_starting_string(parser)
 
 
@@ -2548,20 +2550,29 @@ class Alternative(NaryParser):
                 + 'Parser "%s" at position %i out of %i is optional'
                 %(p.tag_name, i + 1, len(self.parsers)),
                 BAD_ORDER_OF_ALTERNATIVES))
+
         # check for errors like "A" | "AB" where "AB" would never be reached,
         # because a substring at the beginning is already caught by an earlier
         # alternative
+
+        def does_preempt(start, parser):
+            """EXPERIMENTAL!!!"""
+            cst = parser(StringView(start))
+            return cst[0] is not None
+            # cst = self.grammar(start, parser, complete_match=False)
+            # return not cst.errors and len(cst) >= 1
+
         for i in range(2, len(self.parsers)):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
                 for k in range(i):
-                    st = self.grammar(fixed_start, self.parsers[k], complete_match=False)
-                    if not st.errors and len(st) >= 1:
+                    if does_preempt(fixed_start, self.parsers[k]):
                         errors.append(self.static_error(
                             "Parser-specification Error in " + self.location_info()
                             + "\nAlternative %i will never be reached, because its starting-"
                             'string "%s" is already captured by earlier alternative %i !'
                             % (i + 1, fixed_start, k + 1), BAD_ORDER_OF_ALTERNATIVES))
+        self.grammar._dirty_flag__ = True
         return errors
 
 
@@ -3189,6 +3200,8 @@ class Forward(UnaryParser):
         self.drop_content = parser.drop_content
 
     def sub_parsers(self) -> Tuple[Parser, ...]:
+        """Note: Sub-Parsers are not passed through by Forward-Parser.
+        TODO: Should this be changed?"""
         if is_parser_placeholder(self.parser):
             return tuple()
         return (self.parser,)
