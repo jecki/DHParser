@@ -2556,11 +2556,8 @@ class Alternative(NaryParser):
         # alternative
 
         def does_preempt(start, parser):
-            """EXPERIMENTAL!!!"""
-            cst = parser(StringView(start))
-            return cst[0] is not None
-            # cst = self.grammar(start, parser, complete_match=False)
-            # return not cst.errors and len(cst) >= 1
+            cst = self.grammar(start, parser, complete_match=False)
+            return not cst.errors and len(cst) >= 1
 
         for i in range(2, len(self.parsers)):
             fixed_start = starting_string(self.parsers[i])
@@ -2572,7 +2569,6 @@ class Alternative(NaryParser):
                             + "\nAlternative %i will never be reached, because its starting-"
                             'string "%s" is already captured by earlier alternative %i !'
                             % (i + 1, fixed_start, k + 1), BAD_ORDER_OF_ALTERNATIVES))
-        self.grammar._dirty_flag__ = True
         return errors
 
 
