@@ -53,8 +53,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'LEAF_NODES',
            'BRANCH_NODES',
            'Node',
-           'predecessor',
-           'successor',
+           'prev_context',
+           'next_context',
            'serialize_context',
            'context_sanity_check',
            'FrozenNode',
@@ -1365,13 +1365,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
 @cython.locals(i=cython.int, k=cython.int)
-def predecessor(context: List[Node]) -> Optional[Node]:
-    """Returns the predecessor of the last Node in the context. The
-    predecessor is the sibling of the same parent Node preceding the
-    the node, or if it already is the first sibling, the parent's
-    sibling preceeding the parent, or grand-parente's sibling and
-    so on. In case no predecessor is found when the first ancestor has
-    been reached, None is returned."""
+def prev_context(context: List[Node]) -> Optional[List[Node]]:
+    """Returns the context of the predecessor of the last Node in the
+    context. The predecessor is the sibling of the same parent Node
+    preceding the node, or if it already is the first sibling, the parent's
+    sibling preceeding the parent, or grand-parente's sibling and so on.
+    In case no predecessor is found when the first ancestor has been
+    reached, None is returned.
+    """
     assert isinstance(context, list)
     node = context[-1]
     for i in range(len(context) - 2, -1, -1):
@@ -1379,7 +1380,7 @@ def predecessor(context: List[Node]) -> Optional[Node]:
         if node is not siblings[0]:
             for k in range(1, len(siblings)):
                 if node is siblings[k]:
-                    return siblings[k - 1]
+                    return context[:i + 1] + [siblings[k - 1]]
             raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
                                  % (i, i+1))
         node = context[i]
@@ -1387,13 +1388,14 @@ def predecessor(context: List[Node]) -> Optional[Node]:
 
 
 @cython.locals(i=cython.int, k=cython.int)
-def successor(context: List[Node]) -> Optional[Node]:
-    """Returns the successor of the last Node in the context. The
-    successor is the sibling of the same parent Node succeeding the
-    the node, or if it already is the last sibling, the parent's
-    sibling succeeding the parent, or grand-parente's sibling and
-    so on. In case no successor is found when the first ancestor has
-    been reached, None is returned."""
+def next_context(context: List[Node]) -> Optional[List[Node]]:
+    """Returns the contexnt of the successor of the last Node in the
+    context. The successor is the sibling of the same parent Node
+    succeeding the the node, or if it already is the last sibling, the
+    parent's sibling succeeding the parent, or grand-parente's sibling and
+    so on. In case no successor is found when the first ancestor has been
+    reached, None is returned.
+    """
     assert isinstance(context, list)
     node = context[-1]
     for i in range(len(context) - 2, -1, -1):
@@ -1401,7 +1403,7 @@ def successor(context: List[Node]) -> Optional[Node]:
         if node is not siblings[-1]:
             for k in range(len(siblings) - 2, -1, -1):
                 if node is siblings[k]:
-                    return siblings[k + 1]
+                    return context[:i + 1] + [siblings[k + 1]]
             raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
                                  % (i, i+1))
         node = context[i]

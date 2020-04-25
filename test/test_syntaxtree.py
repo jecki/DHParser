@@ -29,8 +29,8 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
-    flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, successor, \
-    predecessor, serialize_context
+    flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
+    prev_context, serialize_context
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -626,33 +626,33 @@ class TestPositionAssignment:
 class TestContextNavigation:
     tree = parse_sxpr('(A (B 1) (C (D 2) (E 3)) (F 4))')
 
-    def test_predecessor(self):
+    def test_prev_context(self):
         ctx = self.tree.pick_context('D')
-        nd = predecessor(ctx)
-        assert nd.tag_name == 'B'
+        c = prev_context(ctx)
+        assert c[-1].tag_name == 'B'
         ctx = self.tree.pick_context('E')
-        nd = predecessor(ctx)
-        assert nd.tag_name == 'D'
+        c = prev_context(ctx)
+        assert c[-1].tag_name == 'D'
         ctx = self.tree.pick_context('F')
-        nd = predecessor(ctx)
-        assert nd.tag_name == 'C'
+        c = prev_context(ctx)
+        assert c[-1].tag_name == 'C'
         ctx = self.tree.pick_context('C')
-        nd = predecessor(ctx)
-        assert nd.tag_name == 'B'
+        c = prev_context(ctx)
+        assert c[-1].tag_name == 'B'
 
-    def test_successor(self):
+    def test_next_context(self):
         ctx = self.tree.pick_context('D')
-        nd = successor(ctx)
-        assert nd.tag_name == 'E'
+        c = next_context(ctx)
+        assert c[-1].tag_name == 'E'
         ctx = self.tree.pick_context('E')
-        nd = successor(ctx)
-        assert nd.tag_name == 'F'
+        c = next_context(ctx)
+        assert c[-1].tag_name == 'F'
         ctx = self.tree.pick_context('C')
-        nd = successor(ctx)
-        assert nd.tag_name == 'F'
+        c = next_context(ctx)
+        assert c[-1].tag_name == 'F'
         ctx = self.tree.pick_context('B')
-        nd = successor(ctx)
-        assert nd.tag_name == 'C'
+        c = next_context(ctx)
+        assert c[-1].tag_name == 'C'
 
 if __name__ == "__main__":
     from DHParser.testing import runner
