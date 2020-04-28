@@ -32,7 +32,8 @@ from DHParser.configuration import get_config_value
 from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
-from DHParser.error import Error, is_error, has_errors, only_errors
+from DHParser.error import Error, is_error, has_errors, only_errors, \
+    CANNOT_VERIFY_TRANSTABLE_WARNING
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
@@ -476,7 +477,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             source = f.read()
             sections = split_source(parser_name, source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
-            ast_trans_python_src = DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath) + ast
+            ast_trans_python_src = imports + ast  # DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath)
             ast_trans_table = dict()  # type: TransformationDict
             try:
                 ast_trans_table = compile_python_object(ast_trans_python_src,
@@ -489,7 +490,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
                 else:
                     err_str = 'Exception {} while compiling AST-Tansformation: {}' \
                               .format(str(type(e)), str(e))
-                messages.append(Error(err_str, 0, Error.CANNOT_VERIFY_TRANSTABLE_WARNING))
+                messages.append(Error(err_str, 0, CANNOT_VERIFY_TRANSTABLE_WARNING))
                 if is_logging():
                     with open(os.path.join(log_dir(), rootname + '_AST_src.py'), 'w',
                               encoding='utf-8') as f:

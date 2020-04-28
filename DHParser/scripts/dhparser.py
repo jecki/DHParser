@@ -18,6 +18,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+from functools import partial
 import os
 import sys
 from typing import cast
@@ -145,7 +146,7 @@ def selftest() -> bool:
           "Trying to compile EBNF-Grammar with generated parser...\n")
     selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
                                         ebnf_transformer, ebnf_compiler)
-    ebnf_compiler.gen_transformer_skeleton()
+    # ebnf_compiler.gen_transformer_skeleton()
     print(selfhosted_ebnf_parser)
     return True
 
@@ -166,7 +167,7 @@ def cpu_profile(func, repetitions=1):
     # after your program ends
     stats = pstats.Stats(profile)
     stats.strip_dirs()
-    stats.sort_stats('time').print_stats(40)
+    stats.sort_stats('time').print_stats(80)
     return success
 
 
@@ -210,6 +211,24 @@ def main():
                     print(syntax_tree.as_sxpr(compact=True))
                 except IndexError:
                     print("Usage:  dhparser.py -ast FILENAME.ebnf")
+                    sys.exit(1)
+                except FileNotFoundError:
+                    print('File "%s" not found!' % sys.arg[2])
+                    sys.exit(1)
+                except IOError as e:
+                    print('Could not read file "%s": %s' % (sys.argv[2], str(e)))
+            elif sys.argv[1].lower() in ('-cpu', '--cpu', '-mem', '--mem'):
+                try:
+                    func = partial(compile_on_disk, source_file=sys.argv[2])
+                    if sys.argv[1].lower() in ('-cpu', '--cpu'):
+                        _errors = cpu_profile(func, 1)
+                    else:
+                        _errors = mem_profile(func)
+                    if _errors:
+                        print('\n'.join(str(err) for err in _errors))
+                        sys.exit(1)
+                except IndexError:
+                    print("Usage:  dhparser.py -cpu/mem FILENAME.ebnf")
                     sys.exit(1)
                 except FileNotFoundError:
                     print('File "%s" not found!' % sys.arg[2])

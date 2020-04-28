@@ -711,38 +711,6 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     return not parser or parser.ptype == ":Parser"
 
 
-def leaf_parsers(starting_point: Parser,
-                 cache: Dict[Parser, Set[Parser]] = dict()) -> Set[Parser]:
-    """Retrieves all leaf-parsers that can be reached (or might be called
-    for that matter) a given parser (`starting_point`). Since a combined
-    parser that does not ever reach a leaf-parser, the the returned list
-    should never be empty, if the parser ensemble is well-designed.
-    """
-    lp_dict = {starting_point: cache.get(starting_point, set())}  # type: Dict[Parser, Set[Parser]]
-
-    def associate_leaf_parsers(context: List[Parser]):
-        parser = context[-1]
-        if parser not in context[:-1]:
-            if parser in cache:
-                for p in context:
-                    if p not in cache:
-                        lp_dict.setdefault(p, set()).update(cache[parser])
-            else:
-                sub_parsers = parser.sub_parsers()
-                if sub_parsers:
-                    for p in sub_parsers:
-                        associate_leaf_parsers(context + [p])
-                else:  # it's a leaf-parser, now associate all it's parents with it
-                    for p in context:
-                        if p not in cache:
-                            lp_dict.setdefault(p, set()).add(parser)
-
-    associate_leaf_parsers([starting_point])
-    cache.update(lp_dict)
-
-    return cache[starting_point]
-
-
 ########################################################################
 #
 # Grammar class, central administration of all parser of a grammar
@@ -1193,6 +1161,8 @@ class Grammar:
             self.root_parser__ = copy.deepcopy(self.__class__.root__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
+        self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
+
         self.root_parser__.apply(self._add_parser__)
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
@@ -1332,21 +1302,20 @@ class Grammar:
                         for h in self.history__[:-1])
 
         # assert isinstance(document, str), type(document)
+        parser = self[start_parser] if isinstance(start_parser, str) else start_parser
+        assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
+                                       " %s vs. %s" % (str(self), str(parser.grammar))
         if self._dirty_flag__:
             self._reset__()
-            for parser in self.all_parsers__:
-                parser.reset()
+            parser.apply(lambda ctx: ctx[-1].reset())
         else:
             self._dirty_flag__ = True
 
+        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = -1  # rollback location
-        parser = self[start_parser] if isinstance(start_parser, str) else start_parser
-        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
-        assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
-                                       " %s vs. %s" % (str(self), str(parser.grammar))
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         rest = self.document__
@@ -1538,19 +1507,37 @@ class Grammar:
             the actual parser that failed and an error object.
         """
         error_list = []  # type: List[AnalysisError]
+        leaf_state = dict()  # type: Dict[Parser, Optional[bool]]
 
-        def visit_parser(context: List[Parser]) -> Optional[bool]:
-            nonlocal error_list
-            parser = context[-1]
-            errors = parser.static_analysis()
-            error_list.extend(errors)
+        def has_leaf_parsers(prsr: Parser) -> bool:
+            def leaf_parsers(p: Parser) -> Optional[bool]:
+                if p in leaf_state:
+                    return leaf_state[p]
+                sub_list = p.sub_parsers()
+                if sub_list:
+                    leaf_state[p] = None
+                    state = any(leaf_parsers(s) for s in sub_list)
+                    if not state and any(leaf_state[s] is None for s in sub_list):
+                        state = None
+                else:
+                    state = True
+                leaf_state[p] = state
+                return state
 
-        self.root_parser__.apply(visit_parser)
+            # remove parsers with unknown state (None) from cache
+            state_unknown = [p for p, s in leaf_state.items() if s is None]
+            for p in state_unknown:
+                del leaf_state[p]
+
+            result = leaf_parsers(prsr) or False
+            leaf_state[prsr] = result
+            return result
 
         cache = dict()  # type: Dict[Parser, Set[Parser]]
-        # for DEBUGGING: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
-        for parser in self.all_parsers__: # self.all_parsers__:
-            if parser.pname and not leaf_parsers(parser, cache):
+        # for debugging: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
+        for parser in self.all_parsers__:
+            error_list.extend(parser.static_analysis())
+            if parser.pname and not has_leaf_parsers(parser):
                 error_list.append((parser.symbol, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even '
                     'touch the parsed document' % parser.location_info(),
@@ -2458,28 +2445,30 @@ def starting_string(parser: Parser) -> str:
     """If parser starts with a fixed string, this will be returned.
     """
     # keep track of already visited parsers to avoid infinite circles
-    been_there = set()  # type: Set[Parser]
+    been_there = parser.grammar.static_analysis_caches__.setdefault('starting_strings', dict())  # type: Dict[Parser, str]
 
     def find_starting_string(p: Parser) -> str:
         nonlocal been_there
-        if p not in been_there:
-            been_there.add(p)
+        if p in been_there:
+            return been_there[p]
+        else:
+            been_there[p] = ""
             if isinstance(p, Token):
-                return cast(Token, p).text
+                been_there[p] = cast(Token, p).text
             elif isinstance(p, Series) or isinstance(p, Alternative):
-                return starting_string(cast(NaryParser, p).parsers[0])
+                been_there[p] = find_starting_string(cast(NaryParser, p).parsers[0])
             elif isinstance(p, Synonym) or isinstance(p, OneOrMore) \
                     or isinstance(p, Lookahead):
-                return starting_string(cast(UnaryParser, p).parser)
+                been_there[p] = find_starting_string(cast(UnaryParser, p).parser)
             elif isinstance(p, Counted):
                 counted = cast(Counted, p)  # type: Counted
                 if not counted.is_optional():
-                    return starting_string(counted.parser)
+                    been_there[p] = find_starting_string(counted.parser)
             elif isinstance(p, Interleave):
                 interleave = cast(Interleave, p)
                 if interleave.repetitions[0][0] >= 1:
-                    return starting_string(interleave.parsers[0])
-        return ""
+                    been_there[p] = find_starting_string(interleave.parsers[0])
+            return been_there[p]
     return find_starting_string(parser)
 
 
@@ -2521,9 +2510,9 @@ class Alternative(NaryParser):
             return ' | '.join(parser.repr for parser in self.parsers)
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
-    def reset(self):
-        super(Alternative, self).reset()
-        return self
+    # def reset(self):
+    #     super(Alternative, self).reset()
+    #     return self
 
     # The following operator definitions add syntactical sugar, so one can write:
     # `RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')` instead of:
@@ -2561,15 +2550,22 @@ class Alternative(NaryParser):
                 + 'Parser "%s" at position %i out of %i is optional'
                 %(p.tag_name, i + 1, len(self.parsers)),
                 BAD_ORDER_OF_ALTERNATIVES))
+
         # check for errors like "A" | "AB" where "AB" would never be reached,
         # because a substring at the beginning is already caught by an earlier
         # alternative
+        # WARNING: This can become time-consuming!!!
+        # EXPERIMENTAL
+
+        def does_preempt(start, parser):
+            cst = self.grammar(start, parser, complete_match=False)
+            return not cst.errors and len(cst) >= 1
+
         for i in range(2, len(self.parsers)):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
                 for k in range(i):
-                    st = self.grammar(fixed_start, self.parsers[k], complete_match=False)
-                    if not st.errors and len(st) >= 1:
+                    if does_preempt(fixed_start, self.parsers[k]):
                         errors.append(self.static_error(
                             "Parser-specification Error in " + self.location_info()
                             + "\nAlternative %i will never be reached, because its starting-"
@@ -3201,7 +3197,9 @@ class Forward(UnaryParser):
         self.parser = parser
         self.drop_content = parser.drop_content
 
-    # def sub_parsers(self) -> Tuple[Parser, ...]:
-    #     if is_parser_placeholder(self.parser):
-    #         return tuple()
-    #     return (self.parser,)
+    def sub_parsers(self) -> Tuple[Parser, ...]:
+        """Note: Sub-Parsers are not passed through by Forward-Parser.
+        TODO: Should this be changed?"""
+        if is_parser_placeholder(self.parser):
+            return tuple()
+        return (self.parser,)

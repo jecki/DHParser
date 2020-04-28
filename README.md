@@ -2,7 +2,7 @@ DHParser
 ========
 
 DHParser - A parser generator and domain specific language (DSL)
-construction kit for the Digit Humanities
+construction kit for the Digital Humanities
 
 
 Features
