@@ -1,0 +1,52 @@
+# Direktiven zur Steuerung des Einlese-Prozesses ("parsing")
+
+@ whitespace = horizontal                           # Impliziter Leerraum ~ umfasst keine Zeilenwechsel
+@ anonymous  = JAHRESZAHL, ZEICHENFOLGE, ENDE       # Diese Elementnamen erscheinen nicht als tags
+@ drop       = whitespace, token, ENDE              # Implizieter Leerraum ~, Zeichenketten "..." und das
+                                                    # ENDE-Element werden schon beim einlesen gelöscht
+
+#: Gesamtdokument
+
+gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel text [LEERRAUM] ENDE
+
+
+#: Metadaten
+
+bibliographisches = autor §"," [ZW] werk "," [ZW] ort "," [ZW] jahr "."
+autor             = namenfolge [verknüpfung]
+werk              = wortfolge ["." §untertitel] [verknüpfung]
+untertitel        = wortfolge [verknüpfung]
+ort               = wortfolge [verknüpfung]
+jahr              = JAHRESZAHL
+
+wortfolge         = WORT { L WORT } ~
+namenfolge        = NAME { L NAME } ~
+verknüpfung       = "<" ziel ">"
+ziel              = ZEICHENFOLGE ~
+
+serie             = !(titel vers ZW vers) { ZW zeile }+ { LEERZEILE }+
+
+
+#: Gedicht
+
+titel             = { ZW zeile }+ { LEERZEILE }+
+
+text              = strophe { { LEERZEILE }+ strophe }
+strophe           = { ZW vers }+
+vers              = zeile
+
+zeile             = T { L T } ~
+T                 = ZEICHENFOLGE
+
+
+#:  Lexeme
+
+WORT              = /\w+/
+NAME              = /\w+\.?/
+ZEICHENFOLGE      = /[^ \n<>]+/
+ZW                = /\n/~
+L                 = / +/
+LEERRAUM          = /\s+/
+LEERZEILE         = /\n[ \t]*(?=\n)/
+JAHRESZAHL        = /\d\d\d\d/~
+ENDE              = !/./

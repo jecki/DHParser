@@ -1658,7 +1658,7 @@ class PreprocessorToken(Parser):
 
 ########################################################################
 #
-# _Token and Regular Expression parser classes (leaf classes)
+# Token and Regular Expression parser classes (leaf classes)
 #
 ########################################################################
 

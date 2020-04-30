@@ -117,7 +117,7 @@ DHParser is able to exploit all those hints in order to gather much the
 same information as was encoded in the XML-Version. Don't believe it?
 You can try: Download DHParser from the
 [gitlab-repository](https://gitlab.lrz.de/badw-it/DHParser) and enter
-the directory `examples/Tutorial` on the command line interface (shell).
+the directory `examples/Introduction` on the command line interface (shell).
 Just run `python LyrikCompiler_example.py` (you need to have installed
 [Python](https://www.python.org/) Version 3.5 or higher on your
 computer). The output will be something like this:
