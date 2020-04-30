@@ -94,7 +94,7 @@ class TestRemoval:
         assert cst.content == "facitergula"
 
     def test_remove_tokens(self):
-        cst = parse_sxpr('(wortarten (:Token "ajektiv") (:Token "et") (:Token "praeposition"))')
+        cst = parse_sxpr('(wortarten (:Text "ajektiv") (:Text "et") (:Text "praeposition"))')
         ast_table = {
             "wortarten": [remove_tokens({"et"})],
             "*": []

@@ -28,7 +28,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Interleave, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
@@ -84,11 +84,11 @@ class ArithmeticGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
-    sign = Alternative(Drop(Token("+")), Drop(Token("-")))
+    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
+    sign = Alternative(Drop(Text("+")), Drop(Text("-")))
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
-    term = Series(factor, ZeroOrMore(Series(Alternative(Series(Drop(Token("*")), dwsp__), Series(Drop(Token("/")), dwsp__)), factor)))
-    expression.set(Series(term, ZeroOrMore(Series(Alternative(Series(Drop(Token("+")), dwsp__), Series(Drop(Token("-")), dwsp__)), term))))
+    term = Series(factor, ZeroOrMore(Series(Alternative(Series(Drop(Text("*")), dwsp__), Series(Drop(Text("/")), dwsp__)), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(Series(Drop(Text("+")), dwsp__), Series(Drop(Text("-")), dwsp__)), term))))
     root__ = expression
     
 

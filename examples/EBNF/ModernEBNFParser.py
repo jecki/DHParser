@@ -22,7 +22,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, AllOf, SomeOf, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
@@ -82,20 +82,20 @@ class ModernEBNFGrammar(Grammar):
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
-    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
-    element = Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), literal, plaintext, regexp, whitespace, group)
-    option = Series(element, Series(Token("?"), dwsp__))
-    repetition = Series(element, Series(Token("*"), dwsp__))
-    oneormore = Series(element, Series(Token("+"), dwsp__))
+    group = Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__), mandatory=1)
+    element = Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Series(Text("="), dwsp__))), literal, plaintext, regexp, whitespace, group)
+    option = Series(element, Series(Text("?"), dwsp__))
+    repetition = Series(element, Series(Text("*"), dwsp__))
+    oneormore = Series(element, Series(Text("+"), dwsp__))
     interleave = Alternative(oneormore, repetition, option, element)
-    unordered = Series(interleave, OneOrMore(Series(Series(Token("^"), dwsp__), interleave)))
-    retrieveop.set(Alternative(Series(Token("::"), dwsp__), Series(Token(":"), dwsp__)))
-    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("-!"), dwsp__), Series(Token("-&"), dwsp__))
+    unordered = Series(interleave, OneOrMore(Series(Series(Text("^"), dwsp__), interleave)))
+    retrieveop.set(Alternative(Series(Text("::"), dwsp__), Series(Text(":"), dwsp__)))
+    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("-!"), dwsp__), Series(Text("-&"), dwsp__))
     term = Alternative(repetition, option, Series(Option(flowmarker), Alternative(unordered, oneormore, element)))
-    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), term))
-    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
-    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
+    sequence = OneOrMore(Series(Option(Series(Text("§"), dwsp__)), term))
+    expression.set(Series(sequence, ZeroOrMore(Series(Series(Text("|"), dwsp__), sequence))))
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Text(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
+    definition = Series(symbol, Series(Text("="), dwsp__), expression, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     

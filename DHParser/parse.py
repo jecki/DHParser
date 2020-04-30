@@ -64,8 +64,8 @@ __all__ = ('ParserError',
            'Never',
            'AnyChar',
            'PreprocessorToken',
-           'Token',
-           'DropToken',
+           'Text',
+           'DropText',
            'RegExp',
            'RE',
            'TKN',
@@ -1658,24 +1658,24 @@ class PreprocessorToken(Parser):
 
 ########################################################################
 #
-# Token and Regular Expression parser classes (leaf classes)
+# Text and Regular Expression parser classes (leaf classes)
 #
 ########################################################################
 
-class Token(Parser):
+class Text(Parser):
     """
     Parses plain text strings. (Could be done by RegExp as well, but is faster.)
 
     Example::
 
-        >>> while_token = Token("while")
+        >>> while_token = Text("while")
         >>> Grammar(while_token)("while").content
         'while'
     """
-    assert TOKEN_PTYPE == ":Token"
+    assert TOKEN_PTYPE == ":Text"
 
     def __init__(self, text: str) -> None:
-        super(Token, self).__init__()
+        super(Text, self).__init__()
         self.text = text
         self.len = len(text)
 
@@ -1759,8 +1759,8 @@ class RegExp(Parser):
             .replace('/', '\\/') + '/'
 
 
-def DropToken(text: str) -> Token:
-    return cast(Token, Drop(Token(text)))
+def DropText(text: str) -> Text:
+    return cast(Text, Drop(Text(text)))
 
 
 def DropRegExp(regexp) -> RegExp:
@@ -1790,13 +1790,13 @@ def RE(regexp, wsL='', wsR=r'\s*'):
 
 
 def TKN(token, wsL='', wsR=r'\s*'):
-    """Syntactic Sugar for 'Series(Whitespace(wsL), Token(token), Whitespace(wsR))'"""
-    return withWS(lambda: Token(token), wsL, wsR)
+    """Syntactic Sugar for 'Series(Whitespace(wsL), Text(token), Whitespace(wsR))'"""
+    return withWS(lambda: Text(token), wsL, wsR)
 
 
 def DTKN(token, wsL='', wsR=r'\s*'):
-    """Syntactic Sugar for 'Series(Whitespace(wsL), DropToken(token), Whitespace(wsR))'"""
-    return withWS(lambda: Drop(Token(token)), wsL, wsR)
+    """Syntactic Sugar for 'Series(Whitespace(wsL), DropText(token), Whitespace(wsR))'"""
+    return withWS(lambda: Drop(Text(token)), wsL, wsR)
 
 
 class Whitespace(RegExp):
@@ -2131,7 +2131,7 @@ class Counted(UnaryParser):
 
     Examples:
 
-    >>> A2_4 = Counted(Token('A'), (2, 4))
+    >>> A2_4 = Counted(Text('A'), (2, 4))
     >>> A2_4
     `A`{2,4}
     >>> Grammar(A2_4)('AA').as_sxpr()
@@ -2140,11 +2140,11 @@ class Counted(UnaryParser):
     '(:Counted (:Token "A") (:Token "A") (:Token "A") (:Token "A"))'
     >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
     '(ZOMBIE__ `(Error (1040): Parser did not match!))'
-    >>> moves = OneOrMore(Counted(Token('A'), (1, 3)) + Counted(Token('B'), (1, 3)))
+    >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
     >>> result = Grammar(moves)('AAABABB')
     >>> result.tag_name, result.content
     (':OneOrMore', 'AAABABB')
-    >>> moves = Counted(Token('A'), (2, 3)) * Counted(Token('B'), (2, 3))
+    >>> moves = Counted(Text('A'), (2, 3)) * Counted(Text('B'), (2, 3))
     >>> moves
     `A`{2,3} ° `B`{2,3}
     >>> Grammar(moves)('AAABB').as_sxpr()
@@ -2453,8 +2453,8 @@ def starting_string(parser: Parser) -> str:
             return been_there[p]
         else:
             been_there[p] = ""
-            if isinstance(p, Token):
-                been_there[p] = cast(Token, p).text
+            if isinstance(p, Text):
+                been_there[p] = cast(Text, p).text
             elif isinstance(p, Series) or isinstance(p, Alternative):
                 been_there[p] = find_starting_string(cast(NaryParser, p).parsers[0])
             elif isinstance(p, Synonym) or isinstance(p, OneOrMore) \
@@ -2798,7 +2798,7 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowParser):
     """
     Matches, if the contained parser would match backwards. Requires
-    the contained parser to be a RegExp, _RE, Token parser.
+    the contained parser to be a RegExp, _RE, Text parser.
 
     EXPERIMENTAL
     """
@@ -2806,13 +2806,13 @@ class Lookbehind(FlowParser):
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
-        assert isinstance(p, RegExp) or isinstance(p, Token)
+        assert isinstance(p, RegExp) or isinstance(p, Text)
         self.regexp = None
         self.text = ''  # type: str
         if isinstance(p, RegExp):
             self.regexp = cast(RegExp, p).regexp
-        else:  # p is of type Token
-            self.text = cast(Token, p).text
+        else:  # p is of type Text
+            self.text = cast(Text, p).text
         super(Lookbehind, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:

@@ -77,12 +77,12 @@ class TestParseXML:
 
     def test_plaintext_handling(self):
         tree = parse_xml('<a>alpha <b>beta</b> gamma</a>')
-        assert flatten_sxpr(tree.as_sxpr()) == '(a (:Token "alpha ") (b "beta") (:Token " gamma"))'
+        assert flatten_sxpr(tree.as_sxpr()) == '(a (:Text "alpha ") (b "beta") (:Text " gamma"))'
         tree = parse_xml(' <a>  <b>beta</b>  </a> ')
         assert flatten_xml(tree.as_xml()) == \
-               '<a><ANONYMOUS_Token__>  </ANONYMOUS_Token__><b>beta</b>' \
-               '<ANONYMOUS_Token__>  </ANONYMOUS_Token__></a>'
-        assert tree.as_xml(inline_tags={'a'}, omit_tags={':Token'}) == '<a>  <b>beta</b>  </a>'
+               '<a><ANONYMOUS_Text__>  </ANONYMOUS_Text__><b>beta</b>' \
+               '<ANONYMOUS_Text__>  </ANONYMOUS_Text__></a>'
+        assert tree.as_xml(inline_tags={'a'}, omit_tags={':Text'}) == '<a>  <b>beta</b>  </a>'
         tree = parse_xml(' <a>\n  <b>beta</b>\n</a> ')
         assert tree.as_xml(inline_tags={'a'}) == '<a><b>beta</b></a>'
 
@@ -302,7 +302,7 @@ class TestNode:
         parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
-        compare_tree = parse_sxpr("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
+        compare_tree = parse_sxpr("(term (term (factor 20) (:Text /) (factor 4)) (:Text *) (factor 3))")
         assert tree.equals(compare_tree), tree.as_sxpr()
 
     def test_copy(self):

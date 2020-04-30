@@ -22,7 +22,7 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
@@ -75,19 +75,19 @@ class yamlGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
-    FRAC = Option(Series(Drop(Token(".")), RegExp('[0-9]+')))
-    INT = Alternative(Series(Option(Drop(Token("-"))), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    EXP = Option(Series(Alternative(Drop(Text("E")), Drop(Text("e"))), Option(Alternative(Drop(Text("+")), Drop(Text("-")))), RegExp('[0-9]+')))
+    FRAC = Option(Series(Drop(Text(".")), RegExp('[0-9]+')))
+    INT = Alternative(Series(Option(Drop(Text("-"))), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
     HEX = RegExp('[0-9a-fA-F]')
     ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), Series(RegExp('\\\\u'), HEX, HEX, HEX, HEX))
     CHARACTERS = ZeroOrMore(Alternative(RegExp('[^"\\\\]+'), ESCAPE))
-    null = Series(Token("null"), dwsp__)
+    null = Series(Text("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Token('"')), CHARACTERS, Drop(Token('"')), dwsp__)
-    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), value)))), Series(Drop(Token("]")), dwsp__))
-    member = Series(string, Series(Drop(Token(":")), dwsp__), element)
-    object = Series(Series(Drop(Token("{")), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(Drop(Token(",")), dwsp__), member)))), Series(Drop(Token("}")), dwsp__))
+    string = Series(Drop(Text('"')), CHARACTERS, Drop(Text('"')), dwsp__)
+    array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(value, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), value)))), Series(Drop(Text("]")), dwsp__))
+    member = Series(string, Series(Drop(Text(":")), dwsp__), element)
+    object = Series(Series(Drop(Text("{")), dwsp__), Option(Series(member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member)))), Series(Drop(Text("}")), dwsp__))
     value.set(Alternative(object, array, string, number, bool, null))
     element.set(Synonym(value))
     json = Series(dwsp__, element, EOF)

@@ -28,7 +28,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Interleave, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
@@ -88,18 +88,18 @@ class EBNFGrammar(Grammar):
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
-    option = Series(Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=1)
-    repetition = Series(Series(Token("{"), dwsp__), expression, Series(Token("}"), dwsp__), mandatory=1)
-    oneormore = Series(Series(Token("{"), dwsp__), expression, Series(Token("}+"), dwsp__))
-    unordered = Series(Series(Token("<"), dwsp__), expression, Series(Token(">"), dwsp__), mandatory=1)
-    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":?"), dwsp__), Series(Token(":"), dwsp__))
-    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("-!"), dwsp__), Series(Token("-&"), dwsp__))
-    term = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Token("="), dwsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
-    sequence = OneOrMore(Series(Option(Series(Token("§"), dwsp__)), term))
-    expression.set(Series(sequence, ZeroOrMore(Series(Series(Token("|"), dwsp__), sequence))))
-    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
-    definition = Series(symbol, Series(Token("="), dwsp__), expression, mandatory=1)
+    option = Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1)
+    repetition = Series(Series(Text("{"), dwsp__), expression, Series(Text("}"), dwsp__), mandatory=1)
+    oneormore = Series(Series(Text("{"), dwsp__), expression, Series(Text("}+"), dwsp__))
+    unordered = Series(Series(Text("<"), dwsp__), expression, Series(Text(">"), dwsp__), mandatory=1)
+    group = Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__), mandatory=1)
+    retrieveop = Alternative(Series(Text("::"), dwsp__), Series(Text(":?"), dwsp__), Series(Text(":"), dwsp__))
+    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("-!"), dwsp__), Series(Text("-&"), dwsp__))
+    term = Alternative(Series(Option(flowmarker), Option(retrieveop), symbol, NegativeLookahead(Series(Text("="), dwsp__))), Series(Option(flowmarker), literal), Series(Option(flowmarker), plaintext), Series(Option(flowmarker), regexp), Series(Option(flowmarker), whitespace), Series(Option(flowmarker), oneormore), Series(Option(flowmarker), group), Series(Option(flowmarker), unordered), repetition, option)
+    sequence = OneOrMore(Series(Option(Series(Text("§"), dwsp__)), term))
+    expression.set(Series(sequence, ZeroOrMore(Series(Series(Text("|"), dwsp__), sequence))))
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Text(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
+    definition = Series(symbol, Series(Text("="), dwsp__), expression, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
     

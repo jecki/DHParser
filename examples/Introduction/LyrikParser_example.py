@@ -7,29 +7,49 @@
 #######################################################################
 
 
+import collections
 from functools import partial
 import os
 import sys
+sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
-dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if dhparser_path not in sys.path:
-    sys.path.append(dhparser_path)
+
+try:
+    scriptpath = os.path.dirname(__file__)
+except NameError:
+    scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'..\..'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
+if dhparser_parentdir not in sys.path:
+    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import is_filename, Grammar, Compiler, Lookbehind, \
-    Alternative, Pop, Token, Synonym, Whitespace, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Series, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    PreprocessorFunc, TransformationDict, remove_empty, reduce_single_child, \
-    Node, TransformationFunc, traverse, remove_children_if, is_anonymous, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, \
-    flatten, is_empty, collapse, remove_brackets, transform_content, \
-    is_one_of, rstrip, strip, remove_tokens, remove_children, peek, \
-    is_insignificant_whitespace, TOKEN_PTYPE, access_thread_locals
-from DHParser.log import start_logging
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
+    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
+    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
+    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
+    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
+    transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
+    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, any_of, \
+    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
+    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
+    has_attr, has_parent
 
 
 #######################################################################
@@ -39,7 +59,8 @@ from DHParser.log import start_logging
 #######################################################################
 
 def LyrikPreprocessor(text):
-    return text
+    return text, lambda i: i
+
 
 def get_preprocessor() -> PreprocessorFunc:
     return LyrikPreprocessor
@@ -52,79 +73,62 @@ def get_preprocessor() -> PreprocessorFunc:
 #######################################################################
 
 class LyrikGrammar(Grammar):
-    r"""Parser for a Lyrik source file, with this grammar:
-    
-    gedicht           = bibliographisches { LEERZEILE }+ [serie] §titel text /\s*/ ENDE
-    
-    bibliographisches = autor §"," [NZ] werk "," [NZ] ort "," [NZ] jahr "."
-    autor             = namenfolge [verknüpfung]
-    werk              = wortfolge ["." §untertitel] [verknüpfung]
-    untertitel        = wortfolge [verknüpfung]
-    ort               = wortfolge [verknüpfung]
-    jahr              = JAHRESZAHL
-    
-    wortfolge         = { WORT }+
-    namenfolge        = { NAME }+
-    verknüpfung       = "<" ziel ">"
-    ziel              = ZEICHENFOLGE
-    
-    serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
-    
-    titel             = { NZ zeile}+ { LEERZEILE }+
-    zeile             = { ZEICHENFOLGE }+
-    
-    text              = { strophe {LEERZEILE} }+
-    strophe           = { NZ vers }+
-    vers              = { ZEICHENFOLGE }+
-    
-    WORT              = /\w+/~
-    NAME              = /\w+\.?/~
-    ZEICHENFOLGE      = /[^ \n<>]+/~
-    NZ                = /\n/~
-    LEERZEILE         = /\n[ \t]*(?=\n)/~
-    JAHRESZAHL        = /\d\d\d\d/~
-    ENDE              = !/./
+    r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "6602d99972ef2883e28bd735e1fe0401"
+    source_hash__ = "19f45d350a36c790a1f4527d98b9c1f1"
+    anonymous__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$')
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
+    comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    ENDE = NegativeLookahead(RegExp('.'))
-    JAHRESZAHL = Series(RegExp('\\d\\d\\d\\d'), wsp__)
-    LEERZEILE = Series(RegExp('\\n[ \\t]*(?=\\n)'), wsp__)
-    NZ = Series(RegExp('\\n'), wsp__)
-    ZEICHENFOLGE = Series(RegExp('[^ \\n<>]+'), wsp__)
-    NAME = Series(RegExp('\\w+\\.?'), wsp__)
-    WORT = Series(RegExp('\\w+'), wsp__)
-    vers = OneOrMore(ZEICHENFOLGE)
-    strophe = OneOrMore(Series(NZ, vers))
-    text = OneOrMore(Series(strophe, ZeroOrMore(LEERZEILE)))
-    zeile = OneOrMore(ZEICHENFOLGE)
-    titel = Series(OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
-    serie = Series(NegativeLookahead(Series(titel, vers, NZ, vers)), OneOrMore(Series(NZ, zeile)), OneOrMore(LEERZEILE))
-    ziel = Synonym(ZEICHENFOLGE)
-    verknüpfung = Series(Series(Token("<"), wsp__), ziel, Series(Token(">"), wsp__))
-    namenfolge = OneOrMore(NAME)
-    wortfolge = OneOrMore(WORT)
+    dwsp__ = Drop(Whitespace(WSP_RE__))
+    ENDE = Drop(Drop(NegativeLookahead(RegExp('.'))))
+    JAHRESZAHL = Series(RegExp('\\d\\d\\d\\d'), dwsp__)
+    LEERZEILE = RegExp('\\n[ \\t]*(?=\\n)')
+    LEERRAUM = RegExp('\\s+')
+    L = RegExp(' +')
+    ZW = Series(RegExp('\\n'), dwsp__)
+    ZEICHENFOLGE = RegExp('[^ \\n<>]+')
+    NAME = RegExp('\\w+\\.?')
+    WORT = RegExp('\\w+')
+    T = Synonym(ZEICHENFOLGE)
+    zeile = Series(T, ZeroOrMore(Series(L, T)), dwsp__)
+    vers = Synonym(zeile)
+    strophe = OneOrMore(Series(ZW, vers))
+    text = Series(strophe, ZeroOrMore(Series(OneOrMore(LEERZEILE), strophe)))
+    titel = Series(OneOrMore(Series(ZW, zeile)), OneOrMore(LEERZEILE))
+    serie = Series(NegativeLookahead(Series(titel, vers, ZW, vers)), OneOrMore(Series(ZW, zeile)), OneOrMore(LEERZEILE))
+    ziel = Series(ZEICHENFOLGE, dwsp__)
+    verknüpfung = Series(Series(Drop(Text("<")), dwsp__), ziel, Series(Drop(Text(">")), dwsp__))
+    namenfolge = Series(NAME, ZeroOrMore(Series(L, NAME)), dwsp__)
+    wortfolge = Series(WORT, ZeroOrMore(Series(L, WORT)), dwsp__)
     jahr = Synonym(JAHRESZAHL)
     ort = Series(wortfolge, Option(verknüpfung))
     untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Series(Token("."), wsp__), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(wortfolge, Option(Series(Series(Drop(Text(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
     autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(Token(","), wsp__), Option(NZ), werk, Series(Token(","), wsp__),
-                               Option(NZ), ort, Series(Token(","), wsp__), Option(NZ), jahr, Series(Token("."), wsp__), mandatory=1)
-    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, RegExp('\\s*'), ENDE, mandatory=3)
+    bibliographisches = Series(autor, Series(Drop(Text(",")), dwsp__), Option(ZW), werk, Series(Drop(Text(",")), dwsp__), Option(ZW), ort, Series(Drop(Text(",")), dwsp__), Option(ZW), jahr, Series(Drop(Text(".")), dwsp__), mandatory=1)
+    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, Option(LEERRAUM), ENDE, mandatory=3)
     root__ = gedicht
     
+
 def get_grammar() -> LyrikGrammar:
+    """Returns a thread/process-exclusive LyrikGrammar-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        grammar = THREAD_LOCALS.Lyrik_grammar_singleton
+        grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_grammar_singleton = LyrikGrammar()
-        grammar = THREAD_LOCALS.Lyrik_grammar_singleton
+        THREAD_LOCALS.Lyrik_00000001_grammar_singleton = LyrikGrammar()
+        if hasattr(get_grammar, 'python_src__'):
+            THREAD_LOCALS.Lyrik_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Lyrik_00000001_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 
 
@@ -134,62 +138,56 @@ def get_grammar() -> LyrikGrammar:
 #
 #######################################################################
 
-def halt(node):
-    assert False
-
 Lyrik_AST_transformation_table = {
     # AST Transformations for the Lyrik-grammar
-    "<": remove_empty,
-    "bibliographisches":
-        [flatten, remove_children('NZ'), remove_whitespace, remove_tokens],
+    "<": flatten,
+    "gedicht": [],
+    "bibliographisches": [],
     "autor": [],
     "werk": [],
     "untertitel": [],
     "ort": [],
-    "jahr":
-        [reduce_single_child, remove_whitespace, reduce_single_child],
-    "wortfolge":
-        [flatten(is_one_of('WORT'), recursive=False), rstrip, collapse],
-    "namenfolge":
-        [flatten(is_one_of('NAME'), recursive=False), rstrip, collapse],
-    "verknüpfung":
-        [flatten, remove_tokens('<', '>'), remove_whitespace, reduce_single_child],
-    "ziel":
-        [reduce_single_child, remove_whitespace, reduce_single_child],
-    "gedicht, strophe, text":
-        [flatten, remove_children('LEERZEILE'), remove_children('NZ')],
-    "titel, serie":
-        [flatten, remove_children('LEERZEILE'), remove_children('NZ'), collapse],
-    "zeile": [strip],
-    "vers":
-        [strip, collapse],
+    "jahr": [],
+    "wortfolge": [],
+    "namenfolge": [],
+    "verknüpfung": [],
+    "ziel": [],
+    "serie": [],
+    "titel": [],
+    "text": [],
+    "strophe": [],
+    "vers": [],
+    "zeile": [],
+    "T": [],
     "WORT": [],
     "NAME": [],
-    "ZEICHENFOLGE":
-        reduce_single_child,
-    "NZ":
-        reduce_single_child,
+    "ZEICHENFOLGE": [],
+    "ZW": [],
+    "L": [],
+    "LEERRAUM": [],
     "LEERZEILE": [],
-    "JAHRESZAHL":
-        [reduce_single_child],
+    "JAHRESZAHL": [],
     "ENDE": [],
-    ":Whitespace":
-        transform_content(lambda node: " "),
     "*": replace_by_single_child
 }
 
-def LyrikTransform() -> TransformationFunc:
-    return partial(traverse, processing_table=Lyrik_AST_transformation_table)
+
+
+def CreateLyrikTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
+    return partial(traverse, processing_table=Lyrik_AST_transformation_table.copy())
 
 
 def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transform = THREAD_LOCALS.Lyrik_transformer_singleton
+        transformer = THREAD_LOCALS.Lyrik_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_transformer_singleton = LyrikTransform()
-        transform = THREAD_LOCALS.Lyrik_transformer_singleton
-    return transform
+        THREAD_LOCALS.Lyrik_00000001_transformer_singleton = CreateLyrikTransformer()
+        transformer = THREAD_LOCALS.Lyrik_00000001_transformer_singleton
+    return transformer
 
 
 #######################################################################
@@ -202,86 +200,104 @@ class LyrikCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a Lyrik source file.
     """
 
+    def __init__(self):
+        super(LyrikCompiler, self).__init__()
+
+    def reset(self):
+        super().reset()
+        # initialize your variables here, not in the constructor!
+
     def on_gedicht(self, node):
-        return node
+        return self.fallback_compiler(node)
 
-    def on_bibliographisches(self, node):
-        pass
+    # def on_bibliographisches(self, node):
+    #     return node
 
-    def on_autor(self, node):
-        pass
+    # def on_autor(self, node):
+    #     return node
 
-    def on_werk(self, node):
-        pass
+    # def on_werk(self, node):
+    #     return node
 
-    def on_untertitel(self, node):
-        pass
+    # def on_untertitel(self, node):
+    #     return node
 
-    def on_ort(self, node):
-        pass
+    # def on_ort(self, node):
+    #     return node
 
-    def on_jahr(self, node):
-        pass
+    # def on_jahr(self, node):
+    #     return node
 
-    def on_wortfolge(self, node):
-        pass
+    # def on_wortfolge(self, node):
+    #     return node
 
-    def on_namenfolge(self, node):
-        pass
+    # def on_namenfolge(self, node):
+    #     return node
 
-    def on_verknüpfung(self, node):
-        pass
+    # def on_verknüpfung(self, node):
+    #     return node
 
-    def on_ziel(self, node):
-        pass
+    # def on_ziel(self, node):
+    #     return node
 
-    def on_serie(self, node):
-        pass
+    # def on_serie(self, node):
+    #     return node
 
-    def on_titel(self, node):
-        pass
+    # def on_titel(self, node):
+    #     return node
 
-    def on_zeile(self, node):
-        pass
+    # def on_text(self, node):
+    #     return node
 
-    def on_text(self, node):
-        pass
+    # def on_strophe(self, node):
+    #     return node
 
-    def on_strophe(self, node):
-        pass
+    # def on_vers(self, node):
+    #     return node
 
-    def on_vers(self, node):
-        pass
+    # def on_zeile(self, node):
+    #     return node
 
-    def on_WORT(self, node):
-        pass
+    # def on_T(self, node):
+    #     return node
 
-    def on_NAME(self, node):
-        pass
+    # def on_WORT(self, node):
+    #     return node
 
-    def on_ZEICHENFOLGE(self, node):
-        pass
+    # def on_NAME(self, node):
+    #     return node
 
-    def on_NZ(self, node):
-        pass
+    # def on_ZEICHENFOLGE(self, node):
+    #     return node
 
-    def on_LEERZEILE(self, node):
-        pass
+    # def on_ZW(self, node):
+    #     return node
 
-    def on_JAHRESZAHL(self, node):
-        pass
+    # def on_L(self, node):
+    #     return node
 
-    def on_ENDE(self, node):
-        pass
+    # def on_LEERRAUM(self, node):
+    #     return node
+
+    # def on_LEERZEILE(self, node):
+    #     return node
+
+    # def on_JAHRESZAHL(self, node):
+    #     return node
+
+    # def on_ENDE(self, node):
+    #     return node
+
 
 
 def get_compiler() -> LyrikCompiler:
+    """Returns a thread/process-exclusive LyrikCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.Lyrik_compiler_singleton
+        compiler = THREAD_LOCALS.Lyrik_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.Lyrik_compiler_singleton = LyrikCompiler()
-        compiler = THREAD_LOCALS.Lyrik_compiler_singleton
+        THREAD_LOCALS.Lyrik_00000001_compiler_singleton = LyrikCompiler()
+        compiler = THREAD_LOCALS.Lyrik_00000001_compiler_singleton
     return compiler
 
 
@@ -291,29 +307,62 @@ def get_compiler() -> LyrikCompiler:
 #
 #######################################################################
 
-
 def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
-    start_logging("LOGS")
-    compiler = get_compiler()
-    cname = compiler.__class__.__name__
-    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
-    result = compile_source(source, get_preprocessor(),
-                            get_grammar(),
-                            get_transformer(), compiler)
-    return result
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
+    return result_tuple
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        result, errors, ast = compile_src(sys.argv[1])
-        if errors:
-            for error in errors:
-                print(error)
-            sys.exit(1)
-        else:
-            print(result.as_xml() if isinstance(result, Node) else result)
+    # recompile grammar if needed
+    if __file__.endswith('Parser.py'):
+        grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     else:
-        print("Usage: LyrikParser.py [FILENAME]")
+        grammar_path = os.path.dirname(__file__)
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
+    if os.path.exists(grammar_path) and os.path.isfile(grammar_path):
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
+            with open(error_file, encoding="utf-8") as f:
+                print(f.read())
+            sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
+    else:
+        print('Could not check whether grammar requires recompiling, '
+              'because grammar was not found at: ' + grammar_path)
+
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description="Parses a Lyrik-file and shows its syntax-tree.")
+    parser.add_argument('files', nargs=1)
+    parser.add_argument('-d', '--debug', action='store_const', const='debug')
+    parser.add_argument('-x', '--xml', action='store_const', const='xml')
+    args = parser.parse_args()
+
+    file_name, log_dir = args.files[0], ''
+    if args.debug is not None:
+        log_dir = 'LOGS'
+        set_config_value('history_tracking', True)
+        set_config_value('resume_notices', True)
+        set_config_value('log_syntax_trees', set(('cst', 'ast')))
+    start_logging(log_dir)
+    result, errors, _ = compile_src(file_name)
+    if errors:
+        cwd = os.getcwd()
+        rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
+        for error in errors:
+            print(rel_path + ':' + str(error))
+        sys.exit(1)
+    else:
+        print(result.serialize(how='default' if args.xml is None else 'xml')
+              if isinstance(result, Node) else result)

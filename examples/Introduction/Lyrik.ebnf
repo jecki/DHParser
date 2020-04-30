@@ -2,7 +2,7 @@
 
 @ whitespace = horizontal                           # Impliziter Leerraum ~ umfasst keine Zeilenwechsel
 @ anonymous  = JAHRESZAHL, ZEICHENFOLGE, ENDE       # Diese Elementnamen erscheinen nicht als tags
-@ drop       = whitespace, token, ENDE              # Implizieter Leerraum ~, Zeichenketten "..." und das
+@ drop       = whitespace, strings, ENDE            # Implizieter Leerraum ~, Zeichenketten "..." und das
                                                     # ENDE-Element werden schon beim einlesen gelöscht
 
 #: Gesamtdokument
