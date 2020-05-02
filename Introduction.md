@@ -118,55 +118,114 @@ same information as was encoded in the XML-Version. Don't believe it?
 You can try: Download DHParser from the
 [gitlab-repository](https://gitlab.lrz.de/badw-it/DHParser) and enter
 the directory `examples/Introduction` on the command line interface (shell).
-Just run `python LyrikCompiler_example.py` (you need to have installed
-[Python](https://www.python.org/) Version 3.5 or higher on your
-computer). The output will be something like this:
+Just run `python LyrikCompiler_example.py --xml Lyrisches_Intermezzo_IV.txt` 
+(you need to have installed [Python](https://www.python.org/) Version 3.5 or 
+higher on your computer). The output will look like this. (If there is a
+warning at the beginning, it can safely be ignored.):
 
-    <gedicht>
-        <bibliographisches>
-            <autor>
-                <namenfolge>Heinrich Heine</namenfolge>
-                <verknüpfung>gnd:118548018</verknüpfung>
-            </autor>
-            <werk>
-                <wortfolge>Buch der Lieder</wortfolge>
-                <verknüpfung>urn:nbn:de:kobv:b4-200905192211</verknüpfung>
-            </werk>
-            <ort>
-                <wortfolge>Hamburg</wortfolge>
-                <verknüpfung>gnd:4023118-5</verknüpfung>
-            </ort>
-            <jahr>1927</jahr>
-        </bibliographisches>
-        <serie>Lyrisches Intermezzo</serie>
+    <Gedicht>
+      <bibliographisches>
+        <autor>
+          <name>Heinrich Heine</name>
+          <verknüpfung>gnd:118548018</verknüpfung>
+        </autor>
+        <ZW> </ZW>
+        <werk>
+          <werktitel>Buch der Lieder</werktitel>
+          <verknüpfung>urn:nbn:de:kobv:b4-200905192211</verknüpfung>
+        </werk>
+        <ZW> </ZW>
+        <ort>
+          <ortsname>Hamburg</ortsname>
+          <verknüpfung>gnd:4023118-5</verknüpfung>
+        </ort>
+        <jahr>1927</jahr>
+      </bibliographisches>
+      <LEERZEILEN> </LEERZEILEN>
+      <serie>Lyrisches Intermezzo</serie>
+      <LEERZEILEN> </LEERZEILEN>
+      <gedicht>
         <titel>IV.</titel>
+        <LEERZEILEN> </LEERZEILEN>
         <text>
-            <strophe>
-                <vers>Wenn ich in deine Augen seh',</vers>
-                <vers>so schwindet all' mein Leid und Weh!</vers>
-                <vers>Doch wenn ich küsse deinen Mund,</vers>
-                <vers>so werd' ich ganz und gar gesund.</vers>
-            </strophe>
-            <strophe>
-                <vers>Wenn ich mich lehn' an deine Brust,</vers>
-                <vers>kommt's über mich wie Himmelslust,</vers>
-                <vers>doch wenn du sprichst: Ich liebe dich!</vers>
-                <vers>so muß ich weinen bitterlich.</vers>
-            </strophe>
+          <strophe>
+            <vers>Wenn ich in deine Augen seh',</vers>
+            <ZW> </ZW>
+            <vers>so schwindet all' mein Leid und Weh!</vers>
+            <ZW> </ZW>
+            <vers>Doch wenn ich küsse deinen Mund,</vers>
+            <ZW> </ZW>
+            <vers>so werd' ich ganz und gar gesund.</vers>
+          </strophe>
+          <LEERZEILEN></LEERZEILEN>
+          <strophe>
+            <vers>Wenn ich mich lehn' an deine Brust,</vers>
+            <ZW> </ZW>
+            <vers>kommt's über mich wie Himmelslust,</vers>
+            <ZW> </ZW>
+            <vers>doch wenn du sprichst: Ich liebe dich!</vers>
+            <ZW> </ZW>
+            <vers>so muß ich weinen bitterlich.</vers>
+          </strophe>
         </text>
-    </gedicht>
+      </gedicht>
+    </Gedicht>
 
-Now, you might notice that this is not exactly the XML-encoding as shown
-above. (Can you spot the differences?) But you will probably believe me
-without further proof that it can easily be converted into the other
-version and contains all the information that the other version
-contains.
+While this is not exactly the XML-encoding as shown above, it can
+easily be converted into the previous version. The important point
+is that it contains exactly the same information, even though the 
+input requires hardly any of the explicit markers that make the
+XML-code so cumbersome.
 
-How does DHParser achieve this? Well, there is the rub. In order to
-convert the poem in the domain specific version into the XML-version,
-DHParser requires a structural description of the domain specific
-encoding. This is a bit similar to a document type definition (DTD) in
-XML. This structural description uses a slightly enhanced version of the
+### Some remarks on data encoding
+
+In contrast to the XML-code shown above, the code produced by 
+`LyrikParser_example.py` is somewhat more verbose, because it 
+explicitly models blank lines (with the tag `<LEERZEILEN>`) and 
+line breaks (`<ZW>`), which actually do contain one (`<ZW>`) or
+two or more line breaks (`<LEERZEILEN>`) as their content,
+although these have been substituted by a single blank in this
+document for the sake of brevity. 
+
+Because we know that after each verse a line break follows and 
+after each stanza a blank line follows, it is not necessary to 
+encode these in the data as long as this mentioned as a rule in 
+the data description and as long as we pay attention to insert 
+the line feeds and blanks according to these rules when 
+serializing the data in a human readable form. The philosophy 
+behind this design decision can be called "rule-based data enrichment".
+
+The output of "LyrikParser_example.py" follows a different philosophy,
+namely that of "comprehensive data modelling". In this case everything
+that is needed for rendering the data in a human readable form is 
+included in the data itself in addition to every aspect that is 
+modeled for processing the data with a machine. This does not mean that
+every aspect of the source data will be preserved. Rather, the philosophy
+of "comprehensive data modelling" allows, but does not require to replace
+these items by a normalized form. For example, if the input data contains 
+several blank lines where one single blank line would have sufficed to 
+convey the meaning, only one blank like will be included in the data.
+
+One cannot say that one of these philosophies ist better than the other. It
+really depends on the purpose. The philosophy of "rule-based-enrichment"
+shines when machine-processing of the data (say feeding a data base or a
+search engine, linking the data with other data and the like) is the primary
+purpose. "Comprehensive data modeling" has advantages when producing accurate
+human readable versions (online or in print) is considered most important.
+
+As always in the digital humanities, it does not hurt to preserve several instances 
+of the same data in different formats as long as it is ensured that they are 
+synchronized. 
+
+### How parser-generators like DHParser work
+
+How does DHParser manage to convert an input that almost looks like plain 
+into structured data? In order to
+convert the poem to a tree structure that can be serialized as XML, S-expressions, 
+json or any other suitable form, DHParser requires a structural description 
+of the domain specific language. This structural description has some similarities to a document 
+type definition (DTD) in XML. Just like the DTD, the structural description of a domain specific 
+languages requires a notation of its own to define the structure. DHParser uses a variant of the
 [Extended-Backus-Naur-Form
 (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form),
 which is a well-established formalism for the structural description of
@@ -176,51 +235,64 @@ out the meta-data here. See
 [`examples/Tutorial/Lyrik.ebnf`](https://gitlab.lrz.de/badw-it/DHParser/blob/master/examples/Tutorial/Lyrik.ebnf)
 for the full EBNF):
 
-    gedicht           = { LEERZEILE }+ [serie] §titel §text /\s*/ §ENDE
-    serie             = !(titel vers NZ vers) { NZ zeile }+ { LEERZEILE }+
-    titel             = { NZ zeile}+ { LEERZEILE }+
-    zeile             = { ZEICHENFOLGE }+
+    gedicht           = titel LEERZEILEN §text
+    titel             = zeile
+    text              = strophe { LEERZEILEN strophe }
+    strophe           = vers { ZW vers }+
+    vers              = zeile
+    zeile             = ~ TEXT { L TEXT } ~
+    
+    TEXT              = ZEICHENFOLGE
+    ZEICHENFOLGE      = /[^ \n<>]+/
+    ZW                = /\n/
+    L                 = / +/    
+    LEERZEILEN        = /\n(?:[ \t]*\n)+/
 
-    text              = { strophe {LEERZEILE} }+
-    strophe           = { NZ vers }+
-    vers              = { ZEICHENFOLGE }+
-
-    ZEICHENFOLGE      = /[^ \n<>]+/~
-    NZ                = /\n/~
-    LEERZEILE         = /\n[ \t]*(?=\n)/~
-    ENDE              = !/./
-
-Without going into too much detail here, let me just explain a few
+Without going into too much detail here, let me explain a few
 basics of this formal description: The slashes `/` enclose ordinary
-regular expressions. Thus, `NZ` for ("Neue Zeile", German for: "new
-line") is defined as `/\n/~` which is the newline-token `\n` in a
-regular expression, plus further horizontal whitespace (signified by the
-tilde `~`), if there is any.
+regular expressions. Thus, `ZW` for ("Zeilenwechsel", German for: "line
+feed") is defined as `/\n/` which is the newline-token `\n` in a
+regular expression.
 
 The braces `{` `}` enclose items that can be repeated zero or more
-times; with a `+` appended to the closing brace it means one or more
-times. Now, look at the definition of `text` in the 6th line: `{ strophe
-{LEERZEILE} }+`. This reads as follows: The text of the poem consists of
-a sequence of stanzas, each of which is followed by a sequence of empty
-lines (German: "Leerzeilen"). If you now look at the structural
-definition of a stanza, you find that it consists of a sequence of
-verses, each of which starts, i.e. is preceded by a new line.
+times. Thus, the definition of `text` in the 6th line as `strophe { LEERZEILEN strophe }`
+reads as follows: The text of the poem consists of a stanza that 
+be followed by further stanzas each of which is separated by one or more blank
+lines (German: "Leerzeilen") from the previous stanza. 
+The structural definition of a stanza (`strophe`) as `vers { ZW vers }+` in turn
+says that a stanza consists of a vers that is followed by at least one more verse
+that are sparated with a single linefeed (and not a blank line which contains two 
+line feeds in sequence) only. Here, the `+` following the closing curly brace means
+that what is enclosed in the curly braces must follow one or more times rather than
+just zero or more times as in the case of the simple curly braces. 
 
-Can you figure out the rest? Hint: The angular brackets `[` and `]` mean
-that and item is optional and the `§` sign means that it is obligatory.
-(Strictly speaking, the §-signs are not necessary, because an item that
-is not optional is always obligatory, but the §-signs help the converter
-to produce more useful error messages.)
+Apart from the curly braces, there are two more signs in this snipped, the
+tilde '~' and the the `§`-sign. The tilde stands for insignificant whitespace 
+(which in this case is restricted to horizontal whitespace, i.e. blanks and
+tabulators). Insigificant whitespeace will be dropped in the instant the parser 
+reads it and never appear in the data. Here the tile-sign is used to allow leading
+and following whitespace in lines of text, although we do not need this whitespace
+in our data. 
 
-This should be enough for an introduction to the purpose of DSLs in the
-humanities. It has shown the probably most important use case of
-DHParser, i.e. as a frontend-technology form XML-encodings. Of course,
-it can just as well be used as a frontend for any other kind of
-structured data, like SQL or graph-structured data. The latter is by the
-way is a very reasonable alternative to XML for edition projects with a
-complex transmission history. See Andreas Kuczera's Blog-entry on
-["Graphdatenbanken für
-Historiker"](http://mittelalter.hypotheses.org/5995).
+The paragrah-sign `§` means that what follows is obligatory. In this case, the line
+`gedicht = titel LEERZEILEN §text` means a poem (`gedicht`) is something that has a title.
+If there is no title, it is not a poem, but could still be something else (say a footer, 
+although we do not have this here.) But if there is something that has a title followed 
+by blank lines (`LEERZEILEN`) then by virtue of the `§`-sign it must be followed by
+the text of a poem. Otherwise, an error message is produced.
+
+The meaning of the paragraph-sign `§` could also be understood as such: By the time
+the `§` is reached, we are sure that the item that is just parsed is a poem. Therefore,
+if it does not continue like a poem, this is an error. We could not tell this earlier, because
+parsers typically work by trying to match different items to the following text. Now, if there
+is no title, then the parser for `gedicht` (poem) would not produce an error but it simply 
+would not match, which makes sense, because the lack of a title might just indicate that
+the end of a chapter or the end of the text has been reached.)
+ 
+Strictly speaking, the §-sign is not necessary and it does not occur in the standard 
+EBNF-formalism, but it tremendously helpful in pin-pointing syntax-errors and producing
+useful error messages in this case. 
+
 
 Tutorial: First Steps with DHParser
 -----------------------------------
@@ -246,7 +318,7 @@ Now, if you enter the repo, you'll find among others these subdirectories:
 
 The directory `DHParser` contains the Python modules of the
 DHParser-package, `test` - as you can guess - contains the unit-tests
-for DHParser. Now, enter the `examples/Tutorial`-directory. Presently,
+for DHParser. Now, enter the `examples/Introduction`-directory. Presently,
 most other examples are pretty rudimentary. So, don't worry about them.
 
 In this directory, you'll find a simple EBNF Grammar for poetry in the
@@ -257,8 +329,8 @@ compile an EBNF-Grammar into an executable Python-module that can be
 used to parse any piece of text that this grammar is meant for; in this
 case poetry.
 
-Any DHParser-Project needs such a script. The content of the script is
-pretty self-explanatory:
+Any DHParser-Project needs such a script. The content of the script 
+is pretty self-explanatory:
 
     from DHParser.testing import recompile_grammar
     if not recompile_grammar('.', force=True):
@@ -275,13 +347,23 @@ Now just run `recompile_grammar.py` from the command line:
 
     $ python recompile_grammar.py
 
-You'll find that `recompile_grammar.py` has generated a new script with
+If you start a completely new
+project with DHParser, the script might not be called `recompile_grammar.py`
+but `test_Lyrik_grammar.py`. In this case the `test_Lyrik_grammar.py`-script
+still has the same function as the `recompile_grammar.py`-script, namely
+compiling the EBNF-grammar into an executable Python-parser for that grammar,
+but it has the further function to run all unit-tests of the grammar in case
+there are any. However, the topic of testing grammars will not be described in 
+this introduction.
+
+You'll find that `recompile_grammar.py` (or the equivalent 
+"test_Lyrik_grammar.py"-script) has generated a new script with
 the name `LyrikCompiler.py`. This script contains the Parser for the
 `Lyrik.ebnf`-grammar and some skeleton-code for a DSL->XML-Compiler (or
 rather, a DSL-whatever compiler), which you can later fill in. Now let's
 see how this script works:
 
-    $ python LyrikCompiler.py Lyrisches_Intermezzo_IV.txt >result.xml
+    $ python LyrikParser.py --xml Lyrisches_Intermezzo_IV.txt >result.xml
 
 The file `Lyrisches_Intermezzo_IV.txt` contains the fourth part of
 Heinrich Heine's Lyrisches Intermezzo encoded in our own human-readable

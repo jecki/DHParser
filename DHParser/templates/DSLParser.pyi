@@ -38,16 +38,26 @@ if __name__ == "__main__":
     parser.add_argument('files', nargs=1)
     parser.add_argument('-d', '--debug', action='store_const', const='debug')
     parser.add_argument('-x', '--xml', action='store_const', const='xml')
-    args = parser.parse_args()
 
+    args = parser.parse_args()
     file_name, log_dir = args.files[0], ''
+
+    if not os.path.exists(file_name):
+        print('File "%s" not found!' % file_name)
+        sys.exit(1)
+    if not os.path.isfile(file_name):
+        print('"%" is not a file!' % file_name)
+        sys.exit(1)
+
     if args.debug is not None:
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
         set_config_value('resume_notices', True)
         set_config_value('log_syntax_trees', set(('cst', 'ast')))
     start_logging(log_dir)
+
     result, errors, _ = compile_src(file_name)
+
     if errors:
         cwd = os.getcwd()
         rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name

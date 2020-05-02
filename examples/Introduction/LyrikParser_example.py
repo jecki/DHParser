@@ -18,7 +18,7 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'..\..'))
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
@@ -75,8 +75,8 @@ def get_preprocessor() -> PreprocessorFunc:
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "19f45d350a36c790a1f4527d98b9c1f1"
-    anonymous__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$')
+    source_hash__ = "862b44a0a6c1b1d8decf8aa01926461d"
+    anonymous__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|ziel$|wortfolge$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -86,33 +86,36 @@ class LyrikGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     ENDE = Drop(Drop(NegativeLookahead(RegExp('.'))))
-    JAHRESZAHL = Series(RegExp('\\d\\d\\d\\d'), dwsp__)
-    LEERZEILE = RegExp('\\n[ \\t]*(?=\\n)')
+    JAHRESZAHL = RegExp('\\d\\d\\d\\d')
+    LEERZEILEN = RegExp('\\n(?:[ \\t]*\\n)+')
     LEERRAUM = RegExp('\\s+')
     L = RegExp(' +')
-    ZW = Series(RegExp('\\n'), dwsp__)
+    ZW = RegExp('\\n')
     ZEICHENFOLGE = RegExp('[^ \\n<>]+')
     NAME = RegExp('\\w+\\.?')
     WORT = RegExp('\\w+')
-    T = Synonym(ZEICHENFOLGE)
-    zeile = Series(T, ZeroOrMore(Series(L, T)), dwsp__)
+    TEXT = Synonym(ZEICHENFOLGE)
+    zeile = Series(dwsp__, TEXT, ZeroOrMore(Series(L, TEXT)), dwsp__)
     vers = Synonym(zeile)
-    strophe = OneOrMore(Series(ZW, vers))
-    text = Series(strophe, ZeroOrMore(Series(OneOrMore(LEERZEILE), strophe)))
-    titel = Series(OneOrMore(Series(ZW, zeile)), OneOrMore(LEERZEILE))
-    serie = Series(NegativeLookahead(Series(titel, vers, ZW, vers)), OneOrMore(Series(ZW, zeile)), OneOrMore(LEERZEILE))
+    strophe = Series(vers, ZeroOrMore(Series(ZW, vers)))
+    text = Series(strophe, ZeroOrMore(Series(LEERZEILEN, strophe)))
+    titel = Series(zeile, ZeroOrMore(Series(ZW, zeile)))
+    gedicht = Series(titel, LEERZEILEN, text, mandatory=2)
+    serie = Series(NegativeLookahead(Series(titel, vers, ZW, vers)), dwsp__, zeile, ZeroOrMore(Series(ZW, zeile)))
     ziel = Series(ZEICHENFOLGE, dwsp__)
     verknüpfung = Series(Series(Drop(Text("<")), dwsp__), ziel, Series(Drop(Text(">")), dwsp__))
-    namenfolge = Series(NAME, ZeroOrMore(Series(L, NAME)), dwsp__)
     wortfolge = Series(WORT, ZeroOrMore(Series(L, WORT)), dwsp__)
-    jahr = Synonym(JAHRESZAHL)
-    ort = Series(wortfolge, Option(verknüpfung))
-    untertitel = Series(wortfolge, Option(verknüpfung))
-    werk = Series(wortfolge, Option(Series(Series(Drop(Text(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
-    autor = Series(namenfolge, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(Drop(Text(",")), dwsp__), Option(ZW), werk, Series(Drop(Text(",")), dwsp__), Option(ZW), ort, Series(Drop(Text(",")), dwsp__), Option(ZW), jahr, Series(Drop(Text(".")), dwsp__), mandatory=1)
-    gedicht = Series(bibliographisches, OneOrMore(LEERZEILE), Option(serie), titel, text, Option(LEERRAUM), ENDE, mandatory=3)
-    root__ = gedicht
+    jahr = Series(JAHRESZAHL, dwsp__)
+    ortsname = Synonym(wortfolge)
+    ort = Series(ortsname, Option(verknüpfung))
+    untertitel = Synonym(wortfolge)
+    werktitel = Synonym(wortfolge)
+    werk = Series(werktitel, Option(Series(Series(Drop(Text(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
+    name = Series(NAME, ZeroOrMore(Series(L, NAME)), dwsp__)
+    autor = Series(name, Option(verknüpfung))
+    bibliographisches = Series(autor, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), werk, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), ort, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), jahr, Series(Drop(Text(".")), dwsp__), mandatory=1)
+    Dokument = Series(Option(LEERRAUM), bibliographisches, LEERZEILEN, Option(serie), LEERZEILEN, gedicht, Option(LEERRAUM), ENDE, mandatory=1)
+    root__ = Dokument
     
 
 def get_grammar() -> LyrikGrammar:
@@ -141,33 +144,31 @@ def get_grammar() -> LyrikGrammar:
 Lyrik_AST_transformation_table = {
     # AST Transformations for the Lyrik-grammar
     "<": flatten,
+    "Dokument": [],
     "gedicht": [],
     "bibliographisches": [],
     "autor": [],
+    "name": [collapse],
     "werk": [],
+    "werktitel": [collapse],
     "untertitel": [],
     "ort": [],
+    "ortsname": [collapse],
     "jahr": [],
-    "wortfolge": [],
-    "namenfolge": [],
     "verknüpfung": [],
-    "ziel": [],
-    "serie": [],
-    "titel": [],
+    "serie": [reduce_single_child],
+    "titel": [collapse],
     "text": [],
     "strophe": [],
-    "vers": [],
-    "zeile": [],
+    "vers": [reduce_single_child],
+    "zeile": [collapse],
     "T": [],
     "WORT": [],
     "NAME": [],
-    "ZEICHENFOLGE": [],
     "ZW": [],
     "L": [],
     "LEERRAUM": [],
     "LEERZEILE": [],
-    "JAHRESZAHL": [],
-    "ENDE": [],
     "*": replace_by_single_child
 }
 
@@ -216,7 +217,13 @@ class LyrikCompiler(Compiler):
     # def on_autor(self, node):
     #     return node
 
+    # def on_name(self, node):
+    #     return node
+
     # def on_werk(self, node):
+    #     return node
+
+    # def on_werktitel(self, node):
     #     return node
 
     # def on_untertitel(self, node):
@@ -225,13 +232,13 @@ class LyrikCompiler(Compiler):
     # def on_ort(self, node):
     #     return node
 
+    # def on_ortsname(self, node):
+    #     return node
+
     # def on_jahr(self, node):
     #     return node
 
     # def on_wortfolge(self, node):
-    #     return node
-
-    # def on_namenfolge(self, node):
     #     return node
 
     # def on_verknüpfung(self, node):
@@ -320,7 +327,7 @@ if __name__ == "__main__":
     if __file__.endswith('Parser.py'):
         grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
     else:
-        grammar_path = os.path.dirname(__file__)
+        grammar_path = os.path.splitext(__file__)[0] + '.ebnf'
     parser_update = False
 
     def notify():
@@ -339,17 +346,25 @@ if __name__ == "__main__":
               'Please run again in order to apply updated compiler')
             sys.exit(0)
     else:
-        print('Could not check whether grammar requires recompiling, '
-              'because grammar was not found at: ' + grammar_path)
+        print('Warning: Could not check whether grammar requires recompiling, '
+              'because grammar was not found at: %s\n' % grammar_path)
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Parses a Lyrik-file and shows its syntax-tree.")
     parser.add_argument('files', nargs=1)
     parser.add_argument('-d', '--debug', action='store_const', const='debug')
     parser.add_argument('-x', '--xml', action='store_const', const='xml')
-    args = parser.parse_args()
 
+    args = parser.parse_args()
     file_name, log_dir = args.files[0], ''
+
+    if not os.path.exists(file_name):
+        print('File "%s" not found!' % file_name)
+        sys.exit(1)
+    if not os.path.isfile(file_name):
+        print('"%" is not a file!' % file_name)
+        sys.exit(1)
+
     if args.debug is not None:
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
