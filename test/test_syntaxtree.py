@@ -27,7 +27,8 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.configuration import get_config_value, set_config_value
+from DHParser.configuration import get_config_value, set_config_value, INDENTED_SERIALIZATION, \
+    SXPRESSION_SERIALIZATION
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
     prev_context, serialize_context
@@ -77,12 +78,12 @@ class TestParseXML:
 
     def test_plaintext_handling(self):
         tree = parse_xml('<a>alpha <b>beta</b> gamma</a>')
-        assert flatten_sxpr(tree.as_sxpr()) == '(a (:Token "alpha ") (b "beta") (:Token " gamma"))'
+        assert flatten_sxpr(tree.as_sxpr()) == '(a (:Text "alpha ") (b "beta") (:Text " gamma"))'
         tree = parse_xml(' <a>  <b>beta</b>  </a> ')
         assert flatten_xml(tree.as_xml()) == \
-               '<a><ANONYMOUS_Token__>  </ANONYMOUS_Token__><b>beta</b>' \
-               '<ANONYMOUS_Token__>  </ANONYMOUS_Token__></a>'
-        assert tree.as_xml(inline_tags={'a'}, omit_tags={':Token'}) == '<a>  <b>beta</b>  </a>'
+               '<a><ANONYMOUS_Text__>  </ANONYMOUS_Text__><b>beta</b>' \
+               '<ANONYMOUS_Text__>  </ANONYMOUS_Text__></a>'
+        assert tree.as_xml(inline_tags={'a'}, omit_tags={':Text'}) == '<a>  <b>beta</b>  </a>'
         tree = parse_xml(' <a>\n  <b>beta</b>\n</a> ')
         assert tree.as_xml(inline_tags={'a'}) == '<a><b>beta</b></a>'
 
@@ -302,7 +303,7 @@ class TestNode:
         parser = grammar_provider(ebnf)()
         tree = parser("20 / 4 * 3")
         traverse(tree, att)
-        compare_tree = parse_sxpr("(term (term (factor 20) (:Token /) (factor 4)) (:Token *) (factor 3))")
+        compare_tree = parse_sxpr("(term (term (factor 20) (:Text /) (factor 4)) (:Text *) (factor 3))")
         assert tree.equals(compare_tree), tree.as_sxpr()
 
     def test_copy(self):
@@ -507,10 +508,10 @@ class TestSerialization:
         C.attr['attr'] = 'val'
         threshold = get_config_value('flatten_sxpr_threshold')
         set_config_value('flatten_sxpr_threshold', 20)
-        compact = tree.serialize('smart')
+        compact = tree.serialize('indented')
         assert compact == 'A\n  B\n    C `(attr "val")\n      "D"\n    E\n      "F"\n  G\n    "H"'
         tree = parse_xml('<note><priority level="high" /><remark></remark></note>')
-        assert tree.serialize() == 'note\n  priority `(level "high")\n  remark'
+        assert tree.serialize(how=INDENTED_SERIALIZATION) == 'note\n  priority `(level "high")\n  remark'
         set_config_value('flatten_sxpr_threshold', threshold)
 
     def test_xml_inlining(self):

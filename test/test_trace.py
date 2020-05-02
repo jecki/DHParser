@@ -103,7 +103,7 @@ class TestTrace:
 
     def test_trace_drop(self):
         lang = r"""
-            @ drop = token, whitespace
+            @ drop = strings, whitespace
             expression = term  { ("+" | "-") term}
             term       = factor  { ("*"|"/") factor}
             factor     = number | variable | "("  expression  ")"

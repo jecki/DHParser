@@ -22,7 +22,7 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, \
@@ -79,32 +79,32 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     NUMBER = RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?')
     MINUS = RegExp('-')
     PLUS = RegExp('\\+')
-    i = Token("i")
-    e = Token("e")
-    pi = Alternative(Drop(Token("pi")), Drop(Token("π")))
+    i = Text("i")
+    e = Text("e")
+    pi = Alternative(Drop(Text("pi")), Drop(Text("π")))
     special = Alternative(pi, e)
     number = Synonym(NUMBER)
-    log = Series(Series(Drop(Token('log(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
-    tan = Series(Series(Drop(Token('tan(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
-    cos = Series(Series(Drop(Token('cos(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
-    sin = Series(Series(Drop(Token('sin(')), dwsp__), expression, Drop(Token(")")), mandatory=1)
+    log = Series(Series(Drop(Text('log(')), dwsp__), expression, Drop(Text(")")), mandatory=1)
+    tan = Series(Series(Drop(Text('tan(')), dwsp__), expression, Drop(Text(")")), mandatory=1)
+    cos = Series(Series(Drop(Text('cos(')), dwsp__), expression, Drop(Text(")")), mandatory=1)
+    sin = Series(Series(Drop(Text('sin(')), dwsp__), expression, Drop(Text(")")), mandatory=1)
     function = Alternative(sin, cos, tan, log)
-    group = Series(Drop(Token("(")), expression, Drop(Token(")")), mandatory=1)
+    group = Series(Drop(Text("(")), expression, Drop(Text(")")), mandatory=1)
     tail_value = Alternative(special, function, VARIABLE, group)
-    tail_pow = Series(tail_value, Option(i), Drop(Token("^")), element)
+    tail_pow = Series(tail_value, Option(i), Drop(Text("^")), element)
     tail_elem = Alternative(tail_pow, tail_value)
     value = Series(Alternative(number, tail_value), Option(i))
-    pow = Series(value, Drop(Token("^")), Option(sign), element)
+    pow = Series(value, Drop(Text("^")), Option(sign), element)
     element.set(Alternative(pow, value))
     sign.set(Alternative(PLUS, MINUS))
     seq = Series(tail_elem, tail)
     tail.set(Series(Alternative(seq, tail_elem), Option(i)))
     factor = Series(Option(sign), Alternative(Series(Option(element), tail), element), dwsp__)
-    div = Series(factor, Series(Drop(Token("/")), dwsp__), term)
-    mul = Series(factor, Series(Drop(Token("*")), dwsp__), term)
+    div = Series(factor, Series(Drop(Text("/")), dwsp__), term)
+    mul = Series(factor, Series(Drop(Text("*")), dwsp__), term)
     term.set(Alternative(mul, div, factor))
-    sub = Series(term, Series(Drop(Token("-")), dwsp__), expression)
-    add = Series(term, Series(Drop(Token("+")), dwsp__), expression)
+    sub = Series(term, Series(Drop(Text("-")), dwsp__), expression)
+    add = Series(term, Series(Drop(Text("+")), dwsp__), expression)
     expression.set(Alternative(add, sub, term))
     root__ = expression
     

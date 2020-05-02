@@ -522,7 +522,7 @@ def is_empty(context: List[Node]) -> bool:
 @transformation_factory(collections.abc.Set)
 def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
     """
-    Checks whether the last node in the context has the tag_name ":Token"
+    Checks whether the last node in the context has the tag_name ":Text"
     and it's content matches one of the given tokens. Leading and trailing
     whitespace-tokens will be ignored. In case an empty set of tokens is passed,
     any token is a match.

@@ -31,7 +31,7 @@ from DHParser.error import Error
 from DHParser.log import start_logging
 from DHParser.parse import Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, NegativeLookahead, Alternative, Series, Option, OneOrMore, ZeroOrMore, \
-    Token, GrammarError, Whitespace
+    Text, GrammarError, Whitespace
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, md5, sane_parser_name, re, expand_table, \
@@ -72,7 +72,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \\
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, Interleave, \\
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Interleave, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
@@ -129,29 +129,29 @@ class NewEBNFGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(Drop(NegativeLookahead(RegExp('.'))))
-    ENDL = Drop(Token(""))
-    AND = Drop(Token(""))
-    OR = Drop(Token("|"))
-    DEF = Drop(Token("="))
+    ENDL = Drop(Text(""))
+    AND = Drop(Text(""))
+    OR = Drop(Text("|"))
+    DEF = Drop(Text("="))
     whitespace = Series(RegExp('~'), dwsp__)
     regexp = Series(RegExp('/(?:(?<!\\\\)\\\\(?:/)|[^/])*?/'), dwsp__)
     plaintext = Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__)
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(RegExp('(?!\\d)\\w+'), dwsp__)
-    option = Alternative(Series(Series(Token("["), dwsp__), expression, Series(Token("]"), dwsp__), mandatory=1), Series(element, Series(Token("?"), dwsp__)))
-    repetition = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}"), dwsp__), mandatory=1), Series(element, Series(Token("*"), dwsp__)))
-    oneormore = Alternative(Series(Series(Token("{"), dwsp__), expression, Series(Token("}+"), dwsp__)), Series(element, Series(Token("+"), dwsp__)))
-    group = Series(Series(Token("("), dwsp__), expression, Series(Token(")"), dwsp__), mandatory=1)
-    retrieveop = Alternative(Series(Token("::"), dwsp__), Series(Token(":?"), dwsp__), Series(Token(":"), dwsp__))
-    flowmarker = Alternative(Series(Token("!"), dwsp__), Series(Token("&"), dwsp__), Series(Token("<-!"), dwsp__), Series(Token("<-&"), dwsp__))
+    option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1), Series(element, Series(Text("?"), dwsp__)))
+    repetition = Alternative(Series(Series(Text("{"), dwsp__), expression, Series(Text("}"), dwsp__), mandatory=1), Series(element, Series(Text("*"), dwsp__)))
+    oneormore = Alternative(Series(Series(Text("{"), dwsp__), expression, Series(Text("}+"), dwsp__)), Series(element, Series(Text("+"), dwsp__)))
+    group = Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__), mandatory=1)
+    retrieveop = Alternative(Series(Text("::"), dwsp__), Series(Text(":?"), dwsp__), Series(Text(":"), dwsp__))
+    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__), Series(Text("<-&"), dwsp__))
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, whitespace, group))
     pure_elem = Series(element, NegativeLookahead(RegExp('[?*+]')), mandatory=1)
     term = Alternative(oneormore, repetition, option, pure_elem)
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem))
-    interleave = Series(term, ZeroOrMore(Series(Series(Token("°"), dwsp__), Option(Series(Token("§"), dwsp__)), term)))
-    sequence = Series(Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Token("§"), dwsp__)), Alternative(interleave, lookaround))))
+    interleave = Series(term, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), term)))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
-    directive = Series(Series(Token("@"), dwsp__), symbol, Series(Token("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Token(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), Alternative(regexp, literal, symbol), ZeroOrMore(Series(Series(Text(","), dwsp__), Alternative(regexp, literal, symbol))), mandatory=1)
     definition = Series(symbol, DEF, dwsp__, expression, ENDL, dwsp__, mandatory=1)
     syntax = Series(Option(Series(dwsp__, RegExp(''))), ZeroOrMore(Alternative(definition, directive)), EOF, mandatory=2)
     root__ = syntax
@@ -344,7 +344,7 @@ class EBNFDirectives:
                 the failing parser (`parser.Series` or `parser.AllOf`)
                 has returned.
 
-        drop:   A set that may contain the elements `DROP_TOKEN` and
+        drop:   A set that may contain the elements `DROP_STRINGS` and
                 `DROP_WSP', 'DROP_REGEXP' or any name of a symbol
                 of an anonymous parser (e.g. '_linefeed') the results
                 of which will be dropped during the parsing process,
@@ -608,7 +608,7 @@ class NewEBNFCompiler(Compiler):
             # elif rule.startswith('Synonym'):
             #     transformations = '[reduce_single_child]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        # transtable.append('    ":Token": reduce_single_child,')
+        # transtable.append('    ":Text": reduce_single_child,')
         transtable += ['    "*": replace_by_single_child', '}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
         return '\n'.join(transtable)
@@ -1198,7 +1198,7 @@ class NewEBNFCompiler(Compiler):
         # remove drop clause for non dropping definitions of forms like "/\w+/~"
         if (parser_class == "Series" and node.tag_name not in self.directives.drop
             and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
-            and all((arg.startswith('Drop(RegExp(') or arg.startswith('Drop(Token(')
+            and all((arg.startswith('Drop(RegExp(') or arg.startswith('Drop(Text(')
                      or arg in NewEBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
             arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
         if self.drop_flag:
@@ -1391,8 +1391,8 @@ class NewEBNFCompiler(Compiler):
 
     def TOKEN_PARSER(self, token):
         if DROP_TOKEN in self.directives.drop and self.context[-2].tag_name != "definition":
-            return 'Drop(Token(' + token + '))'
-        return 'Token(' + token + ')'
+            return 'Drop(Text(' + token + '))'
+        return 'Text(' + token + ')'
 
     def REGEXP_PARSER(self, regexp):
         if DROP_REGEXP in self.directives.drop and self.context[-2].tag_name != "definition":

@@ -36,7 +36,7 @@ from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CO
     PARSER_NEVER_TOUCHES_DOCUMENT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
-    Interleave, UnknownParserError, CombinedParser, Token, EMPTY_NODE, Capture, Drop, Whitespace, \
+    Interleave, UnknownParserError, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, INFINITE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -101,7 +101,7 @@ class TestParserClass:
 
     def test_symbol(self):
         class MyGrammar(Grammar):
-            wrong = Token('wrong')
+            wrong = Text('wrong')
             word = OneOrMore(wrong) + Whitespace(r'\s*') + OneOrMore(RegExp(r'\w+'))
             root__ = word
         gr = MyGrammar()
@@ -453,7 +453,7 @@ class TestGrammar:
         gr = grammar_provider(lang)()
         st = gr('eins 1 zwei2drei 3')
         # set_config_value('compiled_EBNF_log', 'grammar.log')
-        gr = grammar_provider("@drop = whitespace, token" + lang)()
+        gr = grammar_provider("@drop = whitespace, strings" + lang)()
         st = gr('eins 1 zwei2drei 3')
         st = gr('-3')
         assert str(gr['S']) == "S = ~", str(gr['S'])
@@ -579,7 +579,7 @@ class TestAllOfSomeOf:
 
 class TestInterleave:
     def test_interleave_most_simple(self):
-        letterset = Interleave(Token("A"), Token("B"), Token("C"))
+        letterset = Interleave(Text("A"), Text("B"), Text("C"))
         gr = Grammar(letterset)
         st = gr('ABC')
         assert not st.errors, str(st.errors)
@@ -593,7 +593,7 @@ class TestInterleave:
         assert st.errors
 
     def test_interleave(self):
-        letterset = Interleave(Token("A"), Token("B"), Token("C"),
+        letterset = Interleave(Text("A"), Text("B"), Text("C"),
                                repetitions=[(1, 1000), (0, 1), (1, 1)])
         gr = Grammar(letterset)
         st = gr('AABC')
@@ -705,7 +705,7 @@ class TestPopRetrieve:
         except GrammarError as ge:
             pass
         try:
-            _ = Grammar(Capture(Series(Token(' '), Drop(Whitespace(r'\s*')))))
+            _ = Grammar(Capture(Series(Text(' '), Drop(Whitespace(r'\s*')))))
             assert False, "ValueError expected!"
         except GrammarError:
             pass
@@ -1191,7 +1191,7 @@ def next_valid_letter(text, start):
 
     def test_unambiguous_error_location(self):
         lang = r"""
-            @ drop        = whitespace, token  # drop tokens and whitespace early
+            @ drop        = whitespace, strings  # drop strings and whitespace early
            
             @object_resume = /(?<=\})/
            
@@ -1250,7 +1250,7 @@ class TestUnknownParserError:
 
 class TestEarlyTokenWhitespaceDrop:
     lang = r"""
-        @ drop = token, whitespace
+        @ drop = strings, whitespace
         expression = term  { ("+" | "-") term}
         term       = factor  { ("*"|"/") factor}
         factor     = number | variable | "("  expression  ")"
@@ -1264,7 +1264,7 @@ class TestEarlyTokenWhitespaceDrop:
 
     def test_drop(self):
         cst = self.gr('4 + 3 * 5')
-        assert not cst.pick(':Token')
+        assert not cst.pick(':Text')
         assert not cst.pick(':Whitespace')
         cst = self.gr('A + B')
         try:
@@ -1356,10 +1356,10 @@ class TestParserCombining:
         parser += RegExp(r'\d+')
         assert isinstance(parser, Series)
         assert len(parser.parsers) == 3
-        parser = Token(">") + parser
+        parser = Text(">") + parser
         assert isinstance(parser, Series)
         assert len(parser.parsers) == 4
-        parser = parser + Token("<")
+        parser = parser + Text("<")
         assert isinstance(parser, Series)
         assert len(parser.parsers) == 5
 
@@ -1369,10 +1369,10 @@ class TestParserCombining:
         parser |= RegExp(r'\d+')
         assert isinstance(parser, Alternative)
         assert len(parser.parsers) == 3
-        parser = Token(">") | parser
+        parser = Text(">") | parser
         assert isinstance(parser, Alternative)
         assert len(parser.parsers) == 4
-        parser = parser | Token("<")
+        parser = parser | Text("<")
         assert isinstance(parser, Alternative)
         assert len(parser.parsers) == 5
 
@@ -1382,10 +1382,10 @@ class TestParserCombining:
         parser *= RegExp(r'\d+')
         assert isinstance(parser, Interleave)
         assert len(parser.parsers) == 3
-        parser = Token(">") * parser
+        parser = Text(">") * parser
         assert isinstance(parser, Interleave)
         assert len(parser.parsers) == 4
-        parser = parser * Token("<")
+        parser = parser * Text("<")
         assert isinstance(parser, Interleave)
         assert len(parser.parsers) == 5
 
@@ -1415,7 +1415,7 @@ class TestStaticAnalysis:
             pass
 
     def test_cyclical_ebnf_error(self):
-        doc = Token('proper');  doc.pname = "doc"
+        doc = Text('proper');  doc.pname = "doc"
         grammar = Grammar(doc)
         # grammar.static_analysis()
         lang = "doc = 'proper'  # this works!"

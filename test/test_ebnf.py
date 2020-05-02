@@ -990,7 +990,7 @@ class TestSyntaxExtensions:
         lang = 'doc = "A".'
         parser = create_parser(lang)
         st = parser('A翿')
-        assert st.as_sxpr() == '(doc (:Token "A") (:AnyChar "翿"))'
+        assert st.as_sxpr() == '(doc (:Text "A") (:AnyChar "翿"))'
 
     def test_character(self):
         lang = 'doc = 0xe4'

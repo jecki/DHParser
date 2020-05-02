@@ -151,7 +151,7 @@ class EBNFLanguageServerProtocol:
     #                 'that shall not yield named tags in the syntax tree.'],
     #                ['comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
     #                 'Regular expression for comments.'],
-    #                ['drop', '@ drop = ${1:whitespace, token, regexp}', 2,
+    #                ['drop', '@ drop = ${1:whitespace, strings, regexps}', 2,
     #                 'List of definitions for which the parsed content shall be dropped rather '
     #                 'than included in the syntax tree. The special values "whitespace", "token" '
     #                 'and "regexp" stand for their respective classes instead of particular '

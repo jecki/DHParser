@@ -22,7 +22,7 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
@@ -77,14 +77,14 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
-    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
+    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
-    div = Series(factor, Series(Drop(Token("/")), dwsp__), term)
-    mul = Series(factor, Series(Drop(Token("*")), dwsp__), term)
+    div = Series(factor, Series(Drop(Text("/")), dwsp__), term)
+    mul = Series(factor, Series(Drop(Text("*")), dwsp__), term)
     term.set(Alternative(mul, div, factor))
-    sub = Series(term, Series(Drop(Token("-")), dwsp__), expression)
-    add = Series(term, Series(Drop(Token("+")), dwsp__), expression)
+    sub = Series(term, Series(Drop(Text("-")), dwsp__), expression)
+    add = Series(term, Series(Drop(Text("+")), dwsp__), expression)
     expression.set(Alternative(add, sub, term))
     root__ = expression
     

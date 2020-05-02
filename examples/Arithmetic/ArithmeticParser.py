@@ -22,7 +22,7 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Drop, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Drop, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, \
@@ -75,11 +75,11 @@ class ArithmeticGrammar(Grammar):
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
-    DIV = Series(Token("/"), dwsp__)
-    MUL = Series(Token("*"), dwsp__)
-    MINUS = Series(Token("-"), dwsp__)
-    PLUS = Series(Token("+"), dwsp__)
-    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
+    DIV = Series(Text("/"), dwsp__)
+    MUL = Series(Text("*"), dwsp__)
+    MINUS = Series(Text("-"), dwsp__)
+    PLUS = Series(Text("+"), dwsp__)
+    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
     term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
