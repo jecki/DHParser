@@ -2135,9 +2135,9 @@ class Counted(UnaryParser):
     >>> A2_4
     `A`{2,4}
     >>> Grammar(A2_4)('AA').as_sxpr()
-    '(:Counted (:Token "A") (:Token "A"))'
+    '(:Counted (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
-    '(:Counted (:Token "A") (:Token "A") (:Token "A") (:Token "A"))'
+    '(:Counted (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
     '(ZOMBIE__ `(Error (1040): Parser did not match!))'
     >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
@@ -2148,7 +2148,7 @@ class Counted(UnaryParser):
     >>> moves
     `A`{2,3} ° `B`{2,3}
     >>> Grammar(moves)('AAABB').as_sxpr()
-    '(:Interleave (:Token "A") (:Token "A") (:Token "A") (:Token "B") (:Token "B"))'
+    '(:Interleave (:Text "A") (:Text "A") (:Text "A") (:Text "B") (:Text "B"))'
 
     While a Counted-parser could be treated as a special case of Interleave-parser,
     defining a dedicated class makes the purpose clearer and runs slightly faster.
