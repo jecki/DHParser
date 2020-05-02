@@ -378,38 +378,28 @@ example, if you scroll down a few lines, you'll find the (hardly
 recognizable!) first verse of the poem:
 
     ...
-    <vers>
-        <ZEICHENFOLGE>
-            <:RegExp>Wenn</:RegExp>
-            <:Whitespace> </:Whitespace>
-        </ZEICHENFOLGE>
-        <ZEICHENFOLGE>
-            <:RegExp>ich</:RegExp>
-            <:Whitespace> </:Whitespace>
-        </ZEICHENFOLGE>
-        <ZEICHENFOLGE>
-            <:RegExp>in</:RegExp>
-            <:Whitespace> </:Whitespace>
-        </ZEICHENFOLGE>
-        <ZEICHENFOLGE>
-            <:RegExp>deine</:RegExp>
-            <:Whitespace> </:Whitespace>
-        </ZEICHENFOLGE>
-        <ZEICHENFOLGE>
-            <:RegExp>Augen</:RegExp>
-            <:Whitespace> </:Whitespace>
-        </ZEICHENFOLGE>
-        <ZEICHENFOLGE>
-            <:RegExp>seh',</:RegExp>
-        </ZEICHENFOLGE>
-    </vers>
+        <vers>
+          <zeile>
+            <TEXT>Wenn</TEXT>
+            <L> </L>
+            <TEXT>ich</TEXT>
+            <L> </L>
+            <TEXT>in</TEXT>
+            <L> </L>
+            <TEXT>deine</TEXT>
+            <L> </L>
+            <TEXT>Augen</TEXT>
+            <L> </L>
+            <TEXT>seh',</TEXT>
+          </zeile>
+        </vers>
     ...
 
-How come it is so obfuscated, and where do all those pseudo-tags like
-`<:RegExp>` and `<:Whitespace>` come from? Well, this is probably the
-right time to explain a bit about parsing and compilation in general.
-Parsing and compilation of a text with DHParser takes place in three
-strictly separated steps:
+This looks much more verbose than the same passage in the output of
+`LyrikParser_example.py` which consists of the single line
+`<vers>Wenn ich in deine Augen seh',</vers>`. The reason for this is
+the following. Parsing and compilation of a text with DHParser 
+takes place in three more or less separated steps:
 
 1. Parsing of the text and generation of the "concrete syntax tree"
    (CST)
@@ -417,92 +407,87 @@ strictly separated steps:
 2. Transformation of the CST into an "abstract syntax tree" (AST)
 
 3. And, finally, compilation of the AST into valid XML, HTML, LaTeX or
-   whatever you like.
+   any other desired form.
 
 DHParser automatically only generates a parser for the very first step.
 The other steps have to be programmed by hand, though DHParser tries to
-make those parts as easy as possible. What you have just seen in your
-editor is a Pseudo-XML-representation of the concrete syntax tree. (The
-output of a parser is always a tree structure, just like XML.) It is
-called concrete syntax tree, because it contains all the syntactic
-details that have been described in the `Lyrik.ebnf`-grammar; and the
-grammar needs to describe all those details, because otherwise it would
-not be possible to parse the text. On the other hand most of these
-details do not carry any important information. This is the reason why
-in the second step the transformation into an abstract syntax tree that
-leaves out the unimportant details. There is now general rule of how to
-derive abstract syntax trees from concrete syntax trees, and there
-cannot be, because it depends on the particular domain of application
+make those parts as easy as possible. The verbose output of one line of
+verse above is an excerpt from the XML-representation of the 
+*concrete syntax tree*. It is called concrete syntax tree, because it 
+contains all the syntactic details that have been described in the 
+`Lyrik.ebnf`-grammar; and the grammar needs to describe all those details, 
+because otherwise it would not be possible to parse the text. On the other 
+hand most of these details do not carry any important information. This is 
+the reason why in the second step the transformation into an abstract syntax
+tree takes place that leaves out the unimportant details. There exists no 
+general rule of how to derive abstract syntax trees from concrete syntax 
+trees, because it depends on the particular domain of application
 which details are important and which not. For poems these might be
-different from, say, for a catalogue entry. Therefore, the
-AST-transformation has to be specified for each grammar separately, just
-as the grammar has to be specified for each application domain.
+different from, say, for a catalogue entry. And even for poems it depends
+on the particular use you'd like to make of the data, if you need a
+line of verse to be separeted into text-chunks and blanks (as in the
+verobse output) or if a single text-line enclosed in "verse"-tags is
+sufficient. Because of this, the AST-transformation has to be specified 
+for each grammar separately, just as the grammar has to be specified 
+for each application domain.
 
-Before I'll explain how to specify an AST-transformation for DHParser,
-you may want to know what difference it makes. There is a script
-`LyrikCompiler_example.py` in the directory where the
-AST-transformations are already included. Running the script
-
-    $ python LyrikCompiler_example.py Lyrisches_Intermezzo_IV.txt
-
-yields the fairly clean Pseudo-XML-representation of the DSL-encoded
-poem that we have seen above. Just as a teaser, you might want to look
-up, how the AST-transformation is specified with DHParser. For this
-purpose, you can have a look in file `LyrikCompiler_example.py`. If you
-scroll down to the AST section, you'll see something like this:
+To get an idea, how the transformation of a concrete into an abstract syntax
+tree works with DHParser, let's have look into the specification of the 
+AST-transformation in the script `LyrikCompiler_example.py`:
 
     Lyrik_AST_transformation_table = {
         # AST Transformations for the Lyrik-grammar
-        "<": remove_empty,
-        "bibliographisches":
-            [flatten, remove_children('NZ'), remove_whitespace, remove_tokens],
+        "<": flatten,
+        "Dokument": [],
+        "gedicht": [],
+        "bibliographisches": [],
         "autor": [],
+        "name": [collapse],
         "werk": [],
+        "werktitel": [collapse],
         "untertitel": [],
         "ort": [],
-        "jahr":
-            [reduce_single_child, remove_whitespace, reduce_single_child],
-        "wortfolge":
-            [flatten(is_one_of('WORT'), recursive=False), peek, rstrip,
-             collapse],
-        "namenfolge":
-            [flatten(is_one_of('NAME'), recursive=False), peek, rstrip,
-             collapse],
-        "verknüpfung":
-            [flatten, remove_tokens('<', '>'), remove_whitespace,
-             reduce_single_child],
-        "ziel":
-            [reduce_single_child, remove_whitespace, reduce_single_child],
-        "gedicht, strophe, text":
-            [flatten, remove_children('LEERZEILE'), remove_children('NZ')],
-        "titel, serie":
-            [flatten, remove_children('LEERZEILE'), remove_children('NZ'),
-             collapse],
-        "zeile": [strip],
-        "vers":
-            [strip, collapse],
+        "ortsname": [collapse],
+        "jahr": [],
+        "verknüpfung": [],
+        "serie": [reduce_single_child],
+        "titel": [collapse],
+        "text": [],
+        "strophe": [],
+        "vers": [reduce_single_child],
+        "zeile": [collapse],
+        "T": [],
         "WORT": [],
         "NAME": [],
-        "ZEICHENFOLGE":
-            reduce_single_child,
-        "NZ":
-            reduce_single_child,
+        "ZW": [],
+        "L": [],
+        "LEERRAUM": [],
         "LEERZEILE": [],
-        "JAHRESZAHL":
-            [reduce_single_child],
-        "ENDE": [],
-        ":Whitespace":
-            transform_content(lambda node: " "),
         "*": replace_by_single_child
     }
 
-As you can see, AST-transformations are specified declaratively (with
-the option to add your own Python-programmed transformation rules). This
-keeps the specification of the AST-transformation simple and concise. At
-the same, we avoid adding hints for the AST-transformation in the
+With DHParser AST-transformations are specified declaratively, by specifying the names
+and possibly parameters of the transformation-rules that are to be applied to each tag. 
+(It is possible to add custom rules, if the stock set of transformation rules does not 
+suffice.) This keeps the specification of the AST-transformation simple and concise. At
+the same time, we avoid adding hints for the AST-transformation in the
 grammar specification, which would render the grammar less readable.
 
-Now that you have seen how DHParser basically works, it is time to go
-through the process of designing and testing a domain specific notation
-step by step from the very start. Head over to the documentation in
-subdirectory and read the step by step guide.
+The rule "collapse" for example replaces the children of a node by the their concatenated
+content. Persons used to XML can think of a node as a tag and of the children as child-tags
+enclosed by this tag. The tree structures, DHParser works produces, however, are more 
+restricted than those of XML: Theres exists no mixed content, which means that a tag 
+contains either child-tags or text but not both at the same time. Thus, where in XML it
+is possible to write `<text>It's a <emph>beautiful</empth> day today!</text>`, in DHParser
+this would internally be represented as:
+
+    <text><plain>It's a </plain><emph>beautiful</emph><plain> day today!</plain></text>
+    
+DHParser supports the transformation of its internal restricted tree-representation to
+anbd from standard-XML as an import and export-feature, however. So it can be used to
+work seamlessly with other XML-tools, just as it can be connected seamlessly to tools
+that process s-expressions like lisp- or scheme-interpreters.
+   
+This should suffice to get a first idea of how DHParser works. There is a detailed step-by-step
+guide in the documentation-directory of the DHParser-Package that takes you through all the 
+steps needed for setting up a new DHParser-project.  

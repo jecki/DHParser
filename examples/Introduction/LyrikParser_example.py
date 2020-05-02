@@ -45,7 +45,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, any_of, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    JSON_SERIALIZATION, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
@@ -75,7 +75,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "862b44a0a6c1b1d8decf8aa01926461d"
+    source_hash__ = "fd6b4bce06103ceaab2b3ae06128cc6e"
     anonymous__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|ziel$|wortfolge$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -87,8 +87,8 @@ class LyrikGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     ENDE = Drop(Drop(NegativeLookahead(RegExp('.'))))
     JAHRESZAHL = RegExp('\\d\\d\\d\\d')
-    LEERZEILEN = RegExp('\\n(?:[ \\t]*\\n)+')
     LEERRAUM = RegExp('\\s+')
+    LEERZEILEN = RegExp('\\n(?:[ \\t]*\\n)+')
     L = RegExp(' +')
     ZW = RegExp('\\n')
     ZEICHENFOLGE = RegExp('[^ \\n<>]+')
@@ -97,24 +97,37 @@ class LyrikGrammar(Grammar):
     TEXT = Synonym(ZEICHENFOLGE)
     zeile = Series(dwsp__, TEXT, ZeroOrMore(Series(L, TEXT)), dwsp__)
     vers = Synonym(zeile)
-    strophe = Series(vers, ZeroOrMore(Series(ZW, vers)))
+    strophe = Series(vers, OneOrMore(Series(ZW, vers)))
     text = Series(strophe, ZeroOrMore(Series(LEERZEILEN, strophe)))
-    titel = Series(zeile, ZeroOrMore(Series(ZW, zeile)))
+    titel = Synonym(zeile)
     gedicht = Series(titel, LEERZEILEN, text, mandatory=2)
-    serie = Series(NegativeLookahead(Series(titel, vers, ZW, vers)), dwsp__, zeile, ZeroOrMore(Series(ZW, zeile)))
+    serie = Series(NegativeLookahead(Series(titel, vers, ZW, vers)), dwsp__,
+                   zeile, ZeroOrMore(Series(ZW, zeile)))
     ziel = Series(ZEICHENFOLGE, dwsp__)
-    verknüpfung = Series(Series(Drop(Text("<")), dwsp__), ziel, Series(Drop(Text(">")), dwsp__))
+    verknüpfung = Series(Series(Drop(Text("<")), dwsp__), ziel,
+                         Series(Drop(Text(">")), dwsp__))
     wortfolge = Series(WORT, ZeroOrMore(Series(L, WORT)), dwsp__)
     jahr = Series(JAHRESZAHL, dwsp__)
     ortsname = Synonym(wortfolge)
     ort = Series(ortsname, Option(verknüpfung))
     untertitel = Synonym(wortfolge)
     werktitel = Synonym(wortfolge)
-    werk = Series(werktitel, Option(Series(Series(Drop(Text(".")), dwsp__), untertitel, mandatory=1)), Option(verknüpfung))
+    werk = Series(werktitel,
+                  Option(Series(Series(Drop(Text(".")), dwsp__), untertitel,
+                                mandatory=1)),
+                  Option(verknüpfung))
     name = Series(NAME, ZeroOrMore(Series(L, NAME)), dwsp__)
     autor = Series(name, Option(verknüpfung))
-    bibliographisches = Series(autor, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), werk, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), ort, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), jahr, Series(Drop(Text(".")), dwsp__), mandatory=1)
-    Dokument = Series(Option(LEERRAUM), bibliographisches, LEERZEILEN, Option(serie), LEERZEILEN, gedicht, Option(LEERRAUM), ENDE, mandatory=1)
+    bibliographisches = Series(autor, Series(Drop(Text(",")), dwsp__),
+                               Option(Series(ZW, dwsp__)), werk,
+                               Series(Drop(Text(",")), dwsp__),
+                               Option(Series(ZW, dwsp__)), ort,
+                               Series(Drop(Text(",")), dwsp__),
+                               Option(Series(ZW, dwsp__)), jahr,
+                               Series(Drop(Text(".")), dwsp__), mandatory=1)
+    Dokument = Series(Option(LEERRAUM), bibliographisches, LEERZEILEN,
+                      Option(serie), OneOrMore(Series(LEERZEILEN, gedicht)),
+                      Option(LEERRAUM), ENDE, mandatory=1)
     root__ = Dokument
     
 

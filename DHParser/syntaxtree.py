@@ -32,8 +32,8 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
     Tuple, Container, Optional, Dict
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
-    SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, JSON_SERIALIZATION, \
-    SMART_SERIALIZATION, get_config_value
+    SXPRESSION_SERIALIZATION, INDENTED_SERIALIZATION, JSON_SERIALIZATION, \
+    get_config_value
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col
@@ -1314,6 +1314,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         which case the value of respective configuration variable determines the
         serialization format. (See module `configuration.py`.)
         """
+        def exceeds_compact_threshold(node: Node, threshold: int) -> bool:
+            """Returns True, if the S-expression-serialization of the tree
+            rooted in `node` would exceed a certain number of lines and
+            should therefore be rendered in a more compact form.
+            """
+            vsize = 0
+            for nd in node.select_if(lambda _: True, include_root=True):
+                if nd.children:
+                    vsize += 1
+                if vsize > threshold:
+                    return True
+            return False
+
         switch = how.lower()
 
         if switch == 'ast':
@@ -1323,26 +1336,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif switch == 'default':
             switch = get_config_value('default_serialization').lower()
 
+        flatten_threshold = get_config_value('flatten_sxpr_threshold')
+        compact_threshold = get_config_value('compact_sxpr_threshold')
+
         if switch == SXPRESSION_SERIALIZATION.lower():
-            return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'))
+            return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
+                                compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == XML_SERIALIZATION.lower():
             return self.as_xml()
         elif switch == JSON_SERIALIZATION.lower():
             return self.as_json()
-        elif switch == COMPACT_SERIALIZATION.lower():
-            return self.as_sxpr(compact=True)
-        elif switch == SMART_SERIALIZATION.lower():
-            flatten_threshold = get_config_value('flatten_sxpr_threshold')
-            compact_threshold = get_config_value('compact_sxpr_threshold')
-            vsize = 0
-            for nd in self.select_if(lambda _: True, include_root=True):
-                if nd.children:
-                    vsize += 1
-                if vsize > compact_threshold:
-                    return self.as_sxpr(compact=True)
-            if flatten_threshold <= 0:
-                return self.as_sxpr(compact=True)
-            sxpr = self.as_sxpr(flatten_threshold=flatten_threshold)
+        elif switch == INDENTED_SERIALIZATION.lower():
+            sxpr = self.as_sxpr(flatten_threshold=0)
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
                 sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)

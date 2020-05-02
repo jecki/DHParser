@@ -11,7 +11,7 @@
 
 Dokument          = [LEERRAUM] §bibliographisches
                     LEERZEILEN [serie]
-                    { LEERZEILEN gedicht } [LEERRAUM] ENDE
+                    { LEERZEILEN gedicht }+ [LEERRAUM] ENDE
 
 
 #: Metadaten
