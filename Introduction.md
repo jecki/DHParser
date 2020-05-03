@@ -44,22 +44,24 @@ Now, while you might think that this all works well enough, there are
 a few drawbacks to this approach:
 
 - The syntax is cumbersome and the encoding not very legible to humans
-  working with it. (And I did not even use
+  working with it. (And this is not even
   [TEI-XML](http://www.tei-c.org/index.xml), yet...)
-  Editing and revising XML-encoded text is a pain. Just ask the
-  literary scientists who have to work with it.
+  Editing and revising XML-encoded text is tedious.
 
 - The XML encoding, especially TEI-XML, is often not intuitive. Only
-  experts understand it. Now, if you had the idea that your humanist
-  friend, who is not into digital technologies, might help you with
-  proof-reading, you better think about it again.
+  experts understand it. 
 
 - There is an awful lot of typing to do: All those lengthy opening
   and closing tags. This takes time...
+  
+- With the use of XML one is more or less confined to tree-data-structures.
+  However, to represent a complex text-transmission-history, other data structures, like
+  graph data structures are much more suitable. See Andreas Kuczera's Blog-entry on
+  ["Graphdatenbanken für Historiker"](http://mittelalter.hypotheses.org/5995).
 
-- While looking for a good XML-Editor, you find that there hardly exist
-  any XML-Editors, any more. (And for a reason, actually...) In
-  particular, there are not many good open source XML-Editors.
+- While most text-editors have an XML-mode, there exist only few good
+  dedicated XML editors that can mitigate the above mentioned obstacles
+  and none of the is open source.
 
 On the other hand, there are good reasons why XML is used in the
 humanities: Important encoding standards like
@@ -68,10 +70,10 @@ syntax and the possibility to check data against a schema help to detect
 and avoiding encoding errors. If the schema is well-defined, it is
 unambiguous, and it is easy to parse for a computer. Most of these
 advantages, however, are on a technical level and few of them are
-actually exclusive advantages of XML.
+exclusive advantages of XML.
 
-All in all this means, that while XML is a solid back-end-technology, it
-still is a pain to work with XML as a frontend-technology. This is where
+Therefore, although XML is a solid back-end-technology, it
+still is painstaking to work with XML as a frontend-technology. This is where
 DHParser comes in. It allows you to define your own domain specific
 notation that is specifically tailored to your editing needs and
 provides an infrastructure that - if you know a little
@@ -102,20 +104,20 @@ efficacious a verse like "Wenn ich mich lehn' an deine Brust, / kommt's
 über mich wie Himmelslust," can be if it is not cluttered with XML tags
 ;-)
 
-You might now wonder whether the second version really does encode the
-same information as the XML version. How, for example, would the
+But does the second version really encode the
+same information as the XML version? How, for example, would the
 computer know for sure where a verse starts and ends or a stanza or what
 is title and what stanza? Well, for all these matters there exist
-conventions that poets have been using for several thousand years. For
-example, a verse always starts and ends on the same line. There is
-always a gap between stanzas. And the title is always written above the
+obvious conventions. For example, a verse always starts and ends on 
+the same line. There is always a gap between stanzas. And the title 
+is always written above the
 poem and not in the middle of it. So, if there is a title at all, we can
 be sure that what is written in the first line is the title and not a
 stanza.
 
 DHParser is able to exploit all those hints in order to gather much the
 same information as was encoded in the XML-Version. Don't believe it?
-You can try: Download DHParser from the
+In order to try this out, download DHParser from the
 [gitlab-repository](https://gitlab.lrz.de/badw-it/DHParser) and enter
 the directory `examples/Introduction` on the command line interface (shell).
 Just run `python LyrikCompiler_example.py --xml Lyrisches_Intermezzo_IV.txt` 
@@ -171,7 +173,7 @@ warning at the beginning, it can safely be ignored.):
       </gedicht>
     </Gedicht>
 
-While this is not exactly the XML-encoding as shown above, it can
+While this is not exactly the same XML-encoding as shown above, it can
 easily be converted into the previous version. The important point
 is that it contains exactly the same information, even though the 
 input requires hardly any of the explicit markers that make the

@@ -37,7 +37,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
      forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
     get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor
 
@@ -74,12 +74,12 @@ class XMLGrammar(Grammar):
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
     markupdecl = Forward()
-    source_hash__ = "4cd0cef2b3f3559b014e4d34e5d8b1f6"
+    source_hash__ = "fc8ad8fca491542f5eb4d6c697b74bd0"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'//'
-    comment_rx__ = re.compile(COMMENT__)
+    COMMENT__ = r''
+    comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
@@ -144,7 +144,7 @@ class XMLGrammar(Grammar):
     IDREFS = Text('IDREFS')
     IDREF = Text('IDREF')
     ID = Text('ID')
-    TokenizedType = Alternative(ID, IDREF, IDREFS, ENTITY, ENTITIES, NMTOKEN, NMTOKENS)
+    TokenizedType = Alternative(IDREFS, IDREF, ID, ENTITY, ENTITIES, NMTOKENS, NMTOKEN)
     StringType = Text('CDATA')
     AttType = Alternative(StringType, TokenizedType, EnumeratedType)
     AttDef = Series(Name, dwsp__, AttType, S, DefaultDecl, mandatory=2)

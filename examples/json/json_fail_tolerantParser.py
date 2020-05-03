@@ -63,15 +63,15 @@ class json_fail_tolerantGrammar(Grammar):
     r"""Parser for a json_fail_tolerant source file.
     """
     _element = Forward()
-    source_hash__ = "6410f8962393b80b827883f8593d859c"
+    source_hash__ = "eb1250cddc18f92b9b0582b3aa386238"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'member': [[re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!']],
-                        'string': [[re.compile(r'\\'), 'Illegal escape sequence "{1}" Allowed values are \\\\/, \\\\\\\\, \\\\b, \\\\n, \\\\r, \\\\t, or \\\\u.'],
-                                   [re.compile(r'(?=)'), 'Illegal character "{1}" in string.']],
-                        '_OBJECT_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']],
-                        '_ARRAY_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']]}
+    error_messages__ = {'member': [(re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')],
+                        'string': [(re.compile(r'\\'), 'Illegal escape sequence "{1}" Allowed values are \\\\/, \\\\\\\\, \\\\b, \\\\n, \\\\r, \\\\t, or \\\\u.'),
+                                   (re.compile(r'(?=)'), 'Illegal character "{1}" in string.')],
+                        '_OBJECT_SEPARATOR': [(re.compile(r'(?!,)'), 'Missing separator ","')],
+                        '_ARRAY_SEPARATOR': [(re.compile(r'(?!,)'), 'Missing separator ","')]}
     skip_rules__ = {'string': [re.compile(r'(?=")')]}
     resume_rules__ = {'object': [re.compile(r'(?:[^{}]|(?:\{.*\}))*\}\s*')],
                       'array': [re.compile(r'(?:[^\[\]]|(?:\[.*\]))*\]\s*')],
