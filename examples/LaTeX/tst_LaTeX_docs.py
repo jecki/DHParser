@@ -31,6 +31,7 @@ for path in (os.path.join('..', '..'), '.'):
     if fullpath not in sys.path:
         sys.path.append(fullpath)
 
+import DHParser.configuration
 import DHParser.dsl
 import DHParser.log
 from DHParser.log import log_parsing_history
@@ -111,7 +112,7 @@ def tst_func():
             with open(os.path.splitext(filepath)[0] + '.xml', 'w', encoding='utf-8') as f:
                 f.write(output.customized_XML())
             with open(os.path.splitext(filepath)[0] + '.sxpr', 'w', encoding='utf-8') as f:
-                f.write(output.serialize("smart"))
+                f.write(output.serialize(DHParser.configuration.SXPRESSION_SERIALIZATION))
 
 def cpu_profile(func):
     pr = profile.Profile()

@@ -36,7 +36,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, INDENTED_SERIALIZATION, \
     JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets
 
 
@@ -64,7 +64,7 @@ class yamlGrammar(Grammar):
     """
     element = Forward()
     value = Forward()
-    source_hash__ = "9660424d926b901b9654279f23e6c1f1"
+    source_hash__ = "0bddf6bf7e765930591dc13edb0e235f"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

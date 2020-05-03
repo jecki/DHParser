@@ -53,7 +53,7 @@ if __name__ == "__main__":
             os.chdir(save)
 
     save = os.getcwd()
-    os.chdir(os.path.join(scriptdir, 'Tutorial'))
+    os.chdir(os.path.join(scriptdir, 'Introduction'))
     python = sys.executable + ' '
     check(os.system(python + ' LyrikParser.py Lyrisches_Intermezzo_IV.txt'))
     check(os.system(python + ' LyrikParser_example.py Lyrisches_Intermezzo_IV.txt'))

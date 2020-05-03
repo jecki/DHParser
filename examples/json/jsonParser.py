@@ -36,7 +36,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, \
     set_config_value, get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
-    COMPACT_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals
+    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals
 
 
 #######################################################################
@@ -63,7 +63,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "31833295329c0325d087229c3d932092"
+    source_hash__ = "bafbd6f9841d02f5d89991ad92492673"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

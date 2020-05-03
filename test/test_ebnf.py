@@ -100,6 +100,20 @@ class TestDirectives:
         syntax_tree = parser("3 + 4 \n * 12")
         assert syntax_tree.errors_sorted
 
+    def test_nocomment(self):
+        lang = """
+            @ whitespace  = /\s*/           # insignificant whitespace, signified by ~
+            @ literalws   = none            # literals have no implicit whitespace
+            @ comment     = //              # no implicit comments
+            @ ignorecase  = False           # literals and regular expressions are case-sensitive
+            @ drop        = strings, whitespace
+            
+            document      = `` "" '' //
+        """
+        parser = create_parser(lang)
+        st = parser('')
+        assert not st.errors and str(st) == ''
+
 
 class TestReservedSymbols:
     def test_comment_usage(self):
@@ -308,8 +322,12 @@ symbol     = /(?!\d)\w+/~                       # e.g. expression, term, paramet
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
-regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~      # e.g. /\w+/, ~/#.*(?:\n|$)/~
 whitespace = /~/~                               # insignificant whitespace
+
+RE_LEADIN  = `/`
+RE_LEADOUT = `/`
+RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/ 
 
 EOF = !/./
 """

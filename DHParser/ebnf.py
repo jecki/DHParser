@@ -47,8 +47,8 @@ from DHParser.toolkit import load_if_file, escape_re, escape_control_characters,
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
     RX_NEVER_MATCH
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
-    reduce_single_child, replace_by_single_child, remove_empty, remove_children, \
-    remove_tokens, flatten, forbid, assert_content, apply_unless, has_parent
+    reduce_single_child, replace_by_single_child, is_empty, remove_children, \
+    remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of
 from DHParser.versionnumber import __version__
 
 
@@ -148,6 +148,169 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 
 class EBNFGrammar(Grammar):
     r"""Parser for a FlexibleEBNF source file.
+
+    # This grammar is tuned for flexibility, that is, it supports as many
+    # different flavors of EBNF as possible. However, this flexibility
+    # comes at the cost of some ambiguities. In particular:
+    #
+    #    1. the alternative OR-operator / could be mistaken for the start
+    #       of a regular expression and vice versa, and
+    #    2. character ranges [a-z] can be mistaken for optional blocks
+    #       and vice versa
+    #
+    # A strategy to avoid these ambiguities is to do all of the following:
+    #
+    #     - replace the free_char-parser by a never matching parser
+    #     - if this is done, it is safe to replace the char_range_heuristics-
+    #       parser by an always matching parser
+    #     - replace the regex_heuristics by an always matching parser
+    #
+    # Ambiguities can also be avoided by NOT using all the syntactic variants
+    # made possible by this EBNF-grammar within one and the same EBNF-document.
+
+
+
+    @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
+        # comments can be either C-Style: /* ... */
+        # or pascal/modula/oberon-style: (* ... *)
+        # or python-style: # ... \n, excluding, however, character markers: #x20
+    @ whitespace = /\s*/                            # whitespace includes linefeed
+    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+    @ anonymous  = pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+    @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
+    @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+
+
+    # re-entry-rules for resuming after parsing-error
+
+    @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
+    @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
+
+
+    # specialized error messages for certain cases
+
+    @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
+                               'be a directive and the directive symbol @ is missing\nor the error is '
+                               'due to inconsistent use of the comma as a delimiter\nfor the elements '
+                               'of a sequence.'
+
+
+    #: top-level
+
+    syntax     = [~//] { definition | directive } EOF
+    definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
+
+    directive  = "@" §symbol "=" (regexp | literals | procedure | symbol !DEF)
+                 { "," (regexp | literals | procedure | symbol !DEF) } & FOLLOW_UP
+    literals   = { literal }+                       # string chaining, only allowed in directives!
+    procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
+
+    FOLLOW_UP  = `@` | symbol | EOF
+
+
+    #: components
+
+    expression = sequence { :OR~ sequence }
+    sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
+                 { :AND~ ["§"] ( interleave | lookaround ) }
+    interleave = difference { "°" ["§"] difference }
+    lookaround = flowmarker § (oneormore | pure_elem)
+    difference = term ["-" § (oneormore | pure_elem)]
+    term       = oneormore | counted | repetition | option | pure_elem
+
+
+    #: elements
+
+    countable  = option | oneormore | element
+    pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
+    element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure it's not a definition
+               | literal
+               | plaintext
+               | regexp
+               | char_range
+               | character ~
+               | any_char
+               | whitespace
+               | group
+
+
+    ANY_SUFFIX = /[?*+]/
+
+
+    #: flow-operators
+
+    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+               | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
+    retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+
+
+    #: groups
+
+    group      = "(" no_range §expression ")"
+    oneormore  = "{" no_range expression "}+" | element "+"
+    repetition = "{" no_range §expression "}" | element "*" no_range
+    option     = !char_range "[" §expression "]" | element "?"
+    counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~ §countable
+
+    range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
+    no_range   = !multiplier | &multiplier :TIMES
+    multiplier = /[1-9]\d*/~
+
+
+    #: leaf-elements
+
+    symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
+    literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
+               | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+    plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+               | /´(?:(?<!\\)\\´|[^´])*?´/~
+    regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+    # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+    char_range = `[` &char_range_heuristics
+                     [`^`] (character | free_char) { [`-`] character | free_char } "]"
+    character  = :CH_LEADIN HEXCODE
+    free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
+    any_char   = "."
+    whitespace = /~/~                               # insignificant whitespace
+
+    #: delimiters
+
+    EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+               [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
+
+    DEF        = `=` | `:=` | `::=` | `<-`
+    OR         = `|` | `/` !regex_heuristics
+    AND        = `,` | ``
+    ENDL       = `;` | ``
+
+    RNG_BRACE  = :BRACE_SIGN
+    BRACE_SIGN = `{` | `(`
+    RNG_DELIM  = `,`
+    TIMES      = `*`
+
+    RE_LEADIN  = `/` &regex_heuristics | `^/`
+    RE_LEADOUT = `/`
+
+    CH_LEADIN  = `0x` | `#x`
+
+    #: heuristics
+
+    char_range_heuristics  = ! ( /[\n\t ]/
+                               | ~ literal_heuristics
+                               | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+    literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
+                           | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
+                           | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
+                           | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
+                           | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
+    regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+
+
+    #: basic-regexes
+
+    RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
+    SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
+    HEXCODE    = /[A-Fa-f0-9]{1,8}/
     """
     countable = Forward()
     element = Forward()
@@ -345,7 +508,7 @@ def parse_ebnf(ebnf: str) -> Node:
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
-        [remove_empty],
+        [remove_children_if(all_of(not_one_of('regexp'), is_empty))],
     "syntax":
         [],
     "directive":
@@ -396,7 +559,7 @@ EBNF_AST_transformation_table = {
     (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
         [reduce_single_child],
     "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, "
-    "RE_LEADIN, RE_LEADOUT, CH_LEADIN":
+    "RE_LEADIN, RE_CORE, RE_LEADOUT, CH_LEADIN":
         [],
     "*":
         [replace_by_single_child]
@@ -418,9 +581,9 @@ def get_ebnf_transformer() -> TransformationFunc:
 
 
 def transform_ebnf(cst: Node) -> None:
-    """Transforms the contrete-syntax-tree of an EBNF-source-code
+    """Transforms the concrete-syntax-tree of an EBNF-source-code
     into the abstract-syntax-tree. The transformation changes the
-    syntaxtree in place. No value is returned."""
+    syntax tree in place. No value is returned."""
     get_ebnf_transformer()(cst)
 
 
@@ -894,7 +1057,7 @@ class EBNFCompiler(Compiler):
         pass  # TODO: add verification code here
 
 
-    def _check_rx(self, node: Node, rx: str) -> str:
+    def check_rx(self, node: Node, rx: str) -> str:
         """
         Checks whether the string `rx` represents a valid regular
         expression. Makes sure that multi-line regular expressions are
@@ -913,17 +1076,20 @@ class EBNFCompiler(Compiler):
         return rx
 
 
-    def _extract_regex(self, node: Node) -> str:
+    def extract_regex(self, node: Node) -> str:
         """Extracts regular expression string from regexp-Node."""
-        value = node.content.strip("~")
-        if value[0] + value[-1] in {'""', "''"}:
+        value = node.content
+        if node.tag_name in ('literal', 'plaintext'):
+            assert value
+            assert value[0] + value[-1] in ('""', "''", "``")
             value = escape_re(value[1:-1])
-        elif value[0] + value[-1] == '//' and value != '//':
-            value = self._check_rx(node, value[1:-1])
+        else:
+            assert node.tag_name == "regexp"""
+        value = self.check_rx(node, value)
         return value
 
 
-    def _gen_search_rule(self, nd: Node) -> ReprType:
+    def gen_search_rule(self, nd: Node) -> ReprType:
         """Generates a search rule, which can be either a string for simple
         string search or a regular expression from the nodes content. Returns
         an empty string in case the node is neither regexp nor literal.
@@ -931,7 +1097,7 @@ class EBNFCompiler(Compiler):
         if nd.tag_name == 'regexp':
             super_ws = self.directives.super_ws
             nonempty_ws = mixin_nonempty(super_ws)
-            search_regex = self._extract_regex(nd)\
+            search_regex = self.extract_regex(nd)\
                 .replace(r'\~!', nonempty_ws).replace(r'\~', super_ws)
             return unrepr("re.compile(r'%s')" % search_regex)
         elif nd.tag_name == 'literal':
@@ -945,10 +1111,10 @@ class EBNFCompiler(Compiler):
         return ''
 
 
-    def _gen_search_list(self, nodes: Sequence[Node]) -> List[Union[unrepr, str]]:
+    def gen_search_list(self, nodes: Sequence[Node]) -> List[Union[unrepr, str]]:
         search_list = []  # type: List[Union[unrepr, str]]
         for child in nodes:
-            rule = self._gen_search_rule(child)
+            rule = self.gen_search_rule(child)
             search_list.append(rule if rule else unrepr(child.content.strip()))
         return search_list
 
@@ -1050,7 +1216,7 @@ class EBNFCompiler(Compiler):
                 if isinstance(rule, unrepr) and rule.s.isidentifier():
                     try:
                         nd = self.rules[rule.s][0].children[1]
-                        refined = self._gen_search_rule(nd)
+                        refined = self.gen_search_rule(nd)
                     except IndexError:
                         nd = self.tree
                         refined = ""
@@ -1080,7 +1246,7 @@ class EBNFCompiler(Compiler):
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
                         nd = self.rules[search.s][0].children[1]
-                        search = self._gen_search_rule(nd)
+                        search = self.gen_search_rule(nd)
                     except IndexError:
                         search = ''
                     except KeyError:
@@ -1120,7 +1286,7 @@ class EBNFCompiler(Compiler):
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
                         nd = self.rules[search.s][0].children[1]
-                        search = self._gen_search_rule(nd)
+                        search = self.gen_search_rule(nd)
                     except IndexError:
                         search = ''
                     except KeyError:
@@ -1348,7 +1514,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(node, 'Value "%s" not allowed for directive "%s".'
                                         % (value, key))
             else:
-                value = self._extract_regex(node.children[1])
+                value = self.extract_regex(node.children[1])
                 if key == 'whitespace' and not re.match(value, ''):
                     self.tree.new_error(node, "Implicit whitespace should always "
                                         "match the empty string, /%s/ does not." % value)
@@ -1441,7 +1607,7 @@ class EBNFCompiler(Compiler):
             if len(node.children) == 2:
                 error_msgs.append(('', unrepr(node.children[1].content)))
             elif len(node.children) == 3:
-                rule = self._gen_search_rule(node.children[1])
+                rule = self.gen_search_rule(node.children[1])
                 error_msgs.append((rule if rule else unrepr(node.children[1].content),
                                    unrepr(node.children[2].content)))
             else:
@@ -1453,11 +1619,11 @@ class EBNFCompiler(Compiler):
             if symbol in self.rules:
                 self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
                                     'must be defined before the symbol!'.format(symbol))
-            self.directives.skip[symbol] = self._gen_search_list(node.children[1:])
+            self.directives.skip[symbol] = self.gen_search_list(node.children[1:])
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            self.directives.resume[symbol] = self._gen_search_list(node.children[1:])
+            self.directives.resume[symbol] = self.gen_search_list(node.children[1:])
 
         else:
             if any(key.startswith(directive) for directive in ('skip', 'error', 'resume')):
@@ -1672,7 +1838,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_group(self, node) -> str:
-        assert len(node.children) == 1
+        assert len(node.children) == 1, node.as_sxpr()
         return self.compile(node.children[0])
 
 
@@ -1807,7 +1973,7 @@ class EBNFCompiler(Compiler):
         rx = node.content
         name = []   # type: List[str]
         try:
-            arg = repr(self._check_rx(node, rx.replace(r'\/', '/')))
+            arg = repr(self.check_rx(node, rx.replace(r'\/', '/')))
         except AttributeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list(extract_tb(error.__traceback__)))
