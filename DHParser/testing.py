@@ -676,7 +676,10 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
     ebnf = load_if_file(ebnf_text_or_file)
     deflist = RX_DEFINITION_OR_SECTION.findall(ebnf)
     if not deflist:
-        raise AssertionError('No symbols found in: ' + ebnf_text_or_file[:40])
+        if ebnf_text_or_file.find('\n') < 0 and ebnf_text_or_file.endswith('.ebnf'):
+            deflist = '#: ' + os.path.splitext(ebnf_text_or_file)[0]
+        else:
+            deflist = '#: ALL'
     symbols = collections.OrderedDict()  # type: SymbolsDictType
     if deflist[0][:2] != '#:':
         curr_section = ''

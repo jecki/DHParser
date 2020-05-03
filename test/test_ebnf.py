@@ -34,7 +34,8 @@ from DHParser.configuration import access_thread_locals, get_config_value, \
     EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
     EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX, set_config_value
 from DHParser.error import has_errors, Error, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
-    REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING
+    REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
+    REORDERING_OF_ALTERNATIVES_REQUIRED
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
@@ -1091,6 +1092,59 @@ class TestModeSetting:
         gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
         st = gr(self.testdoc)
         assert not st.errors
+
+
+class TestAlternativeReordering:
+    def test_reordering_alternative_literals(self):
+        lang = """
+            TokenizedType  ::= 'ID'
+                     | 'IDREF'
+                     | 'IDREFS'
+                     | 'ENTITY'
+                     | 'ENTITIES'
+                     | 'NMTOKEN'
+                     | 'NMTOKENS'
+        """
+        src, errors, ast = compile_ebnf(lang, preserve_AST=True)
+        assert src.find("'IDREFS'") < src.find("'IDREF'") < src.find("'ID'")
+        assert src.find("'NMTOKENS'") < src.find("'NMTOKEN'")
+        assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
+
+    def test_reordering_alternative_literals_interspersed_with_non_literals(self):
+        lang = """
+            TokenizedType  ::= /x/ | /y/ | 'ID' | /aaa/
+                     | 'IDREF' | /aa/
+                     | 'IDREFS'
+                     | 'ENTITY'
+                     | 'ENTITIES' | /a/ | /h/
+                     | 'NMTOKEN'
+                     | 'NMTOKENS' | /z/
+        """
+        src, errors, ast = compile_ebnf(lang, preserve_AST=True)
+        assert src.find("'IDREFS'") < src.find("'IDREF'") < src.find("'ID'")
+        assert src.find("'NMTOKENS'") < src.find("'NMTOKEN'")
+        assert src.find("'aaa'") < src.find("'aa'") < src.find("'a'")
+        assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
+
+    def test_reordering_alternative_symbols(self):
+        lang = """
+            TokenizedType  ::= 'ID'
+                     | IDREF
+                     | IDREFS
+                     | 'ENTITY'
+                     | 'ENTITIES'
+                     | NMTOKEN
+                     | 'NMTOKENS'
+            IDREF ::= 'IDREF'
+            IDREFS ::= 'IDREFS'
+            NMTOKEN ::= 'NMTOKEN'
+        """
+        src, errors, ast = compile_ebnf(lang, preserve_AST=True)
+        i = src.find('TokenizedType')
+        k = src.find('\n', i)
+        assert src[i:k].find("IDREFS,") < src[i:k].find("IDREF,") < src[i:k].find("'ID'")
+        assert src[i:k].find("'NMTOKENS'") < src[i:k].find("NMTOKEN")
+        assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
 
 
 if __name__ == "__main__":

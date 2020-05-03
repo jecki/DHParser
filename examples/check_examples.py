@@ -45,10 +45,10 @@ if __name__ == "__main__":
                     print(os.path.join(example_path, name))
                     for grammar in ebnf:
                         call = interpreter + name + ' ' + grammar
-                        # print("CALL: ", call)
+                        print("CALL: ", call)
                         check(os.system(call))
                     call = interpreter + name
-                    # print("CALL: ", call)
+                    print("CALL: ", call)
                     check(os.system(call))
             os.chdir(save)
 

@@ -48,7 +48,7 @@
 
 #: top-level
 
-syntax     = [~//] { definition | directive } EOF
+syntax     = ~ { definition | directive } EOF
 definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
 
 directive  = "@" §symbol "=" (regexp | literals | procedure | symbol !DEF)

@@ -36,7 +36,8 @@ from DHParser.configuration import access_thread_locals, get_config_value, \
     EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
-    DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING
+    DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
+    REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -197,7 +198,7 @@ class EBNFGrammar(Grammar):
 
     #: top-level
 
-    syntax     = [~//] { definition | directive } EOF
+    syntax     = ~ { definition | directive } EOF
     definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
 
     directive  = "@" §symbol "=" (regexp | literals | procedure | symbol !DEF)
@@ -1659,6 +1660,87 @@ class EBNFCompiler(Compiler):
 
     def on_expression(self, node) -> str:
         # TODO: Add check for errors like "a" | "ab" (which will always yield a, even for ab)
+
+        # The following algorithm reorders literal alternatives, so that earlier alternatives
+        # doe not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
+        # 'IDREF' | 'ID'
+        # TODO: Add symbols defined as literals, here...
+
+        def move_items(l: List, a: int, b: int):
+            """Moves all items in the interval [a:b[ one position forward and moves the
+            item at position b to position a."""
+            if a > b:
+                a, b = b, a
+            last = l[b]
+            for i in range(b, a, -1):
+                l[i] = l[i-1]
+            l[a] = last
+
+        literal_symbols = None  # type: Optional[Dict[str, str]]
+
+        def literal_content(nd: Node) -> Optional[str]:
+            """Returns the literal content of either a literal-Node, a plaintext-Node
+            or a symbol-Node, where the symbol is defined as a literal or plaintext."""
+            if nd.tag_name in ('literal', 'plaintext'):
+                return nd.content[1:-1]
+            elif nd.tag_name == 'symbol':
+                nonlocal literal_symbols
+                if literal_symbols is None:
+                    literal_symbols = dict()
+                    for df in self.tree.select_children('definition'):
+                        if df.children[1].tag_name in ('literal', 'plaintext'):
+                            literal_symbols[df.children[0].content] = df.children[1].content[1:-1]
+                return literal_symbols.get(nd.content, None)
+            return None
+
+        literals = []  # type: List[List[int, str]]
+        for i, child in enumerate(node.children):
+            content = literal_content(child)
+            if content is not None:
+                literals.append([i, content])
+
+        move = []  # type: List[Tuple[int, int]]
+        snapshots = set()  # type: Set[Tuple[int]]
+        start_over = True
+
+        while start_over:
+            start_over = False
+            for i in range(1, len(literals)):
+                later = literals[i][1]
+                for k in range(i):
+                    earlier = literals[k][1]
+                    if later.startswith(earlier):
+                        a, b = literals[k][0], literals[i][0]
+                        move.append((a, b))
+                        literals[i][0] = a
+                        for n in range(k, i):
+                            literals[n][0] += 1
+                        self.tree.new_error(
+                            node, 'Alternative "%s" should not preceede "%s" where it occurs '
+                            'at the beginning! Reorder to avoid warning.' % (earlier, later),
+                            REORDERING_OF_ALTERNATIVES_REQUIRED)
+                        start_over = True
+                        break
+                if start_over:
+                    break
+            if start_over:
+                move_items(literals, k, i)
+                snapshot = tuple(item[1] for item in literals)
+                if snapshot in snapshots:
+                    self.tree.new_error(
+                        node, 'Reordering of alternatives "%s" and "%s" required but not possible!'
+                              % (earlier, later), BAD_ORDER_OF_ALTERNATIVES)
+                    move = []
+                    start_over = False
+                else:
+                    snapshots.add(snapshot)
+
+        if move:
+            children = list(node.children)
+            for mv in move:
+                move_items(children, mv[0], mv[1])
+            node.result = tuple(children)
+
         return self.non_terminal(node, 'Alternative')
 
 
@@ -1990,7 +2072,9 @@ class EBNFCompiler(Compiler):
                 child.result = self.extract_character(child)
             elif child.tag_name == 'free_char':
                 child.result = self.extract_free_char(child)
-        return "RegExp('[%s]')" % node.content
+        re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
+        re_str = re.sub(r"(?<!\\)]", r'\]', re_str)
+        return "RegExp('[%s]')" % re_str
 
 
     def extract_character(self, node: Node) -> str:
