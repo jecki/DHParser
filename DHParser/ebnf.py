@@ -1702,10 +1702,9 @@ class EBNFCompiler(Compiler):
             if content is not None:
                 literals.append([i, content])
 
-        move = []  # type: List[Tuple[int, int]]
+        move = []          # type: List[Tuple[int, int]]
         snapshots = set()  # type: Set[Tuple[int]]
-        start_over = True
-
+        start_over = True  # type: bool
         while start_over:
             start_over = False
             for i in range(1, len(literals)):

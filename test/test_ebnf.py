@@ -33,9 +33,9 @@ from DHParser import compile_source, INFINITE, Interleave
 from DHParser.configuration import access_thread_locals, get_config_value, \
     EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
     EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX, set_config_value
-from DHParser.error import has_errors, Error, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
+from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
-    REORDERING_OF_ALTERNATIVES_REQUIRED
+    REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
@@ -102,7 +102,7 @@ class TestDirectives:
         assert syntax_tree.errors_sorted
 
     def test_nocomment(self):
-        lang = """
+        lang = r"""
             @ whitespace  = /\s*/           # insignificant whitespace, signified by ~
             @ literalws   = none            # literals have no implicit whitespace
             @ comment     = //              # no implicit comments
@@ -426,7 +426,7 @@ class TestSynonymDetection:
         assert grammar('b').as_sxpr() == '(a (b "b"))'
 
     def test_synonym_anonymous_elimination(self):
-        ebnf = """@ anonymous = /_\w+$/
+        ebnf = r"""@ anonymous = /_\w+$/
                   a = _b
                   _b = /b/
         """
@@ -1145,6 +1145,13 @@ class TestAlternativeReordering:
         assert src[i:k].find("IDREFS,") < src[i:k].find("IDREF,") < src[i:k].find("'ID'")
         assert src[i:k].find("'NMTOKENS'") < src[i:k].find("NMTOKEN")
         assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
+
+    def test_reordering_impossible(self):
+        lang = """
+            type = 'X' | 'ID' | 'XY' | 'ID'
+        """
+        src, errors, ast = compile_ebnf(lang, preserve_AST=True)
+        assert any(e.code == BAD_ORDER_OF_ALTERNATIVES for e in errors)
 
 
 if __name__ == "__main__":
