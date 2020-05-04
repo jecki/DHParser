@@ -808,6 +808,10 @@ class EBNFCompiler(Compiler):
                 and then the nodes of the symbols that are referred to in
                 the currently compiled definition.
 
+        cache_literal_symbols: A cache for all symbols that are defined
+                by literals, e.g. head = "<head>". This is used by the
+                on_expression()-method.
+
         rules:  Dictionary that maps rule names to a list of Nodes that
                 contain symbol-references in the definition of the rule.
                 The first item in the list is the node of the rule-
@@ -929,18 +933,19 @@ class EBNFCompiler(Compiler):
 
     def reset(self):
         super(EBNFCompiler, self).reset()
-        self._result = ''               # type: str
-        self.re_flags = set()           # type: Set[str]
-        self.rules = OrderedDict()      # type: OrderedDict[str, List[Node]]
-        self.current_symbols = []       # type: List[Node]
-        self.symbols = {}               # type: Dict[str, Node]
-        self.variables = set()          # type: Set[str]
-        self.recursive = set()          # type: Set[str]
-        self.definitions = {}           # type: Dict[str, str]
-        self.required_keywords = set()  # type: Set[str]
-        self.deferred_tasks = []        # type: List[Callable]
-        self.root_symbol = ""           # type: str
-        self.drop_flag = False          # type: bool
+        self._result = ''                    # type: str
+        self.re_flags = set()                # type: Set[str]
+        self.rules = OrderedDict()           # type: OrderedDict[str, List[Node]]
+        self.current_symbols = []            # type: List[Node]
+        self.cache_literal_symbols = None    # type: Optional[Dict[str, str]]
+        self.symbols = {}                    # type: Dict[str, Node]
+        self.variables = set()               # type: Set[str]
+        self.recursive = set()               # type: Set[str]
+        self.definitions = {}                # type: Dict[str, str]
+        self.required_keywords = set()       # type: Set[str]
+        self.deferred_tasks = []             # type: List[Callable]
+        self.root_symbol = ""                # type: str
+        self.drop_flag = False               # type: bool
         self.directives = EBNFDirectives()   # type: EBNFDirectives
         self.defined_directives = dict()     # type: Dict[str, List[Node]]
         self.consumed_custom_errors = set()  # type: Set[str]
@@ -1676,21 +1681,19 @@ class EBNFCompiler(Compiler):
                 l[i] = l[i-1]
             l[a] = last
 
-        literal_symbols = None  # type: Optional[Dict[str, str]]
-
         def literal_content(nd: Node) -> Optional[str]:
             """Returns the literal content of either a literal-Node, a plaintext-Node
             or a symbol-Node, where the symbol is defined as a literal or plaintext."""
             if nd.tag_name in ('literal', 'plaintext'):
                 return nd.content[1:-1]
             elif nd.tag_name == 'symbol':
-                nonlocal literal_symbols
-                if literal_symbols is None:
-                    literal_symbols = dict()
+                if self.cache_literal_symbols is None:
+                    self.cache_literal_symbols = dict()
                     for df in self.tree.select_children('definition'):
                         if df.children[1].tag_name in ('literal', 'plaintext'):
-                            literal_symbols[df.children[0].content] = df.children[1].content[1:-1]
-                return literal_symbols.get(nd.content, None)
+                            self.cache_literal_symbols[df.children[0].content] = \
+                                df.children[1].content[1:-1]
+                return self.cache_literal_symbols.get(nd.content, None)
             return None
 
         literals = []  # type: List[List[int, str]]
