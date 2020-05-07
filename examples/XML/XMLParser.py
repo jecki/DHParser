@@ -12,7 +12,13 @@ from functools import partial
 import os
 import sys
 
-dhparser_parentdir = os.path.abspath(r'../..')
+try:
+    scriptpath = os.path.dirname(__file__)
+except NameError:
+    scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
     sys.path.append(dhparser_parentdir)
 
@@ -21,25 +27,27 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
-    merge_adjacent, collapse, collapse_children_if, WHITESPACE_PTYPE, \
+    replace_by_children, remove_empty, remove_tokens, flatten, PLACEHOLDER, \
+    merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-     forbid, assert_content, remove_infix_operator, \
+    transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, any_of, \
     INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
-    trace_history, has_descendant, neg, has_ancestor
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
+    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
+    has_attr, has_parent
 
 
 #######################################################################
@@ -50,6 +58,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 
 def XMLPreprocessor(text):
     return text, lambda i: i
+
 
 def get_preprocessor() -> PreprocessorFunc:
     return XMLPreprocessor
@@ -74,7 +83,7 @@ class XMLGrammar(Grammar):
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
     markupdecl = Forward()
-    source_hash__ = "fc8ad8fca491542f5eb4d6c697b74bd0"
+    source_hash__ = "d2e07253aa32c7c42cec71d8331fa227"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -123,7 +132,7 @@ class XMLGrammar(Grammar):
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     NDataDecl = Series(Drop(Text('NData')), S, Name, mandatory=1)
     PublicID = Series(Drop(Text('PUBLIC')), S, PubidLiteral, mandatory=1)
-    ExternalID = Series(Drop(Text('SYSTEM')), S, SystemLiteral, mandatory=1)
+    ExternalID = Alternative(Series(Drop(Text('SYSTEM')), S, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), S, PubidLiteral, S, SystemLiteral, mandatory=1))
     NotationDecl = Series(Drop(Text('<!NOTATION')), S, Name, dwsp__, Alternative(ExternalID, PublicID), dwsp__, Drop(Text('>')), mandatory=1)
     PEDef = Alternative(EntityValue, ExternalID)
     EntityDef = Alternative(EntityValue, Series(ExternalID, Option(NDataDecl)))
@@ -169,7 +178,7 @@ class XMLGrammar(Grammar):
     markupdecl.set(Alternative(elementdecl, AttlistDecl, EntityDecl, NotationDecl, PI, Comment))
     DeclSep.set(Alternative(PEReference, S))
     intSubset = ZeroOrMore(Alternative(markupdecl, DeclSep))
-    doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Option(Series(Drop(Text('[')), intSubset, Drop(Text(']')), dwsp__)), Drop(Text('>')))
+    doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Option(Series(Drop(Text('[')), intSubset, Drop(Text(']')), dwsp__)), Drop(Text('>')), mandatory=2)
     No = Text('no')
     Yes = Text('yes')
     SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Alternative(Series(Drop(Text("\'")), Yes), Series(No, Drop(Text("\'")))), Alternative(Series(Drop(Text('"')), Yes), Series(No, Drop(Text('"'))))))
@@ -289,7 +298,7 @@ XML_AST_transformation_table = {
     "NameStartChar": [],
     "NameChars": [],
     "Misc": [],
-    "Comment": [],
+    "Comment": [collapse],
     "PI": [],
     "PITarget": [reduce_single_child],
     "CDSect": [],
@@ -309,10 +318,12 @@ XML_AST_transformation_table = {
 }
 
 
+
 def CreateXMLTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=XML_AST_transformation_table.copy())
+
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
@@ -364,7 +375,7 @@ class XMLCompiler(Compiler):
         self.mock_parsers = dict()
 
     def extract_attributes(self, node_sequence):
-        attributes = OrderedDict()
+        attributes = collections.OrderedDict()
         for node in node_sequence:
             if node.tag_name == "Attribute":
                 assert node[0].tag_name == "Name", node.as_sexpr()
@@ -717,6 +728,7 @@ class XMLCompiler(Compiler):
     #     return node
 
 
+
 def get_compiler() -> XMLCompiler:
     """Returns a thread/process-exclusive XMLCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
@@ -744,7 +756,10 @@ def compile_src(source):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    if __file__.endswith('Parser.py'):
+        grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    else:
+        grammar_path = os.path.splitext(__file__)[0] + '.ebnf'
     parser_update = False
 
     def notify():
@@ -752,7 +767,7 @@ if __name__ == "__main__":
         parser_update = True
         print('recompiling ' + grammar_path)
 
-    if os.path.exists(grammar_path):
+    if os.path.exists(grammar_path) and os.path.isfile(grammar_path):
         if not recompile_grammar(grammar_path, force=False, notify=notify):
             error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
@@ -766,23 +781,37 @@ if __name__ == "__main__":
         print('Could not check whether grammar requires recompiling, '
               'because grammar was not found at: ' + grammar_path)
 
-    if len(sys.argv) > 1:
-        # compile file
-        file_name, log_dir = sys.argv[1], ''
-        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
-            file_name, log_dir = sys.argv[2], 'LOGS'
-            set_config_value('history_tracking', True)
-            set_config_value('resume_notices', True)
-            set_config_value('log_syntax_trees', set(('cst', 'ast')))
-        start_logging(log_dir)
-        result, errors, _ = compile_src(file_name)
-        if errors:
-            cwd = os.getcwd()
-            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
-            for error in errors:
-                print(rel_path + ':' + str(error))
-            sys.exit(1)
-        else:
-            print(result.serialize() if isinstance(result, Node) else result)
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description="Parses a XML-file and shows its syntax-tree.")
+    parser.add_argument('files', nargs=1)
+    parser.add_argument('-d', '--debug', action='store_const', const='debug')
+    parser.add_argument('-x', '--xml', action='store_const', const='xml')
+
+    args = parser.parse_args()
+    file_name, log_dir = args.files[0], ''
+
+    if not os.path.exists(file_name):
+        print('File "%s" not found!' % file_name)
+        sys.exit(1)
+    if not os.path.isfile(file_name):
+        print('"%" is not a file!' % file_name)
+        sys.exit(1)
+
+    if args.debug is not None:
+        log_dir = 'LOGS'
+        set_config_value('history_tracking', True)
+        set_config_value('resume_notices', True)
+        set_config_value('log_syntax_trees', set(('cst', 'ast')))
+    start_logging(log_dir)
+
+    result, errors, _ = compile_src(file_name)
+
+    if errors:
+        cwd = os.getcwd()
+        rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
+        for error in errors:
+            print(rel_path + ':' + str(error))
+        sys.exit(1)
     else:
-        print("Usage: XMLParser.py [FILENAME]")
+        print(result.serialize(how='default' if args.xml is None else 'xml')
+              if isinstance(result, Node) else result)
