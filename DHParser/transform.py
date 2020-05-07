@@ -77,9 +77,9 @@ __all__ = ('TransformationDict',
            'lean_left',
            'apply_if',
            'apply_unless',
+           'apply_ifelse',
            'traverse_locally',
            'is_anonymous',
-           'is_insignificant_whitespace',
            'contains_only_whitespace',
            # 'is_any_kind_of_whitespace',
            'is_empty',
@@ -421,6 +421,19 @@ def apply_if(context: List[Node], transformation: Union[Callable, Tuple[Callable
 
 
 @transformation_factory(collections.abc.Callable, tuple)
+def apply_ifelse(context: List[Node],
+                 if_transformation: Union[Callable, Tuple[Callable]],
+                 else_transformation: Union[Callable, Tuple[Callable]],
+                 condition: Callable):
+    """Applies a one particular transformation if a certain condition is met
+    and another transformation otherwise."""
+    if condition_guard(condition(context)):
+        apply_transformations(context, if_transformation)
+    else:
+        apply_transformations(context, else_transformation)
+
+
+@transformation_factory(collections.abc.Callable, tuple)
 def apply_unless(context: List[Node], transformation: Union[Callable, Tuple[Callable]], condition: Callable):
     """Applies a transformation if a certain condition is *not* met."""
     if not condition_guard(condition(context)):
@@ -488,13 +501,6 @@ def is_anonymous(context: List[Node]) -> bool:
     return context[-1].anonymous
 
 
-# TODO: can be removed, use: is_one_of(WHITESPACE_PTYPE)
-def is_insignificant_whitespace(context: List[Node]) -> bool:
-    """Returns ``True`` for whitespace and comments defined with the
-    ``@comment``-directive."""
-    return context[-1].tag_name == WHITESPACE_PTYPE
-
-
 RX_WHITESPACE = re.compile(r'\s*$')
 
 
@@ -504,14 +510,6 @@ def contains_only_whitespace(context: List[Node]) -> bool:
     expression /\s*/, including empty nodes. Note, that this is not true
     for anonymous whitespace nodes that contain comments."""
     return bool(RX_WHITESPACE.match(context[-1].content))
-
-
-# def is_any_kind_of_whitespace(context: List[Node]) -> bool:
-#     """Returns ``True`` for nodes that either contain only whitespace or
-#     are insignificant whitespace nodes, i.e. nodes with the ``tag_name``
-#     ``PTYPE_WHITESPACE``, including those that contain comment-text."""
-#     node = context[-1]
-#     return node.tag_name == WHITESPACE_PTYPE or RX_WHITESPACE.match(node.content)
 
 
 def is_empty(context: List[Node]) -> bool:
@@ -964,7 +962,7 @@ def normalize_whitespace(context):
     """
     node = context[-1]
     assert not node.children
-    if is_insignificant_whitespace(context):
+    if context[-1].tag_name == WHITESPACE_PTYPE:
         if node.result:
             node.result = ' '
     else:
@@ -1284,7 +1282,7 @@ def remove_children_if(context: List[Node], condition: Callable):
     pass
 
 
-remove_whitespace = remove_children_if(is_insignificant_whitespace)
+remove_whitespace = remove_children_if(is_one_of(WHITESPACE_PTYPE))
 remove_empty = remove_children_if(is_empty)
 remove_anonymous_empty = remove_children_if(lambda ctx: is_empty(ctx) and is_anonymous(ctx))
 remove_anonymous_tokens = remove_children_if(lambda ctx: is_token(ctx) and is_anonymous(ctx))

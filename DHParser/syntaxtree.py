@@ -1362,8 +1362,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 sxpr = re.sub(r'^\(', r'', sxpr)
             return sxpr
         else:
-            raise ValueError('Unknown serialization %s. Allowed values are either: %s or : %s'
-                             % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
+            s = how if how == switch else (how + '/' + switch)
+            raise ValueError('Unknown serialization "%s". Allowed values are either: %s or : %s'
+                             % (s, "ast, cst, default", ", ".join(list(SERIALIZATIONS))))
 
 
 # Navigate contexts ###################################################
