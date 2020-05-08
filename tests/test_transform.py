@@ -28,11 +28,11 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import SXPRESSION_SERIALIZATION
 from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
-    tree_sanity_check, flatten_sxpr
+    tree_sanity_check, flatten_sxpr, WHITESPACE_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
-    is_insignificant_whitespace, merge_adjacent, is_one_of, swap_attributes, delimit_children, \
+    merge_adjacent, is_one_of, swap_attributes, delimit_children, \
     positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -263,7 +263,7 @@ class TestWhitespaceTransformations:
                               '(WORD (LETTERS "not") (:Whitespace " ")) '
                               '(WORD (LETTERS "to") (:Whitespace " "))'
                               '(WORD (LETTERS "be") (:Whitespace " ")))')
-        transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
+        transformations = {'WORD': move_adjacent(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
@@ -276,7 +276,7 @@ class TestWhitespaceTransformations:
                               '(:Whitespace "c")'
                               '(WORD (:Whitespace "d") (:Whitespace "e") (LETTERS "to") (:Whitespace " "))'
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
-        transformations = {'WORD': move_adjacent(is_insignificant_whitespace)}
+        transformations = {'WORD': move_adjacent(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert sentence.content.find('abcde') >= 0
@@ -287,7 +287,7 @@ class TestWhitespaceTransformations:
     def test_move_adjacent3(self):
         sentence = parse_sxpr('(SENTENCE  (:Whitespace " ") (:Whitespace " ")  '
                               '(TEXT (PHRASE "Guten Tag") (:Whitespace " ")))')
-        transformations = {'TEXT': move_adjacent(is_insignificant_whitespace)}
+        transformations = {'TEXT': move_adjacent(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
 
     def test_merge_adjacent(self):

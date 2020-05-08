@@ -749,7 +749,7 @@ class EBNFDirectives:
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
         self.comment = ''      # type: str
-        self.literalws = {'right'}  # type: Set[str]
+        self.literalws = {'none'}  # type: Set[str]
         self.tokens = set()    # type: Set[str]
         self.filter = dict()   # type: Dict[str, str]
         self.error = dict()    # type: Dict[str, List[Tuple[ReprType, ReprType]]]
