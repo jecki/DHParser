@@ -67,6 +67,7 @@ class TestTrace:
 
     def test_trace_simple(self):
         lang = """
+            @literalws = right
             expr = term { ("+"|"-") term }
             term = factor { ("*"|"/") factor }
             factor = /[0-9]+/~ | "(" expr ")"
@@ -89,6 +90,7 @@ class TestTrace:
 
     def test_trace_stopped_early(self):
         lang = """
+            @ literalws = right
             expr = term { ("+"|"-") term }
             term = factor { ("*"|"/") factor }
             factor = /[0-9]+/~ | "(" expr ")"
@@ -103,6 +105,7 @@ class TestTrace:
 
     def test_trace_drop(self):
         lang = r"""
+            @ literalws = right
             @ drop = strings, whitespace
             expression = term  { ("+" | "-") term}
             term       = factor  { ("*"|"/") factor}
@@ -129,6 +132,7 @@ class TestTrace:
 
     def test_trace_resume(self):
         lang = """
+        @literalws = right
         document = alpha [beta] gamma "."
           alpha = "ALPHA" abc
             abc = §"a" "b" "c"
@@ -161,6 +165,7 @@ class TestTrace:
 
 class TestErrorReporting:
     lang = """
+    @literalws = right
     document = alpha [beta] gamma "."
       alpha = "ALPHA" abc
         abc = §"a" "b" "c"
@@ -233,6 +238,7 @@ class TestErrorReporting:
 
     def test_trace_resume_complex_case(self):
         lang = r"""
+            @ literalws = right
             @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
             document = block_A block_B
             @ block_A_resume = /(?=x)/

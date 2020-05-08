@@ -112,7 +112,7 @@ class TestParserClass:
 
 class TestInfiLoopsAndRecursion:
     def test_direct_left_recursion1(self):
-        minilang = """
+        minilang = """@literalws = right
             expr = expr ("+"|"-") term | term
             term = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
@@ -128,7 +128,7 @@ class TestInfiLoopsAndRecursion:
             log_parsing_history(parser, "test_LeftRecursion_direct")
 
     def test_direct_left_recursion2(self):
-        minilang = """
+        minilang = """@literalws = right
             expr = ex
             ex   = expr ("+"|"-") term | term
             term = term ("*"|"/") factor | factor
@@ -142,7 +142,7 @@ class TestInfiLoopsAndRecursion:
         assert snippet == syntax_tree.content
 
     def test_indirect_left_recursion1(self):
-        minilang = """
+        minilang = """@literalws = right
             Expr    = //~ (Product | Sum | Value)
             Product = Expr { ('*' | '/') Expr }+
             Sum     = Expr { ('+' | '-') Expr }+
@@ -165,7 +165,7 @@ class TestInfiLoopsAndRecursion:
 
     # # BEWARE: EXPERIMENTAL TEST can be long running
     # def test_indirect_left_recursion2(self):
-    #     arithmetic_syntax = """
+    #     arithmetic_syntax = """@literalws = right
     #         expression     = addition | subtraction
     #         addition       = (expression | term) "+" (expression | term)
     #         subtraction    = (expression | term) "-" (expression | term)
@@ -363,7 +363,7 @@ class TestRegex:
         assert node is None
 
     def test_token(self):
-        tokenlang = r"""
+        tokenlang = r"""@literalws = right
             @whitespace = linefeed
             lang        = "" begin_token {/\w+/ ""} end_token
             begin_token = "\begin{document}"
@@ -667,7 +667,7 @@ class TestPopRetrieve:
         closing_braces = /\}+/
         text           = /[^{}]+/
         """
-    mini_lang3 = r"""
+    mini_lang3 = r"""@literalws = right
         document       = { text | env }
         env            = (specialtag | opentag) text [ closespecial | closetag ]
         opentag        = "<" name ">"
@@ -679,7 +679,7 @@ class TestPopRetrieve:
         name           = /\w+/~
         text           = /[^<>]+/
         """
-    mini_lang4 = r"""
+    mini_lang4 = r"""@literalws = right
         document       = { text | env }
         env            = opentag document closetag
         opentag        = "<" name ">"
@@ -770,7 +770,7 @@ class TestPopRetrieve:
     def test_cache_neutrality(self):
         """Test that packrat-caching does not interfere with the variable-
         changing parsers: Capture and Retrieve."""
-        lang = r"""
+        lang = r"""@literalws = right
             text = opening closing
             opening = (unmarked_package | marked_package)
             closing = ::variable
@@ -845,7 +845,7 @@ class TestPopRetrieve:
             log_ST(syntax_tree, "test_PopRetrieve_multi_line.cst")
 
     def test_autoretrieve(self):
-        lang = r"""
+        lang = r"""@literalws = right
             document   = { definition } § EOF
             definition = symbol :defsign value
             symbol     = /\w+/~                      
@@ -864,15 +864,15 @@ class TestPopRetrieve:
 
         lines = [line for line in lang.split('\n') if line.strip()]
         eof_line = lines.pop()
-        lines.insert(1, eof_line)
+        lines.insert(2, eof_line)
         lang = '\n'.join(lines)
         parser = grammar_provider(lang)()
         st = parser("X := 1")
-        assert not st.errors
+        assert not st.errors, str(st.errors)
         assert st.equals(st1)
 
-        del lines[1]
-        lines.insert(2, eof_line)
+        del lines[2]
+        lines.insert(3, eof_line)
         lang = '\n'.join(lines)
         parser = grammar_provider(lang)()
         st = parser("X := 1")
@@ -880,7 +880,7 @@ class TestPopRetrieve:
         assert st.equals(st1)
 
         # and, finally...
-        lang_variant = r"""
+        lang_variant = r"""@literalws = right
             document   = { definition } § EOF
             symbol     = /\w+/~                      
             defsign    = "=" | ":="
@@ -897,7 +897,7 @@ class TestPopRetrieve:
 
 
 class TestWhitespaceHandling:
-    minilang = """
+    minilang = """@literalws = right
         doc = A B
         A = "A"
         B = "B"
@@ -1049,7 +1049,7 @@ EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
 """
 
 class TestReentryAfterError:
-    testlang = """
+    testlang = """@literalws = right
     document = alpha [beta] gamma "."
       alpha = "ALPHA" abc
         abc = §"a" "b" "c"
@@ -1167,7 +1167,7 @@ def next_valid_letter(text, start):
 
 
     def test_skip_comment_on_resume(self):
-        lang = r"""
+        lang = r"""@literalws = right
             @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
             document = block_A block_B
             @ block_A_resume = /(?=x)/
@@ -1191,6 +1191,7 @@ def next_valid_letter(text, start):
 
     def test_unambiguous_error_location(self):
         lang = r"""
+            @ literalws   = right
             @ drop        = whitespace, strings  # drop strings and whitespace early
            
             @object_resume = /(?<=\})/

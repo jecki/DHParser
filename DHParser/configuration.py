@@ -329,6 +329,15 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 CONFIG_PRESET['default_anonymous_regexp'] = r'..(?<=^)'
 
 
+# Default value for implicit insignificant whitespace adjacent to literals.
+# Possible values are:
+# 'none': no implicit adjacent whitespace:   "text" = `text`
+# 'right': implicit whitespace to the right: "text" = `text`~
+# 'left': implicit whitespace to the left:   "text" = ~`text`
+# 'both': implicit whitespace on both sides: "text" = ~`text`~
+CONFIG_PRESET['default_literalws'] = "none"
+
+
 # Default value for the brand of EBNF that DHParser accepts
 # 'classic'     - relatively closest to the ISO-standard, i.e. uses [] and {}
 #       for optional and zero or more elements, respectively. Does not allow

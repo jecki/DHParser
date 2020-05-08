@@ -45,6 +45,7 @@ from DHParser.testing import grammar_unit, clean_report
 
 class TestDirectives:
     mini_language = """
+        @ literalws = right
         expression =  term  { ("+" | "-") term }
         term       =  factor  { ("*" | "/") factor }
         factor     =  constant | "("  expression  ")"
@@ -489,7 +490,7 @@ class TestWhitespace:
             WORD     =  /\w+/~
             EOF      =  !/./
         """
-        lang1 = r'document = "DOC" { WORD } EOF' + tail
+        lang1 = '@literalws=right\ndocument = "DOC" { WORD } EOF' + tail
         parser = grammar_provider(lang1)()
         cst = parser("DOC Wörter Wörter Wörter")
         assert not cst.error_flag
@@ -766,7 +767,7 @@ class TestErrorCustomizationErrors:
 
 
 class TestCustomizedResumeParsing:
-    lang = r"""
+    lang = r"""@ literalws = right
         @ alpha_resume = "BETA", "GAMMA"
         @ beta_resume = GAMMA_RE
         @ bac_resume = /(?=GA\w+)/
@@ -970,6 +971,7 @@ class TestInterleaveResume:
 
 
 ArithmeticEBNF = r"""
+@ literalws = right
 @ drop = whitespace   # <- there is no alternative syntax for directives!!!
 
 expression ::= term, { ("+" | "-"), term};

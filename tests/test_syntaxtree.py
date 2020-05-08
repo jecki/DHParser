@@ -296,7 +296,7 @@ class TestNode:
         assert parse_sxpr('(a (b c))').equals(parse_sxpr('(a (b c))'))
 
     def test_equality2(self):
-        ebnf = 'term = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
+        ebnf = '@literalws = right\nterm = term ("*"|"/") factor | factor\nfactor = /[0-9]+/~'
         att  = {"term": [remove_empty, remove_whitespace, replace_by_single_child, flatten],
                 "factor": [remove_empty, remove_whitespace, reduce_single_child],
                 "*": [remove_empty, remove_whitespace, replace_by_single_child]}

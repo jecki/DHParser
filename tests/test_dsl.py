@@ -35,6 +35,7 @@ from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, grammar_pro
 from DHParser.toolkit import concurrent_ident
 
 ARITHMETIC_EBNF = """
+    @ literalws = right
     @ whitespace = linefeed
     formula = [ //~ ] expr
     expr = expr ("+"|"-") term | term
