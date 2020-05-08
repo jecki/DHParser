@@ -76,10 +76,10 @@ if __name__ == "__main__":
         # unit tests
         for interpreter in interpreters:
             if os.system(interpreter + '--version') == 0:
-                for filename in os.listdir('test'):
+                for filename in os.listdir('tests'):
                     if filename.endswith('.py') and (filename.startswith('test_') or
                                                      filename.startswith('notest')):
-                        command = interpreter + os.path.join('test', filename)
+                        command = interpreter + os.path.join('tests', filename)
                         # run_unittests(command)
                         results.append(pool.submit(run_unittests, command))
 
