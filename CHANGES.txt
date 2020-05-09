@@ -1,6 +1,7 @@
-DHParser Version 0.9.1
-......................
+DHParser Version 0.9.1 (8.5.2019)
+.................................
 
+- Support for various variants of EBNF-Grammars (see examples/EBNF/grammar_examples)
 - for debugging, notices informing about where the parser resumes after
   an error can be added to the error messages. (See config-parameter
   "resume_notices" and '@ resume_XXXX' as well as '@ skip_XXX'-directives.)
@@ -11,7 +12,7 @@ DHParser Version 0.9.1
   tag-less parser's content can be dropped, not only that of the Token
   and Whitespace-parsers
 - AllOf- and SomeOf-parsers have been exchanged in favor of a more flexible
-  "interleave"-parser
+  Interleave-parser
 - (some) static analysis of the generated parser during ebnf-compilation for
   possible mistakes
 - better parsing history (now moved from parse.py to the new trace.py-module)
