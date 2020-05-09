@@ -1,6 +1,7 @@
 # LaTeX-Grammar for DHParser
 
 # preamble
+@ literalws  = right
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*/
 @ anonymous  = _WSPC, _GAP, _LB, _PARSEP,

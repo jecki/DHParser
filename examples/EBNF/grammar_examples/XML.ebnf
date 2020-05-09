@@ -1,4 +1,4 @@
-/* Source: https://www.w3.org/TR/REC-xml/ */
+/* Source: https://www.w3.org/TR/xml/ */
 
 document	   ::= prolog element Misc*
 Char	       ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]

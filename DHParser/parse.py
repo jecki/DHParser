@@ -42,7 +42,7 @@ from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
-    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -709,6 +709,26 @@ PARSER_PLACEHOLDER = Parser()
 def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     """Returns True, if `parser` is `None` or merely a placeholder for a parser."""
     return not parser or parser.ptype == ":Parser"
+
+
+# functions for analysing the parser tree/graph ###
+
+
+def has_non_autocaptured_symbols(context: List[Parser]) -> Optional[bool]:
+    """Returns True, if the context contains a Capture-Parser that is not
+    shielded by a Retrieve-Parser. This is the case for captured symbols
+    that are not "auto-captured" by a Retrieve-Parser.
+    """
+    for parser in context:
+        if parser.ptype == ":Retrieve":
+            break
+        elif parser.ptype == ":Capture":
+            p = cast(UnaryParser, parser).parser
+            while p.ptype in (":Synonym", ":Forward"):
+                p = cast(UnaryParser, p).parser
+            if not isinstance(p, Retrieve):
+                return True
+    return None
 
 
 ########################################################################
@@ -1394,7 +1414,10 @@ class Grammar:
         if any(self.variables__.values()):
             error_msg = "Capture-stack not empty after end of parsing: " \
                 + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
-            error_code = CAPTURE_STACK_NOT_EMPTY
+            if parser.apply(has_non_autocaptured_symbols):
+                error_code = CAPTURE_STACK_NOT_EMPTY
+            else:
+                error_code = AUTORETRIEVED_SYMBOL_NOT_CLEARED
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
@@ -1500,7 +1523,7 @@ class Grammar:
         Checks the parser tree statically for possible errors.
 
         This function is called by the constructor of class Grammar and does
-        not need to be called externally.
+        not need to (and should not) be called externally.
 
         :return: a list of error-tuples consisting of the narrowest containing
             named parser (i.e. the symbol on which the failure occurred),

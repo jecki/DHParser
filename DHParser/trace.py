@@ -77,8 +77,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             line_col(grammar.document_lbreaks__, mre.error.pos), errors))
 
     grammar.call_stack__.append(
-        ((self.repr if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")
-          else (self.pname or self.tag_name)), location))
+        (((' ' + self.repr) if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")
+          else (self.pname or self.tag_name)), location))  # ' ' added to avoid ':' as first char!
     grammar.moving_forward__ = True
 
     try:

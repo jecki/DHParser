@@ -37,7 +37,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    replace_by_children, remove_empty, remove_tokens, flatten, \
     merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
@@ -76,7 +76,7 @@ class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
     source_hash__ = "fd6b4bce06103ceaab2b3ae06128cc6e"
-    anonymous__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|ziel$|wortfolge$')
+    anonymous__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|LEERRAUM$|ziel$|wortfolge$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -87,7 +87,7 @@ class LyrikGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     ENDE = Drop(Drop(NegativeLookahead(RegExp('.'))))
     JAHRESZAHL = RegExp('\\d\\d\\d\\d')
-    LEERRAUM = RegExp('\\s+')
+    LEERRAUM = Drop(RegExp('\\s+'))
     LEERZEILEN = RegExp('\\n(?:[ \\t]*\\n)+')
     L = RegExp(' +')
     ZW = RegExp('\\n')
@@ -180,7 +180,6 @@ Lyrik_AST_transformation_table = {
     "NAME": [],
     "ZW": [],
     "L": [],
-    "LEERRAUM": [],
     "LEERZEILE": [],
     "*": replace_by_single_child
 }

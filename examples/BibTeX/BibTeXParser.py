@@ -28,7 +28,7 @@ from DHParser import is_filename, load_if_file, \
     Node, TransformationDict, Whitespace, \
     traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    remove_empty, remove_tokens, flatten, \
     is_empty, collapse, remove_children, remove_content, remove_brackets, change_tag_name, \
     keep_children, is_one_of, has_content, apply_if, \
     WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS

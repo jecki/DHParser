@@ -1,11 +1,11 @@
 # Direktiven zur Steuerung des Einlese-Prozesses ("parsing")
 
 @ whitespace = horizontal                       # Insiginifikanter Leerraum ~ umfasst keine Zeilenwechsel
-@ literalws  = right                            # Leeraum rechts von Zeichenkettenliteralen wird automatisch erfasst
+@ literalws  = right                            # Leerraum rechts von Zeichenkettenliteralen wird automatisch erfasst
 @ anonymous  = JAHRESZAHL, ZEICHENFOLGE, ENDE,  # Diese Elementnamen erscheinen nicht als tags und werden automatisch
-               ziel, wortfolge                  # reduziert, wenn sie als einzelne Kind-Elemente im Snytaxbaum vorkommen
-@ drop       = whitespace, strings, ENDE        # Impliziter Leerraum ~, Zeichenketten "..." und das
-                                                # ENDE-Element werden schon beim einlesen gelöscht
+               LEERRAUM, ziel, wortfolge        # reduziert, wenn sie einzelne Kind-Elemente im Syntaxbaum sind
+@ drop       = whitespace, strings, ENDE,       # Impliziter Leerraum ~, Zeichenketten "..." und das
+               LEERRAUM                         # ENDE-Element werden schon beim einlesen gelöscht
 
 #: Gesamtdokument
 
@@ -50,10 +50,10 @@ TEXT              = ZEICHENFOLGE
 WORT              = /\w+/
 NAME              = /\w+\.?/
 ZEICHENFOLGE      = /[^ \n<>]+/
-ZW                = /\n/
-L                 = / +/
-LEERZEILEN        = /\n(?:[ \t]*\n)+/
-LEERRAUM          = /\s+/
+ZW                = /\n/                    # Zeilenwechsel
+L                 = / +/                    # Explizite bzw. signifikante Leerzeichen
+LEERZEILEN        = /\n(?:[ \t]*\n)+/       # Mindestens eine Leerzeile
+LEERRAUM          = /\s+/                   # Beliebiger horizontaler oder vertikaler Leerraum
 JAHRESZAHL        = /\d\d\d\d/
 
 ENDE              = !/./
