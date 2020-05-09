@@ -2,6 +2,7 @@ DHParser Version 0.9.1 (8.5.2019)
 .................................
 
 - Support for various variants of EBNF-Grammars (see examples/EBNF/grammar_examples)
+- More static error checking for EBNF-Grammars
 - for debugging, notices informing about where the parser resumes after
   an error can be added to the error messages. (See config-parameter
   "resume_notices" and '@ resume_XXXX' as well as '@ skip_XXX'-directives.)
