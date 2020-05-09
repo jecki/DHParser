@@ -1,0 +1,59 @@
+# Direktiven zur Steuerung des Einlese-Prozesses ("parsing")
+
+@ whitespace = horizontal                       # Insiginifikanter Leerraum ~ umfasst keine Zeilenwechsel
+@ literalws  = right                            # Leerraum rechts von Zeichenkettenliteralen wird automatisch erfasst
+@ anonymous  = JAHRESZAHL, ZEICHENFOLGE, ENDE,  # Diese Elementnamen erscheinen nicht als tags und werden automatisch
+               LEERRAUM, ziel, wortfolge        # reduziert, wenn sie einzelne Kind-Elemente im Syntaxbaum sind
+@ drop       = whitespace, strings, ENDE,       # Impliziter Leerraum ~, Zeichenketten "..." und das
+               LEERRAUM                         # ENDE-Element werden schon beim einlesen gelöscht
+
+#: Gesamtdokument
+
+Dokument          = [LEERRAUM] §bibliographisches
+                    LEERZEILEN [serie]
+                    { LEERZEILEN gedicht }+ [LEERRAUM] ENDE
+
+
+#: Metadaten
+
+bibliographisches = autor §"," [ZW~] werk "," [ZW~] ort "," [ZW~] jahr "."
+autor             = name [verknüpfung]
+name              = NAME { L NAME } ~
+werk              = werktitel ["." §untertitel] [verknüpfung]
+werktitel         = wortfolge
+untertitel        = wortfolge
+ort               = ortsname [verknüpfung]
+ortsname          = wortfolge
+jahr              = JAHRESZAHL~
+
+wortfolge         = WORT { L WORT } ~
+verknüpfung       = "<" ziel ">"
+ziel              = ZEICHENFOLGE ~
+
+serie             = !(titel vers ZW vers) ~ zeile { ZW zeile }
+
+
+#: Gedicht
+
+gedicht           = titel LEERZEILEN §text
+titel             = zeile
+text              = strophe { LEERZEILEN strophe }
+strophe           = vers { ZW vers }+
+vers              = zeile
+
+zeile             = ~ TEXT { L TEXT } ~
+TEXT              = ZEICHENFOLGE
+
+
+#:  Lexeme
+
+WORT              = /\w+/
+NAME              = /\w+\.?/
+ZEICHENFOLGE      = /[^ \n<>]+/
+ZW                = /\n/                    # Zeilenwechsel
+L                 = / +/                    # Explizite bzw. signifikante Leerzeichen
+LEERZEILEN        = /\n(?:[ \t]*\n)+/       # Mindestens eine Leerzeile
+LEERRAUM          = /\s+/                   # Beliebiger horizontaler oder vertikaler Leerraum
+JAHRESZAHL        = /\d\d\d\d/
+
+ENDE              = !/./

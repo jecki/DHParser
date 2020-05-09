@@ -39,11 +39,12 @@ from typing import Dict, List, Union, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
-    PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF
+    PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import UnknownParserError, Parser, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
+from DHParser.transform import traverse, remove_children
 from DHParser.toolkit import load_if_file, re
 
 __all__ = ('unit_from_config',
@@ -125,7 +126,7 @@ def unit_from_config(config_str, filename):
             # unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
             test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
             assert testkey.strip('*') not in test and (testkey.strip('*') + '*') not in test, \
-                "Key %s already exists in text %s:%s !" % (testkey, stage, symbol)
+                '"%s": Key %s already exists in %s:%s !' % (filename, testkey, stage, symbol)
             test[testkey] = testcode
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
@@ -269,7 +270,8 @@ def get_report(test_unit) -> str:
 POSSIBLE_ARTIFACTS = frozenset((
     PARSER_LOOKAHEAD_MATCH_ONLY,
     PARSER_LOOKAHEAD_FAILURE_ONLY,
-    MANDATORY_CONTINUATION_AT_EOF
+    MANDATORY_CONTINUATION_AT_EOF,
+    AUTORETRIEVED_SYMBOL_NOT_CLEARED
 ))
 
 
@@ -351,7 +353,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         raw_errors = cast(RootNode, syntax_tree).errors_sorted
         is_artifact = ({e.code for e in raw_errors}
                        <= {PARSER_LOOKAHEAD_FAILURE_ONLY,
-                           # PARSER_STOPPED_BEFORE_END,
+                           AUTORETRIEVED_SYMBOL_NOT_CLEARED,
                            PARSER_LOOKAHEAD_MATCH_ONLY}
                        or (len(raw_errors) == 1
                            and (raw_errors[-1].code == PARSER_LOOKAHEAD_MATCH_ONLY
@@ -432,6 +434,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 old_errors = set(ast.errors)
+                traverse(ast, {'*': remove_children({'__TESTING_ARTIFACT__'})})
                 transform(ast)
                 tests.setdefault('__ast__', {})[test_name] = ast
                 ast_errors = [e for e in ast.errors if e not in old_errors]
@@ -466,8 +469,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if "ast" in tests and len(errata) == errflag:
                 compare = parse_tree(get(tests, "ast", test_name))
                 if compare:
-                    from DHParser.transform import traverse, remove_children
-                    traverse(ast, {'*': remove_children({'__TESTING_ARTIFACT__'})})
                     traverse(compare, {'*': remove_children({'__TESTING_ARTIFACT__'})})
                     if not compare.equals(ast):
                         errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
@@ -676,7 +677,10 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
     ebnf = load_if_file(ebnf_text_or_file)
     deflist = RX_DEFINITION_OR_SECTION.findall(ebnf)
     if not deflist:
-        raise AssertionError('No symbols found in: ' + ebnf_text_or_file[:40])
+        if ebnf_text_or_file.find('\n') < 0 and ebnf_text_or_file.endswith('.ebnf'):
+            deflist = '#: ' + os.path.splitext(ebnf_text_or_file)[0]
+        else:
+            deflist = '#: ALL'
     symbols = collections.OrderedDict()  # type: SymbolsDictType
     if deflist[0][:2] != '#:':
         curr_section = ''

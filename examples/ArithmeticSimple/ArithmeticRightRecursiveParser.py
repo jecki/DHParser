@@ -22,14 +22,14 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    remove_empty, remove_tokens, flatten, \
     collapse, collapse_children_if, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
@@ -63,7 +63,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "9f9acd23245ae0a07680aa9cfda7952f"
+    source_hash__ = "8352081e550ffe4cc667067b45572885"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -77,14 +77,14 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
-    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
+    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
-    div = Series(factor, Series(Drop(Token("/")), dwsp__), term)
-    mul = Series(factor, Series(Drop(Token("*")), dwsp__), term)
+    div = Series(factor, Series(Drop(Text("/")), dwsp__), term)
+    mul = Series(factor, Series(Drop(Text("*")), dwsp__), term)
     term.set(Alternative(mul, div, factor))
-    sub = Series(term, Series(Drop(Token("-")), dwsp__), expression)
-    add = Series(term, Series(Drop(Token("+")), dwsp__), expression)
+    sub = Series(term, Series(Drop(Text("-")), dwsp__), expression)
+    add = Series(term, Series(Drop(Text("+")), dwsp__), expression)
     expression.set(Alternative(add, sub, term))
     root__ = expression
     

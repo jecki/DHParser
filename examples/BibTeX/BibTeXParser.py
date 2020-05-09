@@ -21,14 +21,14 @@ if dhparser_path not in sys.path:
 
 from DHParser import is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, access_thread_locals, \
-    Lookbehind, Lookahead, Alternative, Pop, Required, Token, Synonym, \
+    Lookbehind, Lookahead, Alternative, Pop, Required, Text, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
     last_value, matching_bracket, PreprocessorFunc, \
     Node, TransformationDict, Whitespace, \
     traverse, remove_children_if, is_anonymous, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    remove_empty, remove_tokens, flatten, \
     is_empty, collapse, remove_children, remove_content, remove_brackets, change_tag_name, \
     keep_children, is_one_of, has_content, apply_if, \
     WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS
@@ -75,16 +75,16 @@ class BibTeXGrammar(Grammar):
     COMMA_TERMINATED_STRING = ZeroOrMore(Alternative(RegExp('(?i)[^,%&_ \\t]+'), ESC, WS))
     NO_BLANK_STRING = Series(OneOrMore(Alternative(RegExp('(?i)[^ \\t\\n,%&_]+'), ESC)), wsp__)
     WORD = Series(RegExp('(?i)\\w+'), wsp__)
-    text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)))))
+    text.set(ZeroOrMore(Alternative(CONTENT_STRING, Series(Series(Text("{"), wsp__), text, Series(Text("}"), wsp__)))))
     plain_content = Synonym(COMMA_TERMINATED_STRING)
-    content = Alternative(Series(Series(Token("{"), wsp__), text, Series(Token("}"), wsp__)), plain_content)
+    content = Alternative(Series(Series(Text("{"), wsp__), text, Series(Text("}"), wsp__)), plain_content)
     field = Synonym(WORD)
     key = Synonym(NO_BLANK_STRING)
     type = Synonym(WORD)
-    entry = Series(RegExp('(?i)@'), type, Series(Token("{"), wsp__), key, ZeroOrMore(Series(Series(Token(","), wsp__), field, Series(Token("="), wsp__), content, mandatory=2)), Option(Series(Token(","), wsp__)), Series(Token("}"), wsp__), mandatory=6)
-    comment = Series(Series(Token("@Comment{"), wsp__), text, Series(Token("}"), wsp__), mandatory=2)
+    entry = Series(RegExp('(?i)@'), type, Series(Text("{"), wsp__), key, ZeroOrMore(Series(Series(Text(","), wsp__), field, Series(Text("="), wsp__), content, mandatory=2)), Option(Series(Text(","), wsp__)), Series(Text("}"), wsp__), mandatory=6)
+    comment = Series(Series(Text("@Comment{"), wsp__), text, Series(Text("}"), wsp__), mandatory=2)
     pre_code = ZeroOrMore(Alternative(RegExp('(?i)[^"%]+'), RegExp('(?i)%.*\\n')))
-    preamble = Series(Series(Token("@Preamble{"), wsp__), RegExp('(?i)"'), pre_code, RegExp('(?i)"'), wsp__, Series(Token("}"), wsp__), mandatory=5)
+    preamble = Series(Series(Text("@Preamble{"), wsp__), RegExp('(?i)"'), pre_code, RegExp('(?i)"'), wsp__, Series(Text("}"), wsp__), mandatory=5)
     bibliography = Series(ZeroOrMore(Alternative(preamble, comment, entry)), wsp__, EOF)
     root__ = bibliography
     

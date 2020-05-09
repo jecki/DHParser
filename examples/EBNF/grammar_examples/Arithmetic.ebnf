@@ -1,0 +1,26 @@
+# Arithmetic-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = vertical             # implicit whitespace, includes any number of line feeds
+@ literalws   = right                # literals have implicit whitespace on the right hand side
+@ comment     = /#.*/                # comments range from a '#'-character to the end of the line
+@ ignorecase  = False                # literals and regular expressions are case-sensitive
+@ drop        = whitespace, strings  # drop anonymous whitespace
+
+#: Structure and Components
+
+expression ::= term, { ("+" | "-"), term};
+term       ::= factor, { ("*" | "/"), factor};
+factor     ::= [sign], (NUMBER | VARIABLE | group), { VARIABLE | group };
+sign       ::= `+` | `-`;
+group      ::= "(", expression, ")";
+
+#: "Leaf"-Expressions
+
+NUMBER     ::= /(?:0|(?:[1-9]\d*))(?:\.\d+)?/, ~;
+VARIABLE   ::= /[A-Za-z]/, ~;

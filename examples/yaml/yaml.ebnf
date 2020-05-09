@@ -10,7 +10,7 @@
 @ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /(?:\/\/|#).*/  # comments range from a '#' odr '//' sign to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
-@ drop        = whitespace, token  # drop tokens and whitespace
+@ drop        = whitespace, strings  # drop tokens and whitespace
 
 
 #######################################################################

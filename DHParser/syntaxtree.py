@@ -32,8 +32,8 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
     Tuple, Container, Optional, Dict
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
-    SXPRESSION_SERIALIZATION, COMPACT_SERIALIZATION, JSON_SERIALIZATION, \
-    SMART_SERIALIZATION, get_config_value
+    SXPRESSION_SERIALIZATION, INDENTED_SERIALIZATION, JSON_SERIALIZATION, \
+    get_config_value
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col
@@ -53,6 +53,10 @@ __all__ = ('WHITESPACE_PTYPE',
            'LEAF_NODES',
            'BRANCH_NODES',
            'Node',
+           'prev_context',
+           'next_context',
+           'serialize_context',
+           'context_sanity_check',
            'FrozenNode',
            'EMPTY_NODE',
            'tree_sanity_check',
@@ -74,7 +78,7 @@ __all__ = ('WHITESPACE_PTYPE',
 
 
 WHITESPACE_PTYPE = ':Whitespace'
-TOKEN_PTYPE = ':Token'
+TOKEN_PTYPE = ':Text'
 REGEXP_PTYPE = ':RegExp'
 EMPTY_PTYPE = ':EMPTY'
 LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE}
@@ -144,7 +148,7 @@ def flatten_xml(xml: str) -> str:
 CriteriaType = Union['Node', str, Container[str], Callable]
 ALL_NODES = lambda nd: True
 LEAF_NODES = lambda nd: not nd.children
-BRANCH_NODES = lambda nd: bool(nd.children)
+BRANCH_NODES = lambda nd: nd.children
 
 
 def create_match_function(criterion: CriteriaType) -> Callable:
@@ -815,19 +819,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if match_function(child):
                     yield child
 
-    def pick(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
+    def pick(self, criterion: CriteriaType,
+             include_root: bool = False,
+             reverse: bool = False) -> Optional['Node']:
         """
         Picks the first (or last if run in reverse mode) descendant that fulfills
         the given criterion which can be either a match-function or a tag-name or
         a container of tag-names.
 
         This function is syntactic sugar for
-        ``next(node.select(criterion, False))``. However, rather than
+        ``next(node.select(criterion, ...))``. However, rather than
         raising a StopIterationError if no descendant with the given tag-name
         exists, it returns None.
         """
         try:
-            return next(self.select(criterion, include_root=False, reverse=reverse))
+            return next(self.select(criterion,
+                                    include_root=include_root, reverse=reverse))
         except StopIteration:
             return None
 
@@ -908,13 +915,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                                       include_root, reverse)
 
     def pick_context(self, criterion: CriteriaType,
+                     include_root: bool = False,
                      reverse: bool = False) -> Optional[List['Node']]:
         """
         Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
         relative to `self` is returned.
         """
         try:
-            return next(self.select_context(criterion, include_root=False, reverse=reverse))
+            return next(self.select_context(criterion,
+                                            include_root=include_root, reverse=reverse))
         except StopIteration:
             return None
 
@@ -1305,6 +1314,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         which case the value of respective configuration variable determines the
         serialization format. (See module `configuration.py`.)
         """
+        def exceeds_compact_threshold(node: Node, threshold: int) -> bool:
+            """Returns True, if the S-expression-serialization of the tree
+            rooted in `node` would exceed a certain number of lines and
+            should therefore be rendered in a more compact form.
+            """
+            vsize = 0
+            for nd in node.select_if(lambda _: True, include_root=True):
+                if nd.children:
+                    vsize += 1
+                if vsize > threshold:
+                    return True
+            return False
+
         switch = how.lower()
 
         if switch == 'ast':
@@ -1314,26 +1336,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif switch == 'default':
             switch = get_config_value('default_serialization').lower()
 
+        flatten_threshold = get_config_value('flatten_sxpr_threshold')
+        compact_threshold = get_config_value('compact_sxpr_threshold')
+
         if switch == SXPRESSION_SERIALIZATION.lower():
-            return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'))
+            return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
+                                compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == XML_SERIALIZATION.lower():
             return self.as_xml()
         elif switch == JSON_SERIALIZATION.lower():
             return self.as_json()
-        elif switch == COMPACT_SERIALIZATION.lower():
-            return self.as_sxpr(compact=True)
-        elif switch == SMART_SERIALIZATION.lower():
-            flatten_threshold = get_config_value('flatten_sxpr_threshold')
-            compact_threshold = get_config_value('compact_sxpr_threshold')
-            vsize = 0
-            for nd in self.select_if(lambda _: True, include_root=True):
-                if nd.children:
-                    vsize += 1
-                if vsize > compact_threshold:
-                    return self.as_sxpr(compact=True)
-            if flatten_threshold <= 0:
-                return self.as_sxpr(compact=True)
-            sxpr = self.as_sxpr(flatten_threshold=flatten_threshold)
+        elif switch == INDENTED_SERIALIZATION.lower():
+            sxpr = self.as_sxpr(flatten_threshold=0)
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
                 sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
@@ -1348,8 +1362,71 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 sxpr = re.sub(r'^\(', r'', sxpr)
             return sxpr
         else:
-            raise ValueError('Unknown serialization %s. Allowed values are either: %s or : %s'
-                             % (how, "'ast', 'cst', 'default'", ", ".join(list(SERIALIZATIONS))))
+            s = how if how == switch else (how + '/' + switch)
+            raise ValueError('Unknown serialization "%s". Allowed values are either: %s or : %s'
+                             % (s, "ast, cst, default", ", ".join(list(SERIALIZATIONS))))
+
+
+# Navigate contexts ###################################################
+
+
+@cython.locals(i=cython.int, k=cython.int)
+def prev_context(context: List[Node]) -> Optional[List[Node]]:
+    """Returns the context of the predecessor of the last Node in the
+    context. The predecessor is the sibling of the same parent Node
+    preceding the node, or if it already is the first sibling, the parent's
+    sibling preceeding the parent, or grand-parente's sibling and so on.
+    In case no predecessor is found when the first ancestor has been
+    reached, None is returned.
+    """
+    assert isinstance(context, list)
+    node = context[-1]
+    for i in range(len(context) - 2, -1, -1):
+        siblings = context[i].children
+        if node is not siblings[0]:
+            for k in range(1, len(siblings)):
+                if node is siblings[k]:
+                    return context[:i + 1] + [siblings[k - 1]]
+            raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
+                                 % (i, i+1))
+        node = context[i]
+    return None
+
+
+@cython.locals(i=cython.int, k=cython.int)
+def next_context(context: List[Node]) -> Optional[List[Node]]:
+    """Returns the contexnt of the successor of the last Node in the
+    context. The successor is the sibling of the same parent Node
+    succeeding the the node, or if it already is the last sibling, the
+    parent's sibling succeeding the parent, or grand-parente's sibling and
+    so on. In case no successor is found when the first ancestor has been
+    reached, None is returned.
+    """
+    assert isinstance(context, list)
+    node = context[-1]
+    for i in range(len(context) - 2, -1, -1):
+        siblings = context[i].children
+        if node is not siblings[-1]:
+            for k in range(len(siblings) - 2, -1, -1):
+                if node is siblings[k]:
+                    return context[:i + 1] + [siblings[k + 1]]
+            raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
+                                 % (i, i+1))
+        node = context[i]
+    return None
+
+
+def serialize_context(context: List[Node], with_content: bool = False, delimiter: str = ' <- '):
+    l = [nd.tag_name + ((':' + nd.content) if with_content else '') for nd in context]
+    return delimiter.join(l)
+
+
+def context_sanity_check(context: List[Node]) -> bool:
+    return all(context[i] in context[i - 1].children for i in range(1, len(context)))
+
+
+
+# FrozenNode ##########################################################
 
 
 ChildrenType = Tuple[Node, ...]
@@ -1426,6 +1503,9 @@ def tree_sanity_check(tree: Node) -> bool:
             return False
         node_set.add(node)
     return True
+
+
+# Tree of nodes #######################################################
 
 
 class RootNode(Node):

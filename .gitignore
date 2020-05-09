@@ -21,7 +21,7 @@ LOGS
 REPORT
 external_resources/
 tmp/*
-test/tmp*
+tests/tmp*
 build
 dist
 MANIFEST

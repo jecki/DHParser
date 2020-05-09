@@ -1,13 +1,14 @@
 # LaTeX-Grammar for DHParser
 
 # preamble
+@ literalws  = right
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
 @ comment    = /%.*/
 @ anonymous  = _WSPC, _GAP, _LB, _PARSEP,
                block_environment, known_environment, text_element,
                line_element, inline_environment, known_inline_env,
                begin_inline_env, end_inline_env, command, known_command
-@ drop       = token, whitespace, regexp, _WSPC, _GAP, _PARSEP, _LB
+@ drop       = strings, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB
 
 ########################################################################
 #

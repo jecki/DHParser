@@ -3,7 +3,7 @@ from DHParser import *
 
 # specify the grammar of your DSL in EBNF-notation
 grammar = '''
-@ drop = whitespace, token
+@ drop = whitespace, strings
 key_store   = ~ { entry }
 entry       = key "=" value 
 key         = /\w+/~             # Scannerless parsing, use regular

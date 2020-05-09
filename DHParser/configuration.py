@@ -39,8 +39,7 @@ __all__ = ('access_presets',
            'set_config_value',
            'XML_SERIALIZATION',
            'SXPRESSION_SERIALIZATION',
-           'COMPACT_SERIALIZATION',
-           'SMART_SERIALIZATION',
+           'INDENTED_SERIALIZATION',
            'JSON_SERIALIZATION',
            'SERIALIZATIONS')
 
@@ -257,18 +256,17 @@ CONFIG_PRESET['resume_notices'] = False
 #                 syntax trees and "S-expression" for any other kind of tree.
 XML_SERIALIZATION = "XML"
 JSON_SERIALIZATION = "json"
-SMART_SERIALIZATION = "smart"
-COMPACT_SERIALIZATION = "compact"
+INDENTED_SERIALIZATION = "indented"
 SXPRESSION_SERIALIZATION = "S-expression"
 
 SERIALIZATIONS = frozenset({XML_SERIALIZATION,
-                            SXPRESSION_SERIALIZATION,
-                            COMPACT_SERIALIZATION,
-                            JSON_SERIALIZATION})
+                            JSON_SERIALIZATION,
+                            INDENTED_SERIALIZATION,
+                            SXPRESSION_SERIALIZATION,})
 
-CONFIG_PRESET['cst_serialization'] = SMART_SERIALIZATION
-CONFIG_PRESET['ast_serialization'] = SMART_SERIALIZATION
-CONFIG_PRESET['default_serialization'] = SMART_SERIALIZATION
+CONFIG_PRESET['cst_serialization'] = SXPRESSION_SERIALIZATION
+CONFIG_PRESET['ast_serialization'] = SXPRESSION_SERIALIZATION
+CONFIG_PRESET['default_serialization'] = SXPRESSION_SERIALIZATION
 
 # Defines the maximum line length for flattened S-expressions.
 # Below this threshold S-expressions will be returned in flattened
@@ -329,6 +327,15 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 # regular expression that matches no string whatsoever.
 # Default value: r'..(?<=^)'  # never match.
 CONFIG_PRESET['default_anonymous_regexp'] = r'..(?<=^)'
+
+
+# Default value for implicit insignificant whitespace adjacent to literals.
+# Possible values are:
+# 'none': no implicit adjacent whitespace:   "text" = `text`
+# 'right': implicit whitespace to the right: "text" = `text`~
+# 'left': implicit whitespace to the left:   "text" = ~`text`
+# 'both': implicit whitespace on both sides: "text" = ~`text`~
+CONFIG_PRESET['default_literalws'] = "none"
 
 
 # Default value for the brand of EBNF that DHParser accepts

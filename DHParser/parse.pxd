@@ -59,7 +59,7 @@ cdef class Grammar:
 cdef class PreprocessorToken(Parser):
     pass
 
-cdef class Token(Parser):
+cdef class Text(Parser):
     cdef public str text
     cdef public int len
 

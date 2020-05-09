@@ -6,11 +6,11 @@
 #
 #######################################################################
 
-@ whitespace  = vertical           # implicit whitespace, includes any number of line feeds
-@ literalws   = right              # literals have implicit whitespace on the right hand side
-@ comment     = /#.*/              # comments range from a '#'-character to the end of the line
-@ ignorecase  = False              # literals and regular expressions are case-sensitive
-@ drop        = whitespace, token  # drop anonymous whitespace
+@ whitespace  = vertical             # implicit whitespace, includes any number of line feeds
+@ literalws   = right                # literals have implicit whitespace on the right hand side
+@ comment     = /#.*/                # comments range from a '#'-character to the end of the line
+@ ignorecase  = False                # literals and regular expressions are case-sensitive
+@ drop        = whitespace, strings  # drop anonymous whitespace
 
 
 #######################################################################

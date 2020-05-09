@@ -22,14 +22,14 @@ except ImportError:
     import re
 from DHParser import start_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, Synonym,\
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym,\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_insignificant_whitespace, is_empty, \
+    remove_empty, remove_tokens, flatten, is_empty, \
     collapse, collapse_children_if, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
@@ -61,7 +61,7 @@ class ArithmeticSimpleGrammar(Grammar):
     r"""Parser for an ArithmeticSimple source file.
     """
     expression = Forward()
-    source_hash__ = "057a467fa65d6c91e5658319e2c9469f"
+    source_hash__ = "7ac678ba42d15fcf537d9c1e4d254f0a"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -75,11 +75,11 @@ class ArithmeticSimpleGrammar(Grammar):
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
-    div = Series(Token("/"), dwsp__)
-    mul = Series(Token("*"), dwsp__)
-    sub = Series(Token("-"), dwsp__)
-    add = Series(Token("+"), dwsp__)
-    group = Series(Series(Drop(Token("(")), dwsp__), expression, Series(Drop(Token(")")), dwsp__))
+    div = Series(Text("/"), dwsp__)
+    mul = Series(Text("*"), dwsp__)
+    sub = Series(Text("-"), dwsp__)
+    add = Series(Text("+"), dwsp__)
+    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
     term = Series(factor, ZeroOrMore(Series(Alternative(div, mul), factor)))

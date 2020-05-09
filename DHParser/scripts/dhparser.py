@@ -18,6 +18,7 @@ implied.  See the License for the specific language governing
 permissions and limitations under the License.
 """
 
+from functools import partial
 import os
 import sys
 from typing import cast
@@ -36,6 +37,8 @@ else:
 templatedir = os.path.join(os.path.dirname(scriptdir.rstrip('/')), 'templates')
 
 from DHParser.compile import compile_source
+from DHParser.configuration import access_presets, finalize_presets, \
+    EBNF_ANY_SYNTAX_HEURISTICAL
 from DHParser.dsl import compileDSL, compile_on_disk
 from DHParser.error import is_error
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -145,7 +148,7 @@ def selftest() -> bool:
           "Trying to compile EBNF-Grammar with generated parser...\n")
     selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
                                         ebnf_transformer, ebnf_compiler)
-    ebnf_compiler.gen_transformer_skeleton()
+    # ebnf_compiler.gen_transformer_skeleton()
     print(selfhosted_ebnf_parser)
     return True
 
@@ -166,7 +169,7 @@ def cpu_profile(func, repetitions=1):
     # after your program ends
     stats = pstats.Stats(profile)
     stats.strip_dirs()
-    stats.sort_stats('time').print_stats(40)
+    stats.sort_stats('time').print_stats(80)
     return success
 
 
@@ -188,6 +191,9 @@ def main():
     """Creates a project (if a project name has been passed as command line
     parameter) or runs a quick self-test.
     """
+    config = access_presets()
+    config['syntax_variant'] = EBNF_ANY_SYNTAX_HEURISTICAL
+    finalize_presets()
     if len(sys.argv) > 1:
         if sys.argv[1].lower() == "--selftest":
             if not selftest():
@@ -210,6 +216,24 @@ def main():
                     print(syntax_tree.as_sxpr(compact=True))
                 except IndexError:
                     print("Usage:  dhparser.py -ast FILENAME.ebnf")
+                    sys.exit(1)
+                except FileNotFoundError:
+                    print('File "%s" not found!' % sys.arg[2])
+                    sys.exit(1)
+                except IOError as e:
+                    print('Could not read file "%s": %s' % (sys.argv[2], str(e)))
+            elif sys.argv[1].lower() in ('-cpu', '--cpu', '-mem', '--mem'):
+                try:
+                    func = partial(compile_on_disk, source_file=sys.argv[2])
+                    if sys.argv[1].lower() in ('-cpu', '--cpu'):
+                        _errors = cpu_profile(func, 1)
+                    else:
+                        _errors = mem_profile(func)
+                    if _errors:
+                        print('\n'.join(str(err) for err in _errors))
+                        sys.exit(1)
+                except IndexError:
+                    print("Usage:  dhparser.py -cpu/mem FILENAME.ebnf")
                     sys.exit(1)
                 except FileNotFoundError:
                     print('File "%s" not found!' % sys.arg[2])

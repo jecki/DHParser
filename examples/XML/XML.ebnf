@@ -1,4 +1,4 @@
-# XML-grammar, see https://www.w3.org/TR/REC-xml/
+# XML-grammar, see https://www.w3.org/TR/xml/
 
 #######################################################################
 #
@@ -6,11 +6,11 @@
 #
 #######################################################################
 
-@ whitespace  = /\s*/           # insignificant whitespace, signified by ~
-@ literalws   = none            # literals have no implicit whitespace
-@ comment     = //              # no implicit comments
-@ ignorecase  = False           # literals and regular expressions are case-sensitive
-@ drop        = token, whitespace  # drop anonymous tokens and whitespace
+@ whitespace  = /\s*/                # insignificant whitespace, signified by ~
+@ literalws   = none                 # literals have no implicit whitespace
+@ comment     = //                   # no implicit comments
+@ ignorecase  = False                # literals and regular expressions are case-sensitive
+@ drop        = strings, whitespace  # drop anonymous tokens and whitespace
 
 
 #######################################################################
@@ -40,7 +40,7 @@ No              = 'no'
 #
 #######################################################################
 
-doctypedecl	    = '<!DOCTYPE' ~ Name [~ ExternalID] ~ ['[' intSubset ']' ~] '>'
+doctypedecl	    = '<!DOCTYPE' ~ § Name [~ ExternalID] ~ ['[' intSubset ']' ~] '>'
 intSubset       = { markupdecl | DeclSep }
 DeclSep         = PEReference | S
 markupdecl      = elementdecl | AttlistDecl | EntityDecl | NotationDecl | PI | Comment
@@ -72,7 +72,7 @@ AttlistDecl     = '<!ATTLIST' §S Name { ~ AttDef } ~ '>'
 AttDef          = Name ~ §AttType S DefaultDecl
 AttType         = StringType | TokenizedType | EnumeratedType
 StringType      = 'CDATA'
-TokenizedType   = ID | IDREF | IDREFS | ENTITY | ENTITIES | NMTOKEN | NMTOKENS
+TokenizedType   = IDREFS | IDREF | ID | ENTITY | ENTITIES | NMTOKENS | NMTOKEN
 ID              = 'ID'
 IDREF           = 'IDREF'
 IDREFS          = 'IDREFS'
@@ -99,6 +99,7 @@ PEDef           = EntityValue | ExternalID
 NotationDecl    = '<!NOTATION' §S Name ~ (ExternalID | PublicID) ~ '>'
 
 ExternalID      = 'SYSTEM' §S SystemLiteral
+                | 'PUBLIC' §S PubidLiteral S SystemLiteral
 PublicID        = 'PUBLIC' §S PubidLiteral
 NDataDecl       = 'NData' §S Name
 
@@ -182,6 +183,7 @@ NameChars       = /(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]
 
 Misc            = { Comment | PI | S }+
 Comment         = '<!--' { CommentChars | /-(?!-)/ } '-->'
+# Comment         = '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
 PI              = '<?' PITarget [~ PIChars] '?>'
 PITarget        = !/X|xM|mL|l/ Name
 CDSect          = '<![CDATA[' CData ']]>'

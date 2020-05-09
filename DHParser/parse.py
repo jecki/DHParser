@@ -42,7 +42,7 @@ from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
-    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -64,8 +64,8 @@ __all__ = ('ParserError',
            'Never',
            'AnyChar',
            'PreprocessorToken',
-           'Token',
-           'DropToken',
+           'Text',
+           'DropText',
            'RegExp',
            'RE',
            'TKN',
@@ -711,36 +711,24 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     return not parser or parser.ptype == ":Parser"
 
 
-def leaf_parsers(starting_point: Parser,
-                 cache: Dict[Parser, Set[Parser]] = dict()) -> Set[Parser]:
-    """Retrieves all leaf-parsers that can be reached (or might be called
-    for that matter) a given parser (`starting_point`). Since a combined
-    parser that does not ever reach a leaf-parser, the the returned list
-    should never be empty, if the parser ensemble is well-designed.
+# functions for analysing the parser tree/graph ###
+
+
+def has_non_autocaptured_symbols(context: List[Parser]) -> Optional[bool]:
+    """Returns True, if the context contains a Capture-Parser that is not
+    shielded by a Retrieve-Parser. This is the case for captured symbols
+    that are not "auto-captured" by a Retrieve-Parser.
     """
-    lp_dict = {starting_point: cache.get(starting_point, set())}  # type: Dict[Parser, Set[Parser]]
-
-    def associate_leaf_parsers(context: List[Parser]):
-        parser = context[-1]
-        if parser not in context[:-1]:
-            if parser in cache:
-                for p in context:
-                    if p not in cache:
-                        lp_dict.setdefault(p, set()).update(cache[parser])
-            else:
-                sub_parsers = parser.sub_parsers()
-                if sub_parsers:
-                    for p in sub_parsers:
-                        associate_leaf_parsers(context + [p])
-                else:  # it's a leaf-parser, now associate all it's parents with it
-                    for p in context:
-                        if p not in cache:
-                            lp_dict.setdefault(p, set()).add(parser)
-
-    associate_leaf_parsers([starting_point])
-    cache.update(lp_dict)
-
-    return cache[starting_point]
+    for parser in context:
+        if parser.ptype == ":Retrieve":
+            break
+        elif parser.ptype == ":Capture":
+            p = cast(UnaryParser, parser).parser
+            while p.ptype in (":Synonym", ":Forward"):
+                p = cast(UnaryParser, p).parser
+            if not isinstance(p, Retrieve):
+                return True
+    return None
 
 
 ########################################################################
@@ -1193,6 +1181,8 @@ class Grammar:
             self.root_parser__ = copy.deepcopy(self.__class__.root__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
+        self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
+
         self.root_parser__.apply(self._add_parser__)
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
@@ -1332,21 +1322,20 @@ class Grammar:
                         for h in self.history__[:-1])
 
         # assert isinstance(document, str), type(document)
+        parser = self[start_parser] if isinstance(start_parser, str) else start_parser
+        assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
+                                       " %s vs. %s" % (str(self), str(parser.grammar))
         if self._dirty_flag__:
             self._reset__()
-            for parser in self.all_parsers__:
-                parser.reset()
+            parser.apply(lambda ctx: ctx[-1].reset())
         else:
             self._dirty_flag__ = True
 
+        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         self.last_rb__loc__ = -1  # rollback location
-        parser = self[start_parser] if isinstance(start_parser, str) else start_parser
-        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
-        assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
-                                       " %s vs. %s" % (str(self), str(parser.grammar))
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         rest = self.document__
@@ -1425,7 +1414,10 @@ class Grammar:
         if any(self.variables__.values()):
             error_msg = "Capture-stack not empty after end of parsing: " \
                 + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
-            error_code = CAPTURE_STACK_NOT_EMPTY
+            if parser.apply(has_non_autocaptured_symbols):
+                error_code = CAPTURE_STACK_NOT_EMPTY
+            else:
+                error_code = AUTORETRIEVED_SYMBOL_NOT_CLEARED
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
@@ -1531,26 +1523,44 @@ class Grammar:
         Checks the parser tree statically for possible errors.
 
         This function is called by the constructor of class Grammar and does
-        not need to be called externally.
+        not need to (and should not) be called externally.
 
         :return: a list of error-tuples consisting of the narrowest containing
             named parser (i.e. the symbol on which the failure occurred),
             the actual parser that failed and an error object.
         """
         error_list = []  # type: List[AnalysisError]
+        leaf_state = dict()  # type: Dict[Parser, Optional[bool]]
 
-        def visit_parser(context: List[Parser]) -> Optional[bool]:
-            nonlocal error_list
-            parser = context[-1]
-            errors = parser.static_analysis()
-            error_list.extend(errors)
+        def has_leaf_parsers(prsr: Parser) -> bool:
+            def leaf_parsers(p: Parser) -> Optional[bool]:
+                if p in leaf_state:
+                    return leaf_state[p]
+                sub_list = p.sub_parsers()
+                if sub_list:
+                    leaf_state[p] = None
+                    state = any(leaf_parsers(s) for s in sub_list)
+                    if not state and any(leaf_state[s] is None for s in sub_list):
+                        state = None
+                else:
+                    state = True
+                leaf_state[p] = state
+                return state
 
-        self.root_parser__.apply(visit_parser)
+            # remove parsers with unknown state (None) from cache
+            state_unknown = [p for p, s in leaf_state.items() if s is None]
+            for p in state_unknown:
+                del leaf_state[p]
+
+            result = leaf_parsers(prsr) or False
+            leaf_state[prsr] = result
+            return result
 
         cache = dict()  # type: Dict[Parser, Set[Parser]]
-        # for DEBUGGING: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
-        for parser in self.all_parsers__: # self.all_parsers__:
-            if parser.pname and not leaf_parsers(parser, cache):
+        # for debugging: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
+        for parser in self.all_parsers__:
+            error_list.extend(parser.static_analysis())
+            if parser.pname and not has_leaf_parsers(parser):
                 error_list.append((parser.symbol, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even '
                     'touch the parsed document' % parser.location_info(),
@@ -1671,24 +1681,24 @@ class PreprocessorToken(Parser):
 
 ########################################################################
 #
-# _Token and Regular Expression parser classes (leaf classes)
+# Text and Regular Expression parser classes (leaf classes)
 #
 ########################################################################
 
-class Token(Parser):
+class Text(Parser):
     """
     Parses plain text strings. (Could be done by RegExp as well, but is faster.)
 
     Example::
 
-        >>> while_token = Token("while")
+        >>> while_token = Text("while")
         >>> Grammar(while_token)("while").content
         'while'
     """
-    assert TOKEN_PTYPE == ":Token"
+    assert TOKEN_PTYPE == ":Text"
 
     def __init__(self, text: str) -> None:
-        super(Token, self).__init__()
+        super(Text, self).__init__()
         self.text = text
         self.len = len(text)
 
@@ -1772,8 +1782,8 @@ class RegExp(Parser):
             .replace('/', '\\/') + '/'
 
 
-def DropToken(text: str) -> Token:
-    return cast(Token, Drop(Token(text)))
+def DropText(text: str) -> Text:
+    return cast(Text, Drop(Text(text)))
 
 
 def DropRegExp(regexp) -> RegExp:
@@ -1803,13 +1813,13 @@ def RE(regexp, wsL='', wsR=r'\s*'):
 
 
 def TKN(token, wsL='', wsR=r'\s*'):
-    """Syntactic Sugar for 'Series(Whitespace(wsL), Token(token), Whitespace(wsR))'"""
-    return withWS(lambda: Token(token), wsL, wsR)
+    """Syntactic Sugar for 'Series(Whitespace(wsL), Text(token), Whitespace(wsR))'"""
+    return withWS(lambda: Text(token), wsL, wsR)
 
 
 def DTKN(token, wsL='', wsR=r'\s*'):
-    """Syntactic Sugar for 'Series(Whitespace(wsL), DropToken(token), Whitespace(wsR))'"""
-    return withWS(lambda: Drop(Token(token)), wsL, wsR)
+    """Syntactic Sugar for 'Series(Whitespace(wsL), DropText(token), Whitespace(wsR))'"""
+    return withWS(lambda: Drop(Text(token)), wsL, wsR)
 
 
 class Whitespace(RegExp):
@@ -2144,24 +2154,24 @@ class Counted(UnaryParser):
 
     Examples:
 
-    >>> A2_4 = Counted(Token('A'), (2, 4))
+    >>> A2_4 = Counted(Text('A'), (2, 4))
     >>> A2_4
     `A`{2,4}
     >>> Grammar(A2_4)('AA').as_sxpr()
-    '(:Counted (:Token "A") (:Token "A"))'
+    '(:Counted (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
-    '(:Counted (:Token "A") (:Token "A") (:Token "A") (:Token "A"))'
+    '(:Counted (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
     '(ZOMBIE__ `(Error (1040): Parser did not match!))'
-    >>> moves = OneOrMore(Counted(Token('A'), (1, 3)) + Counted(Token('B'), (1, 3)))
+    >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
     >>> result = Grammar(moves)('AAABABB')
     >>> result.tag_name, result.content
     (':OneOrMore', 'AAABABB')
-    >>> moves = Counted(Token('A'), (2, 3)) * Counted(Token('B'), (2, 3))
+    >>> moves = Counted(Text('A'), (2, 3)) * Counted(Text('B'), (2, 3))
     >>> moves
     `A`{2,3} ° `B`{2,3}
     >>> Grammar(moves)('AAABB').as_sxpr()
-    '(:Interleave (:Token "A") (:Token "A") (:Token "A") (:Token "B") (:Token "B"))'
+    '(:Interleave (:Text "A") (:Text "A") (:Text "A") (:Text "B") (:Text "B"))'
 
     While a Counted-parser could be treated as a special case of Interleave-parser,
     defining a dedicated class makes the purpose clearer and runs slightly faster.
@@ -2458,28 +2468,30 @@ def starting_string(parser: Parser) -> str:
     """If parser starts with a fixed string, this will be returned.
     """
     # keep track of already visited parsers to avoid infinite circles
-    been_there = set()  # type: Set[Parser]
+    been_there = parser.grammar.static_analysis_caches__.setdefault('starting_strings', dict())  # type: Dict[Parser, str]
 
     def find_starting_string(p: Parser) -> str:
         nonlocal been_there
-        if p not in been_there:
-            been_there.add(p)
-            if isinstance(p, Token):
-                return cast(Token, p).text
+        if p in been_there:
+            return been_there[p]
+        else:
+            been_there[p] = ""
+            if isinstance(p, Text):
+                been_there[p] = cast(Text, p).text
             elif isinstance(p, Series) or isinstance(p, Alternative):
-                return starting_string(cast(NaryParser, p).parsers[0])
+                been_there[p] = find_starting_string(cast(NaryParser, p).parsers[0])
             elif isinstance(p, Synonym) or isinstance(p, OneOrMore) \
                     or isinstance(p, Lookahead):
-                return starting_string(cast(UnaryParser, p).parser)
+                been_there[p] = find_starting_string(cast(UnaryParser, p).parser)
             elif isinstance(p, Counted):
                 counted = cast(Counted, p)  # type: Counted
                 if not counted.is_optional():
-                    return starting_string(counted.parser)
+                    been_there[p] = find_starting_string(counted.parser)
             elif isinstance(p, Interleave):
                 interleave = cast(Interleave, p)
                 if interleave.repetitions[0][0] >= 1:
-                    return starting_string(interleave.parsers[0])
-        return ""
+                    been_there[p] = find_starting_string(interleave.parsers[0])
+            return been_there[p]
     return find_starting_string(parser)
 
 
@@ -2521,9 +2533,9 @@ class Alternative(NaryParser):
             return ' | '.join(parser.repr for parser in self.parsers)
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
-    def reset(self):
-        super(Alternative, self).reset()
-        return self
+    # def reset(self):
+    #     super(Alternative, self).reset()
+    #     return self
 
     # The following operator definitions add syntactical sugar, so one can write:
     # `RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')` instead of:
@@ -2561,15 +2573,22 @@ class Alternative(NaryParser):
                 + 'Parser "%s" at position %i out of %i is optional'
                 %(p.tag_name, i + 1, len(self.parsers)),
                 BAD_ORDER_OF_ALTERNATIVES))
+
         # check for errors like "A" | "AB" where "AB" would never be reached,
         # because a substring at the beginning is already caught by an earlier
         # alternative
+        # WARNING: This can become time-consuming!!!
+        # EXPERIMENTAL
+
+        def does_preempt(start, parser):
+            cst = self.grammar(start, parser, complete_match=False)
+            return not cst.errors and len(cst) >= 1
+
         for i in range(2, len(self.parsers)):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
                 for k in range(i):
-                    st = self.grammar(fixed_start, self.parsers[k], complete_match=False)
-                    if not st.errors and len(st) >= 1:
+                    if does_preempt(fixed_start, self.parsers[k]):
                         errors.append(self.static_error(
                             "Parser-specification Error in " + self.location_info()
                             + "\nAlternative %i will never be reached, because its starting-"
@@ -2802,7 +2821,7 @@ class NegativeLookahead(Lookahead):
 class Lookbehind(FlowParser):
     """
     Matches, if the contained parser would match backwards. Requires
-    the contained parser to be a RegExp, _RE, Token parser.
+    the contained parser to be a RegExp, _RE, Text parser.
 
     EXPERIMENTAL
     """
@@ -2810,13 +2829,13 @@ class Lookbehind(FlowParser):
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
-        assert isinstance(p, RegExp) or isinstance(p, Token)
+        assert isinstance(p, RegExp) or isinstance(p, Text)
         self.regexp = None
         self.text = ''  # type: str
         if isinstance(p, RegExp):
             self.regexp = cast(RegExp, p).regexp
-        else:  # p is of type Token
-            self.text = cast(Token, p).text
+        else:  # p is of type Text
+            self.text = cast(Text, p).text
         super(Lookbehind, self).__init__(parser)
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -3201,7 +3220,9 @@ class Forward(UnaryParser):
         self.parser = parser
         self.drop_content = parser.drop_content
 
-    # def sub_parsers(self) -> Tuple[Parser, ...]:
-    #     if is_parser_placeholder(self.parser):
-    #         return tuple()
-    #     return (self.parser,)
+    def sub_parsers(self) -> Tuple[Parser, ...]:
+        """Note: Sub-Parsers are not passed through by Forward-Parser.
+        TODO: Should this be changed?"""
+        if is_parser_placeholder(self.parser):
+            return tuple()
+        return (self.parser,)

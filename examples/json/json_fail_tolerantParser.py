@@ -21,14 +21,14 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, \
-    Lookbehind, Lookahead, Alternative, Pop, Token, DropToken, Synonym, AllOf, SomeOf, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, DropText, Synonym, AllOf, SomeOf, \
     Unordered, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    replace_by_children, remove_empty, remove_tokens, flatten, is_insignificant_whitespace, \
+    replace_by_children, remove_empty, remove_tokens, flatten, \
     merge_adjacent, collapse, collapse_children_if, replace_content, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
@@ -63,15 +63,15 @@ class json_fail_tolerantGrammar(Grammar):
     r"""Parser for a json_fail_tolerant source file.
     """
     _element = Forward()
-    source_hash__ = "6410f8962393b80b827883f8593d859c"
+    source_hash__ = "eb1250cddc18f92b9b0582b3aa386238"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'member': [[re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!']],
-                        'string': [[re.compile(r'\\'), 'Illegal escape sequence "{1}" Allowed values are \\\\/, \\\\\\\\, \\\\b, \\\\n, \\\\r, \\\\t, or \\\\u.'],
-                                   [re.compile(r'(?=)'), 'Illegal character "{1}" in string.']],
-                        '_OBJECT_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']],
-                        '_ARRAY_SEPARATOR': [[re.compile(r'(?!,)'), 'Missing separator ","']]}
+    error_messages__ = {'member': [(re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')],
+                        'string': [(re.compile(r'\\'), 'Illegal escape sequence "{1}" Allowed values are \\\\/, \\\\\\\\, \\\\b, \\\\n, \\\\r, \\\\t, or \\\\u.'),
+                                   (re.compile(r'(?=)'), 'Illegal character "{1}" in string.')],
+                        '_OBJECT_SEPARATOR': [(re.compile(r'(?!,)'), 'Missing separator ","')],
+                        '_ARRAY_SEPARATOR': [(re.compile(r'(?!,)'), 'Missing separator ","')]}
     skip_rules__ = {'string': [re.compile(r'(?=")')]}
     resume_rules__ = {'object': [re.compile(r'(?:[^{}]|(?:\{.*\}))*\}\s*')],
                       'array': [re.compile(r'(?:[^\[\]]|(?:\[.*\]))*\]\s*')],
@@ -84,26 +84,26 @@ class json_fail_tolerantGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Token("]"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_ARRAY_SEPARATOR"])
-    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Token("}"))), Lookahead(Drop(Token(","))), Option(Series(Drop(Token(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_OBJECT_SEPARATOR"])
+    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Text("]"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_ARRAY_SEPARATOR"])
+    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Text("}"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_OBJECT_SEPARATOR"])
     _EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(Drop(Token("E")), Drop(Token("e"))), Option(Alternative(Drop(Token("+")), Drop(Token("-")))), RegExp('[0-9]+')))
-    DOT = Token(".")
+    EXP = Option(Series(Alternative(Drop(Text("E")), Drop(Text("e"))), Option(Alternative(Drop(Text("+")), Drop(Text("-")))), RegExp('[0-9]+')))
+    DOT = Text(".")
     FRAC = Option(Series(DOT, RegExp('[0-9]+')))
-    NEG = Token("-")
+    NEG = Text("-")
     INT = Alternative(Series(Option(NEG), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
     HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
-    UNICODE = Series(Series(Drop(Token("\\u")), dwsp__), HEX, HEX)
+    UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
     ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
     PLAIN = RegExp('[^"\\\\]+')
     _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
-    null = Series(Token("null"), dwsp__)
+    null = Series(Text("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Token('"')), _CHARACTERS, Drop(Token('"')), dwsp__, mandatory=1, err_msgs=error_messages__["string"], skip=skip_rules__["string"])
-    array = Series(Series(Drop(Token("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(_ARRAY_SEPARATOR, _element, mandatory=1)))), Series(Drop(Token("]")), dwsp__))
-    member = Series(string, Series(Drop(Token(":")), dwsp__), _element, mandatory=1, err_msgs=error_messages__["member"])
-    object = Series(Series(Drop(Token("{")), dwsp__), member, ZeroOrMore(Series(_OBJECT_SEPARATOR, member, mandatory=1)), Series(Drop(Token("}")), dwsp__), mandatory=3)
+    string = Series(Drop(Text('"')), _CHARACTERS, Drop(Text('"')), dwsp__, mandatory=1, err_msgs=error_messages__["string"], skip=skip_rules__["string"])
+    array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(_ARRAY_SEPARATOR, _element, mandatory=1)))), Series(Drop(Text("]")), dwsp__))
+    member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1, err_msgs=error_messages__["member"])
+    object = Series(Series(Drop(Text("{")), dwsp__), member, ZeroOrMore(Series(_OBJECT_SEPARATOR, member, mandatory=1)), Series(Drop(Text("}")), dwsp__), mandatory=3)
     _element.set(Alternative(object, array, string, number, bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
