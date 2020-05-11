@@ -1,4 +1,10 @@
-DHParser Version 0.9.1 (8.5.2019)
+DHParser Version 0.9.2 (11.5.2020)
+..................................
+
+- Moved to poetry-packaging <https://github.com/python-poetry/poetry>
+
+
+DHParser Version 0.9.1 (8.5.2020)
 .................................
 
 - Support for various variants of EBNF-Grammars (see examples/EBNF/grammar_examples)

@@ -206,17 +206,16 @@ def create_log(log_name: str) -> str:
 
 
 def append_log(log_name: str, *strings, echo: bool = False) -> None:
-    """
-    Appends one or more strings to the log-file with the name 'log_name', if
-    logging is turned on and log_name is not the empty string,
-    or log_name contains path information.
+    """Appends one or more strings to the log-file with the name `log_name`,
+    if logging is turned on and log_name is not the empty string, or
+    `log_name` contains path information.
 
     :param log_name: The name of the log file. The file must already exist.
-        (See: ``create_log()`` above).
-    :param *strings: One or more strings that will be written to the log-file.
+        (See: `create_log()` above).
+    :param strings: One or more strings that will be written to the log-file.
         No delimiters will be added, i.e. all delimiters like blanks or
-        linefeeds need to be added explicitely to the list of strings, before
-        calling 'append_log()'.
+        linefeeds need to be added explicitly to the list of strings, before
+        calling `append_log()`.
     :param echo: If True, the log message will be echoed on the terminal. This
         will also happen if logging is turned off.
     """

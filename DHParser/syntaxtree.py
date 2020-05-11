@@ -573,9 +573,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         as `node.attr.get(attribute, default)`, but with the advantage then
         other than `node.attr.get` it does not automatically create an
         attribute dictionary on (first) access.
+
         :param attribute: The attribute, the value of which shall be looked up
-        :param default:   A default value that is returned, in case attribute
-                          does not exist.
+        :param default: A default value that is returned, in case attribute
+            does not exist.
         :return: str
         """
         if self.has_attr():
@@ -587,6 +588,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Adds the attributes which are passed to `with_attr()` either as an
         attribute dictionary or as keyword parameters to the node's attributes
         and returns `self`.
+
         :param attr_dict:  a dictionary of attribute keys and values
         :param attributes: alternatively, a squences of keyword parameters
         :return: `self`
@@ -728,6 +730,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         `what`. If the parameters start and stop are given, the search is
         restricted to the children with indices from the half-open interval
         [start:end[. If no such child exists a ValueError is raised.
+
         :param what: the criterion by which the child is identified, the index
             of which shall be returned.
         :param start: the first index to start searching.
@@ -997,12 +1000,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         EXPERIMENTAL!!!
         Picks a segment from a tree beginning with start and ending with end.
+
         :param begin: the opening milestone (will be included in the result)
         :param end: the closing milestone (will be included in the result)
         :return: a tree(-segment) encompassing all nodes from the opening
-            milestone upto and including the closing milestone.
+            milestone up to and including the closing milestone.
         """
-        def index(parent: 'Node', nd: 'Node'):
+        def index(parent: 'Node', nd: 'Node') -> int:
             children = parent.children
             for i in range(len(children)):
                 if nd == children[i]:
@@ -1199,22 +1203,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                inline_tags: Set[str] = set(),
                omit_tags: Set[str] = set(),
                empty_tags: Set[str] = set()) -> str:
-        """
-        Returns content as XML-tree.
+        """Returns content as XML-tree.
 
-        Args:
-            src:  The source text or `None`. In case the source text is given,
+        :param src: The source text or `None`. In case the source text is given,
                 the position will also be reported as line and column.
-            indentation: The number of whitespaces for indentation
-            inline_tags:  A set of tag names, the content of which will always be written
+        :param indentation: The number of whitespaces for indentation
+        :param inline_tags:  A set of tag names, the content of which will always be written
                 on a single line, unless it contains explicit line feeds ('\n').
-            omit_tags:  A set of tags from which only the content will be printed, but
+        :param omit_tags: A set of tags from which only the content will be printed, but
                 neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,
                 which otherwise is not supported by the Node object, because it
                 requires its content to be either a tuple of children or string content.
-            empty_tags:  A set of tags which shall be rendered as empty elements, e.g.
+        :param empty_tags: A set of tags which shall be rendered as empty elements, e.g.
                 "<empty/>" instead of "<empty><empty>".
+        :return: The XML-string representing the tree originating in `self`
         """
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]

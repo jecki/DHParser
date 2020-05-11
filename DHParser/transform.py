@@ -592,6 +592,7 @@ def has_ancestor(context: List[Node], tag_name_set: AbstractSet[str], ancestry: 
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the context before the last node in the context.
+
     :param ancestry: determines how deep `has_ancestor` should dive into
         the ancestry. "1" means only the immediate parents wil be considered,
         "2" means also the grandparents, ans so on.
@@ -797,11 +798,13 @@ def change_tag_name(context: List[Node], tag_name: str, restriction: Callable = 
 def replace_tag_names(context: List[Node], replacements: Dict[str, str]):
     """
     Replaces the tag names of the children of the last node in the context
-    according to the raplcement dictionary.
-    :param context:      The current context (i.e. list of ancestors and current node)
-    :param replacements: A dictionary of tag_name. Each tag name of a child node that
-                         exists as a key in the dictionary will be replaces by the
-                         value for that key.
+    according to the replacement dictionary.
+
+    :param context: The current context (i.e. list of ancestors and current
+        node)
+    :param replacements: A dictionary of tag_name. Each tag name of a child
+        node that exists as a key in the dictionary will be replaces by
+        the value for that key.
     """
     for child in context[-1].children:
         child.tag_name = replacements.get(child.tag_name, child.tag_name)
@@ -1012,13 +1015,13 @@ def merge_connected(context: List[Node], content: Callable, delimiter: Callable,
     Merges sequences of content and delimiters. Other than `merge_adjacent()`, which
     does not make this distinction, delimiters at the fringe of content blocks are not
     included in the merge.
-    :param context:     The context, i.e. list of "ancestor" nodes, rangeing from the
-            root node (`context[0]`) to the current node (`context[-1]`)
-    :param content:     Condition to identify content nodes. (List[Node] -> bool)
-    :param delimiter:   Condition to identify delimiter nodes. (List[Node] -> bool)
-    :param content_name:    tag name for the merged content blocks
-    :param delimiter_name:  tag name for the merged delimiters at the fringe
-    :return:
+
+    :param context: The context, i.e. list of "ancestor" nodes, ranging from the
+        root node (`context[0]`) to the current node (`context[-1]`)
+    :param content: Condition to identify content nodes. (List[Node] -> bool)
+    :param delimiter: Condition to identify delimiter nodes. (List[Node] -> bool)
+    :param content_name: tag name for the merged content blocks
+    :param delimiter_name: tag name for the merged delimiters at the fringe
     """
     # first, merge all delimiters
     merge_adjacent(context, delimiter, delimiter_name)
@@ -1163,9 +1166,11 @@ def left_associative(context: List[Node]):
 def lean_left(context: List[Node], operators: AbstractSet[str]):
     """
     Turns a right leaning tree into a left leaning tree:
-    (op1 a (op2 b c))  ->  (op2 (op1 a b) c)
+
+        (op1 a (op2 b c))  ->  (op2 (op1 a b) c)
+
     If a left-associative operator is parsed with a right-recursive
-    parser, `lean_left' can be used to rearrange the tree structure
+    parser, `lean_left` can be used to rearrange the tree structure
     so that it properly reflects the order of association.
 
     ATTENTION: This transformation function moves forward recursively,
@@ -1453,13 +1458,15 @@ def normalize_position_representation(context: List[Node], position: PositionTyp
 
 @transformation_factory(int, tuple, collections.abc.Callable)
 def insert(context: List[Node], position: PositionType, node_factory: Callable):
-    """
-    Inserts a delimiter at a specific position within the children. If
-    `position` is `None` nothing will be inserted. Position values
-    greater or equal the number of children mean that the delimiter will
-    be appended to the tuple of children.
+    """Inserts a delimiter at a specific position within the children. If
+    `position` is `None` nothing will be inserted. Position values greater
+    or equal the number of children mean that the delimiter will be appended
+    to the tuple of children.
+
     Example:
+
         insert(pos_of('paragraph'), node_maker('LF', '\n'))
+
     """
     pos_tuple = normalize_position_representation(context, position)
     if not pos_tuple:

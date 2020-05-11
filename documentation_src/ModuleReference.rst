@@ -152,11 +152,22 @@ Finally, DHParser comprises a number of "toolkit"-modules which
 define helpful functions and classes that will are used at different
 places throughout the other DHParser-modules.
 
+Module ``server``
+------------------
+
+.. automodule:: server
+   :members:
 
 Module ``toolkit``
 ------------------
 
 .. automodule:: toolkit
+   :members:
+
+Module ``trace``
+------------------
+
+.. automodule:: trace
    :members:
 
 Module ``log``

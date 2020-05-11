@@ -34,18 +34,20 @@ of module `server`, i.e. the compilation-modules, to decide.
 
 The communication, i.e. requests and responses, follows the json-rpc protocol:
 
-    https://www.jsonrpc.org/specification
+<https://www.jsonrpc.org/specification>
 
 For JSON see:
 
-    https://json.org/
+<https://json.org/>
 
 The `server`-module contains some rudimentary support for the language server protocol.
 For the specification and implementation of the language server protocol, see:
-    https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
-    https://microsoft.github.io/language-server-protocol/
-    https://langserver.org/
 
+<https://code.visualstudio.com/api/language-extensions/language-server-extension-guide>
+
+<https://microsoft.github.io/language-server-protocol/>
+
+<https://langserver.org/>
 """
 
 import asyncio
@@ -599,50 +601,52 @@ def connection_cb_dummy(connection: Connection) -> None:
 
 
 class Server:
-    """
+    """Class Server contains all the boilerplate code for a
+    Language-Server-Protocol-Server.
 
-    Attributes:
-        server_name: A name for the server. Defaults to 'CLASSNAME_OBJECTID'
-        strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls. If
-                `False` json-rpc calls will be processes even without prior
-                initialization, just like plain data or http calls.
-        cpu_bound:  Set of function names of functions that are cpu-bound and
-                will be run in separate processes
-        blocking:   Set of functions that contain blocking calls (e.g. IO-calls)
-                and will therefore be run in separate threads.
-        rpc_table: Table mapping LSP-method names to Python functions
-        known_methods: Set of all known LSP-methods. This includes the methods
-                in the rpc-table and the four initialization methods,
-                'initialize', "initialized', 'shudown', 'exit'
-        connection_callback:  A callback function that is called with the
-                connection object as argument when a connection to a client
-                is established
-        max_data_size:  Maximal size of a data chunk that can be read by the
-                server at a time.
-        stage:  The operation stage, the server is in. Can be on of the four values:
-                SERVER_OFFLINE, SERVER_STARTING, SERVER_ONLINE, SERVER_TERMINATING
-        host:   The host, the server runs on, e.g. "127.0.0.1"
-        port:   The port of the server, e.g. 8888
-        server: The asyncio.Server if the server is online, or `None`.
-        serving_task:  The task in which the asyncio.Server is run.
-        stop_response:  The response string that is written to the stream as
-                answer to a stop request.
-        echo_log:   Read from the global configuration. If True, any log message
-                will also be echoed on the console.
-        log_file:  The file-name of the server-log.
-        use_jsonrpc_header:  Read from the global configuration. If True, jsonrpc
-                calls or responses will always be preceeded by a simple header of
-                the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
-                the byte-size of the rpc-package.
-        exec:   An instance of the execution environment that delegates tasks to
-                separate processes, threads, asynchronous tasks or simple function
-                calls.
-        connection: An instance of the connection class representing the data of the
-                current connection or None, if there is no connection at the moment.
-                Note: There can be only one connection to the server at a time!
-        kill_switch:  If True the, the server will be shut down.
-        loop:   The asyncio event loop within which the asyncio stream server is
-                run.
+    :param server_name: A name for the server. Defaults to
+        `CLASSNAME_OBJECTID`
+    :param strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
+        If `False` json-rpc calls will be processes even without prior
+        initialization, just like plain data or http calls.
+    :param cpu_bound: Set of function names of functions that are cpu-bound
+        and will be run in separate processes.
+    :param blocking: Set of functions that contain blocking calls
+        (e.g. IO-calls) and will therefore be run in separate threads.
+    :param rpc_table: Table mapping LSP-method names to Python functions
+    :param known_methods: Set of all known LSP-methods. This includes the
+        methods in the rpc-table and the four initialization methods,
+        `initialize()`, `initialized()`, `shudown()`, `exit`
+    :param connection_callback: A callback function that is called with the
+        connection object as argument when a connection to a client is
+        established
+    :param max_data_size: Maximal size of a data chunk that can be read by
+        the server at a time.
+    :param stage:  The operation stage, the server is in. Can be on of the four
+        values: `SERVER_OFFLINE`, `SERVER_STARTING`, `SERVER_ONLINE`,
+        `SERVER_TERMINATING`
+    :param host: The host, the server runs on, e.g. "127.0.0.1"
+    :param port: The port of the server, e.g. 8888
+    :param server: The asyncio.Server if the server is online, or `None`.
+    :param serving_task: The task in which the asyncio.Server is run.
+    :param stop_response:  The response string that is written to the stream
+        as answer to a stop request.
+    :param echo_log: Read from the global configuration. If True, any log
+        message will also be echoed on the console.
+    :param log_file: The file-name of the server-log.
+    :param use_jsonrpc_header: Read from the global configuration. If True,
+        jsonrpc-calls or responses will always be preceeded by a simple header
+        of the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
+        the byte-size of the rpc-package.
+    :param exec: An instance of the execution environment that delegates tasks
+        to separate processes, threads, asynchronous tasks or simple function
+        calls.
+    :param connection: An instance of the connection class representing the
+        data of the current connection or None, if there is no connection at
+        the moment. There can be only one connection to the server at a time!
+    :param kill_switch: If True the, the server will be shut down.
+    :param loop: The asyncio event loop within which the asyncio stream server
+        is run.
     """
     def __init__(self, rpc_functions: RPC_Type,
                  cpu_bound: Set[str] = ALL_RPCs,
@@ -1342,10 +1346,9 @@ def spawn_server(host: str = USE_DEFAULT_HOST,
                  port: int = USE_DEFAULT_PORT,
                  parameters: Union[Tuple, Callable] = dummy_server) -> Process:
     """
-    Start DHParser-Server in a separate process and return.
-    Useful for writing test code.
-    WARNING: Does not seem to work with multiprocessing.set_start_method('spawn')
-             under linux !?
+    Start DHParser-Server in a separate process and return. Can be used
+    for writing test code. WARNING: Does not seem to work with
+    `multiprocessing.set_start_method('spawn')` under linux !?
     """
     if isinstance(parameters, tuple) or isinstance(parameters, list):
         p = Process(target=run_server, args=(host, port, *parameters))

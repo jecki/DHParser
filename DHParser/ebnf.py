@@ -150,168 +150,167 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 class EBNFGrammar(Grammar):
     r"""Parser for a FlexibleEBNF source file.
 
-    # This grammar is tuned for flexibility, that is, it supports as many
-    # different flavors of EBNF as possible. However, this flexibility
-    # comes at the cost of some ambiguities. In particular:
-    #
-    #    1. the alternative OR-operator / could be mistaken for the start
-    #       of a regular expression and vice versa, and
-    #    2. character ranges [a-z] can be mistaken for optional blocks
-    #       and vice versa
-    #
-    # A strategy to avoid these ambiguities is to do all of the following:
-    #
-    #     - replace the free_char-parser by a never matching parser
-    #     - if this is done, it is safe to replace the char_range_heuristics-
-    #       parser by an always matching parser
-    #     - replace the regex_heuristics by an always matching parser
-    #
-    # Ambiguities can also be avoided by NOT using all the syntactic variants
-    # made possible by this EBNF-grammar within one and the same EBNF-document.
+    This grammar is tuned for flexibility, that is, it supports as many
+    different flavors of EBNF as possible. However, this flexibility
+    comes at the cost of some ambiguities. In particular:
 
+       1. the alternative OR-operator / could be mistaken for the start
+          of a regular expression and vice versa, and
+       2. character ranges [a-z] can be mistaken for optional blocks
+          and vice versa
 
+    A strategy to avoid these ambiguities is to do all of the following:
 
-    @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
+        - replace the free_char-parser by a never matching parser
+        - if this is done, it is safe to replace the char_range_heuristics-
+          parser by an always matching parser
+        - replace the regex_heuristics by an always matching parser
+
+    Ambiguities can also be avoided by NOT using all the syntactic variants
+    made possible by this EBNF-grammar within one and the same EBNF-document.
+
+    EBNF-definition of the Grammar::
+
+        @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
         # comments can be either C-Style: /* ... */
         # or pascal/modula/oberon-style: (* ... *)
         # or python-style: # ... \n, excluding, however, character markers: #x20
-    @ whitespace = /\s*/                            # whitespace includes linefeed
-    @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-    @ anonymous  = pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
-    @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
-    @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+
+        @ whitespace = /\s*/                            # whitespace includes linefeed
+        @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+        @ anonymous  = pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+        @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
+        @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+
+        # re-entry-rules for resuming after parsing-error
+
+        @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
+        @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
+
+        # specialized error messages for certain cases
+
+        @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
+                                   'be a directive and the directive symbol @ is missing\nor the error is '
+                                   'due to inconsistent use of the comma as a delimiter\nfor the elements '
+                                   'of a sequence.'
 
 
-    # re-entry-rules for resuming after parsing-error
+        #: top-level
 
-    @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
-    @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
+        syntax     = ~ { definition | directive } EOF
+        definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
 
+        directive  = "@" §symbol "=" (regexp | literals | procedure | symbol !DEF)
+                     { "," (regexp | literals | procedure | symbol !DEF) } & FOLLOW_UP
+        literals   = { literal }+                       # string chaining, only allowed in directives!
+        procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
-    # specialized error messages for certain cases
-
-    @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
-                               'be a directive and the directive symbol @ is missing\nor the error is '
-                               'due to inconsistent use of the comma as a delimiter\nfor the elements '
-                               'of a sequence.'
-
-
-    #: top-level
-
-    syntax     = ~ { definition | directive } EOF
-    definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
-
-    directive  = "@" §symbol "=" (regexp | literals | procedure | symbol !DEF)
-                 { "," (regexp | literals | procedure | symbol !DEF) } & FOLLOW_UP
-    literals   = { literal }+                       # string chaining, only allowed in directives!
-    procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
-
-    FOLLOW_UP  = `@` | symbol | EOF
+        FOLLOW_UP  = `@` | symbol | EOF
 
 
-    #: components
+        #: components
 
-    expression = sequence { :OR~ sequence }
-    sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
-                 { :AND~ ["§"] ( interleave | lookaround ) }
-    interleave = difference { "°" ["§"] difference }
-    lookaround = flowmarker § (oneormore | pure_elem)
-    difference = term ["-" § (oneormore | pure_elem)]
-    term       = oneormore | counted | repetition | option | pure_elem
-
-
-    #: elements
-
-    countable  = option | oneormore | element
-    pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
-    element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure it's not a definition
-               | literal
-               | plaintext
-               | regexp
-               | char_range
-               | character ~
-               | any_char
-               | whitespace
-               | group
+        expression = sequence { :OR~ sequence }
+        sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
+                     { :AND~ ["§"] ( interleave | lookaround ) }
+        interleave = difference { "°" ["§"] difference }
+        lookaround = flowmarker § (oneormore | pure_elem)
+        difference = term ["-" § (oneormore | pure_elem)]
+        term       = oneormore | counted | repetition | option | pure_elem
 
 
-    ANY_SUFFIX = /[?*+]/
+        #: elements
+
+        countable  = option | oneormore | element
+        pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
+        element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure it's not a definition
+                   | literal
+                   | plaintext
+                   | regexp
+                   | char_range
+                   | character ~
+                   | any_char
+                   | whitespace
+                   | group
 
 
-    #: flow-operators
-
-    flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-               | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
-    retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+        ANY_SUFFIX = /[?*+]/
 
 
-    #: groups
+        #: flow-operators
 
-    group      = "(" no_range §expression ")"
-    oneormore  = "{" no_range expression "}+" | element "+"
-    repetition = "{" no_range §expression "}" | element "*" no_range
-    option     = !char_range "[" §expression "]" | element "?"
-    counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~ §countable
-
-    range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
-    no_range   = !multiplier | &multiplier :TIMES
-    multiplier = /[1-9]\d*/~
+        flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+                   | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
+        retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
 
 
-    #: leaf-elements
+        #: groups
 
-    symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
-    literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
-               | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
-    plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
-               | /´(?:(?<!\\)\\´|[^´])*?´/~
-    regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
-    # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-    char_range = `[` &char_range_heuristics
-                     [`^`] (character | free_char) { [`-`] character | free_char } "]"
-    character  = :CH_LEADIN HEXCODE
-    free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
-    any_char   = "."
-    whitespace = /~/~                               # insignificant whitespace
+        group      = "(" no_range §expression ")"
+        oneormore  = "{" no_range expression "}+" | element "+"
+        repetition = "{" no_range §expression "}" | element "*" no_range
+        option     = !char_range "[" §expression "]" | element "?"
+        counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~ §countable
 
-    #: delimiters
-
-    EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
-               [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
-
-    DEF        = `=` | `:=` | `::=` | `<-`
-    OR         = `|` | `/` !regex_heuristics
-    AND        = `,` | ``
-    ENDL       = `;` | ``
-
-    RNG_BRACE  = :BRACE_SIGN
-    BRACE_SIGN = `{` | `(`
-    RNG_DELIM  = `,`
-    TIMES      = `*`
-
-    RE_LEADIN  = `/` &regex_heuristics | `^/`
-    RE_LEADOUT = `/`
-
-    CH_LEADIN  = `0x` | `#x`
-
-    #: heuristics
-
-    char_range_heuristics  = ! ( /[\n\t ]/
-                               | ~ literal_heuristics
-                               | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
-    literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
-                           | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
-                           | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
-                           | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
-                           | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-    regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+        range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
+        no_range   = !multiplier | &multiplier :TIMES
+        multiplier = /[1-9]\d*/~
 
 
-    #: basic-regexes
+        #: leaf-elements
 
-    RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
-    SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
-    HEXCODE    = /[A-Fa-f0-9]{1,8}/
+        symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
+        literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
+                   | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+        plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+                   | /´(?:(?<!\\)\\´|[^´])*?´/~
+        regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+        # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+        char_range = `[` &char_range_heuristics
+                         [`^`] (character | free_char) { [`-`] character | free_char } "]"
+        character  = :CH_LEADIN HEXCODE
+        free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
+        any_char   = "."
+        whitespace = /~/~                               # insignificant whitespace
+
+        #: delimiters
+
+        EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+                   [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
+
+        DEF        = `=` | `:=` | `::=` | `<-`
+        OR         = `|` | `/` !regex_heuristics
+        AND        = `,` | ``
+        ENDL       = `;` | ``
+
+        RNG_BRACE  = :BRACE_SIGN
+        BRACE_SIGN = `{` | `(`
+        RNG_DELIM  = `,`
+        TIMES      = `*`
+
+        RE_LEADIN  = `/` &regex_heuristics | `^/`
+        RE_LEADOUT = `/`
+
+        CH_LEADIN  = `0x` | `#x`
+
+        #: heuristics
+
+        char_range_heuristics  = ! ( /[\n\t ]/
+                                   | ~ literal_heuristics
+                                   | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+        literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
+                               | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
+                               | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
+                               | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
+                               | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
+        regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+
+
+        #: basic-regexes
+
+        RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
+        SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
+        HEXCODE    = /[A-Fa-f0-9]{1,8}/
     """
     countable = Forward()
     element = Forward()

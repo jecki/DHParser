@@ -266,8 +266,8 @@ def compile_source(source: str,
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
                    compiler: CompilerCallable,  # Node (AST), Source -> Any
                    preserve_AST: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
-    """
-    Compiles a source in four stages:
+    """Compiles a source in four stages:
+
     1. Pre-Processing (if needed)
     2. Parsing
     3. AST-transformation
@@ -296,7 +296,7 @@ def compile_source(source: str,
         1. The result as returned by the compiler or ``None`` in case of failure
         2. A list of error or warning messages
         3. The root-node of the abstract syntax tree if `preserve_ast` is True
-           or `None` otherwise.
+            or `None` otherwise.
     """
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str

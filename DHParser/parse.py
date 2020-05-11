@@ -2943,7 +2943,9 @@ def optional_last_value(text: Union[StringView, str], stack: List[str]) -> str:
     """Matches `text` with the most recent value on the capture stack or
     with the empty string, i.e. `optional_match` never returns `None` but
     either the value on the stack or the empty string.
+
     Use case: Implement shorthand notation for matching tags, i.e.:
+
         Good Morning, Mrs. <emph>Smith</>!
     """
     value = stack[-1]
