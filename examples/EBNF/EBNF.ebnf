@@ -129,7 +129,7 @@ whitespace = /~/~                               # insignificant whitespace
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
            [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
-DEF        = `=` | `:=` | `::=` | `<-`
+DEF        = `=` | `:=` | `::=` | `<-` | `: `   # with `: `, the retrieve marker must never be followed by a blank!
 OR         = `|` | `/` !regex_heuristics
 AND        = `,` | ``
 ENDL       = `;` | ``
@@ -162,5 +162,4 @@ regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
 RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
 HEXCODE    = /[A-Fa-f0-9]{1,8}/
-
 

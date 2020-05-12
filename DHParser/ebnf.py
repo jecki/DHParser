@@ -278,7 +278,7 @@ class EBNFGrammar(Grammar):
         EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
                    [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
-        DEF        = `=` | `:=` | `::=` | `<-`
+        DEF        = `=` | `:=` | `::=` | `<-` | `: `   # with `: `, retrieve marker mustn't be followed by a blank!
         OR         = `|` | `/` !regex_heuristics
         AND        = `,` | ``
         ENDL       = `;` | ``
@@ -344,7 +344,7 @@ class EBNFGrammar(Grammar):
     ENDL = Capture(Alternative(Text(";"), Text("")))
     AND = Capture(Alternative(Text(","), Text("")))
     OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))))
-    DEF = Capture(Alternative(Text("="), Text(":="), Text("::="), Text("<-")))
+    DEF = Capture(Alternative(Text("="), Text(":="), Text("::="), Text("<-"), Text(": ")))
     EOF = Drop(Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value)))))))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)

@@ -245,6 +245,9 @@ def main():
                 if _errors:
                     print('\n'.join(str(err) for err in _errors))
                     sys.exit(1)
+                else:
+                    print('%s successfully compiled to %s' %
+                          (sys.argv[1], os.path.splitext(sys.argv[1])[0] + 'Parser.py'))
             else:
                 create_project(sys.argv[1])
     else:
