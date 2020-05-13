@@ -36,6 +36,13 @@ classifiers = [
     'Topic :: Software Development :: Compilers'
 ]
 
+packages = [
+    { include = "DHParser" },
+    { include = "tests", format = "sdist" },
+    { include = "documentation_src", format = "sdist" },
+    { include = "examples", format = "sdist"}
+]
+
 [tool.poetry.dependencies]
 python = "^3.5"
 regex = { version = "^2.5", optional = true }
@@ -48,5 +55,5 @@ pytest = "^5.0"
 dhparser = 'DHParser.scripts.dhparser:main'
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=0.12", "Cython>=0.27.1", "setuptools", "wheel"]
 build-backend = "poetry.masonry.api"
