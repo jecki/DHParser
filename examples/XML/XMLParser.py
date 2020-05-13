@@ -83,7 +83,7 @@ class XMLGrammar(Grammar):
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
     markupdecl = Forward()
-    source_hash__ = "d2e07253aa32c7c42cec71d8331fa227"
+    source_hash__ = "2368dc82b98935091a4e8e1700bb0418"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

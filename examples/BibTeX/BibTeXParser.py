@@ -19,7 +19,7 @@ dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 if dhparser_path not in sys.path:
     sys.path.append(dhparser_path)
 
-from DHParser import is_filename, load_if_file, \
+from DHParser import is_filename, load_if_file, get_config_value, \
     Grammar, Compiler, nil_preprocessor, access_thread_locals, \
     Lookbehind, Lookahead, Alternative, Pop, Required, Text, Synonym, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
@@ -59,10 +59,10 @@ class BibTeXGrammar(Grammar):
     r"""Parser for a BibTeX source file.
     """
     text = Forward()
-    source_hash__ = "197c4727de18b0cb980ff33a8e33f5ca"
-    static_analysis_pending__ = [True]
+    source_hash__ = "d71e3c66426cb68671a79bc63b46cb9e"
+    anonymous__ = re.compile('..(?<=^)')
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    resume_rules__ = {}
     COMMENT__ = r'(?i)%[^\n]*\n'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -88,9 +88,10 @@ class BibTeXGrammar(Grammar):
     bibliography = Series(ZeroOrMore(Alternative(preamble, comment, entry)), wsp__, EOF)
     root__ = bibliography
     
+
 def get_grammar() -> BibTeXGrammar:
     """Returns a thread/process-exclusive BibTeXGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()    
+    THREAD_LOCALS = access_thread_locals()
     try:
         grammar = THREAD_LOCALS.BibTeX_00000001_grammar_singleton
     except AttributeError:
@@ -98,6 +99,10 @@ def get_grammar() -> BibTeXGrammar:
         if hasattr(get_grammar, 'python_src__'):
             THREAD_LOCALS.BibTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
         grammar = THREAD_LOCALS.BibTeX_00000001_grammar_singleton
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
     return grammar
 
 

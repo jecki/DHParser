@@ -2787,6 +2787,7 @@ class Lookahead(FlowParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
+            # TODO: Delete following comment
             # static analysis requires lookahead to be disabled at document end
             # or (self.grammar.static_analysis_pending__ and not text)):
             return (EMPTY_NODE if self.anonymous else Node(self.tag_name, '')), text

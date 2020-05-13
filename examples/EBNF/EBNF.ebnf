@@ -49,7 +49,7 @@
 #: top-level
 
 syntax     = ~ { definition | directive } EOF
-definition = symbol §:DEF~ expression :ENDL~ & FOLLOW_UP
+definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
 
 directive  = "@" §symbol "=" (regexp | literals | procedure | symbol !DEF)
              { "," (regexp | literals | procedure | symbol !DEF) } & FOLLOW_UP
@@ -91,7 +91,7 @@ ANY_SUFFIX = /[?*+]/
 #: flow-operators
 
 flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
-           | "<-!" | "<-&"                      # '<-' negative lookbehind, '<-&' positive lookbehind
+           | "<-!" | "<-&"                      # '<-!' negative lookbehind, '<-&' positive lookbehind
 retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
 
 
@@ -129,7 +129,7 @@ whitespace = /~/~                               # insignificant whitespace
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
            [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
-DEF        = `=` | `:=` | `::=` | `<-` | `: `   # with `: `, the retrieve marker must never be followed by a blank!
+DEF        = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!
 OR         = `|` | `/` !regex_heuristics
 AND        = `,` | ``
 ENDL       = `;` | ``

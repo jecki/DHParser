@@ -7,6 +7,7 @@
 #
 ######################################################################
 
+@ literalws   = right
 @ whitespace  = /\s*/
 @ ignorecase  = True
 @ comment     = /%[^\n]*\n/
@@ -46,7 +47,7 @@ NO_BLANK_STRING         = { /[^ \t\n,%&_]+/ | ESC }+ ~
 COMMA_TERMINATED_STRING = { /[^,%&_ \t]+/ | ESC | WS }
 CONTENT_STRING          = { /[^{}%&_ \t]+/ | ESC | WS }+
 
-ESC           = -&/\\/ /[%&_]/          # escaped characters
+ESC           = <-&/\\/ /[%&_]/          # escaped characters
 WS            = &/[ \t]*%/~ | /[ \t]+/  # non-trailing whitespace
 
 EOF           =  !/./

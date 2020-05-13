@@ -61,7 +61,7 @@ class ArithmeticSimpleGrammar(Grammar):
     r"""Parser for an ArithmeticSimple source file.
     """
     expression = Forward()
-    source_hash__ = "7ac678ba42d15fcf537d9c1e4d254f0a"
+    source_hash__ = "f2218622f7c6a6b491c1ed7df8b07e86"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
