@@ -8,7 +8,7 @@ import sys
 
 LOGGING = ''
 
-TEST_DIRNAME = 'test_grammar'
+TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)
 dhparserdir = os.path.abspath(os.path.join(scriptpath, '{reldhparserdir}'))

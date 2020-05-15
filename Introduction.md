@@ -468,7 +468,7 @@ AST-transformation in the script `LyrikCompiler_example.py`:
         "*": replace_by_single_child
     }
 
-With DHParser AST-transformations are specified declaratively, by specifying the names
+With DHParser AST-transformations are specified in a declarative style by specifying the names
 and possibly parameters of the transformation-rules that are to be applied to each tag. 
 (It is possible to add custom rules, if the stock set of transformation rules does not 
 suffice.) This keeps the specification of the AST-transformation simple and concise. At

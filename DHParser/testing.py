@@ -505,7 +505,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
-                              'expected failure!\n%s' % (test_name, parser_name, cst.serialize()))
+                              'expected failure!\n' % (test_name, parser_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
                 if is_logging() and track_history:
@@ -707,7 +707,7 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
                 the grammar's symbols under that section or an EBNF-grammar
                 or file name of an EBNF-grammar from which the symbols shall
                 be extracted.
-        path: the path to the grammar-test directory (usually 'test_grammar').
+        path: the path to the grammar-test directory (usually 'tests_grammar').
                 If the last element of the path does not exist, the directory
                 will be created.
         fmt: the test-file-format. At the moment only '.ini' is supported

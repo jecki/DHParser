@@ -156,7 +156,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     transformation-functions that receive a collection as their second
     parameter and do not have any further parameters. In this case a
     list of parameters passed to the factory function will be converted
-    into a collection.
+    into a single collection-parameter.
 
     The primary benefit is the readability of the transformation-tables.
 
@@ -267,8 +267,8 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
 
 def key_tag_name(node: Node) -> str:
     """
-    Returns the tag name of the node as key of selecting transformations
-    from the transformation table.
+    Returns the tag name of the node as key for selecting transformations
+    from the transformation table in function `traverse`.
     """
     return node.tag_name
 

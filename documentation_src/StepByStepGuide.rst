@@ -23,6 +23,23 @@ learn:
    the case of typical Digital-Humanities-projects.
 
 
+System-Requirements
+-------------------
+
+DHParser runs on Linux, MacOS and Windows. The following step by step guide
+assumes that you already have a Python-interpreter installed on your system and
+added the `python`-command to your PATH-variable. (The latter is usually done
+automatically when installing Python.) Furthermore, DHParser only works with
+Python Version 3.5.3 and above. In order to verify this, open a shell or command line
+and type::
+
+    $ python --version
+    Python 3.7.7
+
+If `Python` plus a version number greater or equal 3.5.3 does not appear, you'll
+need to install Python from https://python.org .
+
+
 Setting up a new DHParser project
 =================================
 
@@ -39,6 +56,7 @@ a Unix (Linux) environment. The same can most likely be done on other
 operating systems in a very similar way, but there might be subtle
 differences.
 
+
 Installing DHParser from the git repository
 -------------------------------------------
 
@@ -53,19 +71,43 @@ you should recognise the following subdirectories and files. There are more
 files and directories for sure, but those will not concern us for now::
 
     DHParser/            - the DHParser python packages
+    DHParser/scripts     - contains the command line tool "dhparser.py"
     documentation/       - DHParser's documentation in html-form
     documentation_src    - DHParser's documentation in reStructedText-Format
     examples/            - some examples for DHParser (mostly incomplete)
     experimental/        - an empty directory for experimenting
     test/                - DHParser's unit-tests
-    dhparser.py          - DHParser's command line tool for setting up projects
     README.md            - General information about DHParser
     LICENSE.txt          - DHParser's license. It's open source (hooray!)
     Introduction.md      - An introduction and appetizer for DHParser
 
-In order to verify that the installation works, you can simply run the
-"dhparser.py" script and, when asked, chose "3" for the self-test. If the
-self-test runs through without error, the installation has succeeded.
+In order to verify that the installation works, you can run the
+`dhparser.py- script and, when asked, chose "3" for the self-test::
+
+    $ python DHParser/scripts/dhparser.py
+    Usage:
+        dhparser.py PROJECTNAME  - to create a new project
+        dhparser.py FILENAME.ebnf  - to produce a python-parser from an EBNF-grammar
+        dhparser.py --selftest  - to run a self-test
+
+
+    Would you now like to ...
+      [1] create a new project
+      [2] compile an ebnf-grammar
+      [3] run a self-test
+      [q] to quit
+    Please chose 1, 2 or 3> 3
+    DHParser selftest...
+
+
+If the self-test runs through without error, the installation has succeeded.
+
+.. note:: On Microsoft Windows Systems you'll have to use the backslash `\`
+    instead of the forward slash `/` as a delimiter for file paths. Thus,
+    if you are not working on MacOS oder Linux (which I recommend), you'll
+    have to type `python DHParser\scripts\dhparser.py` on the command line
+    ("Eingabeaufforderung") to run the script.
+
 
 Starting a new DHParser project
 -------------------------------
@@ -87,8 +129,8 @@ contains the following files::
                             the grammar (if necessary) and runs the unit tests
     poetryServer.py     - a script that starts the poetry parser as a server
                           which can save startup time among other benefits
-    grammar_tests/01_test_Regular_Expressions.ini      - a demo unit test
-    grammar_tests/02_test_Structure_and_Components.ini - another unit test
+    tests_grammar/01_test_Regular_Expressions.ini      - a demo unit test
+    tests_grammar/02_test_Structure_and_Components.ini - another unit test
 
 Now, if you look into the file "example.dsl" you will find that it contains a
 simple sequence of words, namely "Life is but a walking shadow". In fact, the
@@ -106,18 +148,18 @@ exists a new file "poetryParser.py" in the project directory. This is an
 auto-generated compiler-script for our DSL. You can use this script to compile
 any source file of your DSL, like "example.dsl". Let's try::
 
-    $ python poetryParser.py example.dsl
+    $ python poetryParser.py --xml example.dsl
 
 The output is a block of pseudo-XML, looking like this::
 
     <document>
       <WORD>
-        <:RegExp>Life</:RegExp>
-        <:Whitespace> </:Whitespace>
+        <ANONYMOUS_RegExp__>Life</ANONYMOUS_RegExp__>
+        <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
       </WORD>
       <WORD>
-        <:RegExp>is</:RegExp>
-        <:Whitespace> </:Whitespace>
+        <ANONYMOUS_RegExp__>is</ANONYMOUS_RegExp__>
+        <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
       </WORD>
     ...
 
@@ -227,8 +269,8 @@ with a text editor and add a full stop::
 Now, try to compile "examples.dsl" with the compile-script::
 
     $ python poetryParser.py example.dsl
-    example.dsl:1:29: Error (1010): EOF expected; ".\n " found!
-    example.dsl:1:30: Error (1040): Parser stopped before end! trying to recover...
+    example.dsl:1:29: Error (1010): EOF expected, ».\n ...« found!
+    example.dsl:1:29: Error (1040): Parser stopped before end! Terminating parser.
 
 Since the grammar, obviously, did not allow full stops so far, the parser
 returns an error message. The error message is pretty self-explanatory in this
@@ -279,7 +321,7 @@ and the definition of the rule on the right hand side.
     Because regular languages are a subset of context-free languages, parsers
     for context-free languages can do all the work that regular expressions can
     do. But it makes things easier - and, in the case of DHParser, also faster
-    - to have them.
+    - to use them.
 
 In our case the text as a whole, conveniently named "document" (any other name
 would be allowed, too), consists of a leading whitespace, a possibly empty
@@ -430,6 +472,7 @@ can now try to formulate this in the grammar.::
     document = ~ { sentence } §EOF
     sentence = part {"," part } "."
     part     = { WORD }              # a subtle mistake, right here!
+
     WORD     =  /\w+/~               # something forgotten, here!
     EOF      =  !/./
 
@@ -466,8 +509,10 @@ Again, we recompile the grammar and run the test at the same time by running
 the testing-script::
 
     $ python tst_poetry_grammar.py
+    ...
     Errors found by unit test "03_test_sentence.ini":
-    Fail test "F2" for parser "sentence" yields match instead of expected failure!
+
+        Fail test "F2" for parser "sentence" yields match instead of expected failure!
 
 Too bad, something went wrong here. But what? Didn't the definition of the
 rule "sentence" make sure that parts of sentences are, if at all, only be
@@ -509,7 +554,8 @@ can reduce the risk of such a regression error. This time the tests run
 through, nicely. So let's try the parser on our new example::
 
     $ python poetryParser.py macbeth.dsl
-    macbeth.dsl:1:1: Error: EOF expected; "Life’s but" found!
+    macbeth.dsl:1:1: Error (1010): EOF expected; "Life’s but" found!
+    macbeth.dsl:1:1: Error (1040): Parser stopped before end! Terminating parser.
 
 That is strange. Obviously, there is an error right at the beginning (line 1
 column 1). But what could possibly be wrong with the word "Life". Now you might
@@ -569,6 +615,14 @@ parser matched, the last column displays exactly that section of the text that
 the parser did match. If the parser did not match, the last column displays
 the text that still lies ahead and has not yet been parsed.
 
+.. note:: You may wonder, why in the parsing history `EOF` seems to match.
+    But in fact it is not EOF that matched, but only the part of EOF after
+    the "negative lookahead"-operator '!' (see "poetry.ebnf" for the definition
+    of EOF), which is the regular expression for an arbitrary character `/./`.
+    Now if that latter part of EOF matched, becuse of the negative lookahead
+    operator in front of it, EOF did in fact not match. (The Visualization
+    of negative lookahead operators might be ammended in the future.)
+
 In our concrete example, we can see that the parser "WORD" matches "Life", but
 not "Life’s" or "’s". And this ultimately leads to the failure of the parsing
 process as a whole. The most simple solution would be to add the apostrophe to
@@ -614,22 +668,20 @@ that the output is rather verbose. Just looking at the beginning of the
 output, we find::
 
     <document>
-       <sentence>
-           <part>
-               <WORD>
-                   <:RegExp>Life’s</:RegExp>
-                   <:Whitespace> </:Whitespace>
-               </WORD>
-               <WORD>
-                   <:RegExp>but</:RegExp>
-                   <:Whitespace> </:Whitespace>
-               </WORD>
+      <sentence>
+        <part>
+          <WORD>
+            <ANONYMOUS_RegExp__>Life's</ANONYMOUS_RegExp__>
+            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+          </WORD>
+          <WORD>
+            <ANONYMOUS_RegExp__>but</ANONYMOUS_RegExp__>
+            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+          </WORD>
     ...
 
-But why do we need to know all those details! Why would we need a
-":ZeroOrMore" element inside the "<document>" element, if the
-"<sentence>"-elements could just as well be direct descendants of the
-"<document>"-element? Why do we need the information that "Life’s" has been
+You might notice that the output is fairly verbose.
+Why, for example, do we need the information that "Life’s" has been
 captured by a regular expression parser? Wouldn't it suffice to know that the
 word captured is "Life’s"? And is the whitespace really needed at all? If the
 words in a sequence are separated by definition by whitespace, then it would
@@ -637,13 +689,10 @@ suffice to have the word without whitespace in our tree, and to add whitespace
 only later when transforming the tree into some kind of output format. (On the
 other hand, it might be convenient to have it in the tree never the less...)
 
-Well, the answer to most of these questions is that what our compilation
-script yields is more or less the output that the parser yields which in turn
-is the *concrete syntax tree* of the parsed text. Being a concrete syntax tree
-it is by its very nature very verbose, because it captures every minute
-syntactic detail described in the grammar and found in the text, no matter how
-irrelevant it is, if we are primarily interested in the structure of our text.
-In order for our tree to become more handy we have to transform it into an
+The answer to these questions is that what our compilation
+script yields is the *concrete syntax tree* of the parsed text. The concrete syntax tree
+captures every minute syntactic detail described in the grammar and found in the text.
+ we have to transform it into an
 *abstract syntax tree* first, which is called thus because it abstracts from
 all details that deem us irrelevant. Now, which details we consider as
 irrelevant is almost entirely up to ourselves. And we should think carefully
@@ -672,6 +721,7 @@ can easily write your own. How does this look like? ::
     "EOF": [],
     "*": replace_by_single_child
     }
+
 
 You'll find this table in the script ``poetryParser.py``, which is also the
 place where you edit the table, because then it is automatically used when
@@ -744,105 +794,48 @@ Running the "poetryParser.py"-script on "macbeth.dsl" again, yields::
     <document>
       <sentence>
         <part>
-          <WORD>Life’s</WORD>
+          <WORD>
+            <ANONYMOUS_RegExp__>Life's</ANONYMOUS_RegExp__>
+            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+          </WORD>
+          <WORD>
+            <ANONYMOUS_RegExp__>but</ANONYMOUS_RegExp__>
+            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+          </WORD>
+    ...
+
+It starts to become more readable and concise. The same trick can of course
+be done with the Whitespace inside the `part`- and `sentence`-nodes,
+only here it does not make sence to reduce a single child::
+
+    "part": [remove_whitespace],
+    "sentence": [remove_whitespace],
+
+
+Now that everything is set, let's have a look at the result::
+
+    document>
+      <sentence>
+        <part>
+          <WORD>Life's</WORD>
           <WORD>but</WORD>
           <WORD>a</WORD>
           <WORD>walking</WORD>
           <WORD>shadow</WORD>
         </part>
-        <:Token>,</:Token>
-        <:Whitespace> </:Whitespace>
+        <ANONYMOUS_Text__>,</ANONYMOUS_Text__>
         <part>
           <WORD>a</WORD>
-
-    ...
-
-It starts to become more readable and concise.
-Still, the Tokens that deliminate parts of sentences still contain whitespace.
-As for the <:Token>-nodes, we
-can do the same trick as with the WORD-nodes::
-
-    ":Token": [remove_whitespace, reduce_single_child],
-
-As to the nested structure of the <part>-nodes within the <sentence>-node, this
-a rather typical case of syntactic artifacts that can be found in concrete
-syntax trees. It is obviously a consequence of the grammar definition::
-
-    sentence = part {"," part } "."
-
-We'd of course prefer to have flat structure of parts and punctuation marks
-following each other within the sentence. Since this is a standard case,
-DHParser includes a special operator to "flatten" nested structures of this
-kind::
-
-    "sentence" = [flatten],
-
-The ``flatten`` operator recursively eliminates all intermediary anonymous child
-nodes. We do not need to do anything in particular for transforming the
-<part>-node, except that we should explicitly assign an empty operator-list to
-it, because we do not want the "*" to step in. The reason is that a <part> with
-a single <WORD> should still be visible as a part and not be replaced by the
-<WORD>-node, because we would like our data model to have as regular a form as
-possible. (This does of course imply a decision that we have taken on the form
-of our data model, which would lead too far to discuss here. Suffice it to say
-that depending on the occasion and purpose, such decisions can also be taken
-otherwise.)
-
-The only kind of nodes left are the <document>-nodes. In the output of the
-compiler-script (see above), the <document>-node had a single child-node
-":ZeroOrMore". Since this child node does not have any particular semantic
-meaning it would reasonable to eliminate it and attach its children directly to
-"document". We could do so by entering ``reduce_single_child`` in the list of
-transformations for "document"-nodes. However, when designing the
-AST-transformations, it is important not only to consider the concrete output
-that a particular text yields, but all possible outputs. Therefore, before
-specifying a transformation, we should also take a careful look at the grammar
-again, where "document" is defined as follows::
-
-    document = ~ { sentence } §EOF
-
-As we can see a "document"-node may also contain whitespace and an EOF-marker.
-The reason why we don't find these in the output is that empty nodes have been
-eliminated by the ``remove_empty``-transformation specified in the "+"-joker,
-before. EOF is always empty (little exercise: explain why!). But there
-could be ":Whitespace"-nodes next to the zero or more sentences in the document
-node, in which case the "reduce_single_child"-operator would do nothing, because
-there is more than a single child. (We could of course also use the
-"flatten"-operator, instead. Try this as an exercise.) Test cases help to
-capture those different scenarios, so adding test cases and examining the output
-in the test report help to get a grip on this, if just looking at the grammar
-strains your imagination too much.
-
-Since we have decided, that we do not want to include whitespace in our data
-model, we can simply eliminate any whitespace before we apply the
-``reduce_single_child``-operator, so we change the "document"-entry in the
-AST-transformation-table as thus::
-
-    "document": [remove_whitespace, reduce_single_child],
-
-Now that everything is set, let's have a look at the result::
-
-    <document>
-     <sentence>
-       <part>
-         <WORD>Life’s</WORD>
-         <WORD>but</WORD>
-         <WORD>a</WORD>
-         <WORD>walking</WORD>
-         <WORD>shadow</WORD>
-       </part>
-       <:Token>,</:Token>
-       <part>
-         <WORD>a</WORD>
-         <WORD>poor</WORD>
-         <WORD>player</WORD>
+          <WORD>poor</WORD>
+          <WORD>player</WORD>
     ...
 
 That is much better. There is but one slight blemish in the output: While all
 nodes left a named nodes, i.e. nodes associated with a named parser, there are a
-few anonymous <:Token> nodes. Here is a little exercise: Do away with those
-<:Token>-nodes by replacing them by something semantically more meaningful.
-Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". An
+few anonymous <ANONYMOUS_Text__>-nodes. Here is a little exercise: Do away with those
+<ANONYMOUS_Text__>-nodes by replacing them by something semantically more meaningful.
+Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". (An
 alternative strategy to extending the grammar would be to use the
-``replace_parser`` operator. Which of the strategies is the better one? Explain
-why.
+``replace_parser`` operator. In the AST-transformation-table ANONYMOUS nodes are
+indicated by a leading ':', thus ins the AST-transformation-table you have to write
+":Text" instead pf "ANONYMOUS_Text__" which is merely the XML-compatible name.)

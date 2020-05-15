@@ -47,7 +47,7 @@ from DHParser.toolkit import re
 
 
 LOGGING = False
-TEST_DIRNAME = 'test_grammar'
+TEST_DIRNAME = 'tests_grammar'
 
 
 def read_template(template_name: str) -> str:

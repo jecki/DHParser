@@ -2,23 +2,22 @@
 DHParser User's Guide
 *********************
 
-This user's guide explains how to use create, test and employ a domain
-specific language with DHParser for encoding text or data in a Digital
-Humanities Project.
+This User Guide explains:
 
-Introduction
-============
+1. How to define an EBNF-grammar for your domain specific language (DSL)
+   and how to generate a parser for this grammar.
+2. How to declare AST-Transformations to transform the concrete syntax tree (CST) that
+   the parser produces into an abstract syntax-tree (AST).
+3. How to write tests for the grammar and how to debug the parser.
+4. How to write a compiler that walks the abstract-syntax-tree to produce either
+   data-structures or code, depending on what the purpose of your domain specific language is.
+5. How to write a language server to get editor support for your domain specific language.
 
-Most Digital Humanities projects or least most text-centered DH projects
-involve in some way or other the entering and encoding of annotated text or
-data into a computer. And the systems that scientists use for that purpose
-consist of an input surface (or "redactation system") for entering the data, a
-storage system to keep the data and a presentation system for providing the
-data and possibly also functionality for working with the data to human or
-machine receipients. A typical example of this type of system is Berlin'
-Ediarum-System, which consists of an XML-Editor for entering data, an
-XML-Database for storing the data and a web application for providing the data
-to human readers or other web services via an application programming
-interface (API). Ediarum is also typical, because like many DH-projects it
-assumes an XML-based workflow.
+The guide does not explain how to design a domain specific language for a specific application area.
+In other words, this is not a textbook on domain specific language design for the Digital Humanities,
+just a manual for DHParser.
+
+
+
+
 

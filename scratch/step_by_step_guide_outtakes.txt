@@ -1,0 +1,55 @@
+As to the nested structure of the <part>-nodes within the <sentence>-node, this
+a rather typical case of syntactic artifacts that can be found in concrete
+syntax trees. It is obviously a consequence of the grammar definition::
+
+    sentence = part {"," part } "."
+
+We'd of course prefer to have flat structure of parts and punctuation marks
+following each other within the sentence. Since this is a standard case,
+DHParser includes a special operator to "flatten" nested structures of this
+kind::
+
+    "sentence" = [flatten],
+
+The ``flatten`` operator recursively eliminates all intermediary anonymous child
+nodes. We do not need to do anything in particular for transforming the
+<part>-node, except that we should explicitly assign an empty operator-list to
+it, because we do not want the "*" to step in. The reason is that a <part> with
+a single <WORD> should still be visible as a part and not be replaced by the
+<WORD>-node, because we would like our data model to have as regular a form as
+possible. (This does of course imply a decision that we have taken on the form
+of our data model, which would lead too far to discuss here. Suffice it to say
+that depending on the occasion and purpose, such decisions can also be taken
+otherwise.)
+
+The only kind of nodes left are the <document>-nodes. In the output of the
+compiler-script (see above), the <document>-node had a single child-node
+":ZeroOrMore". Since this child node does not have any particular semantic
+meaning it would reasonable to eliminate it and attach its children directly to
+"document". We could do so by entering ``reduce_single_child`` in the list of
+transformations for "document"-nodes. However, when designing the
+AST-transformations, it is important not only to consider the concrete output
+that a particular text yields, but all possible outputs. Therefore, before
+specifying a transformation, we should also take a careful look at the grammar
+again, where "document" is defined as follows::
+
+    document = ~ { sentence } §EOF
+
+As we can see a "document"-node may also contain whitespace and an EOF-marker.
+The reason why we don't find these in the output is that empty nodes have been
+eliminated by the ``remove_empty``-transformation specified in the "+"-joker,
+before. EOF is always empty (little exercise: explain why!). But there
+could be ":Whitespace"-nodes next to the zero or more sentences in the document
+node, in which case the "reduce_single_child"-operator would do nothing, because
+there is more than a single child. (We could of course also use the
+"flatten"-operator, instead. Try this as an exercise.) Test cases help to
+capture those different scenarios, so adding test cases and examining the output
+in the test report help to get a grip on this, if just looking at the grammar
+strains your imagination too much.
+
+Since we have decided, that we do not want to include whitespace in our data
+model, we can simply eliminate any whitespace before we apply the
+``reduce_single_child``-operator, so we change the "document"-entry in the
+AST-transformation-table as thus::
+
+    "document": [remove_whitespace, reduce_single_child],
