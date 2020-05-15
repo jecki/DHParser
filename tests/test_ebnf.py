@@ -1156,6 +1156,24 @@ class TestAlternativeReordering:
         assert any(e.code == BAD_ORDER_OF_ALTERNATIVES for e in errors)
 
 
+class TestDrop:
+    def test_drop_anonymous(self):
+        lang = """
+            @ drop = B
+            doc = A B C
+            A = `A`
+            B = `B`
+            C = `C`
+        """
+        # print(raw_compileEBNF(lang).result)
+        parser = create_parser(lang)
+        st = parser('ABC')
+        assert str(st) == "AC"
+        parser = create_parser('@ anonymous = B\n' + lang)
+        st = parser('ABC')
+        assert str(st) == "AC"
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

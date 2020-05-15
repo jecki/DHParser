@@ -1485,6 +1485,12 @@ class EBNFCompiler(Compiler):
         nd.result = "".join(parts)
         nd.tag_name = "literal"
 
+    def add_to_anonymous_regexp(self, pattern):
+        if self.anonymous_regexp is RX_NEVER_MATCH:
+            self.anonymous_regexp = re.compile(pattern)
+        else:
+            old_pattern = self.anonymous_regexp.pattern
+            self.anonymous_regexp = re.compile('(?:%s)|(?:%s)' % (old_pattern, pattern))
 
     def on_directive(self, node: Node) -> str:
         for child in node.children:
@@ -1534,7 +1540,7 @@ class EBNFCompiler(Compiler):
                         node, "The regular expression r'%s' matches any symbol, "
                         "which is not allowed!" % re_pattern)
                 else:
-                    self.anonymous_regexp = re.compile(re_pattern)
+                    self.add_to_anonymous_regexp(re_pattern)
             else:
                 args = node.children[1:]
                 assert all(child.tag_name == "symbol" for child in args)
@@ -1542,11 +1548,12 @@ class EBNFCompiler(Compiler):
                 for asym in alist:
                     if asym not in self.symbols:
                         self.symbols[asym] = node
-                self.anonymous_regexp = re.compile('$|'.join(alist) + '$')
+                self.add_to_anonymous_regexp('$|'.join(alist) + '$')
 
         elif key == 'drop':
             if len(node.children) <= 1:
                 self.tree.new_error(node, 'Directive "@ drop" requires as least one argument!')
+            unmatched = []  # type: List[str]  # dropped syms that are not already anonymous syms
             for child in node.children[1:]:
                 content = child.content
                 if self.anonymous_regexp.match(content):
@@ -1554,17 +1561,20 @@ class EBNFCompiler(Compiler):
                 elif content.lower() in DROP_VALUES:
                     self.directives[key].add(content.lower())
                 else:
-                    # TODO: Extend self.anonymous_regexp automatically to cover this case
-                    if self.anonymous_regexp == RX_NEVER_MATCH:
-                        self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
-                                            'Should be one of %s or an anonymous parser, where '
-                                            'the "@anonymous"-directive must preceed the '
-                                            '@drop-directive.' % (content, str(DROP_VALUES)))
-                    else:
-                        self.tree.new_error(
-                            node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
-                            '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
-                                                                self.anonymous_regexp.pattern))
+                    unmatched.append(content)
+                    # if self.anonymous_regexp == RX_NEVER_MATCH:
+                    #     self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
+                    #                         'Should be one of %s or an anonymous parser, where '
+                    #                         'the "@anonymous"-directive must preceed the '
+                    #                         '@drop-directive.' % (content, str(DROP_VALUES)))
+                    # else:
+                    #     self.tree.new_error(
+                    #         node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
+                    #         '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
+                    #                                             self.anonymous_regexp.pattern))
+            if unmatched:
+                self.directives[key].add(content)
+                self.add_to_anonymous_regexp('$|'.join(unmatched) + '$')
 
         elif key == 'ignorecase':
             check_argnum()
