@@ -1554,6 +1554,7 @@ class EBNFCompiler(Compiler):
                 elif content.lower() in DROP_VALUES:
                     self.directives[key].add(content.lower())
                 else:
+                    # TODO: Extend self.anonymous_regexp automatically to cover this case
                     if self.anonymous_regexp == RX_NEVER_MATCH:
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
                                             'Should be one of %s or an anonymous parser, where '
