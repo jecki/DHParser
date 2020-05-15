@@ -82,7 +82,7 @@ files and directories for sure, but those will not concern us for now::
     Introduction.md      - An introduction and appetizer for DHParser
 
 In order to verify that the installation works, you can run the
-`dhparser.py- script and, when asked, chose "3" for the self-test::
+`dhparser.py`-script and, when asked, chose "3" for the self-test::
 
     $ python DHParser/scripts/dhparser.py
     Usage:
@@ -615,14 +615,6 @@ parser matched, the last column displays exactly that section of the text that
 the parser did match. If the parser did not match, the last column displays
 the text that still lies ahead and has not yet been parsed.
 
-.. note:: You may wonder, why in the parsing history `EOF` seems to match.
-    But in fact it is not EOF that matched, but only the part of EOF after
-    the "negative lookahead"-operator '!' (see "poetry.ebnf" for the definition
-    of EOF), which is the regular expression for an arbitrary character `/./`.
-    Now if that latter part of EOF matched, becuse of the negative lookahead
-    operator in front of it, EOF did in fact not match. (The Visualization
-    of negative lookahead operators might be ammended in the future.)
-
 In our concrete example, we can see that the parser "WORD" matches "Life", but
 not "Life’s" or "’s". And this ultimately leads to the failure of the parsing
 process as a whole. The most simple solution would be to add the apostrophe to
@@ -692,7 +684,7 @@ other hand, it might be convenient to have it in the tree never the less...)
 The answer to these questions is that what our compilation
 script yields is the *concrete syntax tree* of the parsed text. The concrete syntax tree
 captures every minute syntactic detail described in the grammar and found in the text.
- we have to transform it into an
+we have to transform it into an
 *abstract syntax tree* first, which is called thus because it abstracts from
 all details that deem us irrelevant. Now, which details we consider as
 irrelevant is almost entirely up to ourselves. And we should think carefully
@@ -832,10 +824,10 @@ Now that everything is set, let's have a look at the result::
 
 That is much better. There is but one slight blemish in the output: While all
 nodes left a named nodes, i.e. nodes associated with a named parser, there are a
-few anonymous <ANONYMOUS_Text__>-nodes. Here is a little exercise: Do away with those
-<ANONYMOUS_Text__>-nodes by replacing them by something semantically more meaningful.
+few anonymous `<ANONYMOUS_Text__>`-nodes. Here is a little exercise: Do away with those
+`<ANON`YMOUS_Text__>`-nodes by replacing them by something semantically more meaningful.
 Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". (An
 alternative strategy to extending the grammar would be to use the
 ``replace_parser`` operator. In the AST-transformation-table ANONYMOUS nodes are
 indicated by a leading ':', thus ins the AST-transformation-table you have to write
-":Text" instead pf "ANONYMOUS_Text__" which is merely the XML-compatible name.)
+`:Text` instead pf `ANONYMOUS_Text__` which is merely the XML-compatible name.)

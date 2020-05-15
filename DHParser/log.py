@@ -258,9 +258,13 @@ def clear_logs(logfile_types=frozenset(['.cst', '.ast', '.log'])):
 #
 #######################################################################
 
+class NoneNode(FrozenNode):
+    def __bool__(self):
+        return False
+
 
 NONE_TAG = ":None"
-NONE_NODE = FrozenNode(NONE_TAG, '')
+NONE_NODE = NoneNode(NONE_TAG, '')
 
 
 def freeze_callstack(call_stack: List[CallItem]) -> Tuple[CallItem, ...]:

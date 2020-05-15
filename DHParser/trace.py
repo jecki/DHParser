@@ -29,7 +29,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 from DHParser.error import Error, RESUME_NOTICE
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
-from DHParser.log import freeze_callstack, HistoryRecord
+from DHParser.log import freeze_callstack, HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 from DHParser.toolkit import cython, line_col
 
@@ -99,8 +99,11 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
-    if ((grammar.moving_forward__ or (node and not self.anonymous))
-            and (self.tag_name != WHITESPACE_PTYPE)):
+    if ((self.tag_name != WHITESPACE_PTYPE)
+        and (grammar.moving_forward__
+             or (not self.anonymous
+                 and (node
+                      or grammar.history__ and grammar.history__[-1].node)))):
         # record history
         # TODO: Make dropping insignificant whitespace from history configurable
         delta = text._len - rest._len
@@ -108,7 +111,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         lc = line_col(grammar.document_lbreaks__, location)
         record = HistoryRecord(grammar.call_stack__, hnd, rest, lc, [])
         cs_len = len(record.call_stack)
-        if (not grammar.history__ or lc != grammar.history__[-1].line_col
+        if (not grammar.history__ or not node
+                or lc != grammar.history__[-1].line_col
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
                 or self == grammar.start_parser__):
             grammar.history__.append(record)

@@ -503,10 +503,9 @@ class Parser:
                     # otherwise also cache None-results
                     visited[location] = (None, rest)
             else:
-                # assert node._pos < 0 or node == EMPTY_NODE
-                # if node._pos != EMPTY_NODE:
+                # assert node._pos < 0 or node is EMPTY_NODE
                 node._pos = location
-                # assert node._pos >= 0 or node == EMPTY_NODE, \
+                # assert node._pos >= 0 or node is EMPTY_NODE, \
                 #     str("%i < %i" % (grammar.document_length__, location))
                 if (grammar.last_rb__loc__ < location
                         and (grammar.memoization__ or location in grammar.recursion_locations__)):
@@ -3123,7 +3122,7 @@ class Synonym(UnaryParser):
             if self.drop_content:
                 return EMPTY_NODE, text
             if not self.anonymous:
-                if node == EMPTY_NODE:
+                if node is EMPTY_NODE:
                     return Node(self.tag_name, ''), text
                 if node.tag_name.startswith(':'):
                     # eliminate anonymous child-node on the fly
