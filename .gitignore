@@ -52,3 +52,4 @@ docs/*
 *.py.cfg
 examples/LaTeX/testdata/*.xml
 venv/*
+*.sxpr
