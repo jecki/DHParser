@@ -3163,6 +3163,7 @@ class Forward(UnaryParser):
         super(Forward, self).__init__(PARSER_PLACEHOLDER)
         # self.parser = PARSER_PLACEHOLDER  # type: Parser
         self.cycle_reached = False
+        self.recursion_depth = dict()  # type: Dict[int, Tuple[int, int]]
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -3183,6 +3184,26 @@ class Forward(UnaryParser):
         `Synonym`, which might be a meaningful marker for the syntax tree,
         parser Forward should never appear in the syntax tree.
         """
+        # retrun self.parser(text)
+        location = self.grammar.document_length__ - text._len
+        if location in self.recursion:
+            depth, oracle = self.recursion[location]
+            if depth >= oracle:
+                self.recursion[location] = (0, oracle + 1)
+                return None, text
+            else:
+                self.recursion[location] = (depth + 1, oracle)
+                return self.parser(text)
+        else:
+            self.recursion_depth[location] = (0, 0)
+            best = None, text
+            while True:
+                node, text_ = self.parser(text)
+                if node is None:
+                    break
+                best = node, text_
+
+
         return self.parser(text)
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
@@ -3227,4 +3248,4 @@ class Forward(UnaryParser):
         TODO: Should this be changed?"""
         if is_parser_placeholder(self.parser):
             return tuple()
-        return (self.parser,)
+        return self.parser,
