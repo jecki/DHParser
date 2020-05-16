@@ -1210,7 +1210,7 @@ class Grammar:
         try:
             return self.__dict__[key]
         except KeyError:
-            p = getattr(self, key, None)
+            #  p = getattr(self, key, None)
             parser_template = getattr(self.__class__, key, None)
             if parser_template:
                 # add parser to grammar object on the fly...
@@ -1556,7 +1556,7 @@ class Grammar:
             leaf_state[prsr] = result
             return result
 
-        cache = dict()  # type: Dict[Parser, Set[Parser]]
+        # cache = dict()  # type: Dict[Parser, Set[Parser]]
         # for debugging: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
         for parser in self.all_parsers__:
             error_list.extend(parser.static_analysis())
