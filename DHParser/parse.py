@@ -426,6 +426,7 @@ class Parser:
                 # no history recording in case of memoized results
                 return visited[location]
 
+            # TODO: Move Left recursion logic to Alternative or Forward-Parser
             # break left recursion at the maximum allowed depth
             left_recursion_depth__ = grammar.left_recursion_depth__
             if left_recursion_depth__:
