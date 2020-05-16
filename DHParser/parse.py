@@ -3184,24 +3184,24 @@ class Forward(UnaryParser):
         `Synonym`, which might be a meaningful marker for the syntax tree,
         parser Forward should never appear in the syntax tree.
         """
-        # retrun self.parser(text)
-        location = self.grammar.document_length__ - text._len
-        if location in self.recursion:
-            depth, oracle = self.recursion[location]
-            if depth >= oracle:
-                self.recursion[location] = (0, oracle + 1)
-                return None, text
-            else:
-                self.recursion[location] = (depth + 1, oracle)
-                return self.parser(text)
-        else:
-            self.recursion_depth[location] = (0, 0)
-            best = None, text
-            while True:
-                node, text_ = self.parser(text)
-                if node is None:
-                    break
-                best = node, text_
+        return self.parser(text)
+        # location = self.grammar.document_length__ - text._len
+        # if location in self.recursion:
+        #     depth, oracle = self.recursion[location]
+        #     if depth >= oracle:
+        #         self.recursion[location] = (0, oracle + 1)
+        #         return None, text
+        #     else:
+        #         self.recursion[location] = (depth + 1, oracle)
+        #         return self.parser(text)
+        # else:
+        #     self.recursion_depth[location] = (0, 0)
+        #     best = None, text
+        #     while True:
+        #         node, text_ = self.parser(text)
+        #         if node is None:
+        #             break
+        #         best = node, text_
 
 
         return self.parser(text)
