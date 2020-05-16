@@ -1,0 +1,315 @@
+(latexdoc
+  (preamble
+    (documentclass `(Warning (100): Only one document language supported. Using defaultdict(<function empty_defaultdict at 0x103b21730>, {}), ignoring english.)
+      (config "12pt, english, a4paper")
+      (block
+        (text "article")))
+    (generic_command
+      (CMDNAME "\usepackage")
+      (config "natbib=true")
+      (block
+        (text "biblatex")))
+    (generic_command
+      (CMDNAME "\bibliography")
+      (block
+        (text "testdoc1.bib")))
+    (generic_command
+      (CMDNAME "\usepackage")
+      (block
+        (text "graphicx"))))
+  (document
+    (frontpages
+      (paragraph
+        (generic_command
+          (CMDNAME "\title")
+          (block
+            (text "LaTeX Test-Document"))))
+      (paragraph
+        (generic_command
+          (CMDNAME "\date")
+          (block
+            (text "May 2016"))))
+      (paragraph
+        (generic_command
+          (CMDNAME "\maketitle")))
+      (generic_block
+        (begin_environment "abstract")
+        (paragraph
+          (text "Here comes the Abstract ")
+          (generic_command
+            (CMDNAME "\ldots"))
+          (text ". This part is ")
+          (block
+            (generic_command
+              (CMDNAME "\em"))
+            (text "emphasized"))
+          (text
+            "."
+            ""))
+        (end_environment "abstract"))
+      (paragraph
+        (generic_command
+          (CMDNAME "\newpage")))
+      (paragraph
+        (generic_command
+          (CMDNAME "\tableofcontents"))))
+    (Section
+      (heading
+        (text "Simple text components"))
+      (paragraph
+        (text "This is the first section. It ")
+        (text_command
+          (BRACKETS "["))
+        (text "contains")
+        (text_command
+          (BRACKETS "]"))
+        (S " ")
+        (text
+          "a reference to"
+          "Willibald ")
+        (citet
+          (config "32")
+          (block
+            (text "Willibald2015")))
+        (text
+          ". Plus, it also refers to"
+          "Kunigunde's completed works ")
+        (citep
+          (block
+            (text "Kunigunde2010")))
+        (text "."))
+      (paragraph
+        (text
+          "This is line that ends with a LaTeX-comment. "
+          "This line continues the paragraph!"))
+      (paragraph
+        (text "These are several ")
+        (LINEFEED "\\")
+        (S
+          ""
+          "")
+        (text "lines ")
+        (LINEFEED "\\")
+        (S
+          ""
+          "")
+        (text "of text."))
+      (paragraph
+        (text "One paragraph"))
+      (paragraph
+        (text "Another paragraph"))
+      (paragraph
+        (text "Continuation of paragraph."))
+      (SubSection
+        (heading
+          (text "Quotations"))
+        (paragraph
+          (text "This is a subsection about quotations. And here is the quote:"))
+        (quotation
+          (text
+            "Gerade hierauf beruht jene Glückseligkeit des ersten Viertels unseres Lebens,"
+            "    in Folge welcher es nachher wie ein verolorenes Paradis hinter uns liegt."
+            "    Wir haben in der Kindheit nur wenige Beziehungen und geringe Bedürfnisse, also wenig"
+            "    Anregung des Willens: der größere Theil unseres Wesens geht demnach im Erkennen auf."
+            "    ")
+          (citep
+            (config "199")
+            (block
+              (text "Schopenhauer1851")))))
+      (SubSection
+        (heading
+          (text "Bullet Lists"))
+        (paragraph
+          (text
+            "Here comes a bullet list:"
+            ""))
+        (itemize
+          (item
+            (paragraph
+              (text
+                "one item"
+                "")))
+          (item
+            (paragraph
+              (text
+                "another item"
+                "")))
+          (item
+            (paragraph
+              (text "An item with several paragraphs"))
+            (paragraph
+              (text
+                "This ist the second paragraph of the item. It should be visible that a new"
+                "      paragraph has started, but it should also be obvious that the second"
+                "      paragraph belongs to the same item as the first paragraph."
+                ""))))
+        (paragraph
+          (text "After the list the text condinues.")
+          (footnote
+            (block_of_paragraphs
+              (text "This is a footnote.")))
+          (text
+            "Although there is no extra newline in the source,"
+            "it should be clear that this is a new paragraph."))
+        (enumerate
+          (item
+            (paragraph
+              (text
+                "This is the first item of an enumeration."
+                "")))
+          (item
+            (paragraph
+              (text
+                "no the second item"
+                "")))
+          (item
+            (paragraph
+              (text
+                "now the third"
+                "      "))
+            (enumerate
+              (item
+                (paragraph
+                  (text
+                    "first item of the nested enumeration"
+                    "      ")))
+              (item
+                (paragraph
+                  (text
+                    "second nested item"
+                    "      ")))))
+          (item
+            (paragraph
+              (text
+                "fourth item of the enumeration"
+                ""))))))
+    (Section
+      (heading
+        (text "Complex document components"))
+      (SubSection
+        (heading
+          (text "Images"))
+        (paragraph
+          (text "This is, how images can be embedded in a document."))
+        (figure
+          (generic_block
+            (begin_environment "center")
+            (paragraph
+              (includegraphics
+                (config
+                  (text "width=")
+                  (CMDNAME "\textwidth"))
+                (block
+                  (text "Graph.eps")))
+              (S
+                ""
+                "")
+              (caption
+                (block
+                  (generic_command
+                    (CMDNAME "\label")
+                    (block
+                      (text "Graph")))
+                  (S " ")
+                  (text "Evolutionary simulation of the reiterated Prisoner's Dilemma."))))
+            (end_environment "center"))))
+      (SubSection
+        (heading
+          (text "Tables"))
+        (paragraph
+          (text
+            "Following comes a complex figure with a table."
+            ""))
+        (figure
+          (generic_block
+            (begin_environment "center")
+            (generic_block
+              (begin_environment "scriptsize")
+              (tabular
+                (tabular_config "l|c|c|c|")
+                (tabular_row
+                  (multicolumn
+                    (INTEGER "1")
+                    (tabular_config "c"))
+                  (multicolumn
+                    (INTEGER "1")
+                    (tabular_config "c"))
+                  (multicolumn
+                    (INTEGER "2")
+                    (tabular_config "c"))
+                  (cline
+                    (INTEGER "2")
+                    (INTEGER "4")))
+                (tabular_row
+                  (tabular_cell
+                    (block
+                      (generic_command
+                        (CMDNAME "\bf"))
+                      (text "computer simulation"))
+                    (S " "))
+                  (tabular_cell
+                    (block
+                      (generic_command
+                        (CMDNAME "\bf"))
+                      (text "analog simulation"))
+                    (S " "))
+                  (tabular_cell
+                    (block
+                      (generic_command
+                        (CMDNAME "\bf"))
+                      (text "plain experiment"))
+                    (S " "))
+                  (hline "\hline"))
+                (tabular_row
+                  (tabular_cell
+                    (text
+                      "materiality of object"
+                      "                      "))
+                  (tabular_cell
+                    (text "semantic                  "))
+                  (multicolumn
+                    (INTEGER "2")
+                    (tabular_config "c|")
+                    (block_of_paragraphs
+                      (text "material")))
+                  (hline "\hline"))
+                (tabular_row
+                  (tabular_cell
+                    (text
+                      "relation to target"
+                      "                      "))
+                  (multicolumn
+                    (INTEGER "2")
+                    (tabular_config "c|")
+                    (block_of_paragraphs
+                      (text "representation")))
+                  (tabular_cell
+                    (text "representative "))
+                  (hline "\hline"))
+                (tabular_row
+                  (multicolumn
+                    (INTEGER "1")
+                    (tabular_config "c"))
+                  (multicolumn
+                    (INTEGER "2")
+                    (tabular_config "c"))
+                  (multicolumn
+                    (INTEGER "1")
+                    (tabular_config "c"))))
+              (end_environment "scriptsize"))
+            (end_environment "center"))
+          (paragraph
+            (caption
+              (block
+                (text "Conceptual relation of simulations and experiments ")
+                (citep
+                  (config "page needed")
+                  (block
+                    (text "Arnold2013")))))
+            (generic_command
+              (CMDNAME "\label")
+              (block
+                (text "SimulationExperimentsScheme"))))))
+      (SubSection
+        (heading
+          (text "Mathematical Formulae"))))))
