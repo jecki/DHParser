@@ -3164,7 +3164,7 @@ class Forward(UnaryParser):
         super(Forward, self).__init__(PARSER_PLACEHOLDER)
         # self.parser = PARSER_PLACEHOLDER  # type: Parser
         self.cycle_reached = False
-        self.recursion_depth = dict()  # type: Dict[int, Tuple[int, int]]
+        # self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -3196,11 +3196,12 @@ class Forward(UnaryParser):
         #         self.recursion[location] = (depth + 1, oracle)
         #         return self.parser(text)
         # else:
-        #     self.recursion_depth[location] = (0, 0)
+        #     self.recursion[location] = (0, 0)
         #     best = None, text
         #     while True:
         #         node, text_ = self.parser(text)
-        #         if node is None:
+        #         oracle = self.recursion[location][1]
+        #         if node is None or oracle == 0:
         #             break
         #         best = node, text_
 
