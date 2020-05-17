@@ -111,6 +111,16 @@ class TestParserClass:
 
 
 class TestInfiLoopsAndRecursion:
+    def test_very_simple(self):
+        minilang = """
+            term = term (`*`|`/`) factor | factor
+            factor = /[0-9]+/
+            """
+        parser = grammar_provider(minilang)()
+        snippet = "5*4*3"
+        st = parser(snippet)
+        assert not is_error(st.error_flag)
+
     def test_direct_left_recursion1(self):
         minilang = """@literalws = right
             expr = expr ("+"|"-") term | term
@@ -149,6 +159,7 @@ class TestInfiLoopsAndRecursion:
             Sum     = Expr { ('+' | '-') Expr }+
             Value   = /[0-9.]+/~ | '(' §Expr ')'
             """
+        # print(raw_compileEBNF(minilang).result)
         parser = grammar_provider(minilang)()
         snippet = "8 * 4"
         syntax_tree = parser(snippet)
@@ -395,7 +406,7 @@ class TestGrammar:
     """
     pyparser, messages, _ = compile_source(grammar, None, get_ebnf_grammar(),
                                            get_ebnf_transformer(), get_ebnf_compiler("PosTest"))
-    assert pyparser
+    assert pyparser, str(messages)
     assert not messages, str(messages)
 
     def test_pos_values_initialized(self):

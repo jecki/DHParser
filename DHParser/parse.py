@@ -583,10 +583,10 @@ class Parser:
     @property
     def grammar(self) -> 'Grammar':
         try:
-            if self._grammar != GRAMMAR_PLACEHOLDER:
+            if self._grammar is not GRAMMAR_PLACEHOLDER:
                 return self._grammar
             else:
-                raise AssertionError('Grammar has not yet been set!')
+                raise ValueError('Grammar has not yet been set!')
         except (AttributeError, NameError):
             raise AttributeError('Parser placeholder does not have a grammar!')
 
@@ -3163,8 +3163,12 @@ class Forward(UnaryParser):
     def __init__(self):
         super(Forward, self).__init__(PARSER_PLACEHOLDER)
         # self.parser = PARSER_PLACEHOLDER  # type: Parser
-        self.cycle_reached = False
-        # self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
+        self.cycle_reached = False  # type: bool
+        self.memoization = True  # type: bool
+
+    def reset(self):
+        super(Forward, self).reset()
+        self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -3185,25 +3189,46 @@ class Forward(UnaryParser):
         `Synonym`, which might be a meaningful marker for the syntax tree,
         parser Forward should never appear in the syntax tree.
         """
-        return self.parser(text)
-        # location = self.grammar.document_length__ - text._len
-        # if location in self.recursion:
-        #     depth, oracle = self.recursion[location]
-        #     if depth >= oracle:
-        #         self.recursion[location] = (0, oracle + 1)
-        #         return None, text
-        #     else:
-        #         self.recursion[location] = (depth + 1, oracle)
-        #         return self.parser(text)
-        # else:
-        #     self.recursion[location] = (0, 0)
-        #     best = None, text
-        #     while True:
-        #         node, text_ = self.parser(text)
-        #         oracle = self.recursion[location][1]
-        #         if node is None or oracle == 0:
-        #             break
-        #         best = node, text_
+        # if not isinstance(self.parser, Alternative):
+        #     return self.parser(text)
+
+        # TODO: For indirect recursion, recursion counters should not only
+        #       depend on location, but on location and call stack depth
+        location = self.grammar.document_length__ - text._len
+        depth, oracle = self.recursion.get(location, (-1, -1))
+        if oracle >= 0:
+            if depth >= oracle:
+                self.recursion[location] = (0, oracle + 1)
+                node, _text = None, text
+            else:
+                self.recursion[location] = (depth + 1, oracle)
+                node, _text = self.parser(text)
+                oracle = self.recursion[location][1]
+                self.recursion[location] = (depth, oracle)
+            self.memoization = self.grammar.memoization__
+            self.grammar.memoization__ = False
+            return node, _text
+        else:
+            self.recursion[location] = (0, 0)
+            longest = None, text
+            length = 0
+            while True:
+                node, text_ = self.parser(text)
+                depth, oracle = self.recursion[location]
+                if oracle == 0:
+                    longest = node, text_
+                    break
+                elif node is None:
+                    break
+                else:
+                    l = len(node)
+                    if l <= length:
+                        break
+                    length = l
+                    longest = node, text_
+            self.recursion[location] = (-1, -1)
+            self.grammar.memoization__ = self.memoization
+            return longest
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         """`set_proxy` has no effects on Forward-objects!"""
