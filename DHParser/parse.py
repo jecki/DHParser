@@ -426,16 +426,7 @@ class Parser:
                 # no history recording in case of memoized results
                 return visited[location]
 
-            # TODO: Move Left recursion logic to Alternative or Forward-Parser
-            # break left recursion at the maximum allowed depth
-            left_recursion_depth__ = grammar.left_recursion_depth__
-            if left_recursion_depth__:
-                if self.recursion_counter[location] > left_recursion_depth__:
-                    grammar.recursion_locations__.add(location)
-                    return None, text
-                self.recursion_counter[location] += 1
-
-            # finally, the actual parser call!
+            # now, the actual parser call!
             try:
                 node, rest = self._parse_proxy(text)
             except ParserError as pe:
@@ -481,39 +472,17 @@ class Parser:
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
 
-            if left_recursion_depth__:
-                self.recursion_counter[location] -= 1
-                # don't clear recursion_locations__ !!!
-
             if node is None:
-                # retrieve an earlier match result (from left recursion) if it exists
-                if location in grammar.recursion_locations__:
-                    if location in visited:
-                        node, rest = visited[location]
-                        if location != grammar.last_recursion_location__:
-                            grammar.tree__.add_error(
-                                node, Error("Left recursion encountered. "
-                                            "Refactor grammar to avoid slow parsing.",
-                                            node.pos if node else location,
-                                            LEFT_RECURSION_WARNING))
-                            # error_id = id(node)
-                            grammar.last_recursion_location__ = location
-                    # don't overwrite any positive match (i.e. node not None) in the cache
-                    # and don't add empty entries for parsers returning from left recursive calls!
-                elif grammar.memoization__:
+                # don't overwrite any positive match (i.e. node not None) in the cache
+                # and don't add empty entries for parsers returning from left recursive calls!
+                if grammar.memoization__ and location not in grammar.recursion_locations__:
                     # otherwise also cache None-results
                     visited[location] = (None, rest)
             else:
-                # assert node._pos < 0 or node is EMPTY_NODE
                 node._pos = location
-                # assert node._pos >= 0 or node is EMPTY_NODE, \
-                #     str("%i < %i" % (grammar.document_length__, location))
-                if (grammar.last_rb__loc__ < location
-                        and (grammar.memoization__ or location in grammar.recursion_locations__)):
+                if grammar.memoization__ and grammar.last_rb__loc__ < location:
                     # - variable manipulating parsers will not be entered into the cache,
                     #   because caching would interfere with changes of variable state
-                    # - in case of left recursion, the first recursive step that
-                    #   matches will store its result in the cache
                     # TODO: need a unit-test concerning interference of variable manipulation
                     #       and left recursion algorithm?
                     visited[location] = (node, rest)
@@ -3164,11 +3133,11 @@ class Forward(UnaryParser):
         super(Forward, self).__init__(PARSER_PLACEHOLDER)
         # self.parser = PARSER_PLACEHOLDER  # type: Parser
         self.cycle_reached = False  # type: bool
-        self.memoization = True  # type: bool
+        # self.memoization = True  # type: bool
 
     def reset(self):
         super(Forward, self).reset()
-        self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
+        # self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -3189,46 +3158,78 @@ class Forward(UnaryParser):
         `Synonym`, which might be a meaningful marker for the syntax tree,
         parser Forward should never appear in the syntax tree.
         """
-        # if not isinstance(self.parser, Alternative):
-        #     return self.parser(text)
+        grammar = self.grammar
+        location = grammar.document_length__ - text._len
 
-        # TODO: For indirect recursion, recursion counters should not only
-        #       depend on location, but on location and call stack depth
-        location = self.grammar.document_length__ - text._len
-        depth, oracle = self.recursion.get(location, (-1, -1))
-        if oracle >= 0:
-            if depth >= oracle:
-                self.recursion[location] = (0, oracle + 1)
-                node, _text = None, text
-            else:
-                self.recursion[location] = (depth + 1, oracle)
-                node, _text = self.parser(text)
-                oracle = self.recursion[location][1]
-                self.recursion[location] = (depth, oracle)
-            self.memoization = self.grammar.memoization__
-            self.grammar.memoization__ = False
-            return node, _text
-        else:
-            self.recursion[location] = (0, 0)
-            longest = None, text
-            length = 0
-            while True:
-                node, text_ = self.parser(text)
-                depth, oracle = self.recursion[location]
-                if oracle == 0:
-                    longest = node, text_
-                    break
-                elif node is None:
-                    break
-                else:
-                    l = len(node)
-                    if l <= length:
-                        break
-                    length = l
-                    longest = node, text_
-            self.recursion[location] = (-1, -1)
-            self.grammar.memoization__ = self.memoization
-            return longest
+        left_recursion_depth__ = grammar.left_recursion_depth__
+        if left_recursion_depth__:
+            if self.recursion_counter[location] > left_recursion_depth__:
+                grammar.recursion_locations__.add(location)
+                return None, text
+            self.recursion_counter[location] += 1
+
+        node, rest = self.parser(text)
+
+        if left_recursion_depth__:
+            self.recursion_counter[location] -= 1
+
+        visited = self.parser.visited
+
+        if node is None:
+            # retrieve an earlier match result (from left recursion) if it exists
+            if location in grammar.recursion_locations__:
+                if location in visited:
+                    node, rest = visited[location]
+                # don't overwrite any positive match (i.e. node not None) in the cache
+                # and don't add empty entries for parsers returning from left recursive calls!
+        elif (grammar.last_rb__loc__ < location and not grammar.memoization__
+              and location in grammar.recursion_locations__):
+            # - in case of left recursion, the first recursive step that
+            #   matches will store its result in the cache
+            # TODO: need a unit-test concerning interference of variable manipulation
+            #       and left recursion algorithm?
+            visited[location] = (node, rest)
+
+        return node, rest
+
+
+        # # TODO: For indirect recursion, recursion counters should not only
+        # #       depend on location, but on location and call stack depth
+        # location = self.grammar.document_length__ - text._len
+        # depth, oracle = self.recursion.get(location, (-1, -1))
+        # if oracle >= 0:
+        #     if depth >= oracle:
+        #         self.recursion[location] = (0, oracle + 1)
+        #         node, _text = None, text
+        #     else:
+        #         self.recursion[location] = (depth + 1, oracle)
+        #         node, _text = self.parser(text)
+        #         oracle = self.recursion[location][1]
+        #         self.recursion[location] = (depth, oracle)
+        #     self.memoization = self.grammar.memoization__
+        #     self.grammar.memoization__ = False
+        #     return node, _text
+        # else:
+        #     self.recursion[location] = (0, 0)
+        #     longest = None, text
+        #     length = 0
+        #     while True:
+        #         node, text_ = self.parser(text)
+        #         depth, oracle = self.recursion[location]
+        #         if oracle == 0:
+        #             longest = node, text_
+        #             break
+        #         elif node is None:
+        #             break
+        #         else:
+        #             l = len(node)
+        #             if l <= length:
+        #                 break
+        #             length = l
+        #             longest = node, text_
+        #     self.recursion[location] = (-1, -1)
+        #     self.grammar.memoization__ = self.memoization
+        #     return longest
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         """`set_proxy` has no effects on Forward-objects!"""

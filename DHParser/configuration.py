@@ -204,7 +204,7 @@ CONFIG_PRESET['flatten_tree'] = True
 # because of python's recursion depth limit
 # Left recursion handling can be turned off by setting this value to zero
 # Default value: 5
-CONFIG_PRESET['left_recursion_depth'] = 0
+CONFIG_PRESET['left_recursion_depth'] = 5
 
 # Maximum allowed number of retries after errors where the parser
 # would exit before the complete document has been parsed. Should
