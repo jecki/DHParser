@@ -3205,9 +3205,6 @@ class Forward(UnaryParser):
         #             break
         #         best = node, text_
 
-
-        return self.parser(text)
-
     def set_proxy(self, proxy: Optional[ParseFunc]):
         """`set_proxy` has no effects on Forward-objects!"""
         return

@@ -41,7 +41,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
-from DHParser.dsl import grammar_provider, create_parser
+from DHParser.dsl import grammar_provider, create_parser, raw_compileEBNF
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
@@ -119,6 +119,7 @@ class TestInfiLoopsAndRecursion:
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()
+        # print(raw_compileEBNF(minilang).result)
         assert parser
         syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), str(syntax_tree.errors_sorted)
