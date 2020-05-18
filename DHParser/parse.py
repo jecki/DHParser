@@ -307,11 +307,6 @@ class Parser:
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
-        recursion_counter:  Mapping of places to how often the parser
-                has already been called recursively at this place. This
-                is needed to implement left recursion. The number of
-                calls becomes irrelevant once a resault has been memoized.
-
         cycle_detection:  The apply()-method uses this variable to make
                 sure that one and the same function will not be applied
                 (recursively) a second time, if it has already been
@@ -3127,6 +3122,12 @@ class Forward(UnaryParser):
             term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
             expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
             root__     = expression
+
+    Parameters:
+        recursion_counter:  Mapping of places to how often the parser
+                has already been called recursively at this place. This
+                is needed to implement left recursion. The number of
+                calls becomes irrelevant once a result has been memoized.
     """
 
     def __init__(self):
@@ -3137,6 +3138,7 @@ class Forward(UnaryParser):
 
     def reset(self):
         super(Forward, self).reset()
+        self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
         # self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
 
     def __deepcopy__(self, memo):
