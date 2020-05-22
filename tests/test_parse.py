@@ -30,7 +30,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re
-from DHParser.log import is_logging, log_ST, log_parsing_history
+from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
 from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
     PARSER_NEVER_TOUCHES_DOCUMENT
@@ -117,9 +117,13 @@ class TestInfiLoopsAndRecursion:
             factor = /[0-9]+/
             """
         parser = grammar_provider(minilang)()
-        snippet = "5*4*3"
+        snippet = "5*4*3*2*1"
+        parser.history_tracking__ = True
+        set_tracer(parser, trace_history)
+        start_logging('LOGS')
         st = parser(snippet)
-        assert not is_error(st.error_flag)
+        log_parsing_history(parser, 'recursion_simple_test')
+        assert not is_error(st.error_flag), str(st.errors)
 
     def test_direct_left_recursion1(self):
         minilang = """@literalws = right
