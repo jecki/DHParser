@@ -113,9 +113,9 @@ class TestParserClass:
 class TestInfiLoopsAndRecursion:
     def setup(self):
         pass
-        # set_config_value('history_tracking', True)
+        set_config_value('history_tracking', True)
         # set_config_value('resume_notices', True)
-        # start_logging('LOGS')
+        start_logging('LOGS')
 
     def test_very_simple(self):
         minilang = """
@@ -190,7 +190,7 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         assert snippet == syntax_tree.content
-        snippet = "9 + 8 * (4 + 3 * (5 + 1))"
+        snippet = "9 + 8 * (4 - 3 / (5 - 1))"
         syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         assert snippet == syntax_tree.content
