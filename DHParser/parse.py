@@ -42,7 +42,8 @@ from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
-    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, AUTORETRIEVED_SYMBOL_NOT_CLEARED
+    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
+    AUTORETRIEVED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -482,11 +483,13 @@ class Parser:
                     #       and left recursion algorithm?
                     visited[location] = (node, rest)
 
-        except RecursionError:
+        except RecursionError as e:
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
             node._pos = location
-            grammar.tree__.new_error(node, "maximum recursion depth of parser reached; "
-                                           "potentially due to too many errors!")
+            error = Error("maximum recursion depth of parser reached; potentially due to too many "
+                          "errors or left recursion!", location, RECURSION_DEPTH_LIMIT_HIT)
+            grammar.tree__.add_error(node, error)
+            grammar.most_recent_error__ = ParserError(node, text, error, first_throw=False)
             rest = EMPTY_STRING_VIEW
 
         return node, rest
@@ -3198,47 +3201,7 @@ class Forward(UnaryParser):
             # TODO: need a unit-test concerning interference of variable manipulation
             #       and left recursion algorithm?
             visited[location] = (node, rest)
-
         return node, rest
-
-
-        # # TODO: For indirect recursion, recursion counters should not only
-        # #       depend on location, but on location and call stack depth
-        # location = self.grammar.document_length__ - text._len
-        # depth, oracle = self.recursion.get(location, (-1, -1))
-        # if oracle >= 0:
-        #     if depth >= oracle:
-        #         self.recursion[location] = (0, oracle + 1)
-        #         node, _text = None, text
-        #     else:
-        #         self.recursion[location] = (depth + 1, oracle)
-        #         node, _text = self.parser(text)
-        #         oracle = self.recursion[location][1]
-        #         self.recursion[location] = (depth, oracle)
-        #     self.memoization = self.grammar.memoization__
-        #     self.grammar.memoization__ = False
-        #     return node, _text
-        # else:
-        #     self.recursion[location] = (0, 0)
-        #     longest = None, text
-        #     length = 0
-        #     while True:
-        #         node, text_ = self.parser(text)
-        #         depth, oracle = self.recursion[location]
-        #         if oracle == 0:
-        #             longest = node, text_
-        #             break
-        #         elif node is None:
-        #             break
-        #         else:
-        #             l = len(node)
-        #             if l <= length:
-        #                 break
-        #             length = l
-        #             longest = node, text_
-        #     self.recursion[location] = (-1, -1)
-        #     self.grammar.memoization__ = self.memoization
-        #     return longest
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         """`set_proxy` has no effects on Forward-objects!"""

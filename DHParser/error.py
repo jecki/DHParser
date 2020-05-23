@@ -87,7 +87,8 @@ __all__ = ('ErrorCode',
            'BAD_REPETITION_COUNT',
            'TREE_PROCESSING_CRASH',
            'COMPILER_CRASH',
-           'AST_TRANSFORM_CRASH')
+           'AST_TRANSFORM_CRASH',
+           'RECURSION_DEPTH_LIMIT_HIT')
 
 
 class ErrorCode(int):
@@ -152,6 +153,7 @@ BAD_REPETITION_COUNT                     = ErrorCode(1580)
 TREE_PROCESSING_CRASH                    = ErrorCode(10100)
 COMPILER_CRASH                           = ErrorCode(10200)
 AST_TRANSFORM_CRASH                      = ErrorCode(10300)
+RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
 
 
 class Error:

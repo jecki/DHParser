@@ -301,7 +301,11 @@ def compile_source(source: str,
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
-    log_syntax_trees = get_config_value('log_syntax_trees')
+    if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
+        # log only for custom parser/transformer/compilers
+        log_syntax_trees = get_config_value('log_syntax_trees')
+    else:
+        log_syntax_trees = set()
 
     # preprocessing
 
@@ -316,7 +320,7 @@ def compile_source(source: str,
     syntax_tree = parser(source_text)  # type: RootNode
     if 'cst' in log_syntax_trees:
         log_ST(syntax_tree, log_file_name + '.cst')
-    if get_config_value('history_tracking'):
+    if parser.history_tracking__:
         log_parsing_history(parser, log_file_name)
 
     # assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \

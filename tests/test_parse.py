@@ -111,18 +111,26 @@ class TestParserClass:
 
 
 class TestInfiLoopsAndRecursion:
+    def setup(self):
+        pass
+        # set_config_value('history_tracking', True)
+        # set_config_value('resume_notices', True)
+        # set_config_value('log_syntax_trees', set(('cst', 'ast')))
+        # start_logging('LOGS')
+
     def test_very_simple(self):
         minilang = """
             term = term (`*`|`/`) factor | factor
             factor = /[0-9]+/
             """
-        parser = grammar_provider(minilang)()
+        grammar_factory = grammar_provider(minilang)
+        parser = grammar_factory()
         snippet = "5*4*3*2"
-        parser.history_tracking__ = True
-        set_tracer(parser, trace_history)
-        start_logging('LOGS')
+        # set_tracer(parser, trace_history)
         st = parser(snippet)
-        log_parsing_history(parser, 'recursion_simple_test')
+        if is_logging():
+            log_ST(st, 'test_LeftRecursion_very_simple.cst')
+            log_parsing_history(parser, 'test_LeftRecurion_very_simple')
         assert not is_error(st.error_flag), str(st.errors)
 
     def test_direct_left_recursion1(self):
@@ -139,8 +147,8 @@ class TestInfiLoopsAndRecursion:
         assert not is_error(syntax_tree.error_flag), str(syntax_tree.errors_sorted)
         assert snippet == syntax_tree.content, str(syntax_tree)
         if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_direct.cst")
-            log_parsing_history(parser, "test_LeftRecursion_direct")
+            log_ST(syntax_tree, "test_LeftRecursion_direct1.cst")
+            log_parsing_history(parser, "test_LeftRecursion_direct1")
 
     def test_direct_left_recursion2(self):
         minilang = """@literalws = right
@@ -155,6 +163,9 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         assert snippet == syntax_tree.content
+        if is_logging():
+            log_ST(syntax_tree, "test_LeftRecursion_direct2.cst")
+            log_parsing_history(parser, "test_LeftRecursion_direct2")
 
     def test_indirect_left_recursion1(self):
         minilang = """@literalws = right
@@ -175,30 +186,38 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser(snippet)
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         assert snippet == syntax_tree.content
+        snippet = "9 + 8 * (4 + 3 * (5 + 1))"
+        syntax_tree = parser(snippet)
+        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+        assert snippet == syntax_tree.content
         if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_indirect.cst")
-            log_parsing_history(parser, "test_LeftRecursion_indirect")
+            log_ST(syntax_tree, "test_LeftRecursion_indirect1.cst")
+            log_parsing_history(parser, "test_LeftRecursion_indirect1")
 
-    # # BEWARE: EXPERIMENTAL TEST can be long running
-    # def test_indirect_left_recursion2(self):
-    #     arithmetic_syntax = """@literalws = right
-    #         expression     = addition | subtraction
-    #         addition       = (expression | term) "+" (expression | term)
-    #         subtraction    = (expression | term) "-" (expression | term)
-    #         term           = multiplication | division
-    #         multiplication = (term | factor) "*" (term | factor)
-    #         division       = (term | factor) "/" (term | factor)
-    #         factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
-    #         group          = "(" expression ")"
-    #         SIGN           = /[+-]/
-    #         NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
-    #         VARIABLE       = /[A-Za-z]/~
-    #         """
-    #     arithmetic = grammar_provider(arithmetic_syntax)()
-    #     arithmetic.left_recursion_depth__ = 2
-    #     assert arithmetic
-    #     syntax_tree = arithmetic("(a + b) * (a - b)")
-    #     assert syntax_tree.errors
+    # BEWARE: EXPERIMENTAL TEST can be long running
+    def test_indirect_left_recursion2(self):
+        arithmetic_syntax = """@literalws = right
+            expression     = addition | subtraction  # | term
+            addition       = (expression | term) "+" (expression | term)
+            subtraction    = (expression | term) "-" (expression | term)
+            term           = multiplication | division  # | factor
+            multiplication = (term | factor) "*" (term | factor)
+            division       = (term | factor) "/" (term | factor)
+            factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+            group          = "(" expression ")"
+            SIGN           = /[+-]/
+            NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+            VARIABLE       = /[A-Za-z]/~
+            """
+        arithmetic = grammar_provider(arithmetic_syntax)()
+        arithmetic.left_recursion_depth__ = 2
+        assert arithmetic
+        syntax_tree = arithmetic("(a + b) * (a - b)")
+        assert syntax_tree.errors
+        if is_logging():
+            log_ST(syntax_tree, "test_LeftRecursion_indirect2.cst")
+            log_parsing_history(arithmetic, "test_LeftRecursion_indirect2")
+
 
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp(''))

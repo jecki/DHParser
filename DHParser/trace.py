@@ -26,7 +26,7 @@ Grammar-object.
 
 from typing import Tuple, Optional, List, Iterable, Union
 
-from DHParser.error import Error, RESUME_NOTICE
+from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import freeze_callstack, HistoryRecord, NONE_NODE
@@ -46,6 +46,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # add resume notice (mind that skip notices are added by
         # `parse.MandatoryElementsParser.mandatory_violation()`
         mre = grammar.most_recent_error__  # type: ParserError
+        if mre.error.code == RECURSION_DEPTH_LIMIT_HIT:
+            return mre.node, text
+
         grammar.most_recent_error__ = None
         errors = [mre.error]  # type: List[Error]
         text_ = grammar.document__[mre.error.pos:]
