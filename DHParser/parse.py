@@ -3193,8 +3193,8 @@ class Forward(UnaryParser):
         elif (grammar.last_rb__loc__ < location
               and (grammar.memoization__ or location in grammar.recursion_locations__)):
             # - in case of left recursion, any recursive step that matches
-            #   will store its result in the cache. Since this is done on return
-            #   this shorter matches will be overwritten by longer matches
+            #   will store its result in the cache. Since this is done on return,
+            #   the cache always contains the longest match when it is read
             # TODO: need a unit-test concerning interference of variable manipulation
             #       and left recursion algorithm?
             visited[location] = (node, rest)
