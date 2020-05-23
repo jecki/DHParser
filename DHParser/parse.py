@@ -418,7 +418,7 @@ class Parser:
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                # no history recording in case of memoized results
+                # no history recording in case of memoized results!
                 return visited[location]
 
             # now, the actual parser call!
@@ -468,10 +468,10 @@ class Parser:
                                       text, pe.error, first_throw=False)
 
             if node is None:
-                # don't overwrite any positive match (i.e. node not None) in the cache
-                # and don't add empty entries for parsers returning from left recursive calls!
-                if grammar.memoization__ and location not in grammar.recursion_locations__:
-                    # otherwise also cache None-results
+                if location in grammar.recursion_locations__:
+                    if location in visited:
+                        node, rest = visited[location]
+                elif grammar.memoization__:
                     visited[location] = (None, rest)
             else:
                 node._pos = location
@@ -3163,6 +3163,12 @@ class Forward(UnaryParser):
         grammar = self.grammar
         location = grammar.document_length__ - text._len
 
+        # if location has already been visited by the current parser, return saved result
+        visited = self.visited  # using local variable for better performance
+        if location in visited:
+            # no history recording in case of memoized results!
+            return visited[location]
+
         left_recursion_depth__ = grammar.left_recursion_depth__
         if left_recursion_depth__:
             if self.recursion_counter[location] > left_recursion_depth__:
@@ -3175,8 +3181,6 @@ class Forward(UnaryParser):
         if left_recursion_depth__:
             self.recursion_counter[location] -= 1
 
-        visited = self.parser.visited
-
         if node is None:
             # retrieve an earlier match result (from left recursion) if it exists
             if location in grammar.recursion_locations__:
@@ -3184,10 +3188,13 @@ class Forward(UnaryParser):
                     node, rest = visited[location]
                 # don't overwrite any positive match (i.e. node not None) in the cache
                 # and don't add empty entries for parsers returning from left recursive calls!
-        elif (grammar.last_rb__loc__ < location and not grammar.memoization__
-              and location in grammar.recursion_locations__):
-            # - in case of left recursion, the first recursive step that
-            #   matches will store its result in the cache
+            elif grammar.memoization__:
+                visited[location] = (None, rest)
+        elif (grammar.last_rb__loc__ < location
+              and (grammar.memoization__ or location in grammar.recursion_locations__)):
+            # - in case of left recursion, any recursive step that matches
+            #   will store its result in the cache if it is longer than
+            #   than a previous match at the same location.
             # TODO: need a unit-test concerning interference of variable manipulation
             #       and left recursion algorithm?
             visited[location] = (node, rest)

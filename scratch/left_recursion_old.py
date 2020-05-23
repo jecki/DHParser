@@ -26,7 +26,7 @@ def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringVi
         # if location has already been visited by the current parser, return saved result
         visited = self.visited  # using local variable for better performance
         if location in visited:
-            # no history recording in case of memoized results
+            # no history recording in case of memoized results!
             return visited[location]
 
         # TODO: Move Left recursion logic to Alternative or Forward-Parser
