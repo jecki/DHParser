@@ -117,7 +117,7 @@ class TestInfiLoopsAndRecursion:
             factor = /[0-9]+/
             """
         parser = grammar_provider(minilang)()
-        snippet = "5*4*3*2*1"
+        snippet = "5*4*3*2"
         parser.history_tracking__ = True
         set_tracer(parser, trace_history)
         start_logging('LOGS')
