@@ -115,7 +115,6 @@ class TestInfiLoopsAndRecursion:
         pass
         # set_config_value('history_tracking', True)
         # set_config_value('resume_notices', True)
-        # set_config_value('log_syntax_trees', set(('cst', 'ast')))
         # start_logging('LOGS')
 
     def test_very_simple(self):
@@ -130,8 +129,13 @@ class TestInfiLoopsAndRecursion:
         st = parser(snippet)
         if is_logging():
             log_ST(st, 'test_LeftRecursion_very_simple.cst')
-            log_parsing_history(parser, 'test_LeftRecurion_very_simple')
+            log_parsing_history(parser, 'test_LeftRecursion_very_simple')
         assert not is_error(st.error_flag), str(st.errors)
+        st = parser("1*2*3*4*5*6*7*8*9")
+        if is_logging():
+            log_ST(st, 'test_LeftRecursion_simple_fail.cst')
+            log_parsing_history(parser, 'test_LeftRecursion_simple_fail')
+        assert is_error(st.error_flag)
 
     def test_direct_left_recursion1(self):
         minilang = """@literalws = right
@@ -210,7 +214,7 @@ class TestInfiLoopsAndRecursion:
             VARIABLE       = /[A-Za-z]/~
             """
         arithmetic = grammar_provider(arithmetic_syntax)()
-        arithmetic.left_recursion_depth__ = 2
+        arithmetic.left_recursion_depth__ = 2  # high values result in very slow parsing!
         assert arithmetic
         syntax_tree = arithmetic("(a + b) * (a - b)")
         assert syntax_tree.errors
