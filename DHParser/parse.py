@@ -470,8 +470,11 @@ class Parser:
 
             if node is None:
                 if location in grammar.recursion_locations__:
+                    # retrieve an earlier match result (from left recursion) if it exists
                     if location in visited:
                         node, rest = visited[location]
+                    # don't overwrite any positive match (i.e. node not None) in the cache
+                    # and don't add empty entries for parsers returning from left recursive calls!
                 elif grammar.memoization__:
                     visited[location] = (None, rest)
             else:
