@@ -158,7 +158,8 @@ class TestInfiLoopsAndRecursion:
         minilang = """@literalws = right
             expr = ex
             ex   = expr ("+"|"-") term | term
-            term = term ("*"|"/") factor | factor
+            term = tr
+            tr   = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
@@ -224,6 +225,28 @@ class TestInfiLoopsAndRecursion:
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_indirect2.cst")
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect2")
+
+    def test_indirect_left_recursion3(self):
+        arithmetic_syntax = """@literalws = right
+            expression     = addition | subtraction | term
+            addition       = (expression | term) "+" (expression | term)
+            subtraction    = (expression | term) "-" (expression | term)
+            term           = multiplication | division | factor
+            multiplication = (term | factor) "*" (term | factor)
+            division       = (term | factor) "/" (term | factor)
+            factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+            group          = "(" expression ")"
+            SIGN           = /[+-]/
+            NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+            VARIABLE       = /[A-Za-z]/~
+            """
+        arithmetic = grammar_provider(arithmetic_syntax)()
+        assert arithmetic
+        syntax_tree = arithmetic("(a + b) * (a - b)")
+        assert not syntax_tree.errors
+        if is_logging():
+            log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
+            log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
 
 
     def test_break_inifnite_loop_ZeroOrMore(self):
@@ -895,11 +918,10 @@ class TestPopRetrieve:
             value      = /\d+/~
             EOF        = !/./ [ :?defsign ]   # eat up captured defsigns
         """
-        # code, _, _ = compile_ebnf(lang)
-        # print(code)
+        # print(raw_compileEBNF(lang).result)
         parser = grammar_provider(lang)()
         st = parser("X := 1")
-        assert not st.error_flag
+        assert not st.error_flag, str(st.errors)
         st1 = st
         st = parser("")
         assert not st.error_flag
