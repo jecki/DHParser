@@ -12,7 +12,6 @@ cdef class Parser:
     cdef public str tag_name
     cdef public object _grammar
     cdef object visited
-    cdef object recursion_counter
     cdef object cycle_detection
     cdef public object _parse_proxy
     cdef str _symbol
@@ -39,7 +38,7 @@ cdef class Grammar:
     cdef public bint history_tracking__
     cdef public bint memoization__
     cdef public bint flatten_tree__
-    cdef public int left_recursion_depth__
+    cdef public bint returning_from_recursion__
     cdef public int max_parser_dropouts__
 #    cdef public object root_parser__  # do not uncomment this!!!
     cdef public object tree__
@@ -53,8 +52,6 @@ cdef class Grammar:
     cdef public list call_stack__
     cdef public list history__
     cdef public bint moving_forward__
-    cdef public set recursion_locations__
-    cdef public int last_recursion_location__
 
 cdef class PreprocessorToken(Parser):
     pass
@@ -138,3 +135,4 @@ cdef class Synonym(UnaryParser):
 
 cdef class Forward(UnaryParser):
     cdef public bint cycle_reached
+    cdef public object recursion_counter

@@ -953,15 +953,6 @@ class Grammar:
                 the left-recursion handling algorithm. See `Parser.__call__`
                 ans `Forward.__call__`.
 
-        recursion_locations__:  Stores the locations where left recursion was
-                detected. Needed to provide minimal memoization for the left
-                recursion detection algorithm, but, strictly speaking, superfluous
-                if full memoization is enabled. (See :func:`Parser.__call__()`)
-
-        last_recursion_location__:  Last location where left recursion was
-                detected. This is used to avoid reduplicating warning messages
-                about left recursion.
-
         memoization__:  Turns full memoization on or off. Turning memoization off
                 results in less memory usage and sometimes reduced parsing time.
                 In some situations it may drastically increase parsing time, so
@@ -1028,10 +1019,6 @@ class Grammar:
                 during parsing already. This greatly reduces the concrete syntax
                 tree and simplifies and speeds up abstract syntax tree generation.
                 Default is on.
-
-        left_recursion_depth__: the maximum allowed depth for left-recursion.
-                A depth of zero means that no left recursion handling will
-                take place. Default is 5.
 
         max_parser_dropouts__: Maximum allowed number of retries after errors
                 where the parser would exit before the complete document has
@@ -1108,7 +1095,6 @@ class Grammar:
         duplicate.history_tracking__ = self.history_tracking__
         duplicate.resume_notices__ = self.resume_notices__
         duplicate.flatten_tree__ = self.flatten_tree__
-        duplicate.left_recursion_depth__ = self.left_recursion_depth__
         duplicate.max_parser_dropouts__ = self.max_parser_dropouts__
         duplicate.reentry_search_window__ = self.reentry_search_window__
         return duplicate
@@ -1132,7 +1118,6 @@ class Grammar:
         self.history_tracking__ = False        # type: bool
         self.resume_notices__ = False          # type: bool
         self.flatten_tree__ = get_config_value('flatten_tree')                    # type: bool
-        self.left_recursion_depth__ = get_config_value('left_recursion_depth')    # type: int
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
         self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
         self._reset__()
@@ -1215,11 +1200,9 @@ class Grammar:
         self.history__ = []                   # type: List[HistoryRecord]
         # also needed for call stack tracing
         self.moving_forward__ = False         # type: bool
-        self.recursion_locations__ = set()    # type: Set[int]
-        self.returning_from_recursion__ = False  # type: bool
-        self.last_recursion_location__ = -1   # type: int
         self.most_recent_error__ = None       # type: Optional[ParserError]
-
+        # support for left-recursion handling
+        self.returning_from_recursion__ = False  # type: bool
 
     @property
     def reversed__(self) -> StringView:
@@ -3228,7 +3211,8 @@ class Forward(UnaryParser):
                                 if grammar.rollback__ else (grammar.document__.__len__() + 1)
                         # Plus, overwrite the discarded result in the last history record with
                         # the accepted result, i.e. the longest match.
-                        # TODO: Move this to trace.py, somehow...
+                        # TODO: Move this to trace.py, somehow... and make it less confusing
+                        #       that the result is not the last but the longest match...
                         if grammar.history__:
                             record = grammar.history__[-1]
                             if record.call_stack[-1] == (self.parser.pname, location):

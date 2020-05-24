@@ -218,7 +218,6 @@ class TestInfiLoopsAndRecursion:
             VARIABLE       = /[A-Za-z]/~
             """
         arithmetic = grammar_provider(arithmetic_syntax)()
-        arithmetic.left_recursion_depth__ = 2  # high values result in very slow parsing!
         assert arithmetic
         syntax_tree = arithmetic("(a + b) * (a - b)")
         assert syntax_tree.errors

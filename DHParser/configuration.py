@@ -198,14 +198,6 @@ def set_config_value(key: str, value: Any):
 # Default value: True
 CONFIG_PRESET['flatten_tree'] = True
 
-# Maximum depth of parser's left recursion
-# This limit should not be set to high, because the left recursion
-# catching algorithm can take exponential time, and, of course,
-# because of python's recursion depth limit
-# Left recursion handling can be turned off by setting this value to zero
-# Default value: 5
-CONFIG_PRESET['left_recursion_depth'] = 5
-
 # Maximum allowed number of retries after errors where the parser
 # would exit before the complete document has been parsed. Should
 # not be set too high, because automatic retry works poorly.
