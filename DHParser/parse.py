@@ -422,6 +422,9 @@ class Parser:
                 # no history recording in case of memoized results!
                 return visited[location]
 
+            recursion_state = grammar.returning_from_recursion__
+            grammar.returning_from_recursion__ = False
+
             # now, the actual parser call!
             try:
                 node, rest = self._parse_proxy(text)
@@ -468,23 +471,35 @@ class Parser:
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
                                       text, pe.error, first_throw=False)
 
-            if node is None:
-                if location in grammar.recursion_locations__:
-                    # retrieve an earlier match result (from left recursion) if it exists
-                    if location in visited:
-                        node, rest = visited[location]
-                    # don't overwrite any positive match (i.e. node not None) in the cache
-                    # and don't add empty entries for parsers returning from left recursive calls!
-                elif grammar.memoization__:
-                    visited[location] = (None, rest)
-            else:
+            if node is not None:
                 node._pos = location
-                if grammar.memoization__ and grammar.last_rb__loc__ < location:
-                    # - variable manipulating parsers will not be entered into the cache,
-                    #   because caching would interfere with changes of variable state
-                    # TODO: need a unit-test concerning interference of variable manipulation
-                    #       and left recursion algorithm?
-                    visited[location] = (node, rest)
+            if (grammar.memoization__
+                    and not grammar.returning_from_recursion__
+                    # variable-manipulating parsers will not be entered into the cache,
+                    # because caching would interfere with changes of variable state
+                    and grammar.last_rb__loc__ < location):
+                visited[location] = (node, rest)
+
+            if not grammar.returning_from_recursion__:
+                grammar.returning_from_recursion__ = recursion_state
+
+            # if node is None:
+            #     if location in grammar.recursion_locations__:
+            #         # retrieve an earlier match result (from left recursion) if it exists
+            #         if location in visited:
+            #             node, rest = visited[location]
+            #         # don't overwrite any positive match (i.e. node not None) in the cache
+            #         # and don't add empty entries for parsers returning from left recursive calls!
+            #     elif grammar.memoization__:
+            #         visited[location] = (None, rest)
+            # else:
+            #     node._pos = location
+            #     if grammar.memoization__ and grammar.last_rb__loc__ < location:
+            #         # - variable manipulating parsers will not be entered into the cache,
+            #         #   because caching would interfere with changes of variable state
+            #         # TODO: need a unit-test concerning interference of variable manipulation
+            #         #       and left recursion algorithm?
+            #         visited[location] = (node, rest)
 
         except RecursionError as e:
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
@@ -1212,6 +1227,7 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = False         # type: bool
         self.recursion_locations__ = set()    # type: Set[int]
+        self.returning_from_recursion__ = False  # type: bool
         self.last_recursion_location__ = -1   # type: int
         self.most_recent_error__ = None       # type: Optional[ParserError]
 
@@ -3190,19 +3206,21 @@ class Forward(UnaryParser):
         if location in self.recursion_counter:
             depth = self.recursion_counter[location]
             if depth == 0:
+                grammar.returning_from_recursion__ = True
                 return None, text
             else:
                 self.recursion_counter[location] = depth - 1
                 result = self.parser(text)
         else:
-            grammar.recursion_locations__.add(location)
+            recursion_state = grammar.returning_from_recursion__
             self.recursion_counter[location] = 0
             result = self.parser(text)
             depth = 1
             while result[0] is not None:
                 self.recursion_counter[location] = depth
-                if location in self.parser.visited:
-                    del self.parser.visited[location]
+                # if location in self.parser.visited:
+                #     del self.parser.visited[location]
+                grammar.returning_from_recursion__ = False
                 next_result = self.parser(text)
                 if next_result[0] is None or len(next_result[1]) >= len(result[1]):
                     break
@@ -3210,6 +3228,7 @@ class Forward(UnaryParser):
                 depth += 1
             if grammar.memoization__:  # grammar.last_rb__loc__ < location and
                 visited[location] = result
+            grammar.returning_from_recursion__ = recursion_state
         return result
 
         # if node is None:

@@ -132,10 +132,10 @@ class TestInfiLoopsAndRecursion:
             log_parsing_history(parser, 'test_LeftRecursion_very_simple')
         assert not is_error(st.error_flag), str(st.errors)
         st = parser("1*2*3*4*5*6*7*8*9")
-        if is_logging():
-            log_ST(st, 'test_LeftRecursion_simple_fail.cst')
-            log_parsing_history(parser, 'test_LeftRecursion_simple_fail')
-        assert is_error(st.error_flag)
+        # if is_logging():
+        #     log_ST(st, 'test_LeftRecursion_very_simple_2.cst')
+        #     log_parsing_history(parser, 'test_LeftRecursion_very_simple_2')
+        assert not is_error(st.error_flag)
 
     def test_direct_left_recursion1(self):
         minilang = """@literalws = right
@@ -148,11 +148,11 @@ class TestInfiLoopsAndRecursion:
         # print(raw_compileEBNF(minilang).result)
         assert parser
         syntax_tree = parser(snippet)
-        assert not is_error(syntax_tree.error_flag), str(syntax_tree.errors_sorted)
-        assert snippet == syntax_tree.content, str(syntax_tree)
         if is_logging():
             log_ST(syntax_tree, "test_LeftRecursion_direct1.cst")
             log_parsing_history(parser, "test_LeftRecursion_direct1")
+        assert not is_error(syntax_tree.error_flag), str(syntax_tree.errors_sorted)
+        assert snippet == syntax_tree.content, str(syntax_tree)
 
     def test_direct_left_recursion2(self):
         minilang = """@literalws = right
@@ -185,6 +185,9 @@ class TestInfiLoopsAndRecursion:
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         snippet = "7 + 8 * 4"
         syntax_tree = parser(snippet)
+        if is_logging():
+            log_ST(syntax_tree, "test_LeftRecursion_indirect1.cst")
+            log_parsing_history(parser, "test_LeftRecursion_indirect1")
         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
         snippet = "9 + 8 * (4 + 3)"
         syntax_tree = parser(snippet)
