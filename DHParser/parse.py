@@ -946,6 +946,13 @@ class Grammar:
                 location to which the parser backtracks. This is done by
                 calling method :func:`rollback_to__(location)`.
 
+        returning_from_recursion__: A flag that is true if - during parsing -
+                a parser returns from a recursive call, in which case its
+                results should not be memoized, because it might be tried
+                again with an increased recursion depth. This flag is needed by
+                the left-recursion handling algorithm. See `Parser.__call__`
+                ans `Forward.__call__`.
+
         recursion_locations__:  Stores the locations where left recursion was
                 detected. Needed to provide minimal memoization for the left
                 recursion detection algorithm, but, strictly speaking, superfluous
@@ -1004,7 +1011,7 @@ class Grammar:
                 records store copies of the current call stack.
 
         moving_forward__: This flag indicates that the parsing process is currently
-                moving forward . It is needed to reduce noise in history recording
+                moving forward. It is needed to reduce noise in history recording
                 and should not be considered as having a valid value if history
                 recording is turned off! (See :func:`Parser.__call__`)
 
@@ -3167,6 +3174,11 @@ class Forward(UnaryParser):
         `Forward.__call__` also takes care of (most of) the left recursion
         handling. In order to do so it (unfortunately) has to duplicate some code
         from `Parser.__call__`.
+
+        The algorithm roughly follows:
+        https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
+        See also:
+        http://www.vpri.org/pdf/tr2007002_packrat.pdf
         """
         grammar = self.grammar
         location = grammar.document_length__ - text._len
