@@ -340,7 +340,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     @property
     def repr(self) -> str:
-        """Retrun a full (re-)executable representation of `self` including
+        """Return a full (re-)executable representation of `self` including
         attributes and position value.
         """
         rep = [repr(self)]
@@ -538,7 +538,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Returns a dictionary of XML-attr attached to the node.
 
         Examples:
-            >>> node = Node(None, '')
+            >>> node = Node('', '')
             >>> print('Any attributes present?', node.has_attr())
             Any attributes present? False
             >>> node.attr['id'] = 'identificator'
@@ -946,7 +946,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> Optional[List['Node']]:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
-        the public method `reconstuct_context`, this method retruns the chain of ancestors
+        the public method `reconstruct_context`, this method returns the chain of ancestors
         in reverse order [node, ... , self] and returns None in case `node` does not exist
         in the tree rooted in self instead of raising a Value Error.
         If `node` equals `self`, `None` will be returned.
@@ -1339,7 +1339,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif switch == 'default':
             switch = get_config_value('default_serialization').lower()
 
-        flatten_threshold = get_config_value('flatten_sxpr_threshold')
+        # flatten_threshold = get_config_value('flatten_sxpr_threshold')
         compact_threshold = get_config_value('compact_sxpr_threshold')
 
         if switch == SXPRESSION_SERIALIZATION.lower():
@@ -1391,7 +1391,7 @@ def prev_context(context: List[Node]) -> Optional[List[Node]]:
                 if node is siblings[k]:
                     return context[:i + 1] + [siblings[k - 1]]
             raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
-                                 % (i, i+1))
+                                 % (i, i + 1))
         node = context[i]
     return None
 
@@ -1414,7 +1414,7 @@ def next_context(context: List[Node]) -> Optional[List[Node]]:
                 if node is siblings[k]:
                     return context[:i + 1] + [siblings[k + 1]]
             raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
-                                 % (i, i+1))
+                                 % (i, i + 1))
         node = context[i]
     return None
 
@@ -1426,7 +1426,6 @@ def serialize_context(context: List[Node], with_content: bool = False, delimiter
 
 def context_sanity_check(context: List[Node]) -> bool:
     return all(context[i] in context[i - 1].children for i in range(1, len(context)))
-
 
 
 # FrozenNode ##########################################################
@@ -1640,8 +1639,9 @@ class RootNode(Node):
         if not node:
             # find the first leaf-node from the left that could contain the error
             # judging from its position
-            pos_list =[]
+            pos_list = []
             node_list = []
+            nd = None
             for nd in self.select_if(lambda nd: not nd.children):
                 if nd.pos <= error.pos < nd.pos + len(nd):
                     node = nd
@@ -1649,9 +1649,12 @@ class RootNode(Node):
                 pos_list.append(nd.pos)
                 node_list.append(nd)
             else:
-                node_list.append(nd)
-                i = bisect.bisect(pos_list, error.pos)
-                node = node_list[i]
+                if nd is None:
+                    node = self
+                else:
+                    node_list.append(nd)
+                    i = bisect.bisect(pos_list, error.pos)
+                    node = node_list[i]
         else:
             assert isinstance(node, Node)
             assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
