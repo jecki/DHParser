@@ -389,7 +389,6 @@ class Parser:
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
         self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
-        self.recursion_counter = defaultdict(int)  # type: DefaultDict[int, int]
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -398,15 +397,6 @@ class Parser:
         done in the overridden method `_parse()`. This wrapper-method can be thought of
         as a "parser guard", because it guards the parsing process.
         """
-        # def get_error_node_id(error_node: Node, root_node: RootNode) -> int:
-        #     if error_node:
-        #         error_node_id = id(error_node)
-        #         while error_node_id not in grammar.tree__.error_nodes and error_node.children:
-        #             error_node = error_node.result[-1]
-        #             error_node_id = id(error_node)
-        #     else:
-        #         error_node_id = 0
-
         grammar = self._grammar
         location = grammar.document_length__ - text._len  # faster then len(text)?
 
@@ -436,6 +426,8 @@ class Parser:
                 i = reentry_point(rest, rules, grammar.comment_rx__,
                                   grammar.reentry_search_window__)
                 if i >= 0 or self == grammar.start_parser__:
+                    # either a reentry point was found or the
+                    # error has fallen through to the first level
                     assert pe.node.children or (not pe.node.result)
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:  i = 0
@@ -459,13 +451,16 @@ class Parser:
                             self.tag_name,
                             (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail) \
                             .with_pos(location)
+                # if no re-entry point was found, do any of the following:
                 elif pe.first_throw:
+                    # just fall through
                     # TODO: Is this case still needed with module "trace"?
                     raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
                 elif grammar.tree__.errors[-1].code == MANDATORY_CONTINUATION_AT_EOF:
                     # try to create tree as faithful as possible
                     node = Node(self.tag_name, pe.node).with_pos(location)
                 else:
+                    # fall through but skip the gap
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
                     raise ParserError(Node(self.tag_name, result).with_pos(location),
@@ -1510,7 +1505,7 @@ class Grammar:
             for p in state_unknown:
                 del leaf_state[p]
 
-            result = leaf_parsers(prsr) or False
+            result = leaf_parsers(prsr) or False  # type: bool
             leaf_state[prsr] = result
             return result
 
@@ -3181,7 +3176,7 @@ class Forward(UnaryParser):
             depth = self.recursion_counter[location]
             if depth == 0:
                 grammar.returning_from_recursion__ = True
-                return None, text
+                result = None, text
             else:
                 self.recursion_counter[location] = depth - 1
                 result = self.parser(text)
@@ -3201,13 +3196,13 @@ class Forward(UnaryParser):
                     rb_stack_size = len(grammar.rollback__)
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
-                    if len(next_result[1]) >= len(result[1]):  # true, if next_result[0] is None
+                    if len(next_result[1]) >= len(result[1]):  # also true, if no match
                         # Since the result of the last parser call (`next_result`) is discarded,
                         # any variables captured by this call should be "rolled back", too.
                         if len(grammar.rollback__) > rb_stack_size:
                             _, rb_func = grammar.rollback__.pop()
                             rb_func()
-                            self.last_rb__loc__ = grammar.rollback__[-1][0] \
+                            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                                 if grammar.rollback__ else (grammar.document__.__len__() + 1)
                         # Plus, overwrite the discarded result in the last history record with
                         # the accepted result, i.e. the longest match.

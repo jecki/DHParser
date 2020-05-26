@@ -1038,20 +1038,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if begin.pos > end.pos:
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        ctxA = self.reconstruct_context(begin)
-        ctxB = self.reconstruct_context(end)
+        ctxA = self.reconstruct_context(begin)  # type: List[Node]
+        ctxB = self.reconstruct_context(end)    # type: List[Node]
         for a, b in zip(ctxA, ctxB):
             if a != b:
                 break
             common_ancestor = a
-        left = cut(ctxA[ctxA.index(common_ancestor):], left_cut)
-        right = cut(ctxB[ctxB.index(common_ancestor):], right_cut)
-        left_children = left.children
-        right_children = right.children
+        left = cut(ctxA[ctxA.index(common_ancestor):], left_cut)    # type: Node
+        right = cut(ctxB[ctxB.index(common_ancestor):], right_cut)  # type: Node
+        left_children = left.children    # type: Tuple[Node]
+        right_children = right.children  # type: Tuple[Node]
         if left_children == right_children:
             return common_ancestor
-        i = 1
-        k = len(right_children)
+        i = 1  # type: int
+        k = len(right_children)  # type: int
         try:
             k = right_children.index(left_children[1]) - 1
             i = 2
