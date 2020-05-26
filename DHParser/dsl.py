@@ -42,7 +42,7 @@ from DHParser.transform import TransformationFunc, TransformationDict
 from DHParser.toolkit import DHPARSER_DIR, DHPARSER_PARENTDIR, load_if_file, is_python_code, \
     compile_python_object, re, as_identifier, is_filename, relative_path
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
-    Callable, Generator
+    Callable, Sequence
 
 
 __all__ = ('DefinitionError',
@@ -91,7 +91,7 @@ class DSLException(Exception):
     """
     Base class for DSL-exceptions.
     """
-    def __init__(self, errors: Union[List[Error], Generator[Error, None, None]]):
+    def __init__(self, errors: Union[Sequence[Error], Iterator[Error]]):
         assert isinstance(errors, Iterator) or isinstance(errors, list) \
             or isinstance(errors, tuple)
         self.errors = list(errors)
@@ -150,12 +150,12 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             parser_py = grammar_src  # type: str
             messages = []            # type: List[Error]
         else:
-            log_dir = suspend_logging()
+            lg_dir = suspend_logging()
             result, messages, _ = compile_source(
                 grammar_src, None,
                 get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
             parser_py = cast(str, result)
-            resume_logging(log_dir)
+            resume_logging(lg_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), grammar_src)
         imports = DHPARSER_IMPORTS.format(
@@ -247,7 +247,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
            SECTION_MARKER.format(marker=SYMBOLS_SECTION),
-           DHPARSER_IMPORTS.format(dhparser_parentdir = relative_dhpath),
+           DHPARSER_IMPORTS.format(dhparser_parentdir=relative_dhpath),
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
@@ -257,7 +257,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
 
 
 @functools.lru_cache()
-def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str='') -> ParserFactoryFunc:
+def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str = '') -> ParserFactoryFunc:
     """
     Compiles an EBNF-grammar and returns a grammar-parser provider
     function for that grammar.
@@ -283,7 +283,7 @@ def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str='') -> 
             append_log(log_name, grammar_src)
         else:
             print(grammar_src)
-    imports = DHPARSER_IMPORTS.format(dhparser_parentdir = relative_path('.', DHPARSER_PARENTDIR))
+    imports = DHPARSER_IMPORTS.format(dhparser_parentdir=relative_path('.', DHPARSER_PARENTDIR))
     grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                             r'get_(?:\w+_)?grammar$')
     if callable(grammar_factory):
@@ -292,7 +292,7 @@ def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str='') -> 
     raise ValueError('Could not compile grammar provider!')
 
 
-def create_parser(ebnf_src: str, branding="DSL", additional_code: str='') -> Grammar:
+def create_parser(ebnf_src: str, branding="DSL", additional_code: str = '') -> Grammar:
     """Compiles the ebnf source into a callable Grammar-object. This is
     essentially syntactic sugar for `grammar_provider(ebnf)()`.
     """
@@ -300,7 +300,7 @@ def create_parser(ebnf_src: str, branding="DSL", additional_code: str='') -> Gra
     return grammar_factory()
 
 
-def split_source(file_name: str, file_content: str) -> Tuple[str]:
+def split_source(file_name: str, file_content: str) -> List[str]:
     """Splits the `file_content` into the seven sections: intro, imports,
     preprocessor_py, parser_py, ast_py, compiler_py, outro.
     Raises a value error, if the number of sections if not equal to 7.
@@ -328,7 +328,7 @@ def load_compiler_suite(compiler_suite: str) -> \
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
     dhpath = relative_path(os.path.dirname('.'), DHPARSER_PARENTDIR)
-    imports = DHPARSER_IMPORTS.format(dhparser_parentdir = dhpath)
+    imports = DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath)
     if is_python_code(compiler_suite):
         sections = split_source(compiler_suite, source)
         _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = sections
@@ -340,11 +340,11 @@ def load_compiler_suite(compiler_suite: str) -> \
     else:
         # Assume source is an ebnf grammar.
         # Is there really any reasonable application case for this?
-        log_dir = suspend_logging()
+        lg_dir = suspend_logging()
         compiler_py, messages, _ = compile_source(source, None, get_ebnf_grammar(),
                                                   get_ebnf_transformer(),
                                                   get_ebnf_compiler(compiler_suite, source))
-        resume_logging(log_dir)
+        resume_logging(lg_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), source)
         preprocessor = get_ebnf_preprocessor
@@ -360,7 +360,7 @@ def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
     """
     Returns ``True``  if the ``compile_suite`` needs to be updated.
 
-    An update is needed, if either the grammar in the compieler suite
+    An update is needed, if either the grammar in the compiler suite
     does not reflect the latest changes of ``grammar_source`` or if
     sections from the compiler suite have diligently been overwritten
     with whitespace order to trigger their recreation. Note: Do not
@@ -488,7 +488,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
                               'Possibly due to a forgotten import at the beginning ' \
                               'of the AST-Block (!)'.format(str(e))
                 else:
-                    err_str = 'Exception {} while compiling AST-Tansformation: {}' \
+                    err_str = 'Exception {} while compiling AST-Transformation: {}' \
                               .format(str(type(e)), str(e))
                 messages.append(Error(err_str, 0, CANNOT_VERIFY_TRANSTABLE_WARNING))
                 if is_logging():

@@ -252,6 +252,7 @@ ResultTuple = Tuple[Optional[Any], List[Error], Optional[Node]]
 def filter_stacktrace(stacktrace: List[str]) -> List[str]:
     """Removes those frames from a formatted stacktrace that are located
     within the DHParser-code."""
+    n = 0
     for n, frame in enumerate(stacktrace):
         i = frame.find('"')
         k = frame.find('"', i + 1)
@@ -332,7 +333,7 @@ def compile_source(source: str,
         # AST-transformation
 
         if is_error(syntax_tree.error_flag):
-            # catch Python exception, because if an error has occured
+            # catch Python exception, because if an error has occurred
             # earlier, the syntax tree might not look like expected,
             # which could (fatally) break AST transformations.
             try:
@@ -421,7 +422,7 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
     Although process_tree returns the root-node of the processed tree,
     tree processing should generally be assumed to change the tree
     in place, even if a different root-node is returned than was passed
-    to the tree. If the input tree shall be prserved, it is necessary to
+    to the tree. If the input tree shall be preserved, it is necessary to
     make a deep copy of the input tree, before calling process_tree.
     """
     assert isinstance(tp, TreeProcessor)

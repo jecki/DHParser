@@ -20,7 +20,7 @@
 Module ``ebnf`` provides a self-hosting parser for EBNF-Grammars as
 well as an EBNF-compiler that compiles an EBNF-Grammar into a
 DHParser based Grammar class that can be executed to parse source text
-conforming to this grammar into contrete syntax trees.
+conforming to this grammar into concrete syntax trees.
 """
 
 
@@ -53,7 +53,8 @@ from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
 from DHParser.versionnumber import __version__
 
 
-__all__ = ('get_ebnf_preprocessor',
+__all__ = ('DHPARSER_IMPORTS',
+           'get_ebnf_preprocessor',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
@@ -471,7 +472,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
             pycode = f.read()
         m = re.search(r'class \w*\(Grammar\)', pycode)
         if m:
-            m = re.search('    source_hash__ *= *"([a-z0-9]*)"',
+            m = re.search(' {4}source_hash__ *= *"([a-z0-9]*)"',
                           pycode[m.span()[1]:])
             return not (m and m.groups() and m.groups()[-1] == chksum)
         else:
@@ -682,8 +683,8 @@ KNOWN_DIRECTIVES = {
     'anonymous': 'List of symbols that are NOT to appear as tag-names',
     'drop': 'List of tags to be dropped early from syntax tree, '
             'special values: strings, whitespace, regexps',
-    '$SYMBOL_filer': 'Function that transforms captured values of the givensymbol on retrieval',
-    '$SYMBOL_error': 'Pair of regular epxression an custom error message if regex matches',
+    '$SYMBOL_filer': 'Function that transforms captured values of the given symbol on retrieval',
+    '$SYMBOL_error': 'Pair of regular expression an custom error message if regex matches',
     '$SYMBOL_skip': 'List of regexes or functions to find reentry point after an error',
     '$SYMBOL_resume': 'List or regexes or functions to find reentry point for parent parser'
 }
@@ -839,10 +840,10 @@ class EBNFCompiler(Compiler):
                 `whitespace__` that need to be defined at the beginning
                 of the grammar class because they are referred to later.
 
-        deferred_tasks:  A list of callables that is filled during
-                compilatation, but that will be executed only after
+        deferred_tasks:  A list of callabels that is filled during
+                compilation, but that will be executed only after
                 compilation has finished. Typically, it contains
-                sementatic checks that require information that
+                semantic checks that require information that
                 is only available upon completion of compilation.
 
         root_symbol: The name of the root symbol.
@@ -1901,7 +1902,7 @@ class EBNFCompiler(Compiler):
 
         if self.anonymous_regexp.match(arg):
             self.tree.new_error(
-                node, ('Retrive operator "%s" does not work with anonymous parsers like %s')
+                node, ('Retrieve operator "%s" does not work with anonymous parsers like %s')
                       % (prefix, arg))
             return arg
 
@@ -1956,7 +1957,7 @@ class EBNFCompiler(Compiler):
     def extract_counted(self, node) -> Tuple[Node, Tuple[int, int]]:
         """Returns the content of a counted-node in a normalized form:
         (node, (n, m)) where node is root of the sub-parser that is counted,
-        i.e. repeated n or n upto m times.
+        i.e. repeated n or n up to m times.
         """
         assert node.tag_name == 'counted'
         assert len(node.children) == 2
@@ -2136,7 +2137,7 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
 def compile_ebnf_ast(ast: Node) -> str:
     """Compiles the abstract-syntax-tree of an EBNF-source-text into
     python code of a class derived from `parse.Grammar` that can
-    parse text following the grammar describend with the EBNF-code."""
+    parse text following the grammar described with the EBNF-code."""
     return get_ebnf_compiler()(ast)
 
 

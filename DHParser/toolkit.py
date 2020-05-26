@@ -175,9 +175,9 @@ def escape_control_characters(strg: str) -> str:
     double backslash.
     """
     s = repr(strg.replace('\\', r'\\')).replace('\\\\', '\\')[1:-1]
-    if s.startswith(r"\'") and s.endswith((r"\'")):
+    if s.startswith(r"\'") and s.endswith(r"\'"):
         return ''.join(["'", s[2:-2], "'"])
-    elif s.startswith(r'\"') and s.endswith((r'\"')):
+    elif s.startswith(r'\"') and s.endswith(r'\"'):
         return ''.join(['"', s[2:-2], '"'])
     return s
 
@@ -265,6 +265,7 @@ class unrepr:
 
     def __repr__(self) -> str:
         return self.s
+
 
 @cython.locals(max_length=cython.int, length=cython.int, a=cython.int, b=cython.int)
 def abbreviate_middle(s: str, max_length: int) -> str:

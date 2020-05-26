@@ -32,7 +32,7 @@ speedup. The modules comes with a ``stringview.pxd`` that contains some type
 declarations to more fully exploit the benefits of the Cython-compiler.
 """
 
-from typing import Optional, Union, Iterable, Tuple, List, Sequence, cast
+from typing import Optional, Union, Iterable, Tuple, List, cast
 
 try:
     import cython
@@ -146,7 +146,7 @@ class StringView:  # collections.abc.Sized
         # PERFORMANCE WARNING: This creates a copy of the string-slice
         if self._fullstring:  # optimization: avoid slicing/copying
             return self._fullstring
-        # since the slice is being copyied now, anyway, the copy might
+        # since the slice is being copied now, anyway, the copy might
         # as well be stored in the string view
         # return self.text[self.begin:self.end]  # use this for debugging!
         self._fullstring = self._text[self._begin:self._end]
@@ -258,12 +258,11 @@ class StringView:  # collections.abc.Sized
         end = self._end if end is None else self._begin + end
         return self._text.startswith(prefix, start, end)
 
-
     def endswith(self,
                  suffix: str,
                  start: int = 0,
                  end: Optional[int] = None) -> bool:
-        """Return True if S ends with the specified suufix, False otherwise.
+        """Return True if S ends with the specified suffix, False otherwise.
         With optional `start`, test S beginning at that position.
         With optional `end`, stop comparing S at that position.
         """
@@ -401,7 +400,7 @@ class TextBuffer:
 
     def update(self, l1: int, c1: int, l2: int, c2: int, replacement: Union[str, StringView]):
         """Replaces the text-range from line and column (l1, c1) to
-        line and columnt (l2, c2) with the replacement-string.
+        line and column (l2, c2) with the replacement-string.
         """
         if not self._buffer:
             self._lazy_init()
@@ -411,10 +410,10 @@ class TextBuffer:
         lines[0] = head + lines[0]
         lines[-1] += tail
         self._buffer[l1:l2 + 1] = lines
-        self._text = ''  # invalidate sinlge-string copy
+        self._text = ''  # invalidate single-string copy
         self.version += 1
 
-    def textEdits(self, edits: Union[list, dict], version: int = -1):
+    def text_edits(self, edits: Union[list, dict], version: int = -1):
         """Incorporates the one or more text-edits or change-events into the text.
         A Text-Edit is a dictionary of this form:
 
@@ -426,9 +425,9 @@ class TextBuffer:
         """
         def edit(ed: dict):
             """Weaves a single edit into the text-buffer."""
-            range = ed["range"]
-            start = range["start"]
-            end = range["end"]
+            rng = ed["range"]
+            start = rng["start"]
+            end = rng["end"]
             try:
                 replacement = ed['text']
             except KeyError:

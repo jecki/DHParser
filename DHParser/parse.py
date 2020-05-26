@@ -37,7 +37,7 @@ from typing import Callable, cast, List, Tuple, Set, Dict, \
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
-    LEFT_RECURSION_WARNING, UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
+    UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
     PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
@@ -133,7 +133,7 @@ class ParserError(Exception):
         return "%i: %s    %s" % (self.node.pos, str(self.rest[:25]), repr(self.node))
 
 
-ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressiones
+ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressions
 ReentryPointAlgorithm = Callable[[StringView, int], Tuple[int, int]]
 # (text, start point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
@@ -237,7 +237,7 @@ def reentry_point(rest: StringView,
 
 
 ApplyFunc = Callable[[List['Parser']], Optional[bool]]
-        # The return value of `True` stops any further application
+# The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[[StringView], Tuple[Optional[Node], StringView]]
 
@@ -285,7 +285,7 @@ class Parser:
         pname:  The parser's name or a (possibly empty) alias name in case
                 of an anonymous parser.
 
-        anonymous: A property indicating that the parser remains anynomous
+        anonymous: A property indicating that the parser remains anonymous
                 anonymous with respect to the nodes it returns. For performance
                 reasons this is implemented as an object variable rather
                 than a property. This property must always be equal to
@@ -478,7 +478,7 @@ class Parser:
             if not grammar.returning_from_recursion__:
                 grammar.returning_from_recursion__ = recursion_state
 
-        except RecursionError as e:
+        except RecursionError:
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
             node._pos = location
             error = Error("maximum recursion depth of parser reached; potentially due to too many "
@@ -563,7 +563,7 @@ class Parser:
                                      "to a different Grammar object!")
         except AttributeError:
             pass  # ignore setting of grammar attribute for placeholder parser
-        except NameError:  # Cython: No access to GRAMMA_PLACEHOLDER, yet :-(
+        except NameError:  # Cython: No access to GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -640,7 +640,7 @@ class Parser:
             return self._apply(func, [], positive_flip)
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
-        return (self.symbol, self, Error(msg, 0, code))
+        return self.symbol, self, Error(msg, 0, code)
 
     def static_analysis(self) -> List['AnalysisError']:
         """Analyses the parser for logical errors after the grammar has been
@@ -649,7 +649,7 @@ class Parser:
 
 
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
-    """Duplicates all attributes of the Parser-class from source to dest."""
+    """Duplicates all attributes of the Parser-class from `src` to `duplicate`."""
     duplicate.pname = src.pname
     duplicate.anonymous = src.anonymous
     duplicate.drop_content = src.drop_content
@@ -1032,7 +1032,8 @@ class Grammar:
     anonymous__ = RX_NEVER_MATCH  # type: RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
-    WSP_RE__ = mixin_comment(whitespace=r'[\t ]*', comment=COMMENT__)  # type: str
+    WHITESPACE__ = r'[\t ]*'
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)  # type: str
     static_analysis_pending__ = [True]  # type: List[bool]
     static_analysis_errors__ = []  # type: List[AnalysisError]
 
@@ -1515,8 +1516,8 @@ class Grammar:
             error_list.extend(parser.static_analysis())
             if parser.pname and not has_leaf_parsers(parser):
                 error_list.append((parser.symbol, parser, Error(
-                    'Parser %s is entirely cyclical and, therefore, cannot even '
-                    'touch the parsed document' % parser.location_info(),
+                    'Parser %s is entirely cyclical and, therefore, cannot even touch '
+                    'the parsed document' % cast('CombinedParser', parser).location_info(),
                     0, PARSER_NEVER_TOUCHES_DOCUMENT)))
         return error_list
 
@@ -1548,7 +1549,7 @@ GRAMMAR_PLACEHOLDER = Grammar()
 
 ########################################################################
 #
-# Special parser classes: Alway, Never, PreprocessorToken (leaf classes)
+# Special parser classes: Always, Never, PreprocessorToken (leaf classes)
 #
 ########################################################################
 
@@ -1871,7 +1872,7 @@ class CombinedParser(Parser):
 
     def location_info(self) -> str:
         """Returns a description of the location of the parser within the grammar
-        for the purpose of transparent erorr reporting."""
+        for the purpose of transparent error reporting."""
         return '%s%s in definition of "%s" as %s' % (self.pname or '_', self.ptype, self.symbol, str(self))
 
 
@@ -1909,7 +1910,7 @@ class UnaryParser(CombinedParser):
 
 class NaryParser(CombinedParser):
     """
-    Base class of all Nnary parsers, i.e. parser that
+    Base class of all Nary parsers, i.e. parser that
     contains one or more other parsers, like the alternative
     parser for example.
 
@@ -2083,7 +2084,7 @@ class OneOrMore(UnaryParser):
         errors = super().static_analysis()
         if self.parser.is_optional():
             errors.append(self.static_error(
-                "Use ZeroOrMore instead of nesting OneOrMore with an optional parser in " \
+                "Use ZeroOrMore instead of nesting OneOrMore with an optional parser in "
                 + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
         return errors
 
@@ -2247,7 +2248,6 @@ class MandatoryNary(NaryParser):
         This is a helper function that abstracts functionality that is
         needed by the Interleave- as well as the Series-parser.
 
-        :param parser: the grammar
         :param text_: the point, where the mandatory violation. As usual the
                 string view represents the remaining text from this point.
         :param failed_on_lookahead: True if the violating parser was a
@@ -2310,11 +2310,11 @@ class MandatoryNary(NaryParser):
         elif length == 0:
             msg.append('Number of elements %i is below minimum length of 1' % length)
         elif length >= NO_MANDATORY:
-            msg.append('Number of elemnts %i of series exceeds maximum length of %i' \
-                  % (length, NO_MANDATORY))
+            msg.append('Number of elements %i of series exceeds maximum length of %i'
+                       % (length, NO_MANDATORY))
         elif not (0 <= self.mandatory < length or self.mandatory == NO_MANDATORY):
             msg.append('Illegal value %i for mandatory-parameter in a parser with %i elements!'
-                  % (self.mandatory, length))
+                       % (self.mandatory, length))
         if msg:
             msg.insert(0, 'Illegal configuration of mandatory Nary-parser '
                        + self.location_info())
@@ -2369,7 +2369,7 @@ class Series(MandatoryNary):
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         ret_node = self._return_values(results)  # type: Node
-        if error and reloc < 0:
+        if error and reloc < 0:  # no worry: reloc is always defined when error is True
             raise ParserError(ret_node.with_pos(self.grammar.document_length__ - len(text_)),
                               text, error, first_throw=True)
         return ret_node, text_
@@ -2520,11 +2520,13 @@ class Alternative(NaryParser):
             for i, p in enumerate(self.parsers):
                 if p.is_optional():
                     break
+            # no worry: p,i are defined, because self.parsers cannot be empty.
+            # See NaryParser.__init__()
             errors.append(self.static_error(
                 "Parser-specification Error in " + self.location_info()
                 + "\nOnly the very last alternative may be optional! "
                 + 'Parser "%s" at position %i out of %i is optional'
-                %(p.tag_name, i + 1, len(self.parsers)),
+                % (p.tag_name, i + 1, len(self.parsers)),
                 BAD_ORDER_OF_ALTERNATIVES))
 
         # check for errors like "A" | "AB" where "AB" would never be reached,
@@ -2638,7 +2640,7 @@ class Interleave(MandatoryNary):
             if length == n:
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
-        if error and reloc < 0:
+        if error and reloc < 0:  # no worry: reloc is always defined when error is True
             raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
                               text, error, first_throw=True)
         return nd, text_
@@ -2660,7 +2662,7 @@ class Interleave(MandatoryNary):
         other_parsers = cast('Interleave', other).parsers if isinstance(other, Interleave) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         other_repetitions = cast('Interleave', other).repetitions \
-            if isinstance(other, Interleave) else [(1, 1),]
+            if isinstance(other, Interleave) else [(1, 1), ]
         other_mandatory = cast('Interleave', other).mandatory \
             if isinstance(other, Interleave) else NO_MANDATORY
         if other_mandatory == NO_MANDATORY:
@@ -2724,7 +2726,7 @@ class FlowParser(UnaryParser):
     Base class for all flow parsers like Lookahead and Lookbehind.
     """
     def sign(self, bool_value) -> bool:
-        """Returns the value. Can be overriden to return the inverted bool."""
+        """Returns the value. Can be overridden to return the inverted bool."""
         return bool_value
 
 
@@ -2754,7 +2756,7 @@ class Lookahead(FlowParser):
         errors = super().static_analysis()
         if self.parser.is_optional():
             errors.append((self.pname, self, Error(
-                'Lookahead %s does not make sense with optional parser "%s"!' \
+                'Lookahead %s does not make sense with optional parser "%s"!'
                 % (self.pname, str(self.parser)),
                 0, LOOKAHEAD_WITH_OPTIONAL_PARSER)))
         return errors
@@ -2873,7 +2875,6 @@ class Capture(UnaryParser):
         return errors
 
 
-
 MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
 # (text, stack) -> value, where:
 # text is the following text for be parsed
@@ -2885,6 +2886,7 @@ MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
 # None, but should return the empty string if no match occurs.
 # Match functions, the name of which does not start with 'optional_', should
 # on the contrary always return `None` if no match occurs!
+
 
 def last_value(text: Union[StringView, str], stack: List[str]) -> str:
     """Matches `text` with the most recent value on the capture stack.
@@ -2990,7 +2992,7 @@ class Retrieve(UnaryParser):
                 # returns a None match if parser is optional but there was no value to retrieve
                 return None, text
             else:
-                node = Node(tn, '') # .with_pos(self.grammar.document_length__ - text.__len__())
+                node = Node(tn, '')  # .with_pos(self.grammar.document_length__ - text.__len__())
                 self.grammar.tree__.new_error(
                     node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
                     UNDEFINED_RETRIEVE)

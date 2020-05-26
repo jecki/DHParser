@@ -1,4 +1,4 @@
-# versionnumber.py - contains the verison number of DHParser
+# versionnumber.py - contains the version number of DHParser
 #
 # Copyright 2016  by Eckhart Arnold (arnold@badw.de)
 #                 Bavarian Academy of Sciences an Humanities (badw.de)

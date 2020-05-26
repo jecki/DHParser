@@ -41,7 +41,7 @@ from DHParser.configuration import get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
-from DHParser.parse import UnknownParserError, Parser, Lookahead
+from DHParser.parse import UnknownParserError, Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
@@ -348,7 +348,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         This is required for testing of parsers that put a lookahead
         operator at the end. See test_testing.TestLookahead.
         """
-        if not get_config_value('test_supress_lookahead_failures'):
+        if not get_config_value('test_suppress_lookahead_failures'):
             return False
         raw_errors = cast(RootNode, syntax_tree).errors_sorted
         is_artifact = ({e.code for e in raw_errors}
@@ -470,7 +470,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 compare = parse_tree(get(tests, "ast", test_name))
                 if compare:
                     traverse(compare, {'*': remove_children({'__TESTING_ARTIFACT__'})})
-                    if not compare.equals(ast):
+                    if not compare.equals(ast):  # no worry: ast is defined if "ast" in tests
                         errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                       '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                       % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
@@ -692,7 +692,7 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
                 raise AssertionError('Section name must not be repeated: ' + curr_section)
             symbols[curr_section] = []
         else:
-            symbols[curr_section].append(df)
+            symbols[curr_section].append(df)  # no worry, curr_section is always defined
     return symbols
 
 

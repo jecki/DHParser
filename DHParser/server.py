@@ -376,8 +376,8 @@ class ExecutionEnvironment:
         """
         if self._closed:
             return None, (-32000,
-                          "Server Error: Execution environment has already been shut down! "\
-                          "Cannot process method {} with parameters {} any more."\
+                          "Server Error: Execution environment has already been shut down! "
+                          "Cannot process method {} with parameters {} any more."
                           .format(method, params))
         result = None      # type: Optional[JSON_Type]
         rpc_error = None   # type: Optional[RPC_Error_Type]
@@ -508,8 +508,8 @@ class Connection:
         # do not do: del self.active_tasks[json_id] !!!
 
     async def cleanup(self):
-        open_tasks = {task for id, task in self.active_tasks.items()
-                      if id not in self.finished_tasks}
+        open_tasks = {task for idT, task in self.active_tasks.items()
+                      if idT not in self.finished_tasks}
         if open_tasks:
             _, pending = await asyncio.wait(
                 open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
@@ -678,7 +678,7 @@ class Server:
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
         self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
         self.blocking = frozenset(self.rpc_table.keys()) if blocking == ALL_RPCs else blocking
-        self.blocking = self.blocking - self.cpu_bound  # cpu_bound property takes precedence
+        self.blocking -= self.cpu_bound  # cpu_bound property takes precedence
 
         assert not (self.cpu_bound - self.rpc_table.keys())
         assert not (self.blocking - self.rpc_table.keys())
@@ -1404,7 +1404,7 @@ def detach_server(host: str = USE_DEFAULT_HOST,
         # if sys.version_info >= (3, 7):
         #     await writer.wait_closed()
 
-    global python_interpreter_name_cached
+    # global python_interpreter_name_cached
     host, port = substitute_default_host_and_port(host, port)
     null_device = " >/dev/null" if platform.system() != "Windows" else " > NUL"
     interpreter = sys.executable

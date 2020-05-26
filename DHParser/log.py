@@ -37,7 +37,7 @@ to which either ``False`` (turn off logging), a log directory name or
 The other components of DHParser check whether logging is on and
 write log files in the the logging directory accordingly. Usually,
 this will be concrete and abstract syntax trees as well as the full
-and abreviated parsing history.
+and abbreviated parsing history.
 
 Example::
 
@@ -186,7 +186,7 @@ def is_logging(thread_local_query: bool = True) -> bool:
 def create_log(log_name: str) -> str:
     """
     Creates a new log file. If log_name is not just a file name but a path with
-    at least one directoy (which can be './') the file is not created in the
+    at least one directory (which can be './') the file is not created in the
     configured log directory but at the given path. If a file with the same
     name already exists, it will be overwritten.
 
@@ -375,10 +375,10 @@ class HistoryRecord:
             dots = '...' if len(self.text) > n else ''
             excerpt = excerpt + '<span class="unmatched">' + self.text[:n] + dots + '</span>'
             i = stack.rfind('-&gt;')
-            chr = stack[i + 12:i + 13]
-            while not chr.isidentifier() and i >= 0:
+            ch = stack[i + 12:i + 13]
+            while not ch.isidentifier() and i >= 0:
                 i = stack.rfind('-&gt;', 0, i)
-                chr = stack[i + 12:i + 13]
+                ch = stack[i + 12:i + 13]
             if i >= 0:
                 i += 12
                 k = stack.find('<', i)
@@ -511,7 +511,7 @@ def log_ST(syntax_tree, log_file_name) -> bool:
 
 
 LOG_SIZE_THRESHOLD = 10000    # maximum number of history records to log
-LOG_TAIL_THRESHOLD = 500      # maximum number of history recors for "tail log"
+LOG_TAIL_THRESHOLD = 500      # maximum number of history records for "tail log"
 
 
 def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> bool:

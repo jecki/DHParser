@@ -72,6 +72,7 @@ __all__ = ('ErrorCode',
            'PARSER_STOPPED_BEFORE_END',
            'PARSER_LOOKAHEAD_MATCH_ONLY',
            'CAPTURE_STACK_NOT_EMPTY',
+           'AUTORETRIEVED_SYMBOL_NOT_CLEARED',
            'MALFORMED_ERROR_STRING',
            'AMBIGUOUS_ERROR_HANDLING',
            'REDEFINED_DIRECTIVE',
@@ -112,7 +113,7 @@ RESUME_NOTICE                            = ErrorCode(50)
 
 REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
 UNUSED_ERROR_HANDLING_WARNING            = ErrorCode(130)
-LEFT_RECURSION_WARNING                   = ErrorCode(140)
+LEFT_RECURSION_WARNING                   = ErrorCode(140)  # obsolete!
 
 UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
 CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)
@@ -227,7 +228,7 @@ def is_error(code: int) -> bool:
 def is_fatal(code: int) -> bool:
     """Returns True, ir error is fatal. Fatal errors are typically raised
     when a crash (i.e. Python exception) occurs at later stages of the
-    processing pipline (e.g. ast transformation, compiling). """
+    processing pipeline (e.g. ast transformation, compiling). """
     return code >= FATAL
 
 

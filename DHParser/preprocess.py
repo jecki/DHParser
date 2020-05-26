@@ -104,7 +104,7 @@ def _apply_preprocessors(text: str, preprocessors: Tuple[PreprocessorFunc, ...])
 
 def chain_preprocessors(*preprocessors) -> PreprocessorFunc:
     """
-    Merges a seuqence of preprocessor functions in to a single function.
+    Merges a sequence of preprocessor functions in to a single function.
     """
     return functools.partial(_apply_preprocessors, preprocessors=preprocessors)
 

@@ -254,7 +254,7 @@ SXPRESSION_SERIALIZATION = "S-expression"
 SERIALIZATIONS = frozenset({XML_SERIALIZATION,
                             JSON_SERIALIZATION,
                             INDENTED_SERIALIZATION,
-                            SXPRESSION_SERIALIZATION,})
+                            SXPRESSION_SERIALIZATION})
 
 CONFIG_PRESET['cst_serialization'] = SXPRESSION_SERIALIZATION
 CONFIG_PRESET['ast_serialization'] = SXPRESSION_SERIALIZATION
@@ -307,7 +307,7 @@ CONFIG_PRESET['log_syntax_trees'] = set()
 # Default value: "none"
 CONFIG_PRESET['static_analysis'] = "early"
 
-# DHParser.ebnfy.EBNFCompiler class adds the the EBNF-grammar to the
+# DHParser.ebnf.EBNFCompiler class adds the the EBNF-grammar to the
 # docstring of the generated Grammar-class
 # Default value: False
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
@@ -344,12 +344,12 @@ CONFIG_PRESET['default_literalws'] = "none"
 #       alternative-parser. Does not allow regular expressions between, i.e.
 #       / ... / within the EBNF-code!
 # 'strict'      - allows both classic and regex-like syntax to be mixed, but
-#       allows character ranges within square brackets with oridinal values,
+#       allows character ranges within square brackets with ordinal values,
 #       only. Uses | as delimiter for alternatives.
 # 'heuristic'   - the most liberal mode, allows about everything. However,
 #       because it employs heuristics to distinguish ambiguous cases, it
-#       may lead to unexcpeted errors and require the user to resolve the
-#       ambiguieties
+#       may lead to unexpected errors and require the user to resolve the
+#       ambiguities
 
 EBNF_CLASSIC_SYNTAX = "classic"
 EBNF_ANY_SYNTAX_STRICT = "strict"
@@ -366,7 +366,7 @@ CONFIG_PRESET['syntax_variant'] = EBNF_ANY_SYNTAX_STRICT
 #
 ########################################################################
 
-# Maximum allowed source size for reomote procedure calls (including
+# Maximum allowed source size for remote procedure calls (including
 # parameters) in server.Server. The default value is rather large in
 # order to allow transmitting complete source texts as parameter.
 # Default value: 4 MB
@@ -377,7 +377,7 @@ CONFIG_PRESET['max_rpc_size'] = 4 * 1024 * 1024
 # Default value: True
 CONFIG_PRESET['jsonrpc_header'] = True
 
-# Defaut host name or IP-adress for the compiler server. Should usually
+# Default host name or IP-address for the compiler server. Should usually
 # be localhost (127.0.0.1)
 # Default value: 127.0.0.1.
 CONFIG_PRESET['server_default_host'] = "127.0.0.1"
@@ -450,4 +450,4 @@ CONFIG_PRESET['test_parallelization'] = True
 # resulting from parsers that contain lookahead checks may have a
 # structure that would not occur outside the testing-environment.
 # Default value: True
-CONFIG_PRESET['test_supress_lookahead_failures'] = True
+CONFIG_PRESET['test_suppress_lookahead_failures'] = True

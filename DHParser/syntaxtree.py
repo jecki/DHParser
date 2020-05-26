@@ -866,7 +866,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         end = 0
         for nd in self.select_if(lambda nd: not nd.children, include_root=True):
-            end = end + len(nd)
+            end += len(nd)
             if location < end:
                 return nd
         return None
@@ -938,7 +938,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         end = 0
         for ctx in self.select_context_if(lambda ctx: not ctx[-1].children, include_root=True):
-            end = end + len(ctx[-1])
+            end += len(ctx[-1])
             if location < end:
                 return ctx
         return None
@@ -976,7 +976,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         ctx.reverse()
         return ctx
 
-
     # milestone support ### EXPERIMENTAL!!! ###
 
     # def find_nearest_common_ancestor(self, A: 'Node', B: 'Node') -> 'Node':
@@ -994,7 +993,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     #             break
     #         common_ancestor = a
     #     return common_ancestor
-
 
     def milestone_segment(self, begin: 'Node', end: 'Node') -> 'Node':
         """
@@ -1137,7 +1135,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     i += 1
                 while k >= 0 and not lines[k]:
                     k -= 1
-            lines = [usetab + l for l in lines[i:k + 1]]
+            lines = [usetab + line for line in lines[i:k + 1]]
             return head + '\n'.join(lines) + tail
 
     def as_sxpr(self, src: Optional[str] = None,
@@ -1420,8 +1418,8 @@ def next_context(context: List[Node]) -> Optional[List[Node]]:
 
 
 def serialize_context(context: List[Node], with_content: bool = False, delimiter: str = ' <- '):
-    l = [nd.tag_name + ((':' + nd.content) if with_content else '') for nd in context]
-    return delimiter.join(l)
+    lines = [nd.tag_name + ((':' + nd.content) if with_content else '') for nd in context]
+    return delimiter.join(lines)
 
 
 def context_sanity_check(context: List[Node]) -> bool:

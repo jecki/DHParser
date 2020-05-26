@@ -28,8 +28,8 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
-from DHParser.log import freeze_callstack, HistoryRecord, NONE_NODE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
+from DHParser.log import freeze_callstack, HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 from DHParser.toolkit import cython, line_col
 
@@ -57,7 +57,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         target = text if len(text) <= 10 else text[:7] + '...'
 
         resumers = [grammar.call_stack__[-1][0]]
-        i = 2;  L = len(grammar.call_stack__)
+        i = 2;  # L = len(grammar.call_stack__)
         while resumers[-1].startswith(':') and i <= len(grammar.call_stack__):
             resumers.append(grammar.call_stack__[-i][0])
             i += 1
