@@ -507,7 +507,6 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         if RX_WHITESPACE.fullmatch(intro):
             intro = '#!/usr/bin/env python3'
         if RX_WHITESPACE.fullmatch(outro):
-            print(DHPARSER_MAIN)
             outro = DHPARSER_MAIN.format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHParser.ebnf.DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath)
