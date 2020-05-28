@@ -948,6 +948,11 @@ class Grammar:
                 the left-recursion handling algorithm. See `Parser.__call__`
                 ans `Forward.__call__`.
 
+        left_recursion__: Turns on left-recursion handling. This prevents the
+                recursive descent parser to get caught in an infinite loop
+                (resulting in a maximum recursion depth reached error) when
+                the grammar definition contains left recursions.
+
         memoization__:  Turns full memoization on or off. Turning memoization off
                 results in less memory usage and sometimes reduced parsing time.
                 In some situations it may drastically increase parsing time, so
@@ -1110,9 +1115,10 @@ class Grammar:
                     or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
-        self.memoization__ = True              # type: bool
-        self.history_tracking__ = False        # type: bool
-        self.resume_notices__ = False          # type: bool
+        self.memoization__ = get_config_value('memoization')                      # type: bool
+        self.left_recursion__ = get_config_value('left_recursion')                # type: bool
+        self.history_tracking__ = get_config_value('history_tracking')            # type: bool
+        self.resume_notices__ = get_config_value('resume_notices')                # type: bool
         self.flatten_tree__ = get_config_value('flatten_tree')                    # type: bool
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
         self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
@@ -3125,7 +3131,6 @@ class Forward(UnaryParser):
         super(Forward, self).__init__(PARSER_PLACEHOLDER)
         # self.parser = PARSER_PLACEHOLDER  # type: Parser
         self.cycle_reached = False  # type: bool
-        # self.memoization = True  # type: bool
 
     def reset(self):
         super(Forward, self).reset()
@@ -3161,8 +3166,10 @@ class Forward(UnaryParser):
         http://www.vpri.org/pdf/tr2007002_packrat.pdf
         """
         grammar = self.grammar
-        location = grammar.document_length__ - text._len
+        if not grammar.left_recursion__:
+            return self.parser(text)
 
+        location = grammar.document_length__ - text._len
         # rollback variable changing operation if parser backtracks
         # to a position before the variable changing operation occurred
         if grammar.last_rb__loc__ > location:
