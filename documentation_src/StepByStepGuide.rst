@@ -705,13 +705,13 @@ rich set of predefined operators. Should these not suffice, you
 can easily write your own. How does this look like? ::
 
     poetry_AST_transformation_table = {
-    "<": flatten,
-    "document": [],
-    "sentence": [],
-    "part": [],
-    "WORD": [],
-    "EOF": [],
-    "*": replace_by_single_child
+        "<": flatten,
+        "document": [],
+        "sentence": [],
+        "part": [],
+        "WORD": [],
+        "EOF": [],
+        "*": replace_by_single_child
     }
 
 
@@ -825,7 +825,7 @@ Now that everything is set, let's have a look at the result::
 That is much better. There is but one slight blemish in the output: While all
 nodes left a named nodes, i.e. nodes associated with a named parser, there are a
 few anonymous `<ANONYMOUS_Text__>`-nodes. Here is a little exercise: Do away with those
-`<ANON`YMOUS_Text__>`-nodes by replacing them by something semantically more meaningful.
+`<ANONYMOUS_Text__>`-nodes by replacing them by something semantically more meaningful.
 Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". (An
 alternative strategy to extending the grammar would be to use the
 ``replace_parser`` operator. In the AST-transformation-table ANONYMOUS nodes are
