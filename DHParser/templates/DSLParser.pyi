@@ -27,7 +27,7 @@ if __name__ == "__main__":
             sys.exit(1)
         elif parser_update:
             print(os.path.basename(__file__) + ' has changed. '
-              'Please run again in order to apply updated compiler')
+                  'Please run again in order to apply updated compiler')
             sys.exit(0)
     else:
         print('Could not check whether grammar requires recompiling, '
@@ -46,14 +46,14 @@ if __name__ == "__main__":
         print('File "%s" not found!' % file_name)
         sys.exit(1)
     if not os.path.isfile(file_name):
-        print('"%" is not a file!' % file_name)
+        print('"%s" is not a file!' % file_name)
         sys.exit(1)
 
     if args.debug is not None:
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
         set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', set(('cst', 'ast')))
+        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
 
     result, errors, _ = compile_src(file_name)
