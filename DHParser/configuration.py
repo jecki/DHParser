@@ -208,9 +208,9 @@ CONFIG_PRESET['max_parser_dropouts'] = 1
 # The "search window" for finding a reentry-point after a syntax error was
 # encountered during parsing. The value of `reentry_search_window` is the
 # maximum number of characters lying ahead of the point of failure, where
-# a suitable reentry point will be searched.
-# A value smaller or equal than zero means that the complete remaining
-# text will be searched.
+# a suitable reentry point will be searched. A value smaller than zero
+# means that the complete remaining text will be searched. A value of zero
+# effectively turns of resuming after error.
 # Default value: 10000
 CONFIG_PRESET['reentry_search_window'] = 10000
 

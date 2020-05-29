@@ -134,8 +134,8 @@ class ParserError(Exception):
 
 
 ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressions
-ReentryPointAlgorithm = Callable[[StringView, int], Tuple[int, int]]
-# (text, start point) => (reentry point, match length)
+ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
+# (text, start point, end point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
 
 
@@ -150,26 +150,45 @@ def reentry_point(rest: StringView,
     The re-entry point is always the point after the end of the match of the regular
     expression defining the re-entry point. (Use look ahead, if you wand to define
     the re-entry point by what follows rather than by what text precedes the point.)
-    Args:
-        rest:  The rest of the parsed text or, in other words, the point where
-            a ParserError was thrown.
-        rules: A list of strings, regular expressions or callable, i.e.
-            reentry-point-search-functions. The rest of the text is searched for
-            each of these. The closest match is the point where parsing will be
-            resumed.
-        comment_regex: A regular expression object that matches comments.
-        search_window: The maximum size of the search window for finding the
-            reentry-point. A value smaller or equal zero means that
-    Returns:
-        The integer index of the closest reentry point or -1 if no reentry-point
-        was found.
+
+    REMARK: The algorithm assumes that any stretch of the document that matches
+    `comment_regex` is actually a comment. It is possible to define grammars,
+    where the use of comments is restricted to certain areas and that allow to
+    use constructs that look like comments (i.e. will be matched by `comment_regex`)
+    but are none in other areas. For example::
+
+            my_string = "# This is not a comment"; foo()  # This is a comment
+            bar()
+
+    Here the reentry-algorithm would overlook `foo()` and jump directly to `bar()`.
+    However, since the reentry-algorithm only needs to be good enough to do its
+    work, this seems acceptable.
+
+    :param rest:  The rest of the parsed text or, in other words, the point where
+        a ParserError was thrown.
+    :param rules: A list of strings, regular expressions or search functions.
+        The rest of the text is searched for each of these. The closest match
+        is the point where parsing will be resumed.
+    :param comment_regex: A regular expression object that matches comments.
+    :param search_window: The maximum size of the search window for finding the
+        reentry-point. A value smaller than zero means that the complete remaining
+        text will be searched. A value of zero effectively turns of resuming after
+        error.
+    :return: The integer index of the closest reentry point or -1 if no
+        reentry-point was found.
     """
     upper_limit = len(rest) + 1
     closest_match = upper_limit
-    comments = None  # typ: Optional[Iterator]
+    comments = None  # type: Optional[Iterator]
+    if search_window < 0:
+        search_window = len(rest)
 
     @cython.locals(a=cython.int, b=cython.int)
     def next_comment() -> Tuple[int, int]:
+        """Returns the [start, end[ intervall of the next comment in the text.
+        The comment-iterator start at the beginning of the `rest` of the
+        document and is reset for each search rule.
+        """
         nonlocal rest, comments
         if comments:
             try:
@@ -182,11 +201,21 @@ def reentry_point(rest: StringView,
 
     @cython.locals(start=cython.int)
     def str_search(s, start: int = 0) -> Tuple[int, int]:
+        """Returns the starting position of the next occurrence of `s` in
+        the `rest` of the document beginning with `start` and the length
+        of the match, which in this case is always the length of `s` itself.
+        If their is no match, the returned starting position will be -1.
+        """
         nonlocal rest
         return rest.find(s, start, start + search_window), len(s)
 
     @cython.locals(start=cython.int, end=cython.int)
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
+        """Returns the staring position and the length of the next match of
+        the regular expression `rx` in the `rest` of the document, starting
+        with `start`.
+        If their is no match, the returned starting position will be -1.
+        """
         nonlocal rest
         m = rest.search(rx, start, start + search_window)
         if m:
@@ -194,12 +223,18 @@ def reentry_point(rest: StringView,
             return rest.index(begin), end - begin
         return -1, 0
 
-    def algorithm_search(func: Callable, start: int = 0):
+    def algorithm_search(func: ReentryPointAlgorithm, start: int = 0):
+        """Returns the next match as a tuple of position and length that
+        the reentry-point-search-function `func` yields.
+        """
         nonlocal rest
-        return func(rest, start)
+        return func(rest, start, start + search_window)
 
     @cython.locals(a=cython.int, b=cython.int, k=cython.int, length=cython.int)
     def entry_point(search_func, search_rule) -> int:
+        """Returns the next reentry-point outside a comment that `search_func`
+        yields. If no reentry point is found, the first position after the
+        end of the text ("upper limit") is returned."""
         a, b = next_comment()
         k, length = search_func(search_rule)
         while a < b <= k + length:

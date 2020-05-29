@@ -1216,7 +1216,9 @@ class TestReentryAfterError:
             block_B = "x" "y" "z"
             """
         proc = """
-def next_valid_letter(text, start):
+def next_valid_letter(text, start, end):
+    L = len(text)
+    end = min(L, max(L, end))
     while start < len(text):
         if str(text[start]) in 'abcxyz':
             return start, 0
