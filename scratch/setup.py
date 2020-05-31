@@ -1,6 +1,4 @@
-import os
 import setuptools
-import sys
 
 try:
     from Cython.Build import cythonize
@@ -23,21 +21,6 @@ compile_modules = [
     'DHParser/compile.py',
     'DHParser/ebnf.py',
 ]
-
-if len(sys.argv) > 1:
-    all_modules = [os.path.splitext(file_name)[0]
-                   for file_name in os.listdir('DHParser')
-                   if file_name.endswith('.py')]
-    if sys.argv[1] == '*':
-        compile_modules = ['DHParser/' + name + '.py' for name in all_modules]
-    else:
-        compile_modules
-        for arg in sys.argv[1:]:
-            name = os.path.splitext(arg)[0]
-            if name in all_modules:
-                compile_modules.append('DHParser/' + name + '.py')
-            else:
-                print('Module "%s" does not exist!' % name)
 
 with open('README.md', encoding='utf-8') as f:
     read_me = f.read()
