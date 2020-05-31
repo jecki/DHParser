@@ -667,9 +667,9 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
     one group with the empty string as a key.
 
     :param ebnf_text_or_file: Either an ebnf-grammar or the file-name
-            of an ebnf-grammar
-    :return: Ordered dictionary mapping the section names of the grammar
-            to lists of symbols that appear under that section.
+        of an ebnf-grammar
+    :return: Ordered dictionary mapping the section names of the
+        grammar to lists of symbols that appear under that section.
     """
     def trim_section_name(name: str) -> str:
         return re.sub(r'[^\w-]', '_', name.replace('#:', '').strip())

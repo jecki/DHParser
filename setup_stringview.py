@@ -13,15 +13,15 @@ from DHParser.versionnumber import __version__
 compile_modules = [
     'DHParser/stringview.py',
     'DHParser/toolkit.py',
-    'DHParser/preprocess.py',
-    'DHParser/error.py',
-    'DHParser/syntaxtree.py',
-    'DHParser/log.py',
-    'DHParser/parse.py',
-    'DHParser/trace.py',
-    'DHParser/transform.py',
-    'DHParser/compile.py',
-    'DHParser/ebnf.py',
+    # 'DHParser/preprocess.py',
+    # 'DHParser/error.py',
+    # 'DHParser/syntaxtree.py',
+    # 'DHParser/log.py',
+    # 'DHParser/parse.py',
+    # 'DHParser/trace.py',
+    # 'DHParser/transform.py',
+    # 'DHParser/compile.py',
+    # 'DHParser/ebnf.py',
 ]
 
 if len(sys.argv) > 1:
