@@ -395,21 +395,21 @@ def parse_logging_args(args):
 
 
 if __name__ == "__main__":
-    from argparse import ArgumentParser
+    from argparse import ArgumentParser, REMAINDER
     parser = ArgumentParser(description="Setup and Control of a Server for processing EBNF-files.")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('file', nargs='?')
     group.add_argument('-t', '--status', action='store_true',
                        help="displays the server's status, e.g. whether it is running")
-    group.add_argument('-s', '--startserver', nargs='*', metavar="host port",
+    group.add_argument('-s', '--startserver', nargs='*', metavar=("HOST", "PORT"),
                        help="starts the server")
     group.add_argument('-d', '--startdaemon', action='store_true',
                        help="starts the server in the background")
     group.add_argument('-k', '--stopserver', action='store_true',
                        help="starts the server")
-    parser.add_argument('-o', '--host', nargs=1, default='',
+    parser.add_argument('-o', '--host', nargs=1, default=[''],
                         help='host name or IP-address of the server (default: 127.0.0.1)')
-    parser.add_argument('-p', '--port', nargs=1, type=int, default=-1,
+    parser.add_argument('-p', '--port', nargs=1, type=int, default=[-1],
                         help='port number of the server (default:8888)')
     parser.add_argument('-l', '--logging', nargs='?', metavar="ON|LOG_DIR|OFF",
                         help='turns logging on (default) or off or writes log to a '
@@ -417,8 +417,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    host = args.host
-    port = int(args.port)
+    host = args.host[0]
+    port = int(args.port[0])
     if port < 0 or not host:
         # if host and port have not been specified explicitly on the command
         # line, try to retrieve them from (temporary) config file or use
@@ -428,17 +428,23 @@ if __name__ == "__main__":
     if args.status:
         try:
             result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
-            print('Server ' + str(result) + ' running on ' + host + ' ' + str(port))
+            print('Server ' + str(result) + ' running on ' + host + ':' + str(port))
         except ConnectionRefusedError:
-            print('No server running on: ' + host + ' ' + str(port))
+            print('No server running on: ' + host + ':' + str(port))
 
     elif args.startserver is not None:
-        if len(args.startserver) not in (0, 2):
+        portstr = None
+        if len(args.startserver) == 1:
+            host, portstr = args.startserver[0].split(':')
+        elif len(args.startserver) == 2:
+            host, portstr = args.startserver
+        elif len(args.startserver) != 0:
             parser.error('Wrong number of arguments for "--startserver"!')
-        host = args.startserver[0]
-        if not args.startserver[1].isdecimal():
-            parser.error('port must be a number!')
-        port = int(args.startserver[1])
+        if portstr is not None:
+            try:
+                port = int(portstr)
+            except ValueError:
+                parser.error('port must be a number!')
         log_path, _ = parse_logging_args(args)
         sys.exit(run_server(host, port, log_path))
 
