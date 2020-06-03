@@ -265,108 +265,84 @@ def start_server_daemon(host, port):
     print(result)
 
 
-def print_usage_and_exit():
-    print('Usages:\n'
-          + '    python DSLServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-          + '    python DSLServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-          + '    python DSLServer.py --stopserver\n'
-          + '    python DSLServer.py --status\n'
-          + '    python DSLServer.py --logging [ON|LOG_PATH|OFF]\n'
-          + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
-    sys.exit(1)
-
-
-def assert_if(cond: bool, message: str):
-    if not cond:
-        if message:
-            print(message)
-        print_usage_and_exit()
-
-
-def parse_logging_args(argv):
-    try:
-        i = argv.index('--logging')
-        echo = repr('ECHO_ON') if argv[1].lower() == '--startserver' else repr('ECHO_OFF')
-        del argv[i]
-        if i < len(argv):
-            arg = argv[i].upper()
-            if arg in ('OFF', 'STOP', 'NO', 'FALSE'):
-                log_path = repr(None)
-                echo = repr('ECHO_OFF')
-            elif arg in ('ON', 'START', 'YES', 'TRUE'):
-                log_path = repr('')
-            else:
-                log_path = repr(argv[i])
-            del argv[i]
-        else:
+def parse_logging_args(args):
+    if args.logging:
+        echo = repr('ECHO_ON') if args.start else repr('ECHO_OFF')
+        if args.logging in ('OFF', 'STOP', 'NO', 'FALSE'):
+            log_path = repr(None)
+            echo = repr('ECHO_OFF')
+        elif args.loggigng in ('ON', 'START', 'YES', 'TRUE'):
             log_path = repr('')
-        args = log_path, echo
-        request = LOGGING_REQUEST.replace('""', ", ".join(args))
+        else:
+            log_path = args.logging
+        request = LOGGING_REQUEST.replace('""', ", ".join((log_path, echo)))
         print('Logging to file %s with call %s' % (repr(log_path), request))
         return log_path, request
-    except ValueError:
+    else:
         return None, ''
 
 
 if __name__ == "__main__":
-    print('Executing ' + ' '.join(sys.argv))
-    host, port = '', -1
+    from argparse import ArgumentParser, REMAINDER
+    parser = ArgumentParser(description="Setup and Control of a Server for processing DSL-files.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('file', nargs='?')
+    group.add_argument('-t', '--status', action='store_true',
+                       help="displays the server's status, e.g. whether it is running")
+    group.add_argument('-s', '--startserver', nargs='*', metavar=("HOST", "PORT"),
+                       help="starts the server")
+    group.add_argument('-d', '--startdaemon', action='store_true',
+                       help="starts the server in the background")
+    group.add_argument('-k', '--stopserver', action='store_true',
+                       help="starts the server")
+    parser.add_argument('-o', '--host', nargs=1, default=[''],
+                        help='host name or IP-address of the server (default: 127.0.0.1)')
+    parser.add_argument('-p', '--port', nargs=1, type=int, default=[-1],
+                        help='port number of the server (default:8888)')
+    parser.add_argument('-l', '--logging', nargs='?', metavar="ON|LOG_DIR|OFF",
+                        help='turns logging on (default) or off or writes log to a '
+                             'specific directory (implies on)')
 
-    # read and remove "--host ..." and "--port ..." parameters from sys.argv
-    argv = []
-    i = 0
-    while i < len(sys.argv):
-        if sys.argv[i] in ('--host', '-h'):
-            assert_if(i < len(sys.argv) - 1, 'host missing!')
-            host = sys.argv[i + 1]
-            i += 1
-        elif sys.argv[i] in ('--port', '-p'):
-            assert_if(i < len(sys.argv) - 1, 'port number missing!')
-            try:
-                port = int(sys.argv[i + 1])
-            except ValueError:
-                assert_if(False, 'invalid port number: ' + sys.argv[i + 1])
-            i += 1
-        else:
-            argv.append(sys.argv[i])
-        i += 1
+    args = parser.parse_args()
 
-    if len(argv) < 2:
-        print_usage_and_exit()
-
+    host = args.host[0]
+    port = int(args.port[0])
     if port < 0 or not host:
         # if host and port have not been specified explicitly on the command
         # line, try to retrieve them from (temporary) config file or use
         # hard coded default values
         host, port = retrieve_host_and_port()
 
-    if sys.argv[1] == "--status":
+    if args.status:
         try:
             result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
-            print('Server ' + str(result) + ' running on ' + host + ' ' + str(port))
-        except ConnectionRefusedError as error:
-            print(error)
-            print('No server running on: ' + host + ' ' + str(port))
+            print('Server ' + str(result) + ' running on ' + host + ':' + str(port))
+        except ConnectionRefusedError:
+            print('No server running on: ' + host + ':' + str(port))
 
-    elif argv[1] == "--startserver":
-        log_path, _ = parse_logging_args(argv)
-        if len(argv) == 2:
-            argv.append(host)
-        if len(argv) == 3:
-            argv.append(str(port))
-        sys.exit(run_server(argv[2], int(argv[3]), log_path))
+    elif args.startserver is not None:
+        portstr = None
+        if len(args.startserver) == 1:
+            host, portstr = args.startserver[0].split(':')
+        elif len(args.startserver) == 2:
+            host, portstr = args.startserver
+        elif len(args.startserver) != 0:
+            parser.error('Wrong number of arguments for "--startserver"!')
+        if portstr is not None:
+            try:
+                port = int(portstr)
+            except ValueError:
+                parser.error('port must be a number!')
+        log_path, _ = parse_logging_args(args)
+        sys.exit(run_server(host, port, log_path))
 
-    elif argv[1] == "--startdaemon":
-        log_path, log_request = parse_logging_args(argv)
-        if len(argv) == 2:
-            argv.append(host)
-        if len(argv) == 3:
-            argv.append(str(port))
+    elif args.startdaemon:
+        log_path, log_request = parse_logging_args(args)
         start_server_daemon(host, port)
         if log_request:
             print(asyncio_run(send_request(log_request, host, port)))
 
-    elif argv[1] in ("--stopserver", "--killserver", "--stopdaemon", "--killdaemon"):
+    elif args.stopserver:
         try:
             result = asyncio_run(send_request(STOP_SERVER_REQUEST_BYTES, host, port))
         except ConnectionRefusedError as e:
@@ -374,32 +350,37 @@ if __name__ == "__main__":
             sys.exit(1)
         print(result)
 
-    elif argv[1] == "--logging":
-        log_path, request = parse_logging_args(argv)
+    elif args.logging:
+        log_path, request = parse_logging_args(args)
         print(asyncio_run(send_request(request, host, port)))
 
-    elif argv[1].startswith('-'):
-        print_usage_and_exit()
-
-    elif argv[1]:
-        if not argv[1].endswith(')'):
+    elif args.file:
+        file_name = args.file
+        if not file_name.endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
-            argv[1] = os.path.abspath(argv[1])
-            # print(argv[1])
-        # TODO: Check for changed grammar and stop server and recompile grammar if needed.
-        log_path, log_request = parse_logging_args(argv)
+            file_name = os.path.abspath(file_name)
+            # print(file_name)
+        log_path, log_request = parse_logging_args(args)
         try:
             if log_request:
                 print(asyncio_run(send_request(log_request, host, port)))
-            result = asyncio_run(send_request(argv[1], host, port))
+            result = asyncio_run(send_request(file_name, host, port))
         except ConnectionRefusedError:
             start_server_daemon(host, port)               # start server first
             if log_request:
                 print(asyncio_run(send_request(log_request, host, port)))
-            result = asyncio_run(send_request(argv[1], host, port))
+            result = asyncio_run(send_request(file_name, host, port))
         if len(result) >= DATA_RECEIVE_LIMIT:
             print(result, '...')
         else:
             print(result)
+
     else:
-        print_usage_and_exit()
+        print('Usages:\n'
+              + '    python DSLServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+              + '    python DSLServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+              + '    python DSLServer.py --stopserver\n'
+              + '    python DSLServer.py --status\n'
+              + '    python DSLServer.py --logging [ON|LOG_PATH|OFF]\n'
+              + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
+        sys.exit(1)
