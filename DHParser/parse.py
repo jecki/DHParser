@@ -33,7 +33,7 @@ for an example.
 from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, Dict, \
-    DefaultDict, Sequence, Union, Optional
+    DefaultDict, Sequence, Union, Optional, Iterator
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
@@ -539,7 +539,7 @@ class Parser:
             return cast('Alternative', other).__ror__(self)
         return Alternative(self, other)
 
-    def __mul__(self, other: 'Parser') -> 'Alternative':
+    def __mul__(self, other: 'Parser') -> 'Interleave':
         """The * operator generates an interleave parser that applies
         the first parser and the second parser in any possible order
         until both match.
@@ -631,7 +631,7 @@ class Parser:
                 return False
         return False
 
-    def apply(self, func: ApplyFunc) -> bool:
+    def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers as long as `func()` returns `None` or `False`.
@@ -649,7 +649,7 @@ class Parser:
         worrying about forgetting the return value of procedure, because a
         return value of `None` means "carry on".
         """
-        def positive_flip(f: Callable[['Parser'], None], flagged: Set[Callable]) -> bool:
+        def positive_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == True`
             as meaning that `f` has already been applied."""
@@ -659,7 +659,7 @@ class Parser:
                 flagged.add(f)
                 return False
 
-        def negative_flip(f: Callable[['Parser'], None], flagged: Set[Callable]) -> bool:
+        def negative_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == False`
             as meaning that `f` has already been applied."""
@@ -1534,7 +1534,7 @@ class Grammar:
                 sub_list = p.sub_parsers()
                 if sub_list:
                     leaf_state[p] = None
-                    state = any(leaf_parsers(s) for s in sub_list)
+                    state = any(leaf_parsers(s) for s in sub_list)  # type: Optional[bool]
                     if not state and any(leaf_state[s] is None for s in sub_list):
                         state = None
                 else:
@@ -1914,7 +1914,8 @@ class CombinedParser(Parser):
     def location_info(self) -> str:
         """Returns a description of the location of the parser within the grammar
         for the purpose of transparent error reporting."""
-        return '%s%s in definition of "%s" as %s' % (self.pname or '_', self.ptype, self.symbol, str(self))
+        return '%s%s in definition of "%s" as %s' \
+            % (self.pname or '_', self.ptype, self.symbol, str(self))
 
 
 class UnaryParser(CombinedParser):
@@ -2311,9 +2312,9 @@ class MandatoryNary(NaryParser):
             is_func = callable(search)           # search rule is a function: StringView -> bool
             is_str = isinstance(search, str)     # search rule is a simple string
             is_rxs = not is_func and not is_str  # search rule is a regular expression
-            if (is_func and search(text_)) \
+            if (is_func and cast(Callable, search)(text_)) \
                     or (is_rxs and text_.match(search)) \
-                    or (is_str and text_.startswith(search)):
+                    or (is_str and text_.startswith(cast(str, search))):
                 try:
                     msg = message.format(expected, found)
                     break
@@ -2462,7 +2463,8 @@ def starting_string(parser: Parser) -> str:
     """If parser starts with a fixed string, this will be returned.
     """
     # keep track of already visited parsers to avoid infinite circles
-    been_there = parser.grammar.static_analysis_caches__.setdefault('starting_strings', dict())  # type: Dict[Parser, str]
+    been_there = parser.grammar.static_analysis_caches__\
+        .setdefault('starting_strings', dict())  # type: Dict[Parser, str]
 
     def find_starting_string(p: Parser) -> str:
         nonlocal been_there
@@ -2627,7 +2629,7 @@ class Interleave(MandatoryNary):
             repetitions = [(1, 1)] * len(parsers)
         elif len(parsers) != len(repetitions):
             raise ValueError("Number of repetition-tuples unequal number of sub-parsers!")
-        self.repetitions = repetitions
+        self.repetitions = list(repetitions)  # type: List[Tuple[int, int]]
         self.non_mandatory = frozenset(parsers[i] for i in range(min(mandatory, len(parsers))))
         self.parsers_set = frozenset(self.parsers)
 
@@ -2696,7 +2698,8 @@ class Interleave(MandatoryNary):
 
         return ' ° '.join(rep(parser) for parser in self.parsers)
 
-    def _prepare_combined(self, other: Parser) -> Tuple[Tuple[Parser], int, List[Tuple[int, int]]]:
+    def _prepare_combined(self, other: Parser) \
+            -> Tuple[Tuple[Parser, ...], int, List[Tuple[int, int]]]:
         """Returns the other's parsers and repetitions if `other` is an Interleave-parser,
         otherwise returns ((other,),), [(1, 1])."""
         other = to_interleave(other)
@@ -2708,8 +2711,8 @@ class Interleave(MandatoryNary):
             if isinstance(other, Interleave) else NO_MANDATORY
         if other_mandatory == NO_MANDATORY:
             mandatory = self.mandatory
-            parsers = self.parsers + other_parsers
-            repetitions = self.repetitions + other_repetitions
+            parsers = self.parsers + other_parsers  # type: Tuple[Parser, ...]
+            repetitions = self.repetitions + other_repetitions  # type: List[Tuple[int, int]]
         elif self.mandatory == NO_MANDATORY:
             mandatory = other_mandatory
             parsers = other_parsers + self.parsers
@@ -2929,14 +2932,14 @@ MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
 # on the contrary always return `None` if no match occurs!
 
 
-def last_value(text: Union[StringView, str], stack: List[str]) -> str:
+def last_value(text: Union[StringView, str], stack: List[str]) -> Optional[str]:
     """Matches `text` with the most recent value on the capture stack.
     This is the default case when retrieving captured substrings."""
     value = stack[-1]
     return value if text.startswith(value) else None
 
 
-def optional_last_value(text: Union[StringView, str], stack: List[str]) -> str:
+def optional_last_value(text: Union[StringView, str], stack: List[str]) -> Optional[str]:
     """Matches `text` with the most recent value on the capture stack or
     with the empty string, i.e. `optional_match` never returns `None` but
     either the value on the stack or the empty string.
@@ -2949,7 +2952,7 @@ def optional_last_value(text: Union[StringView, str], stack: List[str]) -> str:
     return value if text.startswith(value) else ""
 
 
-def matching_bracket(text: Union[StringView, str], stack: List[str]) -> str:
+def matching_bracket(text: Union[StringView, str], stack: List[str]) -> Optional[str]:
     """Returns a closing bracket for the opening bracket on the capture stack,
     i.e. if "[" was captured, "]" will be retrieved."""
     value = stack[-1]

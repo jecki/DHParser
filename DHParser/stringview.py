@@ -339,7 +339,7 @@ class StringView:  # collections.abc.Sized
         return self if end == self._len else self[:end]
 
     @cython.locals(length=cython.int, i=cython.int, k=cython.int)
-    def split(self, sep=None) -> List[Union['StringView', str]]:
+    def split(self, sep=None) -> Sequence[Union['StringView', str]]:
         """Returns a list of the words in `self`, using `sep` as the
         delimiter string.  If `sep` is not specified or is None, any
         whitespace string is a separator and empty strings are
@@ -432,7 +432,8 @@ class TextBuffer:
                 replacement = ed['text']
             except KeyError:
                 replacement = ed['newText']
-            self.update(start["line"], start["character"], end["line"], end["character"], replacement)
+            self.update(start["line"], start["character"],
+                        end["line"], end["character"], replacement)
 
         if isinstance(edits, list):
             for ed in edits:
@@ -442,7 +443,7 @@ class TextBuffer:
         if version >= 0:
             self.version = version
 
-    def snapshot(self, eol: str = '\n') -> str:
+    def snapshot(self, eol: str = '\n') -> Union[str, StringView]:
         """Returns the current state of the entire text, using the given
         end of line marker ('\n' or '\r\n')"""
         if self._text:
