@@ -164,7 +164,7 @@ def create_match_function(criterion: CriteriaType) -> Callable:
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
-        return lambda nd: nd.tag_name in criterion
+        return lambda nd: nd.tag_name in cast(Container, criterion)
     raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
 
 
@@ -182,7 +182,7 @@ def create_context_match_function(criterion: CriteriaType) -> Callable:
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
-        return lambda ctx: ctx[-1].tag_name in criterion
+        return lambda ctx: ctx[-1].tag_name in cast(Container, criterion)
     raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
 
 
@@ -746,7 +746,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         raise ValueError("Node identified by '%s' not among child-nodes." % str(what))
 
     @cython.locals(i=cython.int)
-    def indices(self, what: CriteriaType) -> Tuple[int]:
+    def indices(self, what: CriteriaType) -> Tuple[int, ...]:
         """
         Returns the indices of all children that fulfil the criterion `what`.
         """
@@ -1009,6 +1009,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             for i in range(len(children)):
                 if nd == children[i]:
                     return i
+            raise ValueError
 
         def left_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return (subst,) + result[index + 1:]
@@ -1044,8 +1045,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             common_ancestor = a
         left = cut(ctxA[ctxA.index(common_ancestor):], left_cut)    # type: Node
         right = cut(ctxB[ctxB.index(common_ancestor):], right_cut)  # type: Node
-        left_children = left.children    # type: Tuple[Node]
-        right_children = right.children  # type: Tuple[Node]
+        left_children = left.children    # type: Tuple[Node, ...]
+        right_children = right.children  # type: Tuple[Node, ...]
         if left_children == right_children:
             return common_ancestor
         i = 1  # type: int
@@ -1353,13 +1354,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
                 sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
                 # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
-                s = sxpr.split('\n')
-                for i in range(len(s)):
-                    if '`' in s[i]:
-                        s[i] = s[i].replace('))', ')')
-                    elif s[i][-1:] != '"':
-                        s[i] = s[i].replace(')', '')
-                sxpr = '\n'.join(s)
+                sl = sxpr.split('\n')
+                for i in range(len(sl)):
+                    if '`' in sl[i]:
+                        sl[i] = sl[i].replace('))', ')')
+                    elif sl[i][-1:] != '"':
+                        sl[i] = sl[i].replace(')', '')
+                sxpr = '\n'.join(sl)
                 sxpr = re.sub(r'^\(', r'', sxpr)
             return sxpr
         else:

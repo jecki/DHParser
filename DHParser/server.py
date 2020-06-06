@@ -1320,11 +1320,12 @@ class Server:
                 self.serve_py35(host, port, loop)
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as e:
             if self.stage.value != SERVER_TERMINATING:
-                raise
-        # self.server_messages.put(SERVER_OFFLINE)
-        self.stage.value = SERVER_OFFLINE
+                raise e
+        finally:
+            # self.server_messages.put(SERVER_OFFLINE)
+            self.stage.value = SERVER_OFFLINE
 
 
 def run_server(host, port, rpc_functions: RPC_Type,

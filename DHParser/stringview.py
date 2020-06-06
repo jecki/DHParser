@@ -32,7 +32,7 @@ speedup. The modules comes with a ``stringview.pxd`` that contains some type
 declarations to more fully exploit the benefits of the Cython-compiler.
 """
 
-from typing import Optional, Union, Iterable, Tuple, List, cast
+from typing import Optional, Union, Iterable, Tuple, List, Sequence, cast
 
 try:
     import cython
@@ -388,15 +388,16 @@ class TextBuffer:
     def _lazy_init(self):
         self._buffer = [line.strip('\r') for line in self._text.split('\n')]
 
-    def __getitem__(self, index: Union[slice, int]) -> List[Union[str, StringView]]:
+    def __getitem__(self, index: Union[slice, int]) \
+            -> Union[List[Union[str, StringView]], str, StringView]:
         if not self._buffer:
             self._lazy_init()
         return self._buffer.__getitem__(index)
 
     def __str__(self) -> str:
         if self._text:
-            return self._text
-        return self.snapshot('\n')
+            return str(self._text)
+        return str(self.snapshot('\n'))
 
     def update(self, l1: int, c1: int, l2: int, c2: int, replacement: Union[str, StringView]):
         """Replaces the text-range from line and column (l1, c1) to
