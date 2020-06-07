@@ -92,7 +92,9 @@ __all__ = ('RPC_Table',
            'USE_DEFAULT_PORT',
            'STOP_SERVER_REQUEST_BYTES',
            'IDENTIFY_REQUEST',
+           'IDENTIFY_REQUEST_BYTES',
            'LOGGING_REQUEST',
+           'SERVER_REPLY_TIMEOUT',
            'ALL_RPCs',
            'asyncio_run',
            'asyncio_connect',
@@ -101,6 +103,7 @@ __all__ = ('RPC_Table',
            'Connection',
            'connection_cb_dummy',
            'Server',
+           'probe_server',
            'spawn_server',
            'stop_server',
            'has_server_stopped',
@@ -172,7 +175,10 @@ USE_DEFAULT_PORT = -1
 STOP_SERVER_REQUEST = "__STOP_SERVER__"
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"
 IDENTIFY_REQUEST = "identify()"
+IDENTIFY_REQUEST_BYTES = b"identify()"
 LOGGING_REQUEST = "logging('')"
+
+SERVER_REPLY_TIMEOUT = 3  # seconds
 
 
 def substitute_default_host_and_port(host, port):
@@ -582,7 +588,7 @@ class Connection:
         elif method == 'exit':
             self.lsp_shutdown = LSP_SHUTDOWN
             self.lsp_initialized = ''
-        elif strict and method != STOP_SERVER_REQUEST:
+        elif strict and method not in (STOP_SERVER_REQUEST, IDENTIFY_REQUEST):
             if self.lsp_shutdown:
                 return -32600, 'language server already shut down'
             elif self.lsp_initialized != LSP_INITIALIZED:
@@ -616,7 +622,7 @@ class Server:
     :param rpc_table: Table mapping LSP-method names to Python functions
     :param known_methods: Set of all known LSP-methods. This includes the
         methods in the rpc-table and the four initialization methods,
-        `initialize()`, `initialized()`, `shudown()`, `exit`
+        `initialize()`, `initialized()`, `shutdown()`, `exit`
     :param connection_callback: A callback function that is called with the
         connection object as argument when a connection to a client is
         established
@@ -968,7 +974,6 @@ class Server:
         elif method_name not in self.known_methods:  # self.rpc_table:
             rpc_error = -32601, 'Method not found: ' + str(json_obj['method'])
         elif method_name in self.rpc_table:
-            # method_name = json_obj['method']
             method = self.rpc_table[method_name]
             params = json_obj['params'] if 'params' in json_obj else {}
             if service_call:
@@ -1163,8 +1168,11 @@ class Server:
                 if rpc_error is None:
                     if isinstance(raw, Dict):
                         json_obj = cast(JSON_Dict, raw)
-                        raw_id = cast(Union[str, int], json_obj.get('id', gen_task_id()))
-                        json_id = int(raw_id)
+                        raw_id = json_obj.get('id', gen_task_id())
+                        try:
+                            json_id = int(raw_id)
+                        except TypeError:
+                            json_id = 0
                     else:
                         rpc_error = -32700, 'Parse error: JSON-package does not appear '\
                                             'to ba an RPC-call or -response!?'
@@ -1337,6 +1345,22 @@ def run_server(host, port, rpc_functions: RPC_Type,
     """Start a server and wait until server is closed."""
     server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
     server.run_server(host, port)
+
+
+async def probe_server(host, port, timeout=SERVER_REPLY_TIMEOUT) -> str:
+    """Connects to server and sends an identify-request. Returns the response
+    or an empty string if connection failed or command timed out."""
+    try:
+        reader, writer = await asyncio.open_connection(host, port)
+        try:
+            # request = b'{"jsonrpc": "2.0", "method": "identify", "params": [], "id": null}'
+            writer.write(IDENTIFY_REQUEST_BYTES)
+            ident = await asyncio.wait_for(reader.read(get_config_value('max_rpc_size')), timeout)
+            return ident.decode()
+        except asyncio.TimeoutError:
+            return ''
+    except ConnectionRefusedError:
+        return ''
 
 
 def dummy_server(s: str) -> str:

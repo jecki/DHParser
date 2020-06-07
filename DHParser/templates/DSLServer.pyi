@@ -24,19 +24,35 @@ import asyncio
 import os
 import sys
 
+DEBUG = False
+
+assert sys.version_info >= (3, 5, 7), "DHParser requires at least Python-Version 3.5.7"
 
 scriptpath = os.path.dirname(__file__)
+servername = os.path.splitext(os.path.basename(__file__))[0]
 
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
-LOGGING_REQUEST = "logging('')"
+LOGGING_REQUEST = 'logging("")'
 
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
+ALTERNATIVE_PORTS = [8888, 8889, 8898, 8980, 8988, 8989]
 
 DATA_RECEIVE_LIMIT = 262144
+SERVER_REPLY_TIMEOUT = 3
+
+KNOWN_HOST = ''  # if host and port are retrieved from a config file, their
+KNOWN_PORT = -2  # values are stored to these global variables
 
 config_filename_cache = ''
+
+
+def debug(msg):
+    """Prints a debugging message if DEBUG-flag is """
+    global DEBUG
+    if DEBUG:
+        print(msg)
 
 
 def get_config_filename() -> str:
@@ -49,7 +65,7 @@ def get_config_filename() -> str:
         return config_filename_cache
 
     def probe(dir_list) -> str:
-        for tmpdir in []:
+        for tmpdir in dir_list:
             if os.path.exists(tmpdir) and os.path.isdir(tmpdir):
                 return tmpdir
         return ''
@@ -67,6 +83,7 @@ def retrieve_host_and_port():
     Retrieve host and port from temporary config file or return default values
     for host and port, in case the temporary config file does not exist.
     """
+    global DEFAULT_HOST, DEFAULT_PORT, KNOWN_HOST, KNOWN_PORT
     host = DEFAULT_HOST
     port = DEFAULT_PORT
     cfg_filename = get_config_filename()
@@ -74,12 +91,14 @@ def retrieve_host_and_port():
         with open(cfg_filename) as f:
             host, ports = f.read().strip(' \n').split(' ')
             port = int(ports)
-        print('Read host: {} port: {} from config file "{}".'.format(host, port, cfg_filename))
+            KNOWN_HOST, KNOWN_PORT = host, port
+            debug('Retrieved host and port value %s:%i from file "%s".'
+                  % (host, port, cfg_filename))
     except FileNotFoundError:
-        print('Config file "{}" does not exist. Using host: {} port: {}.'
-              .format(cfg_filename, host, port))
+        debug('File "%s" does not exist. Using default values %s:%i for host and port.'
+              % (cfg_filename, host, port))
     except ValueError:
-        print('Removing invalid config file "{}".'.format(cfg_filename))
+        debug('removing invalid config file: ' + cfg_filename)
         os.remove(cfg_filename)
     return host, port
 
@@ -175,7 +194,12 @@ class DSLLanguageServerProtocol:
 
 
 def run_server(host, port, log_path=None):
-    global scriptpath
+    """
+    Starts a new DSLServer. If `port` is already occupied, different
+    ports will be tried.
+    """
+    global KNOWN_HOST, KNOWN_PORT
+    global scriptpath, servername
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
     dhparserdir = os.path.abspath(os.path.join(scriptpath, 'RELDHPARSERDIR'))
     if scriptpath not in sys.path:
@@ -194,14 +218,7 @@ def run_server(host, port, log_path=None):
         sys.exit(1)
     from DSLParser import compile_src
     from DHParser.server import Server, gen_lsp_table
-    config_filename = get_config_filename()
-    try:
-        with open(config_filename, 'w') as f:
-            f.write(host + ' ' + str(port))
-    except PermissionError:
-        print('PermissionError: Could not write temporary config file: ' + config_filename)
 
-    print('Starting server on %s:%i' % (host, port))
     DSL_lsp = DSLLanguageServerProtocol()
     lsp_table = DSL_lsp.lsp_fulltable.copy()
     lsp_table.setdefault('default', compile_src)
@@ -213,77 +230,200 @@ def run_server(host, port, log_path=None):
                         strict_lsp=True)
     if log_path is not None:
         DSL_server.echo_log = True
-        print(DSL_server.start_logging(log_path))
-    try:
-        DSL_server.run_server(host, port)  # returns only after server has stopped
-    except OSError as e:
-        print(e)
-        print('Could not start server. Shutting down!')
-        sys.exit(1)
-    finally:
-        cfg_filename = get_config_filename()
-        print('Server on %s:%i stopped' % (host, port))
+        print(DSL_server.start_logging(log_path.strip('" \'')))
+
+    cfg_filename = get_config_filename()
+    overwrite = not os.path.exists(cfg_filename)
+    ports = ALTERNATIVE_PORTS.copy()
+    if port in ports:
+        ports.remove(port)
+    ports.append(port)
+
+    while ports:
+        port = ports.pop()
+        if (host, port) == (KNOWN_HOST, KNOWN_PORT):
+            ident = asyncio_run(probe_server(host, port, SERVER_REPLY_TIMEOUT))
+            if ident:
+                if ident.endswith(servername):
+                    print('A server of type "%s" already exists on %s:%i.' % (servername, host, port)
+                          + ' Use --port option to start a secondary server on a different port.')
+                    sys.exit(1)
+                if ports:
+                    print('"%s" already occupies %s:%i. Trying port %i' % (ident, host, port, ports[-1]))
+                    continue
+                else:
+                    print('"%s" already occupies %s:%i. No more ports to try.' % (ident, host, port))
+                    sys.exit(1)
+        if overwrite:
+            try:
+                with open(cfg_filename, 'w') as f:
+                    debug('Storing host and port value %s:%i in file "%s".'
+                          % (host, port, cfg_filename))
+                    f.write(host + ' ' + str(port))
+            except (PermissionError, IOError) as e:
+                print('%s: Could not write temporary config file: "%s"' % (str(e), cfg_filename))
+                ports = []
+        else:
+            print('Configuration file "%s" already existed and was not overwritten. '
+                  'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
-            os.remove(cfg_filename)
-            print('Removing temporary config file: "{}".'.format(cfg_filename))
-        except FileNotFoundError:
-            print('Config file "{}" does not exist any more.'.format(cfg_filename))
+            debug('Starting server on %s:%i' % (host, port))
+            DSL_server.run_server(host, port)  # returns only after server has stopped
+            ports = []
+        except OSError as e:
+            if not (ports and e.errno == 98):
+                print(e)
+                print('Could not start server. Shutting down!')
+                sys.exit(1)
+            elif ports:
+                print('Could not start server on %s:%i. Trying port %s' % (host, port, ports[-1]))
+            else:
+                print('Could not start server on %s:%i. No more ports to try.' % (host, port))
+        finally:
+            if not ports:
+                print('Server on %s:%i stopped' % (host, port))
+                if overwrite:
+                    try:
+                        os.remove(cfg_filename)
+                        debug('removing temporary config file: ' + cfg_filename)
+                    except FileNotFoundError:
+                        pass
 
 
-async def send_request(request, host, port):
-    reader, writer = await asyncio.open_connection(host, port)
+async def send_request(reader, writer, request, timeout=SERVER_REPLY_TIMEOUT) -> str:
+    """Sends a request and returns the decoded response."""
     writer.write(request.encode() if isinstance(request, str) else request)
-    data = await reader.read(DATA_RECEIVE_LIMIT)
-    writer.close()
-    if sys.version_info >= (3, 7):
-        await writer.wait_closed()
+    try:
+        data = await asyncio.wait_for(reader.read(DATA_RECEIVE_LIMIT), timeout)
+    except asyncio.TimeoutError as e:
+        print('Server did not answer to "%s"-Request within %i seconds.'
+              % (request, timeout))
+        raise e
     return data.decode()
 
 
-def start_server_daemon(host, port):
-    import subprocess, time
+async def close_connection(writer):
+    """Closes the communication-channel."""
+    writer.close()
+    if sys.version_info >= (3, 7):
+        await writer.wait_closed()
+
+
+async def final_request(reader, writer, request, timeout=SERVER_REPLY_TIMEOUT) -> str:
+    """Sends a (last) request and then closes the communication channel.
+    Returns the decoded response to the request."""
     try:
-        subprocess.Popen([__file__, '--startserver', host, str(port)],
-                         start_new_session=True)
-    except OSError:
-        subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)],
-                             start_new_session=True)
-    countdown = 25
-    delay = 0.01
-    result = None
-    while countdown > 0 and delay < 25:
-        try:
-            result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
-            countdown = 0
-        except ConnectionRefusedError:
-            time.sleep(delay)
-            delay *= 1.25
-            countdown -= 1
-    if result is None:
-        print('Could not start server or establish connection in time :-(')
+        data = await send_request(reader, writer, request, timeout)
+    finally:
+        await close_connection(writer)
+    return data
+
+
+async def single_request(request, host, port, timeout=SERVER_REPLY_TIMEOUT) -> str:
+    """Opens a connection, sends a single request, and closes the connection
+    again before returning the decoded result."""
+    try:
+        reader, writer = await asyncio.open_connection(host, port)
+    except ConnectionRefusedError:
+        print('No server running on: ' + host + ':' + str(port))
         sys.exit(1)
-    print(result)
+    try:
+        result = await final_request(reader, writer, request, timeout)
+    except asyncio.TimeoutError:
+        sys.exit(1)
+    return result
+
+
+async def connect_to_daemon(host, port) -> tuple:
+    """Opens a connections to the server on host, port. Returns the reader,
+    writer and the string result of the identification-request."""
+    global KNOWN_HOST, KNOWN_PORT, servername
+    delay = 0.05
+    countdown = SERVER_REPLY_TIMEOUT / delay + 10
+    ident, reader, writer = None, None, None
+    cfg_filename = get_config_filename()
+    save = (host, port)
+    while countdown > 0:
+        try:
+            if (host, port) != (KNOWN_HOST, KNOWN_PORT):
+                raise ValueError  # don't connect if host and port are not either
+                # read from config-file or specified explicitly on the command line
+            reader, writer = await asyncio.open_connection(host, port)
+            try:
+                ident = await send_request(reader, writer, IDENTIFY_REQUEST)
+                if not ident.endswith(servername):
+                    ident = None
+                    raise ValueError
+                countdown = 0
+            except (asyncio.TimeoutError, ValueError):
+                print('Server "%s" not found on %s:%i' % (servername, host, port))
+                await close_connection(writer)
+                reader, writer = None, None
+                await asyncio.sleep(delay)
+                countdown -= 1
+                h, p = retrieve_host_and_port()
+                if (h, p) != (host, port):
+                    # try again with a different host and port
+                    host, port = h, p
+        except (ConnectionRefusedError, ValueError):
+            await asyncio.sleep(delay)
+            if os.path.exists(cfg_filename):
+                host, port = retrieve_host_and_port()
+            countdown -= 1
+    if ident is not None and save != (host, port):
+        print('Server "%s" found on different port %i' % (servername, port))
+    return reader, writer, ident
+
+
+async def start_server_daemon(host, port, requests) -> list:
+    """Starts a server in the background and opens a connections. Sends requests if
+    given and returns a list of their results."""
+    import subprocess
+
+    ident, reader, writer = None, None, None
+    if os.path.exists(get_config_filename()):
+        reader, writer, ident = await connect_to_daemon(host, port)
+    if ident is not None:
+        if not requests:
+            print('Server "%s" already running on %s:%i' % (ident, host, port))
+    else:
+        try:
+            subprocess.Popen([__file__, '--startserver', host, str(port)])
+        except OSError:
+            subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)])
+        reader, writer, ident = await connect_to_daemon(host, port)
+        if ident is None:
+            print('Could not start server or establish connection in time :-(')
+            sys.exit(1)
+        if not requests:
+            print('Server "%s" started.' % ident)
+    results = []
+    for request in requests:
+        assert request
+        results.append(await send_request(reader, writer, request))
+    await close_connection(writer)
+    return results
 
 
 def parse_logging_args(args):
     if args.logging:
-        echo = repr('ECHO_ON') if args.start else repr('ECHO_OFF')
+        echo = repr('ECHO_ON') if args.startserver else repr('ECHO_OFF')
         if args.logging in ('OFF', 'STOP', 'NO', 'FALSE'):
             log_path = repr(None)
             echo = repr('ECHO_OFF')
-        elif args.loggigng in ('ON', 'START', 'YES', 'TRUE'):
+        elif args.logging in ('ON', 'START', 'YES', 'TRUE'):
             log_path = repr('')
         else:
             log_path = args.logging
         request = LOGGING_REQUEST.replace('""', ", ".join((log_path, echo)))
-        print('Logging to file %s with call %s' % (repr(log_path), request))
+        debug('Logging to file %s with call %s' % (repr(log_path), request))
         return log_path, request
     else:
         return None, ''
 
 
 if __name__ == "__main__":
-    from argparse import ArgumentParser, REMAINDER
+    from argparse import ArgumentParser
     parser = ArgumentParser(description="Setup and Control of a Server for processing DSL-files.")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('file', nargs='?')
@@ -311,14 +451,19 @@ if __name__ == "__main__":
         # if host and port have not been specified explicitly on the command
         # line, try to retrieve them from (temporary) config file or use
         # hard coded default values
-        host, port = retrieve_host_and_port()
+        h, p = retrieve_host_and_port()
+        if port < 0:
+            port = p
+        else:
+            KNOWN_PORT = port  # we assume, the user knows what (s)he is doing...
+        if not host:
+            host = h
+        else:
+            KNOWN_HOST = host  # ...when explicitly requesting a particular host, port
 
     if args.status:
-        try:
-            result = asyncio_run(send_request(IDENTIFY_REQUEST, host, port))
-            print('Server ' + str(result) + ' running on ' + host + ':' + str(port))
-        except ConnectionRefusedError:
-            print('No server running on: ' + host + ':' + str(port))
+        result = asyncio_run(single_request(IDENTIFY_REQUEST, host, port, SERVER_REPLY_TIMEOUT))
+        print('Server ' + str(result) + ' running on ' + host + ':' + str(port))
 
     elif args.startserver is not None:
         portstr = None
@@ -338,38 +483,28 @@ if __name__ == "__main__":
 
     elif args.startdaemon:
         log_path, log_request = parse_logging_args(args)
-        start_server_daemon(host, port)
-        if log_request:
-            print(asyncio_run(send_request(log_request, host, port)))
+        asyncio.run(start_server_daemon(host, port, [log_request] if log_request else []))
 
     elif args.stopserver:
         try:
-            result = asyncio_run(send_request(STOP_SERVER_REQUEST_BYTES, host, port))
+            result = asyncio_run(single_request(STOP_SERVER_REQUEST_BYTES, host, port))
         except ConnectionRefusedError as e:
             print(e)
             sys.exit(1)
-        print(result)
+        debug(result)
 
     elif args.logging:
         log_path, request = parse_logging_args(args)
-        print(asyncio_run(send_request(request, host, port)))
+        debug(asyncio_run(single_request(request, host, port)))
 
     elif args.file:
         file_name = args.file
         if not file_name.endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
             file_name = os.path.abspath(file_name)
-            # print(file_name)
         log_path, log_request = parse_logging_args(args)
-        try:
-            if log_request:
-                print(asyncio_run(send_request(log_request, host, port)))
-            result = asyncio_run(send_request(file_name, host, port))
-        except ConnectionRefusedError:
-            start_server_daemon(host, port)               # start server first
-            if log_request:
-                print(asyncio_run(send_request(log_request, host, port)))
-            result = asyncio_run(send_request(file_name, host, port))
+        requests = [log_request, file_name] if log_request else [file_name]
+        result = asyncio_run(start_server_daemon(host, port, requests))[-1]
         if len(result) >= DATA_RECEIVE_LIMIT:
             print(result, '...')
         else:

@@ -43,7 +43,7 @@ except ImportError:
     import DHParser.shadow_cython as cython
 
 
-__all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW')
+__all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW', 'TextBuffer')
 
 
 @cython.cfunc
