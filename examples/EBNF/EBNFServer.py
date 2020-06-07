@@ -208,7 +208,7 @@ class EBNFLanguageServerProtocol:
             'clientCapabilities': {},
             'serverInfo': {"name": "EBNF-Server", "version": "0.2"},
             'serverCapabilities': {
-                "textDocumentSync": 1,  # 0 = None, 1 = full, 2 = incremental
+                "textDocumentSync": 2,  # 0 = None, 1 = full, 2 = incremental
                 "completionProvider": {
                     "resolveProvider": False,
                     "triggerCharacters": ['@']
@@ -299,13 +299,14 @@ class EBNFLanguageServerProtocol:
 
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
         from DHParser.toolkit import text_pos
-        text = self.current_text[textDocument['uri']]
         if context['triggerKind'] == 2:  # Trigger Character
             return {}   # leave proposing snippets to VSCode
+        buffer = self.current_text[textDocument['uri']]
         line = position['line']
         col = position['character']
-        pos = text_pos(text, line, col)
-        char = text[pos]
+        # text = buffer.snapshot()
+        # pos = text_pos(text, line, col)
+        # char = text[pos]
         return None
 
     def lsp_S_cancelRequest(self, **kwargs):
