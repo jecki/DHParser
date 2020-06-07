@@ -17,9 +17,7 @@
 #     - replace the regex_heuristics by an always matching parser
 #
 # Ambiguities can also be avoided by NOT using all the syntactic variants
-# made possible by this EBNF-grammar within one and the same EBNF-document.
-
-
+# made possible by this EBNF-grammar within one and the same EBNF-docum
 
 @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
     # comments can be either C-Style: /* ... */

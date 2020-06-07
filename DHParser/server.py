@@ -754,10 +754,19 @@ class Server:
             # self.known_methods.add(name)
 
     def start_logging(self, filename: str = "") -> str:
-        if not filename:
-            filename = self.server_name + '_' + hex(id(self))[2:] + '.log'
-        if not log_dir():
-            filename = os.path.join('.', filename)
+        """Starts logging to a file. If `filename` is void or a directory
+        an auto-generated file name will be used. The file will be written
+        to the standard log-dir, unless a path is specified in filename."""
+        def log_name():
+            """Returns an auto-generated log-name."""
+            return self.server_name + '_' + hex(id(self))[2:] + '.log'
+        if os.path.isdir(filename) or filename.endswith(os.path.sep):
+            filename = os.path.join(filename, log_name())
+        else:
+            if not filename:
+                filename = log_name()
+            if not os.path.dirname(filename) and not log_dir():
+                filename = os.path.join('.', filename)
         self.log_file = create_log(filename)
         if self.log_file:
             self.log('Python Version: %s\nDHParser Version: %s\n\n'
@@ -766,6 +775,7 @@ class Server:
         return 'Unable to write log-file: "%s"' % filename
 
     def stop_logging(self):
+        """Stops logging."""
         if self.log_file:
             self.log('Logging will be stopped now!')
             ret = 'Stopped logging to file: "%s"' % self.log_file

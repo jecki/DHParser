@@ -406,17 +406,17 @@ async def start_server_daemon(host, port, requests) -> list:
 
 
 def parse_logging_args(args):
-    if args.logging:
-        echo = repr('ECHO_ON') if args.startserver else repr('ECHO_OFF')
+    if args.logging or args.logging is None:
+        echo = repr('ECHO_ON') if isinstance(args.startserver, list) else repr('ECHO_OFF')
         if args.logging in ('OFF', 'STOP', 'NO', 'FALSE'):
             log_path = repr(None)
             echo = repr('ECHO_OFF')
         elif args.logging in ('ON', 'START', 'YES', 'TRUE'):
             log_path = repr('')
         else:
-            log_path = args.logging
+            log_path = repr('') if args.logging is None else repr(args.logging)
         request = LOGGING_REQUEST.replace('""', ", ".join((log_path, echo)))
-        debug('Logging to file %s with call %s' % (repr(log_path), request))
+        debug('Logging to %s with call %s' % (log_path, request))
         return log_path, request
     else:
         return None, ''
@@ -439,11 +439,14 @@ if __name__ == "__main__":
                         help='host name or IP-address of the server (default: 127.0.0.1)')
     parser.add_argument('-p', '--port', nargs=1, type=int, default=[-1],
                         help='port number of the server (default:8888)')
-    parser.add_argument('-l', '--logging', nargs='?', metavar="ON|LOG_DIR|OFF",
+    parser.add_argument('-l', '--logging', nargs='?', metavar="ON|LOG_DIR|OFF", default='',
                         help='turns logging on (default) or off or writes log to a '
                              'specific directory (implies on)')
+    parser.add_argument('-b', '--debug', action='store_true', help="debug messages")
 
     args = parser.parse_args()
+    if args.debug:
+        DEBUG = True
 
     host = args.host[0]
     port = int(args.port[0])

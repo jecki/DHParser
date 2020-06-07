@@ -199,6 +199,8 @@ def create_log(log_name: str) -> str:
     if not ldir:
         ldir = log_dir()
     if ldir:
+        if not os.path.exists(ldir):
+            os.makedirs(ldir)
         with open(os.path.join(ldir, file_name), 'w', encoding='utf-8') as f:
             f.write('LOG-FILE: ' + log_name + '\n\n')
         return log_name
@@ -219,7 +221,7 @@ def append_log(log_name: str, *strings, echo: bool = False) -> None:
     :param echo: If True, the log message will be echoed on the terminal. This
         will also happen if logging is turned off.
     """
-    ldir, _ = os.path.split(log_name)
+    ldir, log_name = os.path.split(log_name)
     if not ldir:
         ldir = log_dir()
     if ldir and log_name:

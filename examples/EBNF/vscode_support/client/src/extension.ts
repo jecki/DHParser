@@ -89,7 +89,7 @@ function startLangServerTCP(addr: number) : Disposable {
 }
 
 export function activate(context: ExtensionContext) {
-	// console.log('activating language server connector!');
+	console.log('activating language server connector!');
 	let disposable = startLangServerTCP(defaultPort);
 	context.subscriptions.push(disposable);
 }
