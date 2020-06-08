@@ -1459,7 +1459,7 @@ class Grammar:
             #     (*line_col(self.document__, len(self.document__) - loc),
             #      *line_col(self.document__, len(self.document__) - self.last_rb__loc__))
             rollback_func()
-        self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
+        self.last_rb__loc__ = self.rollback__[-1][0] if self.rollback__ \
             else -1  # (self.document__.__len__() + 1)
 
 
