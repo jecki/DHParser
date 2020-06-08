@@ -971,7 +971,7 @@ class Grammar:
         last_rb__loc__:  The last, i.e. most advanced location in the text
                 where a variable changing operation occurred. If the parser
                 backtracks to a location at or before last_rb__loc__ (i.e.
-                location <= last_rb__loc__) then a rollback of all variable
+                location < last_rb__loc__) then a rollback of all variable
                 changing operations is necessary that occurred after the
                 location to which the parser backtracks. This is done by
                 calling method :func:`rollback_to__(location)`.
@@ -1330,7 +1330,7 @@ class Grammar:
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
-        self.last_rb__loc__ = -1  # rollback location
+        # done by reset: self.last_rb__loc__ = -1  # rollback location
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         rest = self.document__
@@ -1460,7 +1460,7 @@ class Grammar:
             #      *line_col(self.document__, len(self.document__) - self.last_rb__loc__))
             rollback_func()
         self.last_rb__loc__ == self.rollback__[-1][0] if self.rollback__ \
-            else (self.document__.__len__() + 1)
+            else -1  # (self.document__.__len__() + 1)
 
 
     def as_ebnf(self) -> str:
