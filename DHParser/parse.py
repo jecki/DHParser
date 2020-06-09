@@ -507,7 +507,7 @@ class Parser:
                     and not grammar.returning_from_recursion__
                     # variable-manipulating parsers will not be entered into the cache,
                     # because caching would interfere with changes of variable state
-                    and location > grammar.last_rb__loc__ ):
+                    and location > grammar.last_rb__loc__):   # + int(len(text) == int(len(rest))
                 visited[location] = (node, rest)
 
             if not grammar.returning_from_recursion__:
@@ -3279,7 +3279,7 @@ class Forward(UnaryParser):
                         break
                     result = next_result
                     depth += 1
-            if grammar.memoization__ and location > grammar.last_rb__loc__:
+            if grammar.memoization__ and location > grammar.last_rb__loc__:  # + int(len(text) == int(len(result[1]))
                 visited[location] = result
             grammar.returning_from_recursion__ = recursion_state
         return result
