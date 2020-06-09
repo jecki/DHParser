@@ -2873,6 +2873,22 @@ class NegativeLookbehind(Lookbehind):
 ########################################################################
 
 
+@cython.locals(L=cython.int, rb_loc=cython.int)
+def rollback_location(p: Parser, text: StringView, rest: StringView) -> int:
+    """
+    Determines the rollback location for variable manipulating parsers.
+    Usually, this is exactly the location, where the parser started parsing.
+    However, since the rollback-location must lie before the location where
+    the  parser stopped, 1 is subtracted from the start-position in case the
+    it is the same as the stop position (i.e. len(node) == 0).
+    """
+    L = text._len
+    rb_loc = p.grammar.document_length__ - L
+    if rest._len == text._len:
+        rb_loc -= 1
+    return rb_loc
+
+
 class Capture(UnaryParser):
     """
     Applies the contained parser and, in case of a match, saves the result
@@ -2892,8 +2908,7 @@ class Capture(UnaryParser):
             assert not self.parser.drop_content, \
                 "Cannot capture content from parsers that drop content!"
             self.grammar.variables__[self.pname].append(node.content)
-            location = self.grammar.document_length__ - text.__len__()
-            self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.pop())
+            self.grammar.push_rollback__(rollback_location(self, text, text_), self._rollback)
             # caching will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
             return self._return_value(node), text_
@@ -3077,15 +3092,11 @@ class Pop(Retrieve):
         self.grammar.variables__[self.symbol_pname].append(self.values.pop())
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        node, txt = self.retrieve_and_match(text)
+        node, text_ = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
-            location = self.grammar.document_length__ - text.__len__()
-            # if node is not EMPTY_NODE and len(node) == 0:
-            #     location = self.grammar.document_length__ - txt.__len__() - 1
-            #     print('PUSH:', self.symbol_pname, location, self.values[-1])
-            self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
-        return node, txt
+            self.grammar.push_rollback__(rollback_location(self, text, text_), self._rollback)
+        return node, text_
 
     def __repr__(self):
         stack = self.grammar.variables__.get(self.symbol_pname, [])

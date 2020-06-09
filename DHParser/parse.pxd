@@ -120,6 +120,9 @@ cdef class Lookbehind(FlowParser):
 cdef class NegativeLookbehind(Lookbehind):
     pass
 
+@cython.locals(L=cython.int, rb_loc=cython.int)
+cdef int rollback_location(p, text, rest)
+
 cdef class Capture(UnaryParser):
     pass
 
