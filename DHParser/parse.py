@@ -3218,7 +3218,7 @@ class Forward(UnaryParser):
         http://www.vpri.org/pdf/tr2007002_packrat.pdf
         """
         grammar = self.grammar
-        if True or not grammar.left_recursion__:
+        if True or not grammar.left_recursion__:  # TODO: add a static check and flag: self.left_recursive__!
             return self.parser(text)
 
         location = grammar.document_length__ - text._len
