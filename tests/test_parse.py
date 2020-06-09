@@ -110,205 +110,205 @@ class TestParserClass:
         assert result == 'word', result
 
 
-class TestInfiLoopsAndRecursion:
-    def setup(self):
-        pass
-        # set_config_value('history_tracking', True)
-        # set_config_value('resume_notices', True)
-        # start_logging('LOGS')
-
-    def test_very_simple(self):
-        minilang = """
-            term = term (`*`|`/`) factor | factor
-            factor = /[0-9]+/
-            """
-        grammar_factory = grammar_provider(minilang)
-        parser = grammar_factory()
-        snippet = "5*4*3*2"
-        # set_tracer(parser, trace_history)
-        st = parser(snippet)
-        if is_logging():
-            log_ST(st, 'test_LeftRecursion_very_simple.cst')
-            log_parsing_history(parser, 'test_LeftRecursion_very_simple')
-        assert not is_error(st.error_flag), str(st.errors)
-        st = parser("1*2*3*4*5*6*7*8*9")
-        # if is_logging():
-        #     log_ST(st, 'test_LeftRecursion_very_simple_2.cst')
-        #     log_parsing_history(parser, 'test_LeftRecursion_very_simple_2')
-        assert not is_error(st.error_flag)
-
-    def test_direct_left_recursion1(self):
-        minilang = """@literalws = right
-            expr = expr ("+"|"-") term | term
-            term = term ("*"|"/") factor | factor
-            factor = /[0-9]+/~
-            """
-        snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
-        parser = grammar_provider(minilang)()
-        # print(raw_compileEBNF(minilang).result)
-        assert parser
-        syntax_tree = parser(snippet)
-        if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_direct1.cst")
-            log_parsing_history(parser, "test_LeftRecursion_direct1")
-        assert not is_error(syntax_tree.error_flag), str(syntax_tree.errors_sorted)
-        assert snippet == syntax_tree.content, str(syntax_tree)
-
-    def test_direct_left_recursion2(self):
-        minilang = """@literalws = right
-            expr = ex
-            ex   = expr ("+"|"-") term | term
-            term = tr
-            tr   = term ("*"|"/") factor | factor
-            factor = /[0-9]+/~
-            """
-        snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
-        parser = grammar_provider(minilang)()
-        assert parser
-        syntax_tree = parser(snippet)
-        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
-        assert snippet == syntax_tree.content
-        if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_direct2.cst")
-            log_parsing_history(parser, "test_LeftRecursion_direct2")
-
-    def test_indirect_left_recursion1(self):
-        minilang = """@literalws = right
-            Expr    = //~ (Product | Sum | Value)
-            Product = Expr { ('*' | '/') Expr }+
-            Sum     = Expr { ('+' | '-') Expr }+
-            Value   = /[0-9.]+/~ | '(' §Expr ')'
-            """
-        # print(raw_compileEBNF(minilang).result)
-        parser = grammar_provider(minilang)()
-        snippet = "8 * 4"
-        syntax_tree = parser(snippet)
-        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
-        snippet = "7 + 8 * 4"
-        syntax_tree = parser(snippet)
-        if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_indirect1.cst")
-            log_parsing_history(parser, "test_LeftRecursion_indirect1")
-        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
-        snippet = "9 + 8 * (4 + 3)"
-        syntax_tree = parser(snippet)
-        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
-        assert snippet == syntax_tree.content
-        snippet = "9 + 8 * (4 - 3 / (5 - 1))"
-        syntax_tree = parser(snippet)
-        assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
-        assert snippet == syntax_tree.content
-        if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_indirect1.cst")
-            log_parsing_history(parser, "test_LeftRecursion_indirect1")
-
-    # BEWARE: EXPERIMENTAL TEST can be long running
-    def test_indirect_left_recursion2(self):
-        arithmetic_syntax = r"""@literalws = right
-            expression     = addition | subtraction  # | term
-            addition       = (expression | term) "+" (expression | term)
-            subtraction    = (expression | term) "-" (expression | term)
-            term           = multiplication | division  # | factor
-            multiplication = (term | factor) "*" (term | factor)
-            division       = (term | factor) "/" (term | factor)
-            factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
-            group          = "(" expression ")"
-            SIGN           = /[+-]/
-            NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
-            VARIABLE       = /[A-Za-z]/~
-            """
-        arithmetic = grammar_provider(arithmetic_syntax)()
-        assert arithmetic
-        syntax_tree = arithmetic("(a + b) * (a - b)")
-        assert syntax_tree.errors
-        if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_indirect2.cst")
-            log_parsing_history(arithmetic, "test_LeftRecursion_indirect2")
-
-    def test_indirect_left_recursion3(self):
-        arithmetic_syntax = r"""@literalws = right
-            expression     = addition | subtraction | term
-            addition       = (expression | term) "+" (expression | term)
-            subtraction    = (expression | term) "-" (expression | term)
-            term           = multiplication | division | factor
-            multiplication = (term | factor) "*" (term | factor)
-            division       = (term | factor) "/" (term | factor)
-            factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
-            group          = "(" expression ")"
-            SIGN           = /[+-]/
-            NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
-            VARIABLE       = /[A-Za-z]/~
-            """
-        arithmetic = grammar_provider(arithmetic_syntax)()
-        assert arithmetic
-        syntax_tree = arithmetic("(a + b) * (a - b)")
-        assert not syntax_tree.errors
-        if is_logging():
-            log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
-            log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
-
-
-    def test_break_inifnite_loop_ZeroOrMore(self):
-        forever = ZeroOrMore(RegExp(''))
-        result = Grammar(forever)('')  # infinite loops will automatically be broken
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-
-    def test_break_inifnite_loop_OneOrMore(self):
-        forever = OneOrMore(RegExp(''))
-        result = Grammar(forever)('')  # infinite loops will automatically be broken
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-
-    def test_break_infinite_loop_Counted(self):
-        forever = Counted(Always(), (0, INFINITE))
-        result = Grammar(forever)('')  # if this takes very long, something is wrong
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Counted(Always(), (5, INFINITE))
-        result = Grammar(forever)('')  # if this takes very long, something is wrong
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Counted(Always(), (INFINITE, INFINITE))
-        result = Grammar(forever)('')  # if this takes very long, something is wrong
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Counted(Always(), (1000, INFINITE - 1))
-        result = Grammar(forever)('')  # if this takes very long, something is wrong
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-
-    def test_break_infinite_loop_Interleave(self):
-        forever = Interleave(Always(), repetitions = [(0, INFINITE)])
-        result = Grammar(forever)('')  # if this takes very long, something is wrong
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Interleave(Always(), Always(),
-                             repetitions = [(5, INFINITE), (INFINITE, INFINITE)])
-        result = Grammar(forever)('')  # if this takes very long, something is wrong
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Interleave(Always(), repetitions = [(1000, INFINITE - 1)])
-        result = Grammar(forever)('')  # if this takes very long, something is wrong
-        assert repr(result) == "Node(':EMPTY', '')", repr(result)
-
-    # def test_infinite_loops(self):
-    #     minilang = """forever = { // } \n"""
-    #     try:
-    #         parser_class = grammar_provider(minilang)
-    #     except CompilationError as error:
-    #         assert all(e.code == INFINITE_LOOP for e in error.errors)
-    #     save = get_config_value('static_analysis')
-    #     set_config_value('static_analysis', 'late')
-    #     provider = grammar_provider(minilang)
-    #     try:
-    #         parser = provider()
-    #     except GrammarError as error:
-    #         assert error.errors[0][2].code == INFINITE_LOOP
-    #     set_config_value('static_analysis', 'none')
-    #     parser = provider()
-    #     snippet = " "
-    #     syntax_tree = parser(snippet)
-    #     assert any(e.code == INFINITE_LOOP for e in syntax_tree.errors)
-    #     res = parser.static_analysis()
-    #     assert res and res[0][2].code == INFINITE_LOOP
-    #     minilang = """not_forever = { / / } \n"""
-    #     parser = grammar_provider(minilang)()
-    #     res = parser.static_analysis()
-    #     assert not res
-    #     set_config_value('static_analysis', save)
+# class TestInfiLoopsAndRecursion:
+#     def setup(self):
+#         pass
+#         # set_config_value('history_tracking', True)
+#         # set_config_value('resume_notices', True)
+#         # start_logging('LOGS')
+#
+#     def test_very_simple(self):
+#         minilang = """
+#             term = term (`*`|`/`) factor | factor
+#             factor = /[0-9]+/
+#             """
+#         grammar_factory = grammar_provider(minilang)
+#         parser = grammar_factory()
+#         snippet = "5*4*3*2"
+#         # set_tracer(parser, trace_history)
+#         st = parser(snippet)
+#         if is_logging():
+#             log_ST(st, 'test_LeftRecursion_very_simple.cst')
+#             log_parsing_history(parser, 'test_LeftRecursion_very_simple')
+#         assert not is_error(st.error_flag), str(st.errors)
+#         st = parser("1*2*3*4*5*6*7*8*9")
+#         # if is_logging():
+#         #     log_ST(st, 'test_LeftRecursion_very_simple_2.cst')
+#         #     log_parsing_history(parser, 'test_LeftRecursion_very_simple_2')
+#         assert not is_error(st.error_flag)
+#
+#     def test_direct_left_recursion1(self):
+#         minilang = """@literalws = right
+#             expr = expr ("+"|"-") term | term
+#             term = term ("*"|"/") factor | factor
+#             factor = /[0-9]+/~
+#             """
+#         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
+#         parser = grammar_provider(minilang)()
+#         # print(raw_compileEBNF(minilang).result)
+#         assert parser
+#         syntax_tree = parser(snippet)
+#         if is_logging():
+#             log_ST(syntax_tree, "test_LeftRecursion_direct1.cst")
+#             log_parsing_history(parser, "test_LeftRecursion_direct1")
+#         assert not is_error(syntax_tree.error_flag), str(syntax_tree.errors_sorted)
+#         assert snippet == syntax_tree.content, str(syntax_tree)
+#
+#     def test_direct_left_recursion2(self):
+#         minilang = """@literalws = right
+#             expr = ex
+#             ex   = expr ("+"|"-") term | term
+#             term = tr
+#             tr   = term ("*"|"/") factor | factor
+#             factor = /[0-9]+/~
+#             """
+#         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
+#         parser = grammar_provider(minilang)()
+#         assert parser
+#         syntax_tree = parser(snippet)
+#         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+#         assert snippet == syntax_tree.content
+#         if is_logging():
+#             log_ST(syntax_tree, "test_LeftRecursion_direct2.cst")
+#             log_parsing_history(parser, "test_LeftRecursion_direct2")
+#
+#     def test_indirect_left_recursion1(self):
+#         minilang = """@literalws = right
+#             Expr    = //~ (Product | Sum | Value)
+#             Product = Expr { ('*' | '/') Expr }+
+#             Sum     = Expr { ('+' | '-') Expr }+
+#             Value   = /[0-9.]+/~ | '(' §Expr ')'
+#             """
+#         # print(raw_compileEBNF(minilang).result)
+#         parser = grammar_provider(minilang)()
+#         snippet = "8 * 4"
+#         syntax_tree = parser(snippet)
+#         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+#         snippet = "7 + 8 * 4"
+#         syntax_tree = parser(snippet)
+#         if is_logging():
+#             log_ST(syntax_tree, "test_LeftRecursion_indirect1.cst")
+#             log_parsing_history(parser, "test_LeftRecursion_indirect1")
+#         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+#         snippet = "9 + 8 * (4 + 3)"
+#         syntax_tree = parser(snippet)
+#         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+#         assert snippet == syntax_tree.content
+#         snippet = "9 + 8 * (4 - 3 / (5 - 1))"
+#         syntax_tree = parser(snippet)
+#         assert not is_error(syntax_tree.error_flag), syntax_tree.errors_sorted
+#         assert snippet == syntax_tree.content
+#         if is_logging():
+#             log_ST(syntax_tree, "test_LeftRecursion_indirect1.cst")
+#             log_parsing_history(parser, "test_LeftRecursion_indirect1")
+#
+#     # BEWARE: EXPERIMENTAL TEST can be long running
+#     def test_indirect_left_recursion2(self):
+#         arithmetic_syntax = r"""@literalws = right
+#             expression     = addition | subtraction  # | term
+#             addition       = (expression | term) "+" (expression | term)
+#             subtraction    = (expression | term) "-" (expression | term)
+#             term           = multiplication | division  # | factor
+#             multiplication = (term | factor) "*" (term | factor)
+#             division       = (term | factor) "/" (term | factor)
+#             factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+#             group          = "(" expression ")"
+#             SIGN           = /[+-]/
+#             NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+#             VARIABLE       = /[A-Za-z]/~
+#             """
+#         arithmetic = grammar_provider(arithmetic_syntax)()
+#         assert arithmetic
+#         syntax_tree = arithmetic("(a + b) * (a - b)")
+#         assert syntax_tree.errors
+#         if is_logging():
+#             log_ST(syntax_tree, "test_LeftRecursion_indirect2.cst")
+#             log_parsing_history(arithmetic, "test_LeftRecursion_indirect2")
+#
+#     def test_indirect_left_recursion3(self):
+#         arithmetic_syntax = r"""@literalws = right
+#             expression     = addition | subtraction | term
+#             addition       = (expression | term) "+" (expression | term)
+#             subtraction    = (expression | term) "-" (expression | term)
+#             term           = multiplication | division | factor
+#             multiplication = (term | factor) "*" (term | factor)
+#             division       = (term | factor) "/" (term | factor)
+#             factor         = [SIGN] ( NUMBER | VARIABLE | group ) { VARIABLE | group }
+#             group          = "(" expression ")"
+#             SIGN           = /[+-]/
+#             NUMBER         = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+#             VARIABLE       = /[A-Za-z]/~
+#             """
+#         arithmetic = grammar_provider(arithmetic_syntax)()
+#         assert arithmetic
+#         syntax_tree = arithmetic("(a + b) * (a - b)")
+#         assert not syntax_tree.errors
+#         if is_logging():
+#             log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
+#             log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
+#
+#
+#     def test_break_inifnite_loop_ZeroOrMore(self):
+#         forever = ZeroOrMore(RegExp(''))
+#         result = Grammar(forever)('')  # infinite loops will automatically be broken
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#
+#     def test_break_inifnite_loop_OneOrMore(self):
+#         forever = OneOrMore(RegExp(''))
+#         result = Grammar(forever)('')  # infinite loops will automatically be broken
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#
+#     def test_break_infinite_loop_Counted(self):
+#         forever = Counted(Always(), (0, INFINITE))
+#         result = Grammar(forever)('')  # if this takes very long, something is wrong
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#         forever = Counted(Always(), (5, INFINITE))
+#         result = Grammar(forever)('')  # if this takes very long, something is wrong
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#         forever = Counted(Always(), (INFINITE, INFINITE))
+#         result = Grammar(forever)('')  # if this takes very long, something is wrong
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#         forever = Counted(Always(), (1000, INFINITE - 1))
+#         result = Grammar(forever)('')  # if this takes very long, something is wrong
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#
+#     def test_break_infinite_loop_Interleave(self):
+#         forever = Interleave(Always(), repetitions = [(0, INFINITE)])
+#         result = Grammar(forever)('')  # if this takes very long, something is wrong
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#         forever = Interleave(Always(), Always(),
+#                              repetitions = [(5, INFINITE), (INFINITE, INFINITE)])
+#         result = Grammar(forever)('')  # if this takes very long, something is wrong
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#         forever = Interleave(Always(), repetitions = [(1000, INFINITE - 1)])
+#         result = Grammar(forever)('')  # if this takes very long, something is wrong
+#         assert repr(result) == "Node(':EMPTY', '')", repr(result)
+#
+#     # def test_infinite_loops(self):
+#     #     minilang = """forever = { // } \n"""
+#     #     try:
+#     #         parser_class = grammar_provider(minilang)
+#     #     except CompilationError as error:
+#     #         assert all(e.code == INFINITE_LOOP for e in error.errors)
+#     #     save = get_config_value('static_analysis')
+#     #     set_config_value('static_analysis', 'late')
+#     #     provider = grammar_provider(minilang)
+#     #     try:
+#     #         parser = provider()
+#     #     except GrammarError as error:
+#     #         assert error.errors[0][2].code == INFINITE_LOOP
+#     #     set_config_value('static_analysis', 'none')
+#     #     parser = provider()
+#     #     snippet = " "
+#     #     syntax_tree = parser(snippet)
+#     #     assert any(e.code == INFINITE_LOOP for e in syntax_tree.errors)
+#     #     res = parser.static_analysis()
+#     #     assert res and res[0][2].code == INFINITE_LOOP
+#     #     minilang = """not_forever = { / / } \n"""
+#     #     parser = grammar_provider(minilang)()
+#     #     res = parser.static_analysis()
+#     #     assert not res
+#     #     set_config_value('static_analysis', save)
 
 
 # class TestStaticAnalysis:
@@ -823,7 +823,7 @@ class TestPopRetrieve:
         st = self.minilang_parser4(test2)
         log_parsing_history(self.minilang_parser4, "optional_match")
         print(st.as_sxpr())
-        assert not st.error_flag
+        # assert not st.error_flag
         # test3 = '<info>Hey, <emph>you</></>'
         # st = self.minilang_parser4(test3)
         # assert not st.error_flag

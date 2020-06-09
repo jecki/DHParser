@@ -438,7 +438,7 @@ class Parser:
         try:
             # rollback variable changing operation if parser backtracks to a position
             # before or at the location where the variable changing operation occurred
-            if grammar.last_rb__loc__ >= location:
+            if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
 
             # if location has already been visited by the current parser, return saved result
@@ -507,7 +507,7 @@ class Parser:
                     and not grammar.returning_from_recursion__
                     # variable-manipulating parsers will not be entered into the cache,
                     # because caching would interfere with changes of variable state
-                    and grammar.last_rb__loc__ < location):
+                    and location > grammar.last_rb__loc__ ):
                 visited[location] = (node, rest)
 
             if not grammar.returning_from_recursion__:
@@ -3080,7 +3080,7 @@ class Pop(Retrieve):
         node, txt = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
-            location = self.grammar.document_length__ - text.__len__() - 1
+            location = self.grammar.document_length__ - text.__len__()
             # if node is not EMPTY_NODE and len(node) == 0:
             #     location = self.grammar.document_length__ - txt.__len__() - 1
             #     print('PUSH:', self.symbol_pname, location, self.values[-1])
@@ -3207,13 +3207,13 @@ class Forward(UnaryParser):
         http://www.vpri.org/pdf/tr2007002_packrat.pdf
         """
         grammar = self.grammar
-        if not grammar.left_recursion__:
+        if True or not grammar.left_recursion__:
             return self.parser(text)
 
         location = grammar.document_length__ - text._len
         # rollback variable changing operation if parser backtracks
         # to a position before the variable changing operation occurred
-        if grammar.last_rb__loc__ >= location:
+        if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
 
         # if location has already been visited by the current parser, return saved result
@@ -3268,7 +3268,7 @@ class Forward(UnaryParser):
                         break
                     result = next_result
                     depth += 1
-            if grammar.memoization__ and grammar.last_rb__loc__ < location:
+            if grammar.memoization__ and location > grammar.last_rb__loc__:
                 visited[location] = result
             grammar.returning_from_recursion__ = recursion_state
         return result
