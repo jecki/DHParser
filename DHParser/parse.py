@@ -436,9 +436,9 @@ class Parser:
         location = grammar.document_length__ - text._len  # faster then len(text)?
 
         try:
-            # rollback variable changing operation if parser backtracks
-            # to a position before the variable changing operation occurred
-            if grammar.last_rb__loc__ > location:
+            # rollback variable changing operation if parser backtracks to a position
+            # before or at the location where the variable changing operation occurred
+            if grammar.last_rb__loc__ >= location:
                 grammar.rollback_to__(location)
 
             # if location has already been visited by the current parser, return saved result
@@ -3080,7 +3080,10 @@ class Pop(Retrieve):
         node, txt = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
-            location = self.grammar.document_length__ - text.__len__()
+            location = self.grammar.document_length__ - text.__len__() - 1
+            # if node is not EMPTY_NODE and len(node) == 0:
+            #     location = self.grammar.document_length__ - txt.__len__() - 1
+            #     print('PUSH:', self.symbol_pname, location, self.values[-1])
             self.grammar.push_rollback__(location, self._rollback)  # lambda: stack.append(value))
         return node, txt
 
@@ -3210,7 +3213,7 @@ class Forward(UnaryParser):
         location = grammar.document_length__ - text._len
         # rollback variable changing operation if parser backtracks
         # to a position before the variable changing operation occurred
-        if grammar.last_rb__loc__ > location:
+        if grammar.last_rb__loc__ >= location:
             grammar.rollback_to__(location)
 
         # if location has already been visited by the current parser, return saved result

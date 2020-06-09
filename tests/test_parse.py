@@ -113,9 +113,9 @@ class TestParserClass:
 class TestInfiLoopsAndRecursion:
     def setup(self):
         pass
-        set_config_value('history_tracking', True)
+        # set_config_value('history_tracking', True)
         # set_config_value('resume_notices', True)
-        start_logging('LOGS')
+        # start_logging('LOGS')
 
     def test_very_simple(self):
         minilang = """
@@ -204,7 +204,7 @@ class TestInfiLoopsAndRecursion:
 
     # BEWARE: EXPERIMENTAL TEST can be long running
     def test_indirect_left_recursion2(self):
-        arithmetic_syntax = """@literalws = right
+        arithmetic_syntax = r"""@literalws = right
             expression     = addition | subtraction  # | term
             addition       = (expression | term) "+" (expression | term)
             subtraction    = (expression | term) "-" (expression | term)
@@ -226,7 +226,7 @@ class TestInfiLoopsAndRecursion:
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect2")
 
     def test_indirect_left_recursion3(self):
-        arithmetic_syntax = """@literalws = right
+        arithmetic_syntax = r"""@literalws = right
             expression     = addition | subtraction | term
             addition       = (expression | term) "+" (expression | term)
             subtraction    = (expression | term) "-" (expression | term)
@@ -718,7 +718,7 @@ class TestPopRetrieve:
     mini_language = r"""
         document       = { text | codeblock }
         codeblock      = delimiter { text | (!:delimiter delimiter_sign) } ::delimiter
-        delimiter      = delimiter_sign  # never use delimiter between capture and pop except for retrival!
+        delimiter      = delimiter_sign  # never use delimiter between capture and pop except for retrieval!
         delimiter_sign = /`+/
         text           = /[^`]+/
         """
@@ -805,21 +805,31 @@ class TestPopRetrieve:
         assert not syntax_tree.error_flag, str(syntax_tree.errors_sorted)
 
     def test_optional_match(self):
-        test1 = '<info>Hey, you</info>'
-        st = self.minilang_parser4(test1)
-        assert not st.error_flag, str(st.errors_sorted)
-        test12 = '<info>Hey, <emph>you</emph></info>'
-        st = self.minilang_parser4(test1)
-        assert not st.error_flag
+        # from DHParser.dsl import compileEBNF
+        # src = compileEBNF(self.mini_lang4)
+        # print(src)
+        # return
+
+        # test1 = '<info>Hey, you</info>'
+        # st = self.minilang_parser4(test1)
+        # assert not st.error_flag, str(st.errors_sorted)
+        # test12 = '<info>Hey, <emph>you</emph></info>'
+        # st = self.minilang_parser4(test1)
+        # assert not st.error_flag
         test2 = '<info>Hey, you</>'
+        set_config_value('history_tracking', True)
+        set_tracer(self.minilang_parser4, trace_history)
+        start_logging('LOGS')
         st = self.minilang_parser4(test2)
+        log_parsing_history(self.minilang_parser4, "optional_match")
+        print(st.as_sxpr())
         assert not st.error_flag
-        test3 = '<info>Hey, <emph>you</></>'
-        st = self.minilang_parser4(test3)
-        assert not st.error_flag
-        test4 = '<info>Hey, <emph>you</></info>'
-        st = self.minilang_parser4(test4)
-        assert not st.error_flag
+        # test3 = '<info>Hey, <emph>you</></>'
+        # st = self.minilang_parser4(test3)
+        # assert not st.error_flag
+        # test4 = '<info>Hey, <emph>you</></info>'
+        # st = self.minilang_parser4(test4)
+        # assert not st.error_flag
 
     def test_rollback_behaviour_of_optional_match(self):
         test1 = '<info>Hey, you</info*>'
@@ -831,7 +841,7 @@ class TestPopRetrieve:
         assert not self.minilang_parser4.variables__['name']
         assert st.error_flag
 
-    def test_cache_neutrality(self):
+    def test_cache_neutrality_1(self):
         """Test that packrat-caching does not interfere with the variable-
         changing parsers: Capture and Retrieve."""
         lang = r"""@literalws = right
@@ -847,6 +857,25 @@ class TestPopRetrieve:
         gr = grammar_provider(lang)()
         st = gr(case)
         assert not st.error_flag, str(st.errors_sorted)
+
+    def test_cache_neutrality_2(self):
+        lang = r'''document = variantA | variantB
+            variantA  = delimiter `X` ::delimiter `!` 
+            variantB  = `A` delimiter ::delimiter `!` 
+            delimiter = `A` | `X`
+        '''
+        gr = grammar_provider(lang)()
+        case = 'AXA!'
+        st = gr(case)
+        assert not st.errors
+
+        case = 'AXX!'
+        set_config_value('history_tracking', True)
+        start_logging('LOGS')
+        set_tracer(gr, trace_history)
+        st = gr(case)
+        log_parsing_history(gr, 'test_cache_neutrality_2')
+        print(st.as_sxpr())
 
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
@@ -1502,3 +1531,4 @@ class TestStaticAnalysis:
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
+
