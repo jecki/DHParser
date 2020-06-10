@@ -1230,7 +1230,7 @@ class Grammar:
         # variables stored and recalled by Capture and Retrieve parsers
         self.variables__ = defaultdict(lambda: [])  # type: DefaultDict[str, List[str]]
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
-        self.last_rb__loc__ = -1              # type: int
+        self.last_rb__loc__ = -2              # type: int
         # support for call stack tracing
         self.call_stack__ = []                # type: List[CallItem]  # tag_name, location
         # snapshots of call stacks
@@ -1460,7 +1460,7 @@ class Grammar:
             #      *line_col(self.document__, len(self.document__) - self.last_rb__loc__))
             rollback_func()
         self.last_rb__loc__ = self.rollback__[-1][0] if self.rollback__ \
-            else -1  # (self.document__.__len__() + 1)
+            else -2  # (self.document__.__len__() + 1)
 
 
     def as_ebnf(self) -> str:
@@ -3024,6 +3024,8 @@ class Retrieve(UnaryParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # auto-capture on first use if symbol was not captured before
         # ("or"-clause needed, because Forward parsers do not have a pname)
+        self.grammar.last_rb__loc__ = self.grammar.document_length__ - text._len
+        # set last_rb__loc__ to avoid caching of retrieved results
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
             node, text_ = self.parser(text)   # auto-capture value
             if node is None:
@@ -3096,6 +3098,9 @@ class Pop(Retrieve):
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
             self.grammar.push_rollback__(rollback_location(self, text, text_), self._rollback)
+        else:
+            # set last_rb__loc__ to avoid caching of retrieved results
+            self.grammar.last_rb__loc__ = self.grammar.document_length__ - text._len
         return node, text_
 
     def __repr__(self):

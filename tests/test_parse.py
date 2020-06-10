@@ -868,12 +868,31 @@ class TestPopRetrieve:
         st = gr(case)
         assert not st.errors
         case = 'AXX!'
-        set_config_value('history_tracking', True)
-        start_logging('LOGS')
-        set_tracer(gr, trace_history)
+        # set_config_value('history_tracking', True)
+        # start_logging('LOGS')
+        # set_tracer(gr, trace_history)
         st = gr(case)
-        log_parsing_history(gr, 'test_cache_neutrality_2')
-        print(st.as_sxpr())
+        # log_parsing_history(gr, 'test_cache_neutrality_2')
+        assert not st.errors
+        assert str(st) == "AXX!"
+        # print(st.as_sxpr())
+
+    def test_cache_neutrality_3(selfself):
+        lang = r'''document = variantA | variantB
+            variantA  = delimiter `X` check ::delimiter `!` 
+            variantB  = `A` delimiter check ::delimiter `!`
+            check = :delimiter 
+            delimiter = `A` | `X`
+        '''
+        gr = grammar_provider(lang)()
+        case = 'AXXX!'
+        # set_config_value('history_tracking', True)
+        # start_logging('LOGS')
+        # set_tracer(gr, trace_history)
+        st = gr(case)
+        # log_parsing_history(gr, 'test_cache_neutrality_3')
+        assert not st.errors
+        # print(st.as_sxpr())
 
     def test_single_line(self):
         teststr = "Anfang ```code block `` <- keine Ende-Zeichen ! ``` Ende"
