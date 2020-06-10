@@ -868,7 +868,6 @@ class TestPopRetrieve:
         case = 'AXA!'
         st = gr(case)
         assert not st.errors
-
         case = 'AXX!'
         set_config_value('history_tracking', True)
         start_logging('LOGS')
