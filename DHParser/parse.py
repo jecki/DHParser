@@ -3024,13 +3024,15 @@ class Retrieve(UnaryParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         # auto-capture on first use if symbol was not captured before
         # ("or"-clause needed, because Forward parsers do not have a pname)
-        self.grammar.last_rb__loc__ = self.grammar.document_length__ - text._len
-        # set last_rb__loc__ to avoid caching of retrieved results
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
             node, text_ = self.parser(text)   # auto-capture value
             if node is None:
+                # set last_rb__loc__ to avoid caching of retrieved results
+                self.grammar.push_rollback__(rollback_location(self, text, text_), lambda :None)
                 return None, text_
         node, text_ = self.retrieve_and_match(text)
+        # set last_rb__loc__ to avoid caching of retrieved results
+        self.grammar.push_rollback__(rollback_location(self, text, text_), lambda: None)
         return node, text_
 
     def __repr__(self):
@@ -3100,7 +3102,7 @@ class Pop(Retrieve):
             self.grammar.push_rollback__(rollback_location(self, text, text_), self._rollback)
         else:
             # set last_rb__loc__ to avoid caching of retrieved results
-            self.grammar.last_rb__loc__ = self.grammar.document_length__ - text._len
+            self.grammar.push_rollback__(rollback_location(self, text, text_), lambda: None)
         return node, text_
 
     def __repr__(self):
