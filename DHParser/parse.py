@@ -505,8 +505,9 @@ class Parser:
                 node._pos = location
             if (grammar.memoization__
                     and not grammar.returning_from_recursion__
-                    # variable-manipulating parsers will not be entered into the cache,
-                    # because caching would interfere with changes of variable state
+                    # Variable-manipulating parsers will not be entered into the cache,
+                    # because caching would interfere with changes of variable state.
+                    # See `_rollback_location()` for the added compensation term.
                     and location > grammar.last_rb__loc__ + int(text._len == rest._len)):
                 visited[location] = (node, rest)
 
@@ -2868,28 +2869,71 @@ class NegativeLookbehind(Lookbehind):
 
 ########################################################################
 #
-# Capture and Retrieve parsers (for passing variables in the parser)
+# Context-sensitive parsers
 #
 ########################################################################
 
 
-@cython.locals(L=cython.int, rb_loc=cython.int)
-def rollback_location(p: Parser, text: StringView, rest: StringView) -> int:
+class ContextSensitive(UnaryParser):
+    """Base class for context-sensitive parsers.
+
+    Context-Sensitive-Parsers are parsers that either manipulate
+    (store or change) the values of variables or that read values of
+    variables and use them to determine whether the parser matches
+    or not.
+
+    While context-sensitive-parsers are quite useful, grammars that
+    use them will not be context-free any more. Plus they breach the
+    technology of packrat-parsers. In particular, their results cannot
+    simply be memoized by storing them in a dictionary of locations.
+    (In other words, the memoization function is not a function of
+    parser and location any more, but would need to be a function
+    parser, location and variable (stack-)state.)
+    DHParser blocks memoization for context-sensitive-parsers
+    (see `Parser.__call__()` and `Forward.__call__()`). As
+    a consequence the parsing time cannot be assumed to be strictly
+    proportional to the size of the document, any more. Therefore,
+    it is recommended to use context-sensitive-parsers sparingly.
     """
-    Determines the rollback location for variable manipulating parsers.
-    Usually, this is exactly the location, where the parser started parsing.
-    However, since the rollback-location must lie before the location where
-    the  parser stopped, 1 is subtracted from the start-position in case the
-    it is the same as the stop position (i.e. len(node) == 0).
-    """
-    L = text._len
-    rb_loc = p.grammar.document_length__ - L
-    if rest._len == text._len:
-        rb_loc -= 1
-    return rb_loc
+
+    @cython.locals(L=cython.int, rb_loc=cython.int)
+    def _rollback_location(self: Parser, text: StringView, rest: StringView) -> int:
+        """
+        Determines the rollback location for context sensitive parsers, i.e.
+        parsers that either manipulate (store or change) or use variables.
+
+        Rolling back of variable changes takes place when the parser call sequence
+        starts to move forward again. Only those variable changes should be
+        rolled back the locations of which have been passed when backtracking.
+
+        The rollback location is furthermore used to block memoizing. Since
+        the result returned by a variable changing parser (or a parser
+        that directly or indirectly calls a variable changing parser), should
+        never be memoized, memoizing is only triggered, when the location of
+        a returning parser is greater than the last rollback location.
+
+        Usually, the rollback location is exactly the location, where the parser
+        started parsing. However, the rollback-location must lie before the
+        location where the  parser stopped, because otherwise variable changes
+        would be always be rolled back for parsers that have captured or retrieved
+        zero length data. In order to avoid this, the rollback location is
+        artificially reduced by one in case the parser did not capture any text
+        (either of the two equivalent criteria len(text) == len(rest) or
+        len(node) == 0) identifies this case). As this in turn could lead
+        to the return values of variable changing parsers being memoized, because
+        memoizing is triggered if the location of a returning parser is greater
+        than the last rollback location, this must be compensated again in
+        `Parser.__call__()` (and, likewise, `Forward.__call__()`) before
+        memoizing is triggered.
+        """
+        L = text._len
+        rb_loc = self.grammar.document_length__ - L
+        if rest._len == text._len:
+            rb_loc -= 1
+        return rb_loc
 
 
-class Capture(UnaryParser):
+class Capture(ContextSensitive):
     """
     Applies the contained parser and, in case of a match, saves the result
     in a variable. A variable is a stack of values associated with the
@@ -2908,8 +2952,8 @@ class Capture(UnaryParser):
             assert not self.parser.drop_content, \
                 "Cannot capture content from parsers that drop content!"
             self.grammar.variables__[self.pname].append(node.content)
-            self.grammar.push_rollback__(rollback_location(self, text, text_), self._rollback)
-            # caching will be blocked by parser guard (see way above),
+            self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
+            # memoizing will be blocked by parser guard (see way above),
             # because it would prevent recapturing of rolled back captures
             return self._return_value(node), text_
         else:
@@ -2975,7 +3019,7 @@ def matching_bracket(text: Union[StringView, str], stack: List[str]) -> Optional
     return value if text.startswith(value) else None
 
 
-class Retrieve(UnaryParser):
+class Retrieve(ContextSensitive):
     """
     Matches if the following text starts with the value of a particular
     variable. As a variable in this context means a stack of values,
@@ -3027,12 +3071,12 @@ class Retrieve(UnaryParser):
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
             node, text_ = self.parser(text)   # auto-capture value
             if node is None:
-                # set last_rb__loc__ to avoid caching of retrieved results
-                self.grammar.push_rollback__(rollback_location(self, text, text_), lambda :None)
+                # set last_rb__loc__ to avoid memoizing of retrieved results
+                self.grammar.push_rollback__(self._rollback_location(text, text_), lambda :None)
                 return None, text_
         node, text_ = self.retrieve_and_match(text)
-        # set last_rb__loc__ to avoid caching of retrieved results
-        self.grammar.push_rollback__(rollback_location(self, text, text_), lambda: None)
+        # set last_rb__loc__ to avoid memoizing of retrieved results
+        self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
         return node, text_
 
     def __repr__(self):
@@ -3099,10 +3143,10 @@ class Pop(Retrieve):
         node, text_ = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
-            self.grammar.push_rollback__(rollback_location(self, text, text_), self._rollback)
+            self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
         else:
-            # set last_rb__loc__ to avoid caching of retrieved results
-            self.grammar.push_rollback__(rollback_location(self, text, text_), lambda: None)
+            # set last_rb__loc__ to avoid memoizing of retrieved results
+            self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
         return node, text_
 
     def __repr__(self):
@@ -3286,7 +3330,7 @@ class Forward(UnaryParser):
                         break
                     result = next_result
                     depth += 1
-            if (grammar.memoization__
+            if (grammar.memoization__   # see `_rollback_location()` for added compensation term
                     and location > grammar.last_rb__loc__ + int(text._len == result[1]._len)):
                 visited[location] = result
             grammar.returning_from_recursion__ = recursion_state
