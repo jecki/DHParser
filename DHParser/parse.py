@@ -3308,6 +3308,7 @@ class Forward(UnaryParser):
                 result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
+            # TODO: Eliminate returning_from_recursion__ in favor of memoization__
             recursion_state = grammar.returning_from_recursion__
             self.recursion_counter[location] = 0  # fail on the first recursion
             grammar.memoization__ = True
