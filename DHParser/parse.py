@@ -3324,7 +3324,7 @@ class Forward(UnaryParser):
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
                 # the recursion depth by 1 for each call as long as the length of
-                # the matches increase.
+                # the match increases.
                 depth = 1
                 while True:
                     self.recursion_counter[location] = depth
@@ -3335,11 +3335,11 @@ class Forward(UnaryParser):
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match
                         # Since the result of the last parser call (`next_result`) is discarded,
                         # any variables captured by this call should be "rolled back", too.
-                        if len(grammar.rollback__) > rb_stack_size:
+                        while len(grammar.rollback__) > rb_stack_size:
                             _, rb_func = grammar.rollback__.pop()
                             rb_func()
                             grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                                if grammar.rollback__ else (grammar.document__.__len__() + 1)
+                                if grammar.rollback__ else -2
                         # Plus, overwrite the discarded result in the last history record with
                         # the accepted result, i.e. the longest match.
                         # TODO: Move this to trace.py, somehow... and make it less confusing

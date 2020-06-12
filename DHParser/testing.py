@@ -789,7 +789,7 @@ def run_test_function(func_name, namespace):
     exec(func_name + '()', namespace)
 
 
-def runner(tests, namespace):
+def runner(tests, namespace, profile=False):
     """
     Runs all or some selected Python unit tests found in the
     namespace. To run all tests in a module, call
@@ -807,17 +807,22 @@ def runner(tests, namespace):
     (of a test-class) that shall be run. Test-Methods are specified in
     the form: class_name.method.name e.g. "TestServer.test_connection".
 
-    Args:
-        tests: String or list of strings with the names of tests to
-            run. If empty, runner searches by itself all objects the
-            of which starts with 'test' and runs it (if its a function)
-            or all of its methods that start with "test" if its a class
-            plus the "setup" and "teardown" methods if they exist.
+    :param tests: String or list of strings with the names of tests
+        to run. If empty, runner searches by itself all objects the
+        of which starts with 'test' and runs it (if its a function)
+        or all of its methods that start with "test" if its a class
+        plus the "setup" and "teardown" methods if they exist.
 
-        namespace: The namespace for running the test, usually
-            ``globals()`` should be used.
+    :param namespace: The namespace for running the test, usually
+        ``globals()`` should be used.
 
-    Example:
+    :param profile: If True, the tests will be run with the profiler on.
+        results will be displayed after the test-results. Profiling will
+        also be turned on, if the parameter `--profile` has been provided
+        on the command line.
+
+    Example::
+
         class TestSomething()
             def setup(self):
                 pass
@@ -854,11 +859,23 @@ def runner(tests, namespace):
         elif inspect.isfunction(namespace[name]):
             test_functions.append(name)
 
+    profile = profile or '--profile' in sys.argv
+    if profile:
+        import cProfile, pstats
+        pr = cProfile.Profile()
+        pr.enable()
+
     for cls_name, methods in test_classes.items():
         run_tests_in_class(cls_name, namespace, methods)
 
     for test in test_functions:
         run_test_function(test, namespace)
+
+    if profile:
+        pr.disable()
+        st = pstats.Stats(pr)
+        st.strip_dirs()
+        st.sort_stats('time').print_stats(50)
 
 
 def run_file(fname):
