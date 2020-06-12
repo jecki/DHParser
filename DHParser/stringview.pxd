@@ -26,5 +26,7 @@ cdef class StringView:
     cdef str _fullstring
 
 
-# class TextBuffer
-
+cdef class TextBuffer:
+    cdef object _text
+    cdef object _buffer
+    cdef public int version

@@ -399,6 +399,7 @@ class TextBuffer:
             return str(self._text)
         return str(self.snapshot('\n'))
 
+    @cython.locals(l1=cython.int, c1=cython.int, l2=cython.int, c2=cython.int)
     def update(self, l1: int, c1: int, l2: int, c2: int, replacement: Union[str, StringView]):
         """Replaces the text-range from line and column (l1, c1) to
         line and column (l2, c2) with the replacement-string.
@@ -414,6 +415,7 @@ class TextBuffer:
         self._text = ''  # invalidate single-string copy
         self.version += 1
 
+    @cython.locals(version=cython.int)
     def text_edits(self, edits: Union[list, dict], version: int = -1):
         """Incorporates the one or more text-edits or change-events into the text.
         A Text-Edit is a dictionary of this form:

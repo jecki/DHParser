@@ -120,14 +120,13 @@ cdef class Lookbehind(FlowParser):
 cdef class NegativeLookbehind(Lookbehind):
     pass
 
-cdef class ContextSensitive
-    @cython.locals(L=cython.int, rb_loc=cython.int)
-    cdef _rollback_location(p, text, rest)
+cdef class ContextSensitive(UnaryParser):
+    cpdef _rollback_location(self, text, rest)
 
-cdef class Capture(UnaryParser):
+cdef class Capture(ContextSensitive):
     pass
 
-cdef class Retrieve(UnaryParser):
+cdef class Retrieve(ContextSensitive):
     cdef public object filter
     cdef public object match
 

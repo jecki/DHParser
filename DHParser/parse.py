@@ -138,7 +138,7 @@ ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
 # (text, start point, end point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
 
-
+@cython.returns(cython.int)
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
 def reentry_point(rest: StringView,
                   rules: ResumeList,
@@ -230,6 +230,7 @@ def reentry_point(rest: StringView,
         nonlocal rest
         return func(rest, start, start + search_window)
 
+    @cython.returns(cython.int)
     @cython.locals(a=cython.int, b=cython.int, k=cython.int, length=cython.int)
     def entry_point(search_func, search_rule) -> int:
         """Returns the next reentry-point outside a comment that `search_func`
@@ -1291,6 +1292,7 @@ class Grammar:
             Node: The root node to the parse tree.
         """
 
+        @cython.returns(cython.int)
         def tail_pos(predecessors: Union[List[Node], Tuple[Node, ...], None]) -> int:
             """Adds the position after the last node in the list of
             predecessors to the node."""
@@ -2268,6 +2270,7 @@ class MandatoryNary(NaryParser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
+    @cython.returns(cython.int)
     def get_reentry_point(self, text_: StringView) -> int:
         """Returns a reentry-point determined by the skip-list in `self.skip`.
         If no reentry-point was found or the skip-list ist empty, -1 is returned.
@@ -2365,6 +2368,22 @@ class MandatoryNary(NaryParser):
         return errors
 
 
+@cython.returns(cython.int)
+def combined_mandatory(left: Parser, right: Parser) -> int:
+    """
+    Returns the position of the first mandatory element (if any) when
+    parsers `left` and `right` are joined to a sequence.
+    """
+    left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
+        if isinstance(left, Series) else (NO_MANDATORY, 1)
+    if left_mandatory != NO_MANDATORY:
+        return left_mandatory
+    right_mandatory = right.mandatory if isinstance(right, Series) else NO_MANDATORY
+    if right_mandatory != NO_MANDATORY:
+        return right_mandatory + left_length
+    return NO_MANDATORY
+
+
 class Series(MandatoryNary):
     r"""
     Matches if each of a series of parsers matches exactly in the order of
@@ -2425,38 +2444,31 @@ class Series(MandatoryNary):
     # The following operator definitions add syntactical sugar, so one can write:
     # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
 
-    @staticmethod
-    def combined_mandatory(left: Parser, right: Parser) -> int:
-        """
-        Returns the position of the first mandatory element (if any) when
-        parsers `left` and `right` are joined to a sequence.
-        """
-        left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
-            if isinstance(left, Series) else (NO_MANDATORY, 1)
-        if left_mandatory != NO_MANDATORY:
-            return left_mandatory
-        right_mandatory = right.mandatory if isinstance(right, Series) else NO_MANDATORY
-        if right_mandatory != NO_MANDATORY:
-            return right_mandatory + left_length
-        return NO_MANDATORY
-
     def __add__(self, other: Parser) -> 'Series':
+        if not isinstance(self, Series):
+            # for some reason cython called __add__ instead of __radd__,
+            # so we have to repeat the __radd__ code here...
+            self, other = other, self
+            other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
+                else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            return Series(*(other_parsers + self.parsers),
+                          mandatory=combined_mandatory(other, self))
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Series(*(self.parsers + other_parsers),
-                      mandatory=self.combined_mandatory(self, other))
+                      mandatory=combined_mandatory(self, other))
 
     def __radd__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Series(*(other_parsers + self.parsers),
-                      mandatory=self.combined_mandatory(other, self))
+                      mandatory=combined_mandatory(other, self))
 
     def __iadd__(self, other: Parser) -> 'Series':
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
-        self.mandatory = self.combined_mandatory(self, other)
+        self.mandatory = combined_mandatory(self, other)
         return self
 
 
@@ -2539,6 +2551,13 @@ class Alternative(NaryParser):
     # `Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))`
 
     def __or__(self, other: Parser) -> 'Alternative':
+        if not isinstance(self, Alternative):
+            # for some reason cython called __or__ instead of __ror__,
+            # so we have to repeat the __ror__ code here...
+            self, other = other, self
+            other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
+                else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
+            return Alternative(*(other_parsers + self.parsers))
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Alternative(*(self.parsers + other_parsers))
@@ -2727,6 +2746,10 @@ class Interleave(MandatoryNary):
         return parsers, mandatory, repetitions
 
     def __mul__(self, other: Parser) -> 'Interleave':
+        if not isinstance(self, Interleave):
+            # for some reason cython called __mul__ instead of __rmul__,
+            # so we have to flip self and other...
+            self, other = other, self
         parsers, mandatory, repetitions = self._prepare_combined(other)
         return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
 
@@ -2896,8 +2919,9 @@ class ContextSensitive(UnaryParser):
     it is recommended to use context-sensitive-parsers sparingly.
     """
 
+    @cython.returns(cython.int)
     @cython.locals(L=cython.int, rb_loc=cython.int)
-    def _rollback_location(self: Parser, text: StringView, rest: StringView) -> int:
+    def _rollback_location(self, text: StringView, rest: StringView) -> int:
         """
         Determines the rollback location for context sensitive parsers, i.e.
         parsers that either manipulate (store or change) or use variables.
