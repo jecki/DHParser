@@ -504,15 +504,13 @@ class Parser:
 
             if node is not None:
                 node._pos = location
-            if (grammar.memoization__
-                    and not grammar.returning_from_recursion__
-                    # Variable-manipulating parsers will not be entered into the cache,
-                    # because caching would interfere with changes of variable state.
-                    # See `_rollback_location()` for the added compensation term.
-                    and location > grammar.last_rb__loc__ + int(text._len == rest._len)):
-                visited[location] = (node, rest)
-
             if not grammar.returning_from_recursion__:
+                if (grammar.memoization__
+                        # Variable-manipulating parsers will not be entered into the cache,
+                        # because caching would interfere with changes of variable state.
+                        # See `_rollback_location()` for the added compensation term.
+                        and location > grammar.last_rb__loc__ + int(text._len == rest._len)):
+                    visited[location] = (node, rest)
                 grammar.returning_from_recursion__ = recursion_state
 
         except RecursionError:
