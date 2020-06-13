@@ -988,7 +988,7 @@ VARIABLE   ::= /[A-Za-z]/, ~;
 class TestAlternativeEBNFSyntax:
     def test_alt_syntax(self):
         code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
-        assert not ast.error_flag
+        assert not ast.error_flag, str(ast.errors)
         arithmetic_grammer = compile_python_object(
             DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) + code)
         arithmetic_parser = arithmetic_grammer()

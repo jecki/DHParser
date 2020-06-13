@@ -224,16 +224,6 @@ CONFIG_PRESET['history_tracking'] = False
 # Default value: False
 CONFIG_PRESET['resume_notices'] = False
 
-# Turns on memoization. This means that whenever a parser returns the
-# result it yielded at the location at which it was called will be
-# stored in the parser's "visited"-cache, so that in case the same
-# parser is called again at the same location, the result can be
-# retrieved from the cache. This kind of caching is the central
-# design feature of pack-rat parsers, which ensures their finishing
-# in linear time (https://pdos.csail.mit.edu/~baford/packrat/thesis/)
-# Default value: True
-CONFIG_PRESET['memoization'] = True
-
 # Turns on the left-recursion-handling algorithm. This allows the use
 # of left-recursion in grammars, which otherwise would run a recursive
 # descent parser into an infinite-loop.

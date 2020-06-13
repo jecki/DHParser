@@ -448,8 +448,8 @@ class Parser:
                 # no history recording in case of memoized results!
                 return visited[location]
 
-            recursion_state = grammar.returning_from_recursion__
-            grammar.returning_from_recursion__ = False
+            memoization_state = grammar.suspend_memoization__
+            grammar.suspend_memoization__ = False
 
             # now, the actual parser call!
             try:
@@ -504,14 +504,9 @@ class Parser:
 
             if node is not None:
                 node._pos = location
-            if not grammar.returning_from_recursion__:
-                if (grammar.memoization__
-                        # Variable-manipulating parsers will not be entered into the cache,
-                        # because caching would interfere with changes of variable state.
-                        # See `_rollback_location()` for the added compensation term.
-                        and location > grammar.last_rb__loc__ + int(text._len == rest._len)):
-                    visited[location] = (node, rest)
-                grammar.returning_from_recursion__ = recursion_state
+            if not grammar.suspend_memoization__:
+                visited[location] = (node, rest)
+                grammar.suspend_memoization__ = memoization_state
 
         except RecursionError:
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
@@ -976,22 +971,16 @@ class Grammar:
                 location to which the parser backtracks. This is done by
                 calling method :func:`rollback_to__(location)`.
 
-        returning_from_recursion__: A flag that is true if - during parsing -
-                a parser returns from a recursive call, in which case its
-                results should not be memoized, because it might be tried
-                again with an increased recursion depth. This flag is needed by
-                the left-recursion handling algorithm. See `Parser.__call__`
-                ans `Forward.__call__`.
+        suspend_memoization__: A flag that if set suspends memoization of
+                results  from returning parsers. This flag is needed by the
+                left-recursion handling algorithm (see `Parser.__call__`
+                and `Forward.__call__`) as well as the context-sensitive
+                parsers (see function `Grammar.push_rollback__()`).
 
         left_recursion__: Turns on left-recursion handling. This prevents the
                 recursive descent parser to get caught in an infinite loop
                 (resulting in a maximum recursion depth reached error) when
                 the grammar definition contains left recursions.
-
-        memoization__:  Turns full memoization on or off. Turning memoization off
-                results in less memory usage and sometimes reduced parsing time.
-                In some situations it may drastically increase parsing time, so
-                it is safer to leave it on. (Default: on)
 
         # mirrored class attributes:
 
@@ -1150,7 +1139,6 @@ class Grammar:
                     or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
         self.start_parser__ = None             # type: Optional[Parser]
         self._dirty_flag__ = False             # type: bool
-        self.memoization__ = get_config_value('memoization')                      # type: bool
         self.left_recursion__ = get_config_value('left_recursion')                # type: bool
         self.history_tracking__ = get_config_value('history_tracking')            # type: bool
         self.resume_notices__ = get_config_value('resume_notices')                # type: bool
@@ -1231,6 +1219,7 @@ class Grammar:
         self.variables__ = defaultdict(lambda: [])  # type: DefaultDict[str, List[str]]
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -2              # type: int
+        self.suspend_memoization__ = False    # type: bool
         # support for call stack tracing
         self.call_stack__ = []                # type: List[CallItem]  # tag_name, location
         # snapshots of call stacks
@@ -1238,8 +1227,6 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = False         # type: bool
         self.most_recent_error__ = None       # type: Optional[ParserError]
-        # support for left-recursion handling
-        self.returning_from_recursion__ = False  # type: bool
 
     @property
     def reversed__(self) -> StringView:
@@ -1439,6 +1426,7 @@ class Grammar:
         """
         self.rollback__.append((location, func))
         self.last_rb__loc__ = location
+        self.suspend_memoization__ = True
 
 
     @property
@@ -2928,7 +2916,7 @@ class ContextSensitive(UnaryParser):
         starts to move forward again. Only those variable changes should be
         rolled back the locations of which have been passed when backtracking.
 
-        The rollback location is furthermore used to block memoizing. Since
+        The rollback location can also be used to block memoizing. Since
         the result returned by a variable changing parser (or a parser
         that directly or indirectly calls a variable changing parser), should
         never be memoized, memoizing is only triggered, when the location of
@@ -2941,12 +2929,13 @@ class ContextSensitive(UnaryParser):
         zero length data. In order to avoid this, the rollback location is
         artificially reduced by one in case the parser did not capture any text
         (either of the two equivalent criteria len(text) == len(rest) or
-        len(node) == 0) identifies this case). As this in turn could lead
-        to the return values of variable changing parsers being memoized, because
-        memoizing is triggered if the location of a returning parser is greater
-        than the last rollback location, this must be compensated again in
-        `Parser.__call__()` (and, likewise, `Forward.__call__()`) before
-        memoizing is triggered.
+        len(node) == 0) identifies this case). This reduction needs to be
+        compensated for, if blocking of memoization is determined by the
+        rollback-location as in `Forward.__call__()` where a formula like::
+
+            location <= (grammar.last_rb__loc__ + int(text._len == rest._len)
+
+        determines whether memoization should be blocked.
         """
         L = text._len
         rb_loc = self.grammar.document_length__ - L
@@ -3309,15 +3298,16 @@ class Forward(UnaryParser):
         if location in self.recursion_counter:
             depth = self.recursion_counter[location]
             if depth == 0:
-                grammar.returning_from_recursion__ = True
+                grammar.suspend_memoization__ = True
                 result = None, text
             else:
                 self.recursion_counter[location] = depth - 1
                 result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
-            recursion_state = grammar.returning_from_recursion__
+            recursion_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
+            grammar.suspend_memoization = False
             result = self.parser(text)
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
@@ -3326,7 +3316,7 @@ class Forward(UnaryParser):
                 depth = 1
                 while True:
                     self.recursion_counter[location] = depth
-                    grammar.returning_from_recursion__ = False
+                    grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
@@ -3352,10 +3342,10 @@ class Forward(UnaryParser):
                         break
                     result = next_result
                     depth += 1
-            if (grammar.memoization__   # see `_rollback_location()` for added compensation term
-                    and location > grammar.last_rb__loc__ + int(text._len == result[1]._len)):
+            grammar.suspend_memoization__ = recursion_state \
+                or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
+            if not grammar.suspend_memoization__:
                 visited[location] = result
-            grammar.returning_from_recursion__ = recursion_state
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):

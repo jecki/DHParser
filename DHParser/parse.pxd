@@ -36,9 +36,8 @@ cdef class Grammar:
     cdef public object start_parser__
     cdef bint _dirty_flag__
     cdef public bint history_tracking__
-    cdef public bint memoization__
+    cdef public bint suspend_memoization__
     cdef public bint flatten_tree__
-    cdef public bint returning_from_recursion__
     cdef public int max_parser_dropouts__
 #    cdef public object root_parser__  # do not uncomment this!!!
     cdef public object tree__

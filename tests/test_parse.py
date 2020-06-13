@@ -892,7 +892,7 @@ class TestPopRetrieve:
         st = gr(case)
         # log_parsing_history(gr, 'test_cache_neutrality_3')
         # print(st.as_sxpr())
-        assert not st.errors
+        assert not st.errors, str(errors)
         case = 'AXXX!'
         st = gr(case)
         assert not st.errors
