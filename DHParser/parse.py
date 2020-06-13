@@ -505,8 +505,6 @@ class Parser:
             if node is not None:
                 node._pos = location
             if not grammar.suspend_memoization__:
-                # grammar.memoization__ = location > (grammar.last_rb__loc__
-                #                                     + int(text._len == rest._len))
                 visited[location] = (node, rest)
                 grammar.suspend_memoization__ = memoization_state
 
@@ -1221,7 +1219,7 @@ class Grammar:
         self.variables__ = defaultdict(lambda: [])  # type: DefaultDict[str, List[str]]
         self.rollback__ = []                  # type: List[Tuple[int, Callable]]
         self.last_rb__loc__ = -2              # type: int
-        self.memoization__ = True             # type: bool
+        self.suspend_memoization__ = False    # type: bool
         # support for call stack tracing
         self.call_stack__ = []                # type: List[CallItem]  # tag_name, location
         # snapshots of call stacks
@@ -3297,7 +3295,6 @@ class Forward(UnaryParser):
                 result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
-            # TODO: Eliminate returning_from_recursion__ in favor of memoization__
             recursion_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
             grammar.suspend_memoization = False
@@ -3335,11 +3332,10 @@ class Forward(UnaryParser):
                         break
                     result = next_result
                     depth += 1
-            grammar.suspend_memoization__ = location <= (grammar.last_rb__loc__ +
-                                                         int(text._len == result[1]._len))
+            grammar.suspend_memoization__ = recursion_state \
+                or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
             if not grammar.suspend_memoization__:
                 visited[location] = result
-            grammar.suspend_memoization__ |= recursion_state
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
