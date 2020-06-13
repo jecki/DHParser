@@ -1227,8 +1227,6 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = False         # type: bool
         self.most_recent_error__ = None       # type: Optional[ParserError]
-        # support for left-recursion handling
-        self.suspend_memoization__ = False  # type: bool
 
     @property
     def reversed__(self) -> StringView:
