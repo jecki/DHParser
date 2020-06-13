@@ -3344,6 +3344,7 @@ class Forward(UnaryParser):
                     depth += 1
             grammar.suspend_memoization__ = recursion_state \
                 or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
+            # grammar.suspend_memoization__ = recursion_state
             if not grammar.suspend_memoization__:
                 visited[location] = result
         return result
