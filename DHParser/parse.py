@@ -2918,6 +2918,12 @@ class ContextSensitive(UnaryParser):
         starts to move forward again. Only those variable changes should be
         rolled back the locations of which have been passed when backtracking.
 
+        The rollback location can also be used to block memoizing. Since
+        the result returned by a variable changing parser (or a parser
+        that directly or indirectly calls a variable changing parser), should
+        never be memoized, memoizing is only triggered, when the location of
+        a returning parser is greater than the last rollback location.
+
         Usually, the rollback location is exactly the location, where the parser
         started parsing. However, the rollback-location must lie before the
         location where the  parser stopped, because otherwise variable changes
@@ -2925,7 +2931,13 @@ class ContextSensitive(UnaryParser):
         zero length data. In order to avoid this, the rollback location is
         artificially reduced by one in case the parser did not capture any text
         (either of the two equivalent criteria len(text) == len(rest) or
-        len(node) == 0) identifies this case).
+        len(node) == 0) identifies this case). This reduction needs to be
+        compensated for, if blocking of memoization is determined by the
+        rollback-location as in `Forward.__call__()` where a formula like::
+
+            location <= (grammar.last_rb__loc__ + int(text._len == rest._len)
+
+        determines whether memoization should be blocked.
         """
         L = text._len
         rb_loc = self.grammar.document_length__ - L
