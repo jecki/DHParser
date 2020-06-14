@@ -1121,9 +1121,11 @@ class Grammar:
 
     def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
-        :param root: Overrides default root parser. By default the root parser
-            is the parser assigned to the class field `root__`. This is useful for
-            executing or testing certain parts of a complex parser ensemble.
+        :param root: If not None, this is goind to be the root parser of the grammar.
+            This allows to first construct an ensemble of parser objects and then
+            link those objects in a grammar-object, rather than adding the parsers
+            as fields to a derived class of class Grammar. (See the doc-tests in this
+            module for examples.)
         :param static_analysis: If not None, this overrides the config value
             "static_analysis".
         """

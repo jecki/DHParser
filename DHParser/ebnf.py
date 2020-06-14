@@ -674,13 +674,13 @@ def get_ebnf_grammar() -> EBNFGrammar:
                 raise AttributeError
     except AttributeError:
         if mode in ('fixed', 'configurable'):
-            grammar = FixedEBNFGrammar()
+            grammar = FixedEBNFGrammar(static_analysis=False)
             if mode == "fixed":
                 # configure grammar once
                 update_scanner(grammar, get_config_value('delimiter_set'))
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
         else:
-            grammar = EBNFGrammar()
+            grammar = EBNFGrammar(static_analysis=False)
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
     if mode == 'configurable':
         # configure grammar on each request of the grammar object
