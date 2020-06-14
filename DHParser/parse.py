@@ -57,7 +57,6 @@ __all__ = ('ParserError',
            'FlagFunc',
            'ParseFunc',
            'Parser',
-           'UnknownParserError',
            'AnalysisError',
            'GrammarError',
            'Grammar',
@@ -68,6 +67,7 @@ __all__ = ('ParserError',
            'Text',
            'DropText',
            'RegExp',
+           'update_scanner',
            'RE',
            'TKN',
            'Whitespace',
@@ -777,12 +777,6 @@ def mixin_nonempty(whitespace: str) -> str:
     return whitespace
 
 
-class UnknownParserError(KeyError):
-    """UnknownParserError is raised if a Grammar object is called with a
-    parser that does not exist or if in the course of parsing a parser
-    is referred to that does not exist."""
-
-
 AnalysisError = Tuple[str, Parser, Error]      # pname, parser, error
 # TODO: replace with a named tuple?
 
@@ -1125,7 +1119,14 @@ class Grammar:
         return duplicate
 
 
-    def __init__(self, root: Parser = None) -> None:
+    def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
+        """Constructor of class Grammar.
+        :param root: Overrides default root parser. By default the root parser
+            is the parser assigned to the class field `root__`. This is useful for
+            executing or testing certain parts of a complex parser ensemble.
+        :param static_analysis: If not None, this overrides the config value
+            "static_analysis".
+        """
         self.all_parsers__ = set()             # type: Set[Parser]
         # add compiled regular expression for comments, if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
@@ -1171,9 +1172,10 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
 
-        if self.static_analysis_pending__ \
-                and get_config_value('static_analysis') in {'early', 'late'}:
-            # try:
+        if (self.static_analysis_pending__
+            and (static_analysis
+                 or (static_analysis is None
+                     and get_config_value('static_analysis') in {'early', 'late'}))):
             result = self.static_analysis()
             # clears any stored errors without overwriting the pointer
             while self.static_analysis_errors__:
@@ -1183,8 +1185,6 @@ class Grammar:
             if has_errors:
                 raise GrammarError(result)
             self.static_analysis_pending__.pop()
-            # except (NameError, AttributeError) as e:
-            #     pass  # don't fail the initialization of PLACEHOLDER
 
     def __str__(self):
         return self.__class__.__name__
@@ -1202,7 +1202,7 @@ class Grammar:
                 parser.apply(self._add_parser__)
                 assert self[key] == parser
                 return self[key]
-            raise UnknownParserError('Unknown parser "%s" !' % key)
+            raise AttributeError('Unknown parser "%s" !' % key)
 
 
     def __contains__(self, key):
@@ -1813,6 +1813,35 @@ class Whitespace(RegExp):
 
     def __repr__(self):
         return '~'
+
+
+def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
+    """Updates the "scanner" of a grammar by overwriting the `text` or
+    `regex`-fields of some of or all of its leaf parsers with new values.
+    This works, of course, only for those parsers that are assigned
+    to a symbol in the Grammar class.
+
+    :param grammar: The grammar-object for which the leaf parsers
+        shall be updated.
+    :param leaf_parsers: A mapping of parser names to strings that
+        are interpreted as plain text (if the parser name refers to
+        a `Text`-parser or as regular expressions, if the parser name
+        refers to a `RegExp`-parser
+
+    :raises AttributeError: in case a leaf parser name in the
+        dictionary does not exist or does not refer to a `Text`
+        or `RegExp`-parser.
+    """
+    for pname, t in leaf_parsers.items():
+        parser = grammar[pname]
+        if isinstance(parser, Text):
+            assert isinstance(t, str)
+            cast(Text, parser).text = t
+        elif isinstance(parser, RegExp):
+            cast(RegExp, parser).regexp = re.compile(t) if isinstance(t, str) else t
+        else:
+            raise AttributeError('Parser %s is not a Text- oder RegExp-Parser, but %s'
+                                 % (pname, type(parser)))
 
 
 ########################################################################

@@ -36,7 +36,7 @@ from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CO
     PARSER_NEVER_TOUCHES_DOCUMENT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
-    Interleave, UnknownParserError, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
+    Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, INFINITE
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -1359,7 +1359,7 @@ class TestUnknownParserError:
         try:
             gr("", "NonExistantParser")
             assert False, "UnknownParserError expected!"
-        except UnknownParserError:
+        except AttributeError:
             pass
 
 

@@ -76,7 +76,7 @@ class EBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "09b88d557e08f59db56613dadff966e3"
+    source_hash__ = "94480ce7a73ec2c5f878ecb207b43073"
     anonymous__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

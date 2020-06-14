@@ -41,7 +41,7 @@ from DHParser.configuration import get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
-from DHParser.parse import UnknownParserError, Lookahead
+from DHParser.parse import Lookahead
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
@@ -383,7 +383,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if has_lookahead(parser_name):
                 set_tracer(all_descendants(parser[parser_name]), trace_history)
                 track_history = True
-        except UnknownParserError:
+        except AttributeError:
             pass
 
         assert parser_name, "Missing parser name in test %s!" % unit_name
@@ -416,7 +416,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             errflag = len(errata)
             try:
                 cst = parser(test_code, parser_name)
-            except UnknownParserError as upe:
+            except AttributeError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
@@ -497,7 +497,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             errflag = len(errata)
             try:
                 cst = parser(test_code, parser_name)
-            except UnknownParserError as upe:
+            except AttributeError as upe:
                 node = Node(ZOMBIE_TAG, "").with_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(

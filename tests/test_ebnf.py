@@ -410,9 +410,9 @@ class TestBoundaryCases:
             assert False, "Grammar objects should be able to cope with unconnected parsers!"
         try:
             nonexistant = grammar['nonexistant']
-            assert False, "Grammar object shoul raise a KeyError if subscripted by " \
+            assert False, "Grammar object should raise an AttributeError if subscripted by " \
                           "a non-existant parser name!"
-        except KeyError:
+        except AttributeError:
             pass
 
 
@@ -986,6 +986,13 @@ VARIABLE   ::= /[A-Za-z]/, ~;
 
 
 class TestAlternativeEBNFSyntax:
+    def setup(self):
+        self.save = get_config_value('syntax_variant')
+        set_config_value('syntax_variant', 'heuristic')
+
+    def teardown(self):
+        set_config_value('syntax_variant', self.save)
+
     def test_alt_syntax(self):
         code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
         assert not ast.error_flag, str(ast.errors)
@@ -997,6 +1004,13 @@ class TestAlternativeEBNFSyntax:
 
 
 class TestSyntaxExtensions:
+    def setup(self):
+        self.save = get_config_value('syntax_variant')
+        set_config_value('syntax_variant', 'strict')
+
+    def teardown(self):
+        set_config_value('syntax_variant', self.save)
+
     def test_difference(self):
         lang = """
             doc = /[A-Z]/ - /[D-F]/
@@ -1055,6 +1069,13 @@ class TestSyntaxExtensions:
 
 
 class TestModeSetting:
+    def setup(self):
+        self.save = get_config_value('syntax_variant')
+        set_config_value('syntax_variant', 'heuristic')
+
+    def teardown(self):
+        set_config_value('syntax_variant', self.save)
+
     testdoc = r"""# hey, you
 
         doc = sequence | re | char | char_range | char_range2 | multiple1 | multiple2 | multiple3 | mutliple4
@@ -1097,6 +1118,13 @@ class TestModeSetting:
 
 
 class TestAlternativeReordering:
+    def setup(self):
+        self.save = get_config_value('syntax_variant')
+        set_config_value('syntax_variant', 'strict')
+
+    def teardown(self):
+        set_config_value('syntax_variant', self.save)
+
     def test_reordering_alternative_literals(self):
         lang = """
             TokenizedType  ::= 'ID'
@@ -1172,6 +1200,36 @@ class TestDrop:
         parser = create_parser('@ anonymous = B\n' + lang)
         st = parser('ABC')
         assert str(st) == "AC"
+
+
+class TestHeuristics:
+    def setup(self):
+        self.save = get_config_value('syntax_variant')
+        set_config_value('syntax_variant', 'fixed')
+
+    def teardown(self):
+        set_config_value('syntax_variant', self.save)
+
+    def test_heuristics(self):
+        lang = """
+            array = "[" [_element { "," _element }] "]"
+            _element = /[0-9]/
+        """
+        parser = create_parser(lang)
+        s = str(parser['array'])
+        assert s == "array = `[` [_element {`,` _element}] `]`", s
+
+        set_config_value('syntax_variant', 'strict')
+        parser = create_parser(lang + ' ')
+        s = str(parser['array'])
+        assert s == "array = `[` [_element {`,` _element}] `]`", s
+
+        # set_config_value('syntax_variant', 'heuristic')
+        # parser = create_parser(lang + '  ')  # + ' ' cheats the cache
+        # s = str(parser['array'])
+        # assert s != "array = `[` [_element {`,` _element}] `]`"
+
+
 
 
 if __name__ == "__main__":

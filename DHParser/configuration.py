@@ -336,11 +336,25 @@ CONFIG_PRESET['default_literalws'] = "none"
 
 
 # Default value for the brand of EBNF that DHParser accepts
+# 'fixed'       - Allows to use suffix syntax (?, +, *) as well as classic
+#       EBNF-syntax ([], {}). The delimiters are fixed before first use to
+#       the DHParser-standard and will not be read from configuration-value
+#       "delimiter_set".
 # 'classic'     - relatively closest to the ISO-standard, i.e. uses [] and {}
 #       for optional and zero or more elements, respectively. Does not allow
 #       the ?, +, * suffixes. Allows the specification of character-ranges
 #       within square brackets only with the ordinal unicode numbers,
-#       not with the characters itself, i.e. [0x41-0x5A]
+#       not with the characters itself, i.e. [0x41-0x5A]. Delimiters will
+#       be configured on first use.
+# 'strict'      - allows both classic and regex-like syntax to be mixed, but
+#       allows character ranges within square brackets with ordinal values,
+#       only. Uses | as delimiter for alternatives.
+# 'configurable' - like fixed, but the delimiter constants will be configured
+#       from the configuration-value 'delimiter_set' (see below).
+# 'heuristic'   - the most liberal mode, allows about everything. However,
+#       because it employs heuristics to distinguish ambiguous cases, it
+#       may lead to unexpected errors and require the user to resolve the
+#       ambiguities
 # 'regex-like'  - similar to regular expression syntax, allows ?, +, *
 #       suffixes for optional, one or more repetitions, zero or more
 #       repetitions, but not {} or []. Allows character-ranges within
@@ -348,21 +362,33 @@ CONFIG_PRESET['default_literalws'] = "none"
 # 'peg-like' - like regex-like, but uses / instead of | for the
 #       alternative-parser. Does not allow regular expressions between, i.e.
 #       / ... / within the EBNF-code!
-# 'strict'      - allows both classic and regex-like syntax to be mixed, but
-#       allows character ranges within square brackets with ordinal values,
-#       only. Uses | as delimiter for alternatives.
-# 'heuristic'   - the most liberal mode, allows about everything. However,
-#       because it employs heuristics to distinguish ambiguous cases, it
-#       may lead to unexpected errors and require the user to resolve the
-#       ambiguities
+# Default value: "fixed"
 
+EBNF_FIXED_SYNTAX = "fixed"
 EBNF_CLASSIC_SYNTAX = "classic"
 EBNF_ANY_SYNTAX_STRICT = "strict"
+EBNF_CONFIGURABLE_SYNTAX = "configurable"
 EBNF_ANY_SYNTAX_HEURISTICAL = "heuristic"
 EBNF_REGULAR_EXPRESSION_SYNTAX = "regex-like"
 EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX = "peg-like"
 
-CONFIG_PRESET['syntax_variant'] = EBNF_ANY_SYNTAX_STRICT
+CONFIG_PRESET['syntax_variant'] = EBNF_FIXED_SYNTAX
+
+
+# Set of delimiters when using the 'configurable'-Grammar
+CONFIG_PRESET['delimiter_set'] = {
+    'DEF':        '=',
+    'OR':         '|',
+    'AND':        '',
+    'ENDL':       '',
+    'RNG_OPEN':   '{',
+    'RNG_CLOSE':  '}',
+    'RNG_DELIM':  ',',
+    'TIMES':      '*',
+    'RE_LEADIN':  '/',
+    'RE_LEADOUT': '/',
+    'CH_LEADIN':  '0x'
+}
 
 
 ########################################################################

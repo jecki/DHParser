@@ -47,7 +47,7 @@ json       = ~ _element _EOF
 _element   = object | array | string | number | bool | null
 object     = "{" member { _OBJECT_SEPARATOR §member } §"}"
 member     = string §":" _element
-array      = "[" [_element { _ARRAY_SEPARATOR §_element }] "]"
+array      = "[" [ _element { _ARRAY_SEPARATOR §_element } ] "]"
 string     = `"` §_CHARACTERS `"` ~
 number     = INT FRAC EXP ~
 bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens
@@ -66,7 +66,7 @@ ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
 UNICODE     = "\u" HEX HEX
 HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
-INT         = [NEG] /[0-9]/ | /[1-9][0-9]+/
+INT         = [ NEG ] /[0-9]/ | /[1-9][0-9]+/
 NEG         = `-`
 FRAC        = [ DOT /[0-9]+/ ]
 DOT         = `.`
@@ -86,7 +86,7 @@ _EOF        =  !/./        # no more characters ahead, end of file reached
 
 # leave sequence, if '}' ahead, otherwise raise error on missing comma,
 # but pass a comma if it exists
-_OBJECT_SEPARATOR = !`}` §&`,` [","]
+_OBJECT_SEPARATOR = !`}` §&`,` [ "," ]
 
 
 @ _ARRAY_SEPARATOR_error = /(?!,)/, 'Missing separator ","'
@@ -94,4 +94,4 @@ _OBJECT_SEPARATOR = !`}` §&`,` [","]
 
 # leave sequence, if ']' ahead, otherwise raise error on missing comma,
 # but pass a comma if it exists
-_ARRAY_SEPARATOR = !`]` §&`,` [","]
+_ARRAY_SEPARATOR = !`]` §&`,` [ "," ]
