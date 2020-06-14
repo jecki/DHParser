@@ -24,9 +24,9 @@ import sys
 from typing import cast
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
-i, k = scriptdir.find('DHParser-submodule'), len('DHParser-submodule')
+i, k = scriptdir.find('DHParser'), len('DHParser')
 if i < 0:
-    i, k = scriptdir.find('DHParser'), len('DHParser')
+    i, k = scriptdir.find('DHParser-submodule'), len('DHParser-submodule')
 if i >= 0:
     dhparserdir = scriptdir[:i + k]
     if dhparserdir not in sys.path:
