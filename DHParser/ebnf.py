@@ -535,16 +535,6 @@ class FixedEBNFGrammar(Grammar):
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
-    regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
-    literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'),
-                                     RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"),
-                                     RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'),
-                                     RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'),
-                                     RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
-    char_range_heuristics = NegativeLookahead(
-        Alternative(RegExp('[\\n\\t ]'), Series(dwsp__, literal_heuristics),
-        Series(Option(Alternative(Text("::"), Text(":?"), Text(":"))),
-               SYM_REGEX, RegExp('\\s*\\]'))))
     CH_LEADIN = Text("0x")
     RE_LEADOUT = Text("/")
     RE_LEADIN = Text("/")
@@ -559,12 +549,7 @@ class FixedEBNFGrammar(Grammar):
     EOF = Drop(Drop(NegativeLookahead(RegExp('.'))))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
-    free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
     character = Series(CH_LEADIN, HEXCODE)
-    char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")),
-                        Alternative(character, free_char),
-                        ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)),
-                        Series(Text("]"), dwsp__))
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
                             Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
