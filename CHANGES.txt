@@ -1,3 +1,13 @@
+DHParser Version 0.9.3 (23.6.2020)
+..................................
+
+- Complete refactoring of left-recursion algorithm. No performance surprises
+  or running out of stack space any more (see parse.Forward.__call__())
+- transform functions now try to keep error messages attached to nodes when
+  reshaping tree (see transform.update_attr())
+- now using argparse instead of hand-written code for argument parsing
+
+
 DHParser Version 0.9.2 (11.5.2020)
 ..................................
 
