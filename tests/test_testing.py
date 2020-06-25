@@ -28,10 +28,10 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_whitespace, remove_empty, \
-    replace_by_single_child, reduce_single_child, flatten
+    replace_by_single_child, reduce_single_child, flatten, add_error
 from DHParser.dsl import grammar_provider
 from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
-    MANDATORY_CONTINUATION_AT_EOF
+    MANDATORY_CONTINUATION_AT_EOF, ERROR, WARNING
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
     clean_report
 from DHParser.trace import set_tracer, trace_history
@@ -128,7 +128,8 @@ class TestTestfiles:
 
 
 ARITHMETIC_EBNF = """
-    @ whitespace = linefeed
+    @ whitespace = vertical
+    @ literalws = right
     formula = [ //~ ] expr
     expr = expr ("+"|"-") term | term
     term = term ("*"|"/") factor | factor
@@ -233,6 +234,38 @@ class TestGrammarTest:
                               lambda : ARITHMETIC_EBNFTransform,
                               'REPORT_TestGrammarTest')
         assert errata
+
+
+class TestASTErrors:
+    trans_table = {
+            "formula": [remove_empty, remove_whitespace],
+            "expr": [remove_empty, remove_whitespace, replace_by_single_child, flatten,
+                     add_error('Expression marked with error for test-purposes', ERROR)
+                    ],
+            "term": [remove_empty, remove_whitespace, replace_by_single_child, flatten],
+            "factor": [remove_empty, remove_whitespace, reduce_single_child],
+            (TOKEN_PTYPE): [remove_empty, remove_whitespace, reduce_single_child],
+            "*": [remove_empty, remove_whitespace, replace_by_single_child]
+    }
+    cases1 = { "formula": {
+        "match": {
+            1: "3 + 2 * 4"
+        }
+    }}
+    cases2 = { "formula": {
+        "fail": {
+            1: "3 + 2 * 4"
+        }
+    }}
+
+    def test_errors_added_during_AST_transformation(self):
+        parser_fac = grammar_provider(ARITHMETIC_EBNF)
+        trans_fac = lambda : partial(traverse, processing_table=self.trans_table)
+        errata = grammar_unit(self.cases1, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
+        assert "marked with error" in str(errata)
+        errata = grammar_unit(self.cases2, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
+        print(errata)
+        assert not errata
 
 
 class TestLookahead:

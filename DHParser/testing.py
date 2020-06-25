@@ -203,14 +203,6 @@ def unit_from_file(filename):
     return test_unit
 
 
-# def all_match_tests(tests):
-#     """Returns all match tests from ``tests``, This includes match tests
-#     marked with an asterix for CST-output as well as unmarked match-tests.
-#     """
-#     return itertools.chain(tests.get('match', dict()).items(),
-#                            tests.get('match*', dict()).items())
-
-
 def get_report(test_unit) -> str:
     """
     Returns a text-report of the results of a grammar unit test. The report
@@ -420,8 +412,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
-            # with local_log_dir('./LOGS'):
-            #     log_ST(cst, "match_%s_%s.cst" % (parser_name, clean_test_name))
             tests.setdefault('__cst__', {})[test_name] = cst
             errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
@@ -441,17 +431,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 ast_errors.sort(key=lambda e: e.pos)
                 if is_error(max(e.code for e in ast_errors) if ast_errors else 0):
                     adjust_error_locations(ast_errors, test_code)
-                    if errors:
+                    if ast_errors:
                         if errata:  errata[-1] = errata[-1].rstrip('\n')
                         ast_errors.append('\n')
                         errata.append('\t' + '\n\t'.join(
                             str(msg).replace('\n', '\n\t\t') for msg in ast_errors))
-                    # else:  # should not be reported, because AST can be tested independently!!!
-                    #     errata.append('Match test "%s" for parser "%s" failed on AST:'
-                    #                   '\n\tExpr.:  %s\n\n\t%s\n\n' %
-                    #                   (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                    #                    '\n\t'.join(
-                    #                        str(m).replace('\n', '\n\t\t') for m in ast_errors)))
+
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
@@ -503,6 +488,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(
                     parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
+            if "ast" in tests or report:
+                traverse(cst, {'*': remove_children({'__TESTING_ARTIFACT__'})})
+                transform(cst)
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '
                               'expected failure!\n' % (test_name, parser_name))
@@ -548,15 +536,6 @@ def reset_unit(test_unit):
                 if key not in RESULT_STAGES:
                     print('Removing unknown component %s from test %s' % (key, parser))
                 del tests[key]
-
-
-# def debug_unit(*parameters):
-#     """debug unit test in multiprocessing environment."""
-#     print("DEBUG_UNIT")
-#     try:
-#         grammar_unit(*parameters)
-#     except Exception as e:
-#         print(e)
 
 
 def grammar_suite(directory, parser_factory, transformer_factory,
