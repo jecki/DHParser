@@ -203,6 +203,7 @@ class ArithmeticRightRecursiveCompiler(Compiler):
 
 
 def get_compiler() -> ArithmeticRightRecursiveCompiler:
+    THREAD_LOCALS = access_thread_locals()
     try:
         compiler = THREAD_LOCALS.ArithmeticRightRecursive_00000001_compiler_singleton
     except AttributeError:

@@ -37,7 +37,7 @@ from DHParser.configuration import access_thread_locals, get_config_value, \
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
-    REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES
+    REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, EMPTY_GRAMMAR_ERROR
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -638,7 +638,9 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         if m:
             m = re.search(' {4}source_hash__ *= *"([a-z0-9]*)"',
                           pycode[m.span()[1]:])
-            return not (m and m.groups() and m.groups()[-1] == chksum)
+            if m is None:
+                return False
+            return not (m.groups() and m.groups()[-1] == chksum)
         else:
             return True
     else:
@@ -1173,7 +1175,7 @@ class EBNFCompiler(Compiler):
         Returns Python-skeleton-code for the AST-transformation for the
         previously compiled formal language.
         """
-        if not self.rules:
+        if not self.rules and not self._dirty_flag:
             raise EBNFCompilerError('Compiler must be run before calling '
                                     '"gen_transformer_Skeleton()"!')
         tt_name = self.grammar_name + '_AST_transformation_table'
@@ -1193,7 +1195,7 @@ class EBNFCompiler(Compiler):
         Returns Python-skeleton-code for a Compiler-class for the
         previously compiled formal language.
         """
-        if not self.rules:
+        if not self.rules and not self._dirty_flag:
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')
         compiler = ['class ' + self.grammar_name + 'Compiler(Compiler):',
@@ -1612,6 +1614,9 @@ class EBNFCompiler(Compiler):
                 assert nd.tag_name == "directive", nd.as_sxpr()
                 self.compile(nd)
         self.definitions.update(definitions)
+
+        if not self.definitions:
+            self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
 
         grammar_python_src = self.assemble_parser(definitions)
         if get_config_value('static_analysis') == 'early':

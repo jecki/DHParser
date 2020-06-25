@@ -945,7 +945,7 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
 
 
 @transformation_factory(collections.abc.Callable)
-def transform_content(context: List[Node], func: Callable):  # Callable[[Node], ResultType]
+def transform_content(context: List[Node], func: Callable):  # Callable[[ResultType], ResultType]
     """
     Replaces the content of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
