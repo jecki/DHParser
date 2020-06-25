@@ -258,6 +258,14 @@ class TestASTErrors:
         }
     }}
 
+    def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptpath)
+
+    def teardown(self):
+        clean_report('REPORT_ASTFailureTest')
+        os.chdir(self.save_dir)
+
     def test_errors_added_during_AST_transformation(self):
         parser_fac = grammar_provider(ARITHMETIC_EBNF)
         trans_fac = lambda : partial(traverse, processing_table=self.trans_table)
