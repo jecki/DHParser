@@ -272,7 +272,6 @@ class TestASTErrors:
         errata = grammar_unit(self.cases1, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
         assert "marked with error" in str(errata)
         errata = grammar_unit(self.cases2, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
-        print(errata)
         assert not errata
 
 
