@@ -1695,9 +1695,9 @@ class RootNode(Node):
         start_pos = node.pos
         end_pos = node.pos + max(len(node), 1)
         error_node_ids = set()
-        for pos in self.error_positions.keys():   # TODO: use bisect here...
+        for pos, ids in self.error_positions.items():   # TODO: use bisect here...
             if start_pos <= pos < end_pos:
-                error_node_ids.update(self.error_positions[pos])
+                error_node_ids.update(ids)
         for nid in error_node_ids:
             if nid == node_id:
                 # add the node's errors
@@ -1710,6 +1710,32 @@ class RootNode(Node):
                     # should not get lost, display its errors on its parent
                     errors.extend(self.error_nodes[nid])
         return errors
+
+    def transfer_errors(self, src: Node, dest: Node):
+        """
+        Transfers errors to a different node. While errors never get lost
+        during AST-transformation, because they are kept by the RootNode,
+        the nodes they were connected to may be dropped in the course of the
+        transformation. This function allows to attach error from a node that
+        will be dropped to a different node.
+        """
+        srcId = id(src)
+        destId = id(dest)
+        # assert dest._pos <= src._pos, "Cannot reduce %i to %s" % (src._pos, dest._pos)
+        # dest._pos < 0 or dest._pos < src._pos
+        # or dest._pos < src._pos <= dest._pos + len(dest),
+        # "%i %i %i" % (src._pos, dest._pos, len(dest))
+        if srcId != destId and srcId in self.error_nodes:
+            errorList = self.error_nodes[srcId]
+            self.error_nodes.setdefault(destId, []).extend(errorList)
+            del self.error_nodes[srcId]
+            for nodeSet in self.error_positions.values():
+                nodeSet.discard(srcId)
+                nodeSet.add(destId)
+            # for e in errorList:  # does not work for some reason
+            #     nodeSet = self.error_positions[e.pos]
+            #     nodeSet.discard(srcId)
+            #     nodeSet.add(destId)
 
     @property
     def errors_sorted(self) -> List[Error]:

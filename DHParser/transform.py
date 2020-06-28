@@ -664,10 +664,11 @@ def update_attr(dest: Node, src: Tuple[Node, ...], root: RootNode):
                 dest.attr[k] = v
         # transfer errors
         try:
-            ids = id(s)
-            if ids in root.error_nodes:
-                root.error_nodes.setdefault(id(dest), []).extend(root.error_nodes[ids])
-                del root.error_nodes[ids]
+            root.transfer_errors(s, dest)
+            # ids = id(s)
+            # if ids in root.error_nodes:
+            #     root.error_nodes.setdefault(id(dest), []).extend(root.error_nodes[ids])
+            #     del root.error_nodes[ids]
         except AttributeError:
             # root was not of type RootNode, probably a doc-test
             pass
