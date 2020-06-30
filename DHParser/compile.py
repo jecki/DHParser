@@ -107,6 +107,9 @@ class Compiler:
     recommended to call the `on_XXX`-methods directly.
 
     Attributes:
+        source: The source text of the AST to be compiled. This needs to be
+                assigned by the user of the Compiler object - as is done
+                by function `compile_source()`
         context:  A list of parent nodes that ends with the currently
                 compiled node.
         tree:  The root of the abstract syntax tree.
@@ -128,7 +131,7 @@ class Compiler:
         self.reset()
 
     def reset(self):
-        # self.source = ''
+        self.source = ''  # type: str
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: List[Node]
         self._None_check = True  # type: bool
@@ -301,6 +304,7 @@ def compile_source(source: str,
     """
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
+    compiler.source = original_text
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
         # log only for custom parser/transformer/compilers
