@@ -1,4 +1,4 @@
-def compile_src(source):
+def compile_src(source: str):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),

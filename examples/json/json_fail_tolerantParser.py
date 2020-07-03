@@ -74,7 +74,7 @@ class json_fail_tolerantGrammar(Grammar):
     r"""Parser for a json_fail_tolerant source file.
     """
     _element = Forward()
-    source_hash__ = "8cfbcd6885f3e395ff1859ca9fc8f244"
+    source_hash__ = "f7dcda9a8e9f079fbb0f353f78c64bb9"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

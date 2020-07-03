@@ -91,9 +91,10 @@ def retrieve_host_and_port():
         with open(cfg_filename) as f:
             host, ports = f.read().strip(' \n').split(' ')
             port = int(ports)
+            if (host, port) != (KNOWN_HOST, KNOWN_PORT):
+                debug('Retrieved host and port value %s:%i from config file "%s".'
+                      % (host, port, cfg_filename))
             KNOWN_HOST, KNOWN_PORT = host, port
-            debug('Retrieved host and port value %s:%i from file "%s".'
-                  % (host, port, cfg_filename))
     except FileNotFoundError:
         debug('File "%s" does not exist. Using default values %s:%i for host and port.'
               % (cfg_filename, host, port))
@@ -361,10 +362,7 @@ async def connect_to_daemon(host, port) -> tuple:
                 reader, writer = None, None
                 await asyncio.sleep(delay)
                 countdown -= 1
-                h, p = retrieve_host_and_port()
-                if (h, p) != (host, port):
-                    # try again with a different host and port
-                    host, port = h, p
+                host, port = retrieve_host_and_port()
         except (ConnectionRefusedError, ValueError):
             await asyncio.sleep(delay)
             if os.path.exists(cfg_filename):
@@ -455,6 +453,7 @@ if __name__ == "__main__":
         # line, try to retrieve them from (temporary) config file or use
         # hard coded default values
         h, p = retrieve_host_and_port()
+        debug('Retrieved host and port value %s:%i from config file.' % (h, p))
         if port < 0:
             port = p
         else:

@@ -66,7 +66,7 @@ class XMLSnippetGrammar(Grammar):
     """
     Name = Forward()
     element = Forward()
-    source_hash__ = "589fc409acf3dc38e0e6464a99014d37"
+    source_hash__ = "aa309ed85d255187900ba46d0d407280"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
