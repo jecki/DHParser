@@ -613,7 +613,7 @@ class Server:
     :param server_name: A name for the server. Defaults to
         `CLASSNAME_OBJECTID`
     :param strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
-        If `False` json-rpc calls will be processes even without prior
+        If `False` json-rpc calls will be processed even without prior
         initialization, just like plain data or http calls.
     :param cpu_bound: Set of function names of functions that are cpu-bound
         and will be run in separate processes.

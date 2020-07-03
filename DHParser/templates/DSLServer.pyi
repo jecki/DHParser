@@ -217,7 +217,7 @@ def run_server(host, port, log_path=None):
             print(f.read())
         sys.exit(1)
     from DSLParser import compile_src
-    from DHParser.server import Server, gen_lsp_table
+    from DHParser.server import Server, probe_server, gen_lsp_table
 
     DSL_lsp = DSLLanguageServerProtocol()
     lsp_table = DSL_lsp.lsp_fulltable.copy()
