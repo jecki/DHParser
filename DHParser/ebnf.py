@@ -1413,6 +1413,7 @@ class EBNFCompiler(Compiler):
                         refined = ""
                     except KeyError:
                         # rule represents a procedure name
+                        nd = self.tree
                         refined = rule
                     if refined:
                         refined_rules.append(refined)
@@ -1916,7 +1917,7 @@ class EBNFCompiler(Compiler):
                 return self.cache_literal_symbols.get(nd.content, None)
             return None
 
-        literals = []  # type: List[List[int, str]]
+        literals = []  # type: List[List]
         for i, child in enumerate(node.children):
             content = literal_content(child)
             if content is not None:
