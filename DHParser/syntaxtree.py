@@ -165,7 +165,7 @@ def create_match_function(criterion: CriteriaType) -> Callable:
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.tag_name in cast(Container, criterion)
-    raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
+    raise TypeError("Criterion %s of type %s does not represent a legal criteria type")
 
 
 def create_context_match_function(criterion: CriteriaType) -> Callable:
@@ -183,7 +183,7 @@ def create_context_match_function(criterion: CriteriaType) -> Callable:
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda ctx: ctx[-1].tag_name in cast(Container, criterion)
-    raise AssertionError("Criterion %s of type %s does not represent a legal criteria type")
+    raise TypeError("Criterion %s of type %s does not represent a legal criteria type")
 
 
 RX_AMP = re.compile(r'&(?!\w+;)')
