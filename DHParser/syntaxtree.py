@@ -145,7 +145,7 @@ def flatten_xml(xml: str) -> str:
 # - tag_name
 # - one of several tag_names
 # - a function Node -> bool
-CriteriaType = Union['Node', str, Container[str], Callable]
+CriteriaType = Union['Node', str, Container[str], Callable, int]
 ALL_NODES = lambda nd: True
 LEAF_NODES = lambda nd: not nd.children
 BRANCH_NODES = lambda nd: nd.children
@@ -157,7 +157,9 @@ def create_match_function(criterion: CriteriaType) -> Callable:
     Match-functions are used to find an select particular nodes from a
     tree of nodes.
     """
-    if isinstance(criterion, Node):
+    if isinstance(criterion, int):
+        return lambda nd: id(nd) == criterion
+    elif isinstance(criterion, Node):
         return lambda nd: nd.equals(criterion)
     elif isinstance(criterion, str):
         return lambda nd: nd.tag_name == criterion
