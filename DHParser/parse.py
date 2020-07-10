@@ -3338,7 +3338,7 @@ class Forward(UnaryParser):
         else:
             recursion_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
-            grammar.suspend_memoization = False
+            grammar.suspend_memoization__ = False
             result = self.parser(text)
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
