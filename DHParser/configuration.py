@@ -372,7 +372,7 @@ EBNF_ANY_SYNTAX_HEURISTICAL = "heuristic"
 EBNF_REGULAR_EXPRESSION_SYNTAX = "regex-like"
 EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX = "peg-like"
 
-CONFIG_PRESET['syntax_variant'] = EBNF_FIXED_SYNTAX
+CONFIG_PRESET['syntax_variant'] = EBNF_CONFIGURABLE_SYNTAX
 
 
 # Set of delimiters when using the 'configurable'-Grammar
