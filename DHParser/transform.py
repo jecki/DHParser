@@ -364,7 +364,7 @@ def traverse(root_node: Node,
             try:
                 call(context)
             except Exception as ae:
-                raise AssertionError('An error occured when transforming "%s" with:\n%s\n%s' %
+                raise AssertionError('An error occurred when transforming "%s" with:\n%s\n%s' %
                                      (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
 
     traverse_recursive([root_node])

@@ -147,8 +147,8 @@ def flatten_xml(xml: str) -> str:
 # - a function Node -> bool
 CriteriaType = Union['Node', str, Container[str], Callable, int]
 ALL_NODES = lambda nd: True
-LEAF_NODES = lambda nd: not nd.children
-BRANCH_NODES = lambda nd: nd.children
+LEAF_NODES = lambda nd: not nd._children
+BRANCH_NODES = lambda nd: nd._children
 
 
 def create_match_function(criterion: CriteriaType) -> Callable:
@@ -299,7 +299,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-expression-output.
     """
 
-    __slots__ = '_result', 'children', '_pos', 'tag_name', '_xml_attr'
+    __slots__ = '_result', '_children', '_pos', 'tag_name', '_xml_attr'
 
     def __init__(self, tag_name: str,
                  result: Union[Tuple['Node', ...], 'Node', StringView, str],
@@ -313,14 +313,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result        # type: Union[Tuple['Node', ...], StringView, str]
-            self.children = tuple()      # type: Tuple[Node, ...]
+            self._children = tuple()     # type: Tuple[Node, ...]
         else:
             self._set_result(result)
         self.tag_name = tag_name         # type: str
 
     def __deepcopy__(self, memo):
-        if self.children:
-            duplicate = self.__class__(self.tag_name, copy.deepcopy(self.children), False)
+        if self._children:
+            duplicate = self.__class__(self.tag_name, copy.deepcopy(self._children), False)
         else:
             duplicate = self.__class__(self.tag_name, self.result, True)
         duplicate._pos = self._pos
@@ -336,8 +336,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
         # name, ptype = (self._tag_name.split(':') + [''])[:2]
         # parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
-        rarg = ("'%s'" % str(self)) if not self.children else \
-            "(" + ", ".join(child.__repr__() for child in self.children) + ")"
+        rarg = ("'%s'" % str(self)) if not self._children else \
+            "(" + ", ".join(child.__repr__() for child in self._children) + ")"
         return "Node('%s', %s)" % (self.tag_name, rarg)
 
     @property
@@ -353,8 +353,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return ''.join(rep)
 
     def __len__(self):
-        return (sum(child.__len__() for child in self.children)
-                if self.children else len(self._result))
+        return (sum(child.__len__() for child in self._children)
+                if self._children else len(self._result))
 
     def __bool__(self):
         """Returns the bool value of a node, which is always True. The reason
@@ -378,10 +378,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         value to the tree originating in node `other`.
         """
         if self.tag_name == other.tag_name and self.compare_attr(other, ignore_attr_order):
-            if self.children:
-                return (len(self.children) == len(other.children)
+            if self._children:
+                return (len(self._children) == len(other._children)
                         and all(a.equals(b, ignore_attr_order)
-                                for a, b in zip(self.children, other.children)))
+                                for a, b in zip(self._children, other._children)))
             else:
                 return self.result == other.result
         return False
@@ -409,22 +409,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param result:  the new result of the note
         """
         if isinstance(result, Node):
-            self.children = (result,)
-            self._result = self.children
+            self._children = (result,)
+            self._result = self._children
         else:
             if isinstance(result, tuple):
-                self.children = result
+                self._children = result
                 self._result = result or ''
             else:
                 # assert isinstance(result, StringView) \
                 #     or isinstance(result, str)
-                self.children = tuple()
+                self._children = tuple()
                 self._result = result
 
     def _init_child_pos(self):
         """Initialize position values of children with potentially
         unassigned positions, i.e. child.pos < 0."""
-        children = self.children  # type: Tuple['Node', ...]
+        children = self._children  # type: Tuple['Node', ...]
         if children:
             offset = self._pos
             prev = children[0]
@@ -454,14 +454,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self._pos >= 0:
             self._init_child_pos()
 
+    @property
+    def children(self) -> Tuple['Node', ...]:
+        return self._children
+
     def _leaf_data(self) -> List[str]:
         """
         Returns string content as list of string fragments
         that are gathered from all child nodes in order.
         """
-        if self.children:
+        if self._children:
             fragments = []
-            for child in self.children:
+            for child in self._children:
                 fragments.extend(child._leaf_data())
             return fragments
         self._result = str(self._result)
@@ -474,15 +478,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         string content of the child-nodes is recursively read and then
         concatenated.
         """
-        if self.children:
+        if self._children:
             fragments = []
-            for child in self.children:
+            for child in self._children:
                 fragments.extend(child._leaf_data())
             return ''.join(fragments)
         self._result = str(self._result)
         return self._result
         # unoptimized
-        # return "".join(child.content for child in self.children) if self.children \
+        # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
 
     # node position ###
@@ -663,10 +667,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ValueError: if the __getitem__ has been called on a leaf node.
         """
         if isinstance(key, int):
-            return self.children[key]
+            return self._children[key]
         else:
             mf = create_match_function(key)
-            items = tuple(child for child in self.children if mf(child))
+            items = tuple(child for child in self._children if mf(child))
             if items:
                 return items if len(items) >= 2 else items[0]
             raise IndexError('index out of range') if isinstance(key, int) \
@@ -679,13 +683,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 an index of the child(ren) that shall be removed.
         """
         if isinstance(key, int):
-            if 0 <= key < len(self.children):
-                raise IndexError("index %s out of range [0, %i[" % (key, len(self.children)))
-            self.result = self.children[:key] + self.children[key + 1:]
+            if 0 <= key < len(self._children):
+                raise IndexError("index %s out of range [0, %i[" % (key, len(self._children)))
+            self.result = self._children[:key] + self._children[key + 1:]
         else:
             assert not isinstance(self.result, str)
             mf = create_match_function(key)
-            self.result = tuple(child for child in self.children if not mf(child))
+            self.result = tuple(child for child in self._children if not mf(child))
 
     def get(self, key: Union[CriteriaType, int],
             surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
@@ -720,7 +724,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 exists
         """
         mf = create_match_function(what)
-        for child in self.children:
+        for child in self._children:
             if mf(child):
                 return True
         return False
@@ -742,7 +746,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         assert 0 <= start < stop
         mf = create_match_function(what)
-        for i, child in enumerate(self.children[start:stop]):
+        for i, child in enumerate(self._children[start:stop]):
             if mf(child):
                 return i + start
         raise ValueError("Node identified by '%s' not among child-nodes." % str(what))
@@ -753,7 +757,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Returns the indices of all children that fulfil the criterion `what`.
         """
         mf = create_match_function(what)
-        children = self.children
+        children = self._children
         return tuple(i for i in range(len(children)) if mf(children[i]))
 
     def select_if(self, match_function: Callable,
@@ -768,11 +772,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         if include_root and match_function(self):
             yield self
-        child_iterator = reversed(self.children) if reverse else self.children
+        child_iterator = reversed(self._children) if reverse else self._children
         for child in child_iterator:
             if match_function(child):
                 yield child
-            if child.children:
+            if child._children:
                 yield from child.select_if(match_function, False, reverse)
 
     def select(self, criterion: CriteriaType,
@@ -812,7 +816,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
         """Returns an iterator over all direct children of a node that fulfill `criterion`."""
-        # if not self.children and self.result:
+        # if not self._children and self.result:
         #     raise ValueError("Leaf-Node %s does not have any children to iterate over"
         #                      % self.serialize())
         match_function = create_match_function(criterion)
@@ -820,7 +824,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             for child in reversed(tuple(self.select_children(criterion, False))):
                 yield child
         else:
-            for child in self.children:
+            for child in self._children:
                 if match_function(child):
                     yield child
 
@@ -867,7 +871,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         source code position that the pos-attribute represents)
         """
         end = 0
-        for nd in self.select_if(lambda nd: not nd.children, include_root=True):
+        for nd in self.select_if(lambda nd: not nd._children, include_root=True):
             end += len(nd)
             if location < end:
                 return nd
@@ -879,8 +883,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         by `self`. If the tree does not contain `node`, the value `None`
         is returned.
         """
-        for nd in self.select_if(lambda nd: nd.children, include_root=True):
-            if node in nd.children:
+        for nd in self.select_if(lambda nd: nd._children, include_root=True):
+            if node in nd._children:
                 return nd
         return None
 
@@ -899,12 +903,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         context = parent_context + [self]
         if include_root and match_function(context):
             yield context
-        child_iterator = reversed(self.children) if reverse else self.children
+        child_iterator = reversed(self._children) if reverse else self._children
         for child in child_iterator:
             child_context = context + [child]
             if match_function(child_context):
                 yield child_context
-            if child.children:
+            if child._children:
                 for matched in child.select_context_if(match_function, False, reverse, context):
                     yield matched
 
@@ -939,7 +943,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         relative to `self` is returned.
         """
         end = 0
-        for ctx in self.select_context_if(lambda ctx: not ctx[-1].children, include_root=True):
+        for ctx in self.select_context_if(lambda ctx: not ctx[-1]._children, include_root=True):
             end += len(ctx[-1])
             if location < end:
                 return ctx
@@ -953,9 +957,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         in the tree rooted in self instead of raising a Value Error.
         If `node` equals `self`, `None` will be returned.
         """
-        if node in self.children:
+        if node in self._children:
             return [node, self]
-        for nd in self.children:
+        for nd in self._children:
             ctx = nd._reconstruct_context_recursive(node)
             if ctx:
                 ctx.append(self)
@@ -1007,7 +1011,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             milestone up to and including the closing milestone.
         """
         def index(parent: 'Node', nd: 'Node') -> int:
-            children = parent.children
+            children = parent._children
             for i in range(len(children)):
                 if nd == children[i]:
                     return i
@@ -1047,8 +1051,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             common_ancestor = a
         left = cut(ctxA[ctxA.index(common_ancestor):], left_cut)    # type: Node
         right = cut(ctxB[ctxB.index(common_ancestor):], right_cut)  # type: Node
-        left_children = left.children    # type: Tuple[Node, ...]
-        right_children = right.children  # type: Tuple[Node, ...]
+        left_children = left._children    # type: Tuple[Node, ...]
+        right_children = right._children  # type: Tuple[Node, ...]
         if left_children == right_children:
             return common_ancestor
         i = 1  # type: int
@@ -1109,9 +1113,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             usetab = tab if head else ''    # no indentation if tag is already omitted
             sep = '\n'
 
-        if self.children:
+        if self._children:
             content = []
-            for child in self.children:
+            for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
                                            density, inline, inline_fn)
                 if subtree:
@@ -1275,7 +1279,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def to_json_obj(self) -> List:
         """Serialize node or tree as JSON-serializable nested list."""
         jo = [self.tag_name,
-              [nd.to_json_obj() for nd in self.children] if self.children else str(self.result)]
+              [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
         pos = self.pos
         if pos >= 0:
             jo.append(pos)
@@ -1325,7 +1329,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """
             vsize = 0
             for nd in node.select_if(lambda _: True, include_root=True):
-                if nd.children:
+                if nd._children:
                     vsize += 1
                 if vsize > threshold:
                     return True
@@ -1386,7 +1390,7 @@ def prev_context(context: List[Node]) -> Optional[List[Node]]:
     assert isinstance(context, list)
     node = context[-1]
     for i in range(len(context) - 2, -1, -1):
-        siblings = context[i].children
+        siblings = context[i]._children
         if node is not siblings[0]:
             for k in range(1, len(siblings)):
                 if node is siblings[k]:
@@ -1409,7 +1413,7 @@ def next_context(context: List[Node]) -> Optional[List[Node]]:
     assert isinstance(context, list)
     node = context[-1]
     for i in range(len(context) - 2, -1, -1):
-        siblings = context[i].children
+        siblings = context[i]._children
         if node is not siblings[-1]:
             for k in range(len(siblings) - 2, -1, -1):
                 if node is siblings[k]:
@@ -1426,7 +1430,7 @@ def serialize_context(context: List[Node], with_content: bool = False, delimiter
 
 
 def context_sanity_check(context: List[Node]) -> bool:
-    return all(context[i] in context[i - 1].children for i in range(1, len(context)))
+    return all(context[i] in context[i - 1]._children for i in range(1, len(context)))
 
 
 # FrozenNode ##########################################################
@@ -1580,11 +1584,11 @@ class RootNode(Node):
     def __deepcopy__(self, memodict={}):
         old_node_ids = [id(nd) for nd in self.select_if(lambda n: True, include_root=True)]
         duplicate = self.__class__(None)
-        if self.children:
-            duplicate.children = copy.deepcopy(self.children)
-            duplicate._result = duplicate.children
+        if self._children:
+            duplicate._children = copy.deepcopy(self._children)
+            duplicate._result = duplicate._children
         else:
-            duplicate.children = tuple()
+            duplicate._children = tuple()
             duplicate._result = self._result
         duplicate._pos = self._pos
         new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
@@ -1623,7 +1627,7 @@ class RootNode(Node):
             self.new_error(self, 'Parser did not match!', PARSER_STOPPED_BEFORE_END)
             return self
         self._result = node._result
-        self.children = node.children
+        self._children = node._children
         self._pos = node._pos
         self.tag_name = node.tag_name
         if node.has_attr():
@@ -1643,7 +1647,7 @@ class RootNode(Node):
             pos_list = []
             node_list = []
             nd = None
-            for nd in self.select_if(lambda nd: not nd.children):
+            for nd in self.select_if(lambda nd: not nd._children):
                 if nd.pos <= error.pos < nd.pos + len(nd):
                     node = nd
                     break
@@ -1704,7 +1708,7 @@ class RootNode(Node):
             if nid == node_id:
                 # add the node's errors
                 errors.extend(self.error_nodes[nid])
-            elif node.children:
+            elif node._children:
                 for _ in node.select_if(lambda n: id(n) == nid):
                     break
                 else:
