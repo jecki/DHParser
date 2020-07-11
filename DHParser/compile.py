@@ -42,7 +42,7 @@ from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
-from DHParser.syntaxtree import Node, RootNode
+from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error, \
@@ -184,15 +184,16 @@ class Compiler:
         if node.children:
             for child in node.children:
                 nd = self.compile(child)
-                if not isinstance(nd, Node):
-                    tn = node.tag_name
-                    raise TypeError(
-                        'Fallback compiler for Node `%s` received a value of type '
-                        '`%s` from child `%s` instead of the required return type `Node`. '
-                        'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
-                        'method `on_%s(self, node)` in class `%s` to avoid this error!'
-                        % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
-                result.append(nd)
+                if nd is not None and nd.tag_name != EMPTY_PTYPE:
+                    if not isinstance(nd, Node):
+                        tn = node.tag_name
+                        raise TypeError(
+                            'Fallback compiler for Node `%s` received a value of type '
+                            '`%s` from child `%s` instead of the required return type `Node`. '
+                            'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
+                            'method `on_%s(self, node)` in class `%s` to avoid this error!'
+                            % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
+                    result.append(nd)
             node.result = tuple(result)
         return node
 
@@ -224,11 +225,13 @@ class Compiler:
         result = compiler(node)
         self.context.pop()
         if result is None and self._None_check:
-            raise CompilerError('Method on_%s returned `None` instead of a valid compilation '
-                                'compilation result! Turn this check of by adding '
-                                '"self._None_check = False" to the reset()-Method of your'
-                                'compiler class, in case on_%s actually SHOULD return None.'
-                                % (elem, elem))
+            raise CompilerError(
+                ('Method on_%s returned `None` instead of a valid compilation '
+                 'result! It is recommended to use `syntaxtree.EMPTY_NODE as a '
+                 'void value. This Error can be turn off by adding '
+                 '`self._None_check = False` to the reset()-Method of your'
+                 'compiler class, in case on_%s actually SHOULD be allowed to '
+                 'return None.') % (elem, elem))
         return result
 
 

@@ -25,6 +25,7 @@ import os
 import pstats
 import sys
 
+
 scriptpath = os.path.dirname(__file__) or '.'
 for path in (os.path.join('..', '..'), '.'):
     fullpath = os.path.abspath(os.path.join(scriptpath, path))
@@ -37,7 +38,7 @@ import DHParser.log
 from DHParser.log import log_parsing_history
 
 
-LOGGING = ''
+LOGGING = 'LOGS'
 
 grammar_path = os.path.join(fullpath, 'LaTeX.ebnf')
 if not DHParser.dsl.recompile_grammar(grammar_path, force=False):

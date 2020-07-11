@@ -11,6 +11,7 @@ from collections import defaultdict
 import os
 import sys
 from functools import partial
+from typing import List, Any
 
 dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if dhparser_path not in sys.path:
@@ -28,8 +29,8 @@ from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Po
     reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
     flatten, is_empty, collapse, remove_brackets, strip, \
     is_one_of, remove_tokens, remove_children, TOKEN_PTYPE, WARNING, \
-    access_thread_locals, recompile_grammar, get_config_value, \
-    transform_content, replace_content_with, resume_notices_on, set_tracer, trace_history
+    access_thread_locals, recompile_grammar, get_config_value, apply_unless, \
+    transform_content, replace_content_with, resume_notices_on, set_tracer, trace_history, EMPTY_NODE
 from DHParser.log import start_logging
 
 
@@ -216,30 +217,32 @@ flatten_structure = flatten(lambda context: is_one_of(
               "SubParagraphs", "sequence"}), recursive=True)
 
 
-def is_commandname(context):
-    """Returns True, if last node in the content represents a (potentially
-    unknown) LaTeX-command."""
+def transform_generic_command(context: List[Node]):
     node = context[-1]
-    if node.tag_name == TOKEN_PTYPE:
-        parent = context[-2]
-        if len(parent.children) > 1:
-            parent_name = parent.tag_name.lower()
-            content = str(node)
-            if (content == '\\' + parent_name
-                or content == '\\begin{' + parent_name + '}'
-                or content == '\\end{' + parent_name + '}'):
-                return True
-    return False
+    assert node.children[0].tag_name == 'CMDNAME'
+    node.tag_name = 'cmd_' + node.children[0].content.lstrip('\\')
+    node.result = node.children[1:]
+    pass
 
 
-drop_expendables = remove_children_if(lambda context: is_empty(context) or
-                                                      is_one_of(context, {'PARSEP', 'WSPC'}) or
-                                                      is_commandname(context))
+def transform_generic_block(context: List[Node]):
+    node = context[-1]
+    assert node.children[0].tag_name == "begin_generic_block"
+    assert node.children[0].children[0].tag_name == "begin_environment"
+    assert node.children[-1].tag_name == "end_generic_block"
+    assert node.children[-1].children[0].tag_name == "end_environment"
+    node.tag_name = 'env_' + node.children[0].children[0].content.lstrip('\\')
+    node.result = node.children[1:-1]
+
+
+def is_expendable(context: List[Node]):
+    node = context[-1]
+    return not node._result and not node.tag_name.startswith('cmd_')
 
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "<": [flatten, flatten_structure, remove_empty],
+    "<": [flatten, flatten_structure, remove_children_if(is_expendable)],
     "latexdoc": [],
     "document": [flatten_structure],
     "pdfinfo": [],
@@ -251,8 +254,10 @@ LaTeX_AST_transformation_table = {
     "Index": [],
     "block_environment": replace_by_single_child,
     "known_environment": replace_by_single_child,
-    "generic_block": [],
-    "begin_generic_block, end_generic_block": [remove_children({'NEW_LINE', 'LFF'}), replace_by_single_child],
+    "generic_block": [transform_generic_block],
+    "generic_command": [transform_generic_command],  # [flatten],
+    "begin_generic_block, end_generic_block": [],
+        # [remove_children({'NEW_LINE', 'LFF'}), replace_by_single_child],
     "itemize, enumerate": [remove_brackets, flatten],
     "item": [],
     "figure": [],
@@ -272,12 +277,11 @@ LaTeX_AST_transformation_table = {
     "known_inline_env": replace_by_single_child,
     "generic_inline_env": [],
     "begin_inline_env, end_inline_env": [replace_by_single_child],
-    "begin_environment, end_environment": [remove_brackets, reduce_single_child],
+    "begin_environment, end_environment": [],  # [remove_brackets, reduce_single_child],
     "inline_math": [remove_brackets, reduce_single_child],
     "command": replace_by_single_child,
     "known_command": replace_by_single_child,
     "text_command": [],
-    "generic_command": [flatten],
     "citet, citep": [],
     "footnote": [],
     "includegraphics": [],
@@ -300,7 +304,8 @@ LaTeX_AST_transformation_table = {
     "EOF": [],
     "PARSEP": [replace_content_with('\n\n')],
     ":Whitespace, WSPC, S": streamline_whitespace,
-    "*": replace_by_single_child
+    "*": apply_unless(replace_by_single_child,
+                      lambda ctx: ctx[-1].tag_name[:4] not in ('cmd_', 'env_'))
 }
 
 
@@ -349,6 +354,36 @@ class LaTeXCompiler(Compiler):
         self.tree.empty_tags = set()
         self.tree.omit_tags = {'S', 'PARSEP'}
         return result
+
+
+    def fallback_generic_command(self, node: Node) -> Node:
+        if not node.result:
+            return EMPTY_NODE
+        return node
+
+    def fallback_generic_environment(self, node) -> Node:
+        node = super().fallback_compiler(node)
+        node.tag_name = 'VOID'
+        return node
+
+    def fallback_compiler(self, node: Node) -> Any:
+        if node.tag_name.startswith('cmd_'):
+            node = self.fallback_generic_command(node)
+        elif node.tag_name.startswith('env_'):
+            node = self.fallback_generic_environment(node)
+        else:
+            node = super().fallback_compiler(node)
+        # replace void nodes by their children
+        if node.children:
+            result = [];  void_flag = False
+            for child in node.children:
+                if child.tag_name == 'VOID' and child.children:
+                    result.extend(child.children);  void_flag = True
+                else:
+                    result.append(child)
+            if void_flag:  # use flag, because assignment can be costly
+                node.result = tuple(result)
+        return node
 
     # def on_latexdoc(self, node):
     #     self.compile(node['preamble'])
