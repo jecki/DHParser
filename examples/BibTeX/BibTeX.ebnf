@@ -19,35 +19,90 @@
 #
 #######################################################################
 
-bibliography = { preamble | comment | entry }  ~ EOF
+#: bibliography
 
-preamble      = "@Preamble{" /"/ pre_code /"/~ §"}"
-pre_code      = { /[^"%]+/ | /%.*\n/ }
+bibliography = ( preamble | comment | entry )*  ~ EOF
+
+preamble      = "@Preamble{" /"/ pre_code? /"/~ §"}"
+pre_code      = ( /[^"%]+/ | /%.*\n/ )+
+
+#: entry
 
 comment       = "@Comment{" text §"}"
+entry         = /@/ type "{" § key ( "," !`}` (_known_field | field) )* ","? "}"
 
-entry         = /@/ type "{" key { "," field §"=" content } [","] §"}"
+#: fields
+
+_known_field  = related
+
+field         = name "=" content
 type          = WORD
 key           = NO_BLANK_STRING
 field         = WORD
 content       = "{" text "}" | plain_content
 
 plain_content = COMMA_TERMINATED_STRING
-text          = { CONTENT_STRING | "{" text "}" }
-
+text          = ( CONTENT_STRING | "{" text "}" )*
 
 #######################################################################
 #
-#  Regular Expressions
+#: data_types
 #
 #######################################################################
 
-WORD          = /\w+/~
+name_list      = name (and name)* and_others?
+  and            = ~ `and` ~
+  and_others     = ~ `and` S `others` ~
+
+literal_list   =
+key_list       =
+
+literal_field  =
+range_field    =
+integer_field  =
+date_field     =
+verbatim_field =
+uri_field      =
+separated_value_field =
+pattern_field  =
+key_field      =
+code_field     =
+
+#######################################################################
+#
+#: sub_types
+#
+#######################################################################
+
+name            = familiy_names "," given_names
+                | given_only family_name
+                | NAME
+family_names    = family_name (S family_name)*
+family_name     = NAME
+given_names     = NAME (S NAME)*
+given_only      = NAME &(S NAME !suffix) (S NAME &(S NAME))*
+suffix          = "Junior" | "Senior"
+                | (`Jr` | `Sr` | `jr` | `sr`) `.`? ~
+
+#######################################################################
+#
+#: entities
+#
+#######################################################################
+
+NAME           = GUARDED_TEXT | !and /[\w-]+[.]?/
+GUARDED_TEXT   = "{" § ( /[^{}]/ GUARDED_TEXT? )* "}"
+S              = /[ \t\n]/ ~
+EOF            =  !/./
+
+WORD          = /\w+/
 NO_BLANK_STRING         = { /[^ \t\n,%&_]+/ | ESC }+ ~
 COMMA_TERMINATED_STRING = { /[^,%&_ \t]+/ | ESC | WS }
 CONTENT_STRING          = { /[^{}%&_ \t]+/ | ESC | WS }+
 
 ESC           = <-&/\\/ /[%&_]/          # escaped characters
 WS            = &/[ \t]*%/~ | /[ \t]+/  # non-trailing whitespace
+
+S             = /[ \t\n]/ ~
 
 EOF           =  !/./
