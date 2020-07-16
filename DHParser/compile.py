@@ -184,7 +184,12 @@ class Compiler:
         if node.children:
             for child in node.children:
                 nd = self.compile(child)
-                if nd is not None and nd.tag_name != EMPTY_PTYPE:
+                if nd is not None:
+                    try:
+                        if nd.tag_name != EMPTY_PTYPE:
+                            result.append(nd)
+                    except AttributeError:
+                        pass
                     if not isinstance(nd, Node):
                         tn = node.tag_name
                         raise TypeError(
@@ -193,7 +198,6 @@ class Compiler:
                             'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
                             'method `on_%s(self, node)` in class `%s` to avoid this error!'
                             % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
-                    result.append(nd)
             node.result = tuple(result)
         return node
 

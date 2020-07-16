@@ -3294,6 +3294,7 @@ class Forward(UnaryParser):
         duplicate.drop_content = parser.drop_content
         return duplicate
 
+    @cython.locals(location=cython.int, depth=cython.int, rb_stack_size=cython.int)
     def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         """
         Overrides `Parser.__call__`, because Forward is not an independent parser
