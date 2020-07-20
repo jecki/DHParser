@@ -1024,7 +1024,7 @@ class EBNFCompiler(Compiler):
                 `whitespace__` that need to be defined at the beginning
                 of the grammar class because they are referred to later.
 
-        deferred_tasks:  A list of callabels that is filled during
+        deferred_tasks:  A list of callables that is filled during
                 compilation, but that will be executed only after
                 compilation has finished. Typically, it contains
                 semantic checks that require information that
@@ -1307,6 +1307,7 @@ class EBNFCompiler(Compiler):
             rule = self.gen_search_rule(child)
             search_list.append(rule if rule else unrepr(child.content.strip()))
         return search_list
+
 
     def referred_symbols(self, symbol: str) -> Set[str]:
         """Returns the set of all symbols that are directly or indirectly

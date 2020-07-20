@@ -62,7 +62,7 @@ from DHParser.configuration import access_presets, finalize_presets, get_config_
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
-from DHParser.toolkit import escape_control_characters, abbreviate_middle
+from DHParser.toolkit import escape_control_characters, abbreviate_middle, cython
 
 __all__ = ('CallItem',
            'start_logging',
@@ -358,6 +358,7 @@ class HistoryRecord:
         """
         return '"{}", "{}", "{}", "{}", "{}"'.format(*self.as_tuple())
 
+    @cython.locals(i=cython.int, k=cython.int, n=cython.int)
     def as_html_tr(self) -> str:
         """
         Returns history record formatted as an html table row.

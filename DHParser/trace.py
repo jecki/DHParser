@@ -37,7 +37,8 @@ __all__ = ('trace_history', 'all_descendants', 'set_tracer',
            'resume_notices_on')
 
 
-@cython.locals(location=cython.int, loc=cython.int, delta=cython.int, cs_len=cython.int)
+@cython.locals(location=cython.int, loc=cython.int, delta=cython.int, cs_len=cython.int,
+               i=cython.int, L=cython.int)
 def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], StringView]:
     grammar = self._grammar  # type: Grammar
     location = grammar.document_length__ - text._len  # type: int
@@ -57,8 +58,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         target = text if len(text) <= 10 else text[:7] + '...'
 
         resumers = [grammar.call_stack__[-1][0]]
-        i = 2;  # L = len(grammar.call_stack__)
-        while resumers[-1].startswith(':') and i <= len(grammar.call_stack__):
+        i = 2;  L = len(grammar.call_stack__)
+        while resumers[-1].startswith(':') and i <= L:
             resumers.append(grammar.call_stack__[-i][0])
             i += 1
         resumer = '->'.join(reversed(resumers))
