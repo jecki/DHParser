@@ -1113,27 +1113,24 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             tlf = '\n' if density == 0 or (tail[0:1] == '<') else ''
 
         if self._children:
-            content = [head, hlf, usetab] if hlf else [head, usetab]
+            content = [head]
             first_child = self._children[0]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
                                            density, inline, inline_fn)
                 if subtree:
-                    if child != first_child:
-                        content.append(sep)
-                        content.append(usetab)
                     if inline:
-                        content.extend(subtree)
+                        content[-1] += '\n'.join(subtree)
                     else:
-                        for item in subtree:
-                            if item == '\n':
-                                content.append(sep)
-                                content.append(usetab)
-                            else:
-                                content.append(item)
+                        if sep:
+                            for item in subtree:
+                                content.append(usetab + item)
+                        else:
+                            content[-1] += ''.join(subtree)
             if tlf:
-                content.append(tlf)
-            content.append(tail)
+                content.append(tail)
+            else:
+                content[-1] += tail
             return content
 
         res = self.content
@@ -1155,15 +1152,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     i += 1
                 while k >= 0 and not lines[k]:
                     k -= 1
-            content = [head, hlf, usetab] if hlf else [head + usetab]
+            content = [head, usetab] if hlf else [head + usetab]
             for line in lines[i:k]:
-                content.append(line)
-                content.append('\n')
+                content[-1] += line
                 content.append(usetab)
-            content.append(lines[k])
+            content[-1] += lines[k]
             if tlf:
-                content.append(tlf)
-            content.append(tail)
+                content.append(tail)
+            else:
+                content[-1] += tail
             return content
 
 
@@ -1222,7 +1219,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
-        sxpr = ''.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
+        sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
         return sxpr if compact else flatten_sxpr(sxpr, flatten_threshold)
 
     def as_xml(self, src: str = None,
@@ -1293,7 +1290,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
-        return ''.join(self._tree_repr(
+        return '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
             allow_ommissions=bool(omit_tags)))
 
