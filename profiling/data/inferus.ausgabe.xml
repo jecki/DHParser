@@ -1,0 +1,4870 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Artikel unterbedeutungstiefe="4" stadium="semantischer Baum -> Ausgabebaum">
+  <LemmaPosition>
+    <LemmaBlock>
+      <Lemma id="INFERUS">
+        <LemmaWort>inferus</LemmaWort>
+      </Lemma>
+      <L> </L>
+      <LemmaVarianten>
+        <TEXT>(</TEXT>
+        <LemmaVariante>
+          <TEXT>infer</TEXT>
+        </LemmaVariante>
+        <TEXT>),</TEXT>
+      </LemmaVarianten>
+      <L> </L>
+      <GrammatikPosition>
+        <Grammatik>
+          <wortart klasse="I-II" verdichtung="adi." title="Klasse: I-II" wortart="adiectivum"></wortart>
+          <flexion>
+            <FLEX>-a</FLEX>
+            <Text>,</Text>
+            <L> </L>
+            <FLEX>-um</FLEX>
+            <TEXT>.</TEXT>
+          </flexion>
+        </Grammatik>
+      </GrammatikPosition>
+    </LemmaBlock>
+  </LemmaPosition>
+  <L spatium="3+1">    </L>
+  <ArtikelKopf>
+    <SchreibweisenPosition>
+      <Besonderheiten>
+        <Besonderheit>
+          <Beschreibung>script.:</Beschreibung>
+          <L spatium="3+1">    </L>
+          <Variante>
+            <Beschreibung>f-: </Beschreibung>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Bened. Andr." werk="chron." class="kein_rechter_rand">
+                <Quelle>
+                  <Autor>Bened. Andr.</Autor>
+                  <L> </L>
+                  <Werk>chron.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>p. 113,3.</Stelle>
+                  </Stellenangabe>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </Variante>
+          <L spatium="3+1">    </L>
+          <Kategorie>
+            <Beschreibung>superl.: </Beschreibung>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>him(us): </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Verweise>
+                  <a href="#ziel_1a" globaleReferenz="inferus.ziel-1a" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="10:26: Warning (503): Anker für Verweis auf Ziel 'ziel_1a' fehlt!">⇒😯</a>
+                  <L> </L>
+                  <a href="#ziel_1b" globaleReferenz="inferus.ziel-1b" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="10:48: Warning (503): Anker für Verweis auf Ziel 'ziel_1b' fehlt!">⇒😯</a>
+                </Verweise>
+                <TEXT>.</TEXT>
+              </Beleg>
+            </Variante>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>(h)ymm(us): </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Dhuoda" werk="lib. man." class="kein_rechter_rand">
+                  <Quelle>
+                    <Autor>Dhuoda</Autor>
+                    <L> </L>
+                    <Werk>lib. man.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>4,1,61.</Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </Variante>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>ym(us): </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Dhuoda" werk="lib. man." class="kein_rechter_rand">
+                  <Quelle>
+                    <Autor></Autor>
+                    <L> </L>
+                    <Werk>lib. man.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>3,7,10 (var. l.)</Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+                <ZOMBIE__ davor=" 😢 " class="error" title="Error: Belege dürfen nicht mit einem Punkt ».« abgeschlossen werden!" err="12:55: Error (1010): Belege dürfen nicht mit einem Punkt ».« abgeschlossen werden!">.</ZOMBIE__>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Vita" werk="Liutb.">
+                  <Quelle>
+                    <Autor>Vita</Autor>
+                    <L> </L>
+                    <Werk>Liutb.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>18 p. 23,2.</Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </Variante>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>imm(us): </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Verweise>
+                  <a href="#ziel_2" globaleReferenz="inferus.ziel-2" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="14:26: Warning (503): Anker für Verweis auf Ziel 'ziel_2' fehlt!">⇒😯</a>
+                </Verweise>
+                <L> </L>
+                <FesterZusatz>adde.</FesterZusatz>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Dhuoda" werk="lib. man." class="kein_rechter_rand">
+                  <Quelle>
+                    <Autor>Dhuoda</Autor>
+                    <L> </L>
+                    <Werk>lib. man.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>3,7,10.</Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Carm." werk="de Bened.">
+                  <Quelle>
+                    <Autor>Carm.</Autor>
+                    <L> </L>
+                    <Werk>de Bened.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>517.</Stelle>
+                      <L> </L>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </Variante>
+          </Kategorie>
+        </Besonderheit>
+      </Besonderheiten>
+    </SchreibweisenPosition>
+    <L spatium="3+1">    </L>
+    <StrukturPosition>
+      <Besonderheiten>
+        <Besonderheit>
+          <Beschreibung>struct.:</Beschreibung>
+          <L spatium="3+1">    </L>
+          <Variante>
+            <Beschreibung>superl. pro positivo: </Beschreibung>
+            <L> </L>
+            <Beleg>
+              <Verweise>
+                <a href="#ziel_1" globaleReferenz="inferus.ziel-1" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="21:36: Warning (503): Anker für Verweis auf Ziel 'ziel_1' fehlt!">⇒😯</a>
+              </Verweise>
+              <L> </L>
+              <Zusatz>praed. de iori.</Zusatz>
+            </Beleg>
+          </Variante>
+          <L spatium="3+1">    </L>
+          <Variante>
+            <Beschreibung>(inf)ima parte: </Beschreibung>
+            <L> </L>
+            <Beleg>
+              <Verweise>
+                <a href="#ziel_2" globaleReferenz="inferus.ziel-2" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="22:30: Warning (503): Anker für Verweis auf Ziel 'ziel_2' fehlt!">⇒😯</a>
+              </Verweise>
+              <L> </L>
+              <Zusatz>adv. inferius. </Zusatz>
+            </Beleg>
+          </Variante>
+        </Besonderheit>
+      </Besonderheiten>
+    </StrukturPosition>
+    <L spatium="3+1">    </L>
+    <GebrauchsPosition>
+      <Besonderheiten>
+        <Besonderheit>
+          <Beschreibung>usu praep.:</Beschreibung>
+          <L> </L>
+          <Beleg>
+            <Verweise>
+              <a href="#ziel_3" globaleReferenz="inferus.ziel-3" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="25:21: Warning (503): Anker für Verweis auf Ziel 'ziel_3' fehlt!">⇒😯</a>
+            </Verweise>
+            <TEXT>. </TEXT>
+          </Beleg>
+        </Besonderheit>
+      </Besonderheiten>
+    </GebrauchsPosition>
+    <L spatium="3+1">    </L>
+    <VerwechselungsPosition>
+      <Besonderheiten>
+        <Besonderheit>
+          <Beschreibung>confunditur:</Beschreibung>
+          <L spatium="3+1">    </L>
+          <Kategorie>
+            <Beschreibung>compar. c.: </Beschreibung>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>inferre: </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Verweise>
+                  <a href="inferre.html#INFERRE" globaleReferenz="inferre.INFERRE">p. 5,31.</a>
+                </Verweise>
+              </Beleg>
+            </Variante>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>interior: </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Verweise>
+                  <a href="interior.html#INTERIOR" globaleReferenz="interior.INTERIOR">p. 12,50.</a>
+                </Verweise>
+              </Beleg>
+            </Variante>
+          </Kategorie>
+          <L spatium="3+1">    </L>
+          <Kategorie>
+            <Beschreibung>superl. c.: </Beschreibung>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>infirmus: </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Arbeo" werk="Emm." class="kein_rechter_rand">
+                  <Quelle>
+                    <Autor>Arbeo</Autor>
+                    <L> </L>
+                    <Werk>Emm.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>p. 54,24.</Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Otto Frising." werk="gest.">
+                  <Quelle>
+                    <Autor>Otto Frising.</Autor>
+                    <L> </L>
+                    <Werk>gest.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>2,30 p. 138,35</Stelle>
+                      <L> </L>
+                      <FesterZusatz>var. l.</FesterZusatz>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </Variante>
+            <L spatium="3+1">    </L>
+            <Variante>
+              <Beschreibung>unus: </Beschreibung>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Otto Frising." werk="gest." class="kein_rechter_rand">
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>p. 12,1.6.</Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <FesterZusatz>adde</FesterZusatz>
+                    <L> </L>
+                    <Stellenangabe>
+                      <Stelle>p. 1632,47.</Stelle>
+                      <L> </L>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </Variante>
+          </Kategorie>
+        </Besonderheit>
+      </Besonderheiten>
+    </VerwechselungsPosition>
+  </ArtikelKopf>
+  <LB>    </LB>
+  <BedeutungsPosition>
+    <Bedeutung class="kein_linker_rand">
+      <Zähler>I</Zähler>
+      <Bedeutungsangabe>
+        <Klassifikation>
+          <Kategorienangabe>
+            <TEXT>adi. in iunctura </TEXT>
+            <BelegText class="grade">
+              <TEXT>mare </TEXT>
+              <BelegLemma verdichtung="-um" id="inferum" globaleId="inferus.inferum" lemma="inferum">-um.</BelegLemma>
+            </BelegText>
+            <TEXT> de mare Tyrrheno</TEXT>
+          </Kategorienangabe>
+          <L> </L>
+          <Zusatz>
+            <TEXT>(de re v. Allg. Encyklopädie d. Wissenschaften u. Künste. </TEXT>
+            <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+            <TEXT>/18. 1840. p. 158sq.)</TEXT>
+          </Zusatz>
+        </Klassifikation>
+        <TEXT>: </TEXT>
+      </Bedeutungsangabe>
+      <L> </L>
+      <Beleg>
+        <Quellenangabe autor="Herm. Augiens." werk="chron.">
+          <Quelle>
+            <Autor>Herm. Augiens.</Autor>
+            <L> </L>
+            <Werk>chron.</Werk>
+          </Quelle>
+          <L> </L>
+          <BelegStelle>
+            <Stellenangabe>
+              <Stelle>a. 895</Stelle>
+            </Stellenangabe>
+            <L> </L>
+            <BelegText>
+              <TEXT>divisis ad superum umque mare copiis.</TEXT>
+            </BelegText>
+            <L> </L>
+            <Zusatz>eqs.</Zusatz>
+          </BelegStelle>
+        </Quellenangabe>
+      </Beleg>
+    </Bedeutung>
+    <P>    </P>
+    <Bedeutung class="kein_linker_rand">
+      <Zähler>II</Zähler>
+      <Bedeutungsangabe>
+        <Klassifikation>
+          <Kategorienangabe>
+            <TEXT>subst. masc.</TEXT>
+          </Kategorienangabe>
+          <L> </L>
+          <Zusatz>
+            <TEXT>(fere usu plur.; sing.:</TEXT>
+            <L> </L>
+            <Verweise>
+              <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="43:53: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+            </Verweise>
+            <L> </L>
+            <TEXT>al.)</TEXT>
+          </Zusatz>
+        </Klassifikation>
+        <TEXT>: </TEXT>
+      </Bedeutungsangabe>
+      <L spatium="4">    </L>
+      <U1Bedeutung>
+        <Zähler>A</Zähler>
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>terreni</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>Irdische</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>Menschen</DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L>  </L>
+        <Beleg>
+          <Quellenangabe autor="Hymn." werk="Sangall.">
+            <Quelle>
+              <Autor>Hymn.</Autor>
+              <L> </L>
+              <Werk>Sangall.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>p. 109</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>ymnite nunc, superi; resonate pariter, i.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+      </U1Bedeutung>
+      <L spatium="4">    </L>
+      <U1Bedeutung>
+        <Zähler>B</Zähler>
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>incolae inferni</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>mortui</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>Bewohner der Unterwelt</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>
+                <DeutschesWort>Verstorbene</DeutschesWort>
+                <L> </L>
+                <Zusatz>
+                  <TEXT>(in imag.:</TEXT>
+                  <L> </L>
+                  <Verweise>
+                    <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="50:32: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                  </Verweise>
+                  <TEXT>; fort. meton. de inferno:</TEXT>
+                  <L> </L>
+                  <Verweise>
+                    <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="50:71: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                  </Verweise>
+                  <TEXT>)</TEXT>
+                </Zusatz>
+              </DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L>  </L>
+        <Beleg>
+          <Quellenangabe autor="Aethicus" werk="">
+            <Quelle class="kursiv">
+              <Autorangabe>Aethicus,</Autorangabe>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe class="kursiv">
+                <Stelle>
+                  <TEXT>10</TEXT>
+                  <HOCHGESTELLT>b</HOCHGESTELLT>
+                  <TEXT> l. 12</TEXT>
+                </Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>ovem, quae in imo perierat, ab is suis humeris evexit Dominus.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Epist." werk="Meginh.">
+            <Quelle>
+              <Autor>Epist.</Autor>
+              <L> </L>
+              <Werk>Meginh.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>22 p. 217,12</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>domnus meus ipse sibi legem penamque Proserpine videtur indixisse; nescio </TEXT>
+                <Zusatz>(sc. Meginhardus)</Zusatz>
+                <TEXT> enim, quid apud hos os videtur gustasse, ut ... sex menses in Carinthia, sex alios apud nos, id est apud superos, degere soleat.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Otto Frising." werk="chron.">
+            <Quelle>
+              <Autor>Otto Frising.</Autor>
+              <L> </L>
+              <Werk>chron.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>5,3 p. 232,20</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>qua </TEXT>
+                <Zusatz>(fabula)</Zusatz>
+                <TEXT> vulgo dicitur Theodoricus vivus equo sedens ad os descendisse. al.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+      </U1Bedeutung>
+      <L spatium="4">    </L>
+      <U1Bedeutung>
+        <Zähler>C</Zähler>
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>de diabiolo i. q. dominus inferni</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>gehennae</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>Herrscher über die Unterwelt</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>Hölle</DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L>  </L>
+        <Beleg>
+          <Quellenangabe autor="Rhythm." werk="">
+            <Quelle>
+              <Autor>Rhythm.</Autor>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>83,2,2</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>belua sevissima dixit: ‘potentes quos seculi ad te, </TEXT>
+                <ROEMISCHE_ZAHL>I</ROEMISCHE_ZAHL>
+                <TEXT> r, iam adduxi, te non valent effugere.’</TEXT>
+              </BelegText>
+              <L>  </L>
+              <Zusatz>ibid. al.</Zusatz>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+      </U1Bedeutung>
+      <L spatium="4">    </L>
+      <U1Bedeutung>
+        <Zähler>D</Zähler>
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>infernus</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>gehenna</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>Unterwelt</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>
+                <DeutschesWort>Hölle</DeutschesWort>
+                <L> </L>
+                <Zusatz>
+                  <TEXT>(in imag.:</TEXT>
+                  <L> </L>
+                  <Verweise>
+                    <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="71:74: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                  </Verweise>
+                  <TEXT>; meton. de incolis:</TEXT>
+                  <L> </L>
+                  <Verweise>
+                    <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="72:36: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                  </Verweise>
+                </Zusatz>
+              </DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L>  </L>
+        <Beleg>
+          <Quellenangabe autor="Poeta Saxo" werk="">
+            <Quelle>
+              <Autor>Poeta Saxo</Autor>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>5,84</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>tibi </TEXT>
+                <Zusatz>(sc. Christo)</Zusatz>
+                <TEXT> ... genu flectant us, arva, poli </TEXT>
+                <Einschub>
+                  <Zusatz>(spectat ad</Zusatz>
+                  <L> </L>
+                  <Beleg>
+                    <Quellenangabe autor="Vulg." werk="Phil." class="kein_rechter_rand">
+                      <Quelle class="kursiv">
+                        <Autorangabe>Vulg.</Autorangabe>
+                        <L> </L>
+                        <Werk>Phil.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe class="kursiv">
+                          <Stelle>2,10)</Stelle>
+                          <TEXT>.</TEXT>
+                        </Stellenangabe>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                </Einschub>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Epist." werk="Meginh.">
+            <Quelle>
+              <Autor>Epist.</Autor>
+              <L> </L>
+              <Werk>Meginh.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>5 p. 197,19</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>ex is crudelissime servitutis in lucem quandam candidissime libertatis credunt Forcheimenses evasisse.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Ekkeh." werk="carm. var.">
+            <Quelle class="kursiv">
+              <Autorangabe>Ekkeh.</Autorangabe>
+              <L> </L>
+              <Werk>carm. var.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe class="kursiv">
+                <Stelle>
+                  <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                  <TEXT> 10,1</TEXT>
+                </Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>us invisus cadat, exurgat paradysus.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Chart." werk="Schir.">
+            <Quelle>
+              <Autor>Chart.</Autor>
+              <L> </L>
+              <Werk>Schir.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>3 p. 12,29</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>quos </TEXT>
+                <Zusatz>(sc. Dathan et Abyron)</Zusatz>
+                <TEXT> terra aperto ore deglutivit et vivos us deglutivit. al. </TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+      </U1Bedeutung>
+    </Bedeutung>
+  </BedeutungsPosition>
+  <p>
+    
+    
+  </p>
+  <UnterArtikel>
+    <L> </L>
+    <SubLemmaPosition>
+      <WortartAnzeige>comparativus</WortartAnzeige>
+      <L> </L>
+      <LemmaBlock>
+        <Lemma id="INFERIOR">
+          <LemmaWort>inferior</LemmaWort>
+          <TEXT>,</TEXT>
+        </Lemma>
+        <L> </L>
+        <GrammatikPosition>
+          <Grammatik>
+            <wortart verdichtung="comparativus" class="versteckt" wortart="comparativus">
+              <ZOMBIE__></ZOMBIE__>
+              <TEXT>comparativus</TEXT>
+              <ZOMBIE__ davor=" 😢 " class="error" title="Error: nom_klasse expected, »; -ius\n \n GE...« found!" err="89:17: Error (1010): nom_klasse expected, »; -ius\n \n GE...« found!"></ZOMBIE__>
+            </wortart>
+            <flexion>
+              <FLEX>-ius</FLEX>
+              <TEXT>.</TEXT>
+            </flexion>
+          </Grammatik>
+        </GrammatikPosition>
+      </LemmaBlock>
+    </SubLemmaPosition>
+    <ArtikelKopf>
+      <GebrauchsPosition>
+        <Besonderheiten>
+          <Besonderheit>
+            <Beschreibung>usu subst.:</Beschreibung>
+            <L> </L>
+            <Beleg>
+              <Zusatz>saepe, e. g.</Zusatz>
+              <L> </L>
+              <Verweise>
+                <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="92:35: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+              </Verweise>
+              <TEXT>. </TEXT>
+            </Beleg>
+          </Besonderheit>
+        </Besonderheiten>
+      </GebrauchsPosition>
+    </ArtikelKopf>
+    <BedeutungsPosition>
+      <Bedeutung class="kein_linker_rand">
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>inferius situs</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>katýteroß</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>
+                <DeutschesWort>tiefer</DeutschesWort>
+                <L> </L>
+                <DeutscheKlammer>
+                  <TEXT>(</TEXT>
+                  <DeutscheBedeutung>
+                    <DeutscherAusdruck>gelegen</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                  <TEXT>)</TEXT>
+                </DeutscheKlammer>
+              </DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>darunterliegend</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>Unter-</DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L spatium="4">    </L>
+        <U1Bedeutung>
+          <Zähler>I</Zähler>
+          <Bedeutungsangabe>
+            <Klassifikation>
+              <TEXT>proprie</TEXT>
+            </Klassifikation>
+            <TEXT>: </TEXT>
+          </Bedeutungsangabe>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>A</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad altitudinem locorum</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>1</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>in univ.</TEXT>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Compos." werk="Luc.">
+                  <Quelle>
+                    <Autor>Compos.</Autor>
+                    <L> </L>
+                    <Werk>Luc.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>A 28</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>sufferens ignem et dequoquens (sc. mixturam) </TEXT>
+                      <BelegLemma verdichtung="-e" id="inferiore" globaleId="inferus.inferiore" lemma="inferiore">-e</BelegLemma>
+                      <TEXT> (ed., </TEXT>
+                      <BelegLemma verdichtung="-a" id="inferiora" globaleId="inferus.inferiora" lemma="inferiora">-a</BelegLemma>
+                      <TEXT> codd.) fornace vitriarii dies vi eqs.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Eigil" werk="Sturm.">
+                  <Quelle>
+                    <Autor>Eigil</Autor>
+                    <L> </L>
+                    <Werk>Sturm.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>5 p. 136,8 (cod. W)</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>considerantes (sc. monachi) terram, montes, colles, superiora et </TEXT>
+                      <BelegLemma verdichtung="-a" lemma="inferiora">-a</BelegLemma>
+                      <TEXT> explorantes </TEXT>
+                      <Zusatz>eqs.</Zusatz>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Otto Frising." werk="gest.">
+                  <Quelle>
+                    <Autor>Otto Frising.</Autor>
+                    <L> </L>
+                    <Werk>gest.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>1,20 p. 33,23</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>sole ad </TEXT>
+                      <BelegLemma verdichtung="-s" id="inferiors" globaleId="inferus.inferiors" lemma="inferiors">-s</BelegLemma>
+                      <TEXT> hemisperium descendente.</TEXT>
+                    </BelegText>
+                    <L> </L>
+                    <Zusatz>eqs. al. v. et p. 4,60. 12,50.</Zusatz>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L spatium="3+1">    </L>
+              <Anhänger>
+                <Bedeutungsangabe>
+                  <Klassifikation>
+                    <Kategorienangabe>
+                      <TEXT>in nomine loci (</TEXT>
+                      <ZITAT>‘Nieder ’</ZITAT>
+                      <TEXT>)</TEXT>
+                    </Kategorienangabe>
+                  </Klassifikation>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Belege>
+                  <Beleg>
+                    <Quellenangabe autor="Trad." werk="Ratisb.">
+                      <Quelle>
+                        <Autor>Trad.</Autor>
+                        <L> </L>
+                        <Werk>Ratisb.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle>140</Stelle>
+                          <L> </L>
+                          <Datierung>(a. 889/91)</Datierung>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>tradidit advocatus aream unam Rihholfo presbytero de rebus sancte Marie </TEXT>
+                          <BelegLemma verdichtung="-is" id="Inferioris" globaleId="inferus.Inferioris" lemma="Inferioris">-is</BelegLemma>
+                          <TEXT> Monasterii.</TEXT>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                  <L> </L>
+                  <Beleg>
+                    <Quellenangabe autor="Otloh." werk="Wolfk.">
+                      <Quelle>
+                        <Autor>Otloh.</Autor>
+                        <L> </L>
+                        <Werk>Wolfk.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle>
+                            <TEXT>17 p. 573</TEXT>
+                            <HOCHGESTELLT>E</HOCHGESTELLT>
+                          </Stelle>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>duo monasteria virginum in urbe Ratispona constituta, id est Superius et </TEXT>
+                          <BelegLemma verdichtung="-s" id="Inferiors" globaleId="inferus.Inferiors" lemma="Inferiors">-s</BelegLemma>
+                          <TEXT> Monasterium </TEXT>
+                          <Einschub>
+                            <TEXT class="grade">(</TEXT>
+                            <FesterZusatz>sim.</FesterZusatz>
+                            <L> </L>
+                            <Beleg>
+                              <Quellenangabe autor="Fund." werk="Consecr. Petri" class="kein_rechter_rand">
+                                <Quelle>
+                                  <Autor>Fund.</Autor>
+                                  <L> </L>
+                                  <Werk>Consecr. Petri</Werk>
+                                </Quelle>
+                                <L> </L>
+                                <BelegStelle>
+                                  <Stellenangabe>
+                                    <Stelle>p. 199,21)</Stelle>
+                                    <TEXT>.</TEXT>
+                                  </Stellenangabe>
+                                </BelegStelle>
+                              </Quellenangabe>
+                            </Beleg>
+                          </Einschub>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                  <L> </L>
+                  <Beleg>
+                    <Quellenangabe autor="Chart." werk="Turic.">
+                      <Quelle>
+                        <Autor>Chart.</Autor>
+                        <L> </L>
+                        <Werk>Turic.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle>376 p. 258,8</Stelle>
+                          <L> </L>
+                          <Einschub>
+                            <Beleg>
+                              <Quellenangabe autor="Dipl." werk="Frid. II." class="kein_rechter_rand">
+                                <Quelle>
+                                  <Autor>(Dipl.</Autor>
+                                  <L> </L>
+                                  <Werk>Frid. II.)</Werk>
+                                </Quelle>
+                              </Quellenangabe>
+                            </Beleg>
+                          </Einschub>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>ut omnia eiusdem ecclesie iuste et legitime acquisita ... in </TEXT>
+                          <BelegLemma verdichtung="-i" id="Inferiori" globaleId="inferus.Inferiori" lemma="Inferiori">-i</BelegLemma>
+                          <TEXT> Monte ... sub imperiali mundiburdio ... habeantur.</TEXT>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                </Belege>
+              </Anhänger>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>2</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>de parte fluminum ad ostium vergente</TEXT>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Otto Frising." werk="gest.">
+                  <Quelle>
+                    <Autor>Otto Frising.</Autor>
+                    <L> </L>
+                    <Werk>gest.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>1 capit. 68</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>Conradus ad </TEXT>
+                      <BelegLemma verdichtung="inferiores" id="inferiores" globaleId="inferus.inferiores" lemma="inferiores">inferiores</BelegLemma>
+                      <TEXT> </TEXT>
+                      <Sperrung>partes Reni</Sperrung>
+                      <TEXT> proficiscitur.</TEXT>
+                    </BelegText>
+                    <L> </L>
+                    <Einschub>
+                      <Beleg>
+                        <Quellenangabe autor="Otto Frising." werk="gest." class="kein_rechter_rand">
+                          <BelegStelle>
+                            <Stellenangabe>
+                              <Stelle>(1,68 p. 96,15. 2,4)</Stelle>
+                              <TEXT>.</TEXT>
+                            </Stellenangabe>
+                          </BelegStelle>
+                        </Quellenangabe>
+                      </Beleg>
+                    </Einschub>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>3</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <Kategorienangabe>
+                    <TEXT>de regionibus, urbibus</TEXT>
+                  </Kategorienangabe>
+                  <L> </L>
+                  <Zusatz>
+                    <TEXT>(meton. de incolis:</TEXT>
+                    <L> </L>
+                    <Verweise>
+                      <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="134:75: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                    </Verweise>
+                    <TEXT>)</TEXT>
+                  </Zusatz>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Prud. Trec." werk="annal.">
+                  <Quelle>
+                    <Autor>Prud. Trec.</Autor>
+                    <L> </L>
+                    <Werk>annal.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>a. 845 p. 50,1</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>fames valida Galliae </TEXT>
+                      <BelegLemma verdichtung="-a" lemma="inferiora">-a</BelegLemma>
+                      <TEXT> consumit.</TEXT>
+                    </BelegText>
+                    <L> </L>
+                    <Zusatz>(v. notam ed.).</Zusatz>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Annal." werk="Ved.">
+                  <Quelle>
+                    <Autor>Annal.</Autor>
+                    <L> </L>
+                    <Werk>Ved.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>a. 887 p. 64,6</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <BelegLemma verdichtung="-es" lemma="inferiores">-es</BelegLemma>
+                      <TEXT> Franci ... quidam Widonem ..., quidam Odonem in regno statuere volunt.</TEXT>
+                    </BelegText>
+                    <L> </L>
+                    <Zusatz>(v. notam ed.).</Zusatz>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Herm. Augiens." werk="chron.">
+                  <Quelle>
+                    <Autor>Herm. Augiens.</Autor>
+                    <L> </L>
+                    <Werk>chron.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>a. 945</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>Otto rex Galliam </TEXT>
+                      <BelegLemma verdichtung="-em" id="inferiorem" globaleId="inferus.inferiorem" lemma="inferiorem">-em</BelegLemma>
+                      <TEXT> petit.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Otto Frising." werk="gest.">
+                  <Quelle>
+                    <Autor>Otto Frising.</Autor>
+                    <L> </L>
+                    <Werk>gest.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>1,68 p. 96,28 ibi</Stelle>
+                      <L> </L>
+                      <Zusatz>(sc. Cohemae)</Zusatz>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>... Coloniensem electum excipiens cum eoque ad </TEXT>
+                      <BelegLemma verdichtung="-a" lemma="inferiora">-a</BelegLemma>
+                      <TEXT> descendens </TEXT>
+                      <Zusatz>(sc. Conradus rex)</Zusatz>
+                      <TEXT> </TEXT>
+                      <Zusatz>eqs. saepius</Zusatz>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>4</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>ulterior</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>weiter entfernt</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Eigil" werk="Sturm.">
+                  <Quelle>
+                    <Autor>Eigil</Autor>
+                    <L> </L>
+                    <Werk>Sturm.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>5 p. 135,22</Stelle>
+                      <L> </L>
+                      <Zusatz>(cod. W)</Zusatz>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>vobis remotiorem et </TEXT>
+                      <BelegLemma verdichtung="-em" lemma="inferiorem">-em</BelegLemma>
+                      <TEXT> in solitudine requirite (sc. monachi) habitationem, quam sine periculo vestri colere queatis.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>B</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad partes corporis</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Lex" werk="Frision.">
+                <Quelle>
+                  <Autor>Lex</Autor>
+                  <L> </L>
+                  <Werk>Frision.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>22,42</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>si in pollicis superioris articuli iunctura fuerit </TEXT>
+                    <Zusatz>(sc. ictus)</Zusatz>
+                    <TEXT>, duobus solidis componatur; si in </TEXT>
+                    <BelegLemma verdichtung="-i" id="inferiori" globaleId="inferus.inferiori" lemma="inferiori">-i</BelegLemma>
+                    <TEXT>, tribus solidis componatur.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Antidot." werk="Glasg.">
+                <Quelle>
+                  <Autor>Antidot.</Autor>
+                  <L> </L>
+                  <Werk>Glasg.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>p. 111,30</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>ad eos, qui de bus sanguinem emittent.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>C</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <Zusatz>spectat ad sonos, modos i. q.</Zusatz>
+                <L> </L>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>gravior</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>
+                    <DeutschesWort>tiefer</DeutschesWort>
+                    <L> </L>
+                    <Zusatz>(usu mus.)</Zusatz>
+                  </DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Ps. Alcuin." werk="mus.">
+                <Quelle>
+                  <Autor>Ps. Alcuin.</Autor>
+                  <L> </L>
+                  <Werk>mus.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>
+                      <TEXT>p. 26</TEXT>
+                      <HOCHGESTELLT>b</HOCHGESTELLT>
+                      <TEXT>,18</TEXT>
+                    </Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>unde et primi </TEXT>
+                    <Zusatz>(sc. toni)</Zusatz>
+                    <TEXT> altiores, secundi </TEXT>
+                    <BelegLemma verdichtung="-es" lemma="inferiores">-es</BelegLemma>
+                    <TEXT>.</TEXT>
+                  </BelegText>
+                  <L> </L>
+                  <Einschub>
+                    <Beleg>
+                      <Quellenangabe autor="Ps. Alcuin." werk="mus." class="kein_rechter_rand">
+                        <BelegStelle>
+                          <Stellenangabe>
+                            <Stelle>
+                              <TEXT>(p. 27</TEXT>
+                              <HOCHGESTELLT>b</HOCHGESTELLT>
+                              <TEXT>,3).</TEXT>
+                            </Stelle>
+                          </Stellenangabe>
+                        </BelegStelle>
+                      </Quellenangabe>
+                    </Beleg>
+                  </Einschub>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Mus. Enchir." werk="app.">
+                <Quelle class="kursiv">
+                  <Autorangabe>Mus. Enchir.</Autorangabe>
+                  <L> </L>
+                  <Werk>app.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe class="kursiv">
+                    <Stelle>
+                      <TEXT>A </TEXT>
+                      <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                      <TEXT> l. 63</TEXT>
+                    </Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>loca ... organi sunt tria: organum medium, organum superius, organum </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferiors">-s</BelegLemma>
+                    <TEXT>.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>D</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>spectat ad scriptum</LateinischerAusdruck>
+                  <TEXT>, </TEXT>
+                  <LateinischerAusdruck>
+                    <LateinischesWort>paginam i. q. infra</LateinischesWort>
+                    <L> </L>
+                    <LateinischeKlammer>
+                      <TEXT>(</TEXT>
+                      <LateinischeBedeutung>
+                        <LateinischerAusdruck>scriptus</LateinischerAusdruck>
+                      </LateinischeBedeutung>
+                      <TEXT>)</TEXT>
+                    </LateinischeKlammer>
+                  </LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>unten angegeben</DeutscherAusdruck>
+                  <TEXT>, </TEXT>
+                  <DeutscherAusdruck>
+                    <DeutschesWort>unten aufgeführt</DeutschesWort>
+                    <L> </L>
+                    <Zusatz>
+                      <TEXT>(usu praed. sensu adv.:</TEXT>
+                      <L>  </L>
+                      <Verweise>
+                        <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="174:13: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                      </Verweise>
+                      <TEXT>)</TEXT>
+                    </Zusatz>
+                  </DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Chart." werk="Hersf.">
+                <Quelle>
+                  <Autor>Chart.</Autor>
+                  <L> </L>
+                  <Werk>Hersf.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>21 p. 38,26</Stelle>
+                    <L> </L>
+                    <Datierung>(a. 802)</Datierung>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>ego Theodoricus scripsi rogatus ab istis bus scriptis ...: signum Katoni comitis eqs.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Trad." werk="Frising.">
+                <Quelle>
+                  <Autor>Trad.</Autor>
+                  <L> </L>
+                  <Werk>Frising.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>1481</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>huius rei testes adhibiti sunt es: de nobilibus: eqs.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L spatium="3+1">    </L>
+            <Anhänger>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <Zusatz>spectat ad abacum fere i. q.</Zusatz>
+                  <L> </L>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>interior</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <Zusatz>etwa:</Zusatz>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>innerer</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Herig." werk="reg.">
+                  <Quelle>
+                    <Autor>Herig.</Autor>
+                    <L> </L>
+                    <Werk>reg.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>2,19</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>fa-cile erit ... videre, quam lineam in abaco ulteriorem articulus, </TEXT>
+                      <BelegLemma verdichtung="-em" lemma="inferiorem">-em</BelegLemma>
+                      <TEXT> digitus debeat vindicare.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </Anhänger>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>E</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>de visione i. q. deorsum conversus</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>nach unten gerichtet</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Honor. August." werk="scal.">
+                <Quelle>
+                  <Autor>Honor. August.</Autor>
+                  <L> </L>
+                  <Werk>scal.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>
+                      <ROEMISCHE_ZAHL>I</ROEMISCHE_ZAHL>
+                      <TEXT> 16</TEXT>
+                    </Stelle>
+                    <L> </L>
+                    <opus_minus>
+                      <TEXT>(</TEXT>
+                      <Werk>PL</Werk>
+                      <L> </L>
+                      <Stelle>172,1236B</Stelle>
+                      <TEXT>)</TEXT>
+                    </opus_minus>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>corporalis ... visio dividitur in duo, in </TEXT>
+                    <BelegLemma verdichtung="-em" lemma="inferiorem">-em</BelegLemma>
+                    <TEXT> et superiorem.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>F</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>spectat ad species elementorum fere i. q. densiori elemento similior</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>
+                    <DeutschesWort>dem dichteren Element ähnlicher</DeutschesWort>
+                    <L> </L>
+                    <Zusatz>(usu natur. et philos.)</Zusatz>
+                  </DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Urso" werk="element.">
+                <Quelle>
+                  <Autor>Urso</Autor>
+                  <L> </L>
+                  <Werk>element.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>3 p. 53,5</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>est ... species ignis, que ponitur tantum de superioribus ignis, alia species de mediis ignis, tertia de bus (superioribus </TEXT>
+                    <ROEMISCHE_ZAHL>V</ROEMISCHE_ZAHL>
+                    <TEXT>) ignis.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>p. 53,9</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>s ignis est, quod nullo mediante potest in aerem per condensationem transire (de re v. comm. ed. p. 21sq.). ibid. al.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>G</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>subsequens</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>
+                    <DeutscheKlammer>
+                      <TEXT>(</TEXT>
+                      <DeutscheBedeutung>
+                        <DeutscherAusdruck>darauf</DeutscherAusdruck>
+                      </DeutscheBedeutung>
+                      <TEXT>)</TEXT>
+                    </DeutscheKlammer>
+                    <DeutschesWort>folgend</DeutschesWort>
+                  </DeutscherAusdruck>
+                  <TEXT>, </TEXT>
+                  <DeutscherAusdruck>nächster</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Walahfr." werk="carm.">
+                <Quelle>
+                  <Autor>Walahfr.</Autor>
+                  <L> </L>
+                  <Werk>carm.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>89,3,17</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <BelegLemma verdichtung="-r" id="inferior" globaleId="inferus.inferior" lemma="inferior">-r</BelegLemma>
+                    <TEXT> decimus numero stat ... quintus </TEXT>
+                    <Zusatz>(sc. annus circuli decennovenalis).</Zusatz>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+        </U1Bedeutung>
+        <P>    </P>
+        <U1Bedeutung class="kein_linker_rand">
+          <Zähler>II</Zähler>
+          <Bedeutungsangabe>
+            <Klassifikation>
+              <TEXT>translate</TEXT>
+            </Klassifikation>
+            <TEXT>: </TEXT>
+          </Bedeutungsangabe>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>A</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>minor</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>geringer</DeutscherAusdruck>
+                  <TEXT>, </TEXT>
+                  <DeutscherAusdruck>kleiner</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>1</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <Kategorienangabe>
+                    <TEXT>spectat ad numeros</TEXT>
+                  </Kategorienangabe>
+                  <L> </L>
+                  <Zusatz>(de divisoribus)</Zusatz>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Herig." werk="reg.">
+                  <Quelle>
+                    <Autor>Herig.</Autor>
+                    <L> </L>
+                    <Werk>reg.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>2,14</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>ponatur quilibet numerus tantae multitudinis, ut eum possimus dividere per tres aut per quatuor es.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>2</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <Zusatz>spectat ad condicionem, statum i. q.</Zusatz>
+                  <L> </L>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>subiectus</LateinischerAusdruck>
+                    <TEXT>, </TEXT>
+                    <LateinischerAusdruck>humilior</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>untergeordnet</DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>untertan</DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>
+                      <DeutschesWort>niedriger</DeutschesWort>
+                      <L> </L>
+                      <Zusatz>
+                        <TEXT>(fere de hominibus; de officio:</TEXT>
+                        <L> </L>
+                        <Verweise>
+                          <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="220:29: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                        </Verweise>
+                        <TEXT>; usu log.:</TEXT>
+                        <L> </L>
+                        <Verweise>
+                          <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="220:62: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                        </Verweise>
+                        <TEXT>)</TEXT>
+                      </Zusatz>
+                    </DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Chart." werk="Rhen. med.">
+                  <Quelle>
+                    <Autor>Chart.</Autor>
+                    <L> </L>
+                    <Werk>Rhen. med.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>
+                        <ROEMISCHE_ZAHL>I</ROEMISCHE_ZAHL>
+                        <TEXT> 42 p. 48,20</TEXT>
+                      </Stelle>
+                      <L> </L>
+                      <Datierung>(a. 804)</Datierung>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>si fuerit ... persona potens aut </TEXT>
+                      <BelegLemma verdichtung="-r" lemma="inferior">-r</BelegLemma>
+                      <TEXT> ..., qui </TEXT>
+                      <Zusatz>eqs.</Zusatz>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Annal." werk="Xant.">
+                  <Quelle>
+                    <Autor>Annal.</Autor>
+                    <L> </L>
+                    <Werk>Xant.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>a. 865</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>dicentes </TEXT>
+                      <Zusatz>(sc. episcopi)</Zusatz>
+                      <TEXT> ... in nullo gradum suum </TEXT>
+                      <BelegLemma verdichtung="-em" lemma="inferiorem">-em</BelegLemma>
+                      <TEXT> gradu illius </TEXT>
+                      <Zusatz>(sc. papae)</Zusatz>
+                      <TEXT> esse.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Herm. Augiens." werk="chron.">
+                  <Quelle>
+                    <Autor>Herm. Augiens.</Autor>
+                    <L> </L>
+                    <Werk>chron.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>a. 1053 p. 132,33</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>regni tam primores quam </TEXT>
+                      <BelegLemma verdichtung="-es" lemma="inferiores">-es</BelegLemma>
+                      <TEXT> contra imperatorem ... mussitantes eqs.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Trad." werk="Patav.">
+                  <Quelle>
+                    <Autor>Trad.</Autor>
+                    <L> </L>
+                    <Werk>Patav.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>783</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>testes sunt Heinricus decanus ..., Heinricus </TEXT>
+                      <BelegLemma verdichtung="-r" lemma="inferior">-r</BelegLemma>
+                      <TEXT> cellerarius.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Registr." werk="Patav.">
+                  <Quelle>
+                    <Autor>Registr.</Autor>
+                    <L> </L>
+                    <Werk>Patav.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>
+                        <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                        <TEXT> p. 118,13</TEXT>
+                      </Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>de </TEXT>
+                      <BelegLemma verdichtung="-i" lemma="inferiori">-i</BelegLemma>
+                      <TEXT> officio prepositus xxii sol. </TEXT>
+                      <Zusatz>(sc. solvit)</Zusatz>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Albert. M." werk="probl. det.">
+                  <Quelle>
+                    <Autor>Albert. M.</Autor>
+                    <L> </L>
+                    <Werk>probl. det.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>2 p. 50,16sq.</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>superius nunquam applicatur </TEXT>
+                      <BelegLemma verdichtung="-i" lemma="inferiori">-i</BelegLemma>
+                      <TEXT>, sed semper </TEXT>
+                      <BelegLemma verdichtung="-s" lemma="inferiors">-s</BelegLemma>
+                      <TEXT> superiori. </TEXT>
+                      <FesterZusatz>saepe</FesterZusatz>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L spatium="3+1">    </L>
+              <Anhänger>
+                <Bedeutungsangabe>
+                  <Interpretamente>
+                    <Zusatz>subst. neutr. plur. i. q.</Zusatz>
+                    <L> </L>
+                    <LateinischeBedeutung>
+                      <LateinischerAusdruck>condicio humilior</LateinischerAusdruck>
+                    </LateinischeBedeutung>
+                    <L> </L>
+                    <DeutscheBedeutung>
+                      <TEXT> — </TEXT>
+                      <DeutscherAusdruck>niedrigerer Stand</DeutscherAusdruck>
+                    </DeutscheBedeutung>
+                  </Interpretamente>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Beleg>
+                  <Quellenangabe autor="Lex" werk="Ribv.">
+                    <Quelle>
+                      <Autor>Lex</Autor>
+                      <L> </L>
+                      <Werk>Ribv.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>61,11</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>si ... regius homo ingenuam Ribuariam acciperit ..., generatio eorum semper ad </TEXT>
+                        <BelegLemma verdichtung="-a" lemma="inferiora">-a</BelegLemma>
+                        <TEXT> declinentur.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+              </Anhänger>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>3</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>spectat ad opes</LateinischerAusdruck>
+                    <TEXT>, </TEXT>
+                    <LateinischerAusdruck>vires i. q. debilior</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>schwächer</DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>unterlegen</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Poeta Saxo" werk="">
+                  <Quelle>
+                    <Autor>Poeta Saxo</Autor>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>1,384</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>Francos quamvis armis animisque priores impar fecit et angustus locus </TEXT>
+                      <BelegLemma verdichtung="-es" lemma="inferiores">-es</BelegLemma>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Chron." werk="Reinh.">
+                  <Quelle>
+                    <Autor>Chron.</Autor>
+                    <L> </L>
+                    <Werk>Reinh.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>a. 1208 p. 574,38</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>rex </TEXT>
+                      <BelegLemma verdichtung="inferior" lemma="inferior">inferior</BelegLemma>
+                      <TEXT> consiliis, rebus et auxiliis defecerat.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>p. 575,31</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>rex </TEXT>
+                      <BelegLemma verdichtung="inferior" lemma="inferior">inferior</BelegLemma>
+                      <TEXT>, qui paulo ante quasi super-ficiarius abiectior habebatur, ... ad summa erigitur.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>4</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>spectat ad aptitudinem, dignitatem, morum probitatem</TEXT>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Hugeb." werk="Willib.">
+                  <Quelle>
+                    <Autor>Hugeb.</Autor>
+                    <L> </L>
+                    <Werk>Willib.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>6 p. 106,23</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>cui ille in pauperum opitulatione </TEXT>
+                      <BelegLemma verdichtung="-r" lemma="inferior">-r</BelegLemma>
+                      <TEXT> aut in nudium habitu tardior?</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Theod. Trev." werk="Liutr.">
+                  <Quelle>
+                    <Autor>Theod. Trev.</Autor>
+                    <L> </L>
+                    <Werk>Liutr.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>145,2</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>que etsi non dignitate equali resplendeat atque vite claritate longe sit </TEXT>
+                      <BelegLemma verdichtung="inferior" lemma="inferior">inferior</BelegLemma>
+                      <TEXT> illi, qui Christi precursor </TEXT>
+                      <Zusatz>eqs.</Zusatz>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Thietm." werk="chron.">
+                  <Quelle>
+                    <Autor>Thietm.</Autor>
+                    <L> </L>
+                    <Werk>chron.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>5,9 p. 230,5</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>Bolizlavus, Miseconis filius patri longe </TEXT>
+                      <BelegLemma verdichtung="-r" lemma="inferior">-r</BelegLemma>
+                      <TEXT> eqs. ibid. al.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>5</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>spectat ad gravitatem, momentum</TEXT>
+                </Klassifikation>
+                <L> </L>
+                <Nebenbedeutungen>
+                  <TEXT>(</TEXT>
+                  <Klassifikation>
+                    <TEXT>de rebus</TEXT>
+                  </Klassifikation>
+                  <TEXT>;</TEXT>
+                  <L> </L>
+                  <Klassifikation>
+                    <Kategorienangabe>
+                      <TEXT>iur. de lenioribus delictis iudicandis [</TEXT>
+                      <ZITAT>‘niedere Gerichtsbarkeit’</ZITAT>
+                      <TEXT>]</TEXT>
+                    </Kategorienangabe>
+                  </Klassifikation>
+                  <TEXT>:</TEXT>
+                  <L> </L>
+                  <NBVerweise>
+                    <Verweise>
+                      <a href="#anker_1" alias="⇒" globaleReferenz="inferus.anker-1" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="272:77: Warning (503): Anker für Verweis auf Ziel 'anker_1' fehlt!">⇒😯</a>
+                      <L> </L>
+                      <a href="#anker_2" alias="⇒" globaleReferenz="inferus.anker-2" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="273:17: Warning (503): Anker für Verweis auf Ziel 'anker_2' fehlt!">⇒😯</a>
+                    </Verweise>
+                  </NBVerweise>
+                  <TEXT>)</TEXT>
+                </Nebenbedeutungen>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Vita" werk="Rimb.">
+                  <Quelle>
+                    <Autor>Vita</Autor>
+                    <L> </L>
+                    <Werk>Rimb.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>17</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>oportet assumere, quod est melius, et relinquere, quod habetur </TEXT>
+                      <BelegLemma verdichtung="-s" lemma="inferiors">-s</BelegLemma>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Chart." werk="Rhen. med.">
+                  <Quelle>
+                    <Autor>Chart.</Autor>
+                    <L> </L>
+                    <Werk>Rhen. med.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>
+                        <ROEMISCHE_ZAHL>III</ROEMISCHE_ZAHL>
+                        <TEXT> 1357 p. 979,3</TEXT>
+                      </Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <BelegLemma verdichtung="-a" lemma="inferiora">-a</BelegLemma>
+                      <TEXT> iudicia de suis homini-bus eidem abbati liberaliter relinquimus </TEXT>
+                      <Zusatz>(sc. archiepiscopus)</Zusatz>
+                      <TEXT> iuris-dictione superiori nobis integraliter reservata.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>B</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>deterior</LateinischerAusdruck>
+                  <TEXT>, </TEXT>
+                  <LateinischerAusdruck>peior</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>schlechter</DeutscherAusdruck>
+                  <TEXT>, </TEXT>
+                  <DeutscherAusdruck>schlimmer</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Thietm." werk="chron.">
+                <Quelle>
+                  <Autor>Thietm.</Autor>
+                  <L> </L>
+                  <Werk>chron.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>8,13 p. 508,32</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>tempora haec prioribus cunctis </TEXT>
+                    <BelegLemma verdichtung="-a" lemma="inferiora">-a</BelegLemma>
+                    <TEXT> plus demunt, quam alicui addunt. </TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+        </U1Bedeutung>
+      </Bedeutung>
+    </BedeutungsPosition>
+  </UnterArtikel>
+  <p>
+    
+    
+  </p>
+  <UnterArtikel>
+    <L> </L>
+    <SubLemmaPosition>
+      <WortartAnzeige>adv.</WortartAnzeige>
+      <L> </L>
+      <LemmaBlock>
+        <Lemma id="INFERIUS">
+          <LemmaWort>inferius.</LemmaWort>
+        </Lemma>
+        <L>  </L>
+        <GrammatikPosition>
+          <Grammatik>
+            <wortart verdichtung="adv." class="versteckt" wortart="adverbium">adv.</wortart>
+          </Grammatik>
+        </GrammatikPosition>
+      </LemmaBlock>
+    </SubLemmaPosition>
+    <ArtikelKopf></ArtikelKopf>
+    <BedeutungsPosition>
+      <Bedeutung class="kein_linker_rand">
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>subter(ius)</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>deorsum</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>
+                <DeutscheKlammer>
+                  <TEXT>(</TEXT>
+                  <DeutscheBedeutung>
+                    <DeutscherAusdruck>weiter</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                  <TEXT>)</TEXT>
+                </DeutscheKlammer>
+                <L> </L>
+                <DeutschesWort>unten</DeutschesWort>
+              </DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>tiefer</DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L spatium="4">    </L>
+        <U1Bedeutung>
+          <Zähler>I</Zähler>
+          <Bedeutungsangabe>
+            <Klassifikation>
+              <Kategorienangabe>
+                <TEXT>proprie</TEXT>
+              </Kategorienangabe>
+              <L> </L>
+              <Zusatz>
+                <TEXT>(in imag.:</TEXT>
+                <L> </L>
+                <Verweise>
+                  <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="295:46: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                </Verweise>
+                <TEXT>)</TEXT>
+              </Zusatz>
+            </Klassifikation>
+            <TEXT>: </TEXT>
+          </Bedeutungsangabe>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>A</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad altitudinem locorum</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>1</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>in univ.</TEXT>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Tract." werk="de caus. mul.">
+                  <Quelle>
+                    <Autor>Tract.</Autor>
+                    <L> </L>
+                    <Werk>de caus. mul.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>31 p. 28,16</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>species male odore naribus infunde et </TEXT>
+                      <BelegLemma verdichtung="-s" id="inferius" globaleId="inferus.inferius" lemma="inferius">-s</BelegLemma>
+                      <TEXT> fomicare species bene olentis.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Theoph." werk="sched.">
+                  <Quelle>
+                    <Autor>Theoph.</Autor>
+                    <L> </L>
+                    <Werk>sched.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>3,10</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>fiunt ... ferri graciles ..., quorum caudae ... sunt sursum curvae, </TEXT>
+                      <BelegLemma verdichtung="inferius" lemma="inferius">inferius</BelegLemma>
+                      <TEXT> autem per longitudinem est tractus fossus.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>3,80 p. 144,26.</Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Frid. II. Imp." werk="art. ven.">
+                  <Quelle>
+                    <Autor>Frid. II. Imp.</Autor>
+                    <L> </L>
+                    <Werk>art. ven.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>4 p. 103,22</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>falconum ... volantium ad grues stantes quidam volant alte, quidam </TEXT>
+                      <BelegLemma verdichtung="inferius" lemma="inferius">inferius</BelegLemma>
+                      <TEXT>. v. et.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>
+                        <TEXT>p. 12,56. vol. </TEXT>
+                        <ROEMISCHE_ZAHL>III.</ROEMISCHE_ZAHL>
+                        <TEXT> p. 43,34.</TEXT>
+                      </Stelle>
+                    </Stellenangabe>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L spatium="3+1">    </L>
+              <Anhänger>
+                <Bedeutungsangabe>
+                  <Klassifikation>
+                    <TEXT>in imag.</TEXT>
+                  </Klassifikation>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Beleg>
+                  <Quellenangabe autor="Rimb." werk="Anscar.">
+                    <Quelle>
+                      <Autor>Rimb.</Autor>
+                      <L> </L>
+                      <Werk>Anscar.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>3 p. 23,14</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>ipse om-nes interius ... regebat, ipse superius protegebat, ipse </TEXT>
+                        <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                        <TEXT> sustine-bat.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+              </Anhänger>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>2</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>de regionibus</TEXT>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Trad." werk="Scheftl.">
+                  <Quelle>
+                    <Autor>Trad.</Autor>
+                    <L> </L>
+                    <Werk>Scheftl.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>211</Stelle>
+                      <L> </L>
+                      <Datierung>(c. 1174/80)</Datierung>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>delegavit Fridericus mansum unum aput Terves </TEXT>
+                      <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                      <TEXT> situm.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Frid. II. Imp." werk="epist.">
+                  <Quelle>
+                    <Autor>Frid. II. Imp.</Autor>
+                    <L> </L>
+                    <Werk>epist.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>B 3</Stelle>
+                      <L> </L>
+                      <opus_minus>
+                        <TEXT>(</TEXT>
+                        <Werk>DtArch. 19. 1963. p. 421,9</Werk>
+                        <TEXT>)</TEXT>
+                      </opus_minus>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>comes Symon, a Papia </TEXT>
+                      <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                      <TEXT> noster vicarius generalis.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Acta" werk="imp. Böhmer">
+                  <Quelle>
+                    <Autor>Acta</Autor>
+                    <L> </L>
+                    <Werk>imp. Böhmer</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>969 p. 675,4</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>iuravit Ecelinus ... adiuvare ... Ubertum ... capitaneum generalem ab Ambro </TEXT>
+                      <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L spatium="3+1">    </L>
+              <Anhänger>
+                <Bedeutungsangabe>
+                  <Interpretamente>
+                    <Zusatz>usu praep. i. q.</Zusatz>
+                    <L> </L>
+                    <LateinischeBedeutung>
+                      <LateinischerAusdruck>
+                        <LateinischesWort>infra</LateinischesWort>
+                        <L> </L>
+                        <LateinischeKlammer>
+                          <TEXT>(</TEXT>
+                          <LateinischeBedeutung>
+                            <LateinischerAusdruck>ab</LateinischerAusdruck>
+                          </LateinischeBedeutung>
+                          <TEXT>)</TEXT>
+                        </LateinischeKlammer>
+                      </LateinischerAusdruck>
+                    </LateinischeBedeutung>
+                    <L> </L>
+                    <DeutscheBedeutung>
+                      <TEXT> — </TEXT>
+                      <DeutscherAusdruck>
+                        <DeutschesWort>unterhalb</DeutschesWort>
+                        <L> </L>
+                        <DeutscheKlammer>
+                          <TEXT>(</TEXT>
+                          <DeutscheBedeutung>
+                            <DeutscherAusdruck>von</DeutscherAusdruck>
+                          </DeutscheBedeutung>
+                          <TEXT>)</TEXT>
+                        </DeutscheKlammer>
+                      </DeutscherAusdruck>
+                    </DeutscheBedeutung>
+                  </Interpretamente>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Belege>
+                  <Beleg>
+                    <Quellenangabe autor="Annal." werk="Rod.">
+                      <Quelle>
+                        <Autor>Annal.</Autor>
+                        <L> </L>
+                        <Werk>Rod.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle>a. 1120</Stelle>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>dimidium </TEXT>
+                          <Zusatz>(sc. mansum)</Zusatz>
+                          <TEXT> in monte versus Rothe ... et apud Rothe domus duas ... et </TEXT>
+                          <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                          <TEXT> Rothe domum et pratum </TEXT>
+                          <Zusatz>(sc. dedit comes)</Zusatz>
+                          <TEXT>.</TEXT>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                  <L> </L>
+                  <Beleg>
+                    <Quellenangabe autor="Chart." werk="Turic. add.">
+                      <Quelle>
+                        <Autor>Chart.</Autor>
+                        <L> </L>
+                        <Werk>Turic. add.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle>
+                            <TEXT>660</TEXT>
+                            <HOCHGESTELLT>a</HOCHGESTELLT>
+                          </Stelle>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>contuli </TEXT>
+                          <Zusatz>(sc. Hugo)</Zusatz>
+                          <TEXT> fratribus ... curiam meam sitam </TEXT>
+                          <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                          <TEXT> Mettingen in der Owa.</TEXT>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                  <L> </L>
+                  <Beleg>
+                    <Quellenangabe autor="Registr." werk="Ringrav.">
+                      <Quelle>
+                        <Autor>Registr.</Autor>
+                        <L> </L>
+                        <Werk>Ringrav.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle>2,5</Stelle>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>comes Silvestris concessit eidem W. agros </TEXT>
+                          <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                          <TEXT> Richardeshusen iacentes.</TEXT>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                </Belege>
+              </Anhänger>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>3</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>ulterius</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>weiter weg</DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>dahinter</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Waltharius" werk="">
+                  <Quelle>
+                    <Autor>Waltharius</Autor>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>560</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>hoc heros dicto introitum stationis adibat, </TEXT>
+                      <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                      <TEXT> stanti praedicens sic mulieri: </TEXT>
+                      <ZITAT>‘eqs.’</ZITAT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>B</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad sonos, modos graviores (usu mus.)</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Hucbald." werk="mus.">
+                <Quelle>
+                  <Autor>Hucbald.</Autor>
+                  <L> </L>
+                  <Werk>mus.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>46</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>ubi ... claudantur soni </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                    <TEXT> vel superius pro ratione quarundam litterarum.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Notker. Balb." werk="ad Lantb.">
+                <Quelle>
+                  <Autor>Notker. Balb.</Autor>
+                  <L> </L>
+                  <Werk>ad Lantb.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>p. 36</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <ROEMISCHE_ZAHL>I</ROEMISCHE_ZAHL>
+                    <TEXT> iusum vel </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                    <TEXT> insinuat gravitudinemque pro G interdum indicat.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Liber" werk="spec.">
+                <Quelle>
+                  <Autor>Liber</Autor>
+                  <L> </L>
+                  <Werk>spec.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>3 p. 31</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>secunda vox ex quibus speciebus constat? ex specie toni superius et ex specie semitonii </TEXT>
+                    <Zusatz>(interius add. C)</Zusatz>
+                    <TEXT> </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                    <TEXT>.</TEXT>
+                  </BelegText>
+                  <L> </L>
+                  <Zusatz>ibid. al.</Zusatz>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>C</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad scriptum, paginam</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Liber." werk="diurn.">
+                <Quelle class="kursiv">
+                  <Autorangabe>Liber.</Autorangabe>
+                  <L> </L>
+                  <Werk>diurn.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe class="kursiv">
+                    <Stelle>66 p. 62,18</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>xenodochium ... sub </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                    <TEXT> adscripta conditione tibi concedimus.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Cand. Fuld." werk="Eigil.">
+                <Quelle>
+                  <Autor>Cand. Fuld.</Autor>
+                  <L> </L>
+                  <Werk>Eigil.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>
+                      <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                      <TEXT> 15,19</TEXT>
+                    </Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>relliquiis, quas </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                    <TEXT> subnectere mens est </TEXT>
+                    <Zusatz>eqs. (cf. 15,33sqq.).</Zusatz>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Dipl." werk="Otton.">
+                <Quelle>
+                  <Autor>Dipl.</Autor>
+                  <L> </L>
+                  <Werk>Otton.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>
+                      <ROEMISCHE_ZAHL>I.</ROEMISCHE_ZAHL>
+                      <TEXT> 136</TEXT>
+                    </Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>ut ... verius credatur ..., subter manu propria confirmantes anulo nostro </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                    <TEXT> iussimus insigniri. al.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>D</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>spectat ad tempus i. q. post(ea)</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>später</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Cand. Fuld." werk="Eigil.">
+                <Quelle>
+                  <Autor>Cand. Fuld.</Autor>
+                  <L> </L>
+                  <Werk>Eigil.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>
+                      <ROEMISCHE_ZAHL>I</ROEMISCHE_ZAHL>
+                      <TEXT> 22</TEXT>
+                    </Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>qui (sc. natalis sancti Ignatii) paulo </TEXT>
+                    <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                    <TEXT> ab hac (sc. Styrmes) anniversaria numeratur.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+        </U1Bedeutung>
+        <P>    </P>
+        <U1Bedeutung class="kein_linker_rand">
+          <Zähler>II</Zähler>
+          <Bedeutungsangabe>
+            <Interpretamente>
+              <LateinischeBedeutung>
+                <LateinischerAusdruck>translate i. q. indignius</LateinischerAusdruck>
+              </LateinischeBedeutung>
+              <L> </L>
+              <DeutscheBedeutung>
+                <TEXT> — </TEXT>
+                <DeutscherAusdruck>
+                  <DeutscheKlammer>
+                    <TEXT>(</TEXT>
+                    <DeutscheBedeutung>
+                      <DeutscherAusdruck>zu</DeutscherAusdruck>
+                    </DeutscheBedeutung>
+                    <TEXT>)</TEXT>
+                  </DeutscheKlammer>
+                  <L> </L>
+                  <DeutschesWort>ungebührlich</DeutschesWort>
+                  <L> </L>
+                  <Zusatz>(cf. infra Thangm. Bernw. 15)</Zusatz>
+                </DeutscherAusdruck>
+              </DeutscheBedeutung>
+            </Interpretamente>
+            <TEXT>: </TEXT>
+          </Bedeutungsangabe>
+          <L>  </L>
+          <Beleg>
+            <Quellenangabe autor="Thangm." werk="Bernw.">
+              <Quelle>
+                <Autor>Thangm.</Autor>
+                <L> </L>
+                <Werk>Bernw.</Werk>
+              </Quelle>
+              <L> </L>
+              <BelegStelle>
+                <Stellenangabe>
+                  <Stelle>3</Stelle>
+                </Stellenangabe>
+                <L> </L>
+                <BelegText>
+                  <TEXT>nec ab ullo </TEXT>
+                  <BelegLemma verdichtung="-s" lemma="inferius">-s</BelegLemma>
+                  <TEXT> tractabatur, quem universali virtutum decore respersum venerabatur rex. </TEXT>
+                </BelegText>
+              </BelegStelle>
+            </Quellenangabe>
+          </Beleg>
+        </U1Bedeutung>
+      </Bedeutung>
+    </BedeutungsPosition>
+  </UnterArtikel>
+  <p>
+    
+    
+  </p>
+  <UnterArtikel>
+    <L> </L>
+    <SubLemmaPosition>
+      <WortartAnzeige>superlativus</WortartAnzeige>
+      <L> </L>
+      <LemmaBlock grammatik_wie_bei="imus">
+        <Lemma id="INFIMUS">
+          <LemmaWort>infimus</LemmaWort>
+        </Lemma>
+      </LemmaBlock>
+      <L> </L>
+      <L> </L>
+      <vel> vel </vel>
+      <LemmaBlock>
+        <Lemma id="IMUS">
+          <LemmaWort>imus</LemmaWort>
+          <TEXT>,</TEXT>
+        </Lemma>
+        <L> </L>
+        <GrammatikPosition>
+          <Grammatik>
+            <wortart verdichtung="superlativus" class="versteckt" wortart="superlativus">
+              <ZOMBIE__></ZOMBIE__>
+              <TEXT>superlativus</TEXT>
+              <ZOMBIE__ davor=" 😢 " class="error" title="Error: nom_klasse expected, »; -a, -um\n ...« found!" err="383:16: Error (1010): nom_klasse expected, »; -a, -um\n ...« found!"></ZOMBIE__>
+            </wortart>
+            <flexion>
+              <FLEX>-a</FLEX>
+              <Text>,</Text>
+              <L> </L>
+              <FLEX>-um</FLEX>
+              <TEXT>.</TEXT>
+            </flexion>
+          </Grammatik>
+        </GrammatikPosition>
+      </LemmaBlock>
+    </SubLemmaPosition>
+    <ArtikelKopf>
+      <GebrauchsPosition>
+        <Besonderheiten>
+          <Besonderheit>
+            <Beschreibung>usu subst.:</Beschreibung>
+            <L> </L>
+            <Beleg>
+              <Zusatz>saepe, e. g.</Zusatz>
+              <L> </L>
+              <Verweise>
+                <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="386:36: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+              </Verweise>
+              <TEXT>. </TEXT>
+            </Beleg>
+          </Besonderheit>
+        </Besonderheiten>
+      </GebrauchsPosition>
+    </ArtikelKopf>
+    <BedeutungsPosition>
+      <Bedeutung class="kein_linker_rand">
+        <Zähler>I</Zähler>
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <Zusatz>usu originario i. q.</Zusatz>
+            <L> </L>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>fimo</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>imo loco situs</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>katýtatoß</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>unterster</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>ganz unten</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>sehr tief gelegen</DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L spatium="4">    </L>
+        <U1Bedeutung>
+          <Zähler>A</Zähler>
+          <Bedeutungsangabe>
+            <Klassifikation>
+              <TEXT>proprie</TEXT>
+            </Klassifikation>
+            <TEXT>: </TEXT>
+          </Bedeutungsangabe>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>1</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad altitudinem locorum</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>a</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>in univ.</TEXT>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L spatium="4">    </L>
+              <U4Bedeutung>
+                <Zähler>α</Zähler>
+                <Bedeutungsangabe>
+                  <Klassifikation>
+                    <TEXT>usu communi</TEXT>
+                  </Klassifikation>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Beleg>
+                  <Quellenangabe autor="Arbeo" werk="Corb.">
+                    <Quelle>
+                      <Autor>Arbeo</Autor>
+                      <L> </L>
+                      <Werk>Corb.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>4 p. 191,13</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>discurrentes (sc. ministri) per latera montium et ima convallium.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+                <L> </L>
+                <Beleg>
+                  <Quellenangabe autor="Walahfr." werk="Wett.">
+                    <Quelle>
+                      <Autor>Walahfr.</Autor>
+                      <L> </L>
+                      <Werk>Wett.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>437</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>velut ad superos imo devexit (sc. visionem) abysso.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+                <L> </L>
+                <Beleg>
+                  <Quellenangabe autor="Frid. II. Imp." werk="art. ven.">
+                    <Quelle>
+                      <Autor>Frid. II. Imp.</Autor>
+                      <L> </L>
+                      <Werk>art. ven.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>1 p. 112,25</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>volatus quarundum (sc. avium) est sepius prope terram et fimus, ut gallinarum. </TEXT>
+                        <FesterZusatz>persaepe</FesterZusatz>
+                        <TEXT>.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+                <L spatium="3+1">    </L>
+                <Anhänger>
+                  <Bedeutungsangabe>
+                    <Interpretamente>
+                      <Zusatz>subst. neutr. sing. i. q.</Zusatz>
+                      <L> </L>
+                      <LateinischeBedeutung>
+                        <LateinischerAusdruck>abyssus</LateinischerAusdruck>
+                      </LateinischeBedeutung>
+                      <L> </L>
+                      <DeutscheBedeutung>
+                        <TEXT> — </TEXT>
+                        <DeutscherAusdruck>Abgrund</DeutscherAusdruck>
+                      </DeutscheBedeutung>
+                    </Interpretamente>
+                    <TEXT>: </TEXT>
+                  </Bedeutungsangabe>
+                  <L>  </L>
+                  <Beleg>
+                    <Verweise>
+                      <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="411:23: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                    </Verweise>
+                    <TEXT>.</TEXT>
+                  </Beleg>
+                </Anhänger>
+              </U4Bedeutung>
+              <L spatium="4">    </L>
+              <U4Bedeutung>
+                <Zähler>β</Zähler>
+                <Bedeutungsangabe>
+                  <Interpretamente>
+                    <LateinischeBedeutung>
+                      <LateinischerAusdruck>humillimus</LateinischerAusdruck>
+                    </LateinischeBedeutung>
+                    <L> </L>
+                    <DeutscheBedeutung>
+                      <TEXT> — </TEXT>
+                      <DeutscherAusdruck>sehr niedrig</DeutscherAusdruck>
+                    </DeutscheBedeutung>
+                  </Interpretamente>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Beleg>
+                  <Quellenangabe autor="Gerh. August." werk="Udalr.">
+                    <Quelle>
+                      <Autor>Gerh. August.</Autor>
+                      <L> </L>
+                      <Werk>Udalr.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>1,12 l. 41</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>quae </TEXT>
+                        <Zusatz>(sc. civitas)</Zusatz>
+                        <TEXT> tunc &lt;imis sine&gt; </TEXT>
+                        <Zusatz>(firmissime M3)</Zusatz>
+                        <TEXT> turribus circumdata muris firma ex semet ipsa non fuit.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+                <L> </L>
+                <Beleg>
+                  <Quellenangabe autor="Anon." werk="Has.">
+                    <Quelle>
+                      <Autor>Anon.</Autor>
+                      <L> </L>
+                      <Werk>Has.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>29</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>imis et mediocribus aedificiis contenti erant antecessores </TEXT>
+                        <Zusatz>(sc. episcopi)</Zusatz>
+                        <TEXT>.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+              </U4Bedeutung>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>b</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <TEXT>locut. adv.</TEXT>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L spatium="4">    </L>
+              <U4Bedeutung>
+                <Zähler>α</Zähler>
+                <Bedeutungsangabe>
+                  <Interpretamente>
+                    <LateinischeBedeutung>
+                      <LateinischerAusdruck>ad fima</LateinischerAusdruck>
+                      <TEXT>, </TEXT>
+                      <LateinischerAusdruck>imis i. q. deorsum</LateinischerAusdruck>
+                    </LateinischeBedeutung>
+                    <L> </L>
+                    <DeutscheBedeutung>
+                      <TEXT> — </TEXT>
+                      <DeutscherAusdruck>nach unten</DeutscherAusdruck>
+                    </DeutscheBedeutung>
+                  </Interpretamente>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Beleg>
+                  <Quellenangabe autor="Walahfr." werk="carm.">
+                    <Quelle>
+                      <Autor>Walahfr.</Autor>
+                      <L> </L>
+                      <Werk>carm.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>14,1,5</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>quisquis tramite pendulo ... spheram plana ponit in area, ni prensam teneat manu, statim cernit ad fima cursu nare volubili.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+                <L> </L>
+                <Beleg>
+                  <Quellenangabe autor="Erchemb. Cas." werk="hist.">
+                    <Quelle>
+                      <Autor>Erchemb. Cas.</Autor>
+                      <L> </L>
+                      <Werk>hist.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>57</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>alii sponte ex eo (sc. muro) dissilierunt, quidam cervice tenus imis iacti sunt.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+              </U4Bedeutung>
+              <L spatium="4">    </L>
+              <U4Bedeutung>
+                <Zähler>β</Zähler>
+                <Bedeutungsangabe>
+                  <Interpretamente>
+                    <LateinischeBedeutung>
+                      <LateinischerAusdruck>de imis i. q. infra</LateinischerAusdruck>
+                    </LateinischeBedeutung>
+                    <L> </L>
+                    <DeutscheBedeutung>
+                      <TEXT> — </TEXT>
+                      <DeutscherAusdruck>unten</DeutscherAusdruck>
+                    </DeutscheBedeutung>
+                  </Interpretamente>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Beleg>
+                  <Quellenangabe autor="Carm." werk="Cantabr.">
+                    <Quelle>
+                      <Autor>Carm.</Autor>
+                      <L> </L>
+                      <Werk>Cantabr.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>A 12,3b,1</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>Y Grecam, </TEXT>
+                        <ROEMISCHE_ZAHL>I</ROEMISCHE_ZAHL>
+                        <TEXT> de imis continentem, sed fissam summotenus in ramosas binas partes eqs.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+              </U4Bedeutung>
+              <L spatium="4">    </L>
+              <U4Bedeutung>
+                <Zähler>γ</Zähler>
+                <Bedeutungsangabe>
+                  <Interpretamente>
+                    <LateinischeBedeutung>
+                      <LateinischerAusdruck>ab imis i. q. ab integro</LateinischerAusdruck>
+                    </LateinischeBedeutung>
+                    <L> </L>
+                    <DeutscheBedeutung>
+                      <TEXT> — </TEXT>
+                      <DeutscherAusdruck>von Grund auf</DeutscherAusdruck>
+                      <TEXT>, </TEXT>
+                      <DeutscherAusdruck>vollständig</DeutscherAusdruck>
+                    </DeutscheBedeutung>
+                  </Interpretamente>
+                  <TEXT>: </TEXT>
+                </Bedeutungsangabe>
+                <L>  </L>
+                <Beleg>
+                  <Quellenangabe autor="Dipl." werk="Otton.">
+                    <Quelle>
+                      <Autor>Dipl.</Autor>
+                      <L> </L>
+                      <Werk>Otton.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>
+                          <ROEMISCHE_ZAHL>III.</ROEMISCHE_ZAHL>
+                          <TEXT> 385 p. 814,40</TEXT>
+                        </Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>quod (monasterium) ... fundare et ab imis construere cepit praesul.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+              </U4Bedeutung>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>c</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>
+                      <LateinischesWort>subst. neutr. plur. i. q. viscera</LateinischesWort>
+                      <L> </L>
+                      <LateinischeKlammer>
+                        <TEXT>(</TEXT>
+                        <LateinischeBedeutung>
+                          <LateinischerAusdruck>terrae</LateinischerAusdruck>
+                        </LateinischeBedeutung>
+                        <TEXT>)</TEXT>
+                      </LateinischeKlammer>
+                    </LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>
+                      <DeutschesWort>das</DeutschesWort>
+                      <L> </L>
+                      <DeutscheKlammer>
+                        <TEXT>(</TEXT>
+                        <DeutscheBedeutung>
+                          <DeutscherAusdruck>Erd-</DeutscherAusdruck>
+                        </DeutscheBedeutung>
+                        <TEXT>)</TEXT>
+                      </DeutscheKlammer>
+                      <DeutschesWort>Innere</DeutschesWort>
+                    </DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>der Erdboden</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Epitaph." werk="var.">
+                  <Quelle>
+                    <Autor>Epitaph.</Autor>
+                    <L> </L>
+                    <Werk>var.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>
+                        <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                        <TEXT> 56,14</TEXT>
+                      </Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>corpus ad ima redit, spiritus alta petit.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Chart." werk="Hall.">
+                  <Quelle>
+                    <Autor>Chart.</Autor>
+                    <L> </L>
+                    <Werk>Hall.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>256 p. 244,2</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>cum ... utilitatibus omnibus, que in eis nunc sunt, que in superficie terre vel in imis eius commodalibus in posterum potuerint provenire </TEXT>
+                      <Einschub>
+                        <Beleg>
+                          <Quellenangabe autor="Chart." werk="Port." class="kein_rechter_rand">
+                            <Quelle>
+                              <Autor>(Chart.</Autor>
+                              <L> </L>
+                              <Werk>Port.</Werk>
+                            </Quelle>
+                            <L> </L>
+                            <BelegStelle>
+                              <Stellenangabe>
+                                <Stelle>127 p. 150,18)</Stelle>
+                                <TEXT>.</TEXT>
+                              </Stellenangabe>
+                            </BelegStelle>
+                          </Quellenangabe>
+                        </Beleg>
+                      </Einschub>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Transl." werk="Auct.">
+                  <Quelle>
+                    <Autor>Transl.</Autor>
+                    <L> </L>
+                    <Werk>Auct.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>1 p. 48B</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>corpora ... sanctorum adhuc in imis habita ... per sanctarum ecclesiarum oracula sequestrantur.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>d</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>
+                      <LateinischesWort>subst. neutr.</LateinischesWort>
+                      <L> </L>
+                      <Zusatz>
+                        <TEXT>(fere plur.; sing.:</TEXT>
+                        <L> </L>
+                        <Verweise>
+                          <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="459:62: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                        </Verweise>
+                        <TEXT>)</TEXT>
+                      </Zusatz>
+                      <L> </L>
+                      <LateinischesWort>i. q. superficies terrae</LateinischesWort>
+                    </LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>Erdoberfläche</DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>
+                      <DeutschesWort>irdische Welt</DeutschesWort>
+                      <L> </L>
+                      <Zusatz>
+                        <TEXT>(c. sensu vilitatis:</TEXT>
+                        <L> </L>
+                        <Verweise>
+                          <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="461:24: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                        </Verweise>
+                        <TEXT>)</TEXT>
+                      </Zusatz>
+                    </DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Trad." werk="Frising.">
+                  <Quelle>
+                    <Autor>Trad.</Autor>
+                    <L> </L>
+                    <Werk>Frising.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>373a</Stelle>
+                      <L> </L>
+                      <Datierung>(a. 817)</Datierung>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>ut unusquisque de ima ... animum suum ad celestia mansura elevaret.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Bruno Querf." werk="Adalb.">
+                  <Quelle>
+                    <Autor>Bruno Querf.</Autor>
+                    <L> </L>
+                    <Werk>Adalb.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>A 20</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>proceres ... admonuit, ne vel in parum fimis et terrenis cor figerent.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Hraban." werk="carm.">
+                  <Quelle>
+                    <Autor>Hraban.</Autor>
+                    <L> </L>
+                    <Werk>carm.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>34,2</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>omnipotens ... Christe, qui fima cum superis cuncta tenendo regis.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Dipl." werk="Heinr.">
+                  <Quelle>
+                    <Autor>Dipl.</Autor>
+                    <L> </L>
+                    <Werk>Heinr.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>
+                        <ROEMISCHE_ZAHL>III.</ROEMISCHE_ZAHL>
+                        <TEXT> 29 p. 39,4</TEXT>
+                      </Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>qui (episcopus) cum liquisset fima et migrasset ad superos </TEXT>
+                      <Zusatz>eqs.</Zusatz>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Cantat." werk="Argent.">
+                  <Quelle>
+                    <Autor>Cantat.</Autor>
+                    <L> </L>
+                    <Werk>Argent.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>28</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>Pascha, quo victor rediens ab imo ... super alta carnem astra levasti </TEXT>
+                      <Zusatz>(sc. Christus)</Zusatz>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>e</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>subst. neutr. plur. i. q. infernus</LateinischerAusdruck>
+                    <TEXT>, </TEXT>
+                    <LateinischerAusdruck>gehenna</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>Unterwelt</DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>Hölle</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Pass." werk="Petri et Pauli">
+                  <Quelle>
+                    <Autor>Pass.</Autor>
+                    <L> </L>
+                    <Werk>Petri et Pauli</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>169</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>Petrus, celo, terrae prefectus et imis, spiritibus taetris, quod cupiere, tulit.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>f</Zähler>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>subst. neutr. i. q. fundus</LateinischerAusdruck>
+                    <TEXT>, </TEXT>
+                    <LateinischerAusdruck>solum</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>Boden</DeutscherAusdruck>
+                    <TEXT>, </TEXT>
+                    <DeutscherAusdruck>Basis</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Hugeb." werk="Willib.">
+                  <Quelle>
+                    <Autor>Hugeb.</Autor>
+                    <L> </L>
+                    <Werk>Willib.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>4 p. 101,8</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>tollit unam cannam, que fuit concava et habuit imum </TEXT>
+                      <Zusatz>(linum var. l.; v. notam ed.)</Zusatz>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>2</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad partes corporis</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Lex" werk="Frision.">
+                <Quelle>
+                  <Autor>Lex</Autor>
+                  <L> </L>
+                  <Werk>Frision.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>add. 2,2</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>si indicem ad imum membrum praeciderit, vi solidos componat.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>3</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad sonos graves (usu mus.)</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Aurel. Reom." werk="mus.">
+                <Quelle>
+                  <Autor>Aurel. Reom.</Autor>
+                  <L> </L>
+                  <Werk>mus.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>16,19</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>quarta (sc. varietas) est, quae aliquotiens in imis deprimitur.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>4</Zähler>
+            <Bedeutungsangabe>
+              <Klassifikation>
+                <TEXT>spectat ad scriptum, paginam</TEXT>
+              </Klassifikation>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Agius" werk="comput.">
+                <Quelle>
+                  <Autor>Agius</Autor>
+                  <L> </L>
+                  <Werk>comput.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>3,13</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>in gyro pars summa suo tenet ordine men-ses, ima dies, horas ... revolvit.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>6,4</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>summas ipsorum (circuituum) subdit pars fima (sc. paginae) lunas.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>7,19</Stelle>
+                    <TEXT>.</TEXT>
+                  </Stellenangabe>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Walth. Spir." werk="Christoph.">
+                <Quelle>
+                  <Autor>Walth. Spir.</Autor>
+                  <L> </L>
+                  <Werk>Christoph.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>
+                      <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                      <TEXT> prol. 20</TEXT>
+                    </Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>in imo margine biblis.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>5</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>spectat ad ordinem i. q. novissimus</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>letzter</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Epitaph." werk="var.">
+                <Quelle>
+                  <Autor>Epitaph.</Autor>
+                  <L> </L>
+                  <Werk>var.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>
+                      <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                      <TEXT> 85,5</TEXT>
+                    </Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>Idibus hic </TEXT>
+                    <Zusatz>(sc. Ercambertus)</Zusatz>
+                    <TEXT> quinis Februi decesserat imis.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Bruno Querf." werk="fratr.">
+                <Quelle>
+                  <Autor>Bruno Querf.</Autor>
+                  <L> </L>
+                  <Werk>fratr.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>22 p. 73,10</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>qua </TEXT>
+                    <Zusatz>(mente)</Zusatz>
+                    <TEXT> homines ..., quibus improvisa mors ... incumbit, mallent bona, que non fecere, meliora fecisse ..., quamvis iam sero divisa mente hec et ima sorte promittunt. EPIST. Worm. </TEXT>
+                    <ROEMISCHE_ZAHL>I</ROEMISCHE_ZAHL>
+                    <TEXT> 40 ceterum unde nobiscum vestra dudum loquebatur epistola ima de fide servanda apud prepositum eqs.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Metell." werk="Quir.">
+                <Quelle>
+                  <Autor>Metell.</Autor>
+                  <L> </L>
+                  <Werk>Quir.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>5,39</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>sex mutant eadem tempora caesares regnandi vicibus quattuor editi: prima solus et ima, regnarunt mediis duo.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Zusatz>fort. add.:</Zusatz>
+              <L> </L>
+              <Quellenangabe autor="Mappae Clavic." werk="">
+                <Quelle>
+                  <Autor>Mappae Clavic.</Autor>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>108</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>permove illud </TEXT>
+                    <Zusatz>(sc. mixturam)</Zusatz>
+                    <TEXT> cotidie in die semel usque ad </TEXT>
+                    <BelegLemma verdichtung="imam" id="imam" globaleId="inferus.imam" lemma="imam">imam</BelegLemma>
+                    <TEXT> </TEXT>
+                    <Einschub>
+                      <BelegText>
+                        <TEXT>(unam</TEXT>
+                      </BelegText>
+                      <L> </L>
+                      <Beleg>
+                        <Quellenangabe autor="Compos." werk="Luc." class="kein_rechter_rand">
+                          <Quelle>
+                            <Autor>Compos.</Autor>
+                            <L> </L>
+                            <Werk>Luc.</Werk>
+                          </Quelle>
+                          <L> </L>
+                          <BelegStelle>
+                            <Stellenangabe>
+                              <Stelle>Q 6)</Stelle>
+                            </Stellenangabe>
+                          </BelegStelle>
+                        </Quellenangabe>
+                      </Beleg>
+                    </Einschub>
+                    <TEXT> ebdomadam.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Vita" werk="Erasmi">
+                <Quelle>
+                  <Autor>Vita</Autor>
+                  <L> </L>
+                  <Werk>Erasmi</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>128</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>refove </TEXT>
+                    <Zusatz>(sc. Christus)</Zusatz>
+                    <TEXT> famulum, ut non me mors ima retentet.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L spatium="3+1">    </L>
+            <Anhänger>
+              <Bedeutungsangabe>
+                <Interpretamente>
+                  <LateinischeBedeutung>
+                    <LateinischerAusdruck>usu subst. i. q. finis</LateinischerAusdruck>
+                  </LateinischeBedeutung>
+                  <L> </L>
+                  <DeutscheBedeutung>
+                    <TEXT> — </TEXT>
+                    <DeutscherAusdruck>Ende</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                </Interpretamente>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Belege>
+                <Beleg>
+                  <Quellenangabe autor="Ecbasis" werk="capt.">
+                    <Quelle>
+                      <Autor>Ecbasis</Autor>
+                      <L> </L>
+                      <Werk>capt.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>483</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>sic veris falsa remiscet vulpes, primo ne medium, medio ne discrepet imum.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+                <L> </L>
+                <Beleg>
+                  <Quellenangabe autor="Albert. M." werk="eth.">
+                    <Quelle>
+                      <Autor>Albert. M.</Autor>
+                      <L> </L>
+                      <Werk>eth.</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>
+                          <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                          <TEXT> 1,5,9 p. 69b,25</TEXT>
+                        </Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>in quibus </TEXT>
+                        <Zusatz>(carminibus encyclicis)</Zusatz>
+                        <TEXT> imum </TEXT>
+                        <TEXT class="grade">(</TEXT>
+                        <Zusatz>ci. Pörnbacher</Zusatz>
+                        <TEXT> unum </TEXT>
+                        <VariaLectioZusatz>ed.</VariaLectioZusatz>
+                        <TEXT class="grade">)</TEXT>
+                        <TEXT> coincidit cum principio.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+                <L> </L>
+                <Beleg>
+                  <Quellenangabe autor="Eberh. Heist." werk="Betel">
+                    <Quelle>
+                      <Autor>Eberh. Heist.</Autor>
+                      <L> </L>
+                      <Werk>Betel</Werk>
+                    </Quelle>
+                    <L> </L>
+                    <BelegStelle>
+                      <Stellenangabe>
+                        <Stelle>282</Stelle>
+                      </Stellenangabe>
+                      <L> </L>
+                      <BelegText>
+                        <TEXT>rex Ioachim factus Necao servire coactus est regi primo, regi Babilonis in imo.</TEXT>
+                      </BelegText>
+                    </BelegStelle>
+                  </Quellenangabe>
+                </Beleg>
+              </Belege>
+            </Anhänger>
+          </U2Bedeutung>
+        </U1Bedeutung>
+        <L spatium="4">    </L>
+        <U1Bedeutung>
+          <Zähler>B</Zähler>
+          <Bedeutungsangabe>
+            <Klassifikation>
+              <TEXT>translate</TEXT>
+            </Klassifikation>
+            <TEXT>: </TEXT>
+          </Bedeutungsangabe>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>1</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>minimus</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>geringster</DeutscherAusdruck>
+                  <TEXT>, </TEXT>
+                  <DeutscherAusdruck>unbedeutendster</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>a</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <Kategorienangabe>
+                    <TEXT>spectat ad condicionem, statum</TEXT>
+                  </Kategorienangabe>
+                  <L> </L>
+                  <Zusatz>
+                    <TEXT>(fere de hominibus; de angelis:</TEXT>
+                    <L> </L>
+                    <Verweise>
+                      <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="544:26: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                    </Verweise>
+                    <TEXT>; de ordine:</TEXT>
+                    <L> </L>
+                    <Verweise>
+                      <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="544:51: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+                    </Verweise>
+                    <TEXT>)</TEXT>
+                  </Zusatz>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Form." werk="Ratisb.">
+                  <Quelle>
+                    <Autor>Form.</Autor>
+                    <L> </L>
+                    <Werk>Ratisb.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>
+                        <ROEMISCHE_ZAHL>II</ROEMISCHE_ZAHL>
+                        <TEXT> 9</TEXT>
+                      </Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>quamvis ... omnium servorum Dei sim </TEXT>
+                      <BelegLemma verdichtung="-fimus" id="infimus" globaleId="inferus.infimus" lemma="infimus">-fimus</BelegLemma>
+                      <TEXT> </TEXT>
+                      <Einschub>
+                        <BelegText>
+                          <TEXT>(famulus</TEXT>
+                        </BelegText>
+                        <L> </L>
+                        <Beleg>
+                          <Quellenangabe autor="Form." werk="Sal. Lind." class="kein_rechter_rand">
+                            <Quelle>
+                              <Autor>Form.</Autor>
+                              <L> </L>
+                              <Werk>Sal. Lind.</Werk>
+                            </Quelle>
+                            <L> </L>
+                            <BelegStelle>
+                              <Stellenangabe>
+                                <Stelle>9)</Stelle>
+                              </Stellenangabe>
+                            </BelegStelle>
+                          </Quellenangabe>
+                        </Beleg>
+                      </Einschub>
+                      <TEXT>.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Annal." werk="Quedl.">
+                  <Quelle>
+                    <Autor>Annal.</Autor>
+                    <L> </L>
+                    <Werk>Quedl.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>a. 991 p. 479,9</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>Manogold ..., non fimus Sueviae matris filius, obiit.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Chart." werk="episc. Halb.">
+                  <Quelle>
+                    <Autor>Chart.</Autor>
+                    <L> </L>
+                    <Werk>episc. Halb.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>508 p. 455,30</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>sicut bona ... de manu ad manum ab fima ad supremam resignando conscenderant eqs.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Albert. M." werk="cael. hier.">
+                  <Quelle>
+                    <Autor>Albert. M.</Autor>
+                    <L> </L>
+                    <Werk>cael. hier.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>8 p. 129,24</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>fimae hierarchiae </TEXT>
+                      <Zusatz>(sc. angelorum)</Zusatz>
+                      <TEXT> est transfundere illuminationes in homines.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+              <L> </L>
+              <Beleg>
+                <Quellenangabe autor="Ludolf." werk="summ.">
+                  <Quelle>
+                    <Autor>Ludolf.</Autor>
+                    <L> </L>
+                    <Werk>summ.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>2,1 p. 361,2</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>est ... tam clericalis quam laicalis ordo triplex: summus, medius, fimus. al.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+            <L spatium="4">    </L>
+            <U3Bedeutung>
+              <Zähler>b</Zähler>
+              <Bedeutungsangabe>
+                <Klassifikation>
+                  <Kategorienangabe>
+                    <TEXT>spectat ad gravitatem, momentum</TEXT>
+                  </Kategorienangabe>
+                  <L> </L>
+                  <Zusatz>(de rebus)</Zusatz>
+                </Klassifikation>
+                <TEXT>: </TEXT>
+              </Bedeutungsangabe>
+              <L>  </L>
+              <Beleg>
+                <Quellenangabe autor="Froum." werk="carm.">
+                  <Quelle>
+                    <Autor>Froum.</Autor>
+                    <L> </L>
+                    <Werk>carm.</Werk>
+                  </Quelle>
+                  <L> </L>
+                  <BelegStelle>
+                    <Stellenangabe>
+                      <Stelle>1,6</Stelle>
+                    </Stellenangabe>
+                    <L> </L>
+                    <BelegText>
+                      <TEXT>fima si fue-rint </TEXT>
+                      <Zusatz>(sc. narrata)</Zusatz>
+                      <TEXT>, non sunt spernenda legenti.</TEXT>
+                    </BelegText>
+                  </BelegStelle>
+                </Quellenangabe>
+              </Beleg>
+            </U3Bedeutung>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>2</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>pessimus</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>schlimmster</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Pass." werk="Quir. Teg.">
+                <Quelle>
+                  <Autor>Pass.</Autor>
+                  <L> </L>
+                  <Werk>Quir. Teg.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>12,39 (vs.)</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>omnia mortem intentant misero </TEXT>
+                    <Zusatz>(sc. caeco in via relicto)</Zusatz>
+                    <TEXT> terroribus undique imis </TEXT>
+                    <Zusatz>(sevis 3)</Zusatz>
+                    <TEXT>.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Berth. Ratisb." werk="serm.">
+                <Quelle>
+                  <Autor>Berth. Ratisb.</Autor>
+                  <L> </L>
+                  <Werk>serm.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>6 p. 37,15</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>tales religiosi (i. debiles in probatione Dei) fiunt ut immi diaboli.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>3</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>intimus</LateinischerAusdruck>
+                  <TEXT>, </TEXT>
+                  <LateinischerAusdruck>profundus</LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>innerster</DeutscherAusdruck>
+                  <TEXT>, </TEXT>
+                  <DeutscherAusdruck>innig</DeutscherAusdruck>
+                  <TEXT>, </TEXT>
+                  <DeutscherAusdruck>innigster</DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Arbeo" werk="Emm.">
+                <Quelle>
+                  <Autor>Arbeo</Autor>
+                  <L> </L>
+                  <Werk>Emm.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>40</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>cum lacrimis ex himo cordis arcae indesinenter Deo fundebat preces, ut </TEXT>
+                    <Zusatz>eqs.</Zusatz>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Hraban." werk="carm.">
+                <Quelle>
+                  <Autor>Hraban.</Autor>
+                  <L> </L>
+                  <Werk>carm.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>40,14,3</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>flet mixta senibus plebs iuniorum, ex imo gemitus pectore ducunt </TEXT>
+                    <Einschub>
+                      <FesterZusatz>(sim.</FesterZusatz>
+                      <L> </L>
+                      <Belege>
+                        <Beleg>
+                          <Quellenangabe autor="Walahfr." werk="carm." class="kein_rechter_rand">
+                            <Quelle>
+                              <Autor>Walahfr.</Autor>
+                              <L> </L>
+                              <Werk>carm.</Werk>
+                            </Quelle>
+                            <L> </L>
+                            <BelegStelle>
+                              <Stellenangabe>
+                                <Stelle>18,13.</Stelle>
+                                <TEXT>;</TEXT>
+                              </Stellenangabe>
+                            </BelegStelle>
+                          </Quellenangabe>
+                        </Beleg>
+                        <L> </L>
+                        <Beleg>
+                          <Quellenangabe autor="Waltharius" werk="carm." class="kein_rechter_rand">
+                            <Quelle>
+                              <Autor>Waltharius</Autor>
+                            </Quelle>
+                            <L> </L>
+                            <BelegStelle>
+                              <Stellenangabe>
+                                <Stelle>237.</Stelle>
+                                <L> </L>
+                                <FesterZusatz>al.)</FesterZusatz>
+                              </Stellenangabe>
+                            </BelegStelle>
+                          </Quellenangabe>
+                        </Beleg>
+                      </Belege>
+                    </Einschub>
+                    <TEXT>.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Walahfr." werk="carm.">
+                <Quelle>
+                  <Autor>Walahfr.</Autor>
+                  <L> </L>
+                  <Werk>carm.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>83,1,4</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>celebremus ymnum cordis ab imo </TEXT>
+                    <Einschub>
+                      <Beleg>
+                        <Quellenangabe autor="Waltharius" werk="carm." class="kein_rechter_rand">
+                          <Quelle>
+                            <Autor>(Waltharius</Autor>
+                          </Quelle>
+                          <L> </L>
+                          <BelegStelle>
+                            <Stellenangabe>
+                              <Stelle>256. 856)</Stelle>
+                            </Stellenangabe>
+                          </BelegStelle>
+                        </Quellenangabe>
+                      </Beleg>
+                    </Einschub>
+                    <TEXT>. FROUM. carm. 28,3 corda per ima gemunt.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Chart." werk="archiep. Magd.">
+                <Quelle>
+                  <Autor>Chart.</Autor>
+                  <L> </L>
+                  <Werk>archiep. Magd.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>134 p. 191,28</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>quod gravius immis viscerum suspiriis est ingemiscendum eqs.</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+            <L> </L>
+            <Beleg>
+              <Quellenangabe autor="Epist." werk="Hann.">
+                <Quelle>
+                  <Autor>Epist.</Autor>
+                  <L> </L>
+                  <Werk>Hann.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>37 p. 79,23</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>ubi ... ille imus dulcis in amore gradus?</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+          <L spatium="4">    </L>
+          <U2Bedeutung>
+            <Zähler>4</Zähler>
+            <Bedeutungsangabe>
+              <Interpretamente>
+                <LateinischeBedeutung>
+                  <LateinischerAusdruck>
+                    <LateinischesWort>noctis infima i. q. obscuritas</LateinischesWort>
+                    <L> </L>
+                    <LateinischeKlammer>
+                      <TEXT>(</TEXT>
+                      <LateinischeBedeutung>
+                        <LateinischerAusdruck>profunda</LateinischerAusdruck>
+                      </LateinischeBedeutung>
+                      <TEXT>)</TEXT>
+                    </LateinischeKlammer>
+                  </LateinischerAusdruck>
+                </LateinischeBedeutung>
+                <L> </L>
+                <DeutscheBedeutung>
+                  <TEXT> — </TEXT>
+                  <DeutscherAusdruck>
+                    <DeutscheKlammer>
+                      <TEXT>(</TEXT>
+                      <DeutscheBedeutung>
+                        <DeutscherAusdruck>tiefste</DeutscherAusdruck>
+                      </DeutscheBedeutung>
+                      <TEXT>)</TEXT>
+                    </DeutscheKlammer>
+                    <L> </L>
+                    <DeutschesWort>Dunkelheit</DeutschesWort>
+                  </DeutscherAusdruck>
+                </DeutscheBedeutung>
+              </Interpretamente>
+              <TEXT>: </TEXT>
+            </Bedeutungsangabe>
+            <L>  </L>
+            <Beleg>
+              <Quellenangabe autor="Carm." werk="Bur.">
+                <Quelle>
+                  <Autor>Carm.</Autor>
+                  <L> </L>
+                  <Werk>Bur.</Werk>
+                </Quelle>
+                <L> </L>
+                <BelegStelle>
+                  <Stellenangabe>
+                    <Stelle>87,4,7</Stelle>
+                  </Stellenangabe>
+                  <L> </L>
+                  <BelegText>
+                    <TEXT>tenet (sc. puella socio carens) noctis fima sub intima cordis (ci. Vollmann, cardinis ed.) custodia (v. comm. ed.).</TEXT>
+                  </BelegText>
+                </BelegStelle>
+              </Quellenangabe>
+            </Beleg>
+          </U2Bedeutung>
+        </U1Bedeutung>
+      </Bedeutung>
+      <P>    </P>
+      <Bedeutung class="kein_linker_rand">
+        <Zähler>II</Zähler>
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>superl. pro positivo i. q. inferus</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>infero loco situs</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>
+                <DeutschesWort>tief</DeutschesWort>
+                <L> </L>
+                <DeutscheKlammer>
+                  <TEXT>(</TEXT>
+                  <DeutscheBedeutung>
+                    <DeutscherAusdruck>gelegen</DeutscherAusdruck>
+                  </DeutscheBedeutung>
+                  <TEXT>)</TEXT>
+                </DeutscheKlammer>
+              </DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>niedrig</DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Carm." werk="cod. Vat.">
+            <Quelle>
+              <Autor>Carm.</Autor>
+              <L> </L>
+              <Werk>cod. Vat.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>(5330) 14,26</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>minus hima ferit fulgur lapidans sublimia crebro.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Ysengrimus" werk="">
+            <Quelle>
+              <Autor>Ysengrimus</Autor>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>7,459</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>quo magis alta tenet nequam, magis ima meretur, et bonus ex humili surgit ad alta loco.</TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Frid. II. Imp." werk="art. ven.">
+            <Quelle>
+              <Autor>Frid. II. Imp.</Autor>
+              <L> </L>
+              <Werk>art. ven.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>2 p. 174,28</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>perticarum ... alia est alta, alia est ima.</TEXT>
+              </BelegText>
+            </BelegStelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>p. 178,8sqq. 6 p. 226,14</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>quod ... sunt (sc. quaedam aves) alti volatus, quod imi, quod longi eqs. </TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+      </Bedeutung>
+    </BedeutungsPosition>
+  </UnterArtikel>
+  <p>
+    
+    
+  </p>
+  <UnterArtikel>
+    <L> </L>
+    <SubLemmaPosition>
+      <WortartAnzeige>comparativus</WortartAnzeige>
+      <L> </L>
+      <LemmaBlock>
+        <Lemma id="IMIOR">
+          <nicht_klassisch>✶</nicht_klassisch>
+          <LemmaWort>imior</LemmaWort>
+          <TEXT>,</TEXT>
+        </Lemma>
+        <L>  </L>
+        <GrammatikPosition>
+          <Grammatik>
+            <wortart verdichtung="comparativus" class="versteckt" wortart="comparativus">
+              <ZOMBIE__></ZOMBIE__>
+              <TEXT>comparativus</TEXT>
+              <ZOMBIE__ davor=" 😢 " class="error" title="Error: nom_klasse expected, »; -ius\n \n BE...« found!" err="615:23: Error (1010): nom_klasse expected, »; -ius\n \n BE...« found!"></ZOMBIE__>
+            </wortart>
+            <flexion>
+              <FLEX>-ius</FLEX>
+              <TEXT>.</TEXT>
+            </flexion>
+          </Grammatik>
+        </GrammatikPosition>
+      </LemmaBlock>
+    </SubLemmaPosition>
+    <ArtikelKopf></ArtikelKopf>
+    <BedeutungsPosition>
+      <Bedeutung class="kein_linker_rand">
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>inferius situs</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>tiefer gelegen</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>
+                <DeutschesWort>stehend</DeutschesWort>
+                <L> </L>
+                <Zusatz>(usu subst.)</Zusatz>
+              </DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Mirac." werk="Bert.">
+            <Quelle>
+              <Autor>Mirac.</Autor>
+              <L> </L>
+              <Werk>Bert.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>11</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>nebulosa caligo totum ... texit nemoris locum, ita ut nec montani ab -bus nec inferiores (interiores </TEXT>
+                <VariaLectioZusatz>var l.</VariaLectioZusatz>
+                <TEXT>) a superioribus videri possent. </TEXT>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+      </Bedeutung>
+    </BedeutungsPosition>
+  </UnterArtikel>
+  <p>
+    
+    
+  </p>
+  <UnterArtikel>
+    <L> </L>
+    <SubLemmaPosition>
+      <WortartAnzeige>adv.</WortartAnzeige>
+      <L> </L>
+      <LemmaBlock>
+        <Lemma id="IME">
+          <LemmaWort>ime.</LemmaWort>
+        </Lemma>
+        <L>  </L>
+        <GrammatikPosition>
+          <Grammatik>
+            <wortart verdichtung="adv." class="versteckt" wortart="adverbium">adv.</wortart>
+          </Grammatik>
+        </GrammatikPosition>
+      </LemmaBlock>
+    </SubLemmaPosition>
+    <ArtikelKopf></ArtikelKopf>
+    <BedeutungsPosition>
+      <Bedeutung class="kein_linker_rand">
+        <Bedeutungsangabe>
+          <Interpretamente>
+            <LateinischeBedeutung>
+              <LateinischerAusdruck>imo loco</LateinischerAusdruck>
+              <TEXT>, </TEXT>
+              <LateinischerAusdruck>prope terram</LateinischerAusdruck>
+            </LateinischeBedeutung>
+            <L> </L>
+            <DeutscheBedeutung>
+              <TEXT> — </TEXT>
+              <DeutscherAusdruck>tief</DeutscherAusdruck>
+              <TEXT>, </TEXT>
+              <DeutscherAusdruck>knapp über der Erde</DeutscherAusdruck>
+            </DeutscheBedeutung>
+          </Interpretamente>
+          <TEXT>: </TEXT>
+        </Bedeutungsangabe>
+        <L> </L>
+        <Beleg>
+          <Quellenangabe autor="Frid. II. Imp." werk="art. ven.">
+            <Quelle>
+              <Autor>Frid. II. Imp.</Autor>
+              <L> </L>
+              <Werk>art. ven.</Werk>
+            </Quelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>3 p. 27,8</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>quidam (sc. falcones) vadunt ad loyrum alte et quidam </TEXT>
+                <BelegLemma verdichtung="-e" id="ime" globaleId="inferus.ime" lemma="ime">-e</BelegLemma>
+                <TEXT> et quidam mediocriter.</TEXT>
+              </BelegText>
+            </BelegStelle>
+            <L> </L>
+            <BelegStelle>
+              <Stellenangabe>
+                <Stelle>4 p. 103,26</Stelle>
+              </Stellenangabe>
+              <L> </L>
+              <BelegText>
+                <TEXT>volantium (sc. falconum) ... </TEXT>
+                <BelegLemma verdichtung="-e" lemma="ime">-e</BelegLemma>
+                <TEXT> et prope terram quidam volant inferius prope terram et directe et cito, quidam </TEXT>
+                <Zusatz>eqs. ibid. al. </Zusatz>
+              </BelegText>
+            </BelegStelle>
+          </Quellenangabe>
+        </Beleg>
+      </Bedeutung>
+    </BedeutungsPosition>
+    <VerweisPosition>
+      <L> </L>
+      <Verweise>
+        <a href="#_" globaleReferenz="inferus.-" class="warning" title="Verweisziel nicht gefunden. Fehlender Anker?" err="635:9: Warning (503): Anker für Verweis auf Ziel '_' fehlt!">⇒😯</a>
+      </Verweise>
+      <TEXT> </TEXT>
+    </VerweisPosition>
+  </UnterArtikel>
+  <L spatium="4">    </L>
+  <ArtikelVerfasser>Mandrin</ArtikelVerfasser>
+</Artikel>
