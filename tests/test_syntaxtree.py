@@ -498,6 +498,9 @@ class TestSerialization:
     def test_compact_representation(self):
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
         compact = tree.as_sxpr(compact=True)
+        print('(A\n  (B\n    (C "D")\n    (E "F"))\n  (G "H"))')
+        print('---')
+        print(compact)
         assert compact == '(A\n  (B\n    (C "D")\n    (E "F"))\n  (G "H"))'
         tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
         compact = tree.as_sxpr(compact=True)

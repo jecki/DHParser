@@ -1074,7 +1074,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(i=cython.int, k=cython.int, N=cython.int)
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
-                   allow_ommissions=False) -> str:
+                   allow_ommissions=False) -> List[str]:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -1100,7 +1100,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         tail = close_fn(self)
 
         if not self.result:
-            return head.rstrip() + tail.lstrip()
+            return [head.rstrip(), tail.lstrip()]
 
         tail = tail.lstrip(None if density & 2 else '')
 
@@ -1114,14 +1114,28 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             sep = '\n'
 
         if self._children:
-            content = []
+            content = [head, usetab]
+            first_child = self._children[0]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
                                            density, inline, inline_fn)
                 if subtree:
-                    st = [subtree] if inline else subtree.split('\n')
-                    content.append((sep + usetab).join(s for s in st))
-            return head + usetab + (sep + usetab).join(content) + tail
+                    if child != first_child:
+                        content.append(sep)
+                        content.append(usetab)
+                    # st = [subtree] if inline else subtree.split('\n')
+                    # content.append((sep + usetab).join(s for s in st))
+                    if inline:
+                        content.extend(subtree)
+                    else:
+                        for item in subtree:
+                            if item == '\n':
+                                content.append(sep)
+                                content.append(usetab)
+                            else:
+                                content.append(item)
+            content.append(tail)
+            return content
 
         res = self.content
         if not inline and not head and allow_ommissions:
@@ -1130,7 +1144,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if density & 1 and res.find('\n') < 0:
             # except for XML, add a gap between opening statement and content
             gap = ' ' if not inline and head and head.rstrip()[-1:] != '>' else ''
-            return head.rstrip() + gap + data_fn(res) + tail.lstrip()
+            return [head.rstrip() + gap + data_fn(res) + tail.lstrip()]
         else:
             lines = [data_fn(s) for s in res.split('\n')]
             N = len(lines)
@@ -1142,8 +1156,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     i += 1
                 while k >= 0 and not lines[k]:
                     k -= 1
-            lines = [usetab + line for line in lines[i:k + 1]]
-            return head + '\n'.join(lines) + tail
+            # lines = [usetab + line for line in lines[i:k + 1]]
+            # return head + '\n'.join(lines) + tail
+            content = [head, usetab]
+            for line in lines[i:k]:
+                content.append(line)
+                content.append('\n')
+            content.append(lines[k])
+            content.append(tail)
+            return content
+
 
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
@@ -1200,7 +1222,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
-        sxpr = self._tree_repr(' ' * indentation, opening, closing, pretty, density=density)
+        sxpr = ''.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
         return sxpr if compact else flatten_sxpr(sxpr, flatten_threshold)
 
     def as_xml(self, src: str = None,
@@ -1271,8 +1293,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     and node.attr.get('xml:space', 'default') == 'preserve')
 
         line_breaks = linebreaks(src) if src else []
-        return self._tree_repr(' ' * indentation, opening, closing, sanitizer,
-                               density=1, inline_fn=inlining, allow_ommissions=bool(omit_tags))
+        return ''.join(self._tree_repr(
+            ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
+            allow_ommissions=bool(omit_tags)))
 
     # JSON serialization ###
 
