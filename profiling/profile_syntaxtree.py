@@ -43,7 +43,7 @@ def cpu_profile(func, repetitions=1):
     # after your program ends
     stats = pstats.Stats(profile)
     stats.strip_dirs()
-    stats.sort_stats('time').print_stats(80)
+    stats.sort_stats('time').print_stats(20)
     return success
 
 
@@ -51,11 +51,18 @@ def profile_serializing():
     with open(os.path.join(scriptpath, 'data', 'inferus.ausgabe.xml')) as f:
         data = f.read()
     tree = parse_xml(data)
-    success = cpu_profile(tree.as_xml, 100)
+    print('XML')
+    cpu_profile(tree.as_xml, 100)
+    print('S-Expression')
+    print(tree.as_sxpr())
+    cpu_profile(lambda :tree.as_sxpr(compact=True), 100)
+    print('json')
+    cpu_profile(tree.as_json, 100)
     with open(os.path.join(scriptpath, 'data', 'testdoc3.xml')) as f:
         data = f.read()
     tree = parse_xml(data)
-    success = cpu_profile(tree.as_xml, 100)
+    print('XML')
+    cpu_profile(tree.as_xml, 100)
 
 
 if __name__ == "__main__":

@@ -816,9 +816,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
         """Returns an iterator over all direct children of a node that fulfill `criterion`."""
-        # if not self._children and self.result:
-        #     raise ValueError("Leaf-Node %s does not have any children to iterate over"
-        #                      % self.serialize())
         match_function = create_match_function(criterion)
         if reverse:
             for child in reversed(tuple(self.select_children(criterion, False))):
@@ -1198,13 +1195,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # txt.append(str(id(node)))  # for debugging
             if node.has_attr():
                 txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
-            if src:
-                line, col = line_col(lbreaks, node.pos)
-                txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
-            elif src is not None and node._pos >= 0:
-                txt.append(' `(pos %i)' % node.pos)
-            # if node.tag_name == ZOMBIE_TAG:
-            #     print(node.pos, id(node), id(node) in root.error_nodes, root.get_errors(node))
+            if node._pos >= 0:
+                if src:
+                    line, col = line_col(lbreaks, node.pos)
+                    txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
+                elif src is not None:
+                    txt.append(' `(pos %i)' % node.pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
                 txt.append(" `(%s)" % ';  '.join(str(err) for err in root.get_errors(node)))
             return "".join(txt)
@@ -1300,7 +1296,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Serialize node or tree as JSON-serializable nested list."""
         jo = [self.tag_name,
               [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
-        pos = self.pos
+        pos = self._pos
         if pos >= 0:
             jo.append(pos)
         if self.has_attr():
@@ -1338,7 +1334,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         Serializes the tree starting with `node` either as S-expression, XML, JSON,
         or in compact form. Possible values for `how` are 'S-expression', 'XML',
-        'JSON', 'compact' and 'smart' accordingly, or 'AST', 'CST', 'default' in
+        'JSON', 'indented' accordingly, or 'AST', 'CST', 'default' in
         which case the value of respective configuration variable determines the
         serialization format. (See module `configuration.py`.)
         """

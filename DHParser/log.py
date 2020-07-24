@@ -513,10 +513,6 @@ def log_ST(syntax_tree, log_file_name) -> bool:
     return False
 
 
-LOG_SIZE_THRESHOLD = 10000    # maximum number of history records to log
-LOG_TAIL_THRESHOLD = 500      # maximum number of history records for "tail log"
-
-
 def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> bool:
     """
     Writes a log of the parsing history of the most recently parsed document, if
@@ -565,24 +561,21 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     elif log_file_name.lower().endswith('.log'):
         log_file_name = log_file_name[:-4]
 
-    full_history = ['<h1>Full parsing history of "%s"</h1>' % log_file_name]  # type: List[str]
-
+    history = ['<h1>Parsing history of "%s"</h1>' % log_file_name]  # type: List[str]
+    LOG_SIZE_THRESHOLD = get_config_value('log_size_threshold')
     if len(grammar.history__) > LOG_SIZE_THRESHOLD:
         warning = ('Sorry, man, %iK history records is just too many! '
                    'Only looking at the last %iK records.'
                    % (len(grammar.history__) // 1000, LOG_SIZE_THRESHOLD // 1000))
         html_warning = '<p><strong>' + warning + '</strong></p>'
-        full_history.append(html_warning)
+        history.append(html_warning)
 
     lead_in = '\n'. join(['<table>', HistoryRecord.COLGROUP, HistoryRecord.HEADINGS])
-    full_history.append(lead_in)
+    history.append(lead_in)
 
     for record in grammar.history__[-LOG_SIZE_THRESHOLD:]:
         line = record.as_html_tr() if html else (str(record) + '\n')
-        append_line(full_history, line)
+        append_line(history, line)
 
-    write_log(full_history, log_file_name + '_full')
-    if len(full_history) > LOG_TAIL_THRESHOLD + 10:
-        heading = '<h1>Last 500 records of parsing history of "%s"</h1>' % log_file_name + lead_in
-        write_log([heading] + full_history[-LOG_TAIL_THRESHOLD:], log_file_name + '_full.tail')
+    write_log(history, log_file_name)
     return True

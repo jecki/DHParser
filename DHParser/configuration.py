@@ -240,7 +240,7 @@ CONFIG_PRESET['left_recursion'] = True
 # Possible values are:
 # 'XML'          - output as XML
 # 'S-expression' - output as S-expression, i.e. a list-like format
-# 'compact'      - compact tree output, i.e. children a represented on
+# 'indented'     - compact tree output, i.e. children a represented on
 #                  indented lines with no opening or closing tags, brackets
 #                  etc.
 # 'smart'        - serialize as S-expression if the S-expression fits on
@@ -273,8 +273,9 @@ CONFIG_PRESET['default_serialization'] = SXPRESSION_SERIALIZATION
 # Default value: 120
 CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 
-# Defines the maximum number of LINES before the "smart" serialization
-# will switch from S-expression output to compact output
+# Defines the maximum number of LINES before the "S-expression" serialization
+# will switch to a compact output where the closing brackets are placed on
+# the same line as the last line of the content.
 CONFIG_PRESET['compact_sxpr_threshold'] = 25
 
 
@@ -454,6 +455,11 @@ CONFIG_PRESET['log_server'] = False
 # Echo server log messages on the terminal.
 # Default value: False
 CONFIG_PRESET['echo_server_log'] = False
+
+# Maximum size (i.e.) number of parsing steps before the parsing ended
+# that are logged to the html-parsing-history-file
+# Default value: 10000
+CONFIG_PRESET['log_size_threshold'] = 10000
 
 
 ########################################################################
