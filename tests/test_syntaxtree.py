@@ -498,9 +498,6 @@ class TestSerialization:
     def test_compact_representation(self):
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
         compact = tree.as_sxpr(compact=True)
-        print('(A\n  (B\n    (C "D")\n    (E "F"))\n  (G "H"))')
-        print('---')
-        print(compact)
         assert compact == '(A\n  (B\n    (C "D")\n    (E "F"))\n  (G "H"))'
         tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
         compact = tree.as_sxpr(compact=True)
@@ -522,7 +519,6 @@ class TestSerialization:
 
         xml = tree.as_xml(inline_tags={'A'})
         assert xml == "<A><B>C</B><D>E</D></A>", xml
-
         assert tree.as_xml() == "<A>\n  <B>C</B>\n  <D>E</D>\n</A>", xml
 
         tree.attr['xml:space'] = 'preserve'

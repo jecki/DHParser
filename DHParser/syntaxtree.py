@@ -1087,7 +1087,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             tab (str):  The indentation string, e.g. '\t' or '    '
             open_fn:   (Node->str) A function that returns an opening
                 string (e.g. an XML-tag_name) for a given node
-            close_fn:  (Node->str) A function that returns a closeF
+            close_fn:  (Node->str) A function that returns a closing
                 string (e.g. an XML-tag_name) for a given node.
             data_fn:   (str->str) A function that filters the data string
                 before printing, e.g. to add quotation marks
@@ -1100,21 +1100,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         tail = close_fn(self)
 
         if not self.result:
-            return [head.rstrip(), tail.lstrip()]
-
-        tail = tail.lstrip(None if density & 2 else '')
+            return [head, tail]
 
         inline = inline or inline_fn(self)
         if inline:
-            head = head.rstrip()
-            tail = tail.lstrip()
             usetab, sep = '', ''
+            hlf, tlf = '', ''
         else:
             usetab = tab if head else ''    # no indentation if tag is already omitted
             sep = '\n'
+            hlf = '\n'
+            tlf = '\n' if density == 0 or (tail[0:1] == '<') else ''
 
         if self._children:
-            content = [head, usetab]
+            content = [head, hlf, usetab] if hlf else [head, usetab]
             first_child = self._children[0]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
@@ -1123,8 +1122,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     if child != first_child:
                         content.append(sep)
                         content.append(usetab)
-                    # st = [subtree] if inline else subtree.split('\n')
-                    # content.append((sep + usetab).join(s for s in st))
                     if inline:
                         content.extend(subtree)
                     else:
@@ -1134,6 +1131,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                                 content.append(usetab)
                             else:
                                 content.append(item)
+            if tlf:
+                content.append(tlf)
             content.append(tail)
             return content
 
@@ -1143,26 +1142,27 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             res = res.strip()  # WARNING: This changes the data in subtle ways
         if density & 1 and res.find('\n') < 0:
             # except for XML, add a gap between opening statement and content
-            gap = ' ' if not inline and head and head.rstrip()[-1:] != '>' else ''
-            return [head.rstrip() + gap + data_fn(res) + tail.lstrip()]
+            gap = ' ' if not inline and head and head[-1:] != '>' else ''
+            return [head + gap + data_fn(res) + tail]
         else:
             lines = [data_fn(s) for s in res.split('\n')]
             N = len(lines)
             i, k = 0, N - 1
             if not inline and allow_ommissions:
-                # Strip preceding and succeding whitespace.
+                # Strip preceding and succeeding whitespace.
                 # WARNING: This changes the data in subtle ways
                 while i < N and not lines[i]:
                     i += 1
                 while k >= 0 and not lines[k]:
                     k -= 1
-            # lines = [usetab + line for line in lines[i:k + 1]]
-            # return head + '\n'.join(lines) + tail
-            content = [head, usetab]
+            content = [head, hlf, usetab] if hlf else [head, usetab]
             for line in lines[i:k]:
                 content.append(line)
                 content.append('\n')
+                content.append(usetab)
             content.append(lines[k])
+            if tlf:
+                content.append(tlf)
             content.append(tail)
             return content
 
@@ -1189,7 +1189,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 the flattened expression does not exceed the threshold length.
                 A negative number means that it will always be flattened.
         """
-        left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', '\n)', 0)
+        left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
         lbreaks = linebreaks(src) if src else []  # type: List[int]
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
@@ -1210,7 +1210,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             #     print(node.pos, id(node), id(node) in root.error_nodes, root.get_errors(node))
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
                 txt.append(" `(%s)" % ';  '.join(str(err) for err in root.get_errors(node)))
-            return "".join(txt) + '\n'
+            return "".join(txt)
 
         def closing(node: Node) -> str:
             """Returns the closing string for the representation of `node`."""
@@ -1266,16 +1266,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
-                ending = "/>\n" if not node.tag_name[0] == '?' else "?>\n"
+                ending = "/>" if not node.tag_name[0] == '?' else "?>"
             else:
-                ending = ">\n"
+                ending = ">"
             return "".join(txt + [ending])
 
         def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in empty_tags or (node.tag_name in omit_tags and not node.has_attr()):
                 return ''
-            return '\n</' + clean_anonymous_tag_name(node.tag_name) + '>'
+            return '</' + clean_anonymous_tag_name(node.tag_name) + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
