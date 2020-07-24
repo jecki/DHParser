@@ -227,10 +227,10 @@ def transform_generic_command(context: List[Node]):
 
 def transform_generic_block(context: List[Node]):
     node = context[-1]
-    assert node.children[0].tag_name == "begin_generic_block"
-    assert node.children[0].children[0].tag_name == "begin_environment"
-    assert node.children[-1].tag_name == "end_generic_block"
-    assert node.children[-1].children[0].tag_name == "end_environment"
+    # assert node.children[0].tag_name == "begin_generic_block"
+    # assert node.children[0].children[0].tag_name == "begin_environment"
+    # assert node.children[-1].tag_name == "end_generic_block"
+    # assert node.children[-1].children[0].tag_name == "end_environment"
     node.tag_name = 'env_' + node.children[0].children[0].content.lstrip('\\')
     node.result = node.children[1:-1]
 
@@ -238,6 +238,10 @@ def transform_generic_block(context: List[Node]):
 def is_expendable(context: List[Node]):
     node = context[-1]
     return not node._result and not node.tag_name.startswith('cmd_')
+
+
+def show(context: List[Node]):
+    print(context[-1].as_xml())
 
 
 LaTeX_AST_transformation_table = {
