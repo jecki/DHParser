@@ -23,6 +23,7 @@ import os
 import sys
 
 scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import parse_xml
 
@@ -48,6 +49,10 @@ def cpu_profile(func, repetitions=1):
 
 def profile_serializing():
     with open(os.path.join(scriptpath, 'data', 'inferus.ausgabe.xml')) as f:
+        data = f.read()
+    tree = parse_xml(data)
+    success = cpu_profile(tree.as_xml, 100)
+    with open(os.path.join(scriptpath, 'data', 'testdoc3.xml')) as f:
         data = f.read()
     tree = parse_xml(data)
     success = cpu_profile(tree.as_xml, 100)

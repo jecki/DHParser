@@ -1100,7 +1100,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         tail = close_fn(self)
 
         if not self.result:
-            return [head, tail]
+            return [head + tail]
 
         inline = inline or inline_fn(self)
         if inline:
@@ -1143,7 +1143,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if density & 1 and res.find('\n') < 0:
             # except for XML, add a gap between opening statement and content
             gap = ' ' if not inline and head and head[-1:] != '>' else ''
-            return [head + gap + data_fn(res) + tail]
+            return [''.join((head, gap, data_fn(res), tail))]
         else:
             lines = [data_fn(s) for s in res.split('\n')]
             N = len(lines)
@@ -1155,7 +1155,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     i += 1
                 while k >= 0 and not lines[k]:
                     k -= 1
-            content = [head, hlf, usetab] if hlf else [head, usetab]
+            content = [head, hlf, usetab] if hlf else [head + usetab]
             for line in lines[i:k]:
                 content.append(line)
                 content.append('\n')
@@ -1992,8 +1992,9 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         closing or solitary tag is reached.
         """
         i = 0
-        while s[i] != "<" or s[max(0, i - 1)] == "\\":
-            i = s.find("<", i)
+        while s[i] != "<":  # or s[max(0, i - 1)] == "\\":
+            i = s.find("<", i + 1)
+            assert i > 0
         return s[i:], s[:i]
 
     def parse_full_content(s: StringView) -> Tuple[StringView, Node]:

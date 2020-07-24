@@ -66,6 +66,10 @@ class TestParseSxpression:
         assert str(tree) == "LIUTPR. leg. 21 ..."
         assert tree.attr['unterbedeutungstiefe'] == '0'
 
+    def test_endlessloop_error(self):
+        tree = parse_sxpr(r'(LINEFEED "\\")')
+        assert tree
+
 
 class TestParseXML:
     def test_roundtrip(self):
@@ -91,6 +95,10 @@ class TestParseXML:
         tree = parse_xml('<alpha>\n  <beta>gamma</beta>\n</alpha>')
         flat_xml = flatten_xml(tree.as_xml())
         assert flat_xml == '<alpha><beta>gamma</beta></alpha>', flat_xml
+
+    def test_endlessloop_error(self):
+        tree = parse_xml(r'<LINEFEED>\\</LINEFEED>')
+        assert tree
 
 
 class TestParseJSON:
