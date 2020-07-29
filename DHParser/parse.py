@@ -1317,6 +1317,7 @@ class Grammar:
             self._dirty_flag__ = True
 
         self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
+        assert isinstance(document, str)
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
