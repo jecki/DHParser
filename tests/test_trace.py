@@ -38,7 +38,7 @@ from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
 
 
 def get_history(name, show: bool = REVEAL) -> str:
-    history_fname = os.path.join(log_dir() or '', name + "_full_parser.log.html")
+    history_fname = os.path.join(log_dir() or '', name + "_parser.log.html")
     if show:
         import webbrowser, time
         webbrowser.open(history_fname)

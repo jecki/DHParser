@@ -7,7 +7,7 @@
 cdef class Node:
     cdef public int _pos
     cdef public object _result
-    cdef public tuple children
+    cdef public tuple _children
     cdef public str tag_name
     cdef public object _xml_attr
 
