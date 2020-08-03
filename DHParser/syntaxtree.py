@@ -1111,7 +1111,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         if self._children:
             content = [head]
-            first_child = self._children[0]
+            # first_child = self._children[0]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
                                            density, inline, inline_fn)
