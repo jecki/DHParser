@@ -530,7 +530,7 @@ class Connection:
 
     def put_response(self, json_obj: JSON_Type):
         """Adds a client-response to the waiting queue. The responses
-        to a particual task can be queried with the `client_response()`-
+        to a particular task can be queried with the `client_response()`-
         coroutine."""
         if self.log_file:
             self.log('RESULT: ', json.dumps(json_obj))
@@ -1042,7 +1042,7 @@ class Server:
         def connection_alive() -> bool:
             """-> `False` if connection is dead or shall be shut down."""
             assert self.connection
-            return not self.kill_switch and self.connection.alive and not reader.at_eof()
+            return not self.kill_switch and self.connection.alive and not reader.at_eof()  # and not reader.closed
 
         buffer = bytearray()  # type: bytearray
         while connection_alive():
@@ -1510,6 +1510,11 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
     return asyncio_run(send_stop_server(host, port))
 
 
+# def io_server(server: Server):
+#     stdin, stdout = sys.stdin.buffer, sys.stdout.buffer
+#     server.handle(stdin, stdout)
+
+
 #######################################################################
 #
 # Language-Server-Protocol support
@@ -1574,3 +1579,5 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
     cls = lsp_funcs_or_instance
     rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn) for fn in lsp_candidates(cls, prefix)}
     return rpc_table
+
+
