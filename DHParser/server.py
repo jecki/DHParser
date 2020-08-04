@@ -1514,6 +1514,54 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
 #     stdin, stdout = sys.stdin.buffer, sys.stdout.buffer
 #     server.handle(stdin, stdout)
 
+# https://stackoverflow.com/questions/52089869/how-to-create-asyncio-stream-reader-writer-for-stdin-stdout
+#
+# import asyncio
+# import os
+# import sys
+#
+# async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
+#     if loop is None:
+#         loop = asyncio.get_event_loop()
+#
+#     if sys.platform == 'win32':
+#         return _win32_stdio(loop)
+#
+#     reader = asyncio.StreamReader(limit=limit, loop=loop)
+#     await loop.connect_read_pipe(
+#         lambda: asyncio.StreamReaderProtocol(reader, loop=loop), sys.stdin)
+#
+#     writer_transport, writer_protocol = await loop.connect_write_pipe(
+#         lambda: asyncio.streams.FlowControlMixin(loop=loop),
+#         os.fdopen(sys.stdout.fileno(), 'wb'))
+#     writer = asyncio.streams.StreamWriter(
+#         writer_transport, writer_protocol, None, loop)
+#
+#     return reader, writer
+#
+# def _win32_stdio(loop):
+#     # no support for asyncio stdio yet on Windows, see https://bugs.python.org/issue26832
+#     # use an executor to read from stdio and write to stdout
+#     # note: if nothing ever drains the writer explicitly, no flushing ever takes place!
+#     class Win32StdinReader:
+#         def __init__(self):
+#             self.stdin = sys.stdin.buffer
+#         async def readline():
+#             # a single call to sys.stdin.readline() is thread-safe
+#             return await loop.run_in_executor(None, self.stdin.readline)
+#
+#     class Win32StdoutWriter:
+#         def __init__(self):
+#             self.buffer = []
+#             self.stdout = sys.stdout.buffer
+#         def write(self, data):
+#             self.buffer.append(data)
+#         async def drain(self):
+#             data, self.buffer = self.buffer, []
+#             # a single call to sys.stdout.writelines() is thread-safe
+#             return await loop.run_in_executor(None, sys.stdout.writelines, data)
+#
+#     return Win32StdinReader(), Win32StdoutWriter()
 
 #######################################################################
 #
