@@ -60,6 +60,7 @@ except ImportError:
     class BrokenThreadPool:
         pass
 from functools import partial
+import io
 import json
 from multiprocessing import Process, Value, Array
 import platform
@@ -446,6 +447,74 @@ class ExecutionEnvironment:
             self.process_executor = None
 
 
+class StreamReaderProxy:
+    """StreamReaderProxy simulates an asyncio.StreamReader that sends
+    and receives data through an io.IOBase-Stream.
+
+    see: https://stackoverflow.com/questions/52089869/how-to-create-asyncio-stream-reader-writer-for-stdin-stdout
+    """
+
+    def __init__(self, io_reader: io.IOBase):
+        try:
+            self.buffered_io = io_reader.buffer
+        except AttributeError:
+            self.buffered_io = io_reader
+        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+            else asyncio.get_event_loop()
+
+    def feed_eof(self):
+        self.bufferd_io.close()
+
+    def at_eof(self) -> bool:
+        return self.buffered_io.closed
+
+    async def readline(self) -> bytes:
+        return await self.loop.run_in_executor(None, self.buffered_io.readline)
+
+    async def read(self, n=-1) -> bytes:
+        return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+
+
+class StreamWriterProxy:
+    """StreamReaderProxy simulates an asyncio.StreamReader that sends
+    and receives data through an io.IOBase-Stream.
+
+    see: https://stackoverflow.com/questions/52089869/how-to-create-asyncio-stream-reader-writer-for-stdin-stdout
+    """
+
+    def __init__(self, io_writer: io.IOBase):
+        try:
+            self.buffered_io = io_writer.buffer
+        except AttributeError:
+            self.buffered_io = io_writer
+        self.buffer = []
+        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+            else asyncio.get_event_loop()
+
+    def write(self, data: bytes):
+        self.buffer.append(data)
+
+    def can_write_eof(self) -> bool:
+        return False
+
+    def write_eof(self):
+        pass
+
+    def close(self):
+        self.buffer.close()
+
+    async def wait_closed(self):
+        assert self.buffer.closed, "buffer is not even closing!"
+
+    async def drain(self):
+        data, self.buffer = self.buffer, []
+        return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
+
+
+StreamReaderType = Union[asyncio.StreamReader, StreamReaderProxy]
+StreamWriterType = Union[asyncio.StreamWriter, StreamWriterProxy]
+
+
 class Connection:
     """Class Connections encapsulates connection-specific data for the Server
     class (see below). At the moment, however, only one connection is accepted at
@@ -483,12 +552,12 @@ class Connection:
         echo_log:  If `True` log messages will be echoed to the console. Mirrors
                 Server.log_file
     """
-    def __init__(self, reader: asyncio.StreamReader,
-                 writer: asyncio.StreamWriter,
+    def __init__(self, reader: StreamReaderType,
+                 writer: StreamWriterType,
                  exec_env: ExecutionEnvironment):
         self.alive = True                # type: bool
-        self.reader = reader             # type: asyncio.StreamReader
-        self.writer = writer             # type: asyncio.StreamWriter
+        self.reader = reader             # type: StreamReaderType
+        self.writer = writer             # type: StreamWriterType
         self.exec = exec_env             # type: ExecutionEnvironment
         self.active_tasks = dict()       # type: Dict[int, asyncio.Future]
         self.finished_tasks = set()      # type: Set[int]
@@ -608,7 +677,12 @@ def connection_cb_dummy(connection: Connection) -> None:
 
 class Server:
     """Class Server contains all the boilerplate code for a
-    Language-Server-Protocol-Server.
+    Language-Server-Protocol-Server. Class Server should be
+    considered final, i.e. do not derive from this class to add
+    LSP-functionality, rather implement the lsp_functionality in
+    a dedicated class (or set of cuntions) and pass the
+    LSP-functionality via the rpc_functions-parameter to the
+    constructor of this class.
 
     :param server_name: A name for the server. Defaults to
         `CLASSNAME_OBJECTID`
@@ -834,7 +908,7 @@ class Server:
         result, rpc_error = await self.exec.execute(executor, method, params)
         return result, rpc_error
 
-    async def respond(self, writer: asyncio.StreamWriter, response: Union[str, bytes]):
+    async def respond(self, writer: StreamWriterType, response: Union[str, bytes]):
         """Sends a response to the given writer. Depending on the configuration,
         the response will be logged. If the response appears to be a json-rpc
         response a JSONRPC_HEADER will be added depending on
@@ -873,8 +947,8 @@ class Server:
             return err_func, {} if isinstance(argument, Dict) else ()
 
     async def handle_plaindata_request(self, task_id: int,
-                                       reader: asyncio.StreamReader,
-                                       writer: asyncio.StreamWriter,
+                                       reader: StreamReaderType,
+                                       writer: StreamWriterType,
                                        data: BytesType,
                                        service_call: bool = False):
         """Processes a request in plain-data-format, i.e. neither http nor json-rpc"""
@@ -919,8 +993,8 @@ class Server:
         self.connection.task_done(task_id)
 
     async def handle_http_request(self, task_id: int,
-                                  reader: asyncio.StreamReader,
-                                  writer: asyncio.StreamWriter,
+                                  reader: StreamReaderType,
+                                  writer: StreamWriterType,
                                   data: BytesType,
                                   service_call: bool = False):
         if len(data) > self.max_data_size:
@@ -960,8 +1034,8 @@ class Server:
         self.connection.task_done(task_id)
 
     async def handle_jsonrpc_request(self, json_id: int,
-                                     reader: asyncio.StreamReader,
-                                     writer: asyncio.StreamWriter,
+                                     reader: StreamReaderType,
+                                     writer: StreamWriterType,
                                      json_obj: Dict,
                                      service_call: bool = False):
         # TODO: handle cancellation calls!
@@ -1028,7 +1102,7 @@ class Server:
         assert self.connection
         self.connection.task_done(json_id)
 
-    async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    async def handle(self, reader: StreamReaderType, writer: StreamWriterType):
         if self.connection is None:
             self.connection = Connection(reader, writer, self.exec)
             self.connection.log_file = self.log_file
@@ -1589,7 +1663,7 @@ def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
 
 def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
     """Generates the name of an lsp-method from a function name,
-    e.g. "lsp_S_cacelRequest" -> "$/cancelRequest" """
+    e.g. "lsp_S_cancelRequest" -> "$/cancelRequest" """
     assert func_name.startswith(prefix)
     return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
 
@@ -1623,9 +1697,11 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
     if isinstance(lsp_funcs_or_instance, Iterable):
         assert all(callable(func) for func in lsp_funcs_or_instance)
         rpc_table = {gen_lsp_name(func.__name__, prefix): func for func in lsp_funcs_or_instance}
-    # assume lsp_funcs_or_instance is the instance of a class
-    cls = lsp_funcs_or_instance
-    rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn) for fn in lsp_candidates(cls, prefix)}
+    else:
+        # assume lsp_funcs_or_instance is the instance of a class
+        cls = lsp_funcs_or_instance
+        rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn)
+                     for fn in lsp_candidates(cls, prefix)}
     return rpc_table
 
 

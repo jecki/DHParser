@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-"""notest_server.py - tests of the server module of DHParser
+"""notest_server_tcp.py - tests of the server module of DHParser,
+    connections via tcp.
 
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -20,7 +21,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-# Quite slow under MS Windows! Therefore, renamed to notest_server.py
+# Quite slow under MS Windows! Therefore, renamed to notest_server_tcp.py
 # so that it not regularly called when running pytest/nosetest on
 # the test directory.
 
@@ -123,7 +124,7 @@ class TestServer:
             main_reader, main_writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             main_writer.write(IDENTIFY_REQUEST.encode())
             data = await main_reader.read(500)
-            assert b'alread connected' not in data
+            assert b'already connected' not in data
 
             service_reader, service_writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             service_writer.write(IDENTIFY_REQUEST.encode())
@@ -153,7 +154,6 @@ class TestServer:
             stop_server('127.0.0.1', TEST_PORT)
             if p is not None:
                 p.join()
-
 
     def test_identify(self):
         """Test server's 'identify/'-command."""
