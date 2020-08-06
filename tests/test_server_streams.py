@@ -42,14 +42,14 @@ def compiler_dummy(src: str, log_dir: str='') -> str:
     return src
 
 
-def run_server_streams(rpc_functions: RPC_Type,
+async def run_server_streams(rpc_functions: RPC_Type,
                        in_stream: io.BufferedIOBase,
                        out_stream: io.BufferedIOBase):
     reader = StreamReaderProxy(in_stream)
     writer = StreamWriterProxy(out_stream)
     server = Server(rpc_functions)
     print("starting server")
-    server.handle(reader, writer)
+    await server.handle(reader, writer)
 
 
 class TestServerStream:
@@ -62,16 +62,39 @@ class TestServerStream:
             os.remove('test_identify.bin')
 
     def test_identify(self):
+
         outs = open("test_identify.bin", 'wb')
         ins = open("test_identify.bin", 'rb')
-        p = multiprocessing.Process(target=run_server_streams, args=(compiler_dummy, ins, outs))
-        p.start()
-        print('server-process up')
-        outs.write(b'ECHO')
-        print(ins.read())
-        outs.write(STOP_SERVER_REQUEST_BYTES)
-        print(ins.read())
-        outs.close()
-        ins.close()
-        p.join()
+
+        # p = multiprocessing.Process(target=run_server_streams, args=(compiler_dummy, ins, outs))
+        # p.start()
+
+        async def echo():
+            print('echo task')
+            outs.write(b'ECHO')
+            outs.flush()
+            await asyncio.sleep(5)
+            print('echo written')
+            print(ins.read())
+            print('write stop-request')
+            outs.write(STOP_SERVER_REQUEST_BYTES)
+            print('stop-request written')
+            print(ins.read())
+            print('echo result')
+            outs.close()
+            ins.close()
+
+        async def main():
+            server_task = asyncio.create_task(run_server_streams(compiler_dummy, ins, outs))
+            print('server-task created')
+            echo_task = asyncio.create_task(echo())
+            print('echo-task created')
+            print('await server-task')
+            await server_task
+            print('await echo-task')
+            await echo_task
+            print('end of main')
+
+        asyncio.run(main())
+        # p.join()
 
