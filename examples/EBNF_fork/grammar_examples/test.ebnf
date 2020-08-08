@@ -1,0 +1,15 @@
+# hey, you
+
+doc = sequence | re | char | char_range | char_range2 | multiple1 | multiple2 | multiple3 | mutliple4
+sequence = '</' Name S? '>'
+re = /abc*/
+char = #x32  # shell-style comment
+char_range = [#xDFF88-#xEEFF00]   /*
+        C-style comment
+*/ char_range2 = [-'()+,./:=?;!*#@$_%]
+multiple1 = `a` * 3
+multiple2 = 4 * `b`
+multiple3 = `c`{3}
+multiple4 = `d`{2,5}
+Name = /\w+/
+S    = /\s*/

@@ -459,8 +459,7 @@ class StreamReaderProxy:
             self.buffered_io = io_reader.buffer
         except AttributeError:
             self.buffered_io = io_reader
-        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-            else asyncio.get_event_loop()
+        self.loop = None
 
     def feed_eof(self):
         self.bufferd_io.close()
@@ -469,10 +468,20 @@ class StreamReaderProxy:
         return self.buffered_io.closed
 
     async def readline(self) -> bytes:
-        return await self.loop.run_in_executor(None, self.buffered_io.readline)
+        try:
+            return await self.loop.run_in_executor(None, self.buffered_io.readline)
+        except AttributeError:
+            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                else asyncio.get_event_loop()
+            return await self.loop.run_in_executor(None, self.buffered_io.readline)
 
     async def read(self, n=-1) -> bytes:
-        return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+        try:
+            return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+        except AttributeError:
+            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                else asyncio.get_event_loop()
+            return await self.loop.run_in_executor(None, self.buffered_io.read, n)
 
 
 class StreamWriterProxy:
@@ -488,8 +497,7 @@ class StreamWriterProxy:
         except AttributeError:
             self.buffered_io = io_writer
         self.buffer = []
-        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-            else asyncio.get_event_loop()
+        self.loop = None
 
     def write(self, data: bytes):
         self.buffer.append(data)
@@ -508,7 +516,12 @@ class StreamWriterProxy:
 
     async def drain(self):
         data, self.buffer = self.buffer, []
-        return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
+        try:
+            return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
+        except AttributeError:
+            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                else asyncio.get_event_loop()
+            return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
 
 
 StreamReaderType = Union[asyncio.StreamReader, StreamReaderProxy]

@@ -1,0 +1,96 @@
+{
+	"scopeName": "source.ebnf",
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "DHParser-EBNF",
+	"patterns": [
+		{ "include": "#directive" },
+		{ "include": "#string" },
+		{ "include": "#regex" },
+		{ "include": "#comment" },
+		{ "include": "#symbol" },
+		{ "include": "#section-marker" },
+		{ "include": "#paren-expression" },
+		{ "include": "#prefix-operator" },
+		{ "include": "#infix-operator" },
+		{ "include": "#whitespace-operator" }
+	],
+	"repository": {
+		"directive": {
+			"patterns": [{
+				"name": "constant",
+				"match": "^[\\t ]*@[\\t ]*(?:whitespace|comment|literalws|tokens|drop|\\w*?_(?:error|skip|resume))"
+			}]
+		},
+		"string": {
+			"name": "string.quoted",
+			"begin": "[\"']",
+			"end": "[\"']",
+			"patterns": [{
+					"name": "string.quoted",
+					"match": "\\\\."
+			}]
+		},
+		"regex": {
+			"name": "string.regexp",
+			"begin": "/",
+			"end": "/",
+			"patterns": [{
+					"name": "string.regexp",
+					"match": "\\\\."
+			}]
+		},
+		"comment": {
+			"name": "comment",
+			"patterns": [{
+				"name": "comment.line",
+				"match": "#(?!:).*$"
+			}]
+		},
+		"symbol": {
+			"name": "symbol",
+			"patterns": [{
+				"name": "entity.name.tag",
+				"match": "^\\s*\\w+\\s*(?==)"
+			}]
+		},
+		"section-marker": {
+			"name": "section.marker",
+			"patterns": [{
+				"name": "entity.name.section",
+				"match": "#:.*$"
+			}]
+		},
+		"paren-expression": {
+			"name": "paren.expression",
+			"begin": "[\\(\\[\\{]",
+			"end": "[\\)\\]\\}]|\\}+",
+			"beginCaptures": {
+              "0": { "name": "punctuation.paren.open" }
+		    },
+            "endCaptures": {
+              "0": { "name": "punctuation.paren.close" }
+		    }
+		},
+		"prefix-operator": {
+			"name": "prefix.operator",
+			"patterns": [{
+				"name": "keyword.operator",
+				"match": "-!|-&|::|[§!&:]"
+			}]
+		},
+		"infix-operator": {
+			"name": "infix.operator",
+			"patterns": [{
+				"name": "keyword.control",
+				"match": "[|,]"
+			}]
+		},
+		"whitespace-operator": {
+			"name": "whitespace.operator",
+			"patterns": [{
+				"name": "keyword.other",
+				"match": "~"
+			}]
+		}
+	}
+}

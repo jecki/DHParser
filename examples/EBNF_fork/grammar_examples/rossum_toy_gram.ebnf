@@ -1,0 +1,31 @@
+# adapted from Guido van Rossum: https://github.com/we-like-parsers/pegen/blob/master/story7/toy.gram
+# see also: https://medium.com/@gvanrossum_83706/peg-parsing-series-de5d41b2ed60
+
+
+@literalws = right
+
+
+start: statements ENDMARKER
+statements: statement NEWLINE statements
+          | statement NEWLINE
+statement:  if_statement
+         | assignment
+	 | expr
+expr: expr '+' term
+    | expr '-' term
+    | term
+term: term '*' atom
+    | term '/' atom
+    | atom
+atom: NAME
+    | NUMBER
+    | '(' expr ')'
+assignment: target '=' expr
+target: NAME
+if_statement: 'if' expr ':' statement
+
+
+ENDMARKER: !/./
+NEWLINE: /\n/~
+NAME: /\w+/~
+NUMBER: /\d+/~

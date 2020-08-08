@@ -1,0 +1,53 @@
+{
+  "Comment definition": {
+    "prefix": "@ comment",
+    "body": "@ comment = /${1:#.*(?:\\n|$)}/",
+    "description": "Regular expression defining comments, example: /#.*(?:\\n|$)/"
+  },
+  "Anonymous nodes": {
+    "prefix": "@ anonymous",
+    "body": "@ anonymous = /${1:_\\w+}/",
+    "description": "List of symbols or a regular expression to identify those definitions that shall not yield named tags in the syntax tree."
+  },
+  "Whitespace definition": {
+    "prefix": "@ whitespace",
+    "body": "@ whitespace = /${1:\\s*}/",
+    "description": "Regular expression defining insignificant whitespace, example: /\\s*/. Alternatively, one of the values horizontal, linefeed, vertical can be given.  'linefeed' means that a single linefeed, but not an empty sill counts as whitespace."
+  },
+  "Surrounding whitespace for literals": {
+    "prefix": "@ literalws",
+    "body": "@ literalws = ${1|right,left,both,none|}",
+    "description": "Selects the side on which implicitly capture whitespace, possible values: right, left, both, none\\default value: right. Only a single value is possible!"
+  },
+  "Early dropping of irrelevant nodes": {
+    "prefix": "@ drop",
+    "body": "@ drop = ${1:whitespace, token, regexp}",
+    "description": "Selects which kind of nodes will be dropped from the conctrete syntax tree, already,  possible values: token, whitespace. Both values can be specified. Empty anonymous nodes and anonymous nodes with a single child will always be eliminated."
+  },
+  "Preprocessor token declaration": {
+    "prefix": "@ tokens",
+    "body": "@ tokens = $1, $2, $3",
+    "description": "Declare the names of the tokens that an (optional) preprocessor emits."
+  },
+  "Error message substitution": {
+    "prefix": "@ _error",
+    "body": "@ ${1:SYMBOL}_error = /${2:regex}/, \"${3:message}\"",
+    "description": "Error Message that shall be emitted if a mandatory (§) element is missed while parsing SYMBOL, but the regular expression matches the following text."
+  },
+  "Skip to next legitimate value after parsing failed": {
+    "prefix": "@ _skip",
+    "body": "@ ${1:SYMBOL}_skip = /${2:regex}/",
+    "description": "Specifies a reentry-point where parser SYMBOL continues if a mandatory (§) element was missing."
+  },
+  "Resume after parsing failed": {
+    "prefix": "@ _resume",
+    "body": "@ ${1:SYMBOL}_resume = /${2:regex}/",
+    "description": "Specifies a reentry-point where the parser calling parser SYMBOL continues if parser SYMBOL misses a mandatory (§) element."
+  },
+  "Filter captured symbols": {
+    "prefix": "@ _filter",
+    "body": "@ ${1:SYMBOL}_filter = ${2:funcname}",
+    "description": "Name of a Python-filter-function that is applied when retrieving a stored symbol. (DHParser-extension to EBNF)"
+  }
+}
+
