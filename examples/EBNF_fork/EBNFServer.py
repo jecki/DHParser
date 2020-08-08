@@ -548,6 +548,16 @@ def parse_logging_args(args):
 
 
 if __name__ == "__main__":
+    dhparserdir = os.path.abspath(os.path.join(scriptpath, '../../'))
+    if scriptpath not in sys.path:
+        sys.path.append(scriptpath)
+    if dhparserdir not in sys.path:
+        sys.path.append(dhparserdir)
+        # import subprocess
+        # subprocess.run(['gedit', dhparserdir.replace('/', '_')])
+    from DHParser import configuration
+    configuration.CONFIG_PRESET['log_server'] = True
+
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Setup and Control of a Server for processing EBNF-files.")
     action_group = parser.add_mutually_exclusive_group()

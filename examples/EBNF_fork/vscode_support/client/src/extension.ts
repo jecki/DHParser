@@ -118,6 +118,9 @@ export function activate(context: ExtensionContext) {
 }
 
 
+// TODO: EBNFServer when finished!
+
+
 // export function deactivate(): Thenable<void> | undefined {
 // 	if (!client) {
 // 		return undefined;

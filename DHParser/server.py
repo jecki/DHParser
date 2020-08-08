@@ -516,12 +516,13 @@ class StreamWriterProxy:
 
     async def drain(self):
         data, self.buffer = self.buffer, []
-        try:
-            return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
-        except AttributeError:
-            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-                else asyncio.get_event_loop()
-            return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
+        if data:
+            try:
+                return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
+            except AttributeError:
+                self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                    else asyncio.get_event_loop()
+                return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
 
 
 StreamReaderType = Union[asyncio.StreamReader, StreamReaderProxy]
@@ -792,12 +793,6 @@ class Server:
         self.serving_task = None  # type: Optional[asyncio.Task]
         self.stop_response = ''   # type: str
 
-        self._log_file = ''       # type: str
-        if get_config_value('log_server'):
-            self.start_logging()
-        self._echo_log = get_config_value('echo_server_log')  # type: bool
-        self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
-
         self.register_service_rpc(IDENTIFY_REQUEST, self.rpc_identify_server)
         self.register_service_rpc(LOGGING_REQUEST, self.rpc_logging)
 
@@ -808,6 +803,12 @@ class Server:
 
         self.known_methods = set(self.rpc_table.keys()) | \
             {'initialize', 'initialized', 'shutdown', 'exit'}  # see self.verify_initialization()
+
+        self._echo_log = get_config_value('echo_server_log')  # type: bool
+        self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
+        self._log_file = ''       # type: str
+        if get_config_value('log_server'):
+            self.start_logging()
 
     @property
     def log_file(self):
