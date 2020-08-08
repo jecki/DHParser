@@ -459,7 +459,6 @@ class StreamReaderProxy:
             self.buffered_io = io_reader.buffer
         except AttributeError:
             self.buffered_io = io_reader
-        assert self.buffered_io.isatty()
         self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
             else asyncio.get_event_loop()
 
@@ -488,7 +487,6 @@ class StreamWriterProxy:
             self.buffered_io = io_writer.buffer
         except AttributeError:
             self.buffered_io = io_writer
-        assert self.buffered_io.isatty()
         self.buffer = []
         self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
             else asyncio.get_event_loop()
