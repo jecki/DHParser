@@ -587,7 +587,8 @@ class Connection:
     def create_task(self, json_id: int, coroutine: Coroutine) -> asyncio.futures.Future:
         assert json_id not in self.active_tasks, \
             "JSON-id {} already used!".format(json_id)
-        task = asyncio.ensure_future(coroutine)
+        task = asyncio.create_task(coroutine) if sys.version_info >= (3, 7) \
+            else asyncio.ensure_future(coroutine)
         self.active_tasks[json_id] = task
         return task
 
@@ -1052,6 +1053,9 @@ class Server:
                                      writer: StreamWriterType,
                                      json_obj: Dict,
                                      service_call: bool = False):
+
+        self.log('TICK JSON_RPC\n\n')
+
         # TODO: handle cancellation calls!
         result = None      # type: Optional[JSON_Type]
         rpc_error = None   # type: Optional[RPC_Error_Type]
@@ -1105,6 +1109,8 @@ class Server:
                     await self.respond(writer, json.dumps(json_result, cls=DHParser_JSONEncoder))
                 except TypeError as err:
                     rpc_error = -32070, str(err)
+
+        self.log('TICK RESPOND\n\n')
 
         if rpc_error is not None:
             await self.respond(
@@ -1214,9 +1220,12 @@ class Server:
             if self.log_file:   # avoid decoding if logging is off
                 self.log('RECEIVE: ', *strip_header_delimiter(data.decode()), '\n\n')
 
+            self.log('TICK 1\n\n')
+
             if id_connection:
                 if self.connection.alive:
                     if not data and self.connection.reader.at_eof():
+                        self.log('TICK eof\n\n')
                         self.connection.alive = False
                         break
                     # remove finished tasks from active_tasks list,
@@ -1226,6 +1235,8 @@ class Server:
                     self.connection.finished_tasks = set()
                 else:
                     break
+
+            self.log('TICK 2\n\n')
 
             task = None
             if data.startswith(b'GET'):
@@ -1275,6 +1286,8 @@ class Server:
                         rpc_error = -32700, 'Parse error: JSON-package does not appear '\
                                             'to ba an RPC-call or -response!?'
 
+                self.log('TICK 3\n\n')
+
                 if rpc_error is None:
                     method = json_obj.get('method', '')
                     response = json_obj.get('result', None) or json_obj.get('error', None)
@@ -1284,6 +1297,7 @@ class Server:
                             rpc_error = self.connection.verify_initialization(
                                 method, self.strict_lsp and bool(id_connection))
                             if rpc_error is None:
+                                self.log('TICK 4\n\n')
                                 task = self.connection.create_task(
                                     json_id, self.handle_jsonrpc_request(
                                         json_id, reader, writer, json_obj, not bool(id_connection)))
