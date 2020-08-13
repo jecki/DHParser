@@ -39,6 +39,23 @@ function startLangServerStream(command: string, args: string[]): Disposable {
         command,
         args,
 	};
+
+	// log channel
+	const logChannel: OutputChannel = {
+		name: 'consoleLogger',
+		// Only append the logs but send them later
+		append(value: string) {
+			console.log('append: ' + value + '.');
+		},
+		appendLine(value: string) {
+			console.log('appendLine ' + value + '.');
+		},
+		clear() { console.log('clear()'); },
+		show() { console.log('show()'); },
+		hide() { console.log('hide()'); },
+		dispose() { console.log('dispose()'); }
+	};
+
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{scheme: 'file', language: 'ebnf'}],
 		synchronize: {
