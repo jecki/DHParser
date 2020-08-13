@@ -218,8 +218,8 @@ def append_log(log_name: str, *strings, echo: bool = False) -> None:
         No delimiters will be added, i.e. all delimiters like blanks or
         linefeeds need to be added explicitly to the list of strings, before
         calling `append_log()`.
-    :param echo: If True, the log message will be echoed on the terminal. This
-        will also happen if logging is turned off.
+    :param echo: If True, the log message will be echoed on the terminal.
+        In this case the message will even be echoed if logging is turned off.
     """
     ldir, log_name = os.path.split(log_name)
     if not ldir:

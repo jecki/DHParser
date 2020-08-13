@@ -26,7 +26,7 @@ import sys
 
 DEBUG = False
 
-assert sys.version_info >= (3, 5, 7), "DHParser requires at least Python-Version 3.5.7"
+assert sys.version_info >= (3, 5, 7), "DHParser.server requires at least Python-Version 3.5.7"
 
 scriptpath = os.path.dirname(__file__)
 servername = os.path.splitext(os.path.basename(__file__))[0]
@@ -48,11 +48,33 @@ KNOWN_PORT = -2  # values are stored to these global variables
 config_filename_cache = ''
 
 
-def debug(msg):
-    """Prints a debugging message if DEBUG-flag is """
+CONNECTION_TYPE = 'tcp'   # valid values: 'tcp', 'streams'
+echo_file = None
+
+
+def echo(msg: str):
+    """Writes the message to stdout, or redirects it to a text file, in
+    case the server is connected via IO-streams instead of tcp."""
+    global CONNECTION_TYPE, echo_file
+    if CONNECTION_TYPE == 'tcp':
+        print(msg)
+    elif CONNECTION_TYPE == 'streams':
+        if echo_file is None or echo_file.closed:
+            if echo_file is None:
+                import atexit
+                atexit.register(echo_file.close)
+            echo_file = open('print.txt', 'a')
+        echo_file.write(msg)
+        echo_file.flush()
+    else:
+        print('Unknown connectsion type: %s. Must either be streams or tcp.' % CONNECTION_TYPE)
+
+
+def debug(msg: str):
+    """Prints a debugging message if DEBUG-flag is set"""
     global DEBUG
     if DEBUG:
-        print(msg)
+        echo(msg)
 
 
 def get_config_filename() -> str:
@@ -346,8 +368,9 @@ def run_server(host, port, log_path=None):
                          strict_lsp=True)
 
     if log_path is not None:
-        EBNF_server.echo_log = True
-        print(EBNF_server.start_logging(log_path.strip('" \'')))
+        # echoing does not work with stream connections!
+        EBNF_server.echo_log = True if port >= 0 and host else False
+        echo(EBNF_server.start_logging(log_path.strip('" \'')))
 
     if port < 0 or not host:  # communication via streams instead of tcp server
         try:
@@ -370,14 +393,14 @@ def run_server(host, port, log_path=None):
             ident = asyncio_run(probe_server(host, port, SERVER_REPLY_TIMEOUT))
             if ident:
                 if ident.endswith(servername):
-                    print('A server of type "%s" already exists on %s:%i.' % (servername, host, port)
+                    echo('A server of type "%s" already exists on %s:%i.' % (servername, host, port)
                           + ' Use --port option to start a secondary server on a different port.')
                     sys.exit(1)
                 if ports:
-                    print('"%s" already occupies %s:%i. Trying port %i' % (ident, host, port, ports[-1]))
+                    echo('"%s" already occupies %s:%i. Trying port %i' % (ident, host, port, ports[-1]))
                     continue
                 else:
-                    print('"%s" already occupies %s:%i. No more ports to try.' % (ident, host, port))
+                    echo('"%s" already occupies %s:%i. No more ports to try.' % (ident, host, port))
                     sys.exit(1)
         if overwrite:
             try:
@@ -386,10 +409,10 @@ def run_server(host, port, log_path=None):
                           % (host, port, cfg_filename))
                     f.write(host + ' ' + str(port))
             except (PermissionError, IOError) as e:
-                print('%s: Could not write temporary config file: "%s"' % (str(e), cfg_filename))
+                echo('%s: Could not write temporary config file: "%s"' % (str(e), cfg_filename))
                 ports = []
         else:
-            print('Configuration file "%s" already existed and was not overwritten. '
+            echo('Configuration file "%s" already existed and was not overwritten. '
                   'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
             debug('Starting server on %s:%i' % (host, port))
@@ -397,16 +420,16 @@ def run_server(host, port, log_path=None):
             ports = []
         except OSError as e:
             if not (ports and e.errno == 98):
-                print(e)
-                print('Could not start server. Shutting down!')
+                echo(e)
+                echo('Could not start server. Shutting down!')
                 sys.exit(1)
             elif ports:
-                print('Could not start server on %s:%i. Trying port %s' % (host, port, ports[-1]))
+                echo('Could not start server on %s:%i. Trying port %s' % (host, port, ports[-1]))
             else:
-                print('Could not start server on %s:%i. No more ports to try.' % (host, port))
+                echo('Could not start server on %s:%i. No more ports to try.' % (host, port))
         finally:
             if not ports:
-                print('Server on %s:%i stopped' % (host, port))
+                echo('Server on %s:%i stopped' % (host, port))
                 if overwrite:
                     try:
                         os.remove(cfg_filename)
@@ -421,7 +444,7 @@ async def send_request(reader, writer, request, timeout=SERVER_REPLY_TIMEOUT) ->
     try:
         data = await asyncio.wait_for(reader.read(DATA_RECEIVE_LIMIT), timeout)
     except asyncio.TimeoutError as e:
-        print('Server did not answer to "%s"-Request within %i seconds.'
+        echo('Server did not answer to "%s"-Request within %i seconds.'
               % (request, timeout))
         raise e
     return data.decode()
@@ -450,7 +473,7 @@ async def single_request(request, host, port, timeout=SERVER_REPLY_TIMEOUT) -> s
     try:
         reader, writer = await asyncio.open_connection(host, port)
     except ConnectionRefusedError:
-        print('No server running on: ' + host + ':' + str(port))
+        echo('No server running on: ' + host + ':' + str(port))
         sys.exit(1)
     try:
         result = await final_request(reader, writer, request, timeout)
@@ -481,7 +504,7 @@ async def connect_to_daemon(host, port) -> tuple:
                     raise ValueError
                 countdown = 0
             except (asyncio.TimeoutError, ValueError):
-                print('Server "%s" not found on %s:%i' % (servername, host, port))
+                echo('Server "%s" not found on %s:%i' % (servername, host, port))
                 await close_connection(writer)
                 reader, writer = None, None
                 await asyncio.sleep(delay)
@@ -496,7 +519,7 @@ async def connect_to_daemon(host, port) -> tuple:
                 host, port = retrieve_host_and_port()
             countdown -= 1
     if ident is not None and save != (host, port):
-        print('Server "%s" found on different port %i' % (servername, port))
+        echo('Server "%s" found on different port %i' % (servername, port))
     return reader, writer, ident
 
 
@@ -510,7 +533,7 @@ async def start_server_daemon(host, port, requests) -> list:
         reader, writer, ident = await connect_to_daemon(host, port)
     if ident is not None:
         if not requests:
-            print('Server "%s" already running on %s:%i' % (ident, host, port))
+            echo('Server "%s" already running on %s:%i' % (ident, host, port))
     else:
         try:
             subprocess.Popen([__file__, '--startserver', host, str(port)])
@@ -518,10 +541,10 @@ async def start_server_daemon(host, port, requests) -> list:
             subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)])
         reader, writer, ident = await connect_to_daemon(host, port)
         if ident is None:
-            print('Could not start server or establish connection in time :-(')
+            echo('Could not start server or establish connection in time :-(')
             sys.exit(1)
         if not requests:
-            print('Server "%s" started.' % ident)
+            echo('Server "%s" started.' % ident)
     results = []
     for request in requests:
         assert request
@@ -532,7 +555,11 @@ async def start_server_daemon(host, port, requests) -> list:
 
 def parse_logging_args(args):
     if args.logging or args.logging is None:
-        echo = repr('ECHO_ON') if isinstance(args.startserver, list) else repr('ECHO_OFF')
+        global host, port
+        if port >= 0 and host:
+            echo = repr('ECHO_ON') if isinstance(args.startserver, list) else repr('ECHO_OFF')
+        else:  # echoing does not work with stream connections!
+            echo = repr('ECHO_OFF')
         if args.logging in ('OFF', 'STOP', 'NO', 'FALSE'):
             log_path = repr(None)
             echo = repr('ECHO_OFF')
@@ -588,12 +615,13 @@ if __name__ == "__main__":
     port = int(args.port[0])
 
     if args.stream:
+        CONNECTION_TYPE = 'streams'
         if port >= 0 or host:
-            print('Specifying host and port when using streams as transport does not make sense')
+            echo('Specifying host and port when using streams as transport does not make sense')
             sys.exit(1)
-        print('Starting streaming server.')
+        debug('Starting streaming server.')
         run_server('', -1)
-        print('Streaming server stopped.')
+        debug('Streaming server stopped.')
         sys.exit(0)
 
     if port < 0 or not host:
@@ -612,7 +640,7 @@ if __name__ == "__main__":
 
     if args.status:
         result = asyncio_run(single_request(IDENTIFY_REQUEST, host, port, SERVER_REPLY_TIMEOUT))
-        print('Server ' + str(result) + ' running on ' + host + ':' + str(port))
+        echo('Server ' + str(result) + ' running on ' + host + ':' + str(port))
 
     elif args.startserver is not None:
         portstr = None
@@ -638,7 +666,7 @@ if __name__ == "__main__":
         try:
             result = asyncio_run(single_request(STOP_SERVER_REQUEST_BYTES, host, port))
         except ConnectionRefusedError as e:
-            print(e)
+            echo(e)
             sys.exit(1)
         debug(result)
 
@@ -655,17 +683,17 @@ if __name__ == "__main__":
         requests = [log_request, file_name] if log_request else [file_name]
         result = asyncio_run(start_server_daemon(host, port, requests))[-1]
         if len(result) >= DATA_RECEIVE_LIMIT:
-            print(result, '...')
+            echo(result, '...')
         else:
-            print(result)
+            echo(result)
 
     else:
-        print('Usages:\n'
-              + '    python EBNFServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-              + '    python EBNFServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-              + '    python EBNFServer.py --stream\n'
-              + '    python EBNFServer.py --stopserver\n'
-              + '    python EBNFServer.py --status\n'
-              + '    python EBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
-              + '    python EBNFServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
+        echo('Usages:\n'
+             + '    python EBNFServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python EBNFServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python EBNFServer.py --stream\n'
+             + '    python EBNFServer.py --stopserver\n'
+             + '    python EBNFServer.py --status\n'
+             + '    python EBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
+             + '    python EBNFServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
         sys.exit(1)

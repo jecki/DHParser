@@ -460,12 +460,17 @@ class StreamReaderProxy:
         except AttributeError:
             self.buffered_io = io_reader
         self.loop = None
+        self._eof = False
 
     def feed_eof(self):
         self.bufferd_io.close()
+        self._eof = True
 
     def at_eof(self) -> bool:
-        return self.buffered_io.closed
+        try:
+            return self.buffered_io.closed
+        except AttributeError:
+            return self._eof
 
     async def readline(self) -> bytes:
         try:
@@ -829,9 +834,14 @@ class Server:
 
     @echo_log.setter
     def echo_log(self, value: bool):
-        self._echo_log = value
         if self.connection:
+            if isinstance(self.connection.writer, StreamWriterProxy):
+                # echoing log messages to the console does not work with stream connections,
+                # because the echo stream is the same as the writer of the connection.
+                value = False
             self.connection.echo_log = value
+        self._echo_log = value
+
 
     def register_service_rpc(self, name, method):
         """Registers a service request """
@@ -1126,7 +1136,8 @@ class Server:
         if self.connection is None:
             self.connection = Connection(reader, writer, self.exec)
             self.connection.log_file = self.log_file
-            self.connection.echo_log = self.echo_log
+            self.echo_log = self.echo_log  # will set echo to False is case of a stream connection
+            # self.connection.echo_log = self.echo_log  # already set by echo_log property
             id_connection = str(id(self.connection))
             self.connection_callback(self.connection)
             self.log('SERVER MESSAGE: New connection: ', id_connection, '\n')

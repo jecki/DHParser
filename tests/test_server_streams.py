@@ -36,7 +36,8 @@ from typing import Callable
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.server import Server, RPC_Type, StreamReaderProxy, StreamWriterProxy, STOP_SERVER_REQUEST_BYTES
+from DHParser.server import Server, RPC_Type, StreamReaderProxy, StreamWriterProxy, \
+    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES
 
 
 
@@ -67,8 +68,8 @@ async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
 async def run_server_streams(rpc_functions: RPC_Type,
                        reader: asyncio.StreamReader,
                        writer: asyncio.StreamWriter):
-    print('server task')
     server = Server(rpc_functions)
+    print('B')
     await server.handle(reader, writer)
 
 
@@ -76,28 +77,35 @@ async def run_server_streams(rpc_functions: RPC_Type,
 class TestServerStream:
 
     def test_identify(self):
+        stages = []
 
-        # p = multiprocessing.Process(target=run_server_streams, args=(compiler_dummy, ins, outs))
-        # p.start()
+        def pr(txt: str):
+            stages.append(txt)
+            print(txt)
 
         async def echo(reader, writer):
-            print('echo task')
-            writer.write(b'HALLO')
-            print('echo: was geschrieben')
+            nonlocal stages
+            pr('echo task')
+            writer.write(IDENTIFY_REQUEST_BYTES)
+            pr('echo: was geschrieben')
             await writer.drain()
-            print('echo: warte auf Antwort')
+            pr('echo: warte auf Antwort')
             answer = await reader.read()
-            print('echo Antwort: ' + answer)
+            pr('echo Antwort: ' + str(answer))
 
         async def main():
-            reader, writer = await stdio()
+            if sys.platform.lower().startswith('win'):
+                reader = StreamReaderProxy(sys.stdin)
+                writer = StreamWriterProxy(sys.stdout)
+            else:
+                reader, writer = await stdio()
             server_task = asyncio.create_task(run_server_streams(compiler_dummy, reader, writer))
             echo_task = asyncio.create_task(echo(reader, writer))
-            await server_task
             await echo_task
+            await server_task
 
         asyncio.run(main())
-        # p.join()
+        print(stages)
 
 
 # async def run_server_streams(rpc_functions: RPC_Type,
