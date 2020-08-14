@@ -231,6 +231,7 @@ def append_log(log_name: str, *strings, echo: bool = False) -> None:
         with open(log_path, 'a', encoding='utf-8') as f:
             for text in strings:
                 f.write(text)
+            f.flush()
     if echo:
         print(''.join(strings))
 

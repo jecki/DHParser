@@ -129,9 +129,9 @@ function startLangServerTCP(addr: number) : Disposable {
 
 export function activate(context: ExtensionContext) {
 	console.log('activating language server connector!');
-	context.subscriptions.push(startLangServerStream("python", ["EBNFServer.py", "--stream"]));
+	let disposable = startLangServerStream("python", ["EBNFServer.py", "--stream"]);
 	// let disposable = startLangServerTCP(defaultPort);
-	// context.subscriptions.push(disposable);
+    context.subscriptions.push(disposable);
 }
 
 

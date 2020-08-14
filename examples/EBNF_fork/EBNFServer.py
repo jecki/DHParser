@@ -24,7 +24,7 @@ import asyncio
 import os
 import sys
 
-DEBUG = False
+DEBUG = True
 
 assert sys.version_info >= (3, 5, 7), "DHParser.server requires at least Python-Version 3.5.7"
 
@@ -60,11 +60,13 @@ def echo(msg: str):
         print(msg)
     elif CONNECTION_TYPE == 'streams':
         if echo_file is None or echo_file.closed:
-            if echo_file is None:
+            new_file_flag = echo_file is None
+            echo_file = open('print.txt', 'a')
+            if new_file_flag:
                 import atexit
                 atexit.register(echo_file.close)
-            echo_file = open('print.txt', 'a')
         echo_file.write(msg)
+        echo_file.write('\n')
         echo_file.flush()
     else:
         print('Unknown connectsion type: %s. Must either be streams or tcp.' % CONNECTION_TYPE)
@@ -374,8 +376,11 @@ def run_server(host, port, log_path=None):
 
     if port < 0 or not host:  # communication via streams instead of tcp server
         try:
-            asyncio_run(EBNF_server.handle(StreamReaderProxy(sys.stdin),
-                                           StreamWriterProxy(sys.stdout)))
+            debug('in-stream: ' + str(sys.stdin))
+            debug('out-stream: ' + str(sys.stdout))
+            reader = StreamReaderProxy(sys.stdin)
+            writer = StreamWriterProxy(sys.stdout)
+            asyncio_run(EBNF_server.handle(reader, writer))
         except KeyboardInterrupt:
             pass
         return

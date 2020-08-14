@@ -481,6 +481,7 @@ class StreamReaderProxy:
             return await self.loop.run_in_executor(None, self.buffered_io.readline)
 
     async def read(self, n=-1) -> bytes:
+        n = 1  # DEBUG
         try:
             return await self.loop.run_in_executor(None, self.buffered_io.read, n)
         except AttributeError:
@@ -939,6 +940,8 @@ class Server:
         response a JSONRPC_HEADER will be added depending on
         `self.use_jsonrpc_header`.
         """
+        self.log('TICK respond function\n')
+
         if isinstance(response, str):
             response = response.encode()
         elif not isinstance(response, bytes):
@@ -950,6 +953,7 @@ class Server:
         if self.log_file:  # avoid data decoding if logging is off
             self.log('RESPONSE: ', *strip_header_delimiter(response.decode()), '\n\n')
         try:
+            self.log('TICK write\n')
             writer.write(response)
             await writer.drain()
         except ConnectionError as err:
@@ -1101,6 +1105,8 @@ class Server:
             except KeyError:
                 rpc_error = -32603, 'Inconclusive error object: ' + str(result)
 
+        self.log('TICK RESPOND\n\n')
+
         if rpc_error is None:
             try:
                 # check for json-rpc errors contained within the result
@@ -1119,8 +1125,6 @@ class Server:
                     await self.respond(writer, json.dumps(json_result, cls=DHParser_JSONEncoder))
                 except TypeError as err:
                     rpc_error = -32070, str(err)
-
-        self.log('TICK RESPOND\n\n')
 
         if rpc_error is not None:
             await self.respond(
@@ -1198,6 +1202,8 @@ class Server:
                     buffer = bytearray()
                 else:
                     try:
+                        # await asyncio.sleep(0)
+                        self.log('TICK WAIT FOR DATA\n')
                         data += await reader.read(self.max_data_size + 1)
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
                         self.log('ERROR while awaiting data: ', str(err), '\n')
