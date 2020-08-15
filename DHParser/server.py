@@ -381,7 +381,6 @@ class ExecutionEnvironment:
         zero, i.e. no error. If `executor` is `None`the method will be called
         directly instead of deferring it to an executor.
         """
-        append_log(self.log_file, 'TICK execute...\n')
         if self._closed:
             return None, (-32000,
                           "Server Error: Execution environment has already been shut down! "
@@ -432,7 +431,6 @@ class ExecutionEnvironment:
                 rpc_error = -32060, str(e)
         except Exception as e:
             rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
-        append_log(self.log_file, 'TICK execution in %s finished\n' % str(executor))
         return result, rpc_error
 
     def shutdown(self, wait: bool = True):
@@ -954,11 +952,7 @@ class Server:
         #      #executing-code-in-thread-or-process-pools
         executor = self.exec.process_executor if method_name in self.cpu_bound else \
             self.exec.thread_executor if method_name in self.blocking else None
-
-        self.log('TICK RUN %s in %s\n\n' % (method_name, str(executor)))
-        self.log('TICK EXEC LOG %s \n\n' % self.exec.log_file)
         result, rpc_error = await self.exec.execute(executor, method, params)
-        self.log('TICK END RUN %s in %s\n\n' % (method_name, str(executor)))
         return result, rpc_error
 
     async def respond(self, writer: StreamWriterType, response: Union[str, bytes]):
@@ -967,8 +961,6 @@ class Server:
         response a JSONRPC_HEADER will be added depending on
         `self.use_jsonrpc_header`.
         """
-        self.log('TICK respond function\n')
-
         if isinstance(response, str):
             response = response.encode()
         elif not isinstance(response, bytes):
@@ -982,7 +974,6 @@ class Server:
         try:
             writer.write(response)
             await writer.drain()
-            self.log('TICK response written\n\n')
         except ConnectionError as err:
             self.log('ERROR when writing data: ', str(err), '\n')
             if self.connection:
@@ -1094,9 +1085,6 @@ class Server:
                                      writer: StreamWriterType,
                                      json_obj: Dict,
                                      service_call: bool = False):
-
-        self.log('TICK JSON_RPC\n\n')
-
         # TODO: handle cancellation calls!
         result = None      # type: Optional[JSON_Type]
         rpc_error = None   # type: Optional[RPC_Error_Type]
@@ -1124,8 +1112,6 @@ class Server:
                     "error": {"code": -32601,
                               "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
-
-            self.log('TICK JSON_RPC CALL %s\n\n' % method_name)
             result, rpc_error = await self.run(method_name, method, params)
 
         if isinstance(result, Dict) and 'error' in result:
@@ -1133,8 +1119,6 @@ class Server:
                 rpc_error = result['error']['code'], result['error']['message']
             except KeyError:
                 rpc_error = -32603, 'Inconclusive error object: ' + str(result)
-
-        self.log('TICK RESPOND\n\n')
 
         if rpc_error is None:
             try:
@@ -1207,8 +1191,6 @@ class Server:
             # reset the length of the header, represented by the variable `k`
             k = 0  # type: int
 
-            self.log('TICK CONTINUE with content-length = %i, header-size = %i\n' % (content_length, k))
-
             # The following loop buffers the data from the stream until a complete data
             # set consisting of 1) a header containing a "Content-Length: ..." field,
             # 2) a separator consisting of an empty line and 3) a data-package of exactly
@@ -1250,10 +1232,7 @@ class Server:
                 else:
                     try:
                         # await asyncio.sleep(0)
-                        self.log('TICK WAIT FOR DATA\n')
-                        delta = await reader.read(content_length or self.max_data_size)
-                        data += delta
-                        self.log('TICK %i BYTES READ: %s\n' % (len(delta), str(delta[:25]) + ' ... ' +str(delta[-25:])))
+                        data += await reader.read(content_length or self.max_data_size)
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
                         self.log('ERROR while awaiting data: ', str(err), '\n')
                         if id_connection:
@@ -1287,12 +1266,9 @@ class Server:
                 self.log('RECEIVE (%i, %i, %i): ' % (len(data), content_length, k),
                          *strip_header_delimiter(data.decode()), '\n\n')
 
-            self.log('TICK 1\n\n')
-
             if id_connection:
                 if self.connection.alive:
                     if not data and self.connection.reader.at_eof():
-                        self.log('TICK eof\n\n')
                         self.connection.alive = False
                         break
                     # remove finished tasks from active_tasks list,
@@ -1302,8 +1278,6 @@ class Server:
                     self.connection.finished_tasks = set()
                 else:
                     break
-
-            self.log('TICK 2\n\n')
 
             task = None
             if data.startswith(b'GET'):
@@ -1353,8 +1327,6 @@ class Server:
                         rpc_error = -32700, 'Parse error: JSON-package does not appear '\
                                             'to ba an RPC-call or -response!?'
 
-                self.log('TICK 3\n\n')
-
                 if rpc_error is None:
                     method = json_obj.get('method', '')
                     response = json_obj.get('result', None) or json_obj.get('error', None)
@@ -1364,7 +1336,6 @@ class Server:
                             rpc_error = self.connection.verify_initialization(
                                 method, self.strict_lsp and bool(id_connection))
                             if rpc_error is None:
-                                self.log('TICK 4\n\n')
                                 task = self.connection.create_task(
                                     json_id, self.handle_jsonrpc_request(
                                         json_id, reader, writer, json_obj, not bool(id_connection)))

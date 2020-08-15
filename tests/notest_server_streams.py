@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""test_server_streams.py - tests of the server module of DHParser,
+"""notest_server_streams.py - tests of the server module of DHParser,
     connection with streams.
 
 
