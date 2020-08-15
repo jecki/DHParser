@@ -381,7 +381,7 @@ class ExecutionEnvironment:
         zero, i.e. no error. If `executor` is `None`the method will be called
         directly instead of deferring it to an executor.
         """
-        append_log(self.log_file, 'TICK execute...')
+        append_log(self.log_file, 'TICK execute...\n')
         if self._closed:
             return None, (-32000,
                           "Server Error: Execution environment has already been shut down! "
@@ -401,13 +401,9 @@ class ExecutionEnvironment:
             return result, rpc_error
         try:
             if executor is None:
-                append_log(self.log_file, 'TICK execute ' + str(asyncio.iscoroutinefunction(method)))
                 result = (await executable()) if asyncio.iscoroutinefunction(method) else executable()
-                append_log(self.log_file, 'TICK executed ' + str(asyncio.iscoroutinefunction(method)))
             else:
-                append_log(self.log_file, 'TICK execute in %s' % str(executor))
                 result = await self.loop.run_in_executor(executor, executable)
-                append_log(self.log_file, 'TICK executed in %s' % str(executor))
         except TypeError as e:
             rpc_error = -32602, "Invalid Params: " + str(e)
         except NameError as e:
@@ -436,7 +432,7 @@ class ExecutionEnvironment:
                 rpc_error = -32060, str(e)
         except Exception as e:
             rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
-        append_log(self.log_file, 'TICK task execution finished')
+        append_log(self.log_file, 'TICK execution in %s finished\n' % str(executor))
         return result, rpc_error
 
     def shutdown(self, wait: bool = True):
@@ -465,9 +461,10 @@ class StreamReaderProxy:
             self.buffered_io = io_reader.buffer
         except AttributeError:
             self.buffered_io = io_reader
-        self.loop = None
+        self.loop = None    # type: Optional[asyncio.AbstractEventLoop]
+        self.exec = None    # type: Optional[concurrent.futures.Executor]
         self.max_data_size = get_config_value('max_rpc_size')
-        self._eof = False
+        self._eof = False   # type: bool
 
     def feed_eof(self):
         self.bufferd_io.close()
@@ -491,12 +488,12 @@ class StreamReaderProxy:
         if self._eof:
             return b''
         if 1 <= n < self.max_data_size:
-            return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+            return await self.loop.run_in_executor(self.exec, self.buffered_io.read, n)
             # return self.buffered_io.read(n)
         else:
-            data = await self.loop.run_in_executor(None, self.buffered_io.readline)
+            data = await self.loop.run_in_executor(self.exec, self.buffered_io.readline)
             if len(data) > 0:
-                data += await self.loop.run_in_executor(None, self.buffered_io.readline)
+                data += await self.loop.run_in_executor(self.exec, self.buffered_io.readline)
                 # data += self.buffered_io.readline()
             else:
                 self.feed_eof()
@@ -524,7 +521,8 @@ class StreamWriterProxy:
         except AttributeError:
             self.buffered_io = io_writer
         self.buffer = []
-        self.loop = None
+        self.loop = None    # type: Optional[asyncio.AbstractEventLoop]
+        self.exec = None    # type: Optional[concurrent.futures.Executor]
 
     def write(self, data: bytes):
         self.buffer.append(data)
@@ -541,15 +539,19 @@ class StreamWriterProxy:
     async def wait_closed(self):
         assert self.buffer.closed, "buffer is not even closing!"
 
+    def _drain(self, data: List[str]):
+        self.buffered_io.writelines(data)
+        self.buffered_io.flush()
+
     async def drain(self):
         data, self.buffer = self.buffer, []
         if data:
             try:
-                return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
+                await self.loop.run_in_executor(self.exec, self._drain, data)
             except AttributeError:
                 self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                     else asyncio.get_event_loop()
-                return await self.loop.run_in_executor(None, self.buffered_io.writelines, data)
+                await self.loop.run_in_executor(self.exec, self._drain, data)
 
 
 StreamReaderType = Union[asyncio.StreamReader, StreamReaderProxy]
@@ -954,8 +956,9 @@ class Server:
             self.exec.thread_executor if method_name in self.blocking else None
 
         self.log('TICK RUN %s in %s\n\n' % (method_name, str(executor)))
-
+        self.log('TICK EXEC LOG %s \n\n' % self.exec.log_file)
         result, rpc_error = await self.exec.execute(executor, method, params)
+        self.log('TICK END RUN %s in %s\n\n' % (method_name, str(executor)))
         return result, rpc_error
 
     async def respond(self, writer: StreamWriterType, response: Union[str, bytes]):
@@ -977,9 +980,9 @@ class Server:
         if self.log_file:  # avoid data decoding if logging is off
             self.log('RESPONSE: ', *strip_header_delimiter(response.decode()), '\n\n')
         try:
-            self.log('TICK write\n')
             writer.write(response)
             await writer.drain()
+            self.log('TICK response written\n\n')
         except ConnectionError as err:
             self.log('ERROR when writing data: ', str(err), '\n')
             if self.connection:
@@ -1122,7 +1125,7 @@ class Server:
                               "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
 
-            self.log('TICK JSON_RPC RUN %s\n\n' % method_name)
+            self.log('TICK JSON_RPC CALL %s\n\n' % method_name)
             result, rpc_error = await self.run(method_name, method, params)
 
         if isinstance(result, Dict) and 'error' in result:
@@ -1163,6 +1166,22 @@ class Server:
         self.connection.task_done(json_id)
 
     async def handle(self, reader: StreamReaderType, writer: StreamWriterType):
+        if self.loop is None:
+            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                else asyncio.get_event_loop()
+
+        if self.exec is None:
+            self.exec = ExecutionEnvironment(self.loop)
+            self.exec.log_file = self.log_file
+
+        if isinstance(reader, StreamReaderProxy):
+            cast(StreamReaderProxy, reader).loop = self.loop
+            cast(StreamReaderProxy, reader).exec = self.exec.thread_executor
+
+        if isinstance(writer, StreamWriterProxy):
+            cast(StreamWriterProxy, writer).loop = self.loop
+            cast(StreamWriterProxy, writer).exec = self.exec.thread_executor
+
         if self.connection is None:
             self.connection = Connection(reader, writer, self.exec)
             self.connection.log_file = self.log_file
@@ -1471,10 +1490,11 @@ class Server:
                 self.exec.shutdown()
                 self.exec = None
 
-    def run_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
+    def run_tcp_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         """
-        Starts a DHParser-Server. This function will not return until the
-        DHParser-Server ist stopped by sending a STOP_SERVER_REQUEST.
+        Starts a DHParser-server that listens on a tcp port. This function will
+        not return until the DHParser-Server ist stopped by sending a
+        STOP_SERVER_REQUEST.
         """
         assert self.stage.value == SERVER_OFFLINE
         self.stage.value = SERVER_STARTING
@@ -1495,6 +1515,25 @@ class Server:
             # self.server_messages.put(SERVER_OFFLINE)
             self.stage.value = SERVER_OFFLINE
 
+    def run_stream_server(self, reader: StreamReaderType, writer: StreamWriterType):
+        """
+        Start a DHParser-server that listen on a reader-stream and answers
+        on a writer-stream.
+        """
+        assert self.stage.value == SERVER_OFFLINE
+        self.stage.value = SERVER_ONLINE
+        try:
+            asyncio_run(self.handle(reader, writer))
+        except KeyboardInterrupt:
+            # Don't print an error message, because sys.stdout might
+            # be used for communication with the client.
+            pass
+        except asyncio.CancelledError as e:
+            if self.stage.value != SERVER_TERMINATING:
+                raise e
+        finally:
+            self.stage.value = SERVER_OFFLINE
+
 
 def run_server(host, port, rpc_functions: RPC_Type,
                cpu_bound: Set[str] = ALL_RPCs,
@@ -1504,7 +1543,7 @@ def run_server(host, port, rpc_functions: RPC_Type,
                strict_lsp: bool = True):
     """Start a server and wait until server is closed."""
     server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
-    server.run_server(host, port)
+    server.run_tcp_server(host, port)
 
 
 async def probe_server(host, port, timeout=SERVER_REPLY_TIMEOUT) -> str:

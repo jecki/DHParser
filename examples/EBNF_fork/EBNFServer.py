@@ -24,7 +24,7 @@ import asyncio
 import os
 import sys
 
-DEBUG = True
+DEBUG = False
 
 assert sys.version_info >= (3, 5, 7), "DHParser.server requires at least Python-Version 3.5.7"
 
@@ -374,15 +374,11 @@ def run_server(host, port, log_path=None):
         EBNF_server.echo_log = True if port >= 0 and host else False
         echo(EBNF_server.start_logging(log_path.strip('" \'')))
 
-    if port < 0 or not host:  # communication via streams instead of tcp server
-        try:
-            debug('in-stream: ' + str(sys.stdin))
-            debug('out-stream: ' + str(sys.stdout))
-            reader = StreamReaderProxy(sys.stdin)
-            writer = StreamWriterProxy(sys.stdout)
-            asyncio_run(EBNF_server.handle(reader, writer))
-        except KeyboardInterrupt:
-            pass
+    if port < 0 or not host:
+        # communication via streams instead of tcp server
+        reader = StreamReaderProxy(sys.stdin)
+        writer = StreamWriterProxy(sys.stdout)
+        EBNF_server.run_stream_server(reader, writer)
         return
 
     cfg_filename = get_config_filename()
@@ -421,7 +417,7 @@ def run_server(host, port, log_path=None):
                   'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
             debug('Starting server on %s:%i' % (host, port))
-            EBNF_server.run_server(host, port)  # returns only after server has stopped!
+            EBNF_server.run_tcp_server(host, port)  # returns only after server has stopped!
             ports = []
         except OSError as e:
             if not (ports and e.errno == 98):
@@ -624,9 +620,7 @@ if __name__ == "__main__":
         if port >= 0 or host:
             echo('Specifying host and port when using streams as transport does not make sense')
             sys.exit(1)
-        debug('Starting streaming server.')
         run_server('', -1)
-        debug('Streaming server stopped.')
         sys.exit(0)
 
     if port < 0 or not host:

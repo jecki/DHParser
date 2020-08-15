@@ -384,7 +384,7 @@ def run_server(host, port, log_path=None):
                   'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
             debug('Starting server on %s:%i' % (host, port))
-            EBNF_server.run_server(host, port)  # returns only after server has stopped
+            EBNF_server.run_tcp_server(host, port)  # returns only after server has stopped
             ports = []
         except OSError as e:
             if not (ports and e.errno == 98):

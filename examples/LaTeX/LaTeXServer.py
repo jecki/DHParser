@@ -215,7 +215,7 @@ def run_server(host, port, log_path=None):
         print(LaTeX_server.start_logging(log_path))
 
     try:
-        LaTeX_server.run_server(host, port)  # returns only after server has stopped
+        LaTeX_server.run_tcp_server(host, port)  # returns only after server has stopped
     except OSError as e:
         print(e)
         print('Could not start server. Shutting down!')
