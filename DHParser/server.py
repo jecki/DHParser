@@ -381,6 +381,7 @@ class ExecutionEnvironment:
         zero, i.e. no error. If `executor` is `None`the method will be called
         directly instead of deferring it to an executor.
         """
+        append_log(self.log_file, 'TICK execute...')
         if self._closed:
             return None, (-32000,
                           "Server Error: Execution environment has already been shut down! "
@@ -400,9 +401,13 @@ class ExecutionEnvironment:
             return result, rpc_error
         try:
             if executor is None:
+                append_log(self.log_file, 'TICK execute ' + str(asyncio.iscoroutinefunction(method)))
                 result = (await executable()) if asyncio.iscoroutinefunction(method) else executable()
+                append_log(self.log_file, 'TICK executed ' + str(asyncio.iscoroutinefunction(method)))
             else:
+                append_log(self.log_file, 'TICK execute in %s' % str(executor))
                 result = await self.loop.run_in_executor(executor, executable)
+                append_log(self.log_file, 'TICK executed in %s' % str(executor))
         except TypeError as e:
             rpc_error = -32602, "Invalid Params: " + str(e)
         except NameError as e:
@@ -431,6 +436,7 @@ class ExecutionEnvironment:
                 rpc_error = -32060, str(e)
         except Exception as e:
             rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
+        append_log(self.log_file, 'TICK task execution finished')
         return result, rpc_error
 
     def shutdown(self, wait: bool = True):
@@ -460,6 +466,7 @@ class StreamReaderProxy:
         except AttributeError:
             self.buffered_io = io_reader
         self.loop = None
+        self.max_data_size = get_config_value('max_rpc_size')
         self._eof = False
 
     def feed_eof(self):
@@ -471,38 +478,29 @@ class StreamReaderProxy:
             return self.buffered_io.closed
         except AttributeError:
             return self._eof
-
-    async def readline(self) -> bytes:
-        try:
-            return await self.loop.run_in_executor(None, self.buffered_io.readline)
-        except AttributeError:
-            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-                else asyncio.get_event_loop()
-            return await self.loop.run_in_executor(None, self.buffered_io.readline)
+    #
+    # async def readline(self) -> bytes:
+    #     try:
+    #         return await self.loop.run_in_executor(None, self.buffered_io.readline)
+    #     except AttributeError:
+    #         self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+    #             else asyncio.get_event_loop()
+    #         return await self.loop.run_in_executor(None, self.buffered_io.readline)
 
     async def _read(self, n=-1) -> bytes:
-        # return await self.loop.run_in_executor(None, self.buffered_io.read, n)
-        return await self.loop.run_in_executor(None, self.buffered_io.readline)
-        if n < 0 or n >= 15:    # 15 = len(b'Content-Length:')
-            # work around, because stream reading only returns when really n bytes
-            # have been read, not up to n bytes, or in case of n == -1, when the
-            # stream has been closed.
-            data = await self.loop.run_in_executor(None, self.buffered_io.read, 15)
-            if data == b'Content-Length:':
-                lf_count = 0
-                while lf_count < 2:
-                    ch = self.buffered_io.read(1)
-                    data += ch
-                    if ch == rb'\n':
-                        lf_count += 1
-                n = int(data[15:])
-                data += self.buffere_io.read(n)
-                return data
-            else:
-                d2 = await self.loop.run_in_executor(None, self.buffered_io.read, max(-1, n - 15))
-                return data + d2
-        else:
+        if self._eof:
+            return b''
+        if 1 <= n < self.max_data_size:
             return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+            # return self.buffered_io.read(n)
+        else:
+            data = await self.loop.run_in_executor(None, self.buffered_io.readline)
+            if len(data) > 0:
+                data += await self.loop.run_in_executor(None, self.buffered_io.readline)
+                # data += self.buffered_io.readline()
+            else:
+                self.feed_eof()
+            return data
 
     async def read(self, n=-1) -> bytes:
         try:
@@ -954,6 +952,9 @@ class Server:
         #      #executing-code-in-thread-or-process-pools
         executor = self.exec.process_executor if method_name in self.cpu_bound else \
             self.exec.thread_executor if method_name in self.blocking else None
+
+        self.log('TICK RUN %s in %s\n\n' % (method_name, str(executor)))
+
         result, rpc_error = await self.exec.execute(executor, method, params)
         return result, rpc_error
 
@@ -1120,6 +1121,8 @@ class Server:
                     "error": {"code": -32601,
                               "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
+
+            self.log('TICK JSON_RPC RUN %s\n\n' % method_name)
             result, rpc_error = await self.run(method_name, method, params)
 
         if isinstance(result, Dict) and 'error' in result:
@@ -1185,6 +1188,8 @@ class Server:
             # reset the length of the header, represented by the variable `k`
             k = 0  # type: int
 
+            self.log('TICK CONTINUE with content-length = %i, header-size = %i\n' % (content_length, k))
+
             # The following loop buffers the data from the stream until a complete data
             # set consisting of 1) a header containing a "Content-Length: ..." field,
             # 2) a separator consisting of an empty line and 3) a data-package of exactly
@@ -1227,14 +1232,15 @@ class Server:
                     try:
                         # await asyncio.sleep(0)
                         self.log('TICK WAIT FOR DATA\n')
-                        data += await reader.read(self.max_data_size + 1)
-                        self.log('TICK %i BYTES READ\n' % len(data))
+                        delta = await reader.read(content_length or self.max_data_size)
+                        data += delta
+                        self.log('TICK %i BYTES READ: %s\n' % (len(delta), str(delta[:25]) + ' ... ' +str(delta[-25:])))
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
                         self.log('ERROR while awaiting data: ', str(err), '\n')
                         if id_connection:
                             self.connection.alive = False
                         break
-                if content_length <= 0:
+                if content_length <= 0 or k <= 0:
                     # If content-length has not been set, look for it in the received data package.
                     i = data.find(b'Content-Length:', 0, 512)
                     m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
@@ -1259,7 +1265,8 @@ class Server:
                 # have been received
 
             if self.log_file:   # avoid decoding if logging is off
-                self.log('RECEIVE: ', *strip_header_delimiter(data.decode()), '\n\n')
+                self.log('RECEIVE (%i, %i, %i): ' % (len(data), content_length, k),
+                         *strip_header_delimiter(data.decode()), '\n\n')
 
             self.log('TICK 1\n\n')
 
