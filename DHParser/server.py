@@ -480,14 +480,37 @@ class StreamReaderProxy:
                 else asyncio.get_event_loop()
             return await self.loop.run_in_executor(None, self.buffered_io.readline)
 
-    async def read(self, n=-1) -> bytes:
-        n = 1  # DEBUG
-        try:
+    async def _read(self, n=-1) -> bytes:
+        # return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+        return await self.loop.run_in_executor(None, self.buffered_io.readline)
+        if n < 0 or n >= 15:    # 15 = len(b'Content-Length:')
+            # work around, because stream reading only returns when really n bytes
+            # have been read, not up to n bytes, or in case of n == -1, when the
+            # stream has been closed.
+            data = await self.loop.run_in_executor(None, self.buffered_io.read, 15)
+            if data == b'Content-Length:':
+                lf_count = 0
+                while lf_count < 2:
+                    ch = self.buffered_io.read(1)
+                    data += ch
+                    if ch == rb'\n':
+                        lf_count += 1
+                n = int(data[15:])
+                data += self.buffere_io.read(n)
+                return data
+            else:
+                d2 = await self.loop.run_in_executor(None, self.buffered_io.read, max(-1, n - 15))
+                return data + d2
+        else:
             return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+
+    async def read(self, n=-1) -> bytes:
+        try:
+            return await self._read(n)
         except AttributeError:
             self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                 else asyncio.get_event_loop()
-            return await self.loop.run_in_executor(None, self.buffered_io.read, n)
+            return await self._read(n)
 
 
 class StreamWriterProxy:
@@ -1205,6 +1228,7 @@ class Server:
                         # await asyncio.sleep(0)
                         self.log('TICK WAIT FOR DATA\n')
                         data += await reader.read(self.max_data_size + 1)
+                        self.log('TICK %i BYTES READ\n' % len(data))
                     except ConnectionError as err:  # (ConnectionAbortedError, ConnectionResetError)
                         self.log('ERROR while awaiting data: ', str(err), '\n')
                         if id_connection:
