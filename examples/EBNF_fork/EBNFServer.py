@@ -356,7 +356,7 @@ def run_server(host, port, log_path=None):
         from tst_EBNF_grammar import recompile_grammar
         recompile_grammar(grammar_src, force=False)
         from EBNFParser import compile_src
-    from DHParser.server import Server, probe_server, gen_lsp_table, \
+    from DHParser.server import Server, probe_tcp_server, gen_lsp_table, \
         StreamReaderProxy, StreamWriterProxy
 
     EBNF_lsp = EBNFLanguageServerProtocol()
@@ -391,7 +391,7 @@ def run_server(host, port, log_path=None):
     while ports:
         port = ports.pop()
         if (host, port) == (KNOWN_HOST, KNOWN_PORT):
-            ident = asyncio_run(probe_server(host, port, SERVER_REPLY_TIMEOUT))
+            ident = asyncio_run(probe_tcp_server(host, port, SERVER_REPLY_TIMEOUT))
             if ident:
                 if ident.endswith(servername):
                     echo('A server of type "%s" already exists on %s:%i.' % (servername, host, port)

@@ -104,8 +104,8 @@ __all__ = ('RPC_Table',
            'Connection',
            'connection_cb_dummy',
            'Server',
-           'probe_server',
-           'spawn_server',
+           'probe_tcp_server',
+           'spawn_tcp_server',
            'stop_server',
            'has_server_stopped',
            'gen_lsp_name',
@@ -1488,7 +1488,7 @@ class Server:
 
     def run_stream_server(self, reader: StreamReaderType, writer: StreamWriterType):
         """
-        Start a DHParser-server that listen on a reader-stream and answers
+        Start a DHParser-server that listens on a reader-stream and answers
         on a writer-stream.
         """
         assert self.stage.value == SERVER_OFFLINE
@@ -1506,18 +1506,7 @@ class Server:
             self.stage.value = SERVER_OFFLINE
 
 
-def run_server(host, port, rpc_functions: RPC_Type,
-               cpu_bound: Set[str] = ALL_RPCs,
-               blocking: Set[str] = set(),
-               cn_callback: ConnectionCallback = connection_cb_dummy,
-               name: str = '',
-               strict_lsp: bool = True):
-    """Start a server and wait until server is closed."""
-    server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
-    server.run_tcp_server(host, port)
-
-
-async def probe_server(host, port, timeout=SERVER_REPLY_TIMEOUT) -> str:
+async def probe_tcp_server(host, port, timeout=SERVER_REPLY_TIMEOUT) -> str:
     """Connects to server and sends an identify-request. Returns the response
     or an empty string if connection failed or command timed out."""
     try:
@@ -1533,22 +1522,75 @@ async def probe_server(host, port, timeout=SERVER_REPLY_TIMEOUT) -> str:
         return ''
 
 
-def dummy_server(s: str) -> str:
+def echo_requests(s: str, log_dir: str='') -> str:
     return s
 
 
-def spawn_server(host: str = USE_DEFAULT_HOST,
-                 port: int = USE_DEFAULT_PORT,
-                 parameters: Union[Tuple, Callable] = dummy_server) -> Process:
+def _run_tcp_server(host, port, rpc_functions: RPC_Type,
+                    cpu_bound: Set[str] = ALL_RPCs,
+                    blocking: Set[str] = set(),
+                    cn_callback: ConnectionCallback = connection_cb_dummy,
+                    name: str = '',
+                    strict_lsp: bool = True):
+    """Starts a tcp-server and waits until server is closed."""
+    server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
+    server.run_tcp_server(host, port)
+
+
+def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
+                     port: int = USE_DEFAULT_PORT,
+                     parameters: Union[Tuple, Callable] = echo_requests) -> Process:
     """
-    Start DHParser-Server in a separate process and return. Can be used
-    for writing test code. WARNING: Does not seem to work with
-    `multiprocessing.set_start_method('spawn')` under linux !?
+    Starts DHParser-Server that communicates via tcp in a separate process.
+    Can be used for writing test code. WARNING: Does not seem to work with
+    multiprocessing.set_start_method('spawn')` under linux !?
+    :param host: The host for the tcp-communication, e.g. 127.0.0.1
+    :param port: the port number for the tcp-communication.
+    :param parameters: The parameter-tuple for initializing the server or
+        simply and rpc-handling function that takes a string-request as
+        argument and returns a string response.
+    :return: the `multiprocessing.Proccess`-object of the already started
+        server-processs.
     """
     if isinstance(parameters, tuple) or isinstance(parameters, list):
-        p = Process(target=run_server, args=(host, port, *parameters))
+        p = Process(target=_run_tcp_server, args=(host, port, *parameters))
     else:
-        p = Process(target=run_server, args=(host, port, parameters))
+        p = Process(target=_run_tcp_server, args=(host, port, parameters))
+    p.start()
+    return p
+
+
+def _run_stream_server(reader: StreamReaderType,
+                       writer: StreamWriterType,
+                       rpc_functions: RPC_Type,
+                       cpu_bound: Set[str] = ALL_RPCs,
+                       blocking: Set[str] = set(),
+                       cn_callback: ConnectionCallback = connection_cb_dummy,
+                       name: str = '',
+                       strict_lsp: bool = True):
+    """Starts a stream-server and waits until server is closed."""
+    server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
+    server.run_stream_server(reader, writer)
+
+
+def spawn_stream_server(reader: StreamReaderType,
+                        writer: StreamWriterType,
+                        parameters: Union[Tuple, Callable] = echo_requests) -> Process:
+    """
+    Starts a DHParser-Server that communitcates via streams in a separate
+    process.
+    :param reader: The stream from which the server will read requests.
+    :param writer: The stram to which the server will write responses.
+    :param parameters: The parameter-tuple for initializing the server or
+        simply and rpc-handling function that takes a string-request as
+        argument and returns a string response.
+    :return: the `multiprocessing.Proccess`-object of the already started
+        server-processs.
+    """
+    if isinstance(parameters, tuple) or isinstance(parameters, list):
+        p = Process(target=_run_stream_server, args=(reader, writer, *parameters))
+    else:
+        p = Process(target=_run_stream_server, args=(reader, writer, parameters))
     p.start()
     return p
 
