@@ -24,6 +24,7 @@ limitations under the License.
 
 import asyncio
 import collections
+from concurrent.futures import ThreadPoolExecutor
 import functools
 import io
 import json
@@ -65,26 +66,26 @@ def compiler_dummy(src: str, log_dir: str='') -> str:
 class PipeStream:
     def __init__(self):
         self.lock = threading.Lock()
-        self.data_wating = threading.Event()
+        self.data_waiting = threading.Event()
         self.data_waiting.clear()
         self.data = collections.deque()
         self.closed = False  # type: bool
 
     def close(self):
         assert not self.closed
-        self.data_wating.clear()
+        self.data_waiting.clear()
         self.data = collections.deque()
         self.closed = True
 
     def write(self, data: bytes):
         with self.lock.acquire():
             self.data.append(data)
-            self.data_wating.set()
+            self.data_waiting.set()
 
     def writelines(self, data: List[bytes]):
         with self.lock.acquire():
             self.data.extend(data)
-            self.data_wating.set()
+            self.data_waiting.set()
 
     def flush(self):
         pass
@@ -92,7 +93,7 @@ class PipeStream:
     def _read(self, n=-1) -> Union[List[bytes], Deque[bytes]]:
         with self.lock.acquire():
             if n < 0:
-                self.data_wating.clear()
+                self.data_waiting.clear()
                 if len(self.data) == 1:
                     return [self.data.popleft()]
                 else:
@@ -114,7 +115,7 @@ class PipeStream:
                         self.data[0] = self.data[0][cut:]
                         size = n
                 if not self.data:
-                    self.data_wating.clear()
+                    self.data_waiting.clear()
                 return data
             else:
                 return [b'']
@@ -134,7 +135,7 @@ class PipeStream:
                     self.data[0] = self.data[0][i + 1:]
                     break
             if not self.data:
-                self.data_wating.clear()
+                self.data_waiting.clear()
             return data
 
     def read(self, n=-1) -> bytes:
@@ -142,7 +143,7 @@ class PipeStream:
         if n > 0:
             N = sum(len(chunk) for chunk in data)
             while N < n:
-                self.data_wating.wait()
+                self.data_waiting.wait()
                 more = self._read(n)
                 N += sum(len(chunk) for chunk in more)
                 data.extend(more)
@@ -151,14 +152,34 @@ class PipeStream:
     def readline(self) -> bytes:
         data = self._readline()
         while data[-1][-1] != b'\n':
-            self.data_wating.wait()
+            self.data_waiting.wait()
             data.extend(self._readline())
         return b''.join(data)
 
 
 class TestServer:
     def setup(self):
-        self.reader = ...
+        self.pipe = PipeStream()
+        self.reader = StreamReaderProxy(self.pipe)
+        self.writer = StreamWriterProxy(self.pipe)
+
+    def test_pipe(self):
+        def writer(pipe: PipeStream):
+            txt = b"alpha\nbeta\bgamma\n"
+            for i in range(0, len(txt), 2):
+                pipe.write(txt[i:i+2])
+
+        def reader(pipe: PipeStream):
+            received = []
+            for i in range(3):
+                received.append(pipe.readline())
+                print(received[-1])
+            return b'+ '.join(received)
+
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(reader, self.pipe)
+            executor.submit(writer, self.pipe)
+            print(future.result())
 
 
 # async def run_server_streams(rpc_functions: RPC_Type,
