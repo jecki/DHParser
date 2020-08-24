@@ -39,7 +39,7 @@ scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import Server, RPC_Type, StreamReaderProxy, StreamWriterProxy, \
-    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES
+    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER
 
 
 
@@ -73,8 +73,6 @@ class PipeStream:
 
     def close(self):
         assert not self.closed
-        self.data_waiting.clear()
-        self.data = collections.deque()
         self.closed = True
 
     def write(self, data: bytes):
@@ -151,12 +149,9 @@ class PipeStream:
 
     def readline(self) -> bytes:
         data = self._readline()
-        print('A: ' + repr(data))
-        while not data or data[-1][-1] != b'\n':
+        while not data or data[-1][-1] != ord(b'\n'):
             self.data_waiting.wait()
             data.extend(self._readline())
-            print('B: ', repr(data), data[-1][-1], ord(b'\n'))
-        print('C: ' + repr(data))
         return b''.join(data)
 
 
@@ -167,23 +162,30 @@ class TestServer:
         self.writer = StreamWriterProxy(self.pipe)
 
     def test_pipe(self):
+        message = b"alpha\nbeta\ngamma\n"
+
         def writer(pipe: PipeStream):
-            txt = b"alpha\nbeta\ngamma\n"
-            for i in range(0, len(txt), 2):
-                print('write(): ' + repr(txt[i:i+2]))
-                pipe.write(txt[i:i+2])
+            nonlocal message
+            for i in range(0, len(message), 2):
+                pipe.write(message[i:i+2])
 
         def reader(pipe: PipeStream):
+            nonlocal message
             received = []
             for i in range(3):
                 received.append(pipe.readline())
-                print(received[-1])
-            return b'+ '.join(received)
+            return b''.join(received)
 
         with ThreadPoolExecutor() as executor:
             future = executor.submit(reader, self.pipe)
             executor.submit(writer, self.pipe)
-            print(future.result())
+            assert future.result() == message
+
+    def test_reader_writer(self):
+        def write(writer):
+            writer.write(JSONRPC_HEADER % len(IDENTIFY_REQUEST_BYTES) + IDENTIFY_REQUEST_BYTES)
+            writer.drain()
+            # writer.close()
 
 
 # async def run_server_streams(rpc_functions: RPC_Type,

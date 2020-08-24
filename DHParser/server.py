@@ -526,13 +526,20 @@ class StreamWriterProxy:
         self.buffer.append(data)
 
     def can_write_eof(self) -> bool:
-        return False
+        # return False
+        return True
 
     def write_eof(self):
-        pass
+        # pass
+        assert not self.buffered_io.closed
+        data, self.buffer = self.buffer, []
+        self.buffered_io.writelines(data)
+        self.buffered_io.flush()
+        self.buffered_io.close()
 
     def close(self):
-        self.buffer.close()
+        if not self.buffered_io.closed:
+            self.write_eof()
 
     async def wait_closed(self):
         assert self.buffer.closed, "buffer is not even closing!"
