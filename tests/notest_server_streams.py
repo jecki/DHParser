@@ -78,12 +78,12 @@ class PipeStream:
         self.closed = True
 
     def write(self, data: bytes):
-        with self.lock.acquire():
+        with self.lock:
             self.data.append(data)
             self.data_waiting.set()
 
     def writelines(self, data: List[bytes]):
-        with self.lock.acquire():
+        with self.lock:
             self.data.extend(data)
             self.data_waiting.set()
 
@@ -91,7 +91,7 @@ class PipeStream:
         pass
 
     def _read(self, n=-1) -> Union[List[bytes], Deque[bytes]]:
-        with self.lock.acquire():
+        with self.lock:
             if n < 0:
                 self.data_waiting.clear()
                 if len(self.data) == 1:
@@ -121,7 +121,7 @@ class PipeStream:
                 return [b'']
 
     def _readline(self) -> Union[List[bytes], Deque[bytes]]:
-        with self.lock.acquire():
+        with self.lock:
             data = []
             while self.data:
                 i = self.data[0].find(b'\n')
@@ -151,9 +151,12 @@ class PipeStream:
 
     def readline(self) -> bytes:
         data = self._readline()
-        while data[-1][-1] != b'\n':
+        print('A: ' + repr(data))
+        while not data or data[-1][-1] != b'\n':
             self.data_waiting.wait()
             data.extend(self._readline())
+            print('B: ', repr(data), data[-1][-1], ord(b'\n'))
+        print('C: ' + repr(data))
         return b''.join(data)
 
 
@@ -165,8 +168,9 @@ class TestServer:
 
     def test_pipe(self):
         def writer(pipe: PipeStream):
-            txt = b"alpha\nbeta\bgamma\n"
+            txt = b"alpha\nbeta\ngamma\n"
             for i in range(0, len(txt), 2):
+                print('write(): ' + repr(txt[i:i+2]))
                 pipe.write(txt[i:i+2])
 
         def reader(pipe: PipeStream):
