@@ -288,22 +288,21 @@ def compile_source(source: str,
     no fatal errors occurred in any of the earlier stages of the processing
     pipeline.
 
-    Args:
-        source (str): The input text for compilation or a the name of a
+    :param source (str): The input text for compilation or a the name of a
             file containing the input text.
-        preprocessor (function):  text -> text. A preprocessor function
+    :param preprocessor (function):  text -> text. A preprocessor function
             or None, if no preprocessor is needed.
-        parser (function):  A parsing function or grammar class
-        transformer (function):  A transformation function that takes
+    :param parser (function):  A parsing function or grammar class
+    :param transformer (function):  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
             transforms it (in place) into an abstract syntax tree.
-        compiler (function): A compiler function or compiler class
+    :param compiler (function): A compiler function or compiler class
             instance
-        preserve_AST (bool): Preserves the AST-tree.
+    :param preserve_AST (bool): Preserves the AST-tree.
 
-    Returns (tuple):
-        The result of the compilation as a 3-tuple
+    :return: The result of the compilation as a 3-tuple
         (result, errors, abstract syntax tree). In detail:
+
         1. The result as returned by the compiler or ``None`` in case of failure
         2. A list of error or warning messages
         3. The root-node of the abstract syntax tree if `preserve_ast` is True

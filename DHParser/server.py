@@ -350,15 +350,14 @@ class ExecutionEnvironment:
     """Class ExecutionEnvironment provides methods for executing server tasks
     in separate processes, threads, as asynchronous task or as simple function.
 
-    Attributes:
-        process_executor:  A process-pool-executor for cpu-bound tasks
-        thread_executor:   A thread-pool-executor for blocking tasks
-        loop:              The asynchronous event loop for running coroutines
-        log_file:          The name of the log-file to which error messages
-                           are written if an executor raises a Broken-Error.
-        _closed            A Flag that is set to True after the `shutdown()`-
-                           method has been called. After that any
-                           call to the `execute()`-method yields an error.
+    :var process_executor:  A process-pool-executor for cpu-bound tasks
+    :var thread_executor:   A thread-pool-executor for blocking tasks
+    :var loop:  The asynchronous event loop for running coroutines
+    :var log_file:  The name of the log-file to which error messages are
+        written if an executor raises a Broken-Error.
+    :var _closed:  A Flag that is set to True after the `shutdown-method
+        has been called. After that any call to the `execute()`-method
+        yields an error.
     """
     def __init__(self, event_loop: asyncio.AbstractEventLoop):
         self.process_executor = ProcessPoolExecutor()  # type: Optional[ProcessPoolExecutor]
@@ -375,10 +374,10 @@ class ExecutionEnvironment:
                       params: Union[Dict, Sequence])\
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Executes a method with the given parameters in a given executor
-        (`ThreadPoolExcecutor` or `ProcessPoolExecutor`). `execute()`waits for
-        the completion and returns the JSON result and an RPC error tuple (see
+        (``ThreadPoolExcecutor`` or ``ProcessPoolExecutor``). ``execute()`` waits
+        for the completion and returns the JSON result and an RPC error tuple (see
         the type definition above). The result may be None and the error may be
-        zero, i.e. no error. If `executor` is `None`the method will be called
+        zero, i.e. no error. If `executor` is `None` the method will be called
         directly instead of deferring it to an executor.
         """
         if self._closed:
@@ -733,48 +732,48 @@ class Server:
     LSP-functionality via the rpc_functions-parameter to the
     constructor of this class.
 
-    :ivar server_name: A name for the server. Defaults to
+    :var server_name: A name for the server. Defaults to
         `CLASSNAME_OBJECTID`
-    :ivar strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
+    :var strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
         If `False` json-rpc calls will be processed even without prior
         initialization, just like plain data or http calls.
-    :ivar cpu_bound: Set of function names of functions that are cpu-bound
+    :var cpu_bound: Set of function names of functions that are cpu-bound
         and will be run in separate processes.
-    :ivar blocking: Set of functions that contain blocking calls
+    :var blocking: Set of functions that contain blocking calls
         (e.g. IO-calls) and will therefore be run in separate threads.
-    :ivar rpc_table: Table mapping LSP-method names to Python functions
-    :ivar known_methods: Set of all known LSP-methods. This includes the
+    :var rpc_table: Table mapping LSP-method names to Python functions
+    :var known_methods: Set of all known LSP-methods. This includes the
         methods in the rpc-table and the four initialization methods,
         `initialize()`, `initialized()`, `shutdown()`, `exit`
-    :ivar connection_callback: A callback function that is called with the
+    :var connection_callback: A callback function that is called with the
         connection object as argument when a connection to a client is
         established
-    :ivar max_data_size: Maximal size of a data chunk that can be read by
+    :var max_data_size: Maximal size of a data chunk that can be read by
         the server at a time.
-    :ivar stage:  The operation stage, the server is in. Can be on of the four
+    :var stage:  The operation stage, the server is in. Can be on of the four
         values: `SERVER_OFFLINE`, `SERVER_STARTING`, `SERVER_ONLINE`,
         `SERVER_TERMINATING`
-    :ivar host: The host, the server runs on, e.g. "127.0.0.1"
-    :ivar port: The port of the server, e.g. 8888
-    :ivar server: The asyncio.Server if the server is online, or `None`.
-    :ivar serving_task: The task in which the asyncio.Server is run.
-    :ivar stop_response:  The response string that is written to the stream
+    :var host: The host, the server runs on, e.g. "127.0.0.1"
+    :var port: The port of the server, e.g. 8888
+    :var server: The asyncio.Server if the server is online, or `None`.
+    :var serving_task: The task in which the asyncio.Server is run.
+    :var stop_response:  The response string that is written to the stream
         as answer to a stop request.
-    :ivar echo_log: Read from the global configuration. If True, any log
+    :var echo_log: Read from the global configuration. If True, any log
         message will also be echoed on the console.
-    :ivar log_file: The file-name of the server-log.
-    :ivar use_jsonrpc_header: Read from the global configuration. If True,
+    :var log_file: The file-name of the server-log.
+    :var use_jsonrpc_header: Read from the global configuration. If True,
         jsonrpc-calls or responses will always be preceeded by a simple header
-        of the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
-        the byte-size of the rpc-package.
-    :ivar exec: An instance of the execution environment that delegates tasks
+        of the form: `Content-Length: {NUM}\\n\\n`, where `{NUM}`
+        stands for the byte-size of the rpc-package.
+    :var exec: An instance of the execution environment that delegates tasks
         to separate processes, threads, asynchronous tasks or simple function
         calls.
-    :ivar connection: An instance of the connection class representing the
+    :var connection: An instance of the connection class representing the
         data of the current connection or None, if there is no connection at
         the moment. There can be only one connection to the server at a time!
-    :ivar kill_switch: If True the, the server will be shut down.
-    :ivar loop: The asyncio event loop within which the asyncio stream server
+    :var kill_switch: If True the, the server will be shut down.
+    :var loop: The asyncio event loop within which the asyncio stream server
         is run.
     """
     def __init__(self, rpc_functions: RPC_Type,
@@ -1551,6 +1550,7 @@ def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
     Starts DHParser-Server that communicates via tcp in a separate process.
     Can be used for writing test code. WARNING: Does not seem to work with
     multiprocessing.set_start_method('spawn')` under linux !?
+
     :param host: The host for the tcp-communication, e.g. 127.0.0.1
     :param port: the port number for the tcp-communication.
     :param parameters: The parameter-tuple for initializing the server or
@@ -1586,6 +1586,7 @@ def spawn_stream_server(reader: StreamReaderType,
     """
     Starts a DHParser-Server that communitcates via streams in a separate
     process.
+
     :param reader: The stream from which the server will read requests.
     :param writer: The stram to which the server will write responses.
     :param parameters: The parameter-tuple for initializing the server or

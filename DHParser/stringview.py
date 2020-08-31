@@ -418,10 +418,10 @@ class TextBuffer:
     @cython.locals(version=cython.int)
     def text_edits(self, edits: Union[list, dict], version: int = -1):
         """Incorporates the one or more text-edits or change-events into the text.
-        A Text-Edit is a dictionary of this form:
+        A Text-Edit is a dictionary of this form::
 
             {"range": {"start": {"line": 0, "character": 0 },
-                       "end": {"line": 0, "character": 0} },
+                       "end":   {"line": 0, "character": 0 } },
              "newText": "..."}
 
         In case of a change-event, the key "newText" is replaced by "text".
@@ -448,7 +448,7 @@ class TextBuffer:
 
     def snapshot(self, eol: str = '\n') -> Union[str, StringView]:
         """Returns the current state of the entire text, using the given
-        end of line marker ('\n' or '\r\n')"""
+        end of line marker (``\\n`` or ``\\r\\n``)"""
         if self._text:
             return self._text
         self._text = eol.join(str(line) for line in self._buffer)

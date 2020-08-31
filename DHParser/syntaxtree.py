@@ -1225,11 +1225,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                empty_tags: Set[str] = set()) -> str:
         """Returns content as XML-tree.
 
-        :param src: The source text or `None`. In case the source text is given,
-                the position will also be reported as line and column.
+        :param src: The source text or `None`. In case the source text is
+                given, the position will also be reported as line and column.
         :param indentation: The number of whitespaces for indentation
-        :param inline_tags:  A set of tag names, the content of which will always be written
-                on a single line, unless it contains explicit line feeds ('\n').
+        :param inline_tags:  A set of tag names, the content of which will always be
+                written on a single line, unless it contains explicit line feeds (`\\n`).
         :param omit_tags: A set of tags from which only the content will be printed, but
                 neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,

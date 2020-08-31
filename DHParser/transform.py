@@ -1480,10 +1480,9 @@ def insert(context: List[Node], position: PositionType, node_factory: Callable):
     or equal the number of children mean that the delimiter will be appended
     to the tuple of children.
 
-    Example:
+    Example::
 
-        insert(pos_of('paragraph'), node_maker('LF', '\n'))
-
+        insert(pos_of('paragraph'), node_maker('LF', '\\n'))
     """
     pos_tuple = normalize_position_representation(context, position)
     if not pos_tuple:
