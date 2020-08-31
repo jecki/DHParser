@@ -733,48 +733,48 @@ class Server:
     LSP-functionality via the rpc_functions-parameter to the
     constructor of this class.
 
-    :param server_name: A name for the server. Defaults to
+    :ivar server_name: A name for the server. Defaults to
         `CLASSNAME_OBJECTID`
-    :param strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
+    :ivar strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
         If `False` json-rpc calls will be processed even without prior
         initialization, just like plain data or http calls.
-    :param cpu_bound: Set of function names of functions that are cpu-bound
+    :ivar cpu_bound: Set of function names of functions that are cpu-bound
         and will be run in separate processes.
-    :param blocking: Set of functions that contain blocking calls
+    :ivar blocking: Set of functions that contain blocking calls
         (e.g. IO-calls) and will therefore be run in separate threads.
-    :param rpc_table: Table mapping LSP-method names to Python functions
-    :param known_methods: Set of all known LSP-methods. This includes the
+    :ivar rpc_table: Table mapping LSP-method names to Python functions
+    :ivar known_methods: Set of all known LSP-methods. This includes the
         methods in the rpc-table and the four initialization methods,
         `initialize()`, `initialized()`, `shutdown()`, `exit`
-    :param connection_callback: A callback function that is called with the
+    :ivar connection_callback: A callback function that is called with the
         connection object as argument when a connection to a client is
         established
-    :param max_data_size: Maximal size of a data chunk that can be read by
+    :ivar max_data_size: Maximal size of a data chunk that can be read by
         the server at a time.
-    :param stage:  The operation stage, the server is in. Can be on of the four
+    :ivar stage:  The operation stage, the server is in. Can be on of the four
         values: `SERVER_OFFLINE`, `SERVER_STARTING`, `SERVER_ONLINE`,
         `SERVER_TERMINATING`
-    :param host: The host, the server runs on, e.g. "127.0.0.1"
-    :param port: The port of the server, e.g. 8888
-    :param server: The asyncio.Server if the server is online, or `None`.
-    :param serving_task: The task in which the asyncio.Server is run.
-    :param stop_response:  The response string that is written to the stream
+    :ivar host: The host, the server runs on, e.g. "127.0.0.1"
+    :ivar port: The port of the server, e.g. 8888
+    :ivar server: The asyncio.Server if the server is online, or `None`.
+    :ivar serving_task: The task in which the asyncio.Server is run.
+    :ivar stop_response:  The response string that is written to the stream
         as answer to a stop request.
-    :param echo_log: Read from the global configuration. If True, any log
+    :ivar echo_log: Read from the global configuration. If True, any log
         message will also be echoed on the console.
-    :param log_file: The file-name of the server-log.
-    :param use_jsonrpc_header: Read from the global configuration. If True,
+    :ivar log_file: The file-name of the server-log.
+    :ivar use_jsonrpc_header: Read from the global configuration. If True,
         jsonrpc-calls or responses will always be preceeded by a simple header
         of the form: "Content-Length: {NUM}\n\n", where "{NUM}" stands for
         the byte-size of the rpc-package.
-    :param exec: An instance of the execution environment that delegates tasks
+    :ivar exec: An instance of the execution environment that delegates tasks
         to separate processes, threads, asynchronous tasks or simple function
         calls.
-    :param connection: An instance of the connection class representing the
+    :ivar connection: An instance of the connection class representing the
         data of the current connection or None, if there is no connection at
         the moment. There can be only one connection to the server at a time!
-    :param kill_switch: If True the, the server will be shut down.
-    :param loop: The asyncio event loop within which the asyncio stream server
+    :ivar kill_switch: If True the, the server will be shut down.
+    :ivar loop: The asyncio event loop within which the asyncio stream server
         is run.
     """
     def __init__(self, rpc_functions: RPC_Type,
