@@ -143,7 +143,7 @@ class StringView:  # collections.abc.Sized
         return self._len
 
     def __str__(self) -> str:
-        # PERFORMANCE WARNING: This creates a copy of the string-slice
+        """PERFORMANCE WARNING: This creates a copy of the string-slice!"""
         if self._fullstring:  # optimization: avoid slicing/copying
             return self._fullstring
         # since the slice is being copied now, anyway, the copy might
@@ -153,14 +153,16 @@ class StringView:  # collections.abc.Sized
         return self._fullstring
 
     def __repr__(self) -> str:
+        """PERFORMANCE WARNING: This creates a copy of the string-slice!"""
         return repr(str(self))
 
     def __eq__(self, other) -> bool:
-        # PERFORMANCE WARNING: This creates copies of the strings
+        """PERFORMANCE WARNING: This creates copies of the compared string-slices!"""
+        # one string copy could be avoided by using find...
         return len(other) == len(self) and str(self) == str(other)
 
     def __hash__(self) -> int:
-        # PERFORMANCE WARNING: This creates a copy of the string-slice
+        """PERFORMANCE WARNING: This creates a copy of the string-slice!"""
         return hash(str(self))
 
     def __add__(self, other) -> Union[str, 'StringView']:

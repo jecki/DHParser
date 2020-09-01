@@ -39,8 +39,9 @@ scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import Server, RPC_Type, StreamReaderProxy, StreamWriterProxy, \
-    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER
-
+    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER, asyncio_run, \
+    RX_CONTENT_LENGTH, RE_DATA_START
+from DHParser.toolkit import re_find
 
 
 def compiler_dummy(src: str, log_dir: str='') -> str:
@@ -69,18 +70,25 @@ class PipeStream:
         self.data_waiting = threading.Event()
         self.data_waiting.clear()
         self.data = collections.deque()
-        self.closed = False  # type: bool
+        self._closed = False  # type: bool
 
     def close(self):
-        assert not self.closed
-        self.closed = True
+        self._closed = True
+
+    @property
+    def closed(self) -> bool:
+        return self._closed and not self.data
 
     def write(self, data: bytes):
+        if self._closed:
+            raise ValueError("I/O operation on closed file.")
         with self.lock:
             self.data.append(data)
             self.data_waiting.set()
 
     def writelines(self, data: List[bytes]):
+        if self._closed:
+            raise ValueError("I/O operation on closed file.")
         with self.lock:
             self.data.extend(data)
             self.data_waiting.set()
@@ -161,6 +169,9 @@ class TestServer:
         self.reader = StreamReaderProxy(self.pipe)
         self.writer = StreamWriterProxy(self.pipe)
 
+    def teardown(self):
+        self.writer.close()
+
     def test_pipe(self):
         message = b"alpha\nbeta\ngamma\n"
 
@@ -182,104 +193,40 @@ class TestServer:
             assert future.result() == message
 
     def test_reader_writer(self):
-        def write(writer):
+        async def write(writer):
             writer.write(JSONRPC_HEADER % len(IDENTIFY_REQUEST_BYTES) + IDENTIFY_REQUEST_BYTES)
-            writer.drain()
-            # writer.close()
+            await writer.drain()
+            writer.close()
 
+        async def read(reader):
+            data = b''
+            content_length = 0
+            while not reader.at_eof():
+                data += await reader.read(content_length or -1)
+                i = data.find(b'Content-Length:', 0, 512)
+                m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+                if m:
+                    content_length = int(m.group(1))
+                    m2 = re_find(data, RE_DATA_START)
+                    if m2:
+                        header_size = m2.end()
+                        if len(data) < header_size + content_length:
+                            content_length = header_size + content_length - len(data)
+                        else:
+                            break
+            return data
 
-# async def run_server_streams(rpc_functions: RPC_Type,
-#                        reader: asyncio.StreamReader,
-#                        writer: asyncio.StreamWriter):
-#     server = Server(rpc_functions)
-#     await server.handle(reader, writer)
-#
-#
-#
-# class TestServerStream:
-#
-#     def test_identify(self):
-#         stages = []
-#
-#         def pr(txt: str):
-#             stages.append(txt)
-#             print(txt)
-#
-#         async def echo(reader, writer):
-#             nonlocal stages
-#             pr('echo task')
-#             writer.write(IDENTIFY_REQUEST_BYTES)
-#             pr('echo: was geschrieben')
-#             await writer.drain()
-#             pr('echo: warte auf Antwort')
-#             answer = await reader.read()
-#             pr('echo Antwort: ' + str(answer))
-#
-#         async def main():
-#             # if sys.platform.lower().startswith('win'):
-#             reader = StreamReaderProxy(sys.stdin)
-#             writer = StreamWriterProxy(sys.stdout)
-#             # else:
-#             #     reader, writer = await stdio()
-#             server_task = asyncio.create_task(run_server_streams(compiler_dummy, reader, writer))
-#             echo_task = asyncio.create_task(echo(reader, writer))
-#             await echo_task
-#             await server_task
-#
-#         asyncio.run(main())
-#         print(stages)
+        async def main():
+            read_task = asyncio.create_task(read(self.reader))
+            write_task = asyncio.create_task(write(self.writer))
+            data = await read_task
+            await write_task
+            return data
 
+        data = asyncio_run(main())
+        assert data == b'Content-Length: 10\r\n\r\nidentify()'
+        assert self.pipe.closed
 
-# async def run_server_streams(rpc_functions: RPC_Type,
-#                        in_stream: io.BufferedIOBase,
-#                        out_stream: io.BufferedIOBase):
-#     reader = StreamReaderProxy(in_stream)
-#     writer = StreamWriterProxy(out_stream)
-#     server = Server(rpc_functions)
-#     print("starting server")
-#     await server.handle(reader, writer)
-
-# class TestServerStream:
-#
-#     def test_identify(self):
-#
-#         outs = sys.stdout
-#         print(type(outs))
-#         ins = sys.stdin
-#
-#         # p = threading.Process(target=run_server_streams, args=(compiler_dummy, ins, outs))
-#         # p.start()
-#
-#         async def echo():
-#             print('echo task')
-#             outs.write('ECHO')
-#             print('\n1')
-#             outs.flush()
-#             print("Echo written, now waiting")
-#             await asyncio.sleep(5)
-#             print('echo written')
-#             print(ins.read())
-#             print('write stop-request')
-#             outs.write(STOP_SERVER_REQUEST_BYTES)
-#             print('stop-request written')
-#             print(ins.read())
-#             print('echo result')
-#             outs.close()
-#             ins.close()
-#
-#         async def main():
-#             server_task = asyncio.create_task(run_server_streams(compiler_dummy, ins, outs))
-#             print('server-task created')
-#             echo_task = asyncio.create_task(echo())
-#             print('echo-task created')
-#             print('await server-task')
-#             await server_task
-#             print('await echo-task')
-#             await echo_task
-#             print('end of main')
-#
-#         asyncio.run(main())
-#         # p.join()
 
 if __name__ == "__main__":
     from DHParser.testing import runner
