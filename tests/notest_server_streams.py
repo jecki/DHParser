@@ -48,6 +48,16 @@ def compiler_dummy(src: str, log_dir: str='') -> str:
     return src
 
 
+jrpc_id = 0
+
+
+def json_rpc(method: str, params: dict) -> str:
+    global jrpc_id
+    jrpc_id += 1
+    s = json.dumps({'jsonrpc': '2.0', 'id': jrpc_id, 'method': method, 'params': params})
+    return 'Content-Length: %i\n\n' % len(s) + s
+
+
 # async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
 #     if loop is None:
 #         loop = asyncio.get_event_loop()
@@ -63,6 +73,7 @@ def compiler_dummy(src: str, log_dir: str='') -> str:
 #         writer_transport, writer_protocol, None, loop)
 #
 #     return reader, writer
+
 
 class PipeStream:
     def __init__(self):
@@ -163,7 +174,7 @@ class PipeStream:
         return b''.join(data)
 
 
-class TestServer:
+class TestStreamProxies:
     def setup(self):
         self.pipe = PipeStream()
         self.reader = StreamReaderProxy(self.pipe)
@@ -226,6 +237,38 @@ class TestServer:
         data = asyncio_run(main())
         assert data == b'Content-Length: 10\r\n\r\nidentify()'
         assert self.pipe.closed
+
+
+class TestServer:
+    def setup(self):
+        self.pipeA = PipeStream()
+        self.pipeB = PipeStream()
+        self.readerA = StreamReaderProxy(self.pipeA)
+        self.writerA = StreamWriterProxy(self.pipeA)
+        self.readerB = StreamReaderProxy(self.pipeB)
+        self.writerB = StreamWriterProxy(self.pipeB)
+
+    def teardown(self):
+        self.writerA.close()
+        self.writerB.close()
+
+    def test_server_process(self):
+        """Basic Test of server module."""
+        async def compile_remote(src, reader, writer):
+            writer.write(src.encode())
+            data = await reader.read(500)
+            writer.close()
+            if sys.version_info >= (3, 7):  await writer.wait_closed()
+            assert data.decode() == "Test", data.decode()
+        p = None
+        try:
+            p = spawn_stream_server(self.readerA, self.writerB,
+                                    (compiler_dummy, set()))
+            asyncio_run(compile_remote('Test', self.readerB, self.writerA))
+        finally:
+            stop_server('127.0.0.1', TEST_PORT)
+            if p is not None:
+                p.join()
 
 
 if __name__ == "__main__":

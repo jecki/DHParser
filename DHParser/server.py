@@ -1588,7 +1588,7 @@ def spawn_stream_server(reader: StreamReaderType,
     process.
 
     :param reader: The stream from which the server will read requests.
-    :param writer: The stram to which the server will write responses.
+    :param writer: The stream to which the server will write responses.
     :param parameters: The parameter-tuple for initializing the server or
         simply and rpc-handling function that takes a string-request as
         argument and returns a string response.

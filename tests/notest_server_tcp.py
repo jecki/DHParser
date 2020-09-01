@@ -80,7 +80,6 @@ def send_request(request: str, expect_response: bool = True) -> str:
     return response
 
 
-
 jrpc_id = 0
 
 

@@ -50,6 +50,10 @@ if __name__ == "__main__":
         interpreters.append('python3.7 ')
     elif os.system('~/.local/bin/python3.7 -V') == 0:
         interpreters.append('~/.local/bin/python3.7 ')
+    if os.system('python3.9 -V') == 0:
+        interpreters.append('python3.9 ')
+    elif os.system('~/.local/bin/python3.9 -V') == 0:
+        interpreters.append('~/.local/bin/python3.9 ')
     if os.system('pypy3 -V') == 0:
         interpreters.append('pypy3 ')
     elif os.system('pypy -V') == 0:
