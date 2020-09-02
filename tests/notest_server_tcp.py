@@ -47,7 +47,7 @@ scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import set_config_value
-from DHParser.server import Server, spawn_tcp_server, stop_server, asyncio_run, asyncio_connect, \
+from DHParser.server import Server, spawn_tcp_server, stop_tcp_server, asyncio_run, asyncio_connect, \
     split_header, has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST, \
     SERVER_OFFLINE, connection_cb_dummy
 
@@ -94,10 +94,10 @@ class TestServer:
     spawn = multiprocessing.get_start_method() == "spawn"
 
     def setup(self):
-        stop_server('127.0.0.1', TEST_PORT)
+        stop_tcp_server('127.0.0.1', TEST_PORT)
 
     def teardown(self):
-        stop_server('127.0.0.1', TEST_PORT)
+        stop_tcp_server('127.0.0.1', TEST_PORT)
 
     def test_server_process(self):
         """Basic Test of server module."""
@@ -114,7 +114,7 @@ class TestServer:
                                  (compiler_dummy, set()))
             asyncio_run(compile_remote('Test'))
         finally:
-            stop_server('127.0.0.1', TEST_PORT)
+            stop_tcp_server('127.0.0.1', TEST_PORT)
             if p is not None:
                 p.join()
 
@@ -150,7 +150,7 @@ class TestServer:
             p = spawn_tcp_server('127.0.0.1', TEST_PORT)
             asyncio_run(identify_server())
         finally:
-            stop_server('127.0.0.1', TEST_PORT)
+            stop_tcp_server('127.0.0.1', TEST_PORT)
             if p is not None:
                 p.join()
 
@@ -171,7 +171,7 @@ class TestServer:
             result = asyncio_run(send_request(IDENTIFY_REQUEST))
             assert isinstance(result, str) and result.startswith('DHParser'), result
         finally:
-            stop_server('127.0.0.1', TEST_PORT)
+            stop_tcp_server('127.0.0.1', TEST_PORT)
             if p is not None:
                 p.join()
 
@@ -207,7 +207,7 @@ class TestServer:
                                          b'DHParser server at 127.0.0.1:%i stopped!' % TEST_PORT))
             assert asyncio_run(has_server_stopped('127.0.0.1', TEST_PORT))
         finally:
-            stop_server('127.0.0.1', TEST_PORT)
+            stop_tcp_server('127.0.0.1', TEST_PORT)
             if p is not None:
                 p.join()
 
@@ -245,7 +245,7 @@ class TestServer:
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
-                stop_server('127.0.0.1', TEST_PORT)
+                stop_tcp_server('127.0.0.1', TEST_PORT)
                 if p is not None:
                     p.join()
                 sequence = []
@@ -257,7 +257,7 @@ class TestServer:
                 asyncio_run(run_tasks())
                 assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
             finally:
-                stop_server('127.0.0.1', TEST_PORT)
+                stop_tcp_server('127.0.0.1', TEST_PORT)
                 if p is not None:
                     p.join()
                 sequence = []
@@ -269,7 +269,7 @@ class TestServer:
             asyncio_run(run_tasks())
             assert sequence.count(SLOW) == 2 and sequence.count(FAST) == 2
         finally:
-            stop_server('127.0.0.1', TEST_PORT)
+            stop_tcp_server('127.0.0.1', TEST_PORT)
             if p is not None:
                 p.join()
             sequence = []
@@ -279,10 +279,10 @@ class TestSpawning:
     """Tests spawning a server by starting a script via subprocess.Popen."""
 
     def setup(self):
-        stop_server('127.0.0.1', TEST_PORT)
+        stop_tcp_server('127.0.0.1', TEST_PORT)
 
     def teardown(self):
-        stop_server('127.0.0.1', TEST_PORT)
+        stop_tcp_server('127.0.0.1', TEST_PORT)
 
     def test_spawn(self):
         spawn_tcp_server('127.0.0.1', TEST_PORT)
@@ -377,7 +377,7 @@ class TestLanguageServer:
     """Tests for the generic LanguageServer-class."""
 
     def setup(self):
-        stop_server('127.0.0.1', TEST_PORT)
+        stop_tcp_server('127.0.0.1', TEST_PORT)
         self.p = None
         self.DEBUG = False
         if self.DEBUG:
@@ -386,7 +386,7 @@ class TestLanguageServer:
             set_config_value('log_server', True)
 
     def teardown(self):
-        stop_server('127.0.0.1', TEST_PORT)
+        stop_tcp_server('127.0.0.1', TEST_PORT)
         if self.p is not None:
             self.p.join()
         if self.DEBUG:
@@ -394,7 +394,7 @@ class TestLanguageServer:
             log.suspend_logging()
 
     def start_server(self):
-        stop_server('127.0.0.1', TEST_PORT)
+        stop_tcp_server('127.0.0.1', TEST_PORT)
         if self.p is not None:
             self.p.join()
         self.lsp = LSP()
@@ -574,7 +574,7 @@ class TestLanguageServer:
 
 if __name__ == "__main__":
     if "--killserver" in sys.argv:
-        result = stop_server('127.0.0.1', TEST_PORT)
+        result = stop_tcp_server('127.0.0.1', TEST_PORT)
         print('server stopped' if result is None else "server wasn't running")
         sys.exit(0)
     from DHParser.testing import runner

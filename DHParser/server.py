@@ -67,9 +67,10 @@ import platform
 import os
 import subprocess
 import sys
+from threading import Thread
 import time
 from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, Sequence, \
-    Set, Iterator, Iterable, Any, cast, Type
+    Set, Iterator, Iterable, Any, cast, Type, TypeVar, Generic
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
@@ -106,7 +107,7 @@ __all__ = ('RPC_Table',
            'Server',
            'probe_tcp_server',
            'spawn_tcp_server',
-           'stop_server',
+           'stop_tcp_server',
            'has_server_stopped',
            'gen_lsp_name',
            'gen_lsp_table')
@@ -1543,26 +1544,34 @@ def _run_tcp_server(host, port, rpc_functions: RPC_Type,
     server.run_tcp_server(host, port)
 
 
+ConcurrentType = TypeVar('Concurrent', Thread, Process)
+
+
 def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
                      port: int = USE_DEFAULT_PORT,
-                     parameters: Union[Tuple, Callable] = echo_requests) -> Process:
+                     parameters: Union[Tuple, Callable] = echo_requests,
+                     Concurrent: Generic[ConcurrentType] = Process) -> ConcurrentType:
     """
-    Starts DHParser-Server that communicates via tcp in a separate process.
-    Can be used for writing test code. WARNING: Does not seem to work with
-    multiprocessing.set_start_method('spawn')` under linux !?
+    Starts DHParser-Server that communicates via tcp in a separate process
+    or thread. Can be used for writing test code.
+
+    WARNING: Does not seem to work with multiprocessing.set_start_method('spawn')`
+    when spwaning a process under linux !?
 
     :param host: The host for the tcp-communication, e.g. 127.0.0.1
     :param port: the port number for the tcp-communication.
     :param parameters: The parameter-tuple for initializing the server or
         simply and rpc-handling function that takes a string-request as
         argument and returns a string response.
+    :param Concurrent: The concurrent class, either mutliprocessing.Process or
+        threading.Tread for running the server.
     :return: the `multiprocessing.Proccess`-object of the already started
         server-processs.
     """
     if isinstance(parameters, tuple) or isinstance(parameters, list):
-        p = Process(target=_run_tcp_server, args=(host, port, *parameters))
+        p = Concurrent(target=_run_tcp_server, args=(host, port, *parameters))
     else:
-        p = Process(target=_run_tcp_server, args=(host, port, parameters))
+        p = Concurrent(target=_run_tcp_server, args=(host, port, parameters))
     p.start()
     return p
 
@@ -1582,23 +1591,26 @@ def _run_stream_server(reader: StreamReaderType,
 
 def spawn_stream_server(reader: StreamReaderType,
                         writer: StreamWriterType,
-                        parameters: Union[Tuple, Callable] = echo_requests) -> Process:
+                        parameters: Union[Tuple, Callable] = echo_requests,
+                        Concurrent: ConcurrentType = Thread) -> ConcurrentType:
     """
     Starts a DHParser-Server that communitcates via streams in a separate
-    process.
+    process or thread.
 
     :param reader: The stream from which the server will read requests.
     :param writer: The stream to which the server will write responses.
     :param parameters: The parameter-tuple for initializing the server or
         simply and rpc-handling function that takes a string-request as
         argument and returns a string response.
+    :param Concurrent: The concurrent class, either mutliprocessing.Process or
+        threading.Tread for running the server.
     :return: the `multiprocessing.Proccess`-object of the already started
         server-processs.
     """
     if isinstance(parameters, tuple) or isinstance(parameters, list):
-        p = Process(target=_run_stream_server, args=(reader, writer, *parameters))
+        p = Concurrent(target=_run_stream_server, args=(reader, writer, *parameters))
     else:
-        p = Process(target=_run_stream_server, args=(reader, writer, parameters))
+        p = Concurrent(target=_run_stream_server, args=(reader, writer, parameters))
     p.start()
     return p
 
@@ -1692,20 +1704,25 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
         return True
 
 
-def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
-                timeout: float = 3.0) -> Optional[Exception]:
-    """Sends a STOP_SERVER_REQUEST to a running server. Returns any exceptions
-    that occurred."""
+async def send_stop_request(reader: StreamReaderType, writer: StreamWriterType):
+    """Send a stop request, read and drop the reply."""
+    writer.write(STOP_SERVER_REQUEST_BYTES)
+    await writer.drain()
+    _ = await reader.read()  # await reader.read(1024)
+    writer.write_eof()
+    writer.close()
+    if sys.version_info >= (3, 7):
+        await writer.wait_closed()
+
+
+def stop_tcp_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
+                    timeout: float = 3.0) -> Optional[Exception]:
+    """Sends a STOP_SERVER_REQUEST to a running tcp server. Returns any
+    exceptions that occurred."""
     async def send_stop_server(host: str, port: int) -> Optional[Exception]:
         try:
             reader, writer = await asyncio.open_connection(host, port)
-            writer.write(STOP_SERVER_REQUEST_BYTES)
-            await writer.drain()
-            _ = await reader.read(1024)
-            writer.write_eof()
-            writer.close()
-            if sys.version_info >= (3, 7):
-                await writer.wait_closed()
+            await send_stop_request(reader, writer)
             if timeout > 0.0:
                 if not await has_server_stopped(host, port, timeout):
                     raise AssertionError('Could not stop server on host %s port %i '
@@ -1718,6 +1735,12 @@ def stop_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
 
     host, port = substitute_default_host_and_port(host, port)
     return asyncio_run(send_stop_server(host, port))
+
+
+def stop_stream_server(reader: StreamReaderType, writer: StreamWriterType):
+    """Sends a STOP_SERVER_REQUEST to a running stream server. Returns any
+    exceptions that occurred."""
+    asyncio_run(send_stop_request(reader, writer))
 
 
 # def io_server(server: Server):

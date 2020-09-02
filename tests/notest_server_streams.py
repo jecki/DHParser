@@ -40,7 +40,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import Server, RPC_Type, StreamReaderProxy, StreamWriterProxy, \
     STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER, asyncio_run, \
-    RX_CONTENT_LENGTH, RE_DATA_START
+    RX_CONTENT_LENGTH, RE_DATA_START, spawn_stream_server, stop_stream_server
 from DHParser.toolkit import re_find
 
 
@@ -91,6 +91,7 @@ class PipeStream:
         return self._closed and not self.data
 
     def write(self, data: bytes):
+        assert isinstance(data, bytes)
         if self._closed:
             raise ValueError("I/O operation on closed file.")
         with self.lock:
@@ -98,6 +99,7 @@ class PipeStream:
             self.data_waiting.set()
 
     def writelines(self, data: List[bytes]):
+        assert all(isinstance(datum, bytes) for datum in data)
         if self._closed:
             raise ValueError("I/O operation on closed file.")
         with self.lock:
@@ -255,9 +257,9 @@ class TestServer:
     def test_server_process(self):
         """Basic Test of server module."""
         async def compile_remote(src, reader, writer):
-            writer.write(src.encode())
-            data = await reader.read(500)
-            writer.close()
+            writer.write(json_rpc('Test', {}).encode())
+            await writer.drain()
+            data = await reader.read()  # await reader.read(500)
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             assert data.decode() == "Test", data.decode()
         p = None
@@ -266,7 +268,7 @@ class TestServer:
                                     (compiler_dummy, set()))
             asyncio_run(compile_remote('Test', self.readerB, self.writerA))
         finally:
-            stop_server('127.0.0.1', TEST_PORT)
+            stop_stream_server(self.readerA, self.writerB)
             if p is not None:
                 p.join()
 
