@@ -63,7 +63,6 @@ from functools import partial
 import io
 import json
 from multiprocessing import Process, Value, Array
-import platform
 import os
 import subprocess
 import sys
@@ -154,7 +153,8 @@ X-Pad: avoid browser bug
 
 '''
 
-JSONRPC_HEADER = b'''Content-Length: %i\r\n\r\n'''
+JSONRPC_HEADER_BYTES = b'''Content-Length: %i\r\n\r\n'''
+JSONRPC_HEADER = '''Content-Length: %i\r\n\r\n'''
 
 ONELINER_HTML = '''<!DOCTYPE html>
 <html lang="en" xml:lang="en">
@@ -465,8 +465,8 @@ class StreamReaderProxy:
         self._eof = False   # type: bool
 
     def feed_eof(self):
-        self.bufferd_io.close()
         self._eof = True
+        self.buffered_io.close()
 
     def at_eof(self) -> bool:
         try:
@@ -506,6 +506,49 @@ class StreamReaderProxy:
             return await self._read(n)
 
 
+StreamReaderType = Union[asyncio.StreamReader, StreamReaderProxy]
+
+
+async def read_full_block(reader: StreamReaderType) -> Tuple[int, bytes, bytes]:
+    """Reads a block from a reader, where block may start with a header
+    containing a "Content-Length"-field. if this is the case, read_block
+    tries to read exaclty the number of bytes specified.
+
+    :param reader: The reader from which the data shall be read.
+    :return: A 3-tuple (header_size, data, backlog). header_size is the
+        length in bytes of the header or 0 if there is no header, data
+        ist the data block including the header and backlog is any data
+        that exceeds the specified content-length and that has been
+        delivered by the reader even though it has not been requested.
+    """
+    data = await reader.read()
+    backlog = b''
+    i = data.find(b'Content-Length:', 0, 512)
+    m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+    while not m and incomplete_header(data) and not reader.at_eof():
+        data += await reader.read()
+        i = data.find(b'Content-Length:', 0, 512)
+        m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+    if m:
+        content_length = int(m.group(1))
+        m2 = re_find(data, RE_DATA_START)
+        while not m2 and not reader.at_eof():
+            data += await reader.read()
+            m2 = re_find(data, RE_DATA_START)
+        if m2:
+            header_size = m2.end()
+            missing = header_size + content_length - len(data)
+            if missing > 0:
+                data += await reader.read(missing)
+                backlog = data[header_size + content_length:]
+        else:
+            header_size = 0
+    else:
+        header_size = 0
+    return header_size, data, backlog
+
+
+
 class StreamWriterProxy:
     """StreamReaderProxy simulates an asyncio.StreamReader that sends
     and receives data through an io.IOBase-Stream.
@@ -530,19 +573,20 @@ class StreamWriterProxy:
         return True
 
     def write_eof(self):
-        # pass
-        assert not self.buffered_io.closed
         data, self.buffer = self.buffer, []
-        self.buffered_io.writelines(data)
-        self.buffered_io.flush()
+        try:
+            self.buffered_io.writelines(data)
+            self.buffered_io.flush()
+        except ValueError:
+            pass
         self.buffered_io.close()
 
     def close(self):
-        if not self.buffered_io.closed:
-            self.write_eof()
+        # if not self.buffered_io.closed:
+        self.write_eof()
 
     async def wait_closed(self):
-        assert self.buffer.closed, "buffer is not even closing!"
+        assert self.buffered_io.closed, "buffer is not even closing!"
 
     def _drain(self, data: List[str]):
         self.buffered_io.writelines(data)
@@ -559,7 +603,6 @@ class StreamWriterProxy:
                 await self.loop.run_in_executor(self.exec, self._drain, data)
 
 
-StreamReaderType = Union[asyncio.StreamReader, StreamReaderProxy]
 StreamWriterType = Union[asyncio.StreamWriter, StreamWriterProxy]
 
 
@@ -661,7 +704,7 @@ class Connection:
         if self.log_file:
             self.log('CALL: ', json_str, '\n\n')
         request = json_str.encode()
-        request = JSONRPC_HEADER % len(request) + request
+        request = JSONRPC_HEADER_BYTES % len(request) + request
         self.writer.write(request)
         await self.writer.drain()
 
@@ -975,7 +1018,7 @@ class Server:
                         'Only bytes and str allowed!'
                         % (str(type(response)), str(response))).encode()
         if self.use_jsonrpc_header and response.startswith(b'{'):
-            response = JSONRPC_HEADER % len(response) + response
+            response = JSONRPC_HEADER_BYTES % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
             self.log('RESPONSE: ', *strip_header_delimiter(response.decode()), '\n\n')
         try:
@@ -1006,11 +1049,22 @@ class Server:
                                        data: BytesType,
                                        service_call: bool = False):
         """Processes a request in plain-data-format, i.e. neither http nor json-rpc"""
+        try:
+            header, data, _ = split_header(data)
+        except ValueError:
+            header = b''
+
+        async def respond(response: str):
+            if header:
+                await self.respond(writer, JSONRPC_HEADER % len(response) + response)
+            else:
+                await self.respond(writer, response)
+
         if len(data) > self.max_data_size:
-            await self.respond(writer, "Data too large! Only %i MB allowed"
-                               % (self.max_data_size // (1024 ** 2)))
+            await respond("Data too large! Only %i MB allowed"
+                          % (self.max_data_size // (1024 ** 2)))
         elif data.startswith(STOP_SERVER_REQUEST_BYTES):
-            await self.respond(writer, self.stop_response)
+            await respond(self.stop_response)
             self.kill_switch = True
             reader.feed_eof()
         else:
@@ -1035,14 +1089,14 @@ class Server:
             result, rpc_error = await self.run(func_name, func, argument)
             if rpc_error is None:
                 if isinstance(result, str):
-                    await self.respond(writer, result)
+                    await respond(result)
                 elif result is not None:
                     try:
-                        await self.respond(writer, json.dumps(result, cls=DHParser_JSONEncoder))
+                        await respond(json.dumps(result, cls=DHParser_JSONEncoder))
                     except TypeError as err:
-                        await self.respond(writer, str(err))
+                        await respond(str(err))
             else:
-                await self.respond(writer, rpc_error[1])
+                await respond(rpc_error[1])
         assert self.connection
         self.connection.task_done(task_id)
 
@@ -1285,14 +1339,13 @@ class Server:
                     self.connection.finished_tasks = set()
                 else:
                     break
-
             task = None
             if data.startswith(b'GET'):
                 # HTTP request
                 task_id = gen_task_id()
                 task = self.connection.create_task(task_id, self.handle_http_request(
                     task_id, reader, writer, data, service_call=not id_connection))
-            elif not data.find(b'"jsonrpc"') >= 0:  # re.match(RE_IS_JSONRPC, data):
+            elif data.find(b'"jsonrpc"') < 0:  # re.match(RE_IS_JSONRPC, data):
                 # plain data
                 task_id = gen_task_id()
                 task = self.connection.create_task(task_id, self.handle_plaindata_request(
@@ -1395,8 +1448,8 @@ class Server:
             self.stage.value = SERVER_TERMINATING
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
-                assert self.serving_task
-                self.serving_task.cancel()
+                if self.serving_task:
+                    self.serving_task.cancel()
             else:
                 self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
@@ -1499,6 +1552,8 @@ class Server:
         on a writer-stream.
         """
         assert self.stage.value == SERVER_OFFLINE
+        self.stop_response = "DHParser server communicating over {}, {} stopped!"\
+            .format(str(reader), str(writer))
         self.stage.value = SERVER_ONLINE
         try:
             asyncio_run(self.handle(reader, writer))
@@ -1706,10 +1761,12 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
 
 async def send_stop_request(reader: StreamReaderType, writer: StreamWriterType):
     """Send a stop request, read and drop the reply."""
+    writer.write(JSONRPC_HEADER_BYTES % len(STOP_SERVER_REQUEST_BYTES))
     writer.write(STOP_SERVER_REQUEST_BYTES)
     await writer.drain()
-    _ = await reader.read()  # await reader.read(1024)
+    _ = await read_full_block(reader)  # await reader.read(1024)
     writer.write_eof()
+    await writer.drain()
     writer.close()
     if sys.version_info >= (3, 7):
         await writer.wait_closed()
@@ -1740,8 +1797,11 @@ def stop_tcp_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
 def stop_stream_server(reader: StreamReaderType, writer: StreamWriterType):
     """Sends a STOP_SERVER_REQUEST to a running stream server. Returns any
     exceptions that occurred."""
+    if isinstance(reader, StreamReaderProxy):
+        reader.loop = None
+    if isinstance(writer, StreamWriterProxy):
+        writer.loop = None
     asyncio_run(send_stop_request(reader, writer))
-
 
 # def io_server(server: Server):
 #     stdin, stdout = sys.stdin.buffer, sys.stdout.buffer

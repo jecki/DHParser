@@ -39,13 +39,17 @@ scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import Server, RPC_Type, StreamReaderProxy, StreamWriterProxy, \
-    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER, asyncio_run, \
+    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER_BYTES, asyncio_run, \
     RX_CONTENT_LENGTH, RE_DATA_START, spawn_stream_server, stop_stream_server
 from DHParser.toolkit import re_find
 
 
 def compiler_dummy(src: str, log_dir: str='') -> str:
     return src
+
+
+def with_header(b: bytes) -> bytes:
+    return JSONRPC_HEADER_BYTES % len(b) + b
 
 
 jrpc_id = 0
@@ -55,7 +59,26 @@ def json_rpc(method: str, params: dict) -> str:
     global jrpc_id
     jrpc_id += 1
     s = json.dumps({'jsonrpc': '2.0', 'id': jrpc_id, 'method': method, 'params': params})
-    return 'Content-Length: %i\n\n' % len(s) + s
+    return 'Content-Length: %i\r\n\r\n' % len(s) + s
+
+
+async def read_full_content(reader) -> bytes:
+    data = b''
+    content_length = 0
+    while not reader.at_eof():
+        data += await reader.read(content_length or -1)
+        i = data.find(b'Content-Length:', 0, 512)
+        m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+        if m:
+            content_length = int(m.group(1))
+            m2 = re_find(data, RE_DATA_START)
+            if m2:
+                header_size = m2.end()
+                if len(data) < header_size + content_length:
+                    content_length = header_size + content_length - len(data)
+                else:
+                    break
+    return data
 
 
 # async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
@@ -76,7 +99,8 @@ def json_rpc(method: str, params: dict) -> str:
 
 
 class PipeStream:
-    def __init__(self):
+    def __init__(self, name=''):
+        self.name = name or str(id(self))
         self.lock = threading.Lock()
         self.data_waiting = threading.Event()
         self.data_waiting.clear()
@@ -84,30 +108,43 @@ class PipeStream:
         self._closed = False  # type: bool
 
     def close(self):
-        self._closed = True
+        with self.lock:
+            self.data_waiting.set()  # wake up any waiting readers
+            self._closed = True
 
     @property
     def closed(self) -> bool:
-        return self._closed and not self.data
+        countdown = 50
+        while self._closed and self.data and countdown > 0:
+            # allow client to read any pending data
+            # print(self.name, 'not yet closed due to pending data')
+            self.data_waiting.set()
+            time.sleep(0.01)
+            countdown -= 1
+        return self._closed
+        # with self.lock:
+        #     result = self._closed and not self.data
+        # return result
 
     def write(self, data: bytes):
         assert isinstance(data, bytes)
-        if self._closed:
-            raise ValueError("I/O operation on closed file.")
         with self.lock:
+            if self._closed:
+                raise ValueError("I/O operation on closed file.")
             self.data.append(data)
-            self.data_waiting.set()
+            # self.data_waiting.set()
 
     def writelines(self, data: List[bytes]):
         assert all(isinstance(datum, bytes) for datum in data)
-        if self._closed:
-            raise ValueError("I/O operation on closed file.")
         with self.lock:
+            if self._closed:
+                raise ValueError("I/O operation on closed file.")
             self.data.extend(data)
-            self.data_waiting.set()
+            # self.data_waiting.set()
 
     def flush(self):
-        pass
+        with self.lock:
+            self.data_waiting.set()
 
     def _read(self, n=-1) -> Union[List[bytes], Deque[bytes]]:
         with self.lock:
@@ -170,7 +207,7 @@ class PipeStream:
 
     def readline(self) -> bytes:
         data = self._readline()
-        while not data or data[-1][-1] != ord(b'\n'):
+        while not self._closed and (not data or data[-1][-1] != ord(b'\n')):
             self.data_waiting.wait()
             data.extend(self._readline())
         return b''.join(data)
@@ -192,6 +229,7 @@ class TestStreamProxies:
             nonlocal message
             for i in range(0, len(message), 2):
                 pipe.write(message[i:i+2])
+                pipe.flush()
 
         def reader(pipe: PipeStream):
             nonlocal message
@@ -207,44 +245,29 @@ class TestStreamProxies:
 
     def test_reader_writer(self):
         async def write(writer):
-            writer.write(JSONRPC_HEADER % len(IDENTIFY_REQUEST_BYTES) + IDENTIFY_REQUEST_BYTES)
+            writer.write(JSONRPC_HEADER_BYTES % len(IDENTIFY_REQUEST_BYTES) + IDENTIFY_REQUEST_BYTES)
             await writer.drain()
-            writer.close()
 
         async def read(reader):
-            data = b''
-            content_length = 0
-            while not reader.at_eof():
-                data += await reader.read(content_length or -1)
-                i = data.find(b'Content-Length:', 0, 512)
-                m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
-                if m:
-                    content_length = int(m.group(1))
-                    m2 = re_find(data, RE_DATA_START)
-                    if m2:
-                        header_size = m2.end()
-                        if len(data) < header_size + content_length:
-                            content_length = header_size + content_length - len(data)
-                        else:
-                            break
-            return data
+            return await read_full_content(reader)
 
         async def main():
             read_task = asyncio.create_task(read(self.reader))
             write_task = asyncio.create_task(write(self.writer))
             data = await read_task
             await write_task
+            self.writer.close()
             return data
 
         data = asyncio_run(main())
-        assert data == b'Content-Length: 10\r\n\r\nidentify()'
+        assert data == b'Content-Length: 10\r\n\r\nidentify()', str(data)
         assert self.pipe.closed
 
 
 class TestServer:
     def setup(self):
-        self.pipeA = PipeStream()
-        self.pipeB = PipeStream()
+        self.pipeA = PipeStream('pipeA')
+        self.pipeB = PipeStream('pipeB')
         self.readerA = StreamReaderProxy(self.pipeA)
         self.writerA = StreamWriterProxy(self.pipeA)
         self.readerB = StreamReaderProxy(self.pipeB)
@@ -256,19 +279,22 @@ class TestServer:
 
     def test_server_process(self):
         """Basic Test of server module."""
-        async def compile_remote(src, reader, writer):
-            writer.write(json_rpc('Test', {}).encode())
+        async def compile_remote(src, reader, writer) -> bytes:
+            writer.write(with_header(b'Test'))
             await writer.drain()
-            data = await reader.read()  # await reader.read(500)
-            if sys.version_info >= (3, 7):  await writer.wait_closed()
-            assert data.decode() == "Test", data.decode()
+            data = await read_full_content(reader)
+            # writer.close()
+            # if sys.version_info >= (3, 7):  await writer.wait_closed()
+            return data
+            # assert data.decode() == "Test", data.decode()
         p = None
         try:
             p = spawn_stream_server(self.readerA, self.writerB,
-                                    (compiler_dummy, set()))
-            asyncio_run(compile_remote('Test', self.readerB, self.writerA))
+                                    (compiler_dummy, set()), threading.Thread)
+            data = asyncio_run(compile_remote('Test', self.readerB, self.writerA))
+            # print(data)
         finally:
-            stop_stream_server(self.readerA, self.writerB)
+            stop_stream_server(self.readerB, self.writerA)
             if p is not None:
                 p.join()
 
