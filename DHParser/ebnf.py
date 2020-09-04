@@ -43,7 +43,7 @@ from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forwa
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
     INFINITE, matching_bracket, ParseFunc, update_scanner
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, EMPTY_NODE
+from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, EMPTY_NODE
 from DHParser.toolkit import load_if_file, escape_re, escape_control_characters, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
     RX_NEVER_MATCH
@@ -1886,12 +1886,9 @@ class EBNFCompiler(Compiler):
 
 
     def on_expression(self, node) -> str:
-        # TODO: Add check for errors like "a" | "ab" (which will always yield a, even for ab)
-
         # The following algorithm reorders literal alternatives, so that earlier alternatives
         # doe not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
         # 'IDREF' | 'ID'
-        # TODO: Add symbols defined as literals, here...
 
         def move_items(l: List, a: int, b: int):
             """Moves all items in the interval [a:b[ one position forward and moves the
@@ -2345,7 +2342,7 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         return compiler
 
 
-def compile_ebnf_ast(ast: Node) -> str:
+def compile_ebnf_ast(ast: RootNode) -> str:
     """Compiles the abstract-syntax-tree of an EBNF-source-text into
     python code of a class derived from `parse.Grammar` that can
     parse text following the grammar described with the EBNF-code."""

@@ -147,9 +147,9 @@ def asyncio_run(coroutine):
                 loop.close()
 
 
-def json_rpc(func, params={}, ID=None) -> str:
+def json_rpc(func_name, params={}, ID=None) -> dict:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
-    return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
+    return {"jsonrpc": "2.0", "method": func_name, "params": params, "id": ID}
 
 
 class EBNFCPUBoundTasks:
@@ -249,8 +249,10 @@ class EBNFLanguageServerProtocol:
         assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
         self.lsp_fulltable.update(self.blocking.lsp_table)
 
-        self.pending_changes = dict()  # uri -> text
-        self.current_text = dict()     # uri -> TextBuffer
+        self.current_text = dict()           # uri -> TextBuffer
+        self.last_compiled_version = dict()  # uri -> int
+        self.server_call_ID = 0              # unique id
+
 
         # self.completionItems = [{k: v for k, v in chain(zip(self.completion_fields, item),
         #                                                 [['kind', 2]])}
@@ -276,24 +278,35 @@ class EBNFLanguageServerProtocol:
         return {}
 
     async def compile_text(self, uri: str) -> None:
-        text_buffer = self.pending_changes.get(uri, None)
-        if text_buffer:
+        text_buffer = self.current_text.get(uri, None)
+        version = text_buffer.version
+        if text_buffer and version > self.last_compiled_version.get(uri, -1):
             exenv = self.connection.exec
-            del self.pending_changes[uri]
+            self.connection.log('Compiling: ', uri, '\n')
+            self.last_compiled_version[uri] = version
             result, rpc_error = await exenv.execute(exenv.process_executor,
                                                     self.cpu_bound.compile_EBNF,
                                                     (text_buffer.snapshot(),))
+            diagnostics = []  # TODO: Generate Diagnostics
+            publishDiagnostics = {
+                'uri' : uri,
+                'version': text_buffer.version,
+                'diagnostics': diagnostics
+            }
             # werte Ergebnis aus
-            # sende eine PublishDiagnostics-Notification via self.connect
+            # sende eine PublishDiagnostics-Notification via self.connection
+            self.server_call_ID += 1
+            self.connection.server_call('textDocument/publishDiagnostics',
+                                        publishDiagnostics,
+                                        self.server_call_ID)
         return None
 
     async def lsp_textDocument_didOpen(self, textDocument):
         from DHParser.stringview import TextBuffer
         uri = textDocument['uri']
         text = textDocument['text']
-        text_buffer = TextBuffer(text, int(textDocument.get('version', 0)))
+        text_buffer = TextBuffer(text, int(textDocument.get('version', -1)))
         self.current_text[uri] = text_buffer
-        self.pending_changes[uri] = text_buffer
         await self.compile_text(uri)
         return None
 
@@ -305,7 +318,7 @@ class EBNFLanguageServerProtocol:
 
     async def lsp_textDocument_didChange(self, textDocument: dict, contentChanges: list):
         uri = textDocument['uri']
-        version = int(textDocument['version'])
+        version = int(textDocument.get('version', -1))
         if uri not in self.current_text:
             return {}, (-32602, "Invalid uri: " + uri)
         if contentChanges:
@@ -313,12 +326,12 @@ class EBNFLanguageServerProtocol:
             if 'range' in contentChanges[0]:
                 text_buffer = self.current_text[uri]
                 text_buffer.text_edits(contentChanges, version)
-                self.pending_changes[uri] = text_buffer
             else:
                 text_buffer = TextBuffer(contentChanges[0]['text'], version)
                 self.current_text[uri] = text_buffer
-            await asyncio.sleep(RECOMPILE_DELAY)
-            await self.compile_text(uri)
+            if 'publishDiagnostics' in self.lsp_data['clientCapabilities']:
+                await asyncio.sleep(RECOMPILE_DELAY)
+                await self.compile_text(uri)
         return None
 
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
@@ -583,8 +596,8 @@ if __name__ == "__main__":
         sys.path.append(dhparserdir)
         # import subprocess
         # subprocess.run(['gedit', dhparserdir.replace('/', '_')])
-    from DHParser import configuration
-    configuration.CONFIG_PRESET['log_server'] = True
+    # from DHParser import configuration
+    # configuration.CONFIG_PRESET['log_server'] = True
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Setup and Control of a Server for processing EBNF-files.")
@@ -620,7 +633,8 @@ if __name__ == "__main__":
         if port >= 0 or host:
             echo('Specifying host and port when using streams as transport does not make sense')
             sys.exit(1)
-        run_server('', -1)
+        log_path, _ = parse_logging_args(args)
+        run_server('', -1, log_path)
         sys.exit(0)
 
     if port < 0 or not host:

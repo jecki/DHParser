@@ -35,7 +35,7 @@ the string representations of the error objects. For example::
             print("There have been warnings, but no errors.")
 """
 
-from typing import Iterable, Iterator, Union, List
+from typing import Iterable, Iterator, Union, List, Optional, Sequence, Tuple
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
@@ -160,22 +160,31 @@ RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
 
 
 class Error:
-    __slots__ = ['message', 'code', '_pos', 'orig_pos', 'line', 'column']
+    __slots__ = ['message', 'code', '_pos', 'orig_pos', 'line', 'column',
+                 'length', 'end_line', 'end_column', 'related', 'relatedUri']
 
     def __init__(self, message: str, pos: int, code: ErrorCode = ERROR,
-                 orig_pos: int = -1, line: int = -1, column: int = -1) -> None:
+                 orig_pos: int = -1, line: int = -1, column: int = -1,
+                 length: int = 1, related: Sequence[Tuple['Error', str]] = []) -> None:
         assert isinstance(code, ErrorCode)
         assert not isinstance(pos, ErrorCode)
         assert code >= 0
         assert pos >= 0
+        assert length >= 1
         self.message = message    # type: str
         self._pos = pos           # type: int
-        # TODO: Add some logic to avoid double assignment of the same error code?
-        #       Problem: Same code might allowedly be used by two different parsers/compilers
+        # Add some logic to avoid double assignment of the same error code?
+        # Problem: Same code might allowedly be used by two different parsers/compilers
         self.code = code          # type: ErrorCode
         self.orig_pos = orig_pos  # type: int
         self.line = line          # type: int
         self.column = column      # type: int
+        # support for Languager Server Protocol Diagnostics
+        # see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#diagnostic
+        self.length = length      # type: int
+        self.end_line = -1        # type: int
+        self.end_column = -1      # type: int
+        self.related = tuple(related)   # type: Sequence[Tuple['Error', str]]
 
     def __str__(self):
         prefix = ''
@@ -196,6 +205,7 @@ class Error:
         self._pos = value
         # reset line and column values, because they might now not be valid any more
         self.line, self.column = -1, -1
+        self.end_line, self.end_column = -1, -1
 
     @property
     def severity(self):
@@ -215,6 +225,42 @@ class Error:
         start = document.rfind('\n', 0, self.pos) + 1
         stop = document.find('\n', self.pos)
         return document[start:stop] + '\n' + ' ' * (self.pos - start) + '^\n'
+
+    def rangeObj(self) -> dict:
+        """Returns the range (position plus length) of the error as an LSP-Range-Object.
+        https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range
+        """
+        assert self.line >= 0 and self.column >= 0 and self.end_line >= 0 and self.end_column >= 0
+        return {'start': {'line': self.line, 'character': self.column},
+                'end': {'line': self.end_line, 'character': self.end_column}}
+
+    def diagnosticObj(self) -> dict:
+        """Returns the Error as as Language Server Protocol Diagnostic object.
+        https://microsoft.github.io/language-server-protocol/specifications/specification-current/#diagnostic
+        """
+        def relatedObj(relatedError: Sequence[Tuple['Error', str]]) -> dict:
+            err, uri = relatedError
+            return {
+                'location': {'uri': uri, 'range': err.rangeObj()},
+                'message': err.message
+            }
+
+        if self.code < WARNING:
+            severity = 3
+        elif self.code < ERROR:
+            severity = 2
+        else:
+            severity = 1
+
+        return {
+            'range': self.rangeObj(),
+            'severity': severity,
+            'code': self.code,
+            'source': 'DHParser',
+            'message': self.message,
+            # 'tags': []
+            'related': [relatedObj(err) for err in self.related]
+        }
 
 
 def is_warning(code: int) -> bool:
@@ -290,3 +336,4 @@ def adjust_error_locations(errors: List[Error],
         assert err.pos >= 0
         err.orig_pos = source_mapping(err.pos)
         err.line, err.column = line_col(line_breaks, err.orig_pos)
+        err.end_line, err.end_column = line_col(line_breaks, err.orig_pos + err.length)

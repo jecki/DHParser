@@ -148,9 +148,9 @@ def asyncio_run(coroutine):
                 loop.close()
 
 
-def json_rpc(func, params={}, ID=None) -> str:
+def json_rpc(func_name, params={}, ID=None) -> dict:
     """Generates a JSON-RPC-call for `func` with parameters `params`"""
-    return str({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
+    return {"jsonrpc": "2.0", "method": func_name, "params": params, "id": ID}
 
 
 class DSLCPUBoundTasks:

@@ -876,7 +876,8 @@ def collapse(context: List[Node]):
     (place "p.26b,18")
     """
     node = context[-1]
-    # TODO: update attributes
+    for descendant in node.select_if(lambda nd: nd.has_attr()):
+        node.attr.update(descendant.attr)
     node.result = node.content
 
 
@@ -1365,7 +1366,6 @@ def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
     remove_children_if(context, partial(is_token, tokens=tokens))
 
 
-# TODO: refactor to "remove_children"!?
 @transformation_factory(collections.abc.Set)
 def remove_children(context: List[Node], tag_names: AbstractSet[str]):
     """Removes children by tag name."""

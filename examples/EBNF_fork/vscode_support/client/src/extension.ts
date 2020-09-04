@@ -127,21 +127,19 @@ function startLangServerTCP(addr: number) : Disposable {
 	return disposable;
 }
 
+
 export function activate(context: ExtensionContext) {
 	console.log('activating language server connector!');
-	let disposable = startLangServerStream("python", ["EBNFServer.py", "--stream"]);
+	let disposable = startLangServerStream("python", ["EBNFServer.py", "--stream", "--logging"]);
 	// let disposable = startLangServerTCP(defaultPort);
     context.subscriptions.push(disposable);
 }
 
 
-// TODO: EBNFServer when finished!
-
-
-// export function deactivate(): Thenable<void> | undefined {
-// 	if (!client) {
-// 		return undefined;
-// 	}
-// 	console.log('stop lsp client');
-// 	return client.stop();
-// }
+export function deactivate(): Thenable<void> | undefined {
+	if (!client) {
+ 		return undefined;
+ 	}
+ 	console.log('stop lsp client');
+ 	return client.stop();
+}

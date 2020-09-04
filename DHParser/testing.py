@@ -896,7 +896,7 @@ def run_path(path):
 def clean_report(report_dir='REPORT'):
     """Deletes any test-report-files in the REPORT sub-directory and removes
     the REPORT sub-directory, if it is empty after deleting the files."""
-    # TODO: make this thread safe, if possible!!!!
+    # TODO: make this thread/process safe, if possible!!!!
     if os.path.exists(report_dir):
         files = os.listdir(report_dir)
         flag = False

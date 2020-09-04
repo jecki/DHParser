@@ -2469,7 +2469,7 @@ class Series(MandatoryNary):
             self, other = other, self
             other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
                 else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-            return Series(*(other_parsers + self.parsers),
+            return Series(*(other_parsers + cast(NaryParser, self).parsers),
                           mandatory=combined_mandatory(other, self))
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
@@ -2575,7 +2575,7 @@ class Alternative(NaryParser):
             self, other = other, self
             other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
                 else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-            return Alternative(*(other_parsers + self.parsers))
+            return Alternative(*(other_parsers + cast(NaryParser, self).parsers))
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Alternative(*(self.parsers + other_parsers))
@@ -2768,7 +2768,7 @@ class Interleave(MandatoryNary):
             # for some reason cython called __mul__ instead of __rmul__,
             # so we have to flip self and other...
             self, other = other, self
-        parsers, mandatory, repetitions = self._prepare_combined(other)
+        parsers, mandatory, repetitions = cast(Interleave, self)._prepare_combined(other)
         return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
 
     def __rmul__(self, other: Parser) -> 'Interleave':
@@ -2828,9 +2828,6 @@ class Lookahead(FlowParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
-            # TODO: Delete following comment
-            # static analysis requires lookahead to be disabled at document end
-            # or (self.grammar.static_analysis_pending__ and not text)):
             return (EMPTY_NODE if self.anonymous else Node(self.tag_name, '')), text
         else:
             return None, text
@@ -3420,8 +3417,7 @@ class Forward(UnaryParser):
         self.drop_content = parser.drop_content
 
     def sub_parsers(self) -> Tuple[Parser, ...]:
-        """Note: Sub-Parsers are not passed through by Forward-Parser.
-        TODO: Should this be changed?"""
+        """Note: Sub-Parsers are not passed through by Forward-Parser."""
         if is_parser_placeholder(self.parser):
             return tuple()
         return self.parser,

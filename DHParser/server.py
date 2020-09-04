@@ -193,11 +193,11 @@ def substitute_default_host_and_port(host, port):
     return host, port
 
 
-def as_json_rpc(func: Callable,
-                params: Union[List[JSON_Type], Dict[str, JSON_Type]] = [],
-                ID: Optional[int] = None) -> str:
-    """Generates a JSON-RPC-call for `func` with parameters `params`"""
-    return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
+# def as_json_rpc(func: Callable,
+#                 params: Union[List[JSON_Type], Dict[str, JSON_Type]] = [],
+#                 ID: Optional[int] = None) -> str:
+#     """Generates a JSON-RPC-call for `func` with parameters `params`"""
+#     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
 def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
@@ -334,7 +334,7 @@ def strip_header_delimiter(data: str) -> Tuple[str]:
 
 def gen_task_id() -> int:
     """Generate a unique task id. This is always a negative number to
-    distinguish the taks id's from the json-rpc ids.
+    distinguish the task id's from the json-rpc ids.
     """
     THREAD_LOCALS = access_thread_locals()
     try:
@@ -698,12 +698,14 @@ class Connection:
         assert self.response_queue is not None
         self.response_queue.put_nowait(json_obj)
 
-    async def server_call(self, json_obj: JSON_Type):
+    async def server_call(self, method: str, params: JSON_Type, ID: int):
         """Issues a json-rpc call from the server to the client."""
+        json_obj = {"jsonrpc": "2.0", "method": method, "params": params, "id": ID}
         json_str = json.dumps(json_obj)
-        if self.log_file:
-            self.log('CALL: ', json_str, '\n\n')
+        self.log('CALL: ', json_str, '\n\n')
         request = json_str.encode()
+        # self.writer.write(JSONRPC_HEADER_BYTES % len(request))
+        # sefl.writer.write(request)
         request = JSONRPC_HEADER_BYTES % len(request) + request
         self.writer.write(request)
         await self.writer.drain()

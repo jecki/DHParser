@@ -86,9 +86,6 @@ def pack_index(index: int, length: int) -> int:
     """
     # assert length >= 0
     index = index if index >= 0 else index + length
-    # TODO: Test the following code for speedup
-    # if index < 0:
-    #     index += length
     return 0 if index < 0 else length if index > length else index
 
 
@@ -385,7 +382,7 @@ class TextBuffer:
     def __init__(self, text: Union[str, StringView], version: int = 0):
         self._text = text       # type: Union[str, StringView]
         self._buffer = []       # type: List[Union[str, StringView]]
-        self.version = version  # type: int
+        self.version = version if version >= 0 else 0  # type: int
 
     def _lazy_init(self):
         self._buffer = [line.strip('\r') for line in self._text.split('\n')]
