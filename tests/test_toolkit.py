@@ -185,9 +185,9 @@ class TestJSONSupport:
         assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480},"id":null}'
 
     def test_bool_and_None(self):
-        data = [True, False, None]
+        data = [True, False, None, 1, 2.0, "abc"]
         jsons = json_dumps(data)
-        assert jsons == '[true,false,null]'
+        assert jsons == '[true,false,null,1,2.0,"abc"]', jsons
 
     def test_roundtrip(self):
         data = ('{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":17666,'

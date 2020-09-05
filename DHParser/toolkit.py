@@ -43,7 +43,8 @@ except ImportError:
     import re
 
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Callable, Optional
+from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Callable, Optional, \
+    Iterator
 
 try:
     import cython
@@ -677,10 +678,46 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
         >>> json_dumps(json_obj)
         '{"jsonrpc":"2.0","method":"report_size","params":{"width":640,"height":400"},"id":null}'
     """
+    custom_encoder = cls()
+
+    # def serialize(obj) -> Iterator[str]:
+    #     if isinstance(obj, str):
+    #         yield '"' + obj + '"'
+    #     elif isinstance(obj, dict):
+    #         buf = '{'
+    #         for k, v in obj.items():
+    #             yield buf + '"' + k + '":'
+    #             yield from serialize(v)
+    #             buf = ','
+    #         yield '}'
+    #     elif isinstance(obj, list):
+    #         buf = '['
+    #         for item in obj:
+    #             yield buf
+    #             yield from serialize(item)
+    #             buf = ','
+    #         yield ']'
+    #     elif obj is True:
+    #         yield 'true'
+    #     elif obj is False:
+    #         yield 'false'
+    #     elif isinstance(obj, int):
+    #         # NOTE: test for int must follow test for bool, because True and False
+    #         #       are treated as instances of int as well by Python
+    #         yield str(obj)
+    #     elif isinstance(obj, float):
+    #         yield str(obj)
+    #     elif obj is None:
+    #         yield 'null'
+    #     elif isinstance(obj, JSONLiteral):
+    #         yield obj.literal
+    #     else:
+    #         yield from serialize(custom_encoder.default(obj))
+
     def serialize(obj) -> List[str]:
         if isinstance(obj, str):
             return ['"' + obj + '"']
-        if isinstance(obj, dict):
+        elif isinstance(obj, dict):
             r = ['{']
             for k, v in obj.items():
                 r.append('"' + k + '":')
@@ -688,27 +725,28 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
                 r.append(',')
             r[-1] = '}'
             return r
-        if isinstance(obj, Sequence):
+        elif isinstance(obj, list):
             r = ['[']
             for item in obj:
                 r.extend(serialize(item))
                 r.append(',')
             r[-1] = ']'
             return r
-        if isinstance(obj, bool):
-            return ['true' if obj else 'false']
-        if isinstance(obj, int):
+        elif obj is True:
+            return ['true']
+        elif obj is False:
+            return ['false']
+        elif obj is None:
+            return ['null']
+        elif isinstance(obj, int) or isinstance(obj, float):
             # NOTE: test for int must follow test for bool, because True and False
             #       are treated as instances of int as well by Python
-            return[str(obj)]
-        if obj is None:
-            return ['null']
-        if isinstance(obj, JSONLiteral):
+            return[repr(obj)]
+        elif isinstance(obj, JSONLiteral):
             return [obj.literal]
-        return serialize(cls.default(obj))
+        return serialize(custom_encoder.default(obj))
 
-    l = serialize(obj)
-    return ''.join(l)
+    return ''.join(serialize(obj))
 
 
 def json_rpc(method: Callable, params: JSON_Type = [], ID: Optional[int] = None) -> str:
