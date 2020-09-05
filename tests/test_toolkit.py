@@ -22,14 +22,15 @@ limitations under the License.
 
 import concurrent.futures
 import collections.abc
+import json
 import os
 import sys
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.toolkit import has_fenced_code, load_if_file, re, \
-    lstrip_docstring, issubtype, typing, concurrent_ident
+from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
+    issubtype, typing, concurrent_ident, JSONLiteral, json_dumps, json_rpc
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -174,6 +175,59 @@ class TestTypeSystemSupport:
         assert issubtype(typing.Tuple, type(tuple()))
         assert issubtype(typing.Callable, collections.abc.Callable)
         assert issubtype(typing.Tuple[typing.Callable], tuple)
+
+
+class TestJSONSupport:
+    def test_stepwise_encoding(self):
+        params = {'height': 640, 'width': 480}
+        params_literal = JSONLiteral(json_dumps(params))
+        rpc = json_rpc('open_window', params_literal)
+        assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480},"id":null}'
+
+    def test_bool_and_None(self):
+        data = [True, False, None]
+        jsons = json_dumps(data)
+        assert jsons == '[true,false,null]'
+
+    def test_roundtrip(self):
+        data = ('{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":17666,'
+               '"rootPath":"/home/eckhart/Entwicklung/DHParser/examples/EBNF_fork","rootUri":'
+               '"file:///home/eckhart/Entwicklung/DHParser/examples/EBNF_fork","capabilities":'
+               '{"workspace":{"applyEdit":true,"workspaceEdit":{"documentChanges":true},'
+               '"didChangeConfiguration":{"dynamicRegistration":true},"didChangeWatchedFiles":'
+               '{"dynamicRegistration":true},"symbol":{"dynamicRegistration":true,"symbolKind":'
+               '{"valueSet":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,'
+               '26]}},"executeCommand":{"dynamicRegistration":true},"configuration":true,'
+               '"workspaceFolders":true},"textDocument":{"publishDiagnostics":'
+               '{"relatedInformation":true},"synchronization":{"dynamicRegistration":true,'
+               '"willSave":true,"willSaveWaitUntil":true,"didSave":true},"completion":'
+               '{"dynamicRegistration":true,"contextSupport":true,"completionItem":'
+               '{"snippetSupport":true,"commitCharactersSupport":true,"documentationFormat":'
+               '["markdown","plaintext"],"deprecatedSupport":true,"preselectSupport":true},'
+               '"completionItemKind":{"valueSet":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,'
+               '19,20,21,22,23,24,25]}},"hover":{"dynamicRegistration":true,"contentFormat":'
+               '["markdown","plaintext"]},"signatureHelp":{"dynamicRegistration":true,'
+               '"signatureInformation":{"documentationFormat":["markdown","plaintext"]}},'
+               '"definition":{"dynamicRegistration":true},"references":{"dynamicRegistration":'
+               'true},"documentHighlight":{"dynamicRegistration":true},"documentSymbol":'
+               '{"dynamicRegistration":true,"symbolKind":{"valueSet":[1,2,3,4,5,6,7,8,9,10,11,'
+               '12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]},'
+               '"hierarchicalDocumentSymbolSupport":true},"codeAction":{"dynamicRegistration":'
+               'true,"codeActionLiteralSupport":{"codeActionKind":{"valueSet":["","quickfix",'
+               '"refactor","refactor.extract","refactor.inline","refactor.rewrite","source",'
+               '"source.organizeImports"]}}},"codeLens":{"dynamicRegistration":true},'
+               '"formatting":{"dynamicRegistration":true},"rangeFormatting":'
+               '{"dynamicRegistration":true},"onTypeFormatting":{"dynamicRegistration":true},'
+               '"rename":{"dynamicRegistration":true},"documentLink":{"dynamicRegistration":'
+               'true},"typeDefinition":{"dynamicRegistration":true},"implementation":'
+               '{"dynamicRegistration":true},"colorProvider":{"dynamicRegistration":true},'
+               '"foldingRange":{"dynamicRegistration":true,"rangeLimit":5000,"lineFoldingOnly":'
+               'true}}},"trace":"off","workspaceFolders":[{"uri":'
+               '"file:///home/eckhart/Entwicklung/DHParser/examples/EBNF_fork",'
+               '"name":"EBNF_fork"}]}}')
+        obj = json.loads(data)
+        jsons = json_dumps(obj)
+        assert jsons == data
 
 
 if __name__ == "__main__":

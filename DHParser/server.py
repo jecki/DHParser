@@ -74,15 +74,13 @@ from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
-from DHParser.toolkit import re, re_find
+from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict
 from DHParser.versionnumber import __version__
 
 
 __all__ = ('RPC_Table',
            'RPC_Type',
            'RPC_Error_Type',
-           'JSON_Type',
-           'JSON_Dict',
            'ConnectionCallback',
            'SERVER_ERROR',
            'SERVER_OFFLINE',
@@ -115,8 +113,6 @@ __all__ = ('RPC_Table',
 RPC_Table = Dict[str, Callable]
 RPC_Type = Union[RPC_Table, List[Callable], Callable]
 RPC_Error_Type = Optional[Tuple[int, str]]
-JSON_Type = Union[Dict, Sequence, str, int, None]
-JSON_Dict = Dict[str, JSON_Type]
 BytesType = Union[bytes, bytearray]
 ConnectionCallback = Callable[['Connection'], None]
 
@@ -191,13 +187,6 @@ def substitute_default_host_and_port(host, port):
     if port == USE_DEFAULT_PORT:
         port = get_config_value('server_default_port')
     return host, port
-
-
-# def as_json_rpc(func: Callable,
-#                 params: Union[List[JSON_Type], Dict[str, JSON_Type]] = [],
-#                 ID: Optional[int] = None) -> str:
-#     """Generates a JSON-RPC-call for `func` with parameters `params`"""
-#     return json.dumps({"jsonrpc": "2.0", "method": func.__name__, "params": params, "id": ID})
 
 
 def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
@@ -698,10 +687,8 @@ class Connection:
         assert self.response_queue is not None
         self.response_queue.put_nowait(json_obj)
 
-    async def server_call(self, method: str, params: JSON_Type, ID: int):
+    async def server_call(self, json_str: str):
         """Issues a json-rpc call from the server to the client."""
-        json_obj = {"jsonrpc": "2.0", "method": method, "params": params, "id": ID}
-        json_str = json.dumps(json_obj)
         self.log('CALL: ', json_str, '\n\n')
         request = json_str.encode()
         # self.writer.write(JSONRPC_HEADER_BYTES % len(request))

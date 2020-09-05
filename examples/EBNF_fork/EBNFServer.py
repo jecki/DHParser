@@ -168,6 +168,7 @@ class EBNFCPUBoundTasks:
         result, messages, _ = compile_source(
             text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
         # TODO: return errors as well as (distilled) information about symbols for code propositions
+        # diagnostics = [msg.diagnosticObj() for msg in messages]
         return None
 
 
@@ -296,9 +297,9 @@ class EBNFLanguageServerProtocol:
             # werte Ergebnis aus
             # sende eine PublishDiagnostics-Notification via self.connection
             self.server_call_ID += 1
-            self.connection.server_call('textDocument/publishDiagnostics',
-                                        publishDiagnostics,
-                                        self.server_call_ID)
+            await self.connection.server_call('textDocument/publishDiagnostics',
+                                              publishDiagnostics,
+                                              self.server_call_ID)
         return None
 
     async def lsp_textDocument_didOpen(self, textDocument):

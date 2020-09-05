@@ -26,6 +26,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import parse_xml
+from DHParser.toolkit import json_dumps
 
 def cpu_profile(func, repetitions=1):
     """Profile the function `func`.
@@ -51,18 +52,26 @@ def profile_serializing():
     with open(os.path.join(scriptpath, 'data', 'inferus.ausgabe.xml')) as f:
         data = f.read()
     tree = parse_xml(data)
-    print('XML')
+    print('XML inferus')
     cpu_profile(tree.as_xml, 100)
-    print('S-Expression')
-    print(tree.as_sxpr())
+    print('S-Expression inferus')
     cpu_profile(lambda :tree.as_sxpr(compact=True), 100)
-    print('json')
-    cpu_profile(tree.as_json, 100)
+    print('json inferus')
+    cpu_profile(lambda :tree.as_json(indent=None), 100)
+    print('toolkit.json_dumps inferus')
+    cpu_profile(lambda :json_dumps(tree.to_json_obj()), 100)
+
     with open(os.path.join(scriptpath, 'data', 'testdoc3.xml')) as f:
         data = f.read()
     tree = parse_xml(data)
-    print('XML')
+    print('XML testdoc3')
     cpu_profile(tree.as_xml, 100)
+    print('S-Expression testdoc3')
+    cpu_profile(lambda :tree.as_sxpr(compact=True), 100)
+    print('json testdoc3')
+    cpu_profile(lambda :tree.as_json(indent=None), 100)
+    print('toolkit.json_dumps testdoc3')
+    cpu_profile(lambda :json_dumps(tree.to_json_obj()), 100)
 
 
 if __name__ == "__main__":

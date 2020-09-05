@@ -29,6 +29,7 @@ import bisect
 import functools
 import hashlib
 import io
+import json
 import multiprocessing
 import os
 import sys
@@ -42,7 +43,7 @@ except ImportError:
     import re
 
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple
+from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Callable, Optional
 
 try:
     import cython
@@ -87,6 +88,11 @@ __all__ = ('typing',
            'expand_table',
            'compile_python_object',
            'smart_list',
+           'JSON_Type',
+           'JSON_Dict',
+           'JSONLiteral',
+           'json_dumps',
+           'json_rpc',
            'sane_parser_name',
            'DHPARSER_DIR',
            'DHPARSER_PARENTDIR')
@@ -636,6 +642,78 @@ def expand_table(compact_table: Dict) -> Dict:
                 raise KeyError('Key "%s" used more than once in compact table!' % key)
             expanded_table[k] = value
     return expanded_table
+
+
+#######################################################################
+#
+# JSON RPC support
+#
+#######################################################################
+
+
+JSON_Type = Union[Dict, Sequence, str, int, None]
+JSON_Dict = Dict[str, JSON_Type]
+
+
+class JSONLiteral:
+    """JSONLiteral is a special type that encapsulates already serialized
+    json-chunks in json object-trees. `json_dumps` will insert the content
+    of a JSONLiteral-object literally, rather than serializing it as other
+    objects."""
+    __slots__ = ['literal']
+
+    def __init__(self, literal: str):
+        self.literal = literal
+
+
+def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
+    """Returns json-object as string. Other than the standard-library's
+    `json.dumps()`-function `json_dumps` allows to include alrady serialzed
+    parts (in the form of JSONLiteral-objects) in the json-object. Example::
+        
+        >>> already_serialized = '{"width":640,"height":400"}'
+        >>> literal = JSONLiteral(already_serialized)
+        >>> json_obj = {"jsonrpc": "2.0", "method": "report_size", "params": literal, "id": None}
+        >>> json_dumps(json_obj)
+        '{"jsonrpc":"2.0","method":"report_size","params":{"width":640,"height":400"},"id":null}'
+    """
+    def serialize(obj) -> List[str]:
+        if isinstance(obj, str):
+            return ['"' + obj + '"']
+        if isinstance(obj, dict):
+            r = ['{']
+            for k, v in obj.items():
+                r.append('"' + k + '":')
+                r.extend(serialize(v))
+                r.append(',')
+            r[-1] = '}'
+            return r
+        if isinstance(obj, Sequence):
+            r = ['[']
+            for item in obj:
+                r.extend(serialize(item))
+                r.append(',')
+            r[-1] = ']'
+            return r
+        if isinstance(obj, bool):
+            return ['true' if obj else 'false']
+        if isinstance(obj, int):
+            # NOTE: test for int must follow test for bool, because True and False
+            #       are treated as instances of int as well by Python
+            return[str(obj)]
+        if obj is None:
+            return ['null']
+        if isinstance(obj, JSONLiteral):
+            return [obj.literal]
+        return serialize(cls.default(obj))
+
+    l = serialize(obj)
+    return ''.join(l)
+
+
+def json_rpc(method: Callable, params: JSON_Type = [], ID: Optional[int] = None) -> str:
+    """Generates a JSON-RPC-call for `func` with parameters `params`"""
+    return json_dumps({"jsonrpc": "2.0", "method": method, "params": params, "id": ID})
 
 
 #######################################################################

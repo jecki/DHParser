@@ -1292,7 +1292,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # JSON serialization ###
 
-    def to_json_obj(self) -> List:
+    def to_json_obj(self) -> list:
         """Serialize node or tree as JSON-serializable nested list."""
         jo = [self.tag_name,
               [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
@@ -2029,15 +2029,12 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
 
 
 class DHParser_JSONEncoder(json.JSONEncoder):
-    """A JSON-encoder that also encodes syntaxtree.Node- and error.Error-objects
-    as valid json objects. Error-objects are encoded as strings. Node-objects
-    are encoded using Node.as_json.
+    """A JSON-encoder that also encodes syntaxtree.Node- as valid json objects.
+    Node-objects are encoded using Node.as_json.
     """
     def default(self, obj):
         if isinstance(obj, Node):
             return cast(Node, obj).to_json_obj()
-        elif isinstance(obj, Error):
-            return str(cast(Error, obj))
         return json.JSONEncoder.default(self, obj)
 
 
