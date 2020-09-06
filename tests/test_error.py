@@ -31,6 +31,7 @@ try:
 except ImportError:
     import re
 
+from DHParser.error import Error, ERROR, adjust_error_locations
 from DHParser.toolkit import linebreaks, line_col
 
 
@@ -70,6 +71,17 @@ class TestErrorSupport:
         self.mini_suite(s, linebreaks(s), 0)
         s = "\n123456789\n123456789\n"
         self.mini_suite(s, linebreaks(s), 1)
+
+    def test_boundary_cases(self):
+        err = Error('Error-Test', 0, ERROR)
+        adjust_error_locations([err], '')
+
+        err = Error('Error-Test', 1, ERROR)
+        try:
+            adjust_error_locations([err], '')
+            assert False, "Error-location outside text. ValueError was expected but not raised"
+        except ValueError:
+            pass
 
 
 if __name__ == "__main__":

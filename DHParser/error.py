@@ -252,16 +252,17 @@ class Error:
         else:
             severity = 1
 
-        return {
+        diagnostic =  {
             'range': self.rangeObj(),
             'severity': severity,
             'code': self.code,
             'source': 'DHParser',
             'message': self.message,
             # 'tags': []
-            'related': [relatedObj(err) for err in self.related]
         }
-
+        if self.related:
+            diagnostic['relatedInformation'] = [relatedObj(err) for err in self.related]
+        return diagnostic
 
 def is_warning(code: int) -> bool:
     """Returns True, if error is merely a warning or a message."""
@@ -336,4 +337,9 @@ def adjust_error_locations(errors: List[Error],
         assert err.pos >= 0
         err.orig_pos = source_mapping(err.pos)
         err.line, err.column = line_col(line_breaks, err.orig_pos)
+        # adjust length in case it exceeds the text size. As this is non-fatal
+        # it should be adjusted rather than an error raised to avoid
+        # unnecessary special-case treatments in other places
+        if err.orig_pos + err.length > len(original_text):
+            err.length = len(original_text) - err.orig_pos
         err.end_line, err.end_column = line_col(line_breaks, err.orig_pos + err.length)

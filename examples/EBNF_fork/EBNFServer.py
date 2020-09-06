@@ -160,16 +160,24 @@ class EBNFCPUBoundTasks:
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
-    def compile_EBNF(self, text: str):
-        from DHParser.compile import compile_source
-        from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
-            get_ebnf_compiler
-        compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
-        result, messages, _ = compile_source(
-            text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
-        # TODO: return errors as well as (distilled) information about symbols for code propositions
-        # diagnostics = [msg.diagnosticObj() for msg in messages]
-        return None
+    def compile_EBNF(self, text: str) -> str:
+        with open('sidelog.txt', 'w') as f:
+            f.write('compile_EBNF 1 ' + os.getcwd() + '\n')
+            from DHParser.compile import compile_source
+            from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
+                get_ebnf_compiler
+            from DHParser.toolkit import json_dumps
+            f.write('compile_EBNF 2\n')
+            compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
+            f.write('compile_EBNF 3\n')
+            result, messages, _ = compile_source(
+                text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
+            # TODO: return errors as well as (distilled) information about symbols for code propositions
+            f.write('compile_EBNF 4\n')
+            diagnostics = [msg.diagnosticObj() for msg in messages]
+            f.write('compile_EBNF 5\n')
+            f.close()
+            return json_dumps(diagnostics)
 
 
 class EBNFBlockingTasks:
@@ -279,27 +287,31 @@ class EBNFLanguageServerProtocol:
         return {}
 
     async def compile_text(self, uri: str) -> None:
+        from DHParser.toolkit import JSONStr
         text_buffer = self.current_text.get(uri, None)
         version = text_buffer.version
         if text_buffer and version > self.last_compiled_version.get(uri, -1):
             exenv = self.connection.exec
-            self.connection.log('Compiling: ', uri, '\n')
+            self.connection.log('compile_text 1: ', uri, '\n')
             self.last_compiled_version[uri] = version
-            result, rpc_error = await exenv.execute(exenv.process_executor,
-                                                    self.cpu_bound.compile_EBNF,
-                                                    (text_buffer.snapshot(),))
-            diagnostics = []  # TODO: Generate Diagnostics
+            self.connection.log('compile_text 2\n')
+            diagnostics, rpc_error = await exenv.execute(
+                exenv.process_executor, self.cpu_bound.compile_EBNF, (text_buffer.snapshot(),))
+            self.connection.log('compile_text 3: ', str(rpc_error), '\n')
             publishDiagnostics = {
                 'uri' : uri,
                 'version': text_buffer.version,
-                'diagnostics': diagnostics
+                'diagnostics': JSONStr(diagnostics)
             }
             # werte Ergebnis aus
             # sende eine PublishDiagnostics-Notification via self.connection
+            self.connection.log('compile_text 4\n\n')
             self.server_call_ID += 1
+            # publishDiagnostics is just a Notification, not a request,
+            # there it must not have an ID! Otherwiese an "unhandled method"
+            # error be returned by the client.
             await self.connection.server_call('textDocument/publishDiagnostics',
-                                              publishDiagnostics,
-                                              self.server_call_ID)
+                                              publishDiagnostics, None)
         return None
 
     async def lsp_textDocument_didOpen(self, textDocument):
@@ -308,7 +320,8 @@ class EBNFLanguageServerProtocol:
         text = textDocument['text']
         text_buffer = TextBuffer(text, int(textDocument.get('version', -1)))
         self.current_text[uri] = text_buffer
-        await self.compile_text(uri)
+        if 'publishDiagnostics' in self.lsp_data['clientCapabilities']['textDocument']:
+            await self.compile_text(uri)
         return None
 
     def lsp_textDocument_didSave(self, **kwargs):
@@ -330,7 +343,7 @@ class EBNFLanguageServerProtocol:
             else:
                 text_buffer = TextBuffer(contentChanges[0]['text'], version)
                 self.current_text[uri] = text_buffer
-            if 'publishDiagnostics' in self.lsp_data['clientCapabilities']:
+            if 'publishDiagnostics' in self.lsp_data['clientCapabilities']['textDocument']:
                 await asyncio.sleep(RECOMPILE_DELAY)
                 await self.compile_text(uri)
         return None

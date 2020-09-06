@@ -74,7 +74,7 @@ from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
-from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict
+from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONStr, json_dumps, json_rpc
 from DHParser.versionnumber import __version__
 
 
@@ -682,13 +682,17 @@ class Connection:
         """Adds a client-response to the waiting queue. The responses
         to a particular task can be queried with the `client_response()`-
         coroutine."""
-        if self.log_file:
-            self.log('RESULT: ', json.dumps(json_obj))
+        # # Already logged as received message
+        # if self.log_file:
+        #     self.log('RESULT: ', json.dumps(json_obj), '\n')
         assert self.response_queue is not None
         self.response_queue.put_nowait(json_obj)
 
-    async def server_call(self, json_str: str):
+    async def server_call(self, method: str,
+                          params: JSON_Type = [],
+                          ID: Optional[int] = None):
         """Issues a json-rpc call from the server to the client."""
+        json_str = json_rpc(method, params, ID)
         self.log('CALL: ', json_str, '\n\n')
         request = json_str.encode()
         # self.writer.write(JSONRPC_HEADER_BYTES % len(request))

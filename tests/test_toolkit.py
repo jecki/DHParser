@@ -30,7 +30,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
-    issubtype, typing, concurrent_ident, JSONLiteral, json_dumps, json_rpc
+    issubtype, typing, concurrent_ident, JSONStr, json_dumps, json_rpc
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -180,14 +180,24 @@ class TestTypeSystemSupport:
 class TestJSONSupport:
     def test_stepwise_encoding(self):
         params = {'height': 640, 'width': 480}
-        params_literal = JSONLiteral(json_dumps(params))
+        params_literal = JSONStr(json_dumps(params, partially_serialized=True))
         rpc = json_rpc('open_window', params_literal)
         assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480},"id":null}'
 
     def test_bool_and_None(self):
         data = [True, False, None, 1, 2.0, "abc"]
-        jsons = json_dumps(data)
+        jsons = json_dumps(data, partially_serialized=True)
         assert jsons == '[true,false,null,1,2.0,"abc"]', jsons
+
+    def test_str_escaping(self):
+        data = 'The dragon said "hush"!'
+        jsons = json_dumps(data, partially_serialized=True)
+        assert jsons == r'"The dragon said \"hush\"!"', jsons
+
+    def test_boundary_cases(self):
+        assert json_dumps([], partially_serialized=True) == "[]"
+        assert json_dumps({}, partially_serialized=True) == "{}"
+        assert json_dumps(None, partially_serialized=True) == "null"
 
     def test_roundtrip(self):
         data = ('{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":17666,'
@@ -226,7 +236,7 @@ class TestJSONSupport:
                '"file:///home/eckhart/Entwicklung/DHParser/examples/EBNF_fork",'
                '"name":"EBNF_fork"}]}}')
         obj = json.loads(data)
-        jsons = json_dumps(obj)
+        jsons = json_dumps(obj, partially_serialized=True)
         assert jsons == data
 
 

@@ -91,7 +91,8 @@ __all__ = ('typing',
            'smart_list',
            'JSON_Type',
            'JSON_Dict',
-           'JSONLiteral',
+           'JSONStr',
+           'json_encode_string',
            'json_dumps',
            'json_rpc',
            'sane_parser_name',
@@ -656,33 +657,61 @@ JSON_Type = Union[Dict, Sequence, str, int, None]
 JSON_Dict = Dict[str, JSON_Type]
 
 
-class JSONLiteral:
-    """JSONLiteral is a special type that encapsulates already serialized
+class JSONStr:
+    """JSONStr is a special type that encapsulates already serialized
     json-chunks in json object-trees. `json_dumps` will insert the content
-    of a JSONLiteral-object literally, rather than serializing it as other
+    of a JSONStr-object literally, rather than serializing it as other
     objects."""
-    __slots__ = ['literal']
+    __slots__ = ['serialized_json']
 
-    def __init__(self, literal: str):
-        self.literal = literal
+    def __repr__(self):
+        return self.serialized_json
+
+    def __init__(self, serialized_json: str):
+        assert isinstance(serialized_json, str)
+        self.serialized_json = serialized_json
 
 
-def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
+# the following string-escaping tables and procedures have been
+# copy-pasted and slightly adapted from the std-library
+ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t]')
+ESCAPE_DCT = {'\\': '\\\\', '"': '\\"', '\x08': '\\b', '\x0c': '\\f', '\n': '\\n', '\r': '\\r',
+              '\t': '\\t', '\x00': '\\u0000', '\x01': '\\u0001', '\x02': '\\u0002',
+              '\x03': '\\u0003', '\x04': '\\u0004', '\x05': '\\u0005', '\x06': '\\u0006',
+              '\x07': '\\u0007', '\x0b': '\\u000b', '\x0e': '\\u000e', '\x0f': '\\u000f',
+              '\x10': '\\u0010', '\x11': '\\u0011', '\x12': '\\u0012', '\x13': '\\u0013',
+              '\x14': '\\u0014', '\x15': '\\u0015', '\x16': '\\u0016', '\x17': '\\u0017',
+              '\x18': '\\u0018', '\x19': '\\u0019', '\x1a': '\\u001a', '\x1b': '\\u001b',
+              '\x1c': '\\u001c', '\x1d': '\\u001d', '\x1e': '\\u001e', '\x1f': '\\u001f'}
+
+
+def json_encode_string(s: str) -> str:
+    return '"' + ESCAPE.sub(lambda m: ESCAPE_DCT[m.group(0)], s) + '"'
+
+
+def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bool=False) -> str:
     """Returns json-object as string. Other than the standard-library's
     `json.dumps()`-function `json_dumps` allows to include alrady serialzed
-    parts (in the form of JSONLiteral-objects) in the json-object. Example::
+    parts (in the form of JSONStr-objects) in the json-object. Example::
         
         >>> already_serialized = '{"width":640,"height":400"}'
-        >>> literal = JSONLiteral(already_serialized)
+        >>> literal = JSONStr(already_serialized)
         >>> json_obj = {"jsonrpc": "2.0", "method": "report_size", "params": literal, "id": None}
         >>> json_dumps(json_obj)
         '{"jsonrpc":"2.0","method":"report_size","params":{"width":640,"height":400"},"id":null}'
+
+    :param obj: A json-object (or a tree of json-objects) to be serialized
+    :param cls: The class of a custom json-encoder berived from `json.JSONEncoder`
+    :param partially_serialized: If True, `JSONStr`-objects within the json tree
+        will be encoded (by inserting their content). If False, `JSONStr`-objects
+        will raise a TypeError, but encoding will be faster.
+    :return: The string-serialized form of the json-object.
     """
     custom_encoder = cls()
 
     # def serialize(obj) -> Iterator[str]:
     #     if isinstance(obj, str):
-    #         yield '"' + obj + '"'
+    #         yield json_encode_string(obj)
     #     elif isinstance(obj, dict):
     #         buf = '{'
     #         for k, v in obj.items():
@@ -690,7 +719,7 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
     #             yield from serialize(v)
     #             buf = ','
     #         yield '}'
-    #     elif isinstance(obj, list):
+    #     elif isinstance(obj, (list, tuple)):
     #         buf = '['
     #         for item in obj:
     #             yield buf
@@ -709,49 +738,71 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
     #         yield str(obj)
     #     elif obj is None:
     #         yield 'null'
-    #     elif isinstance(obj, JSONLiteral):
-    #         yield obj.literal
+    #     elif isinstance(obj, JSONStr):
+    #         yield obj.serialized_json
     #     else:
     #         yield from serialize(custom_encoder.default(obj))
 
     def serialize(obj) -> List[str]:
         if isinstance(obj, str):
-            return ['"' + obj + '"']
+            return [json_encode_string(obj)]
         elif isinstance(obj, dict):
-            r = ['{']
-            for k, v in obj.items():
-                r.append('"' + k + '":')
-                r.extend(serialize(v))
-                r.append(',')
-            r[-1] = '}'
-            return r
-        elif isinstance(obj, list):
-            r = ['[']
-            for item in obj:
-                r.extend(serialize(item))
-                r.append(',')
-            r[-1] = ']'
-            return r
+            if obj:
+                r = ['{']
+                for k, v in obj.items():
+                    r.append('"' + k + '":')
+                    r.extend(serialize(v))
+                    r.append(',')
+                r[-1] = '}'
+                return r
+            return ['{}']
+        elif isinstance(obj, (list, tuple)):
+            if obj:
+                r = ['[']
+                for item in obj:
+                    r.extend(serialize(item))
+                    r.append(',')
+                r[-1] = ']'
+                return r
+            return ['[]']
         elif obj is True:
             return ['true']
         elif obj is False:
             return ['false']
         elif obj is None:
             return ['null']
-        elif isinstance(obj, int) or isinstance(obj, float):
+        elif isinstance(obj, (int, float)):
             # NOTE: test for int must follow test for bool, because True and False
             #       are treated as instances of int as well by Python
             return[repr(obj)]
-        elif isinstance(obj, JSONLiteral):
-            return [obj.literal]
+        elif isinstance(obj, JSONStr):
+            return [obj.serialized_json]
         return serialize(custom_encoder.default(obj))
 
-    return ''.join(serialize(obj))
+    if partially_serialized:
+        return ''.join(serialize(obj))
+    else:
+        return json.dumps(obj, indent=None, separators=(',', ':'))
 
 
-def json_rpc(method: Callable, params: JSON_Type = [], ID: Optional[int] = None) -> str:
-    """Generates a JSON-RPC-call for `func` with parameters `params`"""
-    return json_dumps({"jsonrpc": "2.0", "method": method, "params": params, "id": ID})
+def json_rpc(method: str,
+             params: JSON_Type = [],
+             ID: Optional[int] = None,
+             partially_serialized: bool=True) -> str:
+    """Generates a JSON-RPC-call string for `method` with parameters `params`.
+    
+    :param method: The name of the rpc-function that shall be called
+    :param params: A json-object representing the parameters of the call
+    :param ID: An ID for the json-rpc-call or `None` 
+    :param partially_serialized: If True, the `params`-object may contain
+        already serialized parts in form of `JSONStr`-objects.
+        If False, any `JSONStr`-objects will lead to a TypeError.
+    :return: The string-serialized form of the json-object.
+    """
+    rpc = {"jsonrpc": "2.0", "method": method, "params": params}
+    if ID is not None:
+        rpc['id'] = ID
+    return json_dumps(rpc, partially_serialized=partially_serialized)
 
 
 #######################################################################
