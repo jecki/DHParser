@@ -34,6 +34,7 @@ servername = os.path.splitext(os.path.basename(__file__))[0]
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
 LOGGING_REQUEST = 'logging("")'
+LOG_PATH = 'logs/'
 
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
@@ -450,9 +451,9 @@ def parse_logging_args(args):
             log_path = repr(None)
             echo = repr('ECHO_OFF')
         elif args.logging in ('ON', 'START', 'YES', 'TRUE'):
-            log_path = repr('')
+            log_path = repr(LOG_PATH)
         else:
-            log_path = repr('') if args.logging is None else repr(args.logging)
+            log_path = repr(LOG_PATH) if args.logging is None else repr(args.logging)
         request = LOGGING_REQUEST.replace('""', ", ".join((log_path, echo)))
         debug('Logging to %s with call %s' % (log_path, request))
         return log_path, request

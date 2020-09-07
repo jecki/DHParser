@@ -182,7 +182,7 @@ class TestJSONSupport:
         params = {'height': 640, 'width': 480}
         params_literal = JSONStr(json_dumps(params, partially_serialized=True))
         rpc = json_rpc('open_window', params_literal)
-        assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480},"id":null}'
+        assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480}}', rpc
 
     def test_bool_and_None(self):
         data = [True, False, None, 1, 2.0, "abc"]

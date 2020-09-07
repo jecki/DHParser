@@ -230,9 +230,9 @@ class Error:
         """Returns the range (position plus length) of the error as an LSP-Range-Object.
         https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range
         """
-        assert self.line >= 0 and self.column >= 0 and self.end_line >= 0 and self.end_column >= 0
-        return {'start': {'line': self.line, 'character': self.column},
-                'end': {'line': self.end_line, 'character': self.end_column}}
+        assert self.line >= 1 and self.column >= 1 and self.end_line >= 1 and self.end_column >= 1
+        return {'start': {'line': self.line - 1, 'character': self.column - 1},
+                'end': {'line': self.end_line - 1, 'character': self.end_column - 1}}
 
     def diagnosticObj(self) -> dict:
         """Returns the Error as as Language Server Protocol Diagnostic object.

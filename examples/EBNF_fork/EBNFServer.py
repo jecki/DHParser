@@ -152,32 +152,31 @@ def json_rpc(func_name, params={}, ID=None) -> dict:
     return {"jsonrpc": "2.0", "method": func_name, "params": params, "id": ID}
 
 
+def compile_EBNF(text: str) -> str:
+    with open('logs/sidelog.txt', 'a') as f:
+        f.write('compile_EBNF 1 ' + os.getcwd() + '\n')
+        from DHParser.compile import compile_source
+        from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
+            get_ebnf_compiler
+        from DHParser.toolkit import json_dumps
+        f.write('compile_EBNF 2\n')
+        compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
+        f.write('compile_EBNF 3\n')
+        result, messages, _ = compile_source(
+            text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
+        # TODO: return errors as well as (distilled) information about symbols for code propositions
+        f.write('compile_EBNF 4\n')
+        diagnostics = [msg.diagnosticObj() for msg in messages]
+        f.write('compile_EBNF 5\n')
+        return json_dumps(diagnostics)
+
+
 class EBNFCPUBoundTasks:
     def __init__(self, lsp_data: dict):
         from DHParser.compile import ResultTuple
         from DHParser.server import gen_lsp_table
-
         self.lsp_data = lsp_data
-        self.lsp_table = gen_lsp_table(self, prefix='lsp_')
-
-    def compile_EBNF(self, text: str) -> str:
-        with open('sidelog.txt', 'w') as f:
-            f.write('compile_EBNF 1 ' + os.getcwd() + '\n')
-            from DHParser.compile import compile_source
-            from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
-                get_ebnf_compiler
-            from DHParser.toolkit import json_dumps
-            f.write('compile_EBNF 2\n')
-            compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
-            f.write('compile_EBNF 3\n')
-            result, messages, _ = compile_source(
-                text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
-            # TODO: return errors as well as (distilled) information about symbols for code propositions
-            f.write('compile_EBNF 4\n')
-            diagnostics = [msg.diagnosticObj() for msg in messages]
-            f.write('compile_EBNF 5\n')
-            f.close()
-            return json_dumps(diagnostics)
+        self.lsp_table = gen_lsp_table([], prefix='lsp_')
 
 
 class EBNFBlockingTasks:
@@ -296,7 +295,7 @@ class EBNFLanguageServerProtocol:
             self.last_compiled_version[uri] = version
             self.connection.log('compile_text 2\n')
             diagnostics, rpc_error = await exenv.execute(
-                exenv.process_executor, self.cpu_bound.compile_EBNF, (text_buffer.snapshot(),))
+                exenv.process_executor, compile_EBNF, (text_buffer.snapshot(),))
             self.connection.log('compile_text 3: ', str(rpc_error), '\n')
             publishDiagnostics = {
                 'uri' : uri,
@@ -592,9 +591,9 @@ def parse_logging_args(args):
             log_path = repr(None)
             echo = repr('ECHO_OFF')
         elif args.logging in ('ON', 'START', 'YES', 'TRUE'):
-            log_path = repr('')
+            log_path = repr('logs/')
         else:
-            log_path = repr('') if args.logging is None else repr(args.logging)
+            log_path = repr('logs/') if args.logging is None else repr(args.logging)
         request = LOGGING_REQUEST.replace('""', ", ".join((log_path, echo)))
         debug('Logging to %s with call %s' % (log_path, request))
         return log_path, request

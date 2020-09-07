@@ -391,7 +391,9 @@ class ExecutionEnvironment:
             if executor is None:
                 result = (await executable()) if asyncio.iscoroutinefunction(method) else executable()
             else:
+                append_log(self.log_file, '\n\nEXECUTE ' + method.__name__  + '\n\n')
                 result = await self.loop.run_in_executor(executor, executable)
+                append_log(self.log_file, 'DONE\n\n')
         except TypeError as e:
             rpc_error = -32602, "Invalid Params: " + str(e)
         except NameError as e:
@@ -1207,6 +1209,7 @@ class Server:
         if self.loop is None:
             self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                 else asyncio.get_event_loop()
+            self.log('\nLOOP: ' + str(self.loop) + '\n\n')
 
         if self.exec is None:
             self.exec = ExecutionEnvironment(self.loop)
