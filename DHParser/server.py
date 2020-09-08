@@ -391,9 +391,9 @@ class ExecutionEnvironment:
             if executor is None:
                 result = (await executable()) if asyncio.iscoroutinefunction(method) else executable()
             else:
-                append_log(self.log_file, '\n\nEXECUTE ' + method.__name__  + '\n\n')
+                append_log(self.log_file, '\n\nEXECUTE ' + method.__name__  + '\n\n') # DEBUGGING!
                 result = await self.loop.run_in_executor(executor, executable)
-                append_log(self.log_file, 'DONE\n\n')
+                append_log(self.log_file, 'DONE\n\n')  # DEBUGGING
         except TypeError as e:
             rpc_error = -32602, "Invalid Params: " + str(e)
         except NameError as e:
@@ -557,6 +557,7 @@ class StreamWriterProxy:
         self.exec = None    # type: Optional[concurrent.futures.Executor]
 
     def write(self, data: bytes):
+        assert isinstance(data, bytes)
         self.buffer.append(data)
 
     def can_write_eof(self) -> bool:

@@ -43,8 +43,8 @@ except ImportError:
     import re
 
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Callable, Optional, \
-    Iterator
+from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional
+
 
 try:
     import cython

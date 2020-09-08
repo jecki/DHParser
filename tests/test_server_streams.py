@@ -23,194 +23,19 @@ limitations under the License.
 
 
 import asyncio
-import collections
 from concurrent.futures import ThreadPoolExecutor
-import functools
-import io
-import json
 import threading
 import os
 import sys
-import time
-from typing import Callable, List, Union, Deque
-
 
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.server import Server, RPC_Type, StreamReaderProxy, StreamWriterProxy, \
-    STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER_BYTES, asyncio_run, \
-    RX_CONTENT_LENGTH, RE_DATA_START, spawn_stream_server, stop_stream_server
-from DHParser.toolkit import re_find
+from DHParser.server import StreamReaderProxy, StreamWriterProxy, \
+    IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER_BYTES, asyncio_run, \
+    spawn_stream_server, stop_stream_server, split_header
 
-
-def compiler_dummy(src: str, log_dir: str='') -> str:
-    return src
-
-
-def with_header(b: bytes) -> bytes:
-    return JSONRPC_HEADER_BYTES % len(b) + b
-
-
-jrpc_id = 0
-
-
-def json_rpc(method: str, params: dict) -> str:
-    global jrpc_id
-    jrpc_id += 1
-    s = json.dumps({'jsonrpc': '2.0', 'id': jrpc_id, 'method': method, 'params': params})
-    return 'Content-Length: %i\r\n\r\n' % len(s) + s
-
-
-async def read_full_content(reader) -> bytes:
-    data = b''
-    content_length = 0
-    while not reader.at_eof():
-        data += await reader.read(content_length or -1)
-        i = data.find(b'Content-Length:', 0, 512)
-        m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
-        if m:
-            content_length = int(m.group(1))
-            m2 = re_find(data, RE_DATA_START)
-            if m2:
-                header_size = m2.end()
-                if len(data) < header_size + content_length:
-                    content_length = header_size + content_length - len(data)
-                else:
-                    break
-    return data
-
-
-# async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
-#     if loop is None:
-#         loop = asyncio.get_event_loop()
-#
-#     reader = asyncio.StreamReader(limit=limit, loop=loop)
-#     await loop.connect_read_pipe(
-#         lambda: asyncio.StreamReaderProtocol(reader, loop=loop), sys.stdin)
-#
-#     writer_transport, writer_protocol = await loop.connect_write_pipe(
-#         lambda: asyncio.streams.FlowControlMixin(loop=loop),
-#         os.fdopen(sys.stdout.fileno(), 'wb'))
-#     writer = asyncio.streams.StreamWriter(
-#         writer_transport, writer_protocol, None, loop)
-#
-#     return reader, writer
-
-
-class PipeStream:
-    def __init__(self, name=''):
-        self.name = name or str(id(self))
-        self.lock = threading.Lock()
-        self.data_waiting = threading.Event()
-        self.data_waiting.clear()
-        self.data = collections.deque()
-        self._closed = False  # type: bool
-
-    def close(self):
-        with self.lock:
-            self.data_waiting.set()  # wake up any waiting readers
-            self._closed = True
-
-    @property
-    def closed(self) -> bool:
-        countdown = 50
-        while self._closed and self.data and countdown > 0:
-            # allow client to read any pending data
-            # print(self.name, 'not yet closed due to pending data')
-            self.data_waiting.set()
-            time.sleep(0.01)
-            countdown -= 1
-        return self._closed
-        # with self.lock:
-        #     result = self._closed and not self.data
-        # return result
-
-    def write(self, data: bytes):
-        assert isinstance(data, bytes)
-        with self.lock:
-            if self._closed:
-                raise ValueError("I/O operation on closed file.")
-            self.data.append(data)
-            # self.data_waiting.set()
-
-    def writelines(self, data: List[bytes]):
-        assert all(isinstance(datum, bytes) for datum in data)
-        with self.lock:
-            if self._closed:
-                raise ValueError("I/O operation on closed file.")
-            self.data.extend(data)
-            # self.data_waiting.set()
-
-    def flush(self):
-        with self.lock:
-            self.data_waiting.set()
-
-    def _read(self, n=-1) -> Union[List[bytes], Deque[bytes]]:
-        with self.lock:
-            if n < 0:
-                self.data_waiting.clear()
-                if len(self.data) == 1:
-                    return [self.data.popleft()]
-                else:
-                    data = self.data
-                    while self.data:
-                        self.data.pop()
-                    return data
-            elif n > 0:
-                size = 0
-                data = []
-                while size < n and self.data:
-                    i = len(self.data[0])
-                    if size + i <= n:
-                        data.append(self.data.popleft())
-                        size += i
-                    else:
-                        cut = size + i - n
-                        data.append(self.data[0][:cut])
-                        self.data[0] = self.data[0][cut:]
-                        size = n
-                if not self.data:
-                    self.data_waiting.clear()
-                return data
-            else:
-                return [b'']
-
-    def _readline(self) -> Union[List[bytes], Deque[bytes]]:
-        with self.lock:
-            data = []
-            while self.data:
-                i = self.data[0].find(b'\n')
-                if i < 0:
-                    data.append(self.data.popleft())
-                elif i == len(self.data[0]) - 1:
-                    data.append(self.data.popleft())
-                    break
-                else:
-                    data.append(self.data[0][:i + 1])
-                    self.data[0] = self.data[0][i + 1:]
-                    break
-            if not self.data:
-                self.data_waiting.clear()
-            return data
-
-    def read(self, n=-1) -> bytes:
-        data = self._read(n)
-        if n > 0:
-            N = sum(len(chunk) for chunk in data)
-            while N < n:
-                self.data_waiting.wait()
-                more = self._read(n)
-                N += sum(len(chunk) for chunk in more)
-                data.extend(more)
-        return b''.join(data)
-
-    def readline(self) -> bytes:
-        data = self._readline()
-        while not self._closed and (not data or data[-1][-1] != ord(b'\n')):
-            self.data_waiting.wait()
-            data.extend(self._readline())
-        return b''.join(data)
+from mockstreams import read_full_content, add_header, PipeStream
 
 
 class TestStreamProxies:
@@ -264,6 +89,13 @@ class TestStreamProxies:
         assert self.pipe.closed
 
 
+TRANS_TABLE = {ord(ch): ord(ch.upper()) for ch in 'abcdefghijklmnopqrstuvwxzy'}
+TRANS_TABLE.update({ord(ch): ord(ch.lower()) for ch in 'ABCDEFGHIJKLMNOPQRSTUVWXZY'})
+
+def mock_compiler(src: str, log_dir: str='') -> str:
+    return src.translate(TRANS_TABLE)
+
+
 class TestServer:
     def setup(self):
         self.pipeA = PipeStream('pipeA')
@@ -280,19 +112,20 @@ class TestServer:
     def test_server_process(self):
         """Basic Test of server module."""
         async def compile_remote(src, reader, writer) -> bytes:
-            writer.write(with_header(b'Test'))
+            writer.write(add_header(src.encode()))
             await writer.drain()
             data = await read_full_content(reader)
             # writer.close()
             # if sys.version_info >= (3, 7):  await writer.wait_closed()
-            return data
+            header, data, backlog = split_header(data)
+            return data.decode()
             # assert data.decode() == "Test", data.decode()
         p = None
         try:
             p = spawn_stream_server(self.readerA, self.writerB,
-                                    (compiler_dummy, set()), threading.Thread)
+                                    (mock_compiler, set()), threading.Thread)
             data = asyncio_run(compile_remote('Test', self.readerB, self.writerA))
-            # print(data)
+            assert data == "tEST"
         finally:
             stop_stream_server(self.readerB, self.writerA)
             if p is not None:
