@@ -391,9 +391,9 @@ class ExecutionEnvironment:
             if executor is None:
                 result = (await executable()) if asyncio.iscoroutinefunction(method) else executable()
             else:
-                append_log(self.log_file, '\n\nEXECUTE ' + method.__name__  + '\n\n') # DEBUGGING!
+                # append_log(self.log_file, '\n\nEXECUTE ' + method.__name__  + '\n\n') # DEBUGGING!
                 result = await self.loop.run_in_executor(executor, executable)
-                append_log(self.log_file, 'DONE\n\n')  # DEBUGGING
+                # append_log(self.log_file, 'DONE\n\n')  # DEBUGGING
         except TypeError as e:
             rpc_error = -32602, "Invalid Params: " + str(e)
         except NameError as e:
@@ -481,10 +481,10 @@ class StreamReaderProxy:
             # return self.buffered_io.read(n)
         else:
             data = await self.loop.run_in_executor(self.exec, self.buffered_io.readline)
-            if len(data) > 0:
-                data += await self.loop.run_in_executor(self.exec, self.buffered_io.readline)
-                # data += self.buffered_io.readline()
-            else:
+            # if len(data) > 0:
+            #     data += await self.loop.run_in_executor(self.exec, self.buffered_io.readline)
+            #     # data += self.buffered_io.readline()
+            if len(data) <= 0:
                 self.feed_eof()
             return data
 
@@ -1207,14 +1207,8 @@ class Server:
         self.connection.task_done(json_id)
 
     async def handle(self, reader: StreamReaderType, writer: StreamWriterType):
-        if self.loop is None:
-            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-                else asyncio.get_event_loop()
-            self.log('\nLOOP: ' + str(self.loop) + '\n\n')
-
-        if self.exec is None:
-            self.exec = ExecutionEnvironment(self.loop)
-            self.exec.log_file = self.log_file
+        assert self.loop is not None
+        assert self.exec is not None
 
         if isinstance(reader, StreamReaderProxy):
             cast(StreamReaderProxy, reader).loop = self.loop
@@ -1309,6 +1303,9 @@ class Server:
                                 # cut the data of at header size plus content-length
                                 buffer = data[k + content_length:]
                                 data = data[:k + content_length]
+                        else:
+                            k = len(data)
+                            content_length = 0
                     elif not incomplete_header(data):
                         # no header or no context-length given
                         # set `context_length` to the size of the data to break the loop
@@ -1543,6 +1540,25 @@ class Server:
             # self.server_messages.put(SERVER_OFFLINE)
             self.stage.value = SERVER_OFFLINE
 
+    async def serve_via_streams(self, reader, writer):
+        assert self.loop is None
+        assert self.exec is None
+
+        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+            else asyncio.get_event_loop()
+        self.log('\nLOOP: ' + str(self.loop) + '\n\n')
+
+        self.exec = ExecutionEnvironment(self.loop)
+        self.exec.log_file = self.log_file
+
+        try:
+            await self.handle(reader, writer)
+        finally:
+            if self.exec:
+                self.exec.shutdown()
+            self.exec = None
+            self.loop = None
+
     def run_stream_server(self, reader: StreamReaderType, writer: StreamWriterType):
         """
         Start a DHParser-server that listens on a reader-stream and answers
@@ -1553,7 +1569,7 @@ class Server:
             .format(str(reader), str(writer))
         self.stage.value = SERVER_ONLINE
         try:
-            asyncio_run(self.handle(reader, writer))
+            asyncio_run(self.serve_via_streams(reader, writer))
         except KeyboardInterrupt:
             # Don't print an error message, because sys.stdout might
             # be used for communication with the client.

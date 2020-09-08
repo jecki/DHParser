@@ -68,6 +68,18 @@ class TestStreamProxies:
             executor.submit(writer, self.pipe)
             assert future.result() == message
 
+    def test_reader_writer_simple(self):
+        async def main():
+            self.writer.write(b'Hello\n')
+            await self.writer.drain()
+            data = await self.reader.read()
+            self.writer.close()
+            return data
+
+        data = asyncio_run(main())
+        assert data == b'Hello\n', str(data)
+        assert self.pipe.closed
+
     def test_reader_writer(self):
         async def write(writer):
             writer.write(JSONRPC_HEADER_BYTES % len(IDENTIFY_REQUEST_BYTES) + IDENTIFY_REQUEST_BYTES)

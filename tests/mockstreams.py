@@ -36,7 +36,7 @@ from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYT
 from DHParser.toolkit import re_find
 
 
-__all__ = ('read_full_content', 'stdio', 'PipeStream')
+__all__ = ('read_full_content', 'add_header', 'stdio', 'PipeStream')
 
 
 async def read_full_content(reader) -> bytes:
