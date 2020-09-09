@@ -153,22 +153,16 @@ def json_rpc(func_name, params={}, ID=None) -> dict:
 
 
 def compile_EBNF(text: str) -> str:
-    with open('logs/sidelog.txt', 'a') as f:
-        f.write('compile_EBNF 1 ' + os.getcwd() + '\n')
-        from DHParser.compile import compile_source
-        from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
-            get_ebnf_compiler
-        from DHParser.toolkit import json_dumps
-        f.write('compile_EBNF 2\n')
-        compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
-        f.write('compile_EBNF 3\n')
-        result, messages, _ = compile_source(
-            text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
-        # TODO: return errors as well as (distilled) information about symbols for code propositions
-        f.write('compile_EBNF 4\n')
-        diagnostics = [msg.diagnosticObj() for msg in messages]
-        f.write('compile_EBNF 5\n')
-        return json_dumps(diagnostics)
+    from DHParser.compile import compile_source
+    from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
+        get_ebnf_compiler
+    from DHParser.toolkit import json_dumps
+    compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
+    result, messages, _ = compile_source(
+        text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
+    # TODO: return errors as well as (distilled) information about symbols for code propositions
+    diagnostics = [msg.diagnosticObj() for msg in messages]
+    return json_dumps(diagnostics)
 
 
 class EBNFCPUBoundTasks:

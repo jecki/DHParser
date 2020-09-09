@@ -26,6 +26,7 @@ main cause of trouble when constructing a context free Grammar.
 """
 
 
+import asyncio
 import collections
 import concurrent.futures
 import copy
@@ -35,17 +36,21 @@ import json
 import multiprocessing
 import os
 import sys
-from typing import Dict, List, Union, cast
+import threading
+import time
+from typing import Dict, List, Union, Deque, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, is_error, adjust_error_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
+from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
-from DHParser.toolkit import load_if_file, re
+from DHParser.toolkit import load_if_file, re, re_find
+
 
 __all__ = ('unit_from_config',
            'unit_from_json',
@@ -59,7 +64,11 @@ __all__ = ('unit_from_config',
            'create_test_templates',
            'reset_unit',
            'runner',
-           'clean_report')
+           'clean_report',
+           'read_full_content',
+           'add_header',
+           'stdio',
+           'MockStream')
 
 
 UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst'}
@@ -907,3 +916,181 @@ def clean_report(report_dir='REPORT'):
                 flag = True
         if not flag:
             os.rmdir(report_dir)
+
+
+#######################################################################
+#
+#  server testing support
+#
+#######################################################################
+
+
+async def read_full_content(reader) -> bytes:
+    data = b''
+    content_length = 0
+    while not reader.at_eof():
+        data += await reader.read(content_length or -1)
+        i = data.find(b'Content-Length:', 0, 512)
+        m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
+        if m:
+            content_length = int(m.group(1))
+            m2 = re_find(data, RE_DATA_START)
+            if m2:
+                header_size = m2.end()
+                if len(data) < header_size + content_length:
+                    content_length = header_size + content_length - len(data)
+                else:
+                    break
+    return data
+
+
+def add_header(b: bytes) -> bytes:
+    return JSONRPC_HEADER_BYTES % len(b) + b
+
+
+async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
+    if loop is None:
+        loop = asyncio.get_event_loop()
+
+    reader = asyncio.StreamReader(limit=limit, loop=loop)
+    await loop.connect_read_pipe(
+        lambda: asyncio.StreamReaderProtocol(reader, loop=loop), sys.stdin)
+
+    writer_transport, writer_protocol = await loop.connect_write_pipe(
+        lambda: asyncio.streams.FlowControlMixin(loop=loop),
+        os.fdopen(sys.stdout.fileno(), 'wb'))
+    writer = asyncio.streams.StreamWriter(
+        writer_transport, writer_protocol, None, loop)
+
+    return reader, writer
+
+
+class MockStream:
+    """Simulations a stream that can be written to from one side and read from
+    from the other side like a pipe. Usage pattern::
+
+        pipe = MockStream()
+        reader = StreamReaderProxy(pipe)
+        writer = StreamWriterProxy(pipe)
+
+        async def main(text):
+            writer.write((text + '\n').encode())
+            await writer.drain()
+            data (await reader.read()).decode()
+            writer.close()
+            return data
+
+        asyncio.run(main('Hello World'))
+    """
+    def __init__(self, name=''):
+        self.name = name or str(id(self))
+        self.lock = threading.Lock()
+        self.data_waiting = threading.Event()
+        self.data_waiting.clear()
+        self.data = collections.deque()
+        self._closed = False  # type: bool
+
+    def close(self):
+        with self.lock:
+            self.data_waiting.set()  # wake up any waiting readers
+            self._closed = True
+
+    @property
+    def closed(self) -> bool:
+        countdown = 50
+        while self._closed and self.data and countdown > 0:
+            # allow client to read any pending data
+            # print(self.name, 'not yet closed due to pending data')
+            self.data_waiting.set()
+            time.sleep(0.01)
+            countdown -= 1
+        return self._closed
+        # with self.lock:
+        #     result = self._closed and not self.data
+        # return result
+
+    def write(self, data: bytes):
+        assert isinstance(data, bytes)
+        with self.lock:
+            if self._closed:
+                raise ValueError("I/O operation on closed file.")
+            self.data.append(data)
+            # self.data_waiting.set()
+
+    def writelines(self, data: List[bytes]):
+        assert all(isinstance(datum, bytes) for datum in data)
+        with self.lock:
+            if self._closed:
+                raise ValueError("I/O operation on closed file.")
+            self.data.extend(data)
+            # self.data_waiting.set()
+
+    def flush(self):
+        with self.lock:
+            self.data_waiting.set()
+
+    def _read(self, n=-1) -> Union[List[bytes], Deque[bytes]]:
+        with self.lock:
+            if n < 0:
+                self.data_waiting.clear()
+                if len(self.data) == 1:
+                    return [self.data.popleft()]
+                else:
+                    data = self.data
+                    while self.data:
+                        self.data.pop()
+                    return data
+            elif n > 0:
+                size = 0
+                data = []
+                while size < n and self.data:
+                    i = len(self.data[0])
+                    if size + i <= n:
+                        data.append(self.data.popleft())
+                        size += i
+                    else:
+                        cut = size + i - n
+                        data.append(self.data[0][:cut])
+                        self.data[0] = self.data[0][cut:]
+                        size = n
+                if not self.data:
+                    self.data_waiting.clear()
+                return data
+            else:
+                return [b'']
+
+    def _readline(self) -> Union[List[bytes], Deque[bytes]]:
+        with self.lock:
+            data = []
+            while self.data:
+                i = self.data[0].find(b'\n')
+                if i < 0:
+                    data.append(self.data.popleft())
+                elif i == len(self.data[0]) - 1:
+                    data.append(self.data.popleft())
+                    break
+                else:
+                    data.append(self.data[0][:i + 1])
+                    self.data[0] = self.data[0][i + 1:]
+                    break
+            if not self.data:
+                self.data_waiting.clear()
+            return data
+
+    def read(self, n=-1) -> bytes:
+        data = self._read(n)
+        if n > 0:
+            N = sum(len(chunk) for chunk in data)
+            while N < n:
+                self.data_waiting.wait()
+                more = self._read(n)
+                N += sum(len(chunk) for chunk in more)
+                data.extend(more)
+        return b''.join(data)
+
+    def readline(self) -> bytes:
+        data = self._readline()
+        while not self._closed and (not data or data[-1][-1] != ord(b'\n')):
+            self.data_waiting.wait()
+            data.extend(self._readline())
+        return b''.join(data)

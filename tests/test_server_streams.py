@@ -34,13 +34,12 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.server import StreamReaderProxy, StreamWriterProxy, \
     IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER_BYTES, asyncio_run, \
     spawn_stream_server, stop_stream_server, split_header
-
-from mockstreams import read_full_content, add_header, PipeStream
+from DHParser.testing import read_full_content, add_header, MockStream
 
 
 class TestStreamProxies:
     def setup(self):
-        self.pipe = PipeStream()
+        self.pipe = MockStream()
         self.reader = StreamReaderProxy(self.pipe)
         self.writer = StreamWriterProxy(self.pipe)
 
@@ -50,13 +49,13 @@ class TestStreamProxies:
     def test_pipe(self):
         message = b"alpha\nbeta\ngamma\n"
 
-        def writer(pipe: PipeStream):
+        def writer(pipe: MockStream):
             nonlocal message
             for i in range(0, len(message), 2):
                 pipe.write(message[i:i+2])
                 pipe.flush()
 
-        def reader(pipe: PipeStream):
+        def reader(pipe: MockStream):
             nonlocal message
             received = []
             for i in range(3):
@@ -110,8 +109,8 @@ def mock_compiler(src: str, log_dir: str='') -> str:
 
 class TestServer:
     def setup(self):
-        self.pipeA = PipeStream('pipeA')
-        self.pipeB = PipeStream('pipeB')
+        self.pipeA = MockStream('pipeA')
+        self.pipeB = MockStream('pipeB')
         self.readerA = StreamReaderProxy(self.pipeA)
         self.writerA = StreamWriterProxy(self.pipeA)
         self.readerB = StreamReaderProxy(self.pipeB)
