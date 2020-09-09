@@ -36,7 +36,7 @@ from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYT
 from DHParser.toolkit import re_find
 
 
-__all__ = ('read_full_content', 'add_header', 'stdio', 'PipeStream')
+__all__ = ('read_full_content', 'add_header', 'stdio', 'MockStream')
 
 
 async def read_full_content(reader) -> bytes:
@@ -79,12 +79,12 @@ async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
     return reader, writer
 
 
-class PipeStream:
+class MockStream:
     """Simulations a stream that can be written to from one side and read from
     from the other side like a pipe. Usage pattern::
 
-    >>> pipeA = PipeStream('pipeA')
-    >>> pipeB = PipeStream('pipeB')
+    >>> pipeA = MockStream('pipeA')
+    >>> pipeB = MockStream('pipeB')
     >>> readerA = StreamReaderProxy(pipeA)
     >>> writerA = StreamWriterProxy(pipeA)
     >>> readerB = StreamReaderProxy(pipeB)
