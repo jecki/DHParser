@@ -138,8 +138,8 @@ class TestServer:
             data = asyncio_run(compile_remote('Test', self.readerB, self.writerA))
             assert data == "tEST"
         finally:
-            stop_stream_server(self.readerB, self.writerA)
             if p is not None:
+                stop_stream_server(self.readerB, self.writerA)
                 p.join()
 
 

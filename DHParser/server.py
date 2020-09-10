@@ -1607,11 +1607,12 @@ def echo_requests(s: str, log_dir: str='') -> str:
 def _run_tcp_server(host, port, rpc_functions: RPC_Type,
                     cpu_bound: Set[str] = ALL_RPCs,
                     blocking: Set[str] = set(),
-                    cn_callback: ConnectionCallback = connection_cb_dummy,
-                    name: str = '',
+                    connection_callback: ConnectionCallback = connection_cb_dummy,
+                    server_name: str = '',
                     strict_lsp: bool = True):
     """Starts a tcp-server and waits until server is closed."""
-    server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
+    server = Server(rpc_functions, cpu_bound, blocking,
+                    connection_callback, server_name, strict_lsp)
     server.run_tcp_server(host, port)
 
 
@@ -1620,7 +1621,7 @@ ConcurrentType = TypeVar('Concurrent', Thread, Process)
 
 def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
                      port: int = USE_DEFAULT_PORT,
-                     parameters: Union[Tuple, Callable] = echo_requests,
+                     parameters: Union[Tuple, Dict, Callable] = echo_requests,
                      Concurrent: Generic[ConcurrentType] = Process) -> ConcurrentType:
     """
     Starts DHParser-Server that communicates via tcp in a separate process
@@ -1631,8 +1632,8 @@ def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
 
     :param host: The host for the tcp-communication, e.g. 127.0.0.1
     :param port: the port number for the tcp-communication.
-    :param parameters: The parameter-tuple for initializing the server or
-        simply and rpc-handling function that takes a string-request as
+    :param parameters: The parameter-tuple or -dict for initializing the server
+        or simply a rpc-handling function that takes a string-request as
         argument and returns a string response.
     :param Concurrent: The concurrent class, either mutliprocessing.Process or
         threading.Tread for running the server.
@@ -1642,7 +1643,7 @@ def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
     if isinstance(parameters, tuple) or isinstance(parameters, list):
         p = Concurrent(target=_run_tcp_server, args=(host, port, *parameters))
     else:
-        p = Concurrent(target=_run_tcp_server, args=(host, port, parameters))
+        p = Concurrent(target=_run_tcp_server, args=(host, port), kwargs=parameters)
     p.start()
     return p
 
@@ -1652,17 +1653,18 @@ def _run_stream_server(reader: StreamReaderType,
                        rpc_functions: RPC_Type,
                        cpu_bound: Set[str] = ALL_RPCs,
                        blocking: Set[str] = set(),
-                       cn_callback: ConnectionCallback = connection_cb_dummy,
-                       name: str = '',
+                       connection_callback: ConnectionCallback = connection_cb_dummy,
+                       server_name: str = '',
                        strict_lsp: bool = True):
     """Starts a stream-server and waits until server is closed."""
-    server = Server(rpc_functions, cpu_bound, blocking, cn_callback, name, strict_lsp)
+    server = Server(rpc_functions, cpu_bound, blocking,
+                    connection_callback, server_name, strict_lsp)
     server.run_stream_server(reader, writer)
 
 
 def spawn_stream_server(reader: StreamReaderType,
                         writer: StreamWriterType,
-                        parameters: Union[Tuple, Callable] = echo_requests,
+                        parameters: Union[Tuple, Dict, Callable] = echo_requests,
                         Concurrent: ConcurrentType = Thread) -> ConcurrentType:
     """
     Starts a DHParser-Server that communitcates via streams in a separate
@@ -1670,8 +1672,8 @@ def spawn_stream_server(reader: StreamReaderType,
 
     :param reader: The stream from which the server will read requests.
     :param writer: The stream to which the server will write responses.
-    :param parameters: The parameter-tuple for initializing the server or
-        simply and rpc-handling function that takes a string-request as
+    :param parameters: The parameter-tuple or -dict for initializing the server
+        or simply a rpc-handling function that takes a string-request as
         argument and returns a string response.
     :param Concurrent: The concurrent class, either mutliprocessing.Process or
         threading.Tread for running the server.
@@ -1681,7 +1683,7 @@ def spawn_stream_server(reader: StreamReaderType,
     if isinstance(parameters, tuple) or isinstance(parameters, list):
         p = Concurrent(target=_run_stream_server, args=(reader, writer, *parameters))
     else:
-        p = Concurrent(target=_run_stream_server, args=(reader, writer, parameters))
+        p = Concurrent(target=_run_stream_server, args=(reader, writer), kwargs=parameters)
     p.start()
     return p
 
