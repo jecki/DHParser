@@ -360,6 +360,11 @@ def run_server(host, port, log_path=None):
     """
     global KNOWN_HOST, KNOWN_PORT
     global scriptpath, servername
+
+    from multiprocessing import set_start_method
+    if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
+    else:  set_start_method('spawn')
+
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
     dhparserdir = os.path.abspath(os.path.join(scriptpath, '../../'))
     if scriptpath not in sys.path:

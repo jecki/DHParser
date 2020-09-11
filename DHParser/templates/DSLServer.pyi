@@ -226,6 +226,12 @@ def run_server(host, port, log_path=None):
     """
     global KNOWN_HOST, KNOWN_PORT
     global scriptpath, servername
+
+    from multiprocessing import set_start_method
+    # 'forkserver' or 'spawn' required to avoid broken process pools
+    if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
+    else:  set_start_method('spawn')
+
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
     dhparserdir = os.path.abspath(os.path.join(scriptpath, 'RELDHPARSERDIR'))
     if scriptpath not in sys.path:
@@ -258,7 +264,8 @@ def run_server(host, port, log_path=None):
     if log_path is not None:
         # echoing does not work with stream connections!
         DSL_server.echo_log = True if port >= 0 and host else False
-        echo(DSL_server.start_logging(log_path.strip('" \'')))
+        msg = DSL_server.start_logging(log_path.strip('" \''))
+        if DSL_server.echo_log:  echo(msg)
 
     if port < 0 or not host:
         # communication via streams instead of tcp server
