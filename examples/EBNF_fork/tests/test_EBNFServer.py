@@ -380,7 +380,7 @@ class TestServer:
         finally:
             if p is not None:
                 value_error = stop_stream_server(self.readerB, self.writerA)
-                assert value_error, "server wasn't closed"
+                assert value_error, "server hasn't been shutdown orderly"
                 p.join()
 
 
