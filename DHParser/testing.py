@@ -1009,6 +1009,10 @@ class MockStream:
         #     result = self._closed and not self.data
         # return result
 
+    def data_available(self) -> int:
+        """Returns the size of the available data."""
+        return sum(len(chunk) for chunk in self.data)
+
     def write(self, data: bytes):
         assert isinstance(data, bytes)
         with self.lock:
@@ -1037,6 +1041,8 @@ class MockStream:
                     return [self.data.popleft()]
                 else:
                     data = self.data
+                    # use pop() to clear data, so the data-list object stays in place
+                    # which would not be the case when simply assigning an empty list.
                     while self.data:
                         self.data.pop()
                     return data

@@ -180,7 +180,7 @@ class EBNFBlockingTasks:
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
-RECOMPILE_DELAY = 0.5
+RECOMPILE_DELAY = 0.2
 
 
 class EBNFLanguageServerProtocol:
@@ -285,12 +285,9 @@ class EBNFLanguageServerProtocol:
         version = text_buffer.version
         if text_buffer and version > self.last_compiled_version.get(uri, -1):
             exenv = self.connection.exec
-            self.connection.log('compile_text 1: ', uri, '\n')
             self.last_compiled_version[uri] = version
-            self.connection.log('compile_text 2\n')
             diagnostics, rpc_error = await exenv.execute(
                 exenv.process_executor, compile_EBNF, (text_buffer.snapshot(),))
-            self.connection.log('compile_text 3: ', str(rpc_error), '\n')
             publishDiagnostics = {
                 'uri' : uri,
                 'version': text_buffer.version,
@@ -298,7 +295,6 @@ class EBNFLanguageServerProtocol:
             }
             # werte Ergebnis aus
             # sende eine PublishDiagnostics-Notification via self.connection
-            self.connection.log('compile_text 4\n\n')
             self.server_call_ID += 1
             # publishDiagnostics is just a Notification, not a request,
             # there it must not have an ID! Otherwiese an "unhandled method"

@@ -318,23 +318,57 @@ class TestServer:
 
     def test_server_processes(self):
         async def test_interaction(reader, writer) -> bool:
-            writer.write(add_header(json.dumps(initialize_request).encode()))
-            await writer.drain()
-            package = await read_full_content(reader)
-            header, raw_data, backlog = split_header(package)
-            data = json.loads(raw_data.decode())
+            async def send(json_obj: str):
+                writer.write(add_header(json.dumps(json_obj).encode()))
+                await writer.drain()
+
+            async def receive() -> str:
+                package = await read_full_content(reader)
+                header, raw_data, backlog = split_header(package)
+                return json.loads(raw_data.decode())
+
+            publishDiagnosticsCounter = 0
+
+            await send(initialize_request)
+            data = await receive()
             assert "result" in data and data['id'] == initialize_request['id']
-            # to be continued...
+            await send(initialized_notification)
+            await send(didOpen_notification)
+            await asyncio.sleep(EBNFServer.RECOMPILE_DELAY + 2)
+            await send(didChange_notifictaion_1)
+            await asyncio.sleep(0.1)
+            await send(completion_request)
+            await asyncio.sleep(EBNFServer.RECOMPILE_DELAY + 0.5)
+            await send(didSave_notification_1)
+            await asyncio.sleep(0.1)
+            await send(didChange_notification_2)
+            await asyncio.sleep(EBNFServer.RECOMPILE_DELAY + 0.5)
+            await send(didSave_notification_2)
+            await asyncio.sleep(0.1)
+            data = await receive()
+            while 'method' in data:
+                assert data['method'] == 'textDocument/publishDiagnostics'
+                publishDiagnosticsCounter += 1
+                data = await receive()
+            assert publishDiagnosticsCounter == 1
+            assert 'id' in data and data['id'] == completion_request['id']
+            while self.pipeB.data_available():
+                data = await receive()
+                if 'method' in data:
+                    assert data['method'] == 'textDocument/publishDiagnostics'
+                    publishDiagnosticsCounter += 1
+                time.sleep(0.1)
+            assert publishDiagnosticsCounter == 3
 
         p = None
         try:
             p = spawn_stream_server(self.readerA, self.writerB,
-                                    { 'rpc_functions': self.lsp_table,
-                                      'cpu_bound': set(self.EBNF_lsp.cpu_bound.lsp_table.keys()),
-                                      'blocking': set(self.EBNF_lsp.blocking.lsp_table.keys()),
-                                      'connection_callback' :self.EBNF_lsp.connect,
-                                      'server_name' :'EBNFServer',
-                                      'strict_lsp': True },
+                                    {'rpc_functions': self.lsp_table,
+                                     'cpu_bound': set(self.EBNF_lsp.cpu_bound.lsp_table.keys()),
+                                     'blocking': set(self.EBNF_lsp.blocking.lsp_table.keys()),
+                                     'connection_callback': self.EBNF_lsp.connect,
+                                     'server_name': 'EBNFServer',
+                                     'strict_lsp': True},
                                     threading.Thread)
             asyncio_run(test_interaction(self.readerB, self.writerA))
         finally:
