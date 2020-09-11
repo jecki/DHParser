@@ -1642,8 +1642,11 @@ def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
     """
     if isinstance(parameters, tuple) or isinstance(parameters, list):
         p = Concurrent(target=_run_tcp_server, args=(host, port, *parameters))
-    else:
+    elif isinstance(parameters, dict):
         p = Concurrent(target=_run_tcp_server, args=(host, port), kwargs=parameters)
+    else:
+        assert callable(parameters)
+        p = Concurrent(target=_run_tcp_server, args=(host, port, parameters))
     p.start()
     return p
 
@@ -1682,8 +1685,11 @@ def spawn_stream_server(reader: StreamReaderType,
     """
     if isinstance(parameters, tuple) or isinstance(parameters, list):
         p = Concurrent(target=_run_stream_server, args=(reader, writer, *parameters))
-    else:
+    elif isinstance(parameters, dict):
         p = Concurrent(target=_run_stream_server, args=(reader, writer), kwargs=parameters)
+    else:
+        assert callable(parameters)
+        p = Concurrent(target=_run_stream_server, args=(host, port, parameters))
     p.start()
     return p
 
@@ -1796,7 +1802,7 @@ async def send_stop_request(reader: StreamReaderType, writer: StreamWriterType):
 def stop_tcp_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
                     timeout: float = 3.0) -> Optional[Exception]:
     """Sends a STOP_SERVER_REQUEST to a running tcp server. Returns any
-    exceptions that occurred."""
+    legitimate exceptions that occur if the server has already been closed."""
     async def send_stop_server(host: str, port: int) -> Optional[Exception]:
         try:
             reader, writer = await asyncio.open_connection(host, port)
@@ -1815,14 +1821,19 @@ def stop_tcp_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
     return asyncio_run(send_stop_server(host, port))
 
 
-def stop_stream_server(reader: StreamReaderType, writer: StreamWriterType):
+def stop_stream_server(reader: StreamReaderType, writer: StreamWriterType) -> Optional[Exception]:
     """Sends a STOP_SERVER_REQUEST to a running stream server. Returns any
-    exceptions that occurred."""
+    legitimate exceptions that occur if the server has already been closed."""
     if isinstance(reader, StreamReaderProxy):
         reader.loop = None
     if isinstance(writer, StreamWriterProxy):
         writer.loop = None
-    asyncio_run(send_stop_request(reader, writer))
+    try:
+        asyncio_run(send_stop_request(reader, writer))
+    except ValueError as error:
+        return error
+    return None
+
 
 # def io_server(server: Server):
 #     stdin, stdout = sys.stdin.buffer, sys.stdout.buffer

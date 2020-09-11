@@ -379,11 +379,8 @@ class TestServer:
             asyncio_run(test_interaction(self.readerB, self.writerA))
         finally:
             if p is not None:
-                try:
-                    stop_stream_server(self.readerB, self.writerA)
-                    assert False, "server wasn't closed"
-                except ValueError:
-                    pass
+                value_error = stop_stream_server(self.readerB, self.writerA)
+                assert value_error, "server wasn't closed"
                 p.join()
 
 
