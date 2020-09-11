@@ -299,8 +299,8 @@ class EBNFLanguageServerProtocol:
             # publishDiagnostics is just a Notification, not a request,
             # there it must not have an ID! Otherwiese an "unhandled method"
             # error be returned by the client.
-            await self.connection.server_call('textDocument/publishDiagnostics',
-                                              publishDiagnostics, None)
+            await self.connection.server_notification('textDocument/publishDiagnostics',
+                                                      publishDiagnostics)
         return None
 
     async def lsp_textDocument_didOpen(self, textDocument):
@@ -388,7 +388,8 @@ def run_server(host, port, log_path=None):
     if log_path is not None:
         # echoing does not work with stream connections!
         EBNF_server.echo_log = True if port >= 0 and host else False
-        echo(EBNF_server.start_logging(log_path.strip('" \'')))
+        msg = EBNF_server.start_logging(log_path.strip('" \''))
+        if EBNF_server.echo_log:  echo(msg)
 
     if port < 0 or not host:
         # communication via streams instead of tcp server

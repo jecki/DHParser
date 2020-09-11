@@ -364,7 +364,7 @@ class ExecutionEnvironment:
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
-                      params: Union[Dict, Sequence])\
+                      params: Union[dict, tuple, list])\
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Executes a method with the given parameters in a given executor
         (``ThreadPoolExcecutor`` or ``ProcessPoolExecutor``). ``execute()`` waits
@@ -382,9 +382,9 @@ class ExecutionEnvironment:
         rpc_error = None   # type: Optional[RPC_Error_Type]
         if params is None:
             params = tuple()
-        if isinstance(params, Dict):
+        if isinstance(params, dict):
             executable = partial(method, **params)
-        elif isinstance(params, Sequence):
+        elif isinstance(params, (tuple, list)):
             executable = partial(method, *params)
         else:
             rpc_error = -32040, "Invalid parameter type %s for %s. Must be Dict or Sequence" \
@@ -694,18 +694,22 @@ class Connection:
         assert self.response_queue is not None
         self.response_queue.put_nowait(json_obj)
 
-    async def server_call(self, method: str,
-                          params: JSON_Type = [],
-                          ID: Optional[int] = None):
+    async def _server_call(self, method: str, params: JSON_Type, ID: Optional[int]):
         """Issues a json-rpc call from the server to the client."""
         json_str = json_rpc(method, params, ID)
-        self.log('CALL: ', json_str, '\n\n')
+        self.log('SERVER NOTIFICATION: ' if ID is None else 'SERVER REQUEST: ', json_str, '\n\n')
         request = json_str.encode()
         # self.writer.write(JSONRPC_HEADER_BYTES % len(request))
         # sefl.writer.write(request)
         request = JSONRPC_HEADER_BYTES % len(request) + request
         self.writer.write(request)
         await self.writer.drain()
+
+    async def server_notification(self, method: str, params: JSON_Type = []):
+        await self._server_call(method, params, None)
+
+    async def server_request(self, method: str, params: JSON_Type, ID: int):
+        await self._server_call(method, params, ID)
 
     async def client_response(self, call_id: int) -> JSON_Type:
         """Waits for and returns the response from the lsp-client to the call
@@ -1200,9 +1204,13 @@ class Server:
                     rpc_error = -32070, str(err)
 
         if rpc_error is not None:
-            await self.respond(
-                writer, ('{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}' %
-                         (rpc_error[0], rpc_error[1], str(json_id) if json_id >= 0 else 'null')))
+            if json_id >= 0:
+                json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'%\
+                       (rpc_error[0], rpc_error[1], str(json_id))
+            else:
+                json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}}' % \
+                       (rpc_error[0], rpc_error[1])
+            await self.respond(writer, json_str)
 
         if result is not None or rpc_error is not None:
             await writer.drain()
