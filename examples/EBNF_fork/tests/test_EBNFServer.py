@@ -317,6 +317,7 @@ class TestServer:
         self.writerB = StreamWriterProxy(self.pipeB)
 
     def test_server_processes(self):
+        # This test takes a few seconds!
         async def test_interaction(reader, writer) -> bool:
             async def send(json_obj: str):
                 writer.write(add_header(json.dumps(json_obj).encode()))
@@ -357,8 +358,13 @@ class TestServer:
                 if 'method' in data:
                     assert data['method'] == 'textDocument/publishDiagnostics'
                     publishDiagnosticsCounter += 1
-                time.sleep(0.1)
+                await asyncio.sleep(0.1)
             assert publishDiagnosticsCounter == 3
+            await send(shutdown_request)
+            data = await receive()
+            assert 'id' in data and data['id'] == shutdown_request['id']
+            await send(exit_notification)
+            await asyncio.sleep(0.1)
 
         p = None
         try:
@@ -373,7 +379,11 @@ class TestServer:
             asyncio_run(test_interaction(self.readerB, self.writerA))
         finally:
             if p is not None:
-                stop_stream_server(self.readerB, self.writerA)
+                try:
+                    stop_stream_server(self.readerB, self.writerA)
+                    assert False, "server wasn't closed"
+                except ValueError:
+                    pass
                 p.join()
 
 

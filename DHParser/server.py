@@ -544,7 +544,7 @@ async def read_full_block(reader: StreamReaderType) -> Tuple[int, bytes, bytes]:
 
 
 class StreamWriterProxy:
-    """StreamReaderProxy simulates an asyncio.StreamReader that sends
+    """StreamWriterProxy simulates an asyncio.StreamWriter that sends
     and receives data through an io.IOBase-Stream.
 
     see: https://stackoverflow.com/questions/52089869/how-to-create-asyncio-stream-reader-writer-for-stdin-stdout
@@ -1778,7 +1778,10 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
 
 
 async def send_stop_request(reader: StreamReaderType, writer: StreamWriterType):
-    """Send a stop request, read and drop the reply."""
+    """
+    Send a stop request, reads and drops the reply. Raises a ValueError in
+    case the writer is already closed.
+    """
     writer.write(JSONRPC_HEADER_BYTES % len(STOP_SERVER_REQUEST_BYTES))
     writer.write(STOP_SERVER_REQUEST_BYTES)
     await writer.drain()
