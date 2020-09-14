@@ -66,6 +66,9 @@ def echo(msg: str):
             if new_file_flag:
                 import atexit
                 atexit.register(echo_file.close)
+            import time
+            t = time.localtime()
+            echo_file.write("\n\nDate and Time: %i-%i-%i %i:%i\n\n" % t[:5])
         echo_file.write(msg)
         echo_file.write('\n')
         echo_file.flush()
