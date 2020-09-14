@@ -198,7 +198,6 @@ class DSLLanguageServerProtocol:
         self.connection = connection
 
     def lsp_initialize(self, **kwargs):
-        import json
         # # This has been taken care of by DHParser.server.Server.lsp_verify_initialization()
         # if self.shared.initialized or self.shared.processId != 0:
         #     return {"code": -32002, "message": "Server has already been initialized."}
@@ -503,7 +502,8 @@ if __name__ == "__main__":
         if port >= 0 or host:
             echo('Specifying host and port when using streams as transport does not make sense')
             sys.exit(1)
-        run_server('', -1)
+        log_path, _ = parse_logging_args(args)
+        run_server('', -1, log_path)
         sys.exit(0)
 
     if port < 0 or not host:

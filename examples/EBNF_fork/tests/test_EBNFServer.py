@@ -61,12 +61,12 @@ class TestCPUBoundTasks:
 
 
     def test_compileEBNFFork(self):
-        fname = '/home/eckhart/Entwicklung/DHParser/examples/EBNF_fork/FixedEBNF.ebnf'
+        fname = os.path.join(dhparserpath, 'examples/EBNF_fork/FixedEBNF.ebnf')
         with open(fname, 'r') as f:
             source = f.read()
         diagnostics = json.loads(EBNFServer.compile_EBNF(source))
-        assert len(diagnostics) == 6
         # print(json.dumps(diagnostics, indent=2))
+        assert len(diagnostics) == 7
 
 
 initialize_request = {'jsonrpc': '2.0',

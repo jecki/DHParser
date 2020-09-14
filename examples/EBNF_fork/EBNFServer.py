@@ -34,6 +34,7 @@ servername = os.path.splitext(os.path.basename(__file__))[0]
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
 LOGGING_REQUEST = 'logging("")'
+LOG_PATH = 'logs/'
 
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
@@ -115,9 +116,10 @@ def retrieve_host_and_port():
         with open(cfg_filename) as f:
             host, ports = f.read().strip(' \n').split(' ')
             port = int(ports)
+            if (host, port) != (KNOWN_HOST, KNOWN_PORT):
+                debug('Retrieved host and port value %s:%i from config file "%s".'
+                      % (host, port, cfg_filename))
             KNOWN_HOST, KNOWN_PORT = host, port
-            debug('Retrieved host and port value %s:%i from file "%s".'
-                  % (host, port, cfg_filename))
     except FileNotFoundError:
         debug('File "%s" does not exist. Using default values %s:%i for host and port.'
               % (cfg_filename, host, port))
@@ -362,6 +364,7 @@ def run_server(host, port, log_path=None):
     global scriptpath, servername
 
     from multiprocessing import set_start_method
+    # 'forkserver' or 'spawn' required to avoid broken process pools
     if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
     else:  set_start_method('spawn')
 
@@ -587,9 +590,9 @@ def parse_logging_args(args):
             log_path = repr(None)
             echo = repr('ECHO_OFF')
         elif args.logging in ('ON', 'START', 'YES', 'TRUE'):
-            log_path = repr('logs/')
+            log_path = repr(LOG_PATH)
         else:
-            log_path = repr('logs/') if args.logging is None else repr(args.logging)
+            log_path = repr(LOG_PATH) if args.logging is None else repr(args.logging)
         request = LOGGING_REQUEST.replace('""', ", ".join((log_path, echo)))
         debug('Logging to %s with call %s' % (log_path, request))
         return log_path, request
@@ -651,6 +654,7 @@ if __name__ == "__main__":
         # line, try to retrieve them from (temporary) config file or use
         # hard coded default values
         h, p = retrieve_host_and_port()
+        debug('Retrieved host and port value %s:%i from config file.' % (h, p))
         if port < 0:
             port = p
         else:
