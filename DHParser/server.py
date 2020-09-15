@@ -934,7 +934,7 @@ class Server:
         def log_name():
             """Returns an auto-generated log-name."""
             return self.server_name + '_' + hex(id(self))[2:] + '.log'
-        if os.path.isdir(filename) or filename.endswith(os.path.sep):
+        if not filename or os.path.isdir(filename) or filename.endswith(os.path.sep):
             filename = os.path.join(filename, log_name())
         else:
             if not filename:
@@ -943,6 +943,7 @@ class Server:
                 filename = os.path.join('.', filename)
         self.log_file = create_log(filename)
         if self.log_file:
+            self.log("Log started on %i-%i-%i at %i:%i o'clock\n\n" % time.localtime()[:5])
             self.log('Python Version: %s\nDHParser Version: %s\n\n'
                      % (sys.version.replace('\n', ' '), __version__))
             return 'Started logging to file: "%s"' % self.log_file

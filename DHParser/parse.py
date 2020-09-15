@@ -1911,7 +1911,7 @@ class CombinedParser(Parser):
             return EMPTY_NODE
         N = len(results)
         if N > 1:
-            if self._grammar.flatten_tree__:
+            if self._grammar.flatten_tree__:  # possible optimization: always flatten tree
                 nr = []  # type: List[Node]
                 # flatten parse tree
                 for child in results:
