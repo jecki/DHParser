@@ -931,9 +931,11 @@ class Server:
         """Starts logging to a file. If `filename` is void or a directory
         an auto-generated file name will be used. The file will be written
         to the standard log-dir, unless a path is specified in filename."""
+        date_time = time.localtime()[:5]
         def log_name():
             """Returns an auto-generated log-name."""
-            return self.server_name + '_' + hex(id(self))[2:] + '.log'
+            # return self.server_name + '_' + hex(id(self))[2:] + '.log'
+            return self.server_name + '_%04i%02i%02i_%02i%02i' % date_time + '.log'
         if not filename or os.path.isdir(filename) or filename.endswith(os.path.sep):
             filename = os.path.join(filename, log_name())
         else:
@@ -943,7 +945,7 @@ class Server:
                 filename = os.path.join('.', filename)
         self.log_file = create_log(filename)
         if self.log_file:
-            self.log("Log started on %i-%i-%i at %i:%i o'clock\n\n" % time.localtime()[:5])
+            self.log("Log started on %i-%i-%i at %i:%i o'clock\n\n" % date_time)
             self.log('Python Version: %s\nDHParser Version: %s\n\n'
                      % (sys.version.replace('\n', ' '), __version__))
             return 'Started logging to file: "%s"' % self.log_file
