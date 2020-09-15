@@ -742,28 +742,28 @@ def run_tests_in_class(cls_name, namespace, methods=()):
         returns the instance."""
         exec("instance = " + cls + "()", nspace)
         instance = nspace["instance"]
-        if "setup" in dir(instance):
-            instance.setup()
-        return instance
+        setup = instance.setup if "setup" in dir(instance) else lambda : 0
+        teardown = instance.teardown if "teardown" in dir(obj) else lambda : 0
+        return instance, setup, teardown
 
     obj = None
     try:
         if methods:
-            obj = instantiate(cls_name, namespace)
+            obj, setup, teardown = instantiate(cls_name, namespace)
             for name in methods:
                 func = obj.__getattribute__(name)
                 if callable(func):
                     print("Running " + cls_name + "." + name)
-                    func()
+                    setup();  func();  teardown()
                     # exec('obj.' + name + '()')
         else:
-            obj = instantiate(cls_name, namespace)
+            obj, setup, teardown = instantiate(cls_name, namespace)
             for name in dir(obj):
                 if name.lower().startswith("test"):
                     func = obj.__getattribute__(name)
                     if callable(func):
                         print("Running " + cls_name + "." + name)
-                        func()
+                        setup();  func();  teardown()
     finally:
         if "teardown" in dir(obj):
             obj.teardown()

@@ -220,7 +220,7 @@ def relative_path(from_path: str, to_path: str) -> str:
     """Returns the relative path in order to open a file from
     `to_path` when the script is running in `from_path`. Example:
 
-        >>> relative_path('project/common/dir_A', 'project/dir_B')
+        >>> relative_path('project/common/dir_A', 'project/dir_B').replace(chr(92), '/')
         '../../dir_B'
     """
     from_path = os.path.normpath(os.path.abspath(from_path)).replace('\\', '/')
@@ -697,7 +697,7 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
         >>> already_serialized = '{"width":640,"height":400"}'
         >>> literal = JSONStr(already_serialized)
         >>> json_obj = {"jsonrpc": "2.0", "method": "report_size", "params": literal, "id": None}
-        >>> json_dumps(json_obj)
+        >>> json_dumps(json_obj, partially_serialized=True)
         '{"jsonrpc":"2.0","method":"report_size","params":{"width":640,"height":400"},"id":null}'
 
     :param obj: A json-object (or a tree of json-objects) to be serialized
