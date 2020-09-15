@@ -12,7 +12,6 @@ Client-module for Visual Studio Code to connect EBNFServer.py as a language-serv
 ## Running the Sample
 
 - Run `npm install` in this folder. This installs all necessary npm modules in the client folder
-- Run `python3 ../EBNFServer.py --startserver` or `python3 ../EBNFServer.py --startdaemon`
 - Open VS Code on this folder.
 - Press Ctrl+Shift+B to compile the client and server.
 - Switch to the Debug viewlet.
