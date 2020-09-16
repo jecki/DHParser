@@ -169,7 +169,6 @@ def compile_EBNF(text: str) -> str:
 
 class EBNFCPUBoundTasks:
     def __init__(self, lsp_data: dict):
-        from DHParser.compile import ResultTuple
         from DHParser.server import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table([], prefix='lsp_')
