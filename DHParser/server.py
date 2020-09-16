@@ -1332,8 +1332,7 @@ class Server:
                 # have been received
 
             if self.log_file:   # avoid decoding if logging is off
-                self.log('RECEIVE (%i, %i, %i): ' % (len(data), content_length, k),
-                         *strip_header_delimiter(data.decode()), '\n\n')
+                self.log('RECEIVE: ', *strip_header_delimiter(data.decode()), '\n\n')
 
             if id_connection:
                 if self.connection.alive:

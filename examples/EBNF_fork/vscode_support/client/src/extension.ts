@@ -69,7 +69,7 @@ function startLangServerStream(command: string, args: string[]): Disposable {
 			return false;
 		}
 	}
-	return new LanguageClient(command, serverOptions, clientOptions).start();
+	return new LanguageClient(command, `ebnf stream lang server`, serverOptions, clientOptions).start();
 }
 
 
