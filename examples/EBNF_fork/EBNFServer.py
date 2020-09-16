@@ -34,7 +34,7 @@ servername = os.path.splitext(os.path.basename(__file__))[0]
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
 LOGGING_REQUEST = 'logging("")'
-LOG_PATH = 'logs/'
+LOG_PATH = 'LOGS/'
 
 DEFAULT_HOST = '127.0.0.1'
 DEFAULT_PORT = 8888
@@ -66,6 +66,9 @@ def echo(msg: str):
             if new_file_flag:
                 import atexit
                 atexit.register(echo_file.close)
+            import time
+            t = time.localtime()
+            echo_file.write("\n\nDate and Time: %i-%i-%i %i:%i\n\n" % t[:5])
         echo_file.write(msg)
         echo_file.write('\n')
         echo_file.flush()
