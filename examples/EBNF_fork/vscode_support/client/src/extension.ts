@@ -56,20 +56,6 @@ function startLangServerStream(command: string, args: string[]): Disposable {
         dispose() { console.log('dispose()'); }
     };
 
-	const clientOptions: LanguageClientOptions = {
-		documentSelector: [{scheme: 'file', language: 'ebnf'}],
-		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
-		},
-		// outputChannel: logChannel,
-		initializationFailedHandler: function(error: ResponseError<InitializeError> | Error | any): boolean {
-			console.log('InitializationFailed');
-			console.log(error.toString());
-			return false;
-		}
-	}
-	return new LanguageClient(command, `ebnf stream lang server`, serverOptions, clientOptions).start();
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{scheme: 'file', language: 'ebnf'}],
         synchronize: {
@@ -83,6 +69,7 @@ function startLangServerStream(command: string, args: string[]): Disposable {
             return false;
         }
     };
+    console.log('activating language server connector ' + args.toString());	
     return new LanguageClient(command, `ebnf stream lang server`, serverOptions, clientOptions).start();
 }
 
@@ -143,7 +130,6 @@ function startLangServerTCP(addr: number) : Disposable {
 
 
 export function activate(context: ExtensionContext) {
-    console.log('activating language server connector!');
     let disposable = startLangServerStream("python", ["EBNFServer.py", "--stream", "--logging"]);
     // let disposable = startLangServerTCP(defaultPort);
     context.subscriptions.push(disposable);
