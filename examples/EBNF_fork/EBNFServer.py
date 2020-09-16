@@ -194,40 +194,40 @@ class EBNFLanguageServerProtocol:
         https://microsoft.github.io/language-server-protocol/
         https://langserver.org/
     """
-    # completion_fields = ['label', 'insertText', 'insertTextFormat', 'documentation']
-    # completions = [['anonymous', '@ anonymous = /${1:_\\w+}/', 2,
-    #                 'List of symbols or a regular expression to identify those definitions '
-    #                 'that shall not yield named tags in the syntax tree.'],
-    #                ['comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
-    #                 'Regular expression for comments.'],
-    #                ['drop', '@ drop = ${1:whitespace, token, regexp}', 2,
-    #                 'List of definitions for which the parsed content shall be dropped rather '
-    #                 'than included in the syntax tree. The special values "whitespace", "token" '
-    #                 'and "regexp" stand for their respective classes instead of particular '
-    #                 'definitions.'],
-    #                ['ignorecase', '@ ignorecase = ${1|yes,no|}', 2,
-    #                 'Ignore the case within regular expressions.'],
-    #                ['literalws', '@ literalws = ${1|right,left,both,none|}', 2,
-    #                 'Determines one which side (if any) of a string-literal the whitespace '
-    #                 'shall be eaten'],
-    #                ['whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
-    #                 'insignificant whitespace (denoted by a tilde ~)'],
-    #                ['_resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
-    #                 'expressions identifying a place where the parent parser shall catch up the '
-    #                 'parsing process, if within the given parser an element marked as mandatory '
-    #                 'with the §-sign did not match. (DHParser-extension to EBNF.)'],
-    #                ['_skip', '@ ${1:SYMBOL}_skip = /${2: }/', 2,
-    #                 'A list of regular expressions to identify a place to which a series-parser '
-    #                 'shall skip, if a mandatory "§"-item did not match. The parser skips to the '
-    #                 'place after the match except for lookahead-expressions. '
-    #                 '(DHParser-extension to EBNF.)'],
-    #                ['_error', '@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"', 2,
-    #                 'An error message preceded by a regular expression or string-literal that '
-    #                 'will be emitted instead of the stock message, if a mandatory element '
-    #                 'violation occurred within the given parser. (DHParser-extension to EBNF)'],
-    #                ['_filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
-    #                 'Name of a Python-match-function that is applied when retrieving a stored '
-    #                 'symbol. (DHParser-extension to EBNF)']]
+    completion_fields = ['label', 'insertText', 'insertTextFormat', 'documentation']
+    completions = [['anonymous', '@ anonymous = /${1:_\\w+}/', 2,
+                    'List of symbols or a regular expression to identify those definitions '
+                    'that shall not yield named tags in the syntax tree.'],
+                   ['comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
+                    'Regular expression for comments.'],
+                   ['drop', '@ drop = ${1:whitespace, token, regexp}', 2,
+                    'List of definitions for which the parsed content shall be dropped rather '
+                    'than included in the syntax tree. The special values "whitespace", "token" '
+                    'and "regexp" stand for their respective classes instead of particular '
+                    'definitions.'],
+                   ['ignorecase', '@ ignorecase = ${1|yes,no|}', 2,
+                    'Ignore the case within regular expressions.'],
+                   ['literalws', '@ literalws = ${1|right,left,both,none|}', 2,
+                    'Determines one which side (if any) of a string-literal the whitespace '
+                    'shall be eaten'],
+                   ['whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
+                    'insignificant whitespace (denoted by a tilde ~)'],
+                   ['_resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
+                    'expressions identifying a place where the parent parser shall catch up the '
+                    'parsing process, if within the given parser an element marked as mandatory '
+                    'with the §-sign did not match. (DHParser-extension to EBNF.)'],
+                   ['_skip', '@ ${1:SYMBOL}_skip = /${2: }/', 2,
+                    'A list of regular expressions to identify a place to which a series-parser '
+                    'shall skip, if a mandatory "§"-item did not match. The parser skips to the '
+                    'place after the match except for lookahead-expressions. '
+                    '(DHParser-extension to EBNF.)'],
+                   ['_error', '@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"', 2,
+                    'An error message preceded by a regular expression or string-literal that '
+                    'will be emitted instead of the stock message, if a mandatory element '
+                    'violation occurred within the given parser. (DHParser-extension to EBNF)'],
+                   ['_filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
+                    'Name of a Python-match-function that is applied when retrieving a stored '
+                    'symbol. (DHParser-extension to EBNF)']]
 
 
     def __init__(self):
@@ -259,10 +259,10 @@ class EBNFLanguageServerProtocol:
         self.last_compiled_version = dict()  # uri -> int
         self.server_call_ID = 0              # unique id
 
-
-        # self.completionItems = [{k: v for k, v in chain(zip(self.completion_fields, item),
-        #                                                 [['kind', 2]])}
-        #                         for item in self.completions]
+        from itertools import chain
+        self.completionItems = [{k: v for k, v in chain(zip(self.completion_fields, item),
+                                                        [['kind', 2]])}
+                                for item in self.completions]
 
     def connect(self, connection):
         self.connection = connection
