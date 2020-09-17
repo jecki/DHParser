@@ -131,7 +131,7 @@ def json_rpc(func, params={}, ID=None) -> str:
 class EBNFCPUBoundTasks:
     def __init__(self, lsp_data: dict):
         from DHParser.compile import ResultTuple
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
 
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
@@ -149,7 +149,7 @@ class EBNFCPUBoundTasks:
 
 class EBNFBlockingTasks:
     def __init__(self, lsp_data: dict):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
@@ -201,7 +201,7 @@ class EBNFLanguageServerProtocol:
 
 
     def __init__(self):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
         self.lsp_data = {
             'processId': 0,
             'rootUri': '',
@@ -332,7 +332,8 @@ def run_server(host, port, log_path=None):
         from tst_EBNF_grammar import recompile_grammar
         recompile_grammar(grammar_src, force=False)
         from EBNFParser import compile_src
-    from DHParser.server import Server, probe_tcp_server, gen_lsp_table
+    from DHParser.server import Server, probe_tcp_server
+    from DHParser.lsp import gen_lsp_table
 
     EBNF_lsp = EBNFLanguageServerProtocol()
     lsp_table = EBNF_lsp.lsp_fulltable.copy()

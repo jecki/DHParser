@@ -159,14 +159,14 @@ def json_rpc(func_name, params={}, ID=None) -> dict:
 
 class DSLCPUBoundTasks:
     def __init__(self, lsp_data: dict):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
 class DSLBlockingTasks:
     def __init__(self, lsp_data: dict):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
@@ -179,7 +179,7 @@ class DSLLanguageServerProtocol:
         https://langserver.org/
     """
     def __init__(self):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
         self.lsp_data = {
             'processId': 0,
             'rootUri': '',
@@ -251,8 +251,8 @@ def run_server(host, port, log_path=None):
             print(f.read())
         sys.exit(1)
     from DSLParser import compile_src
-    from DHParser.server import Server, probe_tcp_server, gen_lsp_table, \
-	StreamReaderProxy, StreamWriterProxy
+    from DHParser.server import Server, probe_tcp_server, StreamReaderProxy, StreamWriterProxy
+    from DHParser.lsp import gen_lsp_table
 
     DSL_lsp = DSLLanguageServerProtocol()
     lsp_table = DSL_lsp.lsp_fulltable.copy()

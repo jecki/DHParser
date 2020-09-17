@@ -15,6 +15,7 @@ from DHParser.error import ERROR
 from DHParser.server import ExecutionEnvironment, asyncio_run, StreamReaderProxy, \
     StreamWriterProxy,spawn_stream_server, stop_stream_server, split_header
 from DHParser.testing import add_header, read_full_content, MockStream
+from DHParser.toolkit import json_dumps
 
 import EBNFServer, EBNFParser
 
@@ -67,6 +68,12 @@ class TestCPUBoundTasks:
         diagnostics = json.loads(EBNFServer.compile_EBNF(source))
         # print(json.dumps(diagnostics, indent=2))
         assert len(diagnostics) == 7
+
+
+# class TestServerStatic:
+#     def test_EBNFServer(self):
+#         server = EBNFServer.EBNFLanguageServerProtocol()
+#         print(json_dumps(server.completionItems))
 
 
 initialize_request = {'jsonrpc': '2.0',
@@ -305,7 +312,7 @@ shutdown_request = {'jsonrpc': '2.0', 'id': 2, 'method': 'shutdown', 'params': N
 exit_notification = {'jsonrpc': '2.0', 'method': 'exit', 'params': None}
 
 
-class TestServer:
+class TestServerDynamic:
     def setup(self):
         self.EBNF_lsp = EBNFServer.EBNFLanguageServerProtocol()
         self.lsp_table = self.EBNF_lsp.lsp_fulltable.copy()

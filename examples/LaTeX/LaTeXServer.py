@@ -194,7 +194,8 @@ def run_server(host, port, log_path=None):
         sys.exit(1)
     recompile_grammar(os.path.join(scriptpath, 'LaTeX.ebnf'), force=False)
     from LaTeXCompiler import compile_src
-    from DHParser.server import Server, gen_lsp_table
+    from DHParser.server import Server
+    from DHParser.lsp import gen_lsp_table
     config_filename = get_config_filename()
     try:
         with open(config_filename, 'w') as f:

@@ -48,8 +48,9 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import set_config_value
 from DHParser.server import Server, spawn_tcp_server, stop_tcp_server, asyncio_run, asyncio_connect, \
-    split_header, has_server_stopped, gen_lsp_table, STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST, \
+    split_header, has_server_stopped, STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST, \
     SERVER_OFFLINE, connection_cb_dummy
+from DHParser.lsp import gen_lsp_table
 
 TEST_PORT = 8000 + os.getpid() % 1000
 # adding pid % 100 hopefully prevents interference, if `test_server.py` is run in

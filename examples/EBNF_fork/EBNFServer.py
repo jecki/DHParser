@@ -172,14 +172,14 @@ def compile_EBNF(text: str) -> str:
 
 class EBNFCPUBoundTasks:
     def __init__(self, lsp_data: dict):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table([], prefix='lsp_')
 
 
 class EBNFBlockingTasks:
     def __init__(self, lsp_data: dict):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
@@ -231,14 +231,15 @@ class EBNFLanguageServerProtocol:
 
 
     def __init__(self):
-        from DHParser.server import gen_lsp_table
+        from DHParser.lsp import gen_lsp_table
+        from DHParser.lsp import CompletionItemKind, TextDocumentSyncKind
         self.lsp_data = {
             'processId': 0,
             'rootUri': '',
             'clientCapabilities': {},
             'serverInfo': {"name": "EBNF-Server", "version": "0.2"},
             'serverCapabilities': {
-                "textDocumentSync": 2,  # 0 = None, 1 = full, 2 = incremental
+                "textDocumentSync": TextDocumentSyncKind.Incremental,
                 "completionProvider": {
                     "resolveProvider": False,
                     "triggerCharacters": ['@']
@@ -260,9 +261,10 @@ class EBNFLanguageServerProtocol:
         self.server_call_ID = 0              # unique id
 
         from itertools import chain
-        self.completionItems = [{k: v for k, v in chain(zip(self.completion_fields, item),
-                                                        [['kind', 2]])}
-                                for item in self.completions]
+        self.completion_items = [{k: v for k, v in chain(zip(self.completion_fields, item),
+                                                         [['kind', CompletionItemKind.Keyword]])}
+                                 for item in self.completions]
+        self.completion_labels = [f[0] for f in self.completion_fields]
 
     def connect(self, connection):
         self.connection = connection
@@ -342,16 +344,27 @@ class EBNFLanguageServerProtocol:
         return None
 
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
-        from DHParser.toolkit import text_pos
-        if context['triggerKind'] == 2:  # Trigger Character
-            return {}   # leave proposing snippets to VSCode
+        from DHParser.lsp import CompletionTriggerKind, shortlist
         buffer = self.current_text[textDocument['uri']]
         line = position['line']
         col = position['character']
-        # text = buffer.snapshot()
-        # pos = text_pos(text, line, col)
-        # char = text[pos]
-        return None
+        if context['triggerKind'] in (CompletionTriggerKind.TriggerCharacter,
+                                      CompletionTriggerKind.Invoked):
+            self.completion_typed = buffer[line][col - 1]
+            a, b = shortlist(self.completion_labels, self.completion_typed)
+            result = {
+                'isIncomplete': True,
+                'items': self.completion_items[a:b]
+            }
+        else:  # assume CompletionTriggerKind.TriggerForIncompleteCompletions
+            self.completion_typed += buffer[line][col - 1]
+            a, b = shortlist(self.completion_labels, self.completion_typed)
+            result = {
+                'isIncomplete': True,
+                'items': self.completion_shortList
+            }
+        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], buffer[line][:col]))
+        return result
 
     def lsp_S_cancelRequest(self, **kwargs):
         return None
@@ -382,8 +395,8 @@ def run_server(host, port, log_path=None):
         from tst_EBNF_grammar import recompile_grammar
         recompile_grammar(grammar_src, force=False)
         from EBNFParser import compile_src
-    from DHParser.server import Server, probe_tcp_server, gen_lsp_table, \
-        StreamReaderProxy, StreamWriterProxy
+    from DHParser.server import Server, probe_tcp_server, StreamReaderProxy, StreamWriterProxy
+    from DHParser.lsp import gen_lsp_table
 
     EBNF_lsp = EBNFLanguageServerProtocol()
     lsp_table = EBNF_lsp.lsp_fulltable.copy()

@@ -69,7 +69,7 @@ import sys
 from threading import Thread
 import time
 from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, Sequence, \
-    Set, Iterator, Iterable, Any, cast, Type, TypeVar, Generic
+    Set, Any, cast, Type, TypeVar, Generic
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
@@ -111,9 +111,7 @@ __all__ = ('RPC_Table',
            'probe_tcp_server',
            'spawn_tcp_server',
            'stop_tcp_server',
-           'has_server_stopped',
-           'gen_lsp_name',
-           'gen_lsp_table')
+           'has_server_stopped')
 
 
 RPC_Table = Dict[str, Callable]
@@ -1973,72 +1971,5 @@ def stop_stream_server(reader: StreamReaderType, writer: StreamWriterType) -> Op
 #             return await loop.run_in_executor(None, sys.stdout.writelines, data)
 #
 #     return Win32StdinReader(), Win32StdoutWriter()
-
-#######################################################################
-#
-# Language-Server-Protocol support
-#
-#######################################################################
-
-
-def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
-    """Returns an iterator over all method names from a class that either
-    have a certain prefix or, if no prefix was given, all non-special and
-    non-private-methods of the class."""
-    assert not prefix.startswith('_')
-    if prefix:
-        # return [fn for fn in dir(cls) if fn.startswith(prefix) and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if fn.startswith(prefix) and callable(getattr(cls, fn)):
-                yield fn
-    else:
-        # return [fn for fn in dir(cls) if not fn.startswith('_') and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if not fn.startswith('_') and callable(getattr(cls, fn)):
-                yield fn
-
-
-def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
-    """Generates the name of an lsp-method from a function name,
-    e.g. "lsp_S_cancelRequest" -> "$/cancelRequest" """
-    assert func_name.startswith(prefix)
-    return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
-
-
-# def get_lsp_methods(cls: Any, prefix: str= 'lsp_') -> List[str]:
-#     """Returns the language-server-protocol-method-names from class `cls`.
-#     Methods are selected based on the prefix and their name converted in
-#     accordance with the LSP-specification."""
-#     return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
-
-
-def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
-                  prefix: str = 'lsp_') -> RPC_Table:
-    """Creates an RPC from a list of functions or from the methods
-    of a class that implement the language server protocol.
-    The dictionary keys are derived from the function name by replacing an
-    underscore _ with a slash / and a single capital S with a $-sign.
-    if `prefix` is not the empty string only functions or methods that start
-    with `prefix` will be added to the table. The prefix will be removed
-    before converting the functions' name to a dictionary key.
-
-    >>> class LSP:
-    ...     def lsp_initialize(self, **kw):
-    ...         pass
-    ...     def lsp_shutdown(self, **kw):
-    ...         pass
-    >>> lsp = LSP()
-    >>> gen_lsp_table(lsp, 'lsp_').keys()
-    dict_keys(['initialize', 'shutdown'])
-    """
-    if isinstance(lsp_funcs_or_instance, Iterable):
-        assert all(callable(func) for func in lsp_funcs_or_instance)
-        rpc_table = {gen_lsp_name(func.__name__, prefix): func for func in lsp_funcs_or_instance}
-    else:
-        # assume lsp_funcs_or_instance is the instance of a class
-        cls = lsp_funcs_or_instance
-        rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn)
-                     for fn in lsp_candidates(cls, prefix)}
-    return rpc_table
 
 
