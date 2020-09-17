@@ -35,7 +35,7 @@ the string representations of the error objects. For example::
             print("There have been warnings, but no errors.")
 """
 
-from typing import Iterable, Iterator, Union, List, Optional, Sequence, Tuple
+from typing import Iterable, Iterator, Union, List, Any, Sequence, Tuple
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
@@ -226,6 +226,10 @@ class Error:
         stop = document.find('\n', self.pos)
         return document[start:stop] + '\n' + ' ' * (self.pos - start) + '^\n'
 
+    def signature(self) -> bytes:
+        """Returns a signature to quickly check the equality of errors"""
+        return (self.line << 32 | self.column << 16 | self.code).to_bytes(8, 'big')
+
     def rangeObj(self) -> dict:
         """Returns the range (position plus length) of the error as an LSP-Range-Object.
         https://microsoft.github.io/language-server-protocol/specifications/specification-current/#range
@@ -252,7 +256,7 @@ class Error:
         else:
             severity = 1
 
-        diagnostic =  {
+        diagnostic = {
             'range': self.rangeObj(),
             'severity': severity,
             'code': self.code,

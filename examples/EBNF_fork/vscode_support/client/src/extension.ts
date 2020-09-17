@@ -10,7 +10,7 @@ import {
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
-    TransportKind,
+    // TransportKind,
     InitializeError
 } from 'vscode-languageclient';
 

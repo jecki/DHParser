@@ -70,10 +70,11 @@ class TestCPUBoundTasks:
         assert len(diagnostics) == 7
 
 
-# class TestServerStatic:
-#     def test_EBNFServer(self):
-#         server = EBNFServer.EBNFLanguageServerProtocol()
-#         print(json_dumps(server.completionItems))
+class TestServerStatic:
+    def test_EBNFServer(self):
+        server = EBNFServer.EBNFLanguageServerProtocol()
+        print(json_dumps(server.completion_items))
+        print(json_dumps(server.completion_labels))
 
 
 initialize_request = {'jsonrpc': '2.0',

@@ -438,7 +438,7 @@ class ExecutionEnvironment:
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
                       params: Union[dict, tuple, list])\
-            -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
+            -> Tuple[JSON_Type, Optional[RPC_Error_Type]]:
         """Executes a method with the given parameters in a given executor
         (``ThreadPoolExcecutor`` or ``ProcessPoolExecutor``). ``execute()`` waits
         for the completion and returns the JSON result and an RPC error tuple (see
@@ -467,9 +467,7 @@ class ExecutionEnvironment:
             if executor is None:
                 result = (await executable()) if asyncio.iscoroutinefunction(method) else executable()
             else:
-                # append_log(self.log_file, '\n\nEXECUTE ' + method.__name__  + '\n\n') # DEBUGGING!
                 result = await self.loop.run_in_executor(executor, executable)
-                # append_log(self.log_file, 'DONE\n\n')  # DEBUGGING
         except TypeError as e:
             rpc_error = -32602, "Invalid Params: " + str(e)
         except NameError as e:

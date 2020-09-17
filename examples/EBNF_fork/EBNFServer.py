@@ -157,7 +157,7 @@ def json_rpc(func_name, params={}, ID=None) -> dict:
     return {"jsonrpc": "2.0", "method": func_name, "params": params, "id": ID}
 
 
-def compile_EBNF(text: str) -> str:
+def compile_EBNF(text: str, diagnostics_signature: bytes) -> (str, bytes):
     from DHParser.compile import compile_source
     from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
         get_ebnf_compiler
@@ -166,8 +166,13 @@ def compile_EBNF(text: str) -> str:
     result, messages, _ = compile_source(
         text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
     # TODO: return errors as well as (distilled) information about symbols for code propositions
-    diagnostics = [msg.diagnosticObj() for msg in messages]
-    return json_dumps(diagnostics)
+    signature = b''.join(msg.signature() for msg in messages)
+    if signature != diagnostics_signature:
+        # publish diagnostics only if the same diagnostics have not been reported earlier, already
+        diagnostics = [msg.diagnosticObj() for msg in messages]
+        return json_dumps(diagnostics), signature  # TODO: bytes is not a JSON-type proper!
+    else:
+        return '[]', signature
 
 
 class EBNFCPUBoundTasks:
@@ -258,13 +263,14 @@ class EBNFLanguageServerProtocol:
 
         self.current_text = dict()           # uri -> TextBuffer
         self.last_compiled_version = dict()  # uri -> int
+        self.last_signature = dict()         # uri -> str
         self.server_call_ID = 0              # unique id
 
         from itertools import chain
         self.completion_items = [{k: v for k, v in chain(zip(self.completion_fields, item),
                                                          [['kind', CompletionItemKind.Keyword]])}
                                  for item in self.completions]
-        self.completion_labels = [f[0] for f in self.completion_fields]
+        self.completion_labels = [f[0] for f in self.completions]
 
     def connect(self, connection):
         self.connection = connection
@@ -292,21 +298,20 @@ class EBNFLanguageServerProtocol:
         if text_buffer and version > self.last_compiled_version.get(uri, -1):
             exenv = self.connection.exec
             self.last_compiled_version[uri] = version
-            diagnostics, rpc_error = await exenv.execute(
-                exenv.process_executor, compile_EBNF, (text_buffer.snapshot(),))
-            publishDiagnostics = {
-                'uri' : uri,
-                'version': text_buffer.version,
-                'diagnostics': JSONStr(diagnostics)
-            }
-            # werte Ergebnis aus
-            # sende eine PublishDiagnostics-Notification via self.connection
-            self.server_call_ID += 1
-            # publishDiagnostics is just a Notification, not a request,
-            # there it must not have an ID! Otherwiese an "unhandled method"
-            # error be returned by the client.
-            await self.connection.server_notification('textDocument/publishDiagnostics',
-                                                      publishDiagnostics)
+            (diagnostics, signature), rpc_error = await exenv.execute(
+                exenv.process_executor, compile_EBNF,
+                (text_buffer.snapshot(), self.last_signature.get(uri, b'')))
+            self.last_signature[uri] = signature
+            # self.connection.log('\nSIGNATURE: %s\n' % str(signature))
+            if diagnostics and diagnostics != '[]':
+                publishDiagnostics = {
+                    'uri': uri,
+                    'version': text_buffer.version,
+                    'diagnostics': JSONStr(diagnostics)
+                }
+                self.server_call_ID += 1
+                await self.connection.server_notification('textDocument/publishDiagnostics',
+                                                          publishDiagnostics)
         return None
 
     async def lsp_textDocument_didOpen(self, textDocument):
@@ -348,22 +353,24 @@ class EBNFLanguageServerProtocol:
         buffer = self.current_text[textDocument['uri']]
         line = position['line']
         col = position['character']
-        if context['triggerKind'] in (CompletionTriggerKind.TriggerCharacter,
-                                      CompletionTriggerKind.Invoked):
-            self.completion_typed = buffer[line][col - 1]
+
+        def compute_items() -> dict:
             a, b = shortlist(self.completion_labels, self.completion_typed)
-            result = {
+            self.connection.log('\nCOMPLETION-INFO: %i:%i\n' % (a, b))
+            return {
                 'isIncomplete': True,
                 'items': self.completion_items[a:b]
             }
+
+        if context['triggerKind'] in (CompletionTriggerKind.TriggerCharacter,
+                                      CompletionTriggerKind.Invoked):
+            self.completion_typed = buffer[line][col - 1]
+            result = compute_items()
         else:  # assume CompletionTriggerKind.TriggerForIncompleteCompletions
             self.completion_typed += buffer[line][col - 1]
-            a, b = shortlist(self.completion_labels, self.completion_typed)
-            result = {
-                'isIncomplete': True,
-                'items': self.completion_shortList
-            }
-        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], buffer[line][:col]))
+            result = compute_items()
+
+        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], self.completion_typed))  # buffer[line][:col]))
         return result
 
     def lsp_S_cancelRequest(self, **kwargs):
