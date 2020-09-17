@@ -94,7 +94,6 @@ __all__ = ('typing',
            'JSONStr',
            'json_encode_string',
            'json_dumps',
-           'pp_json',
            'json_rpc',
            'sane_parser_name',
            'DHPARSER_DIR',
@@ -784,56 +783,6 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
         return ''.join(serialize(obj))
     else:
         return json.dumps(obj, indent=None, separators=(',', ':'))
-
-
-def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
-    """Returns json-object as pretty-printed string. Other than the standard-library's
-    `json.dumps()`-function `json_dumps` allows to include alrady serialzed
-    parts (in the form of JSONStr-objects) in the json-object. Example::
-
-    :param obj: A json-object (or a tree of json-objects) to be serialized
-    :param cls: The class of a custom json-encoder berived from `json.JSONEncoder`
-    :return: The pretty-printed string-serialized form of the json-object.
-    """
-    custom_encoder = cls()
-
-    def serialize(obj, indent: str) -> List[str]:
-        if isinstance(obj, str):
-            return [json_encode_string(obj)]
-        elif isinstance(obj, dict):
-            if obj:
-                r = ['{\n' + indent + '  ']
-                for k, v in obj.items():
-                    r.append('"' + k + '": ')
-                    r.extend(serialize(v, indent + '  '))
-                    r.append(',\n' + indent + '  ')
-                r[-1] = '}'
-                return r
-            return ['{}']
-        elif isinstance(obj, (list, tuple)):
-            if obj:
-                r = ['[']
-                for item in obj:
-                    r.extend(serialize(item, indent + '  '))
-                    r.append(',')
-                r[-1] = ']'
-                return r
-            return ['[]']
-        elif obj is True:
-            return ['true']
-        elif obj is False:
-            return ['false']
-        elif obj is None:
-            return ['null']
-        elif isinstance(obj, (int, float)):
-            # NOTE: test for int must follow test for bool, because True and False
-            #       are treated as instances of int as well by Python
-            return [repr(obj)]
-        elif isinstance(obj, JSONStr):
-            return [obj.serialized_json]
-        return serialize(custom_encoder.default(obj))
-
-    return ''.join(serialize(obj, ''))
 
 
 def json_rpc(method: str,

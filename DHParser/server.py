@@ -74,7 +74,8 @@ from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
-from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONStr, json_dumps, json_rpc
+from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONStr, json_encode_string, \
+    json_rpc
 from DHParser.versionnumber import __version__
 
 
@@ -98,6 +99,8 @@ __all__ = ('RPC_Table',
            'LOGGING_REQUEST',
            'SERVER_REPLY_TIMEOUT',
            'ALL_RPCs',
+           'pp_json',
+           'pp_json_str',
            'asyncio_run',
            'asyncio_connect',
            'split_header',
@@ -213,6 +216,70 @@ def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
                 return s
 
 
+def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
+    """Returns json-object as pretty-printed string. Other than the standard-library's
+    `json.dumps()`-function `json_dumps` allows to include alrady serialzed
+    parts (in the form of JSONStr-objects) in the json-object. Example::
+
+    :param obj: A json-object (or a tree of json-objects) to be serialized
+    :param cls: The class of a custom json-encoder berived from `json.JSONEncoder`
+    :return: The pretty-printed string-serialized form of the json-object.
+    """
+    custom_encoder = cls()
+
+    def serialize(obj, indent: str) -> List[str]:
+        if isinstance(obj, str):
+            return [json_encode_string(obj)]
+        elif isinstance(obj, dict):
+            if obj:
+                if len(obj) == 1:
+                    k, v = next(iter(obj.items()))
+                    if not isinstance(v, (dict, list, tuple)):
+                        r = ['{"' + k + '": ']
+                        r.extend(serialize(v, indent + '  '))
+                        r.append('}')
+                        return r
+                r = ['{\n' + indent + '  ']
+                for k, v in obj.items():
+                    r.append('"' + k + '": ')
+                    r.extend(serialize(v, indent + '  '))
+                    r.append(',\n' + indent + '  ')
+                r[-1] = '}'
+                return r
+            return ['{}']
+        elif isinstance(obj, (list, tuple)):
+            if obj:
+                r = ['[']
+                for item in obj:
+                    r.extend(serialize(item, indent + '  '))
+                    r.append(',')
+                r[-1] = ']'
+                return r
+            return ['[]']
+        elif obj is True:
+            return ['true']
+        elif obj is False:
+            return ['false']
+        elif obj is None:
+            return ['null']
+        elif isinstance(obj, (int, float)):
+            # NOTE: test for int must follow test for bool, because True and False
+            #       are treated as instances of int as well by Python
+            return [repr(obj)]
+        elif isinstance(obj, JSONStr):
+            return [obj.serialized_json]
+        return serialize(custom_encoder.default(obj))
+
+    return ''.join(serialize(obj, ''))
+
+
+def pp_json_str(jsons: str) -> str:
+    """Pretty-prints and already serialized (but possibly ugly-printed)
+    json object in a well-readable form. Syntactic sugar for:
+    `pp_json(json.loads(jsons))`."""
+    return pp_json(json.loads(jsons))
+
+
 def asyncio_run(coroutine: Awaitable, loop=None) -> Any:
     """Backward compatible version of Pyhon3.7's `asyncio.run()`"""
     if sys.version_info >= (3, 7):
@@ -319,9 +386,17 @@ def split_header(data: BytesType) -> Tuple[BytesType, BytesType, BytesType]:
     return header, data, backlog
 
 
-def strip_header_delimiter(data: str) -> Tuple[str]:
-    i = max(data.find('\n'), data.find('\r'))
-    return (data[:i].rstrip(), '\n', data[i:].lstrip()) if i >= 0 else (data,)
+def strip_header_delimiter(data: bytes) -> Tuple[str, ...]:
+    i = max(data.find(b'\n'), data.find(b'\r'))
+    if i >= 0:
+        return (data[:i].rstrip().decode(), '\n', data[i:].lstrip().decode())
+    else:
+        return (data.decode(),)
+
+
+def pp_transmission(data: bytes) -> Tuple[str, ...]:
+    t = strip_header_delimiter(data)
+    return t[:-1] + (pp_json_str(t[-1]),)
 
 
 def gen_task_id() -> int:
@@ -697,7 +772,8 @@ class Connection:
     async def _server_call(self, method: str, params: JSON_Type, ID: Optional[int]):
         """Issues a json-rpc call from the server to the client."""
         json_str = json_rpc(method, params, ID)
-        self.log('SERVER NOTIFICATION: ' if ID is None else 'SERVER REQUEST: ', json_str, '\n\n')
+        self.log('SERVER NOTIFICATION: ' if ID is None else 'SERVER REQUEST: ',
+                 pp_json_str(json_str), '\n\n')
         request = json_str.encode()
         # self.writer.write(JSONRPC_HEADER_BYTES % len(request))
         # sefl.writer.write(request)
@@ -1026,7 +1102,7 @@ class Server:
         if self.use_jsonrpc_header and response.startswith(b'{'):
             response = JSONRPC_HEADER_BYTES % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
-            self.log('RESPONSE: ', *strip_header_delimiter(response.decode()), '\n\n')
+            self.log('RESPONSE: ', *pp_transmission(response), '\n\n')
         try:
             writer.write(response)
             await writer.drain()
@@ -1332,7 +1408,7 @@ class Server:
                 # have been received
 
             if self.log_file:   # avoid decoding if logging is off
-                self.log('RECEIVE: ', *strip_header_delimiter(data.decode()), '\n\n')
+                self.log('RECEIVE: ', *pp_transmission(data), '\n\n')
 
             if id_connection:
                 if self.connection.alive:

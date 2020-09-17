@@ -30,7 +30,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
-    issubtype, typing, concurrent_ident, JSONStr, json_dumps, pp_json, json_rpc
+    issubtype, typing, concurrent_ident, JSONStr, json_dumps, json_rpc
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -239,11 +239,6 @@ class TestJSONSupport:
         obj = json.loads(self.data)
         jsons = json_dumps(obj, partially_serialized=True)
         assert jsons == self.data
-
-    def test_pp_json(self):
-        obj = json.loads(self.data)
-        print()
-        print(pp_json(obj))
 
 
 if __name__ == "__main__":
