@@ -200,37 +200,37 @@ class EBNFLanguageServerProtocol:
         https://langserver.org/
     """
     completion_fields = ['label', 'insertText', 'insertTextFormat', 'documentation']
-    completions = [['anonymous', '@ anonymous = /${1:_\\w+}/', 2,
+    completions = [['@anonymous', '@ anonymous = /${1:_\\w+}/', 2,
                     'List of symbols or a regular expression to identify those definitions '
                     'that shall not yield named tags in the syntax tree.'],
-                   ['comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
+                   ['@comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
                     'Regular expression for comments.'],
-                   ['drop', '@ drop = ${1:whitespace, token, regexp}', 2,
+                   ['@drop', '@ drop = ${1:whitespace, token, regexp}', 2,
                     'List of definitions for which the parsed content shall be dropped rather '
                     'than included in the syntax tree. The special values "whitespace", "token" '
                     'and "regexp" stand for their respective classes instead of particular '
                     'definitions.'],
-                   ['ignorecase', '@ ignorecase = ${1|yes,no|}', 2,
+                   ['@ignorecase', '@ ignorecase = ${1|yes,no|}', 2,
                     'Ignore the case within regular expressions.'],
-                   ['literalws', '@ literalws = ${1|right,left,both,none|}', 2,
+                   ['@literalws', '@ literalws = ${1|right,left,both,none|}', 2,
                     'Determines one which side (if any) of a string-literal the whitespace '
                     'shall be eaten'],
-                   ['whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
+                   ['@whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
                     'insignificant whitespace (denoted by a tilde ~)'],
-                   ['_resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
+                   ['@_resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
                     'expressions identifying a place where the parent parser shall catch up the '
                     'parsing process, if within the given parser an element marked as mandatory '
                     'with the §-sign did not match. (DHParser-extension to EBNF.)'],
-                   ['_skip', '@ ${1:SYMBOL}_skip = /${2: }/', 2,
+                   ['@_skip', '@ ${1:SYMBOL}_skip = /${2: }/', 2,
                     'A list of regular expressions to identify a place to which a series-parser '
                     'shall skip, if a mandatory "§"-item did not match. The parser skips to the '
                     'place after the match except for lookahead-expressions. '
                     '(DHParser-extension to EBNF.)'],
-                   ['_error', '@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"', 2,
+                   ['@_error', '@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"', 2,
                     'An error message preceded by a regular expression or string-literal that '
                     'will be emitted instead of the stock message, if a mandatory element '
                     'violation occurred within the given parser. (DHParser-extension to EBNF)'],
-                   ['_filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
+                   ['@_filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
                     'Name of a Python-match-function that is applied when retrieving a stored '
                     'symbol. (DHParser-extension to EBNF)']]
 
@@ -267,6 +267,7 @@ class EBNFLanguageServerProtocol:
         self.server_call_ID = 0              # unique id
 
         from itertools import chain
+        self.completions.sort()
         self.completion_items = [{k: v for k, v in chain(zip(self.completion_fields, item),
                                                          [['kind', CompletionItemKind.Keyword]])}
                                  for item in self.completions]
@@ -354,23 +355,23 @@ class EBNFLanguageServerProtocol:
         line = position['line']
         col = position['character']
 
-        def compute_items() -> dict:
-            a, b = shortlist(self.completion_labels, self.completion_typed)
+        def compute_items(chars: str) -> dict:
+            a, b = shortlist(self.completion_labels, chars)
             self.connection.log('\nCOMPLETION-INFO: %i:%i\n' % (a, b))
             return {
                 'isIncomplete': True,
-                'items': self.completion_items[a:b]
+                'items': []  # self.completion_items[a:b]
             }
 
-        if context['triggerKind'] in (CompletionTriggerKind.TriggerCharacter,
-                                      CompletionTriggerKind.Invoked):
-            self.completion_typed = buffer[line][col - 1]
-            result = compute_items()
+        trigger_kind = context['triggerKind']
+        if trigger_kind == CompletionTriggerKind.TriggerCharacter:
+            result = compute_items(buffer[line][col - 1])
+        elif trigger_kind == CompletionTriggerKind.Invoked:
+            result = None
         else:  # assume CompletionTriggerKind.TriggerForIncompleteCompletions
-            self.completion_typed += buffer[line][col - 1]
-            result = compute_items()
+            result = None
 
-        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], self.completion_typed))  # buffer[line][:col]))
+        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], buffer[line][:col]))
         return result
 
     def lsp_S_cancelRequest(self, **kwargs):

@@ -65,16 +65,17 @@ class TestCPUBoundTasks:
         fname = os.path.join(dhparserpath, 'examples/EBNF_fork/FixedEBNF.ebnf')
         with open(fname, 'r') as f:
             source = f.read()
-        diagnostics = json.loads(EBNFServer.compile_EBNF(source))
-        # print(json.dumps(diagnostics, indent=2))
-        assert len(diagnostics) == 7
+        diagnostics, signature = EBNFServer.compile_EBNF(source, b'')
+        diag_json = json.loads(diagnostics)
+        assert len(diag_json) == 6, str(len(diag_json))
+        assert len(signature) == 6 * 8, str(len(signature))
 
 
-class TestServerStatic:
-    def test_EBNFServer(self):
-        server = EBNFServer.EBNFLanguageServerProtocol()
-        print(json_dumps(server.completion_items))
-        print(json_dumps(server.completion_labels))
+# class TestServerStatic:
+#     def test_EBNFServer(self):
+#         server = EBNFServer.EBNFLanguageServerProtocol()
+#         print(json_dumps(server.completion_items))
+#         print(json_dumps(server.completion_labels))
 
 
 initialize_request = {'jsonrpc': '2.0',
