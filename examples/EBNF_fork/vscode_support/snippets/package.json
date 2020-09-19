@@ -1,0 +1,10 @@
+{
+    "contributes": {
+		"snippets": [
+			{
+				"language": "ebnf",
+				"path": "./snippets/ebnf.snippets.json"
+			}
+		]
+	}
+}

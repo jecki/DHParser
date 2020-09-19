@@ -150,7 +150,8 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
 # textDocument/completion #############################################
 
 def shortlist(long_list: List[str], typed: str, lo: int = 0, hi: int = -1) -> Tuple[int, int]:
-    assert len(typed) >= 1
+    if not typed:
+        return 0, 0
     if hi < 0:
         hi = len(long_list)
     a = bisect.bisect_left(long_list, typed, lo, hi)

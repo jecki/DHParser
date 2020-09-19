@@ -230,7 +230,7 @@ class EBNFLanguageServerProtocol:
                     'An error message preceded by a regular expression or string-literal that '
                     'will be emitted instead of the stock message, if a mandatory element '
                     'violation occurred within the given parser. (DHParser-extension to EBNF)'],
-                   ['@_filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
+                   ['@ _filter', '@ ${1:SYMBOL}_filter = ${2:funcname}', 2,
                     'Name of a Python-match-function that is applied when retrieving a stored '
                     'symbol. (DHParser-extension to EBNF)']]
 
@@ -293,7 +293,7 @@ class EBNFLanguageServerProtocol:
         return {}
 
     async def compile_text(self, uri: str) -> None:
-        from DHParser.toolkit import JSONStr
+        from DHParser.toolkit import JSONstr
         text_buffer = self.current_text.get(uri, None)
         version = text_buffer.version
         if text_buffer and version > self.last_compiled_version.get(uri, -1):
@@ -308,7 +308,7 @@ class EBNFLanguageServerProtocol:
                 publishDiagnostics = {
                     'uri': uri,
                     'version': text_buffer.version,
-                    'diagnostics': JSONStr(diagnostics)
+                    'diagnostics': JSONstr(diagnostics)
                 }
                 self.server_call_ID += 1
                 await self.connection.server_notification('textDocument/publishDiagnostics',
@@ -351,34 +351,49 @@ class EBNFLanguageServerProtocol:
 
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
         from DHParser.lsp import CompletionTriggerKind, shortlist
+        from DHParser.toolkit import JSONnull
         line_nr = position['line']
         col = position['character']
         buffer = self.current_text[textDocument['uri']]
         line = buffer[line_nr]
 
         def compute_items(chars: str) -> dict:
-            self.connection.log("CHARS: %s\n" % chars)
+            # self.connection.log("CHARS: %s\n" % chars)
             a, b = shortlist(self.completion_labels, chars)
-            self.connection.log('\nCOMPLETION-INFO: %i:%i\n' % (a, b))
-            return {
-                'isIncomplete': True,
-                'items': self.completion_items[a:b]
-            }
+            # self.connection.log('\nCOMPLETION-INFO: %i:%i\n' % (a, b))
+            if a == b:
+                return None
+                # return {'isIncomplete': False, 'items': []}
+            else:
+                return {
+                    'isIncomplete': False,  # b - a > 1 or self.completion_labels[1] != chars,
+                    'items': self.completion_items[a:b]
+                }
 
-        def compute_trigger(line: str, col: int) -> str:
-            assert False, "TODO!!!"
+        def compute_filter_chars(line: str, col: int) -> str:
+            a = line.rfind('@', 0, col)
+            if a >= 0:
+                if a + 1 < len(line) and line[a + 1] != ' ':
+                    return '@ ' + line[a + 1:col]
+                return line[a:col]
+            return ''
+            # else:
+            #     a = col - 1
+            #     while a >= 0 and line[a].isalpha():
+            #         a -= 1
+            #     a += 1
+            #     return '@ ' + line[a + 1:col]
 
         trigger_kind = context['triggerKind']
         if trigger_kind == CompletionTriggerKind.TriggerCharacter:
-            result = None # compute_items(line[col - 1])
+            result = self.completion_items
         elif trigger_kind == CompletionTriggerKind.Invoked:
-            chars = compute_trigger(line, col)
+            chars = compute_filter_chars(line, col)
             result = compute_items(chars)
         else:  # assume CompletionTriggerKind.TriggerForIncompleteCompletions
-            chars = compute_trigger(line, col)
+            chars = compute_filter_chars(line, col)
             result = compute_items(chars)
-
-        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], line[:col]))
+        # self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], line[:col]))
         return result
 
     def lsp_S_cancelRequest(self, **kwargs):

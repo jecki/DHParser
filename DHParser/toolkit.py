@@ -91,7 +91,8 @@ __all__ = ('typing',
            'smart_list',
            'JSON_Type',
            'JSON_Dict',
-           'JSONStr',
+           'JSONstr',
+           'JSONnull',
            'json_encode_string',
            'json_dumps',
            'json_rpc',
@@ -167,13 +168,15 @@ def re_find(s, r, pos=0, endpos=9223372036854775807):
 def escape_re(strg: str) -> str:
     """
     Returns the string with all regular expression special characters escaped.
+    TODO: Remove this function in favor of re.escape()
     """
 
     # assert isinstance(strg, str)
-    re_chars = r"\.^$*+?{}[]()#<>=|!"
-    for esc_ch in re_chars:
-        strg = strg.replace(esc_ch, '\\' + esc_ch)
-    return strg
+    # re_chars = r"\.^$*+?{}[]()#<>=|!"
+    # for esc_ch in re_chars:
+    #     strg = strg.replace(esc_ch, '\\' + esc_ch)
+    # return strg
+    return re.escape(strg)
 
 
 def escape_control_characters(strg: str) -> str:
@@ -657,7 +660,7 @@ JSON_Type = Union[Dict, Sequence, str, int, None]
 JSON_Dict = Dict[str, JSON_Type]
 
 
-class JSONStr:
+class JSONstr:
     """JSONStr is a special type that encapsulates already serialized
     json-chunks in json object-trees. `json_dumps` will insert the content
     of a JSONStr-object literally, rather than serializing it as other
@@ -670,6 +673,16 @@ class JSONStr:
     def __init__(self, serialized_json: str):
         assert isinstance(serialized_json, str)
         self.serialized_json = serialized_json
+
+
+class JSONnull:
+    """JSONnull is a special type that is serialized as "null" by `json_dumps`.
+    This can be used whenever it is inconvenient to use `None` as the null-value.
+    """
+    __slots__ = []
+
+    def __repr__(self):
+        return 'null'
 
 
 # the following string-escaping tables and procedures have been
@@ -695,7 +708,7 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
     parts (in the form of JSONStr-objects) in the json-object. Example::
         
         >>> already_serialized = '{"width":640,"height":400"}'
-        >>> literal = JSONStr(already_serialized)
+        >>> literal = JSONstr(already_serialized)
         >>> json_obj = {"jsonrpc": "2.0", "method": "report_size", "params": literal, "id": None}
         >>> json_dumps(json_obj, partially_serialized=True)
         '{"jsonrpc":"2.0","method":"report_size","params":{"width":640,"height":400"},"id":null}'
@@ -707,7 +720,6 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
         will raise a TypeError, but encoding will be faster.
     :return: The string-serialized form of the json-object.
     """
-    custom_encoder = cls()
 
     # def serialize(obj) -> Iterator[str]:
     #     if isinstance(obj, str):
@@ -775,14 +787,22 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
             # NOTE: test for int must follow test for bool, because True and False
             #       are treated as instances of int as well by Python
             return[repr(obj)]
-        elif isinstance(obj, JSONStr):
+        elif isinstance(obj, JSONstr):
             return [obj.serialized_json]
+        elif obj is JSONnull or isinstance(obj, JSONnull):
+            return ['null']
         return serialize(custom_encoder.default(obj))
 
     if partially_serialized:
+        custom_encoder = cls()
         return ''.join(serialize(obj))
     else:
-        return json.dumps(obj, indent=None, separators=(',', ':'))
+        class MyEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if obj is JSONnull or isinstance(obj, JSONnull):
+                    return None
+                return cls.default(self, obj)
+        return json.dumps(obj, cls=MyEncoder, indent=None, separators=(',', ':'))
 
 
 def json_rpc(method: str,

@@ -30,7 +30,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
-    issubtype, typing, concurrent_ident, JSONStr, json_dumps, json_rpc
+    issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -216,9 +216,18 @@ class TestJSONSupport:
 
     def test_stepwise_encoding(self):
         params = {'height': 640, 'width': 480}
-        params_literal = JSONStr(json_dumps(params, partially_serialized=True))
+        params_literal = JSONstr(json_dumps(params, partially_serialized=True))
         rpc = json_rpc('open_window', params_literal)
         assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480}}', rpc
+
+    def test_custom_null_value(self):
+        assert json_dumps(JSONnull) == "null"
+        assert json_dumps(JSONnull, partially_serialized=True) == "null"
+        assert json.loads(json_dumps(JSONnull)) is None
+        null = JSONnull()
+        assert json_dumps(null) == "null"
+        assert json_dumps(null, partially_serialized=True) == "null"
+        assert json.loads(json_dumps(null)) is None
 
     def test_bool_and_None(self):
         data = [True, False, None, 1, 2.0, "abc"]

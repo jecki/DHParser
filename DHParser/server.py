@@ -75,8 +75,8 @@ from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
-from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONStr, json_encode_string, \
-    json_rpc
+from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, json_encode_string, \
+    json_rpc, json_dumps
 from DHParser.versionnumber import __version__
 
 
@@ -265,7 +265,7 @@ def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
             # NOTE: test for int must follow test for bool, because True and False
             #       are treated as instances of int as well by Python
             return [repr(obj)]
-        elif isinstance(obj, JSONStr):
+        elif isinstance(obj, JSONstr):
             return [obj.serialized_json]
         return serialize(custom_encoder.default(obj))
 
@@ -764,7 +764,7 @@ class Connection:
         coroutine."""
         # # Already logged as received message
         # if self.log_file:
-        #     self.log('RESULT: ', json.dumps(json_obj), '\n')
+        #     self.log('RESULT: ', json_dumps(json_obj), '\n')
         assert self.response_queue is not None
         self.response_queue.put_nowait(json_obj)
 
@@ -1173,7 +1173,7 @@ class Server:
                     await respond(result)
                 elif result is not None:
                     try:
-                        await respond(json.dumps(result, cls=DHParser_JSONEncoder))
+                        await respond(json_dumps(result, cls=DHParser_JSONEncoder))
                     except TypeError as err:
                         await respond(str(err))
             else:
@@ -1214,7 +1214,7 @@ class Server:
                         else:
                             try:
                                 await self.respond(writer, http_response(
-                                    json.dumps(result, indent=2, cls=DHParser_JSONEncoder)))
+                                    pp_json(result, cls=DHParser_JSONEncoder)))
                             except TypeError as err:
                                 await self.respond(writer, http_response(str(err)))
                     else:
@@ -1277,7 +1277,7 @@ class Server:
             if json_id is not None and result is not None:
                 try:
                     json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                    await self.respond(writer, json.dumps(json_result, cls=DHParser_JSONEncoder))
+                    await self.respond(writer, json_dumps(json_result, cls=DHParser_JSONEncoder))
                 except TypeError as err:
                     rpc_error = -32070, str(err)
 
