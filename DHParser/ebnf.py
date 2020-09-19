@@ -37,7 +37,8 @@ from DHParser.configuration import access_thread_locals, get_config_value, \
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
-    REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, EMPTY_GRAMMAR_ERROR
+    UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
+    EMPTY_GRAMMAR_ERROR
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -1559,7 +1560,7 @@ class EBNFCompiler(Compiler):
         for leftover in defined_symbols:
             self.tree.new_error(self.rules[leftover][0],
                                 'Rule "%s" is not connected to parser root "%s" !' %
-                                (leftover, self.root_symbol), WARNING)
+                                (leftover, self.root_symbol), UNCONNECTED_SYMBOL_WARNING)
 
         # check for filters assigned to non-existing or uncaptured symbols
 
@@ -1596,8 +1597,10 @@ class EBNFCompiler(Compiler):
 
 
     def on_ZOMBIE__(self, node: Node) -> str:
-        result = ['Errors in EBNF-source! Fragments found: ']
-        result.extend([str(self.compile(child)) for child in node.children])
+        result = ['Error(s) in EBNF-source!']
+        if node.children:
+            result.append(' Fragments found: ')
+            result.extend([str(self.compile(child)) for child in node.children])
         return '\n'.join(result)
 
 
@@ -2355,7 +2358,7 @@ def compile_ebnf_ast(ast: RootNode) -> str:
 #
 ########################################################################
 
-def compile_ebnf(ebnf_source: str, branding: str = 'DSL', preserve_AST: bool = False) \
+def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool = False) \
         -> ResultTuple:
     """
     Compiles an `ebnf_source` (file_name or EBNF-string) and returns

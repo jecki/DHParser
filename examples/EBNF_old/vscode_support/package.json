@@ -63,6 +63,12 @@
 				"scopeName": "source.ebnf",
 				"path": "./syntaxes/ebnf.tmLanguage.json"
 			}
+		],
+		"snippets": [
+			{
+				"language": "ebnf",
+				"path": "./snippets/ebnf.snippets.json"
+			}
 		]
 	},
 	"scripts": {

@@ -36,7 +36,8 @@ from DHParser.configuration import access_thread_locals, get_config_value, \
     EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
-    REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES
+    REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
+    ERROR
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
@@ -263,12 +264,42 @@ class TestCompilerErrors:
         assert messages
 
     def test_no_error(self):
-        """But reserved symbols should not be repoted as undefined.
+        """But reserved symbols should not be reported as undefined.
         """
         ebnf = """nothing =  WSP_RE__ | COMMENT__\n"""
-        result, messages, st = compile_source(ebnf, None, get_ebnf_grammar(),
-            get_ebnf_transformer(), get_ebnf_compiler('UndefinedSymbols'))
+        result, messages, st = compile_source(
+            ebnf, None, get_ebnf_grammar(), get_ebnf_transformer(),
+            get_ebnf_compiler('UndefinedSymbols'))
         assert not bool(messages), messages
+
+    def test_unconnected_symbols(self):
+        ebnf = """
+            root = "ROOT" | connected
+            connected = "CONNECTED"
+            unconnected = "UNCONNECTED (warning expected)"
+        """
+        result, messages, st = compile_source(
+            ebnf, None, get_ebnf_grammar(), get_ebnf_transformer(),
+            get_ebnf_compiler('UndefinedSymbols'), preserve_AST=False)
+        assert len(messages) == 1
+        assert messages[0].code == UNCONNECTED_SYMBOL_WARNING
+
+    def test_unconnected_symbols_corrupted_source(self):
+        ebnf = """
+            noroot
+            root = "ROOT" | connected
+            connected = "CONNECTED"
+            unconnected = "UNCONNECTED (warning expected)"
+        """
+        result, messages, st = compile_source(
+            ebnf, None, get_ebnf_grammar(), get_ebnf_transformer(),
+            get_ebnf_compiler('UndefinedSymbols'), preserve_AST=True)
+        assert any(m.code >= ERROR for m in messages)
+        # assert len(messages) == 1
+        # assert messages[0].code == UNCONNECTED_SYMBOL_WARNING
+        # for m in messages:
+        #     print(m)
+        # print(st.as_sxpr())
 
 
 EBNF = r"""

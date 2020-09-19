@@ -276,7 +276,7 @@ def compile_source(source: str,
                    parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
                    compiler: CompilerCallable,  # Node (AST), Source -> Any
-                   preserve_AST: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
+                   *, preserve_AST: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """Compiles a source in four stages:
 
     1. Pre-Processing (if needed)

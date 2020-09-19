@@ -50,8 +50,7 @@ class TestExecutionEnvironment:
         result, rpc_error = asyncio_run(main())
         json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": %s}}' % \
                    (rpc_error[0], json_encode_string(rpc_error[1]))
-        j_obj = json.loads(json_str)
-        print(j_obj)
+        assert json_str.find('Traceback') >= 0
 
 
 class TestUtils:

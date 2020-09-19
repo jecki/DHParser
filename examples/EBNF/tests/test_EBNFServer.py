@@ -62,7 +62,7 @@ class TestCPUBoundTasks:
 
 
     def test_compileEBNFFork(self):
-        fname = os.path.join(dhparserpath, 'examples/EBNF_fork/FixedEBNF.ebnf')
+        fname = os.path.join(dhparserpath, 'examples/EBNF/FixedEBNF.ebnf')
         with open(fname, 'r') as f:
             source = f.read()
         diagnostics, signature = EBNFServer.compile_EBNF(source, b'')
@@ -82,8 +82,8 @@ initialize_request = {'jsonrpc': '2.0',
  'id': 0,
  'method': 'initialize',
  'params': {'processId': 17400,
-  'rootPath': 'c:\\Users\\di68kap\\PycharmProjects\\DHParser\\examples\\EBNF_fork',
-  'rootUri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork',
+  'rootPath': 'c:\\Users\\di68kap\\PycharmProjects\\DHParser\\examples\\EBNF',
+  'rootUri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF',
   'capabilities': {'workspace': {'applyEdit': True,
     'workspaceEdit': {'documentChanges': True},
     'didChangeConfiguration': {'dynamicRegistration': True},
@@ -142,14 +142,14 @@ initialize_request = {'jsonrpc': '2.0',
      'rangeLimit': 5000,
      'lineFoldingOnly': True}}},
   'trace': 'off',
-  'workspaceFolders': [{'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork',
-    'name': 'EBNF_fork'}]}}
+  'workspaceFolders': [{'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF',
+    'name': 'EBNF'}]}}
 
 initialized_notification = {"jsonrpc": "2.0", "method": "initialized", "params": {}}
 
 didOpen_notification = {'jsonrpc': '2.0',
  'method': 'textDocument/didOpen',
- 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork/EBNF.ebnf',
+ 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF/EBNF.ebnf',
    'languageId': 'ebnf',
    'version': 1,
    'text': r"""# EBNF-Grammar in EBNF
@@ -276,7 +276,7 @@ HEXCODE    = /[A-Fa-f0-9]{1,8}/
 
 didChange_notifictaion_1 = {'jsonrpc': '2.0',
  'method': 'textDocument/didChange',
- 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork/EBNF.ebnf',
+ 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF/EBNF.ebnf',
    'version': 2},
   'contentChanges': [{'range': {'start': {'line': 20, 'character': 0},
      'end': {'line': 20, 'character': 0}},
@@ -286,18 +286,18 @@ didChange_notifictaion_1 = {'jsonrpc': '2.0',
 completion_request = {'jsonrpc': '2.0',
  'id': 1,
  'method': 'textDocument/completion',
- 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork/EBNF.ebnf'},
+ 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF/EBNF.ebnf'},
   'position': {'line': 20, 'character': 1},
   'context': {'triggerKind': 2, 'triggerCharacter': '@'}}}
 
 didSave_notification_1 = {'jsonrpc': '2.0',
  'method': 'textDocument/didSave',
- 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork/EBNF.ebnf',
+ 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF/EBNF.ebnf',
    'version': 2}}}
 
 didChange_notification_2 = {'jsonrpc': '2.0',
  'method': 'textDocument/didChange',
- 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork/EBNF.ebnf',
+ 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF/EBNF.ebnf',
    'version': 3},
   'contentChanges': [{'range': {'start': {'line': 20, 'character': 0},
      'end': {'line': 20, 'character': 1}},
@@ -306,7 +306,7 @@ didChange_notification_2 = {'jsonrpc': '2.0',
 
 didSave_notification_2 = {'jsonrpc': '2.0',
  'method': 'textDocument/didSave',
- 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF_fork/EBNF.ebnf',
+ 'params': {'textDocument': {'uri': 'file:///c%3A/Users/di68kap/PycharmProjects/DHParser/examples/EBNF/EBNF.ebnf',
    'version': 3}}}
 
 shutdown_request = {'jsonrpc': '2.0', 'id': 2, 'method': 'shutdown', 'params': None}
