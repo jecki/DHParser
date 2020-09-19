@@ -218,7 +218,11 @@ class TestJSONSupport:
         params = {'height': 640, 'width': 480}
         params_literal = JSONstr(json_dumps(params, partially_serialized=True))
         rpc = json_rpc('open_window', params_literal)
-        assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480}}', rpc
+        if sys.version_info >= (3, 6):
+            assert rpc == '{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480}}', rpc
+        else:
+            obj = json.loads(rpc)
+            assert obj == json.loads('{"jsonrpc":"2.0","method":"open_window","params":{"height":640,"width":480}}')
 
     def test_custom_null_value(self):
         assert json_dumps(JSONnull) == "null"
@@ -245,9 +249,11 @@ class TestJSONSupport:
         assert json_dumps(None, partially_serialized=True) == "null"
 
     def test_roundtrip(self):
-        obj = json.loads(self.data)
-        jsons = json_dumps(obj, partially_serialized=True)
-        assert jsons == self.data
+        if sys.version_info >= (3, 6):
+            obj = json.loads(self.data)
+            jsons = json_dumps(obj, partially_serialized=True)
+            assert jsons == self.data
+
 
 
 if __name__ == "__main__":

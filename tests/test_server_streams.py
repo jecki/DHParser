@@ -88,8 +88,12 @@ class TestStreamProxies:
             return await read_full_content(reader)
 
         async def main():
-            read_task = asyncio.create_task(read(self.reader))
-            write_task = asyncio.create_task(write(self.writer))
+            if sys.version_info >= (3, 7):
+                read_task = asyncio.create_task(read(self.reader))
+                write_task = asyncio.create_task(write(self.writer))
+            else:
+                read_task = asyncio.ensure_future(read(self.reader))
+                write_task = asyncio.ensure_future(write(self.writer))
             data = await read_task
             await write_task
             self.writer.close()

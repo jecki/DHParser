@@ -57,7 +57,7 @@ try:
     from concurrent.futures.thread import BrokenThreadPool
 except ImportError:
     # BrokenThreadPool requires Python version >= 3.8
-    class BrokenThreadPool:
+    class BrokenThreadPool(Exception):
         pass
 from functools import partial
 import io
@@ -75,8 +75,8 @@ from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
-from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, json_encode_string, \
-    json_rpc, json_dumps
+from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
+    json_encode_string, json_rpc, json_dumps
 from DHParser.versionnumber import __version__
 
 
@@ -217,7 +217,7 @@ def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
 
 def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
     """Returns json-object as pretty-printed string. Other than the standard-library's
-    `json.dumps()`-function `json_dumps` allows to include alrady serialzed
+    `json.dumps()`-function `pp_json` allows to include already serialzed
     parts (in the form of JSONStr-objects) in the json-object. Example::
 
     :param obj: A json-object (or a tree of json-objects) to be serialized
@@ -267,6 +267,8 @@ def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
             return [repr(obj)]
         elif isinstance(obj, JSONstr):
             return [obj.serialized_json]
+        elif isinstance(obj, JSONnull) or obj is JSONnull:
+            return ['null']
         return serialize(custom_encoder.default(obj))
 
     return ''.join(serialize(obj, ''))
@@ -298,7 +300,9 @@ def asyncio_run(coroutine: Awaitable, loop=None) -> Any:
         finally:
             if loop is None:
                 try:
-                    myloop.run_until_complete(loop.shutdown_asyncgens())
+                    myloop.run_until_complete(myloop.shutdown_asyncgens())
+                except AttributeError:
+                    pass
                 finally:
                     asyncio.set_event_loop(None)
                     myloop.close()
@@ -1297,7 +1301,7 @@ class Server:
 
     async def handle(self, reader: StreamReaderType, writer: StreamWriterType):
         assert self.loop is not None
-        assert self.exec is not None
+        # assert self.exec is not None  # causes erratic errors with tests/notest_server_tcp.py
 
         if isinstance(reader, StreamReaderProxy):
             cast(StreamReaderProxy, reader).loop = self.loop
@@ -1340,7 +1344,7 @@ class Server:
             # There are four cases to cover:
             #
             # a) the data received does not contain a Content-Length-field. In this case
-            #    the data is considered plain data or json-rpc data wihout a header. The
+            #    the data is considered plain data or json-rpc data without a header. The
             #    data passed through as is without worrying about its size.
             #
             # b) the data has a header with a Content-Length-field and the size of the
@@ -1532,7 +1536,7 @@ class Server:
                 await writer.wait_closed()
                 if self.serving_task:
                     self.serving_task.cancel()
-            else:
+            elif self.server:
                 self.server.close()  # break self.server.serve_forever()
             if sys.version_info < (3, 7) and self.loop is not None:
                 self.loop.stop()
@@ -1712,8 +1716,8 @@ def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
     Starts DHParser-Server that communicates via tcp in a separate process
     or thread. Can be used for writing test code.
 
-    WARNING: Does not seem to work with multiprocessing.set_start_method('spawn')`
-    when spwaning a process under linux !?
+    Servers started with this function sometimes seem to run into race conditions.
+    Therefore, USE THIS ONLY FOR TESTING!
 
     :param host: The host for the tcp-communication, e.g. 127.0.0.1
     :param port: the port number for the tcp-communication.
@@ -1757,6 +1761,8 @@ def spawn_stream_server(reader: StreamReaderType,
     """
     Starts a DHParser-Server that communitcates via streams in a separate
     process or thread.
+
+    USE THIS ONLY FOR TESTING!
 
     :param reader: The stream from which the server will read requests.
     :param writer: The stream to which the server will write responses.

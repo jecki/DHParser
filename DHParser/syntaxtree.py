@@ -36,7 +36,7 @@ from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
     get_config_value
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, cython, linebreaks, line_col
+from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
@@ -2035,6 +2035,8 @@ class DHParser_JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Node):
             return cast(Node, obj).to_json_obj()
+        elif obj is JSONnull or isinstance(obj, JSONnull):
+            return None
         return json.JSONEncoder.default(self, obj)
 
 

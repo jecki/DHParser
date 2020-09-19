@@ -172,7 +172,7 @@ class TestUtils:
         serialized = pp_json(obj)
         # print()
         # print(pp_json(obj))
-        assert serialized == self.expected
+        assert sys.version_info < (3, 6) or serialized == self.expected, serialized
 
 
 if __name__ == "__main__":

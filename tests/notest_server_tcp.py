@@ -36,11 +36,13 @@ import time
 from typing import Callable
 
 
-if __name__ == "__main__" and sys.platform.lower().startswith('win'):
-    # import multiprocessing
+if __name__ == "__main__":
+    import multiprocessing
     multiprocessing.freeze_support()
-    multiprocessing.set_start_method('spawn')   # 'spawn' (windows and linux)
-                                                # or 'fork' or 'forkserver' (linux only)
+    if sys.platform.lower().startswith('win'):
+        multiprocessing.set_start_method('spawn')
+    # else:
+    #     multiprocessing.set_start_method('forkserver')
 
 
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
@@ -92,7 +94,7 @@ def json_rpc(method: str, params: dict) -> str:
 
 
 class TestServer:
-    spawn = multiprocessing.get_start_method() == "spawn"
+    spawn = multiprocessing.get_start_method() in ["spawn", "forkserver"]
 
     def setup(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
@@ -574,9 +576,10 @@ class TestLanguageServer:
 
 
 if __name__ == "__main__":
-    if "--killserver" in sys.argv:
-        result = stop_tcp_server('127.0.0.1', TEST_PORT)
-        print('server stopped' if result is None else "server wasn't running")
-        sys.exit(0)
+    # BROKEN, because TEST_PORT ist not fixed any more
+    # if "--killserver" in sys.argv:
+    #     result = stop_tcp_server('127.0.0.1', TEST_PORT)
+    #     print('server stopped' if result is None else "server wasn't running")
+    #     sys.exit(0)
     from DHParser.testing import runner
     runner("", globals())
