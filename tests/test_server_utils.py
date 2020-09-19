@@ -22,6 +22,7 @@ limitations under the License.
 """
 
 
+import asyncio
 import concurrent.futures
 import collections.abc
 import json
@@ -31,7 +32,26 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.server import pp_json
+from DHParser.server import pp_json, ExecutionEnvironment, asyncio_run
+from DHParser.toolkit import json_dumps, json_encode_string
+
+
+class TestExecutionEnvironment:
+    def test_execenv(self):
+        def fault():
+            raise AssertionError
+
+        async def main():
+            loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                else asyncio.get_event_loop()
+            env = ExecutionEnvironment(loop)
+            return await env.execute(None, fault, [])
+
+        result, rpc_error = asyncio_run(main())
+        json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": %s}}' % \
+                   (rpc_error[0], json_encode_string(rpc_error[1]))
+        j_obj = json.loads(json_str)
+        print(j_obj)
 
 
 class TestUtils:

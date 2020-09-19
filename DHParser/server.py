@@ -68,6 +68,7 @@ import subprocess
 import sys
 from threading import Thread
 import time
+import traceback
 from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, Sequence, \
     Set, Any, cast, Type, TypeVar, Generic
 
@@ -495,7 +496,9 @@ class ExecutionEnvironment:
             except BrokenThreadPool as e:
                 rpc_error = -32060, str(e)
         except Exception as e:
-            rpc_error = -32000, "Server Error " + str(type(e)) + ': ' + str(e)
+            stacktrace = traceback.format_exc()
+            rpc_error = -32000, "Server Error %s: %s\n%s" % (str(type(e)), str(e), stacktrace)
+            append_log(self.log_file, rpc_error[1])
         return result, rpc_error
 
     def shutdown(self, wait: bool = True):
@@ -1280,11 +1283,11 @@ class Server:
 
         if rpc_error is not None:
             if json_id >= 0:
-                json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}, "id": %s}'%\
-                       (rpc_error[0], rpc_error[1], str(json_id))
+                json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": %s}, "id": %s}'%\
+                       (rpc_error[0], json_encode_string(rpc_error[1]), str(json_id))
             else:
-                json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": "%s"}}' % \
-                       (rpc_error[0], rpc_error[1])
+                json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": %s}}' % \
+                       (rpc_error[0], json_encode_string(rpc_error[1]))
             await self.respond(writer, json_str)
 
         if result is not None or rpc_error is not None:

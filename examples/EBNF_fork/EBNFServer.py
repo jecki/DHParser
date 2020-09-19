@@ -200,33 +200,33 @@ class EBNFLanguageServerProtocol:
         https://langserver.org/
     """
     completion_fields = ['label', 'insertText', 'insertTextFormat', 'documentation']
-    completions = [['@anonymous', '@ anonymous = /${1:_\\w+}/', 2,
+    completions = [['@ anonymous', '@ anonymous = /${1:_\\w+}/', 2,
                     'List of symbols or a regular expression to identify those definitions '
                     'that shall not yield named tags in the syntax tree.'],
-                   ['@comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
+                   ['@ comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,
                     'Regular expression for comments.'],
-                   ['@drop', '@ drop = ${1:whitespace, token, regexp}', 2,
+                   ['@ drop', '@ drop = ${1:whitespace, token, regexp}', 2,
                     'List of definitions for which the parsed content shall be dropped rather '
                     'than included in the syntax tree. The special values "whitespace", "token" '
                     'and "regexp" stand for their respective classes instead of particular '
                     'definitions.'],
-                   ['@ignorecase', '@ ignorecase = ${1|yes,no|}', 2,
+                   ['@ ignorecase', '@ ignorecase = ${1|yes,no|}', 2,
                     'Ignore the case within regular expressions.'],
-                   ['@literalws', '@ literalws = ${1|right,left,both,none|}', 2,
+                   ['@ literalws', '@ literalws = ${1|right,left,both,none|}', 2,
                     'Determines one which side (if any) of a string-literal the whitespace '
                     'shall be eaten'],
-                   ['@whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
+                   ['@ whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
                     'insignificant whitespace (denoted by a tilde ~)'],
-                   ['@_resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
+                   ['@ _resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
                     'expressions identifying a place where the parent parser shall catch up the '
                     'parsing process, if within the given parser an element marked as mandatory '
                     'with the §-sign did not match. (DHParser-extension to EBNF.)'],
-                   ['@_skip', '@ ${1:SYMBOL}_skip = /${2: }/', 2,
+                   ['@ _skip', '@ ${1:SYMBOL}_skip = /${2: }/', 2,
                     'A list of regular expressions to identify a place to which a series-parser '
                     'shall skip, if a mandatory "§"-item did not match. The parser skips to the '
                     'place after the match except for lookahead-expressions. '
                     '(DHParser-extension to EBNF.)'],
-                   ['@_error', '@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"', 2,
+                   ['@ _error', '@ ${1:SYMBOL}_error = /${2: }/, "${3:error message}"', 2,
                     'An error message preceded by a regular expression or string-literal that '
                     'will be emitted instead of the stock message, if a mandatory element '
                     'violation occurred within the given parser. (DHParser-extension to EBNF)'],
@@ -351,27 +351,34 @@ class EBNFLanguageServerProtocol:
 
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
         from DHParser.lsp import CompletionTriggerKind, shortlist
-        buffer = self.current_text[textDocument['uri']]
-        line = position['line']
+        line_nr = position['line']
         col = position['character']
+        buffer = self.current_text[textDocument['uri']]
+        line = buffer[line_nr]
 
         def compute_items(chars: str) -> dict:
+            self.connection.log("CHARS: %s\n" % chars)
             a, b = shortlist(self.completion_labels, chars)
             self.connection.log('\nCOMPLETION-INFO: %i:%i\n' % (a, b))
             return {
                 'isIncomplete': True,
-                'items': []  # self.completion_items[a:b]
+                'items': self.completion_items[a:b]
             }
+
+        def compute_trigger(line: str, col: int) -> str:
+            assert False, "TODO!!!"
 
         trigger_kind = context['triggerKind']
         if trigger_kind == CompletionTriggerKind.TriggerCharacter:
-            result = compute_items(buffer[line][col - 1])
+            result = None # compute_items(line[col - 1])
         elif trigger_kind == CompletionTriggerKind.Invoked:
-            result = None
+            chars = compute_trigger(line, col)
+            result = compute_items(chars)
         else:  # assume CompletionTriggerKind.TriggerForIncompleteCompletions
-            result = None
+            chars = compute_trigger(line, col)
+            result = compute_items(chars)
 
-        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], buffer[line][:col]))
+        self.connection.log("\nCOMPLETION %i: %s\n\n" % (context['triggerKind'], line[:col]))
         return result
 
     def lsp_S_cancelRequest(self, **kwargs):
