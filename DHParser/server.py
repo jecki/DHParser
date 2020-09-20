@@ -228,7 +228,13 @@ def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
 
     def serialize(obj, indent: str) -> List[str]:
         if isinstance(obj, str):
-            return [json_encode_string(obj)]
+            if obj.find('\n') >= 0:
+                lines = obj.split('\n')
+                pretty_str = json_encode_string(lines[0]) + '\n' \
+                    + '\n'.join(indent + json_encode_string(line) for line in lines[1:])
+                return [pretty_str]
+            else:
+                return [json_encode_string(obj)]
         elif isinstance(obj, dict):
             if obj:
                 if len(obj) == 1:

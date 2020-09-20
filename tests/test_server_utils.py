@@ -28,6 +28,7 @@ import collections.abc
 import json
 import os
 import sys
+import traceback
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
@@ -170,10 +171,20 @@ class TestUtils:
     def test_pp_json(self):
         obj = json.loads(self.data)
         serialized = pp_json(obj)
-        # print()
-        # print(pp_json(obj))
         assert sys.version_info < (3, 6) or serialized == self.expected, serialized
 
+    def test_pp_json_stacktrace(self):
+        try:
+            raise AssertionError()
+        except AssertionError:
+            tb = traceback.format_exc()
+        ppjsn = pp_json({'error' : tb})
+        expected = '{"error": "Traceback (most recent call last):"\n' \
+            '  "  File \\"/Users/eckhart/Entwicklung/DHParser/tests/test_server_utils.py\\", ' \
+            'line 178, in test_pp_json_stacktrace"\n' \
+            '  "    raise AssertionError()"\n' \
+            '  "AssertionError"\n  ""}'
+        assert ppjsn == expected
 
 if __name__ == "__main__":
     from DHParser.testing import runner
