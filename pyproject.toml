@@ -43,9 +43,12 @@ packages = [
 ]
 
 
-[tool.poetry.build]
-generate-setup-file = false
-script = "build.py"
+# build = "build.py"
+
+# IN THE FUTURE, MAYBE:
+# [tool.poetry.build]
+# script = "build.py"
+# generate-setup-file = false
 
 
 [tool.poetry.dependencies]
@@ -63,5 +66,5 @@ dhparser = 'DHParser.scripts.dhparser:main'
 
 
 [build-system]
-requires = ["poetry>=1.0.0", "Cython>=0.29", "setuptools", "wheel"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0", "Cython>=0.29", "setuptools", "wheel"]
+build-backend = "poetry.core.masonry.api"

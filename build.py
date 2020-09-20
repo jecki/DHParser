@@ -24,9 +24,15 @@ cythonize_modules = [
 ]
 
 
-def build(setup_kwargs):
+def build(setup_kwargs={}):
+    import sys
+    sys.argv.extend(['build_ext', '--inplace'])
     setup(
         name='DHParser',
         ext_modules=cythonize(cythonize_modules, nthreads=0, annotate=False),
         zip_safe=False,
     )
+
+
+if __name__ == "__main__":
+    build()
