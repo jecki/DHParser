@@ -43,11 +43,11 @@ packages = [
 ]
 
 
-# build = "build.py"
+# build = "DHParser/scripts/dhparser_build_cython.py"
 
 # IN THE FUTURE, MAYBE:
 # [tool.poetry.build]
-# script = "build.py"
+# script = "DHParser/scripts/dhparser_build_cython.py"
 # generate-setup-file = false
 
 
@@ -63,6 +63,7 @@ pytest = "^5.0"
 
 [tool.poetry.scripts]
 dhparser = 'DHParser.scripts.dhparser:main'
+dhparser_build_cython = 'DHParser.scripts.dhparser_build_cython:main'
 
 
 [build-system]

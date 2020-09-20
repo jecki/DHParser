@@ -57,10 +57,12 @@ setuptools.setup(
         'Topic :: Software Development :: Compilers'
     ],
     scripts=['DHParser/scripts/dhparser.py',
-             'DHParser/scripts/dhparser_rename.py'],
+             'DHParser/scripts/dhparser_rename.py',
+             'DHParser/scrtips/build_dhparser_cython.py'],
     entry_points={
         'console_scripts': [
-            'dhparser=DHParser.scripts.dhparser:main'
+            'dhparser=DHParser.scripts.dhparser:main',
+            'dhparser_build_cython:main'
         ]
     }
 )

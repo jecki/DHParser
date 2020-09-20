@@ -118,12 +118,20 @@ It is recommended that you install the `regex`-module
 will use `regex` instead of the built-in `re`-module for regular
 expressions. `regex` is faster and more powerful than `re`.
 
-In order to speed up DHParser even more, it is recommended that you
-run the `buildpackages.sh`-script (or `buildpackages.bat` on
-Windows-systems) after installation. This script compiles the
-`stringview.py`-module to C-Code with the cython Python to C compiler
-(https://cython.org). This requires that you have cython and a
-C-compiler installed on your system.
+In order to speed up DHParser even more, it can be compiled with
+the Python to C compiler [Cython](https://cython.org). First,
+you mustt install cython with the command:
+
+    pip install cython
+ 
+Once cython is installed, you can run the `dhparser_build_cython`
+script from the command line:
+
+    dhparser_build_cython
+    
+Alternatively, if you have cloned DHParser from the git-Repository,
+you can run the `buildpackages.sh`-script (or `buildpackages.bat` on
+Windows-systems) after installation.
 
 
 Sources
