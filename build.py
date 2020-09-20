@@ -26,7 +26,7 @@ cythonize_modules = [
 
 def build(setup_kwargs):
     setup(
-        name='Hello world app',
+        name='DHParser',
         ext_modules=cythonize(cythonize_modules, nthreads=0, annotate=False),
         zip_safe=False,
     )

@@ -1,3 +1,14 @@
+DHParser Version 0.9.4
+......................
+
+- better Language server support (modules server.py and lsp.py - still
+  somewhat experimental)
+- language servers can now also be connected via streams, not only tcp
+- Rudimentary Language Server example (for Visual Studio Code etc.) in 
+  examples/EBNF added
+- faster tree serialiazation with Node.as_sxpr or Node.as_xml
+
+
 DHParser Version 0.9.3 (23.6.2020)
 ..................................
 
