@@ -180,10 +180,12 @@ class TestUtils:
             tb = traceback.format_exc()
         ppjsn = pp_json({'error' : tb})
         expected = '{"error": "Traceback (most recent call last):"\n' \
-            '  "  File \\"/Users/eckhart/Entwicklung/DHParser/tests/test_server_utils.py\\", ' \
+            '  "  File \\"$HOME/Entwicklung/DHParser/tests/test_server_utils.py\\", ' \
             'line 178, in test_pp_json_stacktrace"\n' \
             '  "    raise AssertionError()"\n' \
-            '  "AssertionError"\n  ""}'
+            '  "AssertionError"\n  ""}'.replace('$HOME', os.path.expanduser('~'), 1)
+        print(ppjsn)
+        print(expected)
         assert ppjsn == expected
 
 if __name__ == "__main__":
