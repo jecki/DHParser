@@ -51,12 +51,16 @@ __all__ = ('WHITESPACE_PTYPE',
            'CriteriaType',
            'ALL_NODES',
            'LEAF_NODES',
-           'BRANCH_NODES',
+           'ALL_CONTEXTS',
+           'LEAF_CONTEXTS',
            'Node',
            'prev_context',
            'next_context',
            'serialize_context',
            'context_sanity_check',
+           'ContextMapping',
+           'generate_context_mapping',
+           'map_pos_to_context',
            'FrozenNode',
            'EMPTY_NODE',
            'tree_sanity_check',
@@ -148,7 +152,9 @@ def flatten_xml(xml: str) -> str:
 CriteriaType = Union['Node', str, Container[str], Callable, int]
 ALL_NODES = lambda nd: True
 LEAF_NODES = lambda nd: not nd._children
-BRANCH_NODES = lambda nd: nd._children
+
+ALL_CONTEXTS = lambda ctx: True
+LEAF_CONTEXTS = lambda ctx: not ctx[-1].children
 
 
 def create_match_function(criterion: CriteriaType) -> Callable:
@@ -1447,6 +1453,47 @@ def serialize_context(context: List[Node], with_content: bool = False, delimiter
 
 def context_sanity_check(context: List[Node]) -> bool:
     return all(context[i] in context[i - 1]._children for i in range(1, len(context)))
+
+
+ContextMapping = Tuple[List[int], List[List[Node]]]  # A mapping of character positions to contexts
+
+
+def generate_context_mapping(node: Node) -> ContextMapping:
+    """
+    Generates and returns a context mapping for all leave-nodes of the
+    tree originating in `node`. A context mapping is am ordered mapping
+    of the first text position of every leaf-node to the context of
+    this node.
+
+    Context mappings are a helpful tool when searching substrings in a
+    document and then trying to locate them within in the tree.
+
+    :param node: the root of the tree for which a context mapping shall be
+        generated.
+    :return: The context mapping for the node.
+    """
+    pos = 0
+    pos_list, ctx_list = [], []
+    for ctx in node.select_context_if(LEAF_CONTEXTS, include_root=True):
+        pos_list.append(pos)
+        ctx_list.append(ctx)
+        pos += len(ctx[-1])
+    return (pos_list, ctx_list)
+
+
+def map_pos_to_context(i: int, cm: ContextMapping) -> Tuple[List[Node], int]:
+    """Yields the context and relative position for the absolute
+    position `i`.
+
+    :param i:   a position in the content of the tree for which the
+        context mapping `cm` was generated
+    :param cm:  a context mapping
+    :return:    tuple (context, relative position) where relative
+        postition is the position of i relative to the actual
+        position of the last node in the context.
+    """
+    ctx_index = bisect.bisect_right(cm[0], i) - 1
+    return cm[1][ctx_index], i - cm[0][ctx_index]
 
 
 # FrozenNode ##########################################################

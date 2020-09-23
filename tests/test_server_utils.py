@@ -178,14 +178,15 @@ class TestUtils:
             raise AssertionError()
         except AssertionError:
             tb = traceback.format_exc()
-        ppjsn = pp_json({'error' : tb})
+        ppjsn = pp_json({'error' : tb}).replace('\\\\', '/')
         expected = '{"error": "Traceback (most recent call last):"\n' \
-            '  "  File \\"$HOME/Entwicklung/DHParser/tests/test_server_utils.py\\", ' \
+            '  "  File \\"$SCRIPTPATH/test_server_utils.py\\", ' \
             'line 178, in test_pp_json_stacktrace"\n' \
             '  "    raise AssertionError()"\n' \
-            '  "AssertionError"\n  ""}'.replace('$HOME', os.path.expanduser('~'), 1)
-        print(ppjsn)
-        print(expected)
+            '  "AssertionError"\n  ""}'.\
+            replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1)
+        # print(ppjsn)
+        # print(expected)
         assert ppjsn == expected
 
 if __name__ == "__main__":
