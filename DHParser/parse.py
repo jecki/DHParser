@@ -52,6 +52,7 @@ from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, 
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col
 
+
 __all__ = ('ParserError',
            'ApplyFunc',
            'FlagFunc',
@@ -457,7 +458,8 @@ class Parser:
             except ParserError as pe:
                 # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
-                rules = grammar.resume_rules__.get(self.pname, [])
+                rules = grammar.resume_rules__.get(
+                    self.pname or grammar.associated_symbol(self).pname, [])
                 rest = pe.rest[len(pe.node):]
                 i = reentry_point(rest, rules, grammar.comment_rx__,
                                   grammar.reentry_search_window__)
