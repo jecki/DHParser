@@ -30,7 +30,8 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
-    issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc
+    issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
+    matching_brackets
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -254,6 +255,13 @@ class TestJSONSupport:
             jsons = json_dumps(obj, partially_serialized=True)
             assert jsons == self.data
 
+
+class TestMisc:
+    def test_matching_brackets(self):
+        s = """'‘diviniores’, id est digniores, ‘-es’ (PG 3,505C ἁγιαστείαν), sicut est """ \
+            """consecratio chrismatis et altaris (sc. divina lex distribuit pontificali ordini). '"""
+        matches = matching_brackets(s, '(', ')')
+        assert matches == [(39, 60), (107, 152)]
 
 
 if __name__ == "__main__":
