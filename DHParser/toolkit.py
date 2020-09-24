@@ -77,6 +77,7 @@ __all__ = ('typing',
            'as_list',
            'first',
            'last',
+           'matching_brackets',
            'linebreaks',
            'line_col',
            'text_pos',
@@ -339,7 +340,7 @@ def as_list(item_or_sequence) -> List[Any]:
 
 
 def first(item_or_sequence: Union[Sequence, Any]) -> Any:
-    """Returns an item or a the first item of a sequence of items."""
+    """Returns an item or the first item of a sequence of items."""
     if isinstance(item_or_sequence, Sequence):
         return item_or_sequence[0]
     else:
@@ -347,11 +348,31 @@ def first(item_or_sequence: Union[Sequence, Any]) -> Any:
 
 
 def last(item_or_sequence: Union[Sequence, Any]) -> Any:
-    """Returns an item or a the first item of a sequence of items."""
+    """Returns an item or the first item of a sequence of items."""
     if isinstance(item_or_sequence, Sequence):
         return item_or_sequence[-1]
     else:
         return item_or_sequence
+
+
+def matching_brackets(text: str, openb: str, closeb: str) -> List[Tuple[int, int]]:
+    """Returns a list of matching bracket positions.
+
+    >>> matching_brackets('(a(b)c)', '(', ')')
+    [(0, 6), (2, 4)]
+    >>> matching_brackets('(a)b(c)', '(', ')')
+    [(0, 2), (4, 6)]
+    """
+    open_stack, close_stack = [], []
+    a = text.find(openb)
+    while a >= 0:
+        open_stack.append(a)
+        a = text.find(openb, a + 1)
+    b = text.rfind(closeb)
+    while b >= 0:
+        close_stack.append(b)
+        b = text.rfind(closeb, 0, b - 1)
+    return list(zip(open_stack, close_stack))
 
 
 #######################################################################
