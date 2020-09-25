@@ -262,6 +262,18 @@ class TestMisc:
             """consecratio chrismatis et altaris (sc. divina lex distribuit pontificali ordini). '"""
         matches = matching_brackets(s, '(', ')')
         assert matches == [(39, 60), (107, 152)]
+        s = "a)b(c"
+        matches = matching_brackets(s, '(', ')')
+        assert len(matches) == 0
+        s = "a((b)c"
+        matches = matching_brackets(s, '(', ')')
+        assert matches == [(2, 4)]
+        s = "a)(b)(c)(d"
+        matches = matching_brackets(s, '(', ')')
+        assert matches == [(2, 4), (5, 7)]
+        s= "a(b))c"
+        matches = matching_brackets(s, '(', ')')
+        assert matches == [(1, 3)]
 
 
 if __name__ == "__main__":

@@ -373,10 +373,16 @@ def matching_brackets(text: str, openB: str, closeB: str) -> List[Tuple[int, int
             stack.append(a)
             a = text.find(openB, a + da)
         while 0 <= b < a:
-            matches.append((stack.pop(), b))
+            try:
+                matches.append((stack.pop(), b))
+            except IndexError:
+                pass  # ignore unmatched brackets
             b = text.find(closeB, b + db)
     while b >= 0:
-        matches.append((stack.pop(), b))
+        try:
+            matches.append((stack.pop(), b))
+        except IndexError:
+            pass # ignore unmatched brackets
         b = text.find(closeB, b + db)
     return matches
 

@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     print('\nPlease note, the following phenomena are not bugs:')
     print('  1. Some doctests may fail on Windows, due to different file-separators.')
-    print('  2. Some doctests fail with Python 3.5, because in Python 3.5 the order '
+    print('  2. Some doctests may fail with Python 3.5, because in Python 3.5 the order '
           'of entries in a dictionary is undetermined.')
 
     os.chdir(cwd)
