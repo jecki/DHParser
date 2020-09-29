@@ -77,6 +77,7 @@ __all__ = ('typing',
            'as_list',
            'first',
            'last',
+           'NOPE',
            'matching_brackets',
            'linebreaks',
            'line_col',
@@ -355,11 +356,14 @@ def last(item_or_sequence: Union[Sequence, Any]) -> Any:
         return item_or_sequence
 
 
+NOPE = []  # a list that is empty and is supposed to remain empty
+
+
 @cython.locals(da=cython.int, db=cython.int, a=cython.int, b=cython.int)
 def matching_brackets(text: str,
                       openB: str,
                       closeB: str,
-                      unmatched: list = []) -> List[Tuple[int, int]]:
+                      unmatched: list = NOPE) -> List[Tuple[int, int]]:
     """Returns a list of matching bracket positions. Fills an empty list
     passed to parameter `unmatched_flag` with the positions of all
     unmatched brackets.
@@ -389,18 +393,19 @@ def matching_brackets(text: str,
             try:
                 matches.append((stack.pop(), b))
             except IndexError:
-                unmatched.append(b)
+                if unmatched is not NOPE:  unmatched.append(b)
             b = text.find(closeB, b + db)
     while b >= 0:
         try:
             matches.append((stack.pop(), b))
         except IndexError:
-            unmatched.append(b)
+            if unmatched is not NOPE:  unmatched.append(b)
         b = text.find(closeB, b + db)
-    if stack:
-        unmatched.extend(stack)
-    elif a >= 0:
-        unmatched.append(a)
+    if unmatched is not NOPE:
+        if stack:
+            unmatched.extend(stack)
+        elif a >= 0:
+            unmatched.append(a)
     return matches
 
 

@@ -292,6 +292,9 @@ class TestMisc:
         matches = matching_brackets('ab)c', '(', ')', unmatched)
         assert unmatched == [2] and not matches
 
+        matching_brackets('ab)c', '(', ')')
+        matching_brackets('ab)c', '(', ')')
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

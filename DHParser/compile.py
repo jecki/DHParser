@@ -48,7 +48,7 @@ from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename
+from DHParser.toolkit import load_if_file, is_filename, NOPE
 
 
 __all__ = ('CompilerError',
@@ -276,7 +276,9 @@ def compile_source(source: str,
                    parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
                    compiler: CompilerCallable,  # Node (AST), Source -> Any
-                   *, preserve_AST: bool = False) -> Tuple[Optional[Any], List[Error], Optional[Node]]:
+                   out_source_data: list = NOPE,  # Tuple[str, SourceMapFunc]
+                   *, preserve_AST: bool = False) \
+        -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """Compiles a source in four stages:
 
     1. Pre-Processing (if needed)
@@ -298,6 +300,9 @@ def compile_source(source: str,
             transforms it (in place) into an abstract syntax tree.
     :param compiler (function): A compiler function or compiler class
             instance
+    :param out_source_data: An empty list that will be filled with the
+            source code and  source mapping function.
+            (See `preprocess.with_source_mapping()`)
     :param preserve_AST (bool): Preserves the AST-tree.
 
     :return: The result of the compilation as a 3-tuple
@@ -325,6 +330,11 @@ def compile_source(source: str,
         source_mapping = lambda i: i  # type: SourceMapFunc
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
+
+    if out_source_data is not NOPE:
+        assert out_source_data == []
+        out_source_data.append(original_text)
+        out_source_data.append(source_mapping)
 
     # parsing
 
@@ -413,7 +423,10 @@ class TreeProcessor(Compiler):
         return cast(RootNode, result)
 
 
-def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
+def process_tree(tp: TreeProcessor,
+                 tree: RootNode,
+                 source: str,
+                 source_mapping: SourceMapFunc = lambda i: i) -> Tuple[RootNode, List[Error]]:
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Catch any Python exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
@@ -456,7 +469,11 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> RootNode:
             # the exceptions through
             tree = tp(tree)
         assert isinstance(tree, RootNode)
-    return tree
+
+    messages = tree.errors_sorted  # type: List[Error]
+    new_msgs = [msg for msg in messages if msg.line < 0]
+    adjust_error_locations(new_msgs, source, source_mapping)
+    return tree, messages
 
 
 # TODO: Verify compiler against grammar,
