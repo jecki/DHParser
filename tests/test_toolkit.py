@@ -260,20 +260,37 @@ class TestMisc:
     def test_matching_brackets(self):
         s = """'‘diviniores’, id est digniores, ‘-es’ (PG 3,505C ἁγιαστείαν), sicut est """ \
             """consecratio chrismatis et altaris (sc. divina lex distribuit pontificali ordini). '"""
-        matches = matching_brackets(s, '(', ')')
-        assert matches == [(39, 60), (107, 152)]
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(39, 60), (107, 152)] and not unmatched
+
         s = "a)b(c"
-        matches = matching_brackets(s, '(', ')')
-        assert len(matches) == 0
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert len(matches) == 0 and unmatched == [1, 3]
+
         s = "a((b)c"
-        matches = matching_brackets(s, '(', ')')
-        assert matches == [(2, 4)]
-        s = "a)(b)(c)(d"
-        matches = matching_brackets(s, '(', ')')
-        assert matches == [(2, 4), (5, 7)]
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(2, 4)] and unmatched == [1]
+
         s= "a(b))c"
-        matches = matching_brackets(s, '(', ')')
-        assert matches == [(1, 3)]
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(1, 3)] and unmatched == [4]
+
+        s = "a)(b)(c)(d"
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(2, 4), (5, 7)] and unmatched == [1, 8]
+
+        unmatched = []
+        matches = matching_brackets('ab(c', '(', ')', unmatched)
+        assert unmatched == [2] and not matches
+
+        unmatched = []
+        matches = matching_brackets('ab)c', '(', ')', unmatched)
+        assert unmatched == [2] and not matches
 
 
 if __name__ == "__main__":

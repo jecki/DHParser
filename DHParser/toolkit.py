@@ -355,14 +355,27 @@ def last(item_or_sequence: Union[Sequence, Any]) -> Any:
         return item_or_sequence
 
 
-def matching_brackets(text: str, openB: str, closeB: str) -> List[Tuple[int, int]]:
-    """Returns a list of matching bracket positions.
+@cython.locals(da=cython.int, db=cython.int, a=cython.int, b=cython.int)
+def matching_brackets(text: str,
+                      openB: str,
+                      closeB: str,
+                      unmatched: list = []) -> List[Tuple[int, int]]:
+    """Returns a list of matching bracket positions. Fills an empty list
+    passed to parameter `unmatched_flag` with the positions of all
+    unmatched brackets.
 
     >>> matching_brackets('(a(b)c)', '(', ')')
     [(2, 4), (0, 6)]
     >>> matching_brackets('(a)b(c)', '(', ')')
     [(0, 2), (4, 6)]
+    >>> unmatched = []
+    >>> matching_brackets('ab(c', '(', ')', unmatched)
+    []
+    >>> unmatched
+    [2]
     """
+    assert not unmatched, \
+        "Please pass an empty list as unmatched flag, not: " + str(unmatched)
     stack, matches = [], []
     da = len(openB)
     db = len(closeB)
@@ -376,14 +389,18 @@ def matching_brackets(text: str, openB: str, closeB: str) -> List[Tuple[int, int
             try:
                 matches.append((stack.pop(), b))
             except IndexError:
-                pass  # ignore unmatched brackets
+                unmatched.append(b)
             b = text.find(closeB, b + db)
     while b >= 0:
         try:
             matches.append((stack.pop(), b))
         except IndexError:
-            pass # ignore unmatched brackets
+            unmatched.append(b)
         b = text.find(closeB, b + db)
+    if stack:
+        unmatched.extend(stack)
+    elif a >= 0:
+        unmatched.append(a)
     return matches
 
 
