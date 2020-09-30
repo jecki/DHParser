@@ -30,7 +30,8 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
-    issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc
+    issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
+    matching_brackets
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -254,6 +255,45 @@ class TestJSONSupport:
             jsons = json_dumps(obj, partially_serialized=True)
             assert jsons == self.data
 
+
+class TestMisc:
+    def test_matching_brackets(self):
+        s = """'‘diviniores’, id est digniores, ‘-es’ (PG 3,505C ἁγιαστείαν), sicut est """ \
+            """consecratio chrismatis et altaris (sc. divina lex distribuit pontificali ordini). '"""
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(39, 60), (107, 152)] and not unmatched
+
+        s = "a)b(c"
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert len(matches) == 0 and unmatched == [1, 3]
+
+        s = "a((b)c"
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(2, 4)] and unmatched == [1]
+
+        s= "a(b))c"
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(1, 3)] and unmatched == [4]
+
+        s = "a)(b)(c)(d"
+        unmatched = []
+        matches = matching_brackets(s, '(', ')', unmatched)
+        assert matches == [(2, 4), (5, 7)] and unmatched == [1, 8]
+
+        unmatched = []
+        matches = matching_brackets('ab(c', '(', ')', unmatched)
+        assert unmatched == [2] and not matches
+
+        unmatched = []
+        matches = matching_brackets('ab)c', '(', ')', unmatched)
+        assert unmatched == [2] and not matches
+
+        matching_brackets('ab)c', '(', ')')
+        matching_brackets('ab)c', '(', ')')
 
 
 if __name__ == "__main__":

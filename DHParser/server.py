@@ -590,7 +590,7 @@ StreamReaderType = Union[asyncio.StreamReader, StreamReaderProxy]
 async def read_full_block(reader: StreamReaderType) -> Tuple[int, bytes, bytes]:
     """Reads a block from a reader, where block may start with a header
     containing a "Content-Length"-field. if this is the case, read_block
-    tries to read exaclty the number of bytes specified.
+    tries to read exactly the number of bytes specified.
 
     :param reader: The reader from which the data shall be read.
     :return: A 3-tuple (header_size, data, backlog). header_size is the

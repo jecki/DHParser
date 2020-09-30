@@ -77,6 +77,8 @@ __all__ = ('typing',
            'as_list',
            'first',
            'last',
+           'NOPE',
+           'matching_brackets',
            'linebreaks',
            'line_col',
            'text_pos',
@@ -339,7 +341,7 @@ def as_list(item_or_sequence) -> List[Any]:
 
 
 def first(item_or_sequence: Union[Sequence, Any]) -> Any:
-    """Returns an item or a the first item of a sequence of items."""
+    """Returns an item or the first item of a sequence of items."""
     if isinstance(item_or_sequence, Sequence):
         return item_or_sequence[0]
     else:
@@ -347,11 +349,64 @@ def first(item_or_sequence: Union[Sequence, Any]) -> Any:
 
 
 def last(item_or_sequence: Union[Sequence, Any]) -> Any:
-    """Returns an item or a the first item of a sequence of items."""
+    """Returns an item or the first item of a sequence of items."""
     if isinstance(item_or_sequence, Sequence):
         return item_or_sequence[-1]
     else:
         return item_or_sequence
+
+
+NOPE = []  # a list that is empty and is supposed to remain empty
+
+
+@cython.locals(da=cython.int, db=cython.int, a=cython.int, b=cython.int)
+def matching_brackets(text: str,
+                      openB: str,
+                      closeB: str,
+                      unmatched: list = NOPE) -> List[Tuple[int, int]]:
+    """Returns a list of matching bracket positions. Fills an empty list
+    passed to parameter `unmatched_flag` with the positions of all
+    unmatched brackets.
+
+    >>> matching_brackets('(a(b)c)', '(', ')')
+    [(2, 4), (0, 6)]
+    >>> matching_brackets('(a)b(c)', '(', ')')
+    [(0, 2), (4, 6)]
+    >>> unmatched = []
+    >>> matching_brackets('ab(c', '(', ')', unmatched)
+    []
+    >>> unmatched
+    [2]
+    """
+    assert not unmatched, \
+        "Please pass an empty list as unmatched flag, not: " + str(unmatched)
+    stack, matches = [], []
+    da = len(openB)
+    db = len(closeB)
+    a = text.find(openB)
+    b = text.find(closeB)
+    while a >= 0 and b >= 0:
+        while 0 <= a < b:
+            stack.append(a)
+            a = text.find(openB, a + da)
+        while 0 <= b < a:
+            try:
+                matches.append((stack.pop(), b))
+            except IndexError:
+                if unmatched is not NOPE:  unmatched.append(b)
+            b = text.find(closeB, b + db)
+    while b >= 0:
+        try:
+            matches.append((stack.pop(), b))
+        except IndexError:
+            if unmatched is not NOPE:  unmatched.append(b)
+        b = text.find(closeB, b + db)
+    if unmatched is not NOPE:
+        if stack:
+            unmatched.extend(stack)
+        elif a >= 0:
+            unmatched.append(a)
+    return matches
 
 
 #######################################################################

@@ -31,7 +31,7 @@ from DHParser.configuration import get_config_value, set_config_value, INDENTED_
     SXPRESSION_SERIALIZATION
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
-    prev_context, serialize_context
+    prev_context, serialize_context, generate_context_mapping, map_pos_to_context
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -661,6 +661,29 @@ class TestContextNavigation:
         ctx = self.tree.pick_context('B')
         c = next_context(ctx)
         assert c[-1].tag_name == 'C'
+
+    def test_context_mapping(self):
+        tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
+        cm = generate_context_mapping(tree)
+        for i in range(len(tree.content)):
+            ctx, rel_pos = map_pos_to_context(i, cm)
+        i = tree.content.find("delta")
+        ctx, rel_pos = map_pos_to_context(i, cm)
+        assert ctx[-1].tag_name == 'F' and rel_pos == 0
+        i = tree.content.find("lta")
+        ctx, rel_pos = map_pos_to_context(i, cm)
+        assert ctx[-1].tag_name == 'F' and rel_pos == 2
+        i = tree.content.find("a")
+        ctx, rel_pos = map_pos_to_context(i, cm)
+        assert ctx[-1].tag_name == 'B' and rel_pos == 0
+        i = tree.content.rfind("a")
+        ctx, rel_pos = map_pos_to_context(i, cm)
+        assert ctx[-1].tag_name == 'F' and rel_pos == 4
+        i = tree.content.find("mm")
+        ctx, rel_pos = map_pos_to_context(i, cm)
+        assert ctx[-1].tag_name == 'E' and rel_pos == 2
+
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

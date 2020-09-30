@@ -12,3 +12,4 @@ cpdef linebreaks(text)
 
 @cython.locals(line=cython.int, column=cython.int, pos=cython.int)
 cpdef line_col(object lbreaks, cython.int pos)
+

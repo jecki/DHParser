@@ -52,6 +52,7 @@ from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, 
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col
 
+
 __all__ = ('ParserError',
            'ApplyFunc',
            'FlagFunc',
@@ -130,7 +131,8 @@ class ParserError(Exception):
         self.frozen_callstack = tuple()  # type: Tuple[CallItem, ...]  # tag_name, location
 
     def __str__(self):
-        return "%i: %s    %s" % (self.node.pos, str(self.rest[:25]), repr(self.node))
+        return "%i: %s    %s (%s)" \
+               % (self.node.pos, str(self.rest[:25]), repr(self.node), str(self.error))
 
 
 ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressions
@@ -457,7 +459,8 @@ class Parser:
             except ParserError as pe:
                 # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
-                rules = grammar.resume_rules__.get(self.pname, [])
+                rules = grammar.resume_rules__.get(
+                    self.pname or grammar.associated_symbol(self).pname, [])
                 rest = pe.rest[len(pe.node):]
                 i = reentry_point(rest, rules, grammar.comment_rx__,
                                   grammar.reentry_search_window__)
@@ -1121,6 +1124,7 @@ class Grammar:
 
     def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
+
         :param root: If not None, this is goind to be the root parser of the grammar.
             This allows to first construct an ensemble of parser objects and then
             link those objects in a grammar-object, rather than adding the parsers
@@ -1160,6 +1164,8 @@ class Grammar:
         # during testing and development this does not need to be the case.)
         if root:
             self.root_parser__ = copy.deepcopy(root)
+            if not self.root_parser__.pname:
+                self.root_parser__.pname = "root"
             self.static_analysis_pending__ = [True]  # type: List[bool]
             self.static_analysis_errors__ = []       # type: List[AnalysisError]
         else:
@@ -1183,10 +1189,14 @@ class Grammar:
             while self.static_analysis_errors__:
                 self.static_analysis_errors__.pop()
             self.static_analysis_errors__.extend(result)
-            has_errors = any(is_error(tpl[-1].code) for tpl in result)
-            if has_errors:
-                raise GrammarError(result)
             self.static_analysis_pending__.pop()
+            # raise a GrammarError even if result only contains warnings.
+            # It is up to the caller to decide whether to ignore warnings
+            # # has_errors = any(is_error(tpl[-1].code) for tpl in result)
+            # # if has_errors
+            if result:
+                raise GrammarError(result)
+
 
     def __str__(self):
         return self.__class__.__name__
@@ -2108,7 +2118,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "{/\\\\w+,?/ ~}+ `.` ~" did not match! >>> '
+        ' <<< Error on "." | Parser "root = {/\\\\w+,?/ ~}+ `.` ~" did not match! >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node(':EMPTY', '')
@@ -2413,7 +2423,7 @@ class Series(MandatoryNary):
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser "/(?!\\\\d)\\\\w/ /\\\\w*/ ~" did not match! >>> '
+        ' <<< Error on "1_variable" | Parser "root = /(?!\\\\d)\\\\w/ /\\\\w*/ ~" did not match! >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
 

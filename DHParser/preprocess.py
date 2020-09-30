@@ -35,6 +35,7 @@ from typing import Union, Callable, Tuple, List
 
 from DHParser.toolkit import re
 
+
 __all__ = ('RX_TOKEN_NAME',
            'BEGIN_TOKEN',
            'TOKEN_DELIMITER',

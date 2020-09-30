@@ -33,7 +33,7 @@ from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
 from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
-    PARSER_NEVER_TOUCHES_DOCUMENT
+    PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
@@ -765,14 +765,16 @@ class TestPopRetrieve:
     def test_capture_assertions(self):
         try:
             _ = Grammar(Capture(Drop(Whitespace(r'\s*'))))
-            assert False, "GrammarError expected!"
+            assert False, "GrammarError expected"
         except GrammarError as ge:
-            pass
+            assert ge.errors and ge.errors[0][-1].code == CAPTURE_DROPPED_CONTENT_WARNING, \
+                "Capture-dropped-content-Warning expected"
         try:
             _ = Grammar(Capture(Series(Text(' '), Drop(Whitespace(r'\s*')))))
-            assert False, "ValueError expected!"
-        except GrammarError:
-            pass
+            assert False, "GrammarError expected"
+        except GrammarError as ge:
+            assert ge.errors and ge.errors[0][-1].code == CAPTURE_DROPPED_CONTENT_WARNING, \
+                "Capture-dropped-content-Warning expected"
         cp = Capture(RegExp(r'\w+'))
         cp.pname = "capture"
         _ = Grammar(cp)
@@ -1524,10 +1526,11 @@ class TestStaticAnalysis:
     def test_cannot_capture_dropped_content(self):
         p = Capture(Drop(Whitespace(" ")))
         try:
-            gr = Grammar(p)
+            _ = Grammar(p)
             assert False, "GrammarError expected"
-        except GrammarError:
-            pass
+        except GrammarError as ge:
+            assert ge.errors and ge.errors[0][-1].code == CAPTURE_DROPPED_CONTENT_WARNING, \
+                "Capture-dropped-content-Warning expected"
 
     def test_cyclical_ebnf_error(self):
         doc = Text('proper');  doc.pname = "doc"
