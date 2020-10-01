@@ -2,7 +2,7 @@
 
 #######################################################################
 #
-#  EBNF-Directives
+#:  EBNF-Directives
 #
 #######################################################################
 
@@ -11,7 +11,7 @@
 @ comment     = /(?:\/\/|#).*/  # comments range from a '#' odr '//' sign to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ drop        = whitespace, strings  # drop tokens and whitespace early
-
+@ anonymous   = /_[A-Za-z]+|[A-Z]+/
 
 #######################################################################
 #
@@ -20,13 +20,15 @@
 #######################################################################
 
 json       = ~ _element _EOF
-_element   = object | array | string | number | bool | null
+_element   = object | array | string | number | _bool | null
 object     = "{" member { "," §member } §"}"
 member     = string §":" _element
-array      = "[" [ _element { "," _element } ] "]"
+array      = "[" [ _element { "," _element } ] §"]"
 string     = `"` §_CHARACTERS `"` ~
 number     = INT FRAC EXP ~
-bool       = /true/~ | /false/~  # use regexes so values are not dropped as tokens
+_bool      = true | false
+true       = `true` ~
+false      = `false` ~
 null       = "null"
 
 
@@ -42,7 +44,7 @@ ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
 UNICODE     = "\u" HEX HEX
 HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
-INT         = [NEG] /[0-9]/ | /[1-9][0-9]+/
+INT         = [NEG] /[1-9][0-9]+/ | /[0-9]/
 NEG         = `-`
 FRAC        = [ DOT /[0-9]+/ ]
 DOT         = `.`

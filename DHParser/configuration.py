@@ -41,7 +41,14 @@ __all__ = ('access_presets',
            'SXPRESSION_SERIALIZATION',
            'INDENTED_SERIALIZATION',
            'JSON_SERIALIZATION',
-           'SERIALIZATIONS')
+           'SERIALIZATIONS',
+           'EBNF_FIXED_SYNTAX',
+           'EBNF_CLASSIC_SYNTAX',
+           'EBNF_ANY_SYNTAX_STRICT',
+           'EBNF_CONFIGURABLE_SYNTAX',
+           'EBNF_ANY_SYNTAX_HEURISTICAL',
+           'EBNF_REGULAR_EXPRESSION_SYNTAX',
+           'EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX')
 
 
 ########################################################################

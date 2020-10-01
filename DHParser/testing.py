@@ -582,6 +582,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
         clear_logs()
 
     if get_config_value('test_parallelization'):
+        # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
         with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
             results = []
             for filename in sorted(os.listdir('.')):
@@ -589,6 +590,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
                     parameters = filename, parser_factory, transformer_factory, report, verbose
                     results.append((filename, pool.submit(grammar_unit, *parameters)))
+
             for filename, err_future in results:
                 try:
                     errata = err_future.result()
@@ -597,6 +599,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 except ValueError as e:
                     if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
                         raise e
+
     else:
         results = []
         for filename in sorted(os.listdir('.')):
@@ -894,7 +897,6 @@ def run_path(path):
         sys.path.append(path)
         files = os.listdir(path)
         result_futures = []
-
         if get_config_value('test_parallelization'):
             with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
                 for f in files:

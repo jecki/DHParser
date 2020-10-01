@@ -62,7 +62,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'dhparser=DHParser.scripts.dhparser:main',
-            'dhparser_build_cython:main'
+            'dhparser_build_cython=DHParser.scripts.dhparser_build_cython:main'
         ]
     }
 )

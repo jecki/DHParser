@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""tst_json_grammar.py - runs the unit tests for the json-grammar
+"""tst_atf_grammar.py - runs the unit tests for the atf-grammar
 """
 
 import os
@@ -8,11 +8,14 @@ import sys
 
 LOGGING = ''
 
-scriptpath = os.path.dirname(__file__) or '.'
-for path in (os.path.join('..', '..'), '.'):
-    fullpath = os.path.abspath(os.path.join(scriptpath, path))
-    if fullpath not in sys.path:
-        sys.path.append(fullpath)
+TEST_DIRNAME = 'tests_grammar'
+
+scriptpath = os.path.dirname(__file__)
+dhparserdir = os.path.abspath(os.path.join(scriptpath, '../..'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
+if dhparserdir not in sys.path:
+    sys.path.append(dhparserdir)
 
 try:
     from DHParser import dsl
@@ -25,14 +28,14 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    grammar_tests_dir = os.path.join(scriptpath, 'test_grammar')
+    grammar_tests_dir = os.path.join(scriptpath, TEST_DIRNAME)
     testing.create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
     if not dsl.recompile_grammar(grammar_src, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('json_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        with open('atf_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
 
@@ -40,16 +43,21 @@ def recompile_grammar(grammar_src, force):
 def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
     DHParser.log.start_logging(LOGGING)
     error_report = testing.grammar_suite(
-        os.path.join(scriptpath, 'test_grammar'),
+        os.path.join(scriptpath, TEST_DIRNAME),
         get_grammar, get_transformer,
         fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 
 if __name__ == '__main__':
+    # from DHParser.configuration import access_presets, finalize_presets
+    # CONFIG_PRESETS = access_presets()
+    # CONFIG_PRESET['test_parallelization'] = True
+    # finalize_presets()
+
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
-        LOGGING = 'LOGS'
+        LOGGING = True
         del argv[1]
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
         os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
@@ -62,14 +70,13 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, 'json.ebnf'),
+        recompile_grammar(os.path.join(scriptpath, 'atf.ebnf'),
                           force=False)
         sys.path.append('.')
-        from jsonParser import get_grammar, get_transformer
+        from atfParser import get_grammar, get_transformer
         error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')
             print(error_report)
             sys.exit(1)
         print('ready.\n')
-
