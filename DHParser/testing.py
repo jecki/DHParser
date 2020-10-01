@@ -49,7 +49,7 @@ from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYT
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
-from DHParser.toolkit import load_if_file, re, re_find
+from DHParser.toolkit import load_if_file, re, re_find, concurrent_ident
 
 
 __all__ = ('unit_from_config',
@@ -58,6 +58,7 @@ __all__ = ('unit_from_config',
            'unit_from_file',
            'get_report',
            'grammar_unit',
+           'TFFN',
            'grammar_suite',
            'SymbolsDictType',
            'extract_symbols',
@@ -545,6 +546,19 @@ def reset_unit(test_unit):
                 if key not in RESULT_STAGES:
                     print('Removing unknown component %s from test %s' % (key, parser))
                 del tests[key]
+
+
+def TFFN(file_name: str) -> str:
+    """Thread Safe File Name: Returns a thread safe-version of a file
+    name by adding a unique process and thread identificator.
+
+    Thread-Safe filenames are needed when running test that use the same
+    tempory file names in parralel or when running the same test-suite
+    under different constellations, say different Python-interpreters,
+    in parallel. Otherwise it can happen that one thread cleans up a
+    temporary file that an other thread has created.
+    """
+    return concurrent_ident() + '_' + file_name
 
 
 def grammar_suite(directory, parser_factory, transformer_factory,

@@ -34,7 +34,7 @@ from DHParser.dsl import grammar_provider
 from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
     MANDATORY_CONTINUATION_AT_EOF, ERROR, WARNING
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
-    clean_report
+    clean_report, TFFN
 from DHParser.trace import set_tracer, trace_history
 
 
@@ -96,21 +96,21 @@ class TestTestfiles:
     def setup(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
-        with open('configfile_test_1.ini', 'w', encoding="utf-8") as f:
+        with open(TFFN('configfile_test_1.ini'), 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_1)
-        with open('configfile_test_2.ini', 'w', encoding="utf-8") as f:
+        with open(TFFN('configfile_test_2.ini'), 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_2)
-        with open('configfile_test_3.ini', 'w', encoding="utf-8") as f:
+        with open(TFFN('configfile_test_3.ini'), 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_3)
 
     def teardown(self):
-        os.remove('configfile_test_1.ini')
-        os.remove('configfile_test_2.ini')
-        os.remove('configfile_test_3.ini')
+        os.remove(TFFN('configfile_test_1.ini'))
+        os.remove(TFFN('configfile_test_2.ini'))
+        os.remove(TFFN('configfile_test_3.ini'))
         os.chdir(self.save_dir)
 
     def test_unit_from_config_file(self):
-        unit = unit_from_file('configfile_test_1.ini')
+        unit = unit_from_file(TFFN('configfile_test_1.ini'))
         assert list(unit.keys()) == ['ParserA']
         assert list(unit['ParserA'].keys()) == ['match', 'fail'], str(list(unit['ParserA'].keys()))
         assert list(unit['ParserA']['match'].keys()) == ['M1', 'M2', 'M3', 'M4']
@@ -119,13 +119,13 @@ class TestTestfiles:
         lines = testcase.split('\n')
         assert len(lines[2]) - len(lines[2].lstrip()) == 4
 
-        unit = unit_from_file('configfile_test_2.ini')
+        unit = unit_from_file(TFFN('configfile_test_2.ini'))
         txt = unit['BedeutungsPosition']['match']['M1']
         txt.split('\n')
         for line in txt:
             assert line.rstrip()[0:1] != ' '
 
-        unit = unit_from_file('configfile_test_3.ini')
+        unit = unit_from_file(TFFN('configfile_test_3.ini'))
 
 
 ARITHMETIC_EBNF = """
