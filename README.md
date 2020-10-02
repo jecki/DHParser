@@ -27,20 +27,19 @@ Ease of use
 -----------
 
 key_value_store.py:
-
+python 
     # A mini-DSL for a key value store
     from DHParser import *
 
     # specify the grammar of your DSL in EBNF-notation
     grammar = '''@ drop = whitespace, strings
     key_store   = ~ { entry }
-    entry       = key "=" value
+    entry       = key "="~ value          # ~ menas: insignificant whitespace 
     key         = /\w+/~                  # Scannerless parsing: Use regular
     value       = /\"[^"\n]*\"/~          # expressions wherever you like'''
 
     # generating a parser is almost as simple as compiling a regular expression
-    parser_factory = grammar_provider(grammar)
-    parser = parser_factory()             # parser factory for thread-safety
+    parser = create_parser(grammar)       # parser factory for thread-safety
 
 Now, parse some text and extract the data from the Python-shell:
 
@@ -128,10 +127,20 @@ Once cython is installed, you can run the `dhparser_build_cython`
 script from the command line:
 
     dhparser_build_cython
-    
+       
 Alternatively, if you have cloned DHParser from the git-Repository,
 you can run the `buildpackages.sh`-script (or `buildpackages.bat` on
 Windows-systems) after installation.
+
+The Cython-compiled version is about 2-3 times faster than the 
+CPython interpreted version.
+
+Depending on the use case, e.g. when parsing large files, 
+[PyPy3](https://www.pypy.org/) yields even more impressive speed-ups,
+up to 8 times faster than CPython. To circumvent the longer startup
+times of pypy3 in comparison to CPython, it is recommended to use
+the xxxServer.py-scripts rather than calling the xxxParser.py-script
+each time when parsing many documents subsequently.
 
 
 Sources

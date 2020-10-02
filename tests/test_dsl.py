@@ -27,12 +27,12 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
-from DHParser.parse import Grammar
+from DHParser.parse import Grammar, mixin_comment
 from DHParser import Compiler
 from DHParser.error import is_error
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, grammar_provider, \
-    load_compiler_suite
-from DHParser.toolkit import concurrent_ident
+    load_compiler_suite, create_parser
+from DHParser.toolkit import concurrent_ident, re
 
 ARITHMETIC_EBNF = """
     @ literalws = right
@@ -146,6 +146,21 @@ class TestCompilerGeneration:
         sys.path.append(self.tmp)
         from TestCompilerGenerationParser import compile_src
         result, errors, ast = compile_src(self.trivial_text)
+
+    def test_readme_example(self):
+        grammar = '''@ drop = whitespace, strings
+            key_store   = ~ { entry }
+            entry       = key "="~ value
+            key         = /\w+/~                  # Scannerless parsing: Use regular
+            value       = /\"[^"\n]*\"/~          # expressions wherever you like
+        '''
+        parser = create_parser(grammar)
+        text = '''
+            title    = "Odysee 2001"
+            director = "Stanley Kubrick"
+            '''
+        result = parser(text)
+        assert not result.errors, str(result.errors)
 
 
 if __name__ == "__main__":

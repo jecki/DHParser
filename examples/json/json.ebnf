@@ -1,5 +1,6 @@
 # json-grammar  see: https://json.org/
 
+
 #######################################################################
 #
 #:  EBNF-Directives
@@ -12,6 +13,7 @@
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ drop        = whitespace, strings  # drop tokens and whitespace early
 @ anonymous   = /_[A-Za-z]+|[A-Z]+/
+
 
 #######################################################################
 #

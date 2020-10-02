@@ -1909,7 +1909,7 @@ class CombinedParser(Parser):
         return Node(self.tag_name, node or ())  # unoptimized code
 
     @cython.locals(N=cython.int)
-    def _return_values(self, results: Tuple[Node, ...]) -> Node:
+    def _return_values(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
@@ -2083,7 +2083,7 @@ class ZeroOrMore(Option):
     EBNF-Example:  ``sentence = { /\w+,?/ } "."``
     """
 
-    @cython.locals(n=cython.int)
+    @cython.locals(n=cython.int, length=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         results = ()  # type: Tuple[Node, ...]
         length = text.__len__()
