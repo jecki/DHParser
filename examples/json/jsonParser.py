@@ -318,6 +318,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     file_names, log_dir = args.files, ''
+    out = args.out[0]
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -331,20 +332,20 @@ if __name__ == "__main__":
         if os.path.isdir(file_names[0]):
             dir_name = file_names[0]
             print('Processing all files in directory: ' + dir_name)
-            file_names = [os.path.join(dir_name, fn)
-                          for fn in os.listdir(dir_name) if os.path.isfile(fn)]
+            file_names = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)
+                          if os.path.isfile(os.path.join(dir_name, fn))]
             print(file_names)
-        else:
+        elif not ('-o' in sys.argv or '--out' in sys.argv):
             batch_processing = False
 
     if batch_processing:
-        if os.path.exists(args.out[0]):
-            if not os.path.isdir(args.out[0]):
+        if os.path.exists(out):
+            if not os.path.isdir(out):
                 print('Cannot output to %s, because there already exists a file of the same name'
-                      % args.out[0])
+                      % out)
                 sys.exit(1)
         else:
-            os.mkdir(args.out[0])
+            os.mkdir(out)
 
     file_errors = False
     errors = []
@@ -358,16 +359,17 @@ if __name__ == "__main__":
         else:
             result, errors, _ = compile_src(file_name)
             if batch_processing:
-                out_name = os.path.join(args.out, os.path.splitext(os.path.basename(file_name))[0])
+                out_name = os.path.join(out, os.path.splitext(os.path.basename(file_name))[0])
                 if errors:
                     print('Errors found in: ' + file_name)
                     extension = '_ERRORS.txt'
                     data = '\n'.join(str(err) for err in errors)
                 else:
                     print('Successfully processed: ' + file_name)
-                    extension = '.xml' if args.xml else '.sxpr'
+                    is_tree = isinstance(result, Node)
+                    extension = ('.xml' if args.xml else '.sxpr') if is_tree else '.pyi'
                     data = result.serialize(how='default' if args.xml is None else 'xml') \
-                        if isinstance(result, Node) else str(result)
+                        if is_tree else str(result)
                 with open(out_name + extension, 'w') as f:
                     f.write(data)
 
