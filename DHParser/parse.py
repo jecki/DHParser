@@ -1916,7 +1916,7 @@ class CombinedParser(Parser):
         the tuple. Anonymous child nodes will be flattened if
         `grammar.flatten_tree__` is True.
         """
-        assert isinstance(results, tuple)
+        # assert isinstance(results, (list, tuple))
         if self.drop_content:
             return EMPTY_NODE
         N = len(results)
@@ -2431,15 +2431,16 @@ class Series(MandatoryNary):
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
 
-    @cython.locals(pos=cython.int, reloc=cython.int)
+    @cython.locals(pos=cython.int, reloc=cython.int, mandatory=cython.int)
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        results = ()  # type: Tuple[Node, ...]
+        results = []  # type: List[Node]
         text_ = text  # type: StringView
         error = None  # type: Optional[Error]
+        mandatory = self.mandatory  # type: int
         for pos, parser in enumerate(self.parsers):
             node, text_ = parser(text_)
             if node is None:
-                if pos < self.mandatory:
+                if pos < mandatory:
                     return None, text
                 else:
                     reloc = self.get_reentry_point(text_)
@@ -2449,13 +2450,13 @@ class Series(MandatoryNary):
                     if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
                         if nd is not None:
-                            results += (node,)
+                            results.append(node)
                             node = nd
                     else:
-                        results += (node,)
+                        results.append(node)
                         break
             if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
-                results += (node,)
+                results.append(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         ret_node = self._return_values(results)  # type: Node

@@ -267,6 +267,18 @@ def cpu_profile(func, *args):
     return result
 
 
+def mem_profile(func, *args):
+    import tracemalloc
+    tracemalloc.start()
+    result = func(*args)
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print("[ Top 20 ]")
+    for stat in top_stats[:40]:
+        print(stat)
+    return result
+
+
 if __name__ == "__main__":
     # recompile grammar if needed
     if __file__.endswith('Parser.py'):
@@ -296,19 +308,16 @@ if __name__ == "__main__":
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Parses a json-file and shows its syntax-tree.")
-    parser.add_argument('files', nargs=1)
-    parser.add_argument('-d', '--debug', action='store_const', const='debug')
-    parser.add_argument('-x', '--xml', action='store_const', const='xml')
+    parser.add_argument('files', nargs='+')
+    parser.add_argument('-d', '--debug', action='store_const', const='debug',
+                        help='Store debug information in LOGS subdirectory.')
+    parser.add_argument('-x', '--xml', action='store_const', const='xml',
+                        help='Store result as XML instead of S-expression')
+    parser.add_argument('-o', '--out', nargs=1, default=['out'],
+                        help='Output directory')
 
     args = parser.parse_args()
-    file_name, log_dir = args.files[0], ''
-
-    if not os.path.exists(file_name):
-        print('File "%s" not found!' % file_name)
-        sys.exit(1)
-    if not os.path.isfile(file_name):
-        print('"%s" is not a file!' % file_name)
-        sys.exit(1)
+    file_names, log_dir = args.files, ''
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -317,17 +326,63 @@ if __name__ == "__main__":
         set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
 
-    # result, errors, _ = compile_src(file_name)
-    result, errors, _ = cpu_profile(compile_src, file_name)
-    sys.exit(0)
+    batch_processing = True
+    if len(file_names) == 1:
+        if os.path.isdir(file_names[0]):
+            dir_name = file_names[0]
+            print('Processing all files in directory: ' + dir_name)
+            file_names = [os.path.join(dir_name, fn)
+                          for fn in os.listdir(dir_name) if os.path.isfile(fn)]
+            print(file_names)
+        else:
+            batch_processing = False
 
-    if errors:
-        cwd = os.getcwd()
-        rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
-        for error in errors:
-            print(rel_path + ':' + str(error))
+    if batch_processing:
+        if os.path.exists(args.out[0]):
+            if not os.path.isdir(args.out[0]):
+                print('Cannot output to %s, because there already exists a file of the same name'
+                      % args.out[0])
+                sys.exit(1)
+        else:
+            os.mkdir(args.out[0])
+
+    file_errors = False
+    errors = []
+    for file_name in file_names:
+        if not os.path.exists(file_name):
+            print('File "%s" not found!' % file_name)
+            file_errors = True
+        elif not os.path.isfile(file_name):
+            print('"%s" is not a file!' % file_name)
+            file_errors = True
+        else:
+            result, errors, _ = compile_src(file_name)
+            if batch_processing:
+                out_name = os.path.join(args.out, os.path.splitext(os.path.basename(file_name))[0])
+                if errors:
+                    print('Errors found in: ' + file_name)
+                    extension = '_ERRORS.txt'
+                    data = '\n'.join(str(err) for err in errors)
+                else:
+                    print('Successfully processed: ' + file_name)
+                    extension = '.xml' if args.xml else '.sxpr'
+                    data = result.serialize(how='default' if args.xml is None else 'xml') \
+                        if isinstance(result, Node) else str(result)
+                with open(out_name + extension, 'w') as f:
+                    f.write(data)
+
+
+    # result, errors, _ = cpu_profile(compile_src, file_name);  sys.exit(0)
+
+    if not batch_processing:
+        if errors:
+            cwd = os.getcwd()
+            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
+            for error in errors:
+                print(rel_path + ':' + str(error))
+            sys.exit(1)
+        else:
+            print(result.serialize(how='default' if args.xml is None else 'xml')
+                  if isinstance(result, Node) else result)
+    if file_errors:
         sys.exit(1)
-    else:
-        print(result)
-        # import json
-        # print(json.dumps(result, indent=2))
