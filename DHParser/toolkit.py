@@ -188,9 +188,9 @@ def escape_control_characters(strg: str) -> str:
     double backslash.
     """
     s = repr(strg.replace('\\', r'\\')).replace('\\\\', '\\')[1:-1]
-    if s.startswith(r"\'") and s.endswith(r"\'"):
+    if s[:2] == r"\'" and s[-2:] == r"\'":
         return ''.join(["'", s[2:-2], "'"])
-    elif s.startswith(r'\"') and s.endswith(r'\"'):
+    elif s[:2] == r'\"' and s[-2:] == r'\"':
         return ''.join(['"', s[2:-2], '"'])
     return s
 

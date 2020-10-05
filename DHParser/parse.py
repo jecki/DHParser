@@ -2094,7 +2094,7 @@ class ZeroOrMore(Option):
             length = text.__len__()
             if node is None:
                 break
-            if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
+            if node._result or not node.tag_name[:1] == ':':  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2140,7 +2140,7 @@ class OneOrMore(UnaryParser):
             if node is None:
                 break
             match_flag = True
-            if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
+            if node._result or not node.tag_name[:1] == ':':  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2359,7 +2359,7 @@ class MandatoryNary(NaryParser):
             if grammar.history_tracking__:
                 pname = ':root'
                 for pname, _ in reversed(grammar.call_stack__):
-                    if not pname.startswith(':'):
+                    if not pname[:1] == ':':
                         break
                 msg = '%s expected by parser %s, »%s« found!' % (expected, repr(pname), found)
             else:
@@ -2454,7 +2454,7 @@ class Series(MandatoryNary):
                     else:
                         results += (node,)
                         break
-            if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
+            if node._result or not node.tag_name[:1] == ':':  # drop anonymous empty nodes
                 results += (node,)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
@@ -2703,7 +2703,7 @@ class Interleave(MandatoryNary):
                 if parser not in consumed:
                     node, text__ = parser(text_)
                     if node is not None:
-                        if node._result or not node.tag_name.startswith(':'):
+                        if node._result or not node.tag_name[:1] == ':':
                             # drop anonymous empty nodes
                             results += (node,)
                             text_ = text__
@@ -3066,7 +3066,7 @@ def matching_bracket(text: Union[StringView, str], stack: List[str]) -> Optional
     i.e. if "[" was captured, "]" will be retrieved."""
     value = stack[-1]
     value = value.replace("(", ")").replace("[", "]").replace("{", "}").replace("<", ">")
-    return value if text.startswith(value) else None
+    return value if text[:len(value)] == value else None
 
 
 class Retrieve(ContextSensitive):
@@ -3239,7 +3239,7 @@ class Synonym(UnaryParser):
             if not self.anonymous:
                 if node is EMPTY_NODE:
                     return Node(self.tag_name, ''), text
-                if node.tag_name.startswith(':'):
+                if node.tag_name[:1] == ':':
                     # eliminate anonymous child-node on the fly
                     node.tag_name = self.tag_name
                 else:

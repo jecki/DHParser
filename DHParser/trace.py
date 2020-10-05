@@ -59,7 +59,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
         resumers = [grammar.call_stack__[-1][0]]
         i = 2;  L = len(grammar.call_stack__)
-        while resumers[-1].startswith(':') and i <= L:
+        while resumers[-1][:1] == ':' and i <= L:
             resumers.append(grammar.call_stack__[-i][0])
             i += 1
         resumer = '->'.join(reversed(resumers))
