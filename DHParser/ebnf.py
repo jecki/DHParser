@@ -1233,7 +1233,7 @@ class EBNFCompiler(Compiler):
         symbols = self.rules.keys()
         messages = []
         for entry in table_entries:
-            if entry not in symbols and not entry.startswith(":"):
+            if entry not in symbols and not entry[:1] == ":":
                 messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
                                        'the transformation table!') % (entry, self.grammar_name),
                                       0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
@@ -1578,7 +1578,7 @@ class EBNFCompiler(Compiler):
                                     'Filter declared for non-existent symbol "%s"' % symbol,
                                     WARNING)
             else:
-                if not self.definitions[symbol].startswith('Capture('):
+                if not self.definitions[symbol][:8] == 'Capture(':
                     self.tree.new_error(directive_node(self.tree, symbol + '_filter'),
                                         'Filter declared for uncaptured symbol "%s"' % symbol,
                                         WARNING)
@@ -1879,7 +1879,7 @@ class EBNFCompiler(Compiler):
         # remove drop clause for non dropping definitions of forms like "/\w+/~"
         if (parser_class == "Series" and node.tag_name not in self.directives.drop
             and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
-            and all((arg.startswith('Drop(RegExp(') or arg.startswith('Drop(Text(')
+            and all((arg[:12] == 'Drop(RegExp(' or arg[:10] == 'Drop(Text('
                      or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
             arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
         if self.drop_flag:
@@ -2091,7 +2091,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
                                               "-parsers, not: " + nd.tag_name)
 
-            if not result.startswith('RegExp('):
+            if not result[:7] == 'RegExp(':
                 self.deferred_tasks.append(lambda :verify(node))
         return result
 

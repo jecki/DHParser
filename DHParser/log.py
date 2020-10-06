@@ -368,12 +368,12 @@ class HistoryRecord:
             '-&gt;', '<span>&shy;-&gt;</span>')
         status = html.escape(self.status)
         excerpt = html.escape(self.excerpt)
-        if excerpt.startswith(' '):
+        if excerpt[:1] == ' ':
             stripped = excerpt.lstrip()
             excerpt = "&nbsp;" * (len(excerpt) - len(stripped)) + stripped
         classes = list(HistoryRecord.Snapshot_Fields)
         idx = {field_name: i for i, field_name in enumerate(classes)}
-        classes[idx['status']] = 'error' if status.startswith('ERROR') else status.lower()
+        classes[idx['status']] = 'error' if status[:5] == 'ERROR' else status.lower()
         if status in (self.MATCH, self.DROP):
             n = max(40 - len(excerpt), 0)
             dots = '...' if len(self.text) > n else ''
@@ -412,7 +412,7 @@ class HistoryRecord:
         short_stack = []
         anonymous_tail = True
         for tag_name, _ in reversed(self.call_stack):
-            if tag_name.startswith(':'):
+            if tag_name[:1] == ':':
                 if anonymous_tail:
                     short_stack.append(tag_name)
             else:

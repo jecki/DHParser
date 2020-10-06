@@ -97,23 +97,23 @@ def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
     """Returns an iterator over all method names from a class that either
     have a certain prefix or, if no prefix was given, all non-special and
     non-private-methods of the class."""
-    assert not prefix.startswith('_')
+    assert not prefix[:1] == '_'
     if prefix:
         # return [fn for fn in dir(cls) if fn.startswith(prefix) and callable(getattr(cls, fn))]
         for fn in dir(cls):
-            if fn.startswith(prefix) and callable(getattr(cls, fn)):
+            if fn[:len(prefix)] == prefix and callable(getattr(cls, fn)):
                 yield fn
     else:
         # return [fn for fn in dir(cls) if not fn.startswith('_') and callable(getattr(cls, fn))]
         for fn in dir(cls):
-            if not fn.startswith('_') and callable(getattr(cls, fn)):
+            if not fn[:1] == '_' and callable(getattr(cls, fn)):
                 yield fn
 
 
 def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
     """Generates the name of an lsp-method from a function name,
     e.g. "lsp_S_cancelRequest" -> "$/cancelRequest" """
-    assert func_name.startswith(prefix)
+    assert func_name[:len(prefix)] == prefix
     return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
 
 

@@ -203,7 +203,7 @@ def clean_anonymous_tag_name(tag_name: str) -> str:
     >>> clean_anonymous_tag_name(':Series')
     'ANONYMOUS_Series__'
     """
-    if tag_name.startswith(':'):
+    if tag_name[:1] == ':':
         return 'ANONYMOUS_%s__' % tag_name[1:]
     return tag_name
 

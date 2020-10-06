@@ -206,7 +206,7 @@ def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
     try:
         return int(s)
     except ValueError:
-        if s.startswith('"') or s.startswith("'"):
+        if s[:1] in ('"', "'"):
             return s.strip('" \'')
         else:
             try:
@@ -1108,7 +1108,7 @@ class Server:
             response = ('Illegal response type %s of response object %s. '
                         'Only bytes and str allowed!'
                         % (str(type(response)), str(response))).encode()
-        if self.use_jsonrpc_header and response.startswith(b'{'):
+        if self.use_jsonrpc_header and response[:1] == b'{':
             response = JSONRPC_HEADER_BYTES % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
             self.log('RESPONSE: ', *pp_transmission(response), '\n\n')
@@ -1432,7 +1432,7 @@ class Server:
                 else:
                     break
             task = None
-            if data.startswith(b'GET'):
+            if data[:3] == b'GET':
                 # HTTP request
                 task_id = gen_task_id()
                 task = self.connection.create_task(task_id, self.handle_http_request(

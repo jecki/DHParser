@@ -219,7 +219,7 @@ class Compiler:
             self._debug_already_compiled.add(node)
 
         elem = node.tag_name
-        if elem.startswith(':'):
+        if elem[:1] == ':':
             elem = elem[1:]
         try:
             compiler = self.__getattribute__(visitor_name(elem))
