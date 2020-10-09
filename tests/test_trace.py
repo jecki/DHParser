@@ -34,7 +34,7 @@ from DHParser import grammar_provider, all_descendants, \
     set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
     set_config_value, resume_notices_on, Error
 from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
-    MANDATORY_CONTINUATION_AT_EOF
+    MANDATORY_CONTINUATION_AT_EOF, WARNING
 from DHParser.testing import TFFN
 
 
@@ -159,7 +159,37 @@ class TestTrace:
         resume_notices_on(gr)
         cst = gr(content)
         # there should be one error message and one resume notice
+        set_tracer(gr, None)
+        assert not gr.history_tracking__
+
+    def test_trace_resume_message(self):
+        lang = """
+        @literalws = right
+        document = alpha [beta] gamma "."
+          alpha = "ALPHA" abc
+            abc = "    " | §"a" "b" "c"
+          beta = "BETA" (bac | bca)
+            bac = "b" "a" §"c"
+            bca = "b" "c" §"a"
+          gamma = "GAMMA" §(cab | cba)
+            cab = "c" "a" §"b"
+            cba = "c" "b" §"a"
+        """
+        gr = grammar_provider(lang)()
+        gr.resume_rules = dict()
+        gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)')]
+        content = 'ALPHA acb BETA bac GAMMA cab .'
+
+        # test resume notice
+        resume_notices_on(gr)
+        cst = gr(content)
+        # there should be one error message and one resume notice
         assert len(cst.errors_sorted) == 2
+        notices = [e for e in cst.errors_sorted if e.code < WARNING]
+        assert len(notices) == 1, str(notices)
+        notice = str(notices[0])
+        assert notice.find('Skip') < 0, 'Not a resume-notice: ' + notice
+        assert notice.find('"abc') >= 0, "Wrong parser reported: " + notice
         set_tracer(gr, None)
         assert not gr.history_tracking__
 

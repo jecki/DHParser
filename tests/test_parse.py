@@ -59,7 +59,8 @@ class TestWhitespace:
 
 class TestParserError:
     def test_parser_error_str(self):
-        pe = ParserError(Node('TAG', 'test').with_pos(0), StringView('Beispiel'), None, True)
+        pe = ParserError(Parser(), Node('TAG', 'test').with_pos(0),
+                         StringView('Beispiel'), None, first_throw=True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
     def test_false_lookahead_only_message(self):

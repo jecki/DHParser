@@ -122,17 +122,56 @@ class ParserError(Exception):
     different kind of error like `UnknownParserError`) is when a `Series`-
     or `Interleave`-parser detects a missing mandatory element.
     """
-    def __init__(self, node: Node, rest: StringView, error: Error, first_throw: bool):
+    def __init__(self,
+                 parser: 'Parser',
+                 node: Node,
+                 rest: StringView,
+                 error: Error, *,
+                 first_throw: bool):
         assert node is not None
-        self.node = node    # type: Node
-        self.rest = rest    # type: StringView
-        self.error = error  # type: Error
-        self.first_throw = first_throw  # type: bool
+        self.parser = parser  # type: 'Parser'
+        self.node = node      # type: Node
+        self.rest = rest      # type: StringView
+        self.error = error    # type: Error
+        self.first_throw = first_throw   # type:
+        self.attributes_locked = frozenset({'parser', 'node', 'rest', 'error', 'first_throw'})
         self.frozen_callstack = tuple()  # type: Tuple[CallItem, ...]  # tag_name, location
+
+    def __setattr__(self, name, value):
+        if name == "attributes_locked":
+            self.__dict__[name] = value
+        elif "attributes_locked" not in self.__dict__ \
+                or name not in self.__dict__['attributes_locked']:
+            self.__dict__[name] = value
+        else:
+            raise TypeError('Attribute %s of ParserError-object must not be reassigned!' % name)
 
     def __str__(self):
         return "%i: %s    %s (%s)" \
                % (self.node.pos, str(self.rest[:25]), repr(self.node), str(self.error))
+
+
+    def new_PE(self, **kwargs):
+        """Returns a new ParserError object with the same attribute values
+        as `self`, except those that are reassigned in `**kwargs`.
+
+        >>> pe = ParserError(Parser(), Node('test', ""), StringView(""), Error("", 0), first_throw=True)
+        >>> pe_derived = pe.new_PE(first_throw = False)
+        >>> pe.first_throw
+        True
+        >>> pe_derived.first_throw
+        False
+        """
+        args = { "parser": self.parser,
+                 "node": self.node,
+                 "rest": self.rest,
+                 "error": self.error,
+                 "first_throw": self.first_throw }
+        assert len(kwargs.keys() - args.keys()) == 0, str(kwargs.keys() - args.keys())
+        args.update(kwargs)
+        pe = ParserError(**args)
+        pe.frozen_callstack = self.frozen_callstack
+        return pe
 
 
 ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressions
@@ -494,7 +533,7 @@ class Parser:
                 elif pe.first_throw:
                     # just fall through
                     # TODO: Is this case still needed with module "trace"?
-                    raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
+                    raise pe.new_PE(first_throw=False)
                 elif grammar.tree__.errors[-1].code == MANDATORY_CONTINUATION_AT_EOF:
                     # try to create tree as faithful as possible
                     node = Node(self.tag_name, pe.node).with_pos(location)
@@ -502,8 +541,8 @@ class Parser:
                     # fall through but skip the gap
                     result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
-                    raise ParserError(Node(self.tag_name, result).with_pos(location),
-                                      text, pe.error, first_throw=False)
+                    raise pe.new_PE(node=Node(self.tag_name, result).with_pos(location),
+                                    rest=text, first_throw=False)
 
             if node is not None:
                 node._pos = location
@@ -517,7 +556,7 @@ class Parser:
             error = Error("maximum recursion depth of parser reached; potentially due to too many "
                           "errors or left recursion!", location, RECURSION_DEPTH_LIMIT_HIT)
             grammar.tree__.add_error(node, error)
-            grammar.most_recent_error__ = ParserError(node, text, error, first_throw=False)
+            grammar.most_recent_error__ = ParserError(self, node, text, error, first_throw=False)
             rest = EMPTY_STRING_VIEW
 
         return node, rest
@@ -2369,7 +2408,8 @@ class MandatoryNary(NaryParser):
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
-            grammar.most_recent_error__ = ParserError(err_node, text_, error, first_throw=False)
+            grammar.most_recent_error__ = ParserError(
+                self, err_node, text_, error, first_throw=False)
         return error, err_node, text_[i:]
 
     def static_analysis(self) -> List['AnalysisError']:
@@ -2461,7 +2501,7 @@ class Series(MandatoryNary):
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
         ret_node = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
-            raise ParserError(ret_node.with_pos(self.grammar.document_length__ - len(text_)),
+            raise ParserError(self, ret_node.with_pos(self.grammar.document_length__ -len(text_)),
                               text, error, first_throw=True)
         return ret_node, text_
 
@@ -2733,7 +2773,7 @@ class Interleave(MandatoryNary):
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
-            raise ParserError(nd.with_pos(self.grammar.document_length__ - len(text)),
+            raise ParserError(self, nd.with_pos(self.grammar.document_length__ - len(text)),
                               text, error, first_throw=True)
         return nd, text_
 
