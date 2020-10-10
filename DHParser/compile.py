@@ -276,7 +276,7 @@ def compile_source(source: str,
                    parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
                    transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
                    compiler: CompilerCallable,  # Node (AST), Source -> Any
-                   out_source_data: list = NOPE,  # Tuple[str, SourceMapFunc]
+                   # out_source_data: list = NOPE,  # Tuple[str, SourceMapFunc]
                    *, preserve_AST: bool = False) \
         -> Tuple[Optional[Any], List[Error], Optional[Node]]:
     """Compiles a source in four stages:
@@ -331,14 +331,16 @@ def compile_source(source: str,
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
 
-    if out_source_data is not NOPE:
-        assert out_source_data == []
-        out_source_data.append(original_text)
-        out_source_data.append(source_mapping)
+    # if out_source_data is not NOPE:
+    #     assert out_source_data == []
+    #     out_source_data.append(original_text)
+    #     out_source_data.append(source_mapping)
 
     # parsing
 
     syntax_tree = parser(source_text)  # type: RootNode
+    syntax_tree.source = original_text
+    syntax_tree.source_mapping = source_mapping
     if 'cst' in log_syntax_trees:
         log_ST(syntax_tree, log_file_name + '.cst')
     if parser.history_tracking__:
@@ -423,10 +425,7 @@ class TreeProcessor(Compiler):
         return cast(RootNode, result)
 
 
-def process_tree(tp: TreeProcessor,
-                 tree: RootNode,
-                 source: str,
-                 source_mapping: SourceMapFunc = lambda i: i) -> Tuple[RootNode, List[Error]]:
+def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Error]]:
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Catch any Python exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
@@ -472,7 +471,7 @@ def process_tree(tp: TreeProcessor,
 
     messages = tree.errors_sorted  # type: List[Error]
     new_msgs = [msg for msg in messages if msg.line < 0]
-    adjust_error_locations(new_msgs, source, source_mapping)
+    adjust_error_locations(new_msgs, tree.source, tree.source_mapping)
     return tree, messages
 
 

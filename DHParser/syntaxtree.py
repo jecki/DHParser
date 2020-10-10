@@ -35,6 +35,7 @@ from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
     SXPRESSION_SERIALIZATION, INDENTED_SERIALIZATION, JSON_SERIALIZATION, \
     get_config_value
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
+from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull
 
@@ -1618,6 +1619,9 @@ class RootNode(Node):
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
+        # info on source code (to be carreid along all stages of tree-processing)
+        self.source = ""               # type: str
+        self.source_mapping = lambda i: i  # type: SourceMapFunc
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]
         self.omit_tags = set()    # type: Set[str]

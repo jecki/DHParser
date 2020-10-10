@@ -1,9 +1,31 @@
 def compile_src(source: str):
-    """Compiles ``source`` and returns (result, errors, ast).
-    """
+    """Compiles ``source`` and returns (result, errors, ast)."""
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
                                   get_compiler())
     return result_tuple
+
+
+def process_file(source: str) -> Tuple[Union[str, bytes], List[str]]:
+    """Compiles ``source`` and returns (serialized result, error_strings)."""
+    result, errors, _ = compile_src(source)
+
+    if errors:
+        if is_filename(source):
+            cwd = os.getcwd()
+            rel_path = source[len(cwd):] if source.startswith(cwd) else source
+            error_strings = [rel_path + ':' + str(error) for err in errors]
+        else:
+            error_strings = [str(err) for err in errors]
+
+    if isinstance(result, Node):
+        return result.serialize(how='default' if args.xml is None else 'xml'), error_strings
+    else:
+        # Serialize result here, if compiling does not yield a tree
+        return result, error_strings
+
+
+def batch_process(source_filename: str, out_dir: str) -> List[str]:
+    """Compiles file with name ``source_filename`` and stores the results """
 
 
 if __name__ == "__main__":
@@ -35,19 +57,25 @@ if __name__ == "__main__":
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Parses a {NAME}-file and shows its syntax-tree.")
-    parser.add_argument('files', nargs=1)
-    parser.add_argument('-d', '--debug', action='store_const', const='debug')
-    parser.add_argument('-x', '--xml', action='store_const', const='xml')
+    parser.add_argument('files', nargs='+')
+    parser.add_argument('-d', '--debug', action='store_const', const='debug',
+                        help='Store debug information in LOGS subdirectory')
+    parser.add_argument('-x', '--xml', action='store_const', const='xml',
+                        help='Store result as XML instead of S-expression')
+    parser.add_argument('-o', '--out', nargs=1, default=['out'],
+                        help='Output directory')
+    parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
+                        help='Verbose output')
 
     args = parser.parse_args()
-    file_name, log_dir = args.files[0], ''
+    file_names, out, log_dir = args.files, args.out[0], ''
 
-    if not os.path.exists(file_name):
-        print('File "%s" not found!' % file_name)
-        sys.exit(1)
-    if not os.path.isfile(file_name):
-        print('"%s" is not a file!' % file_name)
-        sys.exit(1)
+    # if not os.path.exists(file_name):
+    #     print('File "%s" not found!' % file_name)
+    #     sys.exit(1)
+    # if not os.path.isfile(file_name):
+    #     print('"%s" is not a file!' % file_name)
+    #     sys.exit(1)
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -56,7 +84,22 @@ if __name__ == "__main__":
         set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
 
-    result, errors, _ = compile_src(file_name)
+    def echo(message: str):
+        if args.verbose:
+            print(message)
+
+    batch_processing = True
+    if len(file_names) == 1:
+        if os.path.isdir(file_names[0]):
+            dir_name = file_names[0]
+            echo('Processing all files in directory: ' + dir_name)
+            file_names = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)
+                          if os.path.isfile(os.path.join(dir_name, fn))]
+        elif not ('-o' in sys.argv or '--out' in sys.argv):
+            batch_processing = False
+
+
+    result, errors, _ = compile_src(file_names[0])
 
     if errors:
         cwd = os.getcwd()

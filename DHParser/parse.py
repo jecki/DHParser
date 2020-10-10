@@ -1464,6 +1464,7 @@ class Grammar:
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
         self.tree__.swallow(result)
+        if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
         # self.history_tracking__ = save_history_tracking
         return self.tree__
