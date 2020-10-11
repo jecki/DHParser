@@ -300,9 +300,6 @@ def compile_source(source: str,
             transforms it (in place) into an abstract syntax tree.
     :param compiler (function): A compiler function or compiler class
             instance
-    :param out_source_data: An empty list that will be filled with the
-            source code and  source mapping function.
-            (See `preprocess.with_source_mapping()`)
     :param preserve_AST (bool): Preserves the AST-tree.
 
     :return: The result of the compilation as a 3-tuple
@@ -474,6 +471,18 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Erro
     adjust_error_locations(new_msgs, tree.source, tree.source_mapping)
     return tree, messages
 
+
+# def compiler_factory(compiler_class: Compiler) -> CompilerCallable
+#
+#     def get_compiler() -> CompilerCallable:
+#         """Returns a thread/process-exclusive Compiler-singleton."""
+#         THREAD_LOCALS = access_thread_locals()
+#         try:
+#             compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
+#         except AttributeError:
+#             THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
+#             compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
+#         return compiler
 
 # TODO: Verify compiler against grammar,
 #       i.e. make sure that for all on_X()-methods, `X` is the name of a parser
