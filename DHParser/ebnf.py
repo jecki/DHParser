@@ -123,7 +123,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
-    has_attr, has_parent, thread_local_singleton_factory
+    has_attr, has_parent, ThreadLocalSingletonFactory
 '''
 
 
@@ -795,55 +795,39 @@ def get_preprocessor() -> PreprocessorFunc:
 
 GRAMMAR_FACTORY = '''
 
+_raw_grammar = ThreadLocalSingletonFactory({NAME}Grammar, id={ID})
+
 def get_grammar() -> {NAME}Grammar:
-    """Returns a thread/process-exclusive {NAME}Grammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton = {NAME}Grammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.{NAME}_{ID:08d}_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 '''
 
 
 TRANSFORMER_FACTORY = '''
-
-def Create{NAME}Transformer() -> TransformationFunc:
+def {NAME}Transformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
 
+get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, id={ID})
 
-def get_transformer() -> TransformationFunc:
-    """Returns a thread/process-exclusive transformation function."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        transformer = THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton
-    except AttributeError:
-        THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton = Create{NAME}Transformer()
-        transformer = THREAD_LOCALS.{NAME}_{ID:08d}_transformer_singleton
-    return transformer
+def transform_{NAME}(cst):
+    get_transformer()(cst)
 '''
 
 
 COMPILER_FACTORY = '''
+get_compiler = ThreadLocalSingletonFactory({NAME}Compiler, id={ID})
 
-def get_compiler() -> {NAME}Compiler:
-    """Returns a thread/process-exclusive {NAME}Compiler-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
-    except AttributeError:
-        THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
-        compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
-    return compiler
+def compile_{NAME}(ast):
+    return get_compiler()(ast)
 '''
 
 

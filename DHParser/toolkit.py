@@ -63,7 +63,7 @@ __all__ = ('typing',
            'cython',
            'cython_optimized',
            'gen_id',
-           'thread_local_singleton_factory',
+           'ThreadLocalSingletonFactory',
            'NEVER_MATCH_PATTERN',
            'RX_NEVER_MATCH',
            'RxPatternType',
@@ -125,28 +125,50 @@ def gen_id() -> int:
     return next_id
 
 
-def thread_local_singleton_factory(class_or_factory: Callable,
-                                   name: str = "",
-                                   id: int = -1) -> Callable:
+# def thread_local_singleton_factory(a_class,
+#                                    name: str = "", *,
+#                                    id: int = -1) -> Callable[[], Callable]:
+#     """
+#     Generates a singleton-factory that returns one and
+#     the same instance of `class_or_factory` for one and the
+#     same thread, but dfferent instances for different threads.
+#     TO BAD: closures cannot be pickled :-(
+#     """
+#
+#     singleton_name = "{NAME}_{ID:08d}_singleton".format(
+#         NAME =name or a_class.__name__, ID = id if id >= 0 else gen_id())
+#
+#     def factory() -> Any:
+#         THREAD_LOCALS = access_thread_locals()
+#         try:
+#             singleton = getattr(THREAD_LOCALS, singleton_name)
+#         except AttributeError:
+#             setattr(THREAD_LOCALS, singleton_name, a_class())
+#             singleton = getattr(THREAD_LOCALS, singleton_name)
+#         return singleton
+#
+#     return factory
+
+
+class ThreadLocalSingletonFactory:
     """
     Generates a singleton-factory that returns one and
     the same instance of `class_or_factory` for one and the
     same thread, but dfferent instances for different threads.
     """
+    def __init__(self, class_or_factory, name: str = "", *, id: int = -1):
+        self.class_or_factory = class_or_factory
+        self.singleton_name = "{NAME}_{ID:08d}_singleton".format(
+            NAME=name or class_or_factory.__name__, ID=id if id >= 0 else gen_id())
 
-    singleton_name = "{NAME}_{ID:08d}_singleton".format(
-        NAME = name or class_or_factory.__name__, ID = id if id >= 0 else gen_id())
-
-    def factory() -> Any:
+    def __call__(self):
         THREAD_LOCALS = access_thread_locals()
         try:
-            singleton = getattr(THREAD_LOCALS, singleton_name)
+            singleton = getattr(THREAD_LOCALS, self.singleton_name)
         except AttributeError:
-            setattr(THREAD_LOCALS, singleton_name, class_or_factory())
-            singleton = getattr(THREAD_LOCALS, singleton_name)
+            setattr(THREAD_LOCALS, self.singleton_name, self.class_or_factory())
+            singleton = getattr(THREAD_LOCALS, self.singleton_name)
         return singleton
-
-    return factory
 
 
 def is_filename(strg: str) -> bool:
