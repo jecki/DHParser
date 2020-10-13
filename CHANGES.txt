@@ -4,8 +4,8 @@ DHParser Version 0.9.5
 - ...
 
 
-DHParser Version 0.9.4
-......................
+DHParser Version 0.9.4 (6.10.2020)
+..................................
 
 - better Language server support (modules server.py and lsp.py - still
   somewhat experimental)

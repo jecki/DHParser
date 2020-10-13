@@ -96,7 +96,7 @@ if __name__ == "__main__":
     print('  1. Some doctests may fail on Windows, due to different file-separators.')
     print('  2. Some doctests may fail with Python 3.5, because in Python 3.5 the order '
           'of entries in a dictionary is undetermined.')
-    print('  3. Some tests end with OSError("handle alread closed") on pypy3.6, 3.7. '
+    print('  3. Some tests end with OSError("handle already closed") on pypy3.6, 3.7. '
           'This seems to be a pypy3-bug. See: pypy3 scratch/process_pool_doc_examples.py')
 
     os.chdir(cwd)
