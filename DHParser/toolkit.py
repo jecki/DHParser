@@ -43,7 +43,7 @@ except ImportError:
     import re
 
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional
+from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional, Callable
 
 
 try:
@@ -55,12 +55,15 @@ except ImportError:
     cython_optimized = False
     import DHParser.shadow_cython as cython
 
+from DHParser.configuration import access_thread_locals
 from DHParser.stringview import StringView
 
 
 __all__ = ('typing',
            'cython',
            'cython_optimized',
+           'gen_id',
+           'thread_local_singleton_factory',
            'NEVER_MATCH_PATTERN',
            'RX_NEVER_MATCH',
            'RxPatternType',
@@ -105,7 +108,143 @@ __all__ = ('typing',
 
 #######################################################################
 #
-# (Thread-safe) global variables and configuration
+# miscellaneous (generic)
+#
+#######################################################################
+
+
+global_id_counter = multiprocessing.Value('Q', 0)
+
+
+def gen_id() -> int:
+    """Generates a unique id."""
+    global global_id_counter
+    with global_id_counter.get_lock():
+        next_id = global_id_counter.value + 1
+        global_id_counter.value = next_id
+    return next_id
+
+
+def thread_local_singleton_factory(class_or_factory: Callable,
+                                   name: str = "",
+                                   id: int = -1) -> Callable:
+    """
+    Generates a singleton-factory that returns one and
+    the same instance of `class_or_factory` for one and the
+    same thread, but dfferent instances for different threads.
+    """
+
+    singleton_name = "{NAME}_{ID:08d}_singleton".format(
+        NAME = name or class_or_factory.__name__, ID = id if id >= 0 else gen_id())
+
+    def factory() -> Any:
+        THREAD_LOCALS = access_thread_locals()
+        try:
+            singleton = getattr(THREAD_LOCALS, singleton_name)
+        except AttributeError:
+            setattr(THREAD_LOCALS, singleton_name, class_or_factory())
+            singleton = getattr(THREAD_LOCALS, singleton_name)
+        return singleton
+
+    return factory
+
+
+def is_filename(strg: str) -> bool:
+    """
+    Tries to guess whether string ``strg`` is a file name.
+    """
+    return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
+        and all(strg.find(ch) < 0 for ch in '*?"<>|')
+    #   and strg.select_if('*') < 0 and strg.select_if('?') < 0
+
+
+@cython.locals(i=cython.int, L=cython.int)
+def relative_path(from_path: str, to_path: str) -> str:
+    """Returns the relative path in order to open a file from
+    `to_path` when the script is running in `from_path`. Example:
+
+        >>> relative_path('project/common/dir_A', 'project/dir_B').replace(chr(92), '/')
+        '../../dir_B'
+    """
+    from_path = os.path.normpath(os.path.abspath(from_path)).replace('\\', '/')
+    to_path = os.path.normpath(os.path.abspath(to_path)).replace('\\', '/')
+    if from_path and from_path[-1] != '/':
+        from_path += '/'
+    if to_path and to_path[-1] != '/':
+        to_path += '/'
+    i = 0
+    L = min(len(from_path), len(to_path))
+    while i < L and from_path[i] == to_path[i]:
+        i += 1
+    return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
+
+
+def concurrent_ident() -> str:
+    """
+    Returns an identificator for the current process and thread
+    """
+    return multiprocessing.current_process().name + '_' + str(threading.get_ident())
+
+
+class unrepr:
+    """
+    unrepr encapsulates a string representing a python function in such
+    a way that the representation of the string yields the function call
+    itself rather then a string representing the function call and delimited
+    by quotation marks.
+
+    Example:
+        >>> "re.compile(r'abc+')"
+        "re.compile(r'abc+')"
+        >>> unrepr("re.compile(r'abc+')")
+        re.compile(r'abc+')
+    """
+    def __init__(self, s: str):
+        self.s = s  # type: str
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, unrepr):
+            return self.s == other.s
+        elif isinstance(other, str):
+            return self.s == other
+        else:
+            raise TypeError('unrepr objects can only be compared with '
+                            'other unrepr objects or strings!')
+
+    def __str__(self) -> str:
+        return self.s
+
+    def __repr__(self) -> str:
+        return self.s
+
+
+def as_list(item_or_sequence) -> List[Any]:
+    """Turns an arbitrary sequence or a single item into a list. In case of
+    a single item, the list contains this element as its sole item."""
+    if isinstance(item_or_sequence, Iterable):
+        return list(item_or_sequence)
+    return [item_or_sequence]
+
+
+def first(item_or_sequence: Union[Sequence, Any]) -> Any:
+    """Returns an item or the first item of a sequence of items."""
+    if isinstance(item_or_sequence, Sequence):
+        return item_or_sequence[0]
+    else:
+        return item_or_sequence
+
+
+def last(item_or_sequence: Union[Sequence, Any]) -> Any:
+    """Returns an item or the first item of a sequence of items."""
+    if isinstance(item_or_sequence, Sequence):
+        return item_or_sequence[-1]
+    else:
+        return item_or_sequence
+
+
+#######################################################################
+#
+# miscellaneous (DHParser-specific)
 #
 #######################################################################
 
@@ -114,29 +253,23 @@ DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
 DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
 
 
-# global_id_counter = multiprocessing.Value('Q', 0)
-#
-#
-# def gen_id() -> int:
-#     """Generates a unique id."""
-#     global global_id_counter
-#     with global_id_counter.get_lock():
-#         next_id = global_id_counter.value + 1
-#         global_id_counter.value = next_id
-#     return next_id
+def sane_parser_name(name) -> bool:
+    """
+    Checks whether given name is an acceptable parser name. Parser names
+    must not be preceded or succeeded by a double underscore '__'!
+    """
+
+    return name and name[:2] != '__' and name[-2:] != '__'
 
 
 #######################################################################
 #
-# miscellaneous (generic)
+#  string manipulation and regular expressions
 #
 #######################################################################
-
 
 NEVER_MATCH_PATTERN = r'..(?<=^)'
 RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
-
-
 RxPatternType = Any
 
 
@@ -211,75 +344,6 @@ def lstrip_docstring(docstring: str) -> str:
     return '\n'.join([lines[0]] + [line[indent:] for line in lines[1:]])
 
 
-def is_filename(strg: str) -> bool:
-    """
-    Tries to guess whether string ``strg`` is a file name.
-    """
-    return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
-        and all(strg.find(ch) < 0 for ch in '*?"<>|')
-    #   and strg.select_if('*') < 0 and strg.select_if('?') < 0
-
-
-@cython.locals(i=cython.int, L=cython.int)
-def relative_path(from_path: str, to_path: str) -> str:
-    """Returns the relative path in order to open a file from
-    `to_path` when the script is running in `from_path`. Example:
-
-        >>> relative_path('project/common/dir_A', 'project/dir_B').replace(chr(92), '/')
-        '../../dir_B'
-    """
-    from_path = os.path.normpath(os.path.abspath(from_path)).replace('\\', '/')
-    to_path = os.path.normpath(os.path.abspath(to_path)).replace('\\', '/')
-    if from_path and from_path[-1] != '/':
-        from_path += '/'
-    if to_path and to_path[-1] != '/':
-        to_path += '/'
-    i = 0
-    L = min(len(from_path), len(to_path))
-    while i < L and from_path[i] == to_path[i]:
-        i += 1
-    return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
-
-
-def concurrent_ident() -> str:
-    """
-    Returns an identificator for the current process and thread
-    """
-    return multiprocessing.current_process().name + '_' + str(threading.get_ident())
-
-
-class unrepr:
-    """
-    unrepr encapsulates a string representing a python function in such
-    a way that the representation of the string yields the function call
-    itself rather then a string representing the function call and delimited
-    by quotation marks.
-
-    Example:
-        >>> "re.compile(r'abc+')"
-        "re.compile(r'abc+')"
-        >>> unrepr("re.compile(r'abc+')")
-        re.compile(r'abc+')
-    """
-    def __init__(self, s: str):
-        self.s = s  # type: str
-
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, unrepr):
-            return self.s == other.s
-        elif isinstance(other, str):
-            return self.s == other
-        else:
-            raise TypeError('unrepr objects can only be compared with '
-                            'other unrepr objects or strings!')
-
-    def __str__(self) -> str:
-        return self.s
-
-    def __repr__(self) -> str:
-        return self.s
-
-
 @cython.locals(max_length=cython.int, length=cython.int, a=cython.int, b=cython.int)
 def abbreviate_middle(s: str, max_length: int) -> str:
     """Shortens string `s` by replacing the middle part with an ellipsis
@@ -330,30 +394,6 @@ def as_identifier(s: str, replacement: str = "_") -> str:
             ident.append(replacement * delta)
             i += delta  # rng[1] - rng[0]
     return ''.join(ident)
-
-
-def as_list(item_or_sequence) -> List[Any]:
-    """Turns an arbitrary sequence or a single item into a list. In case of
-    a single item, the list contains this element as its sole item."""
-    if isinstance(item_or_sequence, Iterable):
-        return list(item_or_sequence)
-    return [item_or_sequence]
-
-
-def first(item_or_sequence: Union[Sequence, Any]) -> Any:
-    """Returns an item or the first item of a sequence of items."""
-    if isinstance(item_or_sequence, Sequence):
-        return item_or_sequence[0]
-    else:
-        return item_or_sequence
-
-
-def last(item_or_sequence: Union[Sequence, Any]) -> Any:
-    """Returns an item or the first item of a sequence of items."""
-    if isinstance(item_or_sequence, Sequence):
-        return item_or_sequence[-1]
-    else:
-        return item_or_sequence
 
 
 NOPE = []  # a list that is empty and is supposed to remain empty
@@ -878,22 +918,6 @@ def json_rpc(method: str,
     if ID is not None:
         rpc['id'] = ID
     return json_dumps(rpc, partially_serialized=partially_serialized)
-
-
-#######################################################################
-#
-# miscellaneous (DHParser-specific)
-#
-#######################################################################
-
-
-def sane_parser_name(name) -> bool:
-    """
-    Checks whether given name is an acceptable parser name. Parser names
-    must not be preceded or succeeded by a double underscore '__'!
-    """
-
-    return name and name[:2] != '__' and name[-2:] != '__'
 
 
 #######################################################################

@@ -123,7 +123,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
-    has_attr, has_parent
+    has_attr, has_parent, thread_local_singleton_factory
 '''
 
 
