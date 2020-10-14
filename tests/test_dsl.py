@@ -148,7 +148,7 @@ class TestCompilerGeneration:
         result, errors, ast = compile_src(self.trivial_text)
 
     def test_readme_example(self):
-        grammar = '''@ drop = whitespace, strings
+        grammar = r'''@ drop = whitespace, strings
             key_store   = ~ { entry }
             entry       = key "="~ value
             key         = /\w+/~                  # Scannerless parsing: Use regular
