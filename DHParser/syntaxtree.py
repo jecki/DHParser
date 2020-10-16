@@ -167,7 +167,8 @@ def create_match_function(criterion: CriteriaType) -> Callable:
     if isinstance(criterion, int):
         return lambda nd: id(nd) == criterion
     elif isinstance(criterion, Node):
-        return lambda nd: nd.equals(criterion)
+        return lambda nd: nd == criterion
+        # return lambda nd: nd.equals(criterion)
     elif isinstance(criterion, str):
         return lambda nd: nd.tag_name == criterion
     elif callable(criterion):
