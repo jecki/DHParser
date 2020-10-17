@@ -2134,7 +2134,7 @@ class ZeroOrMore(Option):
             length = text.__len__()
             if node is None:
                 break
-            if node._result or not node.tag_name[:1] == ':':  # drop anonymous empty nodes
+            if node._result or node.tag_name[:1] != ':':  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2180,7 +2180,7 @@ class OneOrMore(UnaryParser):
             if node is None:
                 break
             match_flag = True
-            if node._result or not node.tag_name[:1] == ':':  # drop anonymous empty nodes
+            if node._result or node.tag_name[:1] != ':':  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2399,7 +2399,7 @@ class MandatoryNary(NaryParser):
             if grammar.history_tracking__:
                 pname = ':root'
                 for pname, _ in reversed(grammar.call_stack__):
-                    if not pname[:1] == ':':
+                    if pname[:1] != ':':
                         break
                 msg = '%s expected by parser %s, »%s« found!' % (expected, repr(pname), found)
             else:
@@ -2745,7 +2745,7 @@ class Interleave(MandatoryNary):
                 if parser not in consumed:
                     node, text__ = parser(text_)
                     if node is not None:
-                        if node._result or not node.tag_name[:1] == ':':
+                        if node._result or node.tag_name[:1] != ':':
                             # drop anonymous empty nodes
                             results += (node,)
                             text_ = text__
