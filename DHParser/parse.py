@@ -174,10 +174,13 @@ class ParserError(Exception):
         return pe
 
 
-ResumeList = List[Union[RxPatternType, str, Callable]]  # list of strings or regular expressions
+PatternMatchType = Union[RxPatternType, str, Callable]
+ErrorMessagesType = List[Tuple[PatternMatchType, str]]
+ResumeList = List[PatternMatchType]  # list of strings or regular expressions
 ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
 # (text, start point, end point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
+
 
 @cython.returns(cython.int)
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
@@ -927,6 +930,19 @@ class Grammar:
                 that act as rules to find the reentry point if a ParserError was
                 thrown during the execution of the parser with the respective name.
 
+        skip_rules__: A mapping of parser names to a list of regular expressions
+                that act as rules to find the reentry point if a ParserError was
+                thrown during the execution of the parser with the respective name.
+
+        error_messages__: A mapping of parser names to a Tuple of regalar expressions
+                and error messages. If a mandatory violation error occurs on a
+                specific symbol (i.e. parser name) and any of the regular expressions
+                matches the error message of the first matching expression is used
+                instead of the generic manadtory violation error messages. This
+                allows to answer typical kinds of errors (say putting a colon ","
+                where a semi-colon ";" is expected) with more informative error
+                messages.
+
         anonymous__: A regular expression to identify names of parsers that are
                 assigned to class fields but shall never the less yield anonymous
                 nodes (i.e. nodes the tag name of which starts with a colon ":"
@@ -1018,6 +1034,8 @@ class Grammar:
                 (resulting in a maximum recursion depth reached error) when
                 the grammar definition contains left recursions.
 
+        associated_symbol_cache__: A cache for the associated_symbol()-method.
+
         # mirrored class attributes:
 
         static_analysis_pending__: A pointer to the class attribute of the same name.
@@ -1090,10 +1108,12 @@ class Grammar:
                 has been encountered. Default is 10.000 characters.
     """
     python_src__ = ''  # type: str
-    root__ = PARSER_PLACEHOLDER  # type: Parser
+    root__ = PARSER_PLACEHOLDER   # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: List[str]
-    resume_rules__ = dict()  # type: Dict[str, ResumeList]
+    resume_rules__ = dict()       # type: Dict[str, ResumeList]
+    skip_rules__ = dict()         # type: Dict[str, ResumeList]
+    error_messages__ = dict()     # type: Dict[str, Tuple[PatternMatchType, str]]
     anonymous__ = RX_NEVER_MATCH  # type: RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
@@ -1183,14 +1203,15 @@ class Grammar:
             assert ((self.__class__.COMMENT__
                      and self.__class__.COMMENT__ == self.comment_rx__.pattern)
                     or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
-        self.start_parser__ = None             # type: Optional[Parser]
-        self._dirty_flag__ = False             # type: bool
+        self.start_parser__ = None               # type: Optional[Parser]
+        self._dirty_flag__ = False               # type: bool
         self.left_recursion__ = get_config_value('left_recursion')                # type: bool
         self.history_tracking__ = get_config_value('history_tracking')            # type: bool
         self.resume_notices__ = get_config_value('resume_notices')                # type: bool
         self.flatten_tree__ = get_config_value('flatten_tree')                    # type: bool
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
         self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
+        self.associated_symbol_cache__ = dict()  # type: Dict[Parser, Parser]
         self._reset__()
 
         # prepare parsers in the class, first
@@ -1534,7 +1555,8 @@ class Grammar:
         >>> gr.associated_symbol(anonymous_re).pname
         'word'
         """
-        symbol = None   # type: Optional[Parser]
+        symbol = self.associated_symbol_cache__.get(parser, None)   # type: Optional[Parser]
+        if symbol:  return symbol
 
         def find_symbol_for_parser(context: List[Parser]) -> Optional[bool]:
             nonlocal symbol, parser
@@ -1547,11 +1569,14 @@ class Grammar:
             return False  # continue searching
 
         if parser.pname:
-            return parser
-        self.root_parser__.apply(find_symbol_for_parser)
-        if symbol is None:
-            raise AttributeError('Parser %s (%i) is not contained in Grammar!'
-                                 % (str(parser), id(parser)))
+            symbol = parser
+        else:
+            self.root_parser__.apply(find_symbol_for_parser)
+            if symbol is None:
+                raise AttributeError('Parser %s (%i) is not contained in Grammar!'
+                                     % (str(parser), id(parser)))
+
+        self.associated_symbol_cache__[parser] = symbol
         return symbol
 
 
@@ -2296,7 +2321,6 @@ class Counted(UnaryParser):
         return errors
 
 
-MessagesType = List[Tuple[Union[str, RxPatternType, Callable], str]]
 NO_MANDATORY = 2**30
 
 
@@ -2320,7 +2344,7 @@ class MandatoryNary(NaryParser):
     """
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
-                 err_msgs: MessagesType = [],
+                 err_msgs: ErrorMessagesType = [],
                  skip: ResumeList = []) -> None:
         super(MandatoryNary, self).__init__(*parsers)
         length = len(self.parsers)
@@ -2328,24 +2352,23 @@ class MandatoryNary(NaryParser):
             mandatory += length
 
         self.mandatory = mandatory  # type: int
-        self.err_msgs = err_msgs    # type: MessagesType
-        self.skip = skip            # type: ResumeList
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   err_msgs=self.err_msgs, skip=self.skip)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     @cython.returns(cython.int)
     def get_reentry_point(self, text_: StringView) -> int:
-        """Returns a reentry-point determined by the skip-list in `self.skip`.
-        If no reentry-point was found or the skip-list ist empty, -1 is returned.
+        """Returns a reentry-point determined by the associated skip-list in
+        `self.grammar.skip_rules__`. If no reentry-point was found or the
+        skip-list ist empty, -1 is returned.
         """
-        if self.skip:
+        skip = self.grammar.skip_rules__.get(self.grammar.associated_symbol(self).pname, [])
+        if skip:
             gr = self._grammar
-            return reentry_point(text_, self.skip, gr.comment_rx__, gr.reentry_search_window__)
+            return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
         return -1
 
     @cython.locals(i=cython.int, location=cython.int)
@@ -2380,7 +2403,9 @@ class MandatoryNary(NaryParser):
         location = grammar.document_length__ - len(text_)
         err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
         found = text_[:10].replace('\n', '\\n ') + '...'
-        for search, message in self.err_msgs:
+        sym = self.grammar.associated_symbol(self).pname
+        err_msgs = self.grammar.error_messages__.get(sym, [])
+        for search, message in err_msgs:
             is_func = callable(search)           # search rule is a function: StringView -> bool
             is_str = isinstance(search, str)     # search rule is a simple string
             is_rxs = not is_func and not is_str  # search rule is a regular expression
@@ -2417,12 +2442,13 @@ class MandatoryNary(NaryParser):
         errors = super().static_analysis()
         msg = []
         length = len(self.parsers)
-        if self.mandatory == NO_MANDATORY and self.err_msgs:
-            msg.append('Custom error messages require that parameter "mandatory" is set!')
-        elif self.mandatory == NO_MANDATORY and self.skip:
-            msg.append('Search expressions for skipping text require parameter '
-                       '"mandatory" to be set!')
-        elif length == 0:
+        sym = self.grammar.associated_symbol(self).pname
+        # if self.mandatory == NO_MANDATORY and sym in self.grammar.error_messages__:
+        #     msg.append('Custom error messages require that parameter "mandatory" is set!')
+        # elif self.mandatory == NO_MANDATORY and sym in self.grammar.skip_rules__:
+        #     msg.append('Search expressions for skipping text require parameter '
+        #                '"mandatory" to be set!')
+        if length == 0:
             msg.append('Number of elements %i is below minimum length of 1' % length)
         elif length >= NO_MANDATORY:
             msg.append('Number of elements %i of series exceeds maximum length of %i'
@@ -2710,7 +2736,7 @@ class Interleave(MandatoryNary):
 
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
-                 err_msgs: MessagesType = [],
+                 err_msgs: ErrorMessagesType = [],
                  skip: ResumeList = [],
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
         super(Interleave, self).__init__(
@@ -2726,7 +2752,6 @@ class Interleave(MandatoryNary):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   err_msgs=self.err_msgs, skip=self.skip,
                                    repetitions=self.repetitions)
         copy_parser_base_attrs(self, duplicate)
         return duplicate

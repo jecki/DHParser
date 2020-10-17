@@ -739,7 +739,7 @@ class TestErrorCustomizationErrors:
         lang2 = '\n'.join(l2)
         assert lang2.find('@mitte_') < 0
         result, messages, ast = compile_ebnf(lang2)
-        assert not messages
+        assert not messages, str(messages)
 
         l3 = [zeile for zeile in l2 if not zeile.lstrip().startswith('mitte')]
         lang3 = '\n'.join(l3).replace('mitte', '(`M` §"ITTE")')
