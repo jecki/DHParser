@@ -2343,9 +2343,7 @@ class MandatoryNary(NaryParser):
                 resumed.
     """
     def __init__(self, *parsers: Parser,
-                 mandatory: int = NO_MANDATORY,
-                 err_msgs: ErrorMessagesType = [],
-                 skip: ResumeList = []) -> None:
+                 mandatory: int = NO_MANDATORY) -> None:
         super(MandatoryNary, self).__init__(*parsers)
         length = len(self.parsers)
         if mandatory < 0:
@@ -2736,11 +2734,8 @@ class Interleave(MandatoryNary):
 
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
-                 err_msgs: ErrorMessagesType = [],
-                 skip: ResumeList = [],
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
-        super(Interleave, self).__init__(
-            *parsers, mandatory=mandatory, err_msgs=err_msgs, skip=skip)
+        super(Interleave, self).__init__(*parsers, mandatory=mandatory)
         if len(repetitions) == 0:
             repetitions = [(1, 1)] * len(parsers)
         elif len(parsers) != len(repetitions):

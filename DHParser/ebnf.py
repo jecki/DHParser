@@ -437,8 +437,7 @@ class EBNFGrammar(Grammar):
             regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))),
         Lookahead(FOLLOW_UP), mandatory=1)
     definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)),
-                        expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP),
-                        mandatory=1, err_msgs=error_messages__["definition"])
+                        expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
 
@@ -610,7 +609,7 @@ class FixedEBNFGrammar(Grammar):
             Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))),
         Lookahead(FOLLOW_UP), mandatory=1)
     definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__,
-                        Lookahead(FOLLOW_UP), mandatory=1, err_msgs=error_messages__["definition"])
+                        Lookahead(FOLLOW_UP), mandatory=1)
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
 
