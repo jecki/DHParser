@@ -1980,9 +1980,9 @@ class EBNFCompiler(Compiler):
                         AMBIGUOUS_ERROR_HANDLING)
                 else:
                     # use class field instead or direct representation of error messages!
-                    custom_args.append('err_msgs={err_msgs_name}["{symbol}"]'
-                                       .format(err_msgs_name=self.ERR_MSGS_KEYWORD,
-                                               symbol=current_symbol))
+                    # custom_args.append('err_msgs={err_msgs_name}["{symbol}"]'
+                    #                    .format(err_msgs_name=self.ERR_MSGS_KEYWORD,
+                    #                            symbol=current_symbol))
                     self.consumed_custom_errors.add(current_symbol)
             # add skip-rules to resume parsing of a series, if rules have been declared
             if current_symbol in self.directives.skip:
@@ -1994,9 +1994,9 @@ class EBNFCompiler(Compiler):
                         AMBIGUOUS_ERROR_HANDLING)
                 else:
                     # use class field instead or direct representation of error messages!
-                    custom_args.append('skip={skip_rules_name}["{symbol}"]'
-                                       .format(skip_rules_name=self.SKIP_RULES_KEYWORD,
-                                               symbol=current_symbol))
+                    # custom_args.append('skip={skip_rules_name}["{symbol}"]'
+                    #                    .format(skip_rules_name=self.SKIP_RULES_KEYWORD,
+                    #                            symbol=current_symbol))
                     self.consumed_skip_rules.add(current_symbol)
         return tuple(filtered_children), custom_args
 

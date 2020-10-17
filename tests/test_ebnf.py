@@ -694,9 +694,9 @@ class TestErrorCustomization:
 class TestErrorCustomizationErrors:
     def test_ambiguous_error_customization(self):
         lang = """
-            document = series 
+            document = series
             @series_error = "ambiguous error message: does it apply to first or second '§'?"
-            series = "A" § "B" "C" | "X" § "Y" "Z" 
+            series = "A" § "B" "C" | "X" § "Y" "Z"
             """
         try:
             parser = grammar_provider(lang)()
@@ -719,21 +719,21 @@ class TestErrorCustomizationErrors:
         lang = r"""
             @comment = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/
             document = alles
-            
+
             @alles_skip = /E|3|$/
             alles = (anfang | "1") (mitte | "2") (ende | "3") [COMMENT__]
-            
+
             @anfang_resume = /M|2/
             anfang = `A` §"NFANG"
-            
+
             @mitte_resume = /E|3/
             mitte = `M` §"ITTE"
-            
+
             ende = "ENDE"
         """
         assert lang.find("@mitte_") >= 0
         result, messages, ast = compile_ebnf(lang)
-        assert any(m.code == UNUSED_ERROR_HANDLING_WARNING for m in messages)
+        assert any(m.code == UNUSED_ERROR_HANDLING_WARNING for m in messages), str(messages)
 
         l2 = [zeile for zeile in lang.split('\n') if not zeile.lstrip().startswith('@mitte_')]
         lang2 = '\n'.join(l2)
@@ -744,7 +744,7 @@ class TestErrorCustomizationErrors:
         l3 = [zeile for zeile in l2 if not zeile.lstrip().startswith('mitte')]
         lang3 = '\n'.join(l3).replace('mitte', '(`M` §"ITTE")')
         result, messages, ast = compile_ebnf(lang3)
-        assert not messages
+        assert not messages, str(messages)
 
         parser = create_parser(lang3)
         cst = parser('ANFANGMITTEENDE')
