@@ -113,7 +113,7 @@ __all__ = ('typing',
 #######################################################################
 
 
-global_id_counter = multiprocessing.Value('Q', 0)
+global_id_counter = multiprocessing.Value('L', 0)
 
 
 def gen_id() -> int:
