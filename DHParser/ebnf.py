@@ -1834,7 +1834,7 @@ class EBNFCompiler(Compiler):
             symbol = key[:-5]
             if symbol in self.rules:
                 self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
-                                    'must be defined before the symbol!'.format(symbol))
+                                    ' must be defined before the symbol!'.format(symbol))
             self.directives.skip[symbol] = self.gen_search_list(node.children[1:])
 
         elif key.endswith('_resume'):
@@ -2080,11 +2080,13 @@ class EBNFCompiler(Compiler):
                 self.deferred_tasks.append(lambda :verify(node))
         return result
 
+
     def on_difference(self, node: Node) -> str:
         assert len(node.children) == 2, str(node.as_sxpr())
         left = self.compile(node.children[0])
         right = self.compile(node.children[1])
         return "Series(NegativeLookahead(%s), %s)" % (right, left)
+
 
     def on_element(self, node: Node) -> str:
         assert node.children

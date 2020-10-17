@@ -2372,7 +2372,7 @@ class MandatoryNary(NaryParser):
 
         :return:   a tuple of an error object, a zombie node at the position
                 where the mandatory violation occurred and to which the error
-                object is attached and a string view for continuing the
+                object is attached and a string view for the continuation the
                 parsing process
         """
         grammar = self._grammar

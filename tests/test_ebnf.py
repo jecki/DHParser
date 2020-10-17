@@ -753,7 +753,6 @@ class TestErrorCustomizationErrors:
         assert cst.errors
         assert 'alles' in cst and 'ZOMBIE__' in cst['alles'] and 'ende' in cst['alles']
 
-
     def test_multiple_resume_definitions(self):
         lang = """
             document = series
@@ -793,9 +792,11 @@ class TestErrorCustomizationErrors:
                             'several strings'
             series = "A" § "B" "C"
             """
-        parser = grammar_provider(lang)()
+        provider = grammar_provider(lang)
+        # print(provider.python_src__)
+        parser = provider()
         result = parser('ADX')
-        assert "several strings" in str(result.errors)
+        assert "several strings" in str(result.errors), str(result.errors)
 
 
 class TestCustomizedResumeParsing:
@@ -1262,6 +1263,29 @@ class TestHeuristics:
         # assert s != "array = `[` [_element {`,` _element}] `]`"
 
 
+# Reordering of rules in order to minimize the number of Forwad-Declarations
+# has not yet been implemented in class ebnf.EBNFCompiler !!!
+#
+# class TestRuleOrder:
+#     def test_rule_specification_order_does_not_matter(self):
+#         normal_order = """
+#             A = B
+#             B = C
+#             C = "Hallo Welt"
+#             """
+#         parser = create_parser(normal_order)
+#         assert parser.B.__class__.__name__ != "Forward"
+#
+#         # Now B, should not be a Forward-Parser
+#         reverse_order = """
+#             C = "Hallo Welt"
+#             B = C
+#             A = B
+#             """
+#         parser = create_parser(reverse_order)
+#         # If order of rule specification did not matter,
+#         # B should not be a Forward-parser:
+#         assert parser.B.__class__.__name__ != "Forward"
 
 
 if __name__ == "__main__":
