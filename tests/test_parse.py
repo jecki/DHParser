@@ -688,6 +688,22 @@ class TestErrorRecovery:
         assert len(st.errors) == 2 and any(err.code == RESUME_NOTICE for err in st.errors)
         assert 'Skipping' in str(st.errors_sorted[1])
 
+    def test_irrelevance_of_error_definition_order(self):
+        lang = """
+        document = series | /.*/
+        series = "A" "B" §"C" "D"
+        @series_skip = /(?=[A-Z])/
+        @series_error = '', "Unerwartetes Zeichen"
+        """
+        parser = grammar_provider(lang)()
+        st = parser('AB_D')
+        assert len(st.errors) == 1  # no additional "stopped before end"-error!
+        assert st.errors[0].message == "Unerwartetes Zeichen"
+        resume_notices_on(parser)
+        st = parser('AB_D')
+        assert len(st.errors) == 2 and any(err.code == RESUME_NOTICE for err in st.errors)
+        assert 'Skipping' in str(st.errors_sorted[1])
+
     def test_Interleave_skip(self):
         lang = """
         document = allof | /.*/

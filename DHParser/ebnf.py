@@ -1812,9 +1812,9 @@ class EBNFCompiler(Compiler):
             check_argnum(2)
             symbol = key[:-6]
             error_msgs = self.directives.error.get(symbol, [])
-            if symbol in self.rules:
-                self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
-                                    + ' must be defined before the symbol!')
+            # if symbol in self.rules:
+            #     self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
+            #                         + ' must be defined before the symbol!')
             if node.children[1 if len(node.children) == 2 else 2].tag_name != 'literal':
                 self.tree.new_error(
                     node, 'Directive "%s" requires message string or a a pair ' % key
@@ -1831,9 +1831,9 @@ class EBNFCompiler(Compiler):
 
         elif key.endswith('_skip'):
             symbol = key[:-5]
-            if symbol in self.rules:
-                self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
-                                    ' must be defined before the symbol!'.format(symbol))
+            # if symbol in self.rules:
+            #     self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
+            #                         ' must be defined before the symbol!'.format(symbol))
             self.directives.skip[symbol] = self.gen_search_list(node.children[1:])
 
         elif key.endswith('_resume'):
