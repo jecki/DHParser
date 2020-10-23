@@ -794,7 +794,7 @@ def get_preprocessor() -> PreprocessorFunc:
 
 GRAMMAR_FACTORY = '''
 
-_raw_grammar = ThreadLocalSingletonFactory({NAME}Grammar, id={ID})
+_raw_grammar = ThreadLocalSingletonFactory({NAME}Grammar, ident={ID})
 
 def get_grammar() -> {NAME}Grammar:
     grammar = _raw_grammar()
@@ -815,7 +815,7 @@ def {NAME}Transformer() -> TransformationFunc:
     threads or processes."""
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
 
-get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, id={ID})
+get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, ident={ID})
 
 def transform_{NAME}(cst):
     get_transformer()(cst)
@@ -823,7 +823,7 @@ def transform_{NAME}(cst):
 
 
 COMPILER_FACTORY = '''
-get_compiler = ThreadLocalSingletonFactory({NAME}Compiler, id={ID})
+get_compiler = ThreadLocalSingletonFactory({NAME}Compiler, ident={ID})
 
 def compile_{NAME}(ast):
     return get_compiler()(ast)
@@ -1645,7 +1645,7 @@ class EBNFCompiler(Compiler):
             self.tree.new_error(node, 'Symbol "%s" is a reserved symbol.' % rule)
         elif not sane_parser_name(rule):
             self.tree.new_error(node, 'Illegal symbol "%s". Symbols must not start or '
-                                ' end with a doube underscore "__".' % rule)
+                                ' end with a double underscore "__".' % rule)
         elif rule in self.directives.tokens:
             self.tree.new_error(node, 'Symbol "%s" has already been defined as '
                                 'a preprocessor token.' % rule)
@@ -1660,9 +1660,9 @@ class EBNFCompiler(Compiler):
             if defn.find("(") < 0:
                 # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                 defn = 'Synonym(%s)' % defn
-            if self.drop_flag:
+            if self.drop_flag and defn[:5] != "Drop(":
                 defn = 'Drop(%s)' % defn
-            # TODO: Recursively drop all contained parsers for optimization
+            # TODO: Recursively drop all contained parsers for optimization?
         except TypeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list((extract_tb(error.__traceback__))))
@@ -1761,16 +1761,16 @@ class EBNFCompiler(Compiler):
                     self.directives[key].add(content.lower())
                 else:
                     unmatched.append(content)
-                    # if self.anonymous_regexp == RX_NEVER_MATCH:
-                    #     self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
-                    #                         'Should be one of %s or an anonymous parser, where '
-                    #                         'the "@anonymous"-directive must preceed the '
-                    #                         '@drop-directive.' % (content, str(DROP_VALUES)))
-                    # else:
-                    #     self.tree.new_error(
-                    #         node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
-                    #         '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
-                    #                                             self.anonymous_regexp.pattern))
+                    if self.anonymous_regexp == RX_NEVER_MATCH:
+                        self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
+                                            'Should be one of %s or an anonymous parser, where '
+                                            'the "@anonymous"-directive must precede the '
+                                            '@drop-directive.' % (content, str(DROP_VALUES)))
+                    else:
+                        self.tree.new_error(
+                            node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
+                            '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
+                                                                self.anonymous_regexp.pattern))
             if unmatched:
                 self.directives[key].add(content)
                 self.add_to_anonymous_regexp('$|'.join(unmatched) + '$')
@@ -1924,7 +1924,7 @@ class EBNFCompiler(Compiler):
                         for n in range(k, i):
                             literals[n][0] += 1
                         self.tree.new_error(
-                            node, 'Alternative "%s" should not preceede "%s" where it occurs '
+                            node, 'Alternative "%s" should not precede "%s" where it occurs '
                             'at the beginning! Reorder to avoid warning.' % (earlier, later),
                             REORDERING_OF_ALTERNATIVES_REQUIRED)
                         start_over = True
@@ -2221,6 +2221,7 @@ class EBNFCompiler(Compiler):
         if DROP_STRINGS in self.directives.drop and self.context[-2].tag_name != "definition":
             return 'Drop(Text(' + text + '))'
         return 'Text(' + text + ')'
+
 
     def REGEXP_PARSER(self, regexp):
         if DROP_REGEXP in self.directives.drop and self.context[-2].tag_name != "definition":

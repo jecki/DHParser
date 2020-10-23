@@ -1220,7 +1220,6 @@ class TestAlternativeReordering:
 class TestDrop:
     def test_drop_anonymous(self):
         lang = """
-            @ drop = B
             doc = A B C
             A = `A`
             B = `B`
@@ -1229,8 +1228,8 @@ class TestDrop:
         # print(raw_compileEBNF(lang).result)
         parser = create_parser(lang)
         st = parser('ABC')
-        assert str(st) == "AC"
-        parser = create_parser('@ anonymous = B\n' + lang)
+        assert str(st) == "ABC"
+        parser = create_parser('@ anonymous = B\n@ drop = B\n' + lang)
         st = parser('ABC')
         assert str(st) == "AC"
 

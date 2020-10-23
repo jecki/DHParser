@@ -43,7 +43,7 @@ except ImportError:
     import re
 
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional, Callable
+from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional
 
 
 try:
@@ -154,12 +154,12 @@ class ThreadLocalSingletonFactory:
     """
     Generates a singleton-factory that returns one and
     the same instance of `class_or_factory` for one and the
-    same thread, but dfferent instances for different threads.
+    same thread, but different instances for different threads.
     """
-    def __init__(self, class_or_factory, name: str = "", *, id: int = -1):
+    def __init__(self, class_or_factory, name: str = "", *, ident: int = -1):
         self.class_or_factory = class_or_factory
         self.singleton_name = "{NAME}_{ID:08d}_singleton".format(
-            NAME=name or class_or_factory.__name__, ID=id if id >= 0 else gen_id())
+            NAME=name or class_or_factory.__name__, ID=ident if ident >= 0 else gen_id())
 
     def __call__(self):
         THREAD_LOCALS = access_thread_locals()
@@ -302,8 +302,7 @@ def re_find(s, r, pos=0, endpos=9223372036854775807):
     for `re.finditer()` to avoid a try-catch StopIteration block.
     If `r` cannot be found, `None` will be returned.
     """
-    rx = None
-    if isinstance(r, str) or isinstance(r, bytes):
+    if isinstance(r, (str, bytes)):
         if (pos, endpos) != (0, 9223372036854775807):
             rx = re.compile(r)
         else:
@@ -312,11 +311,9 @@ def re_find(s, r, pos=0, endpos=9223372036854775807):
                 return m
             except StopIteration:
                 return None
-    else:
-        rx = r
-    if rx:
+    elif r:
         try:
-            m = next(rx.finditer(s, pos, endpos))
+            m = next(r.finditer(s, pos, endpos))
             return m
         except StopIteration:
             return None
@@ -339,7 +336,7 @@ def escape_re(strg: str) -> str:
 def escape_control_characters(strg: str) -> str:
     r"""
     Replace all control characters (e.g. `\n` `\t`) in a string
-    by their backslashed representation and replaces backslash by
+    by their back-slashed representation and replaces backslash by
     double backslash.
     """
     s = repr(strg.replace('\\', r'\\')).replace('\\\\', '\\')[1:-1]
@@ -427,7 +424,7 @@ def matching_brackets(text: str,
                       closeB: str,
                       unmatched: list = NOPE) -> List[Tuple[int, int]]:
     """Returns a list of matching bracket positions. Fills an empty list
-    passed to parameter `unmatched_flag` with the positions of all
+    passed to parameter `unmatched` with the positions of all
     unmatched brackets.
 
     >>> matching_brackets('(a(b)c)', '(', ')')
@@ -498,8 +495,8 @@ def issubtype(sub_type, base_type) -> bool:
                         return t.__args__
         except AttributeError:
             if t == 'unicode':  # work-around for cython bug
-                return (str,)
-            return (t,)
+                return str,
+            return t,
         return (ot,) if ot is not None else (t,)
     true_st = origin(sub_type)
     true_bt = origin(base_type)[0]
@@ -925,7 +922,7 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
 def json_rpc(method: str,
              params: JSON_Type = [],
              ID: Optional[int] = None,
-             partially_serialized: bool=True) -> str:
+             partially_serialized: bool = True) -> str:
     """Generates a JSON-RPC-call string for `method` with parameters `params`.
     
     :param method: The name of the rpc-function that shall be called

@@ -103,6 +103,7 @@ if __name__ == "__main__":
 
     if errors:
         cwd = os.getcwd()
+        file_name = file_names[0]
         rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
         for error in errors:
             print(rel_path + ':' + str(error))
