@@ -35,11 +35,12 @@ the string representations of the error objects. For example::
             print("There have been warnings, but no errors.")
 """
 
+import os
 from typing import Iterable, Iterator, Union, List, Any, Sequence, Tuple
 
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView
-from DHParser.toolkit import linebreaks, line_col
+from DHParser.toolkit import linebreaks, line_col, is_filename
 
 
 __all__ = ('ErrorCode',
@@ -50,6 +51,7 @@ __all__ = ('ErrorCode',
            'has_errors',
            'only_errors',
            'adjust_error_locations',
+           'canonical_error_strings',
            'NO_ERROR',
            'NOTICE',
            'WARNING',
@@ -320,7 +322,8 @@ def only_errors(messages: Iterable[Error], level: int = ERROR) -> Iterator[Error
 
 #######################################################################
 #
-# Setting of line, column and position properties of error messages.
+# support for canonical representation, i.e.
+# filename:line:column:severity (code):error string
 #
 #######################################################################
 
@@ -349,3 +352,23 @@ def adjust_error_locations(errors: List[Error],
         if err.orig_pos + err.length > len(original_text):
             err.length = len(original_text) - err.orig_pos
         err.end_line, err.end_column = line_col(line_breaks, err.orig_pos + err.length)
+
+
+def canonical_error_strings(errors: List[Error], source_file_name: str = '') -> List[str]:
+    """Returns the list of error strings in canonical form that can be parsed by most
+    editors, i.e. "relative filepath : line : column : severity (code) : error string"
+    """
+    if errors:
+        if is_filename(source_file_name):
+            cwd = os.getcwd()
+            if source_file_name.startswith(cwd):
+                rel_path = source_file_name[len(cwd)]
+            else:
+                rel_path = source_file_name
+            error_strings = [rel_path + ':' + str(err) for err in errors]
+        else:
+            error_strings = [str(err) for err in errors]
+    else:
+        error_strings = []
+    return error_strings
+

@@ -1,27 +1,24 @@
-def compile_src(source: str):
+def compile_src(source: str) -> Tuple[Any, List[Error]]:
     """Compiles ``source`` and returns (result, errors, ast)."""
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
                                   get_compiler())
-    return result_tuple
+    return result_tuple[:2]  # drop the AST at the end of the result tuple
+
+
+def serialize_result(result: Any) -> Union[str, bytes]:
+    """Serialization of result. REWRITE THIS, IF YOUR COMPILATION RESULT
+    IS NOT A TREE OF NODES.
+    """
+    if isinstance(result, Node):
+        return result.serialize(how='default' if args.xml is None else 'xml')
+    else:
+        return repr(result)
 
 
 def process_file(source: str) -> Tuple[Union[str, bytes], List[str]]:
     """Compiles ``source`` and returns (serialized result, error_strings)."""
-    result, errors, _ = compile_src(source)
-
-    if errors:
-        if is_filename(source):
-            cwd = os.getcwd()
-            rel_path = source[len(cwd):] if source.startswith(cwd) else source
-            error_strings = [rel_path + ':' + str(error) for err in errors]
-        else:
-            error_strings = [str(err) for err in errors]
-
-    if isinstance(result, Node):
-        return result.serialize(how='default' if args.xml is None else 'xml'), error_strings
-    else:
-        # Serialize result here, if compiling does not yield a tree
-        return result, error_strings
+    result, errors = compile_src(source)
+    return serialize_result(result), canonical_error_strings(errors, source)
 
 
 def batch_process(source_filename: str, out_dir: str) -> List[str]:
@@ -99,14 +96,11 @@ if __name__ == "__main__":
             batch_processing = False
 
 
-    result, errors, _ = compile_src(file_names[0])
+    result, errors = compile_src(file_names[0])
 
     if errors:
-        cwd = os.getcwd()
-        file_name = file_names[0]
-        rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
-        for error in errors:
-            print(rel_path + ':' + str(error))
+        for err_str in canonical_erorr_strings(errors, file_names[0]):
+            print(err_str)
         sys.exit(1)
     else:
         print(result.serialize(how='default' if args.xml is None else 'xml')

@@ -145,7 +145,7 @@ class TestCompilerGeneration:
 
         sys.path.append(self.tmp)
         from TestCompilerGenerationParser import compile_src
-        result, errors, ast = compile_src(self.trivial_text)
+        result, errors = compile_src(self.trivial_text)
 
     def test_readme_example(self):
         grammar = r'''@ drop = whitespace, strings

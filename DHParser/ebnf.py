@@ -86,7 +86,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Any
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -123,7 +123,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
-    has_attr, has_parent, ThreadLocalSingletonFactory
+    has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings
 '''
 
 
