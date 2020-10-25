@@ -401,9 +401,15 @@ CONFIG_PRESET['delimiter_set'] = {
 
 ########################################################################
 #
-# compiler server configuration
+# compiler command and server configuration
 #
 ########################################################################
+
+# If parser- or compiler-script is called with several input files
+# (batch-processing), the files will be processed in parallel via the
+# Python multiprocessing module
+# Default value: True
+CONFIG_PRESET['batch_processing_parallelization'] = True
 
 # Maximum allowed source size for remote procedure calls (including
 # parameters) in server.Server. The default value is rather large in

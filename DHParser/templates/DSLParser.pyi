@@ -1,3 +1,6 @@
+RESULT_FILE_EXTENSION = ".xml"  # Change this according to your needs!
+
+
 def compile_src(source: str) -> Tuple[Any, List[Error]]:
     """Compiles ``source`` and returns (result, errors, ast)."""
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
@@ -15,14 +18,61 @@ def serialize_result(result: Any) -> Union[str, bytes]:
         return repr(result)
 
 
-def process_file(source: str) -> Tuple[Union[str, bytes], List[str]]:
-    """Compiles ``source`` and returns (serialized result, error_strings)."""
+def process_file(source: str, result_filename: str = '', verbose: bool = False) -> str:
+    """Compiles the source and writes the serialized results back to disk,
+    unless any fatal errors have occurred. Error and Warning messages are
+    written to a file with the same name as `result_filename` with an
+    appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
+    extension. Returns the name of the error-messages file or an empty
+    string, if no errors of warnings occurred.
+    """
+    source_filename = source if is_filename(source) else ''
+    if verbose:
+        print('Compiling "%s"' % source_filename)
     result, errors = compile_src(source)
-    return serialize_result(result), canonical_error_strings(errors, source)
+    if not has_errors(errors, FATAL):
+        if os.path.abspath(source_filename) != os.path.abspath(result_filename):
+            with open(result_filename, 'w') as f:
+                f.write(serialize_result(result))
+        else:
+            errors.append(Error('Source and destination have the same name "%s"!'
+                                % result_filename, 0, FATAL))
+    if errors:
+        err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
+        err_filename = os.path.splitext(result_filename)[0] + err_ext
+        with open(err_filename, 'w') as f:
+            f.write('\n'.join(canonical_error_strings(errors, source_filename)))
+        return err_filename
+    return ''
 
 
-def batch_process(source_filename: str, out_dir: str) -> List[str]:
-    """Compiles file with name ``source_filename`` and stores the results """
+def batch_process(filenames: List[str], out_dir: str, verbose: bool = False) -> List[str]:
+    """Compiles all files listed in filenames and writes the results and/or
+    error messages to the directory `our_dir`. Returns a list of error
+    messages files.
+    """
+    def gen_dest_name(name):
+        os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
+                                         + RESULT_FILE_EXTENSION)
+    error_list =  []
+    if get_config_value('batch_processing_parallelization'):
+        import concurrent.futures
+        import multiprocessing
+        with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+            err_futures = []
+            for name in filenames:
+                dest_name = gen_dest_name(name)
+                err_futures.append(pool.submit(process_file, name, dest_name, verbose))
+            for err_future in err_futures:
+                error_filename = err_future.result()
+                if error_filename:
+                    error_list.append(error_filename)
+    else:
+        for name in filenames:
+            error_filename = process_file(name, gen_dest_name(name), verbose)
+            if error_filename:
+                error_list.append(error_filename)
+    return error_list
 
 
 if __name__ == "__main__":
@@ -95,13 +145,22 @@ if __name__ == "__main__":
         elif not ('-o' in sys.argv or '--out' in sys.argv):
             batch_processing = False
 
-
-    result, errors = compile_src(file_names[0])
-
-    if errors:
-        for err_str in canonical_erorr_strings(errors, file_names[0]):
-            print(err_str)
-        sys.exit(1)
+    if batch_processing:
+        error_files = batch_process(filenames, out, args.verbose)
+        if error_files:
+            category = "ERRORS" if any(f.endswith('_ERRORS.txt') for f in error_files) \
+                else "warnings"
+            print("There have been %s! Please check files:" % category)
+            print('\n'.join(error_files))
+            if category == "ERRORS":
+                sys.exit(1)
     else:
-        print(result.serialize(how='default' if args.xml is None else 'xml')
-              if isinstance(result, Node) else result)
+        result, errors = compile_src(file_names[0])
+
+        if errors:
+            for err_str in canonical_erorr_strings(errors, file_names[0]):
+                print(err_str)
+            sys.exit(1)
+        else:
+            print(result.serialize(how='default' if args.xml is None else 'xml')
+                  if isinstance(result, Node) else result)
