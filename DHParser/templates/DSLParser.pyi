@@ -52,8 +52,8 @@ def batch_process(filenames: List[str], out_dir: str, verbose: bool = False) -> 
     messages files.
     """
     def gen_dest_name(name):
-        os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
-                                         + RESULT_FILE_EXTENSION)
+        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
+                                     + RESULT_FILE_EXTENSION)
     error_list =  []
     if get_config_value('batch_processing_parallelization'):
         import concurrent.futures
@@ -69,6 +69,7 @@ def batch_process(filenames: List[str], out_dir: str, verbose: bool = False) -> 
                     error_list.append(error_filename)
     else:
         for name in filenames:
+            print(name, gen_dest_name(name))
             error_filename = process_file(name, gen_dest_name(name), verbose)
             if error_filename:
                 error_list.append(error_filename)
@@ -124,6 +125,12 @@ if __name__ == "__main__":
     #     print('"%s" is not a file!' % file_name)
     #     sys.exit(1)
 
+    if not os.path.exists(out):
+        os.mkdir(out)
+    elif not os.path.isdir(out):
+        print('Output directory "%s" exists and is not a directory!' % out)
+        sys.exit(1)
+
     if args.debug is not None:
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
@@ -146,7 +153,7 @@ if __name__ == "__main__":
             batch_processing = False
 
     if batch_processing:
-        error_files = batch_process(filenames, out, args.verbose)
+        error_files = batch_process(file_names, out, args.verbose)
         if error_files:
             category = "ERRORS" if any(f.endswith('_ERRORS.txt') for f in error_files) \
                 else "warnings"

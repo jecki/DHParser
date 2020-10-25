@@ -11,6 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
+from typing import Tuple, List, Union, Any
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -47,7 +48,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent
+    has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
+    has_errors, ERROR, FATAL
 
 
 #######################################################################
@@ -109,21 +111,18 @@ class jsonGrammar(Grammar):
     root__ = json
     
 
+_raw_grammar = ThreadLocalSingletonFactory(jsonGrammar, ident=1)
+
 def get_grammar() -> jsonGrammar:
-    """Returns a thread/process-exclusive jsonGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.json_00000001_grammar_singleton = jsonGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.json_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_json(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################
@@ -134,7 +133,7 @@ def get_grammar() -> jsonGrammar:
 
 json_AST_transformation_table = {
     # AST Transformations for the json-grammar
-    "<": [], # flatten,
+    "<": flatten,
     "json": [],
     "_element": [],
     "object": [],
@@ -157,26 +156,19 @@ json_AST_transformation_table = {
     "DOT": [],
     "EXP": [],
     "_EOF": [],
-    "*": [], # replace_by_single_child
+    "*": replace_by_single_child
 }
 
 
-
-def CreatejsonTransformer() -> TransformationFunc:
+def jsonTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
-        threads or processes."""
+    threads or processes."""
     return partial(traverse, processing_table=json_AST_transformation_table.copy())
 
+get_transformer = ThreadLocalSingletonFactory(jsonTransformer, ident=1)
 
-def get_transformer() -> TransformationFunc:
-    """Returns a thread/process-exclusive transformation function."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
-    except AttributeError:
-        THREAD_LOCALS.json_00000001_transformer_singleton = CreatejsonTransformer()
-        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
-    return transformer
+def transform_json(cst):
+    get_transformer()(cst)
 
 
 #######################################################################
@@ -197,47 +189,76 @@ class jsonCompiler(Compiler):
         # initialize your variables here, not in the constructor!
 
     def on_json(self, node):
-        assert len(node.children) == 1
-        return self.compile(node.children[0])
+        return self.fallback_compiler(node)
 
-    def on_object(self, node):
-        return dict(self.compile(child) for child in node.children)
+    # def on__element(self, node):
+    #     return node
 
-    def on_member(self, node):
-        return (self.compile(node.children[0]),
-                self.compile(node.children[-1]))
+    # def on_object(self, node):
+    #     return node
 
-    def on_array(self, node):
-        return [self.compile(child) for child in node.children]
+    # def on_member(self, node):
+    #     return node
 
-    def on_string(self, node):
-        return node.content
+    # def on_array(self, node):
+    #     return node
 
-    def on_number(self, node):
-        if node.children:
-            return float(node.content)
-        else:
-            return int(node.content)
+    # def on_string(self, node):
+    #     return node
 
-    def on_true(self, node):
-        return True
+    # def on_number(self, node):
+    #     return node
 
-    def on_false(self, node):
-        return False
+    # def on__bool(self, node):
+    #     return node
 
-    def on_null(self, node):
-        return None
+    # def on_true(self, node):
+    #     return node
+
+    # def on_false(self, node):
+    #     return node
+
+    # def on_null(self, node):
+    #     return node
+
+    # def on__CHARACTERS(self, node):
+    #     return node
+
+    # def on_PLAIN(self, node):
+    #     return node
+
+    # def on_ESCAPE(self, node):
+    #     return node
+
+    # def on_UNICODE(self, node):
+    #     return node
+
+    # def on_HEX(self, node):
+    #     return node
+
+    # def on_INT(self, node):
+    #     return node
+
+    # def on_NEG(self, node):
+    #     return node
+
+    # def on_FRAC(self, node):
+    #     return node
+
+    # def on_DOT(self, node):
+    #     return node
+
+    # def on_EXP(self, node):
+    #     return node
+
+    # def on__EOF(self, node):
+    #     return node
 
 
-def get_compiler() -> jsonCompiler:
-    """Returns a thread/process-exclusive jsonCompiler-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
-    except AttributeError:
-        THREAD_LOCALS.json_00000001_compiler_singleton = jsonCompiler()
-        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
-    return compiler
+get_compiler = ThreadLocalSingletonFactory(jsonCompiler, ident=1)
+
+def compile_json(ast):
+    return get_compiler()(ast)
 
 
 #######################################################################
@@ -246,37 +267,82 @@ def get_compiler() -> jsonCompiler:
 #
 #######################################################################
 
-def compile_src(source):
-    """Compiles ``source`` and returns (result, errors, ast).
-    """
+RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
+
+
+def compile_src(source: str) -> Tuple[Any, List[Error]]:
+    """Compiles ``source`` and returns (result, errors, ast)."""
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
                                   get_compiler())
-    return result_tuple
+    return result_tuple[:2]  # drop the AST at the end of the result tuple
 
 
-def cpu_profile(func, *args):
-    import cProfile as profile
-    import pstats
-    pr = profile.Profile()
-    pr.enable()
-    result = func(*args)
-    pr.disable()
-    st = pstats.Stats(pr)
-    st.strip_dirs()
-    st.sort_stats('time').print_stats(40)
-    return result
+def serialize_result(result: Any) -> Union[str, bytes]:
+    """Serialization of result. REWRITE THIS, IF YOUR COMPILATION RESULT
+    IS NOT A TREE OF NODES.
+    """
+    if isinstance(result, Node):
+        return result.serialize(how='default' if args.xml is None else 'xml')
+    else:
+        return repr(result)
 
 
-def mem_profile(func, *args):
-    import tracemalloc
-    tracemalloc.start()
-    result = func(*args)
-    snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
-    print("[ Top 20 ]")
-    for stat in top_stats[:40]:
-        print(stat)
-    return result
+def process_file(source: str, result_filename: str = '', verbose: bool = False) -> str:
+    """Compiles the source and writes the serialized results back to disk,
+    unless any fatal errors have occurred. Error and Warning messages are
+    written to a file with the same name as `result_filename` with an
+    appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
+    extension. Returns the name of the error-messages file or an empty
+    string, if no errors of warnings occurred.
+    """
+    source_filename = source if is_filename(source) else ''
+    if verbose:
+        print('Compiling "%s"' % source_filename)
+    result, errors = compile_src(source)
+    if not has_errors(errors, FATAL):
+        if os.path.abspath(source_filename) != os.path.abspath(result_filename):
+            with open(result_filename, 'w') as f:
+                f.write(serialize_result(result))
+        else:
+            errors.append(Error('Source and destination have the same name "%s"!'
+                                % result_filename, 0, FATAL))
+    if errors:
+        err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
+        err_filename = os.path.splitext(result_filename)[0] + err_ext
+        with open(err_filename, 'w') as f:
+            f.write('\n'.join(canonical_error_strings(errors, source_filename)))
+        return err_filename
+    return ''
+
+
+def batch_process(filenames: List[str], out_dir: str, verbose: bool = False) -> List[str]:
+    """Compiles all files listed in filenames and writes the results and/or
+    error messages to the directory `our_dir`. Returns a list of error
+    messages files.
+    """
+    def gen_dest_name(name):
+        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
+                                     + RESULT_FILE_EXTENSION)
+    error_list =  []
+    if get_config_value('batch_processing_parallelization'):
+        import concurrent.futures
+        import multiprocessing
+        with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+            err_futures = []
+            for name in filenames:
+                dest_name = gen_dest_name(name)
+                err_futures.append(pool.submit(process_file, name, dest_name, verbose))
+            for err_future in err_futures:
+                error_filename = err_future.result()
+                if error_filename:
+                    error_list.append(error_filename)
+    else:
+        for name in filenames:
+            print(name, gen_dest_name(name))
+            error_filename = process_file(name, gen_dest_name(name), verbose)
+            if error_filename:
+                error_list.append(error_filename)
+    return error_list
 
 
 if __name__ == "__main__":
@@ -310,15 +376,29 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Parses a json-file and shows its syntax-tree.")
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
-                        help='Store debug information in LOGS subdirectory.')
+                        help='Store debug information in LOGS subdirectory')
     parser.add_argument('-x', '--xml', action='store_const', const='xml',
                         help='Store result as XML instead of S-expression')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],
                         help='Output directory')
+    parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
+                        help='Verbose output')
 
     args = parser.parse_args()
-    file_names, log_dir = args.files, ''
-    out = args.out[0]
+    file_names, out, log_dir = args.files, args.out[0], ''
+
+    # if not os.path.exists(file_name):
+    #     print('File "%s" not found!' % file_name)
+    #     sys.exit(1)
+    # if not os.path.isfile(file_name):
+    #     print('"%s" is not a file!' % file_name)
+    #     sys.exit(1)
+
+    if not os.path.exists(out):
+        os.mkdir(out)
+    elif not os.path.isdir(out):
+        print('Output directory "%s" exists and is not a directory!' % out)
+        sys.exit(1)
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -327,64 +407,36 @@ if __name__ == "__main__":
         set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
 
+    def echo(message: str):
+        if args.verbose:
+            print(message)
+
     batch_processing = True
     if len(file_names) == 1:
         if os.path.isdir(file_names[0]):
             dir_name = file_names[0]
-            print('Processing all files in directory: ' + dir_name)
+            echo('Processing all files in directory: ' + dir_name)
             file_names = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)
                           if os.path.isfile(os.path.join(dir_name, fn))]
-            print(file_names)
         elif not ('-o' in sys.argv or '--out' in sys.argv):
             batch_processing = False
 
     if batch_processing:
-        if os.path.exists(out):
-            if not os.path.isdir(out):
-                print('Cannot output to %s, because there already exists a file of the same name'
-                      % out)
+        error_files = batch_process(file_names, out, args.verbose)
+        if error_files:
+            category = "ERRORS" if any(f.endswith('_ERRORS.txt') for f in error_files) \
+                else "warnings"
+            print("There have been %s! Please check files:" % category)
+            print('\n'.join(error_files))
+            if category == "ERRORS":
                 sys.exit(1)
-        else:
-            os.mkdir(out)
+    else:
+        result, errors = compile_src(file_names[0])
 
-    file_errors = False
-    errors = []
-    for file_name in file_names:
-        if not os.path.exists(file_name):
-            print('File "%s" not found!' % file_name)
-            file_errors = True
-        elif not os.path.isfile(file_name):
-            print('"%s" is not a file!' % file_name)
-            file_errors = True
-        else:
-            result, errors, _ = compile_src(file_name)
-            if batch_processing:
-                out_name = os.path.join(out, os.path.splitext(os.path.basename(file_name))[0])
-                if errors:
-                    print('Errors found in: ' + file_name)
-                    extension = '_ERRORS.txt'
-                    data = '\n'.join(str(err) for err in errors)
-                else:
-                    print('Successfully processed: ' + file_name)
-                    is_tree = isinstance(result, Node)
-                    extension = ('.xml' if args.xml else '.sxpr') if is_tree else '.pyi'
-                    data = result.serialize(how='default' if args.xml is None else 'xml') \
-                        if is_tree else str(result)
-                with open(out_name + extension, 'w') as f:
-                    f.write(data)
-
-
-    # result, errors, _ = cpu_profile(compile_src, file_name);  sys.exit(0)
-
-    if not batch_processing:
         if errors:
-            cwd = os.getcwd()
-            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
-            for error in errors:
-                print(rel_path + ':' + str(error))
+            for err_str in canonical_erorr_strings(errors, file_names[0]):
+                print(err_str)
             sys.exit(1)
         else:
             print(result.serialize(how='default' if args.xml is None else 'xml')
                   if isinstance(result, Node) else result)
-    if file_errors:
-        sys.exit(1)
