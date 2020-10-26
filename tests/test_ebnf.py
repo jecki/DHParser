@@ -593,6 +593,8 @@ class TestInterleave:
         assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
         assert grammar('B').content == 'B'
+        result = grammar('')
+        assert result.content == '' and not result.errors
 
     def test_interleave_counted(self):
         ebnf = 'prefix = "A"{1,5} ° "B"{2,3}'
