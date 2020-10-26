@@ -68,6 +68,8 @@ class TestDHParserCommandLineTool:
             for fname in os.listdir(LOG_DIR):
                 os.remove(os.path.join(LOG_DIR, fname))
             os.rmdir(LOG_DIR)
+        # if os.path.exists('out') and os.path.isdir('out'):
+        #     os.rmdir('out')
 
     def test_dhparser(self):
         data_dir = TFFN('test_dhparser_data')

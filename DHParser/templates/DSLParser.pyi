@@ -111,7 +111,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', '--xml', action='store_const', const='xml',
                         help='Store result as XML instead of S-expression')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],
-                        help='Output directory')
+                        help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
 
@@ -124,12 +124,6 @@ if __name__ == "__main__":
     # if not os.path.isfile(file_name):
     #     print('"%s" is not a file!' % file_name)
     #     sys.exit(1)
-
-    if not os.path.exists(out):
-        os.mkdir(out)
-    elif not os.path.isdir(out):
-        print('Output directory "%s" exists and is not a directory!' % out)
-        sys.exit(1)
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -153,6 +147,11 @@ if __name__ == "__main__":
             batch_processing = False
 
     if batch_processing:
+        if not os.path.exists(out):
+            os.mkdir(out)
+        elif not os.path.isdir(out):
+            print('Output directory "%s" exists and is not a directory!' % out)
+            sys.exit(1)
         error_files = batch_process(file_names, out, args.verbose)
         if error_files:
             category = "ERRORS" if any(f.endswith('_ERRORS.txt') for f in error_files) \
