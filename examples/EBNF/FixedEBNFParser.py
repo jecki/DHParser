@@ -47,7 +47,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent
+    has_attr, has_parent, ThreadLocalSingletonFactory
 
 
 #######################################################################
@@ -76,8 +76,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "7be178ed2a931a86e09999c07305f6dd"
-    anonymous__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "a56442c2502290d543c4dfdce240192e"
+    anonymous__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -106,7 +106,7 @@ class FixedEBNFGrammar(Grammar):
     AND = Text("")
     OR = Text("|")
     DEF = Text("=")
-    EOF = Drop(Drop(NegativeLookahead(RegExp('.'))))
+    EOF = Drop(NegativeLookahead(RegExp('.')))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
@@ -139,27 +139,25 @@ class FixedEBNFGrammar(Grammar):
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     literals = OneOrMore(literal)
-    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))), ZeroOrMore(Series(Series(Text(","), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))), Lookahead(FOLLOW_UP), mandatory=1)
-    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1, err_msgs=error_messages__["definition"])
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)))
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), Alternative(Series(component, ZeroOrMore(Series(Series(Text(","), dwsp__), component))), expression), Lookahead(FOLLOW_UP), mandatory=1)
+    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
     
 
+_raw_grammar = ThreadLocalSingletonFactory(FixedEBNFGrammar, ident=1)
+
 def get_grammar() -> FixedEBNFGrammar:
-    """Returns a thread/process-exclusive FixedEBNFGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.FixedEBNF_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.FixedEBNF_00000001_grammar_singleton = FixedEBNFGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.FixedEBNF_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.FixedEBNF_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_FixedEBNF(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

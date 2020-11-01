@@ -320,7 +320,7 @@ class EBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "3bda01686407a47a9fd0a709bda53ae3"
-    anonymous__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    anonymous__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [
@@ -431,11 +431,11 @@ class EBNFGrammar(Grammar):
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     literals = OneOrMore(literal)
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)))
     directive = Series(
         Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__),
-        Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))),
-        ZeroOrMore(Series(Series(Text(","), dwsp__), Alternative(
-            regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))),
+        Alternative(Series(component, ZeroOrMore(Series(Series(Text(","), dwsp__), component))),
+                    expression),
         Lookahead(FOLLOW_UP), mandatory=1)
     definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)),
                         expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
@@ -516,7 +516,7 @@ class FixedEBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "d0735678e82e6d7cbf75958080a607ff"
-    anonymous__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    anonymous__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {
@@ -602,12 +602,11 @@ class FixedEBNFGrammar(Grammar):
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     literals = OneOrMore(literal)
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)))
     directive = Series(
         Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__),
-        Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))),
-        ZeroOrMore(Series(
-            Series(Text(","), dwsp__),
-            Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))),
+        Alternative(Series(component, ZeroOrMore(Series(Series(Text(","), dwsp__), component))),
+                    expression),
         Lookahead(FOLLOW_UP), mandatory=1)
     definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__,
                         Lookahead(FOLLOW_UP), mandatory=1)
