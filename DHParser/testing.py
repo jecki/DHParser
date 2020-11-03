@@ -435,7 +435,12 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 ast = copy.deepcopy(cst)
                 old_errors = set(ast.errors)
                 traverse(ast, {'*': remove_children({'__TESTING_ARTIFACT__'})})
-                transform(ast)
+                try:
+                    transform(ast)
+                except AssertionError as e:
+                    e.args = ('Test %s of parser %s failed, because:\n%s'
+                              % (test_name, parser_name, e.args[0]),)
+                    raise e
                 tests.setdefault('__ast__', {})[test_name] = ast
                 ast_errors = [e for e in ast.errors if e not in old_errors]
                 ast_errors.sort(key=lambda e: e.pos)
@@ -599,6 +604,9 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 except ValueError as e:
                     if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
                         raise e
+                except AssertionError as e:
+                    e.args = ('When processing "%s":\n%s' % (filename, e.args[0]),)
+                    raise e
 
     else:
         results = []

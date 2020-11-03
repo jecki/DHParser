@@ -364,8 +364,8 @@ def traverse(root_node: Node,
             try:
                 call(context)
             except Exception as ae:
-                raise AssertionError('An error occurred when transforming "%s" with:\n%s\n%s' %
-                                     (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
+                raise AssertionError('An exception occurred when transforming "%s" with %s:\n%s'
+                                     % (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
 
     traverse_recursive([root_node])
     # assert processing_table['__cache__']
@@ -749,6 +749,8 @@ def replace_by_children(context: List[Node]):
     The attributes of this node will be dropped. In case the last node is
     the root-note (i.e. len(context) == 1), it will only be eliminated, if
     there is but one child.
+
+    WARNING: This should never be followed by move_adjacent() in the transformation list!!!
     """
     try:
         parent = context[-2]
@@ -1109,11 +1111,19 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
     If the `merge`-flag is set, a moved node will be merged with its
     predecessor (or successor, respectively) in the parent node in case it
     also fulfills the given `condition`.
+
+    WARNING: This function should never follow replace_by_children() in the transformation list!!!
     """
     node = context[-1]
     if len(context) <= 1 or not node.children:
         return
     parent = context[-2]
+
+    assert node in parent.children, \
+        ("Node %s (%s) is not among its parent's children, any more! "
+         "This could be due to a transformation that manipulates the parent's result earlier "
+         "in the transformation pipeline, like replace_by_children.") % (node.tag_name, id(node))
+
     children = node.children
 
     a, b = 0, len(children)
