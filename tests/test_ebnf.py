@@ -1149,7 +1149,7 @@ class TestModeSetting:
         assert st.errors
         gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
         st = gr(self.testdoc)
-        assert not st.errors
+        assert not st.errors, str(st.errors)
 
 
 class TestAlternativeReordering:

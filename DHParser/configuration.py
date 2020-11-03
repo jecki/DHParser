@@ -350,10 +350,10 @@ CONFIG_PRESET['default_literalws'] = "none"
 #       "delimiter_set".
 # 'classic'     - relatively closest to the ISO-standard, i.e. uses [] and {}
 #       for optional and zero or more elements, respectively. Does not allow
-#       the ?, +, * suffixes. Allows the specification of character-ranges
-#       within square brackets only with the ordinal unicode numbers,
-#       not with the characters itself, i.e. [0x41-0x5A]. Delimiters will
-#       be configured on first use.
+#       the ?, +, * suffixes (NOT YET IMPLEMENTED!). Allows the specification
+#       of character-ranges within square brackets only with the ordinal
+#       unicode numbers, not with the characters itself, i.e. [0x41-0x5A].
+#       Delimiters will be configured on first use.
 # 'strict'      - allows both classic and regex-like syntax to be mixed, but
 #       allows character ranges within square brackets with ordinal values,
 #       only. Uses | as delimiter for alternatives.
@@ -380,7 +380,7 @@ EBNF_ANY_SYNTAX_HEURISTICAL = "heuristic"
 EBNF_REGULAR_EXPRESSION_SYNTAX = "regex-like"
 EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX = "peg-like"
 
-CONFIG_PRESET['syntax_variant'] = EBNF_CONFIGURABLE_SYNTAX
+CONFIG_PRESET['syntax_variant'] = EBNF_FIXED_SYNTAX
 
 
 # Set of delimiters when using the 'configurable'-Grammar

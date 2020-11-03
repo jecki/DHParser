@@ -65,6 +65,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'EBNFGrammar',
            'EBNFTransform',
            'EBNFCompilerError',
+           'EBNFDirectives',
            'EBNFCompiler',
            'grammar_changed',
            'compile_ebnf',
@@ -473,11 +474,12 @@ class EBNFGrammar(Grammar):
 
     @mode.setter
     def mode(self, mode: str):
+        if mode == self.mode:
+            return
+
         def set_parsefunc(p: Parser, f: ParseFunc):
             method = f.__get__(p, type(p))  # bind function f to parser p
-            # if p._parse == p._parse_proxy:
             p._parse_proxy = method
-            # p._parse = method
 
         always = Always._parse
         never = Never._parse
