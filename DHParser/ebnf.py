@@ -513,6 +513,156 @@ class FixedEBNFGrammar(Grammar):
     r"""Faster version of EBNF, where delimiters are not determined on
     first use, but defined as constant Text-parsers. They can still be
     adjusted with function `parse.update_scanner()`.
+
+    Different syntactical variants can be configured either by adjusting
+    the definitions of DEF, OR, AND, ENDL, RNG_OPEN, RNG_CLOSE, RNG_DELIM,
+    CH_LEADIN, TIMES, RE_LEADIN, RE_LEADOUT either within this grammar
+    definition or in the Grammar-object changing the `text`-field of the
+    respective parser objects.
+
+    EBNF-Definition of the Grammar:
+
+        @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
+            # comments can be either C-Style: /* ... */
+            # or pascal/modula/oberon-style: (* ... *)
+            # or python-style: # ... \n, excluding, however, character markers: #x20
+        @ whitespace = /\s*/                            # whitespace includes linefeed
+        @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+        @ anonymous  = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+        @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
+        @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+
+
+        # re-entry-rules for resuming after parsing-error
+
+        @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
+        @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
+
+
+        # specialized error messages for certain cases
+
+        @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
+                                   'be a directive and the directive symbol @ is missing\nor the error is '
+                                   'due to inconsistent use of the comma as a delimiter\nfor the elements '
+                                   'of a sequence.'
+
+
+        #: top-level
+
+        syntax     = ~ { definition | directive } EOF
+        definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
+
+        directive  = "@" §symbol "=" ( component { "," component } | expression ) & FOLLOW_UP
+          component  = (regexp | literals | procedure | symbol !DEF)
+          literals   = { literal }+                       # string chaining, only allowed in directives!
+          procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
+
+        FOLLOW_UP  = `@` | symbol | EOF
+
+
+        #: components
+
+        expression = sequence { OR~ sequence }
+        sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
+                     { AND~ ["§"] ( interleave | lookaround ) }
+        interleave = difference { "°" ["§"] difference }
+        lookaround = flowmarker § (oneormore | pure_elem)
+        difference = term ["-" § (oneormore | pure_elem)]
+        term       = oneormore | counted | repetition | option | pure_elem
+
+
+        #: elements
+
+        countable  = option | oneormore | element
+        pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
+        element    = [retrieveop] symbol !DEF          # negative lookahead to be sure it's not a definition
+                   | literal
+                   | plaintext
+                   | regexp
+                   # | char_range
+                   | character ~
+                   | any_char
+                   | whitespace
+                   | group
+
+
+        ANY_SUFFIX = /[?*+]/
+
+
+        #: flow-operators
+
+        flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+                   | "<-!" | "<-&"                      # '<-!' negative lookbehind, '<-&' positive lookbehind
+        retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+
+
+        #: groups
+
+        group      = "(" no_range §expression ")"
+        oneormore  = "{" no_range expression "}+" | element "+"
+        repetition = "{" no_range §expression "}" | element "*" no_range
+        option     = # !char_range
+                     "[" §expression "]" | element "?"
+        counted    = countable range | countable TIMES~ multiplier | multiplier TIMES~ §countable
+
+        range      = RNG_OPEN~ multiplier [ RNG_DELIM~ multiplier ] RNG_CLOSE~
+        no_range   = !multiplier | &multiplier TIMES
+        multiplier = /[1-9]\d*/~
+
+
+        #: leaf-elements
+
+        symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
+        literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
+                   | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+        plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
+                   | /´(?:(?<!\\)\\´|[^´])*?´/~
+        regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+        # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+        char_range = `[` &char_range_heuristics
+                         [`^`] (character | free_char) { [`-`] character | free_char } "]"
+        character  = CH_LEADIN HEXCODE
+        free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
+        any_char   = "."
+        whitespace = /~/~                               # insignificant whitespace
+
+        #: delimiters
+
+        EOF = !/./
+
+        DEF        = `=`
+        OR         = `|`
+        AND        = ``
+        ENDL       = ``
+
+        RNG_OPEN   = `{`
+        RNG_CLOSE  = `}`
+        RNG_DELIM  = `,`
+        TIMES      = `*`
+
+        RE_LEADIN  = `/`
+        RE_LEADOUT = `/`
+
+        CH_LEADIN  = `0x`
+
+        #: heuristics
+
+        char_range_heuristics  = ! ( /[\n\t ]/
+                                   | ~ literal_heuristics
+                                   | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+        literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
+                               | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
+                               | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
+                               | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
+                               | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
+        regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
+
+
+        #: basic-regexes
+
+        RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
+        SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
+        HEXCODE    = /[A-Fa-f0-9]{1,8}/
     """
     countable = Forward()
     element = Forward()
@@ -950,11 +1100,6 @@ class EBNFCompilerError(CompilerError):
     """Error raised by `EBNFCompiler` class. (Not compilation errors
     in the strict sense, see `CompilationError` in module ``dsl.py``)"""
     pass
-
-
-# def escape_backslash(s: str) -> str:
-#     """Replaces backslashes by double backslash and newline by r'\n'."""
-#     return s.replace('\\', r'\\').replace('\n', r'\n')
 
 
 class EBNFCompiler(Compiler):
