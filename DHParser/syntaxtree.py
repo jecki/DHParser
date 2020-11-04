@@ -897,15 +897,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_context_if(self, match_function: Callable,
                           include_root: bool = False,
-                          reverse: bool = False,
-                          parent_context=[]) -> Iterator[List['Node']]:
+                          reverse: bool = False) -> Iterator[List['Node']]:
         """
         Like `Node.select_if()` but yields the entire context (i.e. list of
         descendants, the last one being the matching node) instead of just
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
         receives the complete context as argument, rather than just the last node!
         """
-        context = parent_context + [self]
+        context = [self]
         if include_root and match_function(context):
             yield context
         child_iterator = reversed(self._children) if reverse else self._children
@@ -914,8 +913,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if match_function(child_context):
                 yield child_context
             if child._children:
-                for matched in child.select_context_if(match_function, False, reverse, context):
-                    yield matched
+                for matched in child.select_context_if(match_function, False, reverse):
+                    yield context + matched
 
     def select_context(self, criterion: CriteriaType,
                        include_root: bool = False,
