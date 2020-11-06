@@ -135,8 +135,8 @@ def unit_from_config(config_str, filename):
                 testcode = '\n'.join(lines)
             # unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
             test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
-            assert testkey.strip('*') not in test and (testkey.strip('*') + '*') not in test, \
-                '"%s": Key %s already exists in %s:%s !' % (filename, testkey, stage, symbol)
+            if testkey.strip('*') in test or (testkey.strip('*') + '*') in test:
+                raise KeyError('"%s": Key %s already exists in %s:%s !' % (filename, testkey, stage, symbol))
             test[testkey] = testcode
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
@@ -181,11 +181,11 @@ def unit_from_file(filename):
     """
     try:
         reader = TEST_READERS[os.path.splitext(filename)[1].lower()]
-        with open(filename, 'r', encoding='utf8') as f:
-            data = f.read()
-        test_unit = reader(data, filename)
     except KeyError:
         raise ValueError("Unknown unit test file type: " + filename[filename.rfind('.'):])
+    with open(filename, 'r', encoding='utf8') as f:
+        data = f.read()
+    test_unit = reader(data, filename)
 
     # Check for ambiguous Test names
     errors = []

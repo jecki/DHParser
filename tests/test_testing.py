@@ -91,6 +91,14 @@ CFG_FILE_3 = r'''
 M1*: """Trigger CST-output with an asterix!"""
 '''
 
+CFG_FILE_4 = '''
+[match:LAT_GWORT]
+M1: "inferior|es"
+M2: "inferior.|es"
+M3: "h"
+M4: "fa[s]citergiis"
+M1: "sad(d)a"
+'''
 
 class TestTestfiles:
     def setup(self):
@@ -102,11 +110,14 @@ class TestTestfiles:
             f.write(CFG_FILE_2)
         with open(TFFN('configfile_test_3.ini'), 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_3)
+        with open(TFFN('configfile_test_4.ini'), 'w', encoding="utf-8") as f:
+            f.write(CFG_FILE_4)
 
     def teardown(self):
         os.remove(TFFN('configfile_test_1.ini'))
         os.remove(TFFN('configfile_test_2.ini'))
         os.remove(TFFN('configfile_test_3.ini'))
+        os.remove(TFFN('configfile_test_4.ini'))
         os.chdir(self.save_dir)
 
     def test_unit_from_config_file(self):
@@ -126,6 +137,13 @@ class TestTestfiles:
             assert line.rstrip()[0:1] != ' '
 
         unit = unit_from_file(TFFN('configfile_test_3.ini'))
+
+        try:
+            unit = unit_from_file(TFFN('configfile_test_4.ini'))
+            assert False, "Same key used twice should raise a key error!!!"
+        except KeyError as e:
+            pass
+
 
 
 ARITHMETIC_EBNF = """
