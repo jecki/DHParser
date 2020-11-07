@@ -688,6 +688,27 @@ class TestErrorRecovery:
         assert len(st.errors) == 2 and any(err.code == RESUME_NOTICE for err in st.errors)
         assert 'Skipping' in str(st.errors_sorted[1])
 
+    def test_series_skip2(self):
+        grammar = """
+        @whitespace = vertical
+        @literalws = right
+        document = { sentence }+ EOF
+        @sentence_skip = /\s|(?=\.|$)/
+        sentence = { word §&continuation }+ "."
+            continuation = (word | `.` | EOF)
+        word = /[A-Za-z]+/~
+        EOF = !/./ 
+        """
+        data = "Time is out of joint. Oh cursed spite that I was ever born to set it right."
+        parser = grammar_provider(grammar)()
+        st = parser(data)
+        assert not st.errors, str(st.errors)
+        data2 = data.replace('cursed', 'cur?ed')
+        st = parser(data2)
+        assert len(st.errors) == 1
+        zombie = st.pick('ZOMBIE__')
+        assert zombie.content == '?ed ', zombie.content
+
     def test_irrelevance_of_error_definition_order(self):
         lang = """
         document = series | /.*/

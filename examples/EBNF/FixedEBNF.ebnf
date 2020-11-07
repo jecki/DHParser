@@ -38,7 +38,7 @@
 syntax     = ~ { definition | directive } EOF
 definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
-directive  = "@" §symbol "=" ( component { "," component } | expression ) & FOLLOW_UP
+directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   component  = (regexp | literals | procedure | symbol !DEF)
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
