@@ -56,6 +56,8 @@ if __name__ == "__main__":
         interpreters.append('~/.local/bin/python3.9 ')
     if os.system('pypy3 -V') == 0:
         interpreters.append('pypy3 ')
+    elif os.system('pypy36 -V') == 0:
+        interpreters.append('pypy36 ')
     elif os.system('pypy -V') == 0:
         interpreters.append('pypy ')
     print('Interpreters found: ' + ''.join(interpreters))

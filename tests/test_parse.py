@@ -692,16 +692,19 @@ class TestErrorRecovery:
         grammar = """
         @whitespace = vertical
         @literalws = right
-        document = { sentence }+ EOF
-        @sentence_skip = /\s|(?=\.|$)/
-        sentence = { word §&continuation }+ "."
-            continuation = (word | `.` | EOF)
+        @document_skip = /\s+|(?=$)/
+        document = { sentence § sentence_continuation }+ EOF
+            sentence_continuation = &(sentence | EOF)
+        @sentence_skip = /\s+|(?=\.|$)/
+        sentence = { word § word_continuation }+ "."
+            word_continuation = &(word | `.` | EOF)
         word = /[A-Za-z]+/~
         EOF = !/./ 
         """
         data = "Time is out of joint. Oh cursed spite that I was ever born to set it right."
         parser = grammar_provider(grammar)()
         st = parser(data)
+        print(st.as_sxpr())
         assert not st.errors, str(st.errors)
         data2 = data.replace('cursed', 'cur?ed')
         st = parser(data2)
