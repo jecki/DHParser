@@ -2411,7 +2411,6 @@ class EBNFCompiler(Compiler):
 
     def on_regexp(self, node: Node) -> str:
         rx = node.content
-        name = []   # type: List[str]
         try:
             arg = repr(self.check_rx(node, rx.replace(r'\/', '/')))
         except AttributeError as error:
@@ -2421,7 +2420,7 @@ class EBNFCompiler(Compiler):
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             return '"' + errmsg + '"'
-        return self.REGEXP_PARSER(', '.join([arg] + name))
+        return self.REGEXP_PARSER(arg)
 
 
     def on_char_range(self, node) -> str:
