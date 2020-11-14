@@ -24,7 +24,7 @@ import asyncio
 import os
 import sys
 
-DEBUG = False
+VERBOSE = False
 
 assert sys.version_info >= (3, 5, 7), "DHParser.server requires at least Python-Version 3.5.7"
 
@@ -76,10 +76,10 @@ def echo(msg: str):
         print('Unknown connectsion type: %s. Must either be streams or tcp.' % CONNECTION_TYPE)
 
 
-def debug(msg: str):
-    """Prints a debugging message if DEBUG-flag is set"""
-    global DEBUG
-    if DEBUG:
+def verbose(msg: str):
+    """Prints an additional message if VERBOSE-flag is set"""
+    global VERBOSE
+    if VERBOSE:
         echo(msg)
 
 
@@ -120,14 +120,14 @@ def retrieve_host_and_port():
             host, ports = f.read().strip(' \n').split(' ')
             port = int(ports)
             if (host, port) != (KNOWN_HOST, KNOWN_PORT):
-                debug('Retrieved host and port value %s:%i from config file "%s".'
+                verbose('Retrieved host and port value %s:%i from config file "%s".'
                       % (host, port, cfg_filename))
             KNOWN_HOST, KNOWN_PORT = host, port
     except FileNotFoundError:
-        debug('File "%s" does not exist. Using default values %s:%i for host and port.'
+        verbose('File "%s" does not exist. Using default values %s:%i for host and port.'
               % (cfg_filename, host, port))
     except ValueError:
-        debug('removing invalid config file: ' + cfg_filename)
+        verbose('removing invalid config file: ' + cfg_filename)
         os.remove(cfg_filename)
     return host, port
 
@@ -301,7 +301,7 @@ def run_server(host, port, log_path=None):
         if overwrite:
             try:
                 with open(cfg_filename, 'w') as f:
-                    debug('Storing host and port value %s:%i in file "%s".'
+                    verbose('Storing host and port value %s:%i in file "%s".'
                           % (host, port, cfg_filename))
                     f.write(host + ' ' + str(port))
             except (PermissionError, IOError) as e:
@@ -311,7 +311,7 @@ def run_server(host, port, log_path=None):
             echo('Configuration file "%s" already existed and was not overwritten. '
                   'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
-            debug('Starting server on %s:%i' % (host, port))
+            verbose('Starting server on %s:%i' % (host, port))
             DSL_server.run_tcp_server(host, port)  # returns only after server has stopped!
             ports = []
         except OSError as e:
@@ -329,7 +329,7 @@ def run_server(host, port, log_path=None):
                 if overwrite:
                     try:
                         os.remove(cfg_filename)
-                        debug('removing temporary config file: ' + cfg_filename)
+                        verbose('removing temporary config file: ' + cfg_filename)
                     except FileNotFoundError:
                         pass
 
@@ -431,13 +431,13 @@ async def start_server_daemon(host, port, requests) -> list:
         if not requests:
             echo('Server "%s" already running on %s:%i' % (ident, host, port))
         else:
-            debug('Connection to server "%s" established.' % ident)
+            verbose('Connection to server "%s" established.' % ident)
     else:
         try:
             subprocess.Popen([__file__, '--startserver', host, str(port)])
         except OSError:
             subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)])
-        debug('Server starting on %s:%i.' % (host, port))
+        verbose('Server starting on %s:%i.' % (host, port))
         reader, writer, ident = await connect_to_daemon(host, port)
         if ident is None:
             echo('Could not start server or establish connection in time :-(')
@@ -445,14 +445,14 @@ async def start_server_daemon(host, port, requests) -> list:
         if not requests:
             echo('Connection to server "%s" established.' % ident)
         else:
-            debug('Connection to server "%s" established.' % ident)
+            verbose('Connection to server "%s" established.' % ident)
     results = []
     for request in requests:
         assert request
-        debug("Sending request: '%s'" % str(request))
+        verbose("Sending request: '%s'" % str(request))
         results.append(await send_request(reader, writer, request))
     await close_connection(writer)
-    debug('Connection to server "%s" closed.' % ident)
+    verbose('Connection closed.' % ident)
     return results
 
 
@@ -471,7 +471,7 @@ def parse_logging_args(args):
         else:
             log_path = repr(LOG_PATH) if args.logging is None else repr(args.logging)
         request = LOGGING_REQUEST.replace('""', ", ".join((log_path, echo)))
-        debug('Logging to %s with call %s' % (log_path, request))
+        verbose('Logging to %s with call %s' % (log_path, request))
         return log_path, request
     else:
         return None, ''
@@ -498,11 +498,11 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--logging', nargs='?', metavar="ON|LOG_DIR|OFF", default='',
                         help='turns logging on (default) or off or writes log to a '
                              'specific directory (implies on)')
-    parser.add_argument('-v', '--debug', action='store_true', help="debug messages")
+    parser.add_argument('-v', '--verbose', action='store_true', help="verbose messages")
 
     args = parser.parse_args()
-    if args.debug:
-        DEBUG = True
+    if args.verbose:
+        VERBOSE = True
 
     host = args.host[0]
     port = int(args.port[0])
@@ -560,11 +560,11 @@ if __name__ == "__main__":
         except ConnectionRefusedError as e:
             echo(e)
             sys.exit(1)
-        debug(result)
+        verbose(result)
 
     elif args.logging:
         log_path, request = parse_logging_args(args)
-        debug(asyncio_run(single_request(request, host, port)))
+        verbose(asyncio_run(single_request(request, host, port)))
 
     elif args.file:
         file_name = args.file
