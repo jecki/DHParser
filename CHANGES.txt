@@ -1,7 +1,8 @@
 DHParser Version 0.9.5
 ......................
 
-- ...
+- batch processing: just add several files or a directory or shell pattern
+  to the xxxParser.py or xxxServer.py-Skripts
 
 
 DHParser Version 0.9.4 (6.10.2020)
