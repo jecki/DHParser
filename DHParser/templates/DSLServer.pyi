@@ -244,7 +244,6 @@ class DSLLanguageServerProtocol:
                     file_path = os.path.join(entry, file)
                     if os.path.isfile(file_path):
                         file_names.append(file_path)
-                print(file_names)
                 break  # allow at most one directory
             else:
                 file_names.append(entry)
