@@ -407,7 +407,11 @@ def strip_header_delimiter(data: bytes) -> Tuple[str, ...]:
 
 def pp_transmission(data: bytes) -> Tuple[str, ...]:
     t = strip_header_delimiter(data)
-    return t[:-1] + (pp_json_str(t[-1]),)
+    try:
+        pp_str = pp_json_str(t[-1])
+    except json.decoder.JSONDecodeError:
+        pp_str = t[-1]
+    return t[:-1] + (pp_str,)
 
 
 def gen_task_id() -> int:
