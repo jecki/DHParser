@@ -41,7 +41,7 @@ DEFAULT_PORT = 8888
 ALTERNATIVE_PORTS = [8888, 8889, 8898, 8980, 8988, 8989]
 
 DATA_RECEIVE_LIMIT = 262144
-SERVER_REPLY_TIMEOUT = 3
+SERVER_REPLY_TIMEOUT = 10
 
 KNOWN_HOST = ''  # if host and port are retrieved from a config file, their
 KNOWN_PORT = -2  # values are stored to these global variables
@@ -220,6 +220,50 @@ class DSLLanguageServerProtocol:
         self.lsp_data['clientCapabilities'] = {}
         return {}
 
+    def batch_job(self, argstr: str):
+        from DSLParser import batch_process
+        args = argstr.split(' ')
+        indir, outdir = args[1], args[3]
+
+        assert args[0] == '--in'
+        assert args[2] == '--out'
+        if not os.path.exists(outdir): os.mkdir(outdir)
+        elif not os.path.isdir(outdir):
+            return 'Output directory "%s" exists and is not a directory!' % outdir
+        if not os.path.exists(indir):
+            return 'Input directory "%s" does not exist!' % indir
+        elif not os.path.isdir(indir):
+            return 'Input place "%s" is not a directory!' % indir
+
+        file_names = []
+        for entry in args[4:]:
+            if not os.path.isabs(entry):
+                entry = os.path.abspath(os.path.join(indir, entry))
+            if os.path.isdir(entry):
+                for file in os.listdir(entry):
+                    file_path = os.path.join(entry, file)
+                    if os.path.isfile(file_path):
+                        file_names.append(file_path)
+                print(file_names)
+                break  # allow at most one directory
+            else:
+                file_names.append(entry)
+        exenv = self.connection.exec
+        error_list = batch_process(file_names, outdir, submit_func=exenv.submit_as_process,
+                                   log_func=self.connection.log)
+        return error_list
+
+    async def simply_compile(self, argstr: str):
+        from functools import partial
+        from DSLParser import compile_src
+        exenv = self.connection.exec
+        if argstr[:2] != '--':
+            return await exenv.loop.run_in_executor(
+                exenv.process_executor, partial(compile_src, argstr))
+        else:
+            return await exenv.loop.run_in_executor(
+                exenv.thread_executor, partial(self.batch_job, argstr))
+
 
 def run_server(host, port, log_path=None):
     """
@@ -250,13 +294,13 @@ def run_server(host, port, log_path=None):
         with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
-    from DSLParser import compile_src
+
     from DHParser.server import Server, probe_tcp_server, StreamReaderProxy, StreamWriterProxy
-    from DHParser.lsp import gen_lsp_table
+    # from DHParser.lsp import gen_lsp_table
 
     DSL_lsp = DSLLanguageServerProtocol()
     lsp_table = DSL_lsp.lsp_fulltable.copy()
-    lsp_table.setdefault('default', compile_src)
+    lsp_table.setdefault('default', DSL_lsp.simply_compile)
     DSL_server = Server(rpc_functions=lsp_table,
                         cpu_bound=DSL_lsp.cpu_bound.lsp_table.keys(),
                         blocking=DSL_lsp.blocking.lsp_table.keys(),
@@ -419,7 +463,7 @@ async def connect_to_daemon(host, port) -> tuple:
     return reader, writer, ident
 
 
-async def start_server_daemon(host, port, requests) -> list:
+async def start_server_daemon(host, port, requests, timeout=SERVER_REPLY_TIMEOUT) -> list:
     """Starts a server in the background and opens a connections. Sends requests if
     given and returns a list of their results."""
     import subprocess
@@ -450,7 +494,7 @@ async def start_server_daemon(host, port, requests) -> list:
     for request in requests:
         assert request
         verbose("Sending request: '%s'" % str(request))
-        results.append(await send_request(reader, writer, request))
+        results.append(await send_request(reader, writer, request, timeout))
     await close_connection(writer)
     verbose('Connection closed.')
     return results
@@ -570,6 +614,7 @@ if __name__ == "__main__":
         verbose(asyncio_run(single_request(request, host, port)))
 
     elif args.file:
+        timeout = SERVER_REPLY_TIMEOUT
         file_name = args.file
         if not file_name.endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
@@ -577,12 +622,12 @@ if __name__ == "__main__":
                 outdir = args.out or os.path.abspath('out')
                 file_names = ' '. join(['--in', os.getcwd(), '--out', outdir, file_name]
                                        + args.more_files)
-                print(file_names)
+                timeout = 3600 * 24 * 365  # timout in batch mode: one year!
             else:
                 file_names = os.path.abspath(file_name)
         log_path, log_request = parse_logging_args(args)
         requests = [log_request, file_names] if log_request else [file_names]
-        result = asyncio_run(start_server_daemon(host, port, requests))[-1]
+        result = asyncio_run(start_server_daemon(host, port, requests, timeout))[-1]
         if len(result) >= DATA_RECEIVE_LIMIT:
             echo(result, '...')
         else:

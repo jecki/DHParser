@@ -484,7 +484,8 @@ class ExecutionEnvironment:
             return result, rpc_error
         try:
             if executor is None:
-                result = (await executable()) if asyncio.iscoroutinefunction(method) else executable()
+                result = (await executable()) if asyncio.iscoroutinefunction(method) \
+                    else executable()
             else:
                 result = await self.loop.run_in_executor(executor, executable)
         except TypeError as e:

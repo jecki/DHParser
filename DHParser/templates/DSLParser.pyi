@@ -1,4 +1,4 @@
-RESULT_FILE_EXTENSION = ".xml"  # Change this according to your needs!
+RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
 
 def compile_src(source: str) -> Tuple[Any, List[Error]]:
@@ -13,12 +13,12 @@ def serialize_result(result: Any) -> Union[str, bytes]:
     IS NOT A TREE OF NODES.
     """
     if isinstance(result, Node):
-        return result.serialize(how='default' if args.xml is None else 'xml')
+        return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
     else:
         return repr(result)
 
 
-def process_file(source: str, result_filename: str = '', *, verbose: bool = False) -> str:
+def process_file(source: str, result_filename: str = '') -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
@@ -27,8 +27,6 @@ def process_file(source: str, result_filename: str = '', *, verbose: bool = Fals
     string, if no errors of warnings occurred.
     """
     source_filename = source if is_filename(source) else ''
-    if verbose:
-        print('Compiling "%s"' % source_filename)
     result, errors = compile_src(source)
     if not has_errors(errors, FATAL):
         if os.path.abspath(source_filename) != os.path.abspath(result_filename):
@@ -46,9 +44,9 @@ def process_file(source: str, result_filename: str = '', *, verbose: bool = Fals
     return ''
 
 
-def batch_process(filenames: List[str], out_dir: str,
+def batch_process(file_names: List[str], out_dir: str,
                   *, submit_func: Callable = None,
-                  verbose: bool = False) -> List[str]:
+                  log_func: Callable = None) -> List[str]:
     """Compiles all files listed in filenames and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
@@ -56,31 +54,36 @@ def batch_process(filenames: List[str], out_dir: str,
     def gen_dest_name(name):
         return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
                                      + RESULT_FILE_EXTENSION)
+
     error_list =  []
     if get_config_value('batch_processing_parallelization'):
         def run_batch(submit_func: Callable):
+            nonlocal error_list
             err_futures = []
-            for name in filenames:
+            for name in file_names:
                 dest_name = gen_dest_name(name)
-                err_futures.append(submit_func(process_file, name, dest_name, verbose))
-            for err_future in err_futures:
+                err_futures.append(submit_func(process_file, name, dest_name))
+            for file_name, err_future in zip(file_names, err_futures):
                 error_filename = err_future.result()
+                if log_func:
+                    log_func('Compiling "%s"' % file_name)
                 if error_filename:
                     error_list.append(error_filename)
 
-        import concurrent.futures
-        import multiprocessing
-        if submit_func is None:
+        if True or submit_func is None:
+            import concurrent.futures
+            import multiprocessing
             with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
                 run_batch(pool.submit)
         else:
             run_batch(submit_func)
     else:
         for name in filenames:
-            if verbose:  print(name, gen_dest_name(name))
-            error_filename = process_file(name, gen_dest_name(name), verbose)
+            if log_func:  log_func(name, gen_dest_name(name))
+            error_filename = process_file(name, gen_dest_name(name), log_func)
             if error_filename:
                 error_list.append(error_filename)
+
     return error_list
 
 
@@ -140,6 +143,9 @@ if __name__ == "__main__":
         set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
 
+    if args.xml:
+        RESULT_FILE_EXTENSION = '.xml'
+
     def echo(message: str):
         if args.verbose:
             print(message)
@@ -160,7 +166,7 @@ if __name__ == "__main__":
         elif not os.path.isdir(out):
             print('Output directory "%s" exists and is not a directory!' % out)
             sys.exit(1)
-        error_files = batch_process(file_names, out, verbose=args.verbose)
+        error_files = batch_process(file_names, out, log_func=print if args.verbose else None)
         if error_files:
             category = "ERRORS" if any(f.endswith('_ERRORS.txt') for f in error_files) \
                 else "warnings"
