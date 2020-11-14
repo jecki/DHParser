@@ -452,7 +452,7 @@ async def start_server_daemon(host, port, requests) -> list:
         verbose("Sending request: '%s'" % str(request))
         results.append(await send_request(reader, writer, request))
     await close_connection(writer)
-    verbose('Connection closed.' % ident)
+    verbose('Connection closed.')
     return results
 
 
@@ -478,7 +478,7 @@ def parse_logging_args(args):
 
 
 if __name__ == "__main__":
-    from argparse import ArgumentParser
+    from argparse import ArgumentParser, REMAINDER
     parser = ArgumentParser(description="Setup and Control of a Server for processing DSL-files.")
     action_group = parser.add_mutually_exclusive_group()
     action_group.add_argument('file', nargs='?')
@@ -491,14 +491,17 @@ if __name__ == "__main__":
     action_group.add_argument('-k', '--stopserver', action='store_true',
                               help="starts the server")
     action_group.add_argument('-r', '--stream', action='store_true', help="start stream server")
-    parser.add_argument('-o', '--host', nargs=1, default=[''],
+    parser.add_argument('-a', '--host', nargs=1, default=[''],
                         help='host name or IP-address of the server (default: 127.0.0.1)')
     parser.add_argument('-p', '--port', nargs=1, type=int, default=[-1],
                         help='port number of the server (default:8888)')
     parser.add_argument('-l', '--logging', nargs='?', metavar="ON|LOG_DIR|OFF", default='',
                         help='turns logging on (default) or off or writes log to a '
                              'specific directory (implies on)')
+    parser.add_argument('-o', '--out', nargs='?',
+                        help='output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_true', help="verbose messages")
+    parser.add_argument('more_files', nargs='*')
 
     args = parser.parse_args()
     if args.verbose:
@@ -570,9 +573,15 @@ if __name__ == "__main__":
         file_name = args.file
         if not file_name.endswith(')'):
             # argv does not seem to be a command (e.g. "identify()") but a file name or path
-            file_name = os.path.abspath(file_name)
+            if args.more_files or args.out or os.path.isdir(file_name):
+                outdir = args.out or os.path.abspath('out')
+                file_names = ' '. join(['--in', os.getcwd(), '--out', outdir, file_name]
+                                       + args.more_files)
+                print(file_names)
+            else:
+                file_names = os.path.abspath(file_name)
         log_path, log_request = parse_logging_args(args)
-        requests = [log_request, file_name] if log_request else [file_name]
+        requests = [log_request, file_names] if log_request else [file_names]
         result = asyncio_run(start_server_daemon(host, port, requests))[-1]
         if len(result) >= DATA_RECEIVE_LIMIT:
             echo(result, '...')
