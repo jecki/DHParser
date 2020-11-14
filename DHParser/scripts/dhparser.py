@@ -34,12 +34,11 @@ if i >= 0:
 else:
     dhparserdir = ''
 
-templatedir = os.path.join(os.path.dirname(scriptdir.rstrip('/')), 'templates')
 
 from DHParser.compile import compile_source
 from DHParser.configuration import access_presets, finalize_presets, \
     EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_FIXED_SYNTAX
-from DHParser.dsl import compileDSL, compile_on_disk
+from DHParser.dsl import compileDSL, compile_on_disk, read_template
 from DHParser.error import is_error
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import start_logging
@@ -48,15 +47,6 @@ from DHParser.toolkit import re
 
 LOGGING = False
 TEST_DIRNAME = 'tests_grammar'
-
-
-def read_template(template_name: str) -> str:
-    """
-    Reads a script-template from a template file named `template_name`
-    in the template-directory and returns it as a string.
-    """
-    with open(os.path.join(templatedir, template_name), 'r', encoding='utf-8') as f:
-        return f.read()
 
 
 def create_project(path: str):

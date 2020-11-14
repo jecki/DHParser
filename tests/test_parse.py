@@ -704,7 +704,6 @@ class TestErrorRecovery:
         data = "Time is out of joint. Oh cursed spite that I was ever born to set it right."
         parser = grammar_provider(grammar)()
         st = parser(data)
-        print(st.as_sxpr())
         assert not st.errors, str(st.errors)
         data2 = data.replace('cursed', 'cur?ed')
         st = parser(data2)

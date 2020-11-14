@@ -51,7 +51,7 @@ For the specification and implementation of the language server protocol, see:
 """
 
 import asyncio
-from concurrent.futures import Executor, ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import Future, Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 try:
     from concurrent.futures.thread import BrokenThreadPool
@@ -62,10 +62,12 @@ except ImportError:
 from functools import partial
 import io
 import json
+import multiprocessing
 from multiprocessing import Process, Value, Array
 import os
 import subprocess
 import sys
+import threading
 from threading import Thread
 import time
 import traceback
@@ -429,6 +431,10 @@ class ExecutionEnvironment:
 
     :var process_executor:  A process-pool-executor for cpu-bound tasks
     :var thread_executor:   A thread-pool-executor for blocking tasks
+    :var submit_pool:  A secondary process-pool-executor to submit tasks
+        synchronously and thread-safe.
+    :var submit_ppol_lock:  A threading.Lock to ensure that submissions to
+        the submit_pool will be thread_safe
     :var loop:  The asynchronous event loop for running coroutines
     :var log_file:  The name of the log-file to which error messages are
         written if an executor raises a Broken-Error.
@@ -439,6 +445,8 @@ class ExecutionEnvironment:
     def __init__(self, event_loop: asyncio.AbstractEventLoop):
         self.process_executor = ProcessPoolExecutor()  # type: Optional[ProcessPoolExecutor]
         self.thread_executor = ThreadPoolExecutor()    # type: Optional[ThreadPoolExecutor]
+        self.submit_pool = None                        # type: Optional[ProcessPoolExecutor]
+        self.submit_pool_lock = threading.Lock()       # type: threading.Lock
         self.loop = event_loop                         # type: asyncio.AbstractEventLoop
         self.log_file = ''                             # type: str
         self._closed = False                           # type: bool
@@ -511,6 +519,16 @@ class ExecutionEnvironment:
             append_log(self.log_file, rpc_error[1])
         return result, rpc_error
 
+    def submit_as_process(self, func, *args) -> Future:
+        """Submits a running long running function to the secondary process-pool.
+        Other than `execute()` this works synchronously and thread-safe.
+        """
+        if self.submit_pool is None:
+            self.submit_pool = ProcessPoolExecutor()
+        with self.submit_pool_lock:
+            future = self.submit_pool.submit(func, *args)
+        return future
+
     def shutdown(self, wait: bool = True):
         """Shuts the thread and process executor of the execution environment. The
         wait parameter is passed to the shutdown-method of the thread and
@@ -523,6 +541,9 @@ class ExecutionEnvironment:
         if self.process_executor is not None:
             self.process_executor.shutdown(wait=wait)
             self.process_executor = None
+        if self.submit_pool is not None:
+            self.submit_pool.shutdown(wait=wait)
+            self.submit_pool = None
 
 
 class StreamReaderProxy:

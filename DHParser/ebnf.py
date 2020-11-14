@@ -87,7 +87,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any
+from typing import Tuple, List, Union, Any, Optional, Callable
 
 try:
     scriptpath = os.path.dirname(__file__)

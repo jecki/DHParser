@@ -47,6 +47,7 @@ from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, 
 
 __all__ = ('DefinitionError',
            'CompilationError',
+           'read_template',
            'load_compiler_suite',
            'compileDSL',
            'raw_compileEBNF',
@@ -54,9 +55,11 @@ __all__ = ('DefinitionError',
            'grammar_provider',
            'create_parser',
            'compile_on_disk',
-           'recompile_grammar')
+           'recompile_grammar',
+           'restore_server_script')
 
 
+@functools.lru_cache()
 def read_template(template_name: str) -> str:
     """
     Reads a script-template from a template file named `template_name`
@@ -83,8 +86,6 @@ PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
 AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
 END_SECTIONS_MARKER = "END OF DHPARSER-SECTIONS"
-
-DHPARSER_MAIN = read_template('DSLParser.pyi')
 
 
 class DSLException(Exception):
@@ -252,7 +253,8 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
            SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton(),
-           SECTION_MARKER.format(marker=SYMBOLS_SECTION), DHPARSER_MAIN.format(NAME=branding)]
+           SECTION_MARKER.format(marker=END_SECTIONS_MARKER),
+           read_template('DSLParser.pyi').format(NAME=branding)]
     return '\n'.join(src)
 
 
@@ -468,8 +470,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         # either an EBNF- or no compiler suite given
         ebnf_compiler = cast(EBNFCompiler, compiler1)  # type: EBNFCompiler
         global SECTION_MARKER, RX_SECTION_MARKER, PREPROCESSOR_SECTION, PARSER_SECTION, \
-            AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE, \
-            DHPARSER_MAIN
+            AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE
         f = None
         try:
             parser_name = rootname + 'Parser.py'
@@ -507,7 +508,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         if RX_WHITESPACE.fullmatch(intro):
             intro = '#!/usr/bin/env python3'
         if RX_WHITESPACE.fullmatch(outro):
-            outro = DHPARSER_MAIN.format(NAME=compiler_name)
+            outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHParser.ebnf.DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath)
         if RX_WHITESPACE.fullmatch(preprocessor):
@@ -619,3 +620,35 @@ def recompile_grammar(ebnf_filename, force=False,
     if not messages and os.path.exists(error_file_name):
         os.remove(error_file_name)
     return True
+
+
+def restore_server_script(ebnf_filename: str, overwrite: bool = False):
+    """Creates a script for compiling texts adhering to the given grammar
+    with a server. Because the server script relies on a parser script,
+    a parser scripte will be created, too, if it does not yet exist.
+
+    :var ebnf_filename: The filename of the grammar, from which the servfer
+        script's filename is derived.
+    :var overwrite: If True an existing server script will be overwritten.
+    """
+    if os.path.isdir(ebnf_filename):
+        for entry in os.listdir(ebnf_filename):
+            if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
+                restore_server_script(entry)
+        return
+
+    base, _ = os.path.splitext(ebnf_filename)
+    name = os.path.basename(base)
+    server_name = base + 'Server.py'
+    compiler_name = base + 'Parser.py'
+    if not os.path.exists(server_name) or overwrite:
+        template = read_template('DSLServer.pyi')
+        reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
+        serverscript = base + 'Server.py'
+        with open(serverscript, 'w') as f:
+            f.write(template.replace('DSL', name).replace('RELDHPARSERDIR', reldhparserdir))
+        if platform.system() != "Windows":
+            # set file permissions so that the compilerscript can be executed
+            st = os.stat(serverscript)
+            os.chmod(serverscript, st.st_mode | stat.S_IEXEC)
+    if not os.path.exists(compiler_name):  recompile_grammar(ebnf_filename)

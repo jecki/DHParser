@@ -430,22 +430,29 @@ async def start_server_daemon(host, port, requests) -> list:
     if ident is not None:
         if not requests:
             echo('Server "%s" already running on %s:%i' % (ident, host, port))
+        else:
+            debug('Connection to server "%s" established.' % ident)
     else:
         try:
             subprocess.Popen([__file__, '--startserver', host, str(port)])
         except OSError:
             subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)])
+        debug('Server starting on %s:%i.' % (host, port))
         reader, writer, ident = await connect_to_daemon(host, port)
         if ident is None:
             echo('Could not start server or establish connection in time :-(')
             sys.exit(1)
         if not requests:
-            echo('Server "%s" started.' % ident)
+            echo('Connection to server "%s" established.' % ident)
+        else:
+            debug('Connection to server "%s" established.' % ident)
     results = []
     for request in requests:
         assert request
+        debug("Sending request: '%s'" % str(request))
         results.append(await send_request(reader, writer, request))
     await close_connection(writer)
+    debug('Connection to server "%s" closed.' % ident)
     return results
 
 
@@ -491,7 +498,7 @@ if __name__ == "__main__":
     parser.add_argument('-l', '--logging', nargs='?', metavar="ON|LOG_DIR|OFF", default='',
                         help='turns logging on (default) or off or writes log to a '
                              'specific directory (implies on)')
-    parser.add_argument('-b', '--debug', action='store_true', help="debug messages")
+    parser.add_argument('-v', '--debug', action='store_true', help="debug messages")
 
     args = parser.parse_args()
     if args.debug:
@@ -514,7 +521,6 @@ if __name__ == "__main__":
         # line, try to retrieve them from (temporary) config file or use
         # hard coded default values
         h, p = retrieve_host_and_port()
-        debug('Retrieved host and port value %s:%i from config file.' % (h, p))
         if port < 0:
             port = p
         else:
