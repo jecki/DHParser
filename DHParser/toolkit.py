@@ -62,6 +62,7 @@ from DHParser.stringview import StringView
 __all__ = ('typing',
            'cython',
            'cython_optimized',
+           'identify_python',
            'gen_id',
            'ThreadLocalSingletonFactory',
            'NEVER_MATCH_PATTERN',
@@ -111,6 +112,12 @@ __all__ = ('typing',
 # miscellaneous (generic)
 #
 #######################################################################
+
+
+def identify_python() -> str:
+    """Returns a reasonable identification string for the python interpreter,
+    e.g. "cpython 3.8.6"."""
+    return "%s %i.%i.%i" % (sys.implementation.name, *sys.version_info[:3])
 
 
 global_id_counter = multiprocessing.Value('L', 0)

@@ -78,7 +78,7 @@ from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
-    json_encode_string, json_rpc, json_dumps
+    json_encode_string, json_rpc, json_dumps, identify_python
 from DHParser.versionnumber import __version__
 
 
@@ -1078,10 +1078,9 @@ class Server:
 
     def rpc_identify_server(self, service_call: bool = False):
         """Returns an identification string for the server."""
-        if service_call:
-            return "DHParser " + __version__ + " " + self.server_name + " already connected"
-        else:
-            return "DHParser " + __version__ + " " + self.server_name
+        identify = "DHParser %s %s under %s" \
+                   % (__version__, self.server_name, identify_python())
+        return (identify + ' already connected') if service_call else identify
 
     def rpc_logging(self, *args) -> str:
         """Starts logging with either a) the default filename, if args is

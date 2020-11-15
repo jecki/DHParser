@@ -438,7 +438,7 @@ async def connect_to_daemon(host, port) -> tuple:
             reader, writer = await asyncio.open_connection(host, port)
             try:
                 ident = await send_request(reader, writer, IDENTIFY_REQUEST)
-                if not ident.endswith(servername):
+                if ident.find(servername) < 0:
                     ident = None
                     raise ValueError
                 countdown = 0
