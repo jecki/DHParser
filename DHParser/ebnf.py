@@ -1448,7 +1448,10 @@ class EBNFCompiler(Compiler):
         collected = set()  # type: Set[str]
 
         def gather(sym: str):
-            referred = self.rules[sym]
+            try:
+                referred = self.rules[sym]
+            except KeyError:
+                referred = []  # Missing Symbol definition error will be caught later
             for nd in referred[1:]:
                 s = nd.content
                 if s not in collected and s not in EBNFCompiler.RESERVED_SYMBOLS:

@@ -2026,7 +2026,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         the closing tag.
         """
         match = s.match(re.compile(r'</\s*(?P<tagname>[\w:]+)>'))
-        assert match
+        assert match, 'XML-closing-tag expected, but found: ' + s[:20]
         tagname = match.groupdict()['tagname']
         return s[s.index(match.end()):], tagname
 
