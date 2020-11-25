@@ -52,6 +52,11 @@ class TestParseSxpression:
                           "if argument is not a tree!"
         except ValueError:
             pass
+        try:
+            tree = parse_sxpr('(a (b c)))')
+            assert False, "parse_sxpr() should raise a ValueError for too many matching brackets."
+        except ValueError:
+            pass
 
     def test_parse_s_expression_w_attributes(self):
         s = '(A `(attr "1") (B "X"))'
@@ -69,6 +74,12 @@ class TestParseSxpression:
     def test_endlessloop_error(self):
         tree = parse_sxpr(r'(LINEFEED "\\")')
         assert tree
+
+    def test_flatten_sxpr(self):
+        tree = parse_sxpr('(a (b "  ") (d (e f) (h i)))')
+        sxpr = tree.as_sxpr()
+        flat = flatten_sxpr(sxpr)
+        assert flat == '(a (b "  ") (d (e "f") (h "i")))'
 
 
 class TestParseXML:

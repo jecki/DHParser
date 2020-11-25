@@ -122,7 +122,7 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     assert RX_IS_SXPR.match(sxpr)
     if threshold == 0:
         return sxpr
-    flat = re.sub(r'\s(?=\))', '', re.sub(r'\s+', ' ', sxpr)).strip()
+    flat = re.sub(r'\s(?=\))', '', re.sub(r'(?<!")\s+', ' ', sxpr).replace('\n', '')).strip()
     if len(flat) > threshold >= 0:
         return sxpr.strip()
     return flat
@@ -1868,6 +1868,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     >>> tree['C'].pos
     1
     """
+    remaining = sxpr  # type: StringView
+
     @cython.locals(level=cython.int, k=cython.int)
     def next_block(s: StringView) -> Iterator[StringView]:
         """Generator that yields all characters until the next closing bracket
@@ -1898,6 +1900,9 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
             errmsg = ('Malformed S-expression. Unprocessed part: "%s"' % s) if s \
                 else 'Malformed S-expression. Closing bracket(s) ")" missing.'
             raise AssertionError(errmsg)
+        nonlocal remaining
+        remaining = s
+
 
     @cython.locals(pos=cython.int, i=cython.int, k=cython.int, end=cython.int)
     def inner_parser(sxpr: StringView) -> Node:
@@ -1961,6 +1966,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                     lines.append(str(sxpr[:end]))
                     sxpr = sxpr[end:]
             result = "\n".join(lines)  # # type: Union[Tuple[Node, ...], str]
+            nonlocal remaining
+            remaining = sxpr
         node = Node(str(name or ':' + class_name), result)
         node._pos = pos
         if attributes:
@@ -1968,7 +1975,10 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         return node
 
     xpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()  # type: StringView
-    return inner_parser(xpr)
+    tree = inner_parser(xpr)
+    if remaining != ')':
+        raise ValueError('Malformed S-expression. Superfluous characters: ' + remaining[1:])
+    return tree
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')

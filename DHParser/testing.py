@@ -30,6 +30,7 @@ import asyncio
 import collections
 import concurrent.futures
 import copy
+# import difflib
 import fnmatch
 import inspect
 import json
@@ -457,7 +458,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if "cst" in tests and len(errata) == errflag:
-                compare = parse_tree(get(tests, "cst", test_name))
+                try:
+                    compare = parse_tree(get(tests, "cst", test_name))
+                except ValueError as e:
+                    raise SyntaxError('CST-TEST "%s" of parser "%s" failed with:\n%s'
+                                      % (test_name, parser_name, str(e)))
                 if compare:
                     if not compare.equals(cst):
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
@@ -467,15 +472,22 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if "ast" in tests and len(errata) == errflag:
-                compare = parse_tree(get(tests, "ast", test_name))
+                try:
+                    compare = parse_tree(get(tests, "ast", test_name))
+                except ValueError as e:
+                    raise SyntaxError('AST-TEST "%s" of parser "%s" failed with:\n%s'
+                                      % (test_name, parser_name, str(e)))
                 if compare:
                     traverse(compare, {'*': remove_children({'__TESTING_ARTIFACT__'})})
                     if not compare.equals(ast):  # no worry: ast is defined if "ast" in tests
+                        ast_str = flatten_sxpr(ast.as_sxpr())
+                        compare_str = flatten_sxpr(compare.as_sxpr())
+                        # differ = difflib.Differ()
+                        # difference = ''.join(differ.compare([compare_str + '\n'], [ast_str + '\n']))
                         errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                       '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                       % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                         flatten_sxpr(compare.as_sxpr()),
-                                         flatten_sxpr(ast.as_sxpr())))
+                                         compare_str, ast_str))
                     if verbose:
                         infostr = '      ast-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))

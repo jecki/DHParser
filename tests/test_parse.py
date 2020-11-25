@@ -689,7 +689,7 @@ class TestErrorRecovery:
         assert 'Skipping' in str(st.errors_sorted[1])
 
     def test_series_skip2(self):
-        grammar = """
+        grammar = r"""
         @whitespace = vertical
         @literalws = right
         @document_skip = /\s+|(?=$)/
