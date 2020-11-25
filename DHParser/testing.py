@@ -598,16 +598,16 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     if is_logging():
         clear_logs()
 
-    if get_config_value('test_parallelization'):
+    tests = [fn for fn in sorted(os.listdir('.'))
+             if any(fnmatch.fnmatch(fn, pattern) for pattern in fn_patterns)]
+
+    if len(tests) > 1 and get_config_value('test_parallelization'):
         # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
         with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
             results = []
-            for filename in sorted(os.listdir('.')):
-                print(filename)
-                if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
-                    parameters = filename, parser_factory, transformer_factory, report, verbose
-                    results.append((filename, pool.submit(grammar_unit, *parameters)))
-
+            for filename in tests:
+                parameters = filename, parser_factory, transformer_factory, report, verbose
+                results.append((filename, pool.submit(grammar_unit, *parameters)))
             for filename, err_future in results:
                 try:
                     errata = err_future.result()
@@ -622,11 +622,9 @@ def grammar_suite(directory, parser_factory, transformer_factory,
 
     else:
         results = []
-        for filename in sorted(os.listdir('.')):
-            if any(fnmatch.fnmatch(filename, pattern) for pattern in fn_patterns):
-                parameters = filename, parser_factory, transformer_factory, report, verbose
-                # print(filename)
-                results.append((filename, grammar_unit(*parameters)))
+        for filename in tests:
+            parameters = filename, parser_factory, transformer_factory, report, verbose
+            results.append((filename, grammar_unit(*parameters)))
         for filename, errata in results:
             if errata:
                 all_errors[filename] = errata
@@ -917,7 +915,7 @@ def run_path(path):
         sys.path.append(path)
         files = os.listdir(path)
         result_futures = []
-        if get_config_value('test_parallelization'):
+        if len(files) > 1 and get_config_value('test_parallelization'):
             with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
                 for f in files:
                     result_futures.append(pool.submit(run_file, f))
