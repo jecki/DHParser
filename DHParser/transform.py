@@ -588,17 +588,21 @@ def has_content(context: List[Node], regexp: str) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_ancestor(context: List[Node], tag_name_set: AbstractSet[str], ancestry: int = 1) -> bool:
+def has_ancestor(context: List[Node],
+                 tag_name_set: AbstractSet[str],
+                 generations: int =-1) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the context before the last node in the context.
 
-    :param ancestry: determines how deep `has_ancestor` should dive into
+    :param generations: determines how deep `has_ancestor` should dive into
         the ancestry. "1" means only the immediate parents wil be considered,
         "2" means also the grandparents, ans so on.
+        A value smaller or equal zero means all ancestors will be considered.
     """
-    assert ancestry > 0
-    for i in range(2, min(ancestry + 2, len(context) + 1)):
+    if generations <= 0:
+        return any(nd.tag_name in tag_name_set for nd in context)
+    for i in range(2, min(generations + 2, len(context) + 1)):
         if context[-i].tag_name in tag_name_set:
             return True
     return False
