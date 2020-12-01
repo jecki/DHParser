@@ -180,10 +180,14 @@ def unit_from_file(filename):
     Reads a grammar unit test from a file. The format of the file is
     determined by the ending of its name.
     """
+    if not os.path.exists(filename):  raise FileNotFoundError(filename)
+    if not os.path.isfile(filename):  raise ValueError('"%s" is not a file!' % filename)
     try:
         reader = TEST_READERS[os.path.splitext(filename)[1].lower()]
     except KeyError:
-        raise ValueError("Unknown unit test file type: " + filename[filename.rfind('.'):])
+        i = filename.rfind('.')
+        if i < 0:  i = len(filename)
+        raise ValueError('Unknown unit test file type "%s" of file: %s' % (filename[i:], filename))
     with open(filename, 'r', encoding='utf8') as f:
         data = f.read()
     test_unit = reader(data, filename)
