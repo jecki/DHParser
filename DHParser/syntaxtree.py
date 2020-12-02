@@ -1457,6 +1457,7 @@ def select_context_if(context: List[Node],
     Creates an Iterator yielding all `contexts` for which the
     `match_function` is true, starting from `context`
     """
+    context = context.copy()
     while context:
         if match_function(context):
             yield context

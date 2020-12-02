@@ -618,7 +618,7 @@ def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
 @transformation_factory(collections.abc.Set)
 def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
                    generations: int = -1) -> bool:
-    assert generations > 0
+    assert generations != 0
     for child in context[-1].children:
         if child.tag_name in tag_name_set:
             return True
