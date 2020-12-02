@@ -697,11 +697,13 @@ class TestContextNavigation:
 
     def test_select_context(self):
         start = self.tree.pick_context('E')
+        save = start.copy()
         sequence = []
         for ctx in select_context_if(
                 start, lambda c: True, reverse=True):
             sequence.append(''.join(n.tag_name for n in ctx))
         assert sequence == ['ACE', 'ACD', 'AC', 'AB', 'A']
+        assert save == start  # context passed should not be changed by select_context
 
         start = self.tree.pick_context('D')
         sequence = []
