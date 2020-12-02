@@ -58,6 +58,8 @@ __all__ = ('unit_from_config',
            'TEST_READERS',
            'unit_from_file',
            'get_report',
+           'TEST_ARTIFACT',
+           'POSSIBLE_ARTIFACTS',
            'grammar_unit',
            'TFFN',
            'grammar_suite',
@@ -281,6 +283,8 @@ POSSIBLE_ARTIFACTS = frozenset((
     AUTORETRIEVED_SYMBOL_NOT_CLEARED
 ))
 
+TEST_ARTIFACT = "__TEST_ARTIFACT__"
+
 
 def md_codeblock(code: str) -> str:
     """Formats a piece of code as Markdown inline-code or code-block,
@@ -373,7 +377,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                                                  for child in node.children),
                                                 include_root=True, reverse=True):
                 zombie = parent.pick_child(ZOMBIE_TAG)
-                zombie.tag_name = '__TESTING_ARTIFACT__'
+                zombie.tag_name = TEST_ARTIFACT
                 zombie.result = 'Artifact can be ignored. Be aware, though, that also the ' \
                                 'tree structure may not be the same as in a non-testing ' \
                                 'environment, when a testing artifact has occurred!'
@@ -439,7 +443,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if "ast" in tests or report:
                 ast = copy.deepcopy(cst)
                 old_errors = set(ast.errors)
-                traverse(ast, {'*': remove_children({'__TESTING_ARTIFACT__'})})
+                traverse(ast, {'*': remove_children({TEST_ARTIFACT})})
                 try:
                     transform(ast)
                 except AssertionError as e:
@@ -482,7 +486,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     raise SyntaxError('AST-TEST "%s" of parser "%s" failed with:\n%s'
                                       % (test_name, parser_name, str(e)))
                 if compare:
-                    traverse(compare, {'*': remove_children({'__TESTING_ARTIFACT__'})})
+                    traverse(compare, {'*': remove_children({TEST_ARTIFACT})})
                     if not compare.equals(ast):  # no worry: ast is defined if "ast" in tests
                         ast_str = flatten_sxpr(ast.as_sxpr())
                         compare_str = flatten_sxpr(compare.as_sxpr())
@@ -520,7 +524,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
             if "ast" in tests or report:
-                traverse(cst, {'*': remove_children({'__TESTING_ARTIFACT__'})})
+                traverse(cst, {'*': remove_children({TEST_ARTIFACT})})
                 transform(cst)
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
                 errata.append('Fail test "%s" for parser "%s" yields match instead of '

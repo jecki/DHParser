@@ -57,6 +57,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'Node',
            'prev_context',
            'next_context',
+           'select_context_if',
+           'select_context',
            'serialize_context',
            'context_sanity_check',
            'ContextMapping',
@@ -929,7 +931,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def pick_context(self, criterion: CriteriaType,
                      include_root: bool = False,
-                     reverse: bool = False) -> Optional[List['Node']]:
+                     reverse: bool = False) -> List['Node']:
         """
         Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
         relative to `self` is returned.
@@ -938,10 +940,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return next(self.select_context(criterion,
                                             include_root=include_root, reverse=reverse))
         except StopIteration:
-            return None
+            return []
 
     @cython.locals(location=cython.int, end=cython.int)
-    def locate_context(self, location: int) -> Optional[List['Node']]:
+    def locate_context(self, location: int) -> List['Node']:
         """
         Like `Node.locate()`,  only that the entire context (i.e. chain of descendants)
         relative to `self` is returned.
@@ -951,15 +953,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             end += len(ctx[-1])
             if location < end:
                 return ctx
-        return None
+        return []
 
-    def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> Optional[List['Node']]:
+    def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> List['Node']:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
         the public method `reconstruct_context`, this method returns the chain of ancestors
         in reverse order [node, ... , self] and returns None in case `node` does not exist
         in the tree rooted in self instead of raising a Value Error.
-        If `node` equals `self`, `None` will be returned.
+        If `node` equals `self`, any empty context, i.e. list will be returned.
         """
         if node in self._children:
             return [node, self]
@@ -968,7 +970,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if ctx:
                 ctx.append(self)
                 return ctx
-        return None
+        return []
 
     def reconstruct_context(self, node: 'Node') -> List['Node']:
         """
@@ -980,11 +982,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if node == self:
             return [node]
         ctx = self._reconstruct_context_recursive(node)
-        if ctx is None:
+        if ctx:
+            ctx.reverse()
+            return ctx
+        else:
             raise ValueError('Node "%s" does not occur in the tree %s '
                              % (node.tag_name, flatten_sxpr(self.as_sxpr())))
-        ctx.reverse()
-        return ctx
 
     # milestone support ### EXPERIMENTAL!!! ###
 
@@ -1406,7 +1409,7 @@ def prev_context(context: List[Node]) -> Optional[List[Node]]:
     """Returns the context of the predecessor of the last Node in the
     context. The predecessor is the sibling of the same parent Node
     preceding the node, or if it already is the first sibling, the parent's
-    sibling preceeding the parent, or grand-parente's sibling and so on.
+    sibling preceeding the parent, or grand-parent's sibling and so on.
     In case no predecessor is found when the first ancestor has been
     reached, None is returned.
     """
@@ -1426,7 +1429,7 @@ def prev_context(context: List[Node]) -> Optional[List[Node]]:
 
 @cython.locals(i=cython.int, k=cython.int)
 def next_context(context: List[Node]) -> Optional[List[Node]]:
-    """Returns the contexnt of the successor of the last Node in the
+    """Returns the context of the successor of the last Node in the
     context. The successor is the sibling of the same parent Node
     succeeding the the node, or if it already is the last sibling, the
     parent's sibling succeeding the parent, or grand-parente's sibling and
@@ -1445,6 +1448,57 @@ def next_context(context: List[Node]) -> Optional[List[Node]]:
                                  % (i, i + 1))
         node = context[i]
     return None
+
+
+def select_context_if(context: List[Node],
+                      match_function: Callable,
+                      reverse: bool = False) -> Iterator[List[Node]]:
+    """
+    Creates an Iterator yielding all `contexts` for which the
+    `match_function` is true, starting from `context`
+    """
+    while context:
+        if match_function(context):
+            yield context
+        node = context.pop()
+
+        edge, delta = (0, -1) if reverse else (-1, 1)
+        while context and node is context[-1]._children[edge]:
+            if match_function(context):
+                yield context
+            node = context.pop()
+        if context:
+            parent = context[-1]
+            i = parent.index(node)
+            nearest_sibling = parent._children[i + delta]
+            innermost_ctx = nearest_sibling.pick_context(
+                LEAF_CONTEXTS, include_root=True, reverse=reverse)
+            context.extend(innermost_ctx)
+
+
+def select_context(context: List[Node],
+                   criterion: CriteriaType,
+                   reverse: bool = False) -> Iterator[List[Node]]:
+    """
+    Like `select_context_if()` but yields the entire context (i.e. list of
+    descendants, the last one being the matching node) instead of just
+    the matching nodes.
+    """
+    return select_context_if(context, create_context_match_function(criterion), reverse)
+
+
+def pick_context(self, criterion: CriteriaType,
+                 include_root: bool = False,
+                 reverse: bool = False) -> Optional[List['Node']]:
+    """
+    Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
+    relative to `self` is returned.
+    """
+    try:
+        return next(self.select_context(criterion,
+                                        include_root=include_root, reverse=reverse))
+    except StopIteration:
+        return None
 
 
 def serialize_context(context: List[Node], with_content: bool = False, delimiter: str = ' <- '):
@@ -1627,17 +1681,17 @@ class RootNode(Node):
         self.omit_tags = set()    # type: Set[str]
         self.empty_tags = set()   # type: Set[str]
 
-    def clear_errors(self):
-        """
-        DEPRECATED: Should not be ued any more!
-        Removes all error messages. This can be used to keep the error messages
-        of different subsequent phases of tree-processing separate.
-        """
-        raise NotImplementedError
-        # self.errors = []               # type: List[Error]
-        # self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
-        # self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
-        # self.error_flag = 0
+    # def clear_errors(self):
+    #     """
+    #     DEPRECATED: Should not be ued any more!
+    #     Removes all error messages. This can be used to keep the error messages
+    #     of different subsequent phases of tree-processing separate.
+    #     """
+    #     raise NotImplementedError
+    #     # self.errors = []               # type: List[Error]
+    #     # self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
+    #     # self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
+    #     # self.error_flag = 0
 
     def __str__(self):
         errors = self.errors_sorted

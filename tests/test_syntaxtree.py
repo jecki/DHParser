@@ -31,7 +31,8 @@ from DHParser.configuration import get_config_value, set_config_value, INDENTED_
     SXPRESSION_SERIALIZATION
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
-    prev_context, serialize_context, generate_context_mapping, map_pos_to_context
+    prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
+    select_context_if, select_context
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -694,6 +695,20 @@ class TestContextNavigation:
         ctx, rel_pos = map_pos_to_context(i, cm)
         assert ctx[-1].tag_name == 'E' and rel_pos == 2
 
+    def test_select_context(self):
+        start = self.tree.pick_context('E')
+        sequence = []
+        for ctx in select_context_if(
+                start, lambda c: True, reverse=True):
+            sequence.append(''.join(n.tag_name for n in ctx))
+        assert sequence == ['ACE', 'ACD', 'AC', 'AB', 'A']
+
+        start = self.tree.pick_context('D')
+        sequence = []
+        for ctx in select_context_if(
+                start, lambda c: True, reverse=False):
+            sequence.append(''.join(n.tag_name for n in ctx))
+        assert sequence == ['ACD', 'ACE', 'AC', 'AF', 'A']
 
 
 if __name__ == "__main__":

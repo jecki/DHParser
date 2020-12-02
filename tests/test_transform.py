@@ -172,9 +172,9 @@ class TestConditionalTransformations:
         context = [Node('C', 'alpha'),
                    Node('B', 'beta'),
                    Node('A', 'gamma')]
-        assert not has_ancestor(context, {'A'})
-        assert has_ancestor(context, {'B'})
-        assert not has_ancestor(context, {'C'})
+        assert not has_ancestor(context, {'A'}, 1)
+        assert has_ancestor(context, {'B'}, 1)
+        assert not has_ancestor(context, {'C'}, 1)
         assert has_ancestor(context, {'C'}, 2)
 
         assert not has_parent(context, {'A'})
