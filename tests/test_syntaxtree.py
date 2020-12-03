@@ -529,7 +529,8 @@ class TestSerialization:
         threshold = get_config_value('flatten_sxpr_threshold')
         set_config_value('flatten_sxpr_threshold', 20)
         compact = tree.serialize('indented')
-        assert compact == 'A\n  B\n    C `(attr "val")\n      "D"\n    E\n      "F"\n  G\n    "H"'
+        # assert compact == 'A\n  B\n    C `(attr "val")\n      "D"\n    E\n      "F"\n  G\n    "H"'
+        assert compact == 'A\n  B\n    C `(attr "val") "D"\n    E "F"\n  G "H"'
         tree = parse_xml('<note><priority level="high" /><remark></remark></note>')
         assert tree.serialize(how=INDENTED_SERIALIZATION) == 'note\n  priority `(level "high")\n  remark'
         set_config_value('flatten_sxpr_threshold', threshold)
