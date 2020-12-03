@@ -1394,6 +1394,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                         sl[i] = sl[i].replace(')', '')
                 sxpr = '\n'.join(sl)
                 sxpr = re.sub(r'^\(', r'', sxpr)
+            sxpr = re.sub(r'\n\s*"(?=.*?(?:$|\n\s*\w))', r' "', sxpr)
             return sxpr
         else:
             s = how if how == switch else (how + '/' + switch)
