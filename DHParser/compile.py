@@ -417,8 +417,9 @@ class TreeProcessor(Compiler):
     fatal errors have occurred in any of the earlier stages.
     """
     def __call__(self, root: RootNode) -> RootNode:
+        assert isinstance(root, RootNode)
         result = super().__call__(root)
-        assert isinstance(result, RootNode)
+        assert isinstance(result, RootNode), result.as_sxpr()
         return cast(RootNode, result)
 
 
