@@ -287,7 +287,7 @@ class TestNode:
         assert item_w_value_4 not in tree
         assert tree[item_w_value_2].equals(Node('B', '2'))
         try:
-            tree[item_w_value_4]
+            _ = tree[item_w_value_4]
             assert False
         except KeyError:
             pass
