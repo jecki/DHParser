@@ -1253,7 +1253,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else None  # type: Optional[RootNode]
 
         def clean_attr(value: str) -> str:
-            return value.replace('<', '').replace('>', '')
+            return value.replace('<', '')  # .replace('>', '')
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
