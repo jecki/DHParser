@@ -1252,20 +1252,24 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
 
+        def clean_attr(value: str) -> str:
+            return value.replace('<', '').replace('>', '')
+
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             if node.tag_name in omit_tags and not node.has_attr():
                 return ''
             txt = ['<', clean_anonymous_tag_name(node.tag_name)]
             if node.has_attr():
-                txt.extend(' %s="%s"' % (k, v) for k, v in node.attr.items())
+                txt.extend(' %s="%s"' % (k, clean_attr(v)) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node._pos))
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
                 txt.append(' _pos="%i"' % node._pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(' err="%s"' % ''.join(str(err).replace('"', "'").replace('&', '&amp;')
-                                                 for err in root.get_errors(node)))
+                txt.append(' err="%s"' % clean_attr(
+                    ''.join(str(err).replace('"', "'").replace('&', '&amp;')
+                    for err in root.get_errors(node))))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
@@ -1489,7 +1493,8 @@ def select_context(context: List[Node],
     return select_context_if(context, create_context_match_function(criterion), reverse)
 
 
-def pick_context(self, criterion: CriteriaType,
+def pick_context(context: List[Node],
+                 criterion: CriteriaType,
                  include_root: bool = False,
                  reverse: bool = False) -> Optional[List['Node']]:
     """
@@ -1497,7 +1502,7 @@ def pick_context(self, criterion: CriteriaType,
     relative to `self` is returned.
     """
     try:
-        return next(self.select_context(criterion,
+        return next(self.select_context(context, criterion,
                                         include_root=include_root, reverse=reverse))
     except StopIteration:
         return None
