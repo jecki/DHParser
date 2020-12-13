@@ -31,7 +31,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
     issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
-    matching_brackets
+    matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -254,6 +254,47 @@ class TestJSONSupport:
             obj = json.loads(self.data)
             jsons = json_dumps(obj, partially_serialized=True)
             assert jsons == self.data
+
+
+class TestXMLSupport:
+
+    def test_RX_ENTITY(self):
+        assert RX_ENTITY.match('&amp;')
+        assert not RX_ENTITY.match('&...')
+
+    def test_validate_attribute_value(self):
+        assert validate_XML_attribute_value('attribute value test') == '"attribute value test"'
+        assert validate_XML_attribute_value("'single quoted string'") \
+               == '''"'single quoted string'"'''
+        assert validate_XML_attribute_value('"double quoted string"') \
+               == """'"double quoted string"'"""
+        assert validate_XML_attribute_value("&amp;") == '"&amp;"'
+
+        try:
+            validate_XML_attribute_value("&...")
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+
+        try:
+            validate_XML_attribute_value("<")
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+
+        try:
+            validate_XML_attribute_value("""'"'""")
+            assert False, "ValueError expected!"
+        except ValueError:
+            pass
+
+    def test_fix_attribute_value(self):
+        assert fix_XML_attribute_value("<") == '"&lt;"'
+        assert fix_XML_attribute_value("&") == '"&amp;"'
+        assert fix_XML_attribute_value("""'"'""") == """'&apos;"&apos;'"""
+        assert fix_XML_attribute_value('''" "''') == """'" "'"""
+        assert fix_XML_attribute_value("""' '""") == '''"' '"'''
+
 
 
 class TestMisc:
