@@ -42,6 +42,9 @@ __all__ = ('access_presets',
            'INDENTED_SERIALIZATION',
            'JSON_SERIALIZATION',
            'SERIALIZATIONS',
+           'ATTR_ERR_FIX',
+           'ATTR_ERR_FAIL',
+           'ATTR_ERR_IGNORE',
            'EBNF_FIXED_SYNTAX',
            'EBNF_CLASSIC_SYNTAX',
            'EBNF_ANY_SYNTAX_STRICT',
@@ -284,6 +287,21 @@ CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 # will switch to a compact output where the closing brackets are placed on
 # the same line as the last line of the content.
 CONFIG_PRESET['compact_sxpr_threshold'] = 20
+
+
+ATTR_ERR_IGNORE = "ignore"
+ATTR_ERR_FIX    = "fix"
+ATTR_ERR_FAIL   = "fail"
+
+# How to treat illegal attribute values when serializing as XML,
+# e.g. attr="<". Possible values are:
+# 'ignore' - faulty attribute values will be serialized nonetheless
+# 'fix'   - attribute values will be corrected, e.g. "<" will be
+#           replaced by the respective enity and the like
+# 'fail'  - an error will be raised. Observe that this error will be
+#           raised when serializing as XML, not when setting the value
+# Default value = "fail"
+CONFIG_PRESET['xml_attribute_error_handling'] = ATTR_ERR_FAIL
 
 
 ########################################################################

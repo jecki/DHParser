@@ -33,11 +33,13 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
 
 from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
     SXPRESSION_SERIALIZATION, INDENTED_SERIALIZATION, JSON_SERIALIZATION, \
-    get_config_value
+    ATTR_ERR_IGNORE, ATTR_ERR_FAIL, ATTR_ERR_FIX, get_config_value
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull
+from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, RX_ENTITY, \
+    validate_XML_attribute_value, fix_XML_attribute_value
+
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
@@ -1252,16 +1254,27 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
 
-        def clean_attr(value: str) -> str:
-            return value.replace('<', '')  # .replace('>', '')
+        def attr_err_ignore(value: str) -> str:
+            return ("'%s'" % value) if value.find('"') >= 0 else '"%s"' % value
+
+        attr_err_handling = get_config_value('xml_attribute_error_handling')
+        if attr_err_handling == ATTR_ERR_FAIL:
+            attr_filter = validate_XML_attribute_value
+        elif attr_err_handling == ATTR_ERR_FIX:
+            attr_filter = fix_XML_attribute_value
+        else:
+            assert attr_err_handling == ATTR_ERR_IGNORE, 'Illegal value for configuration ' +\
+                'variable "xml_attribute_error_handling": ' + attr_err_handling
+            attr_filter = attr_err_ignore
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
+            nonlocal attr_filter
             if node.tag_name in omit_tags and not node.has_attr():
                 return ''
             txt = ['<', clean_anonymous_tag_name(node.tag_name)]
             if node.has_attr():
-                txt.extend(' %s="%s"' % (k, clean_attr(v)) for k, v in node.attr.items())
+                txt.extend(' %s=%s' % (k, attr_filter(v)) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node._pos))
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
@@ -1502,8 +1515,8 @@ def pick_context(context: List[Node],
     relative to `self` is returned.
     """
     try:
-        return next(self.select_context(context, criterion,
-                                        include_root=include_root, reverse=reverse))
+        return next(select_context(context, criterion,
+                                   include_root=include_root, reverse=reverse))
     except StopIteration:
         return None
 

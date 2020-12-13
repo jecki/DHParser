@@ -67,6 +67,9 @@ __all__ = ('typing',
            'ThreadLocalSingletonFactory',
            'NEVER_MATCH_PATTERN',
            'RX_NEVER_MATCH',
+           'RX_ENTITY',
+           'validate_XML_attribute_value',
+           'fix_XML_attribute_value',
            'RxPatternType',
            're_find',
            'escape_re',
@@ -473,6 +476,56 @@ def matching_brackets(text: str,
         elif a >= 0:
             unmatched.append(a)
     return matches
+
+
+# see definition of EntityRef in: XML-grammar: XML-grammar, see https://www.w3.org/TR/xml/
+RX_ENTITY = re.compile(r'&(?:_|:|[A-Z]|[a-z]|[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]'
+                       r'|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]|[\u2070-\u218F]'
+                       r'|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]|[\uFDF0-\uFFFD]'
+                       r'|[\U00010000-\U000EFFFF])(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]|\u00B7'
+                       r'|[\u0300-\u036F]|[\u203F-\u2040]|[\u00C0-\u00D6]|[\u00D8-\u00F6]'
+                       r'|[\u00F8-\u02FF]|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]'
+                       r'|[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]'
+                       r'|[\uFDF0-\uFFFD]|[\U00010000-\U000EFFFF])*;')
+
+
+def validate_XML_attribute_value(value: str) -> str:
+    """Validates an XML-attribute value and returns the quoted value
+    if successful. Otherwise raises a ValueError.
+    """
+    contains_doublequote = value.find('"') >= 0
+    if contains_doublequote and value.find("'") >= 0:
+        raise ValueError(('Illegal XML-attribute value: %s  (Cannot be quoted, because '
+                          'both single and double quotation mark are contained in the '
+                          'value. Use enttites to avoid this conflict.)') % value)
+    if value.find('<') >= 0:
+        raise ValueError('XML-attribute value  %s  must not contain "<"!' % value)
+    i = value.find('&')
+    while i >= 0:
+        if not RX_ENTITY.match(value, i):
+            raise ValueError('Ampersand.sign "&" not allowed in XML-attribute value '
+                             'unless it is the beginning of an entity: ' + value)
+        i = value.find('&', i + 1)
+    return ("'%s'" % value) if contains_doublequote else '"%s"' % value
+
+
+def fix_XML_attribute_value(value: str) -> str:
+    """Returns the quotes XML-attribute value. In case the values
+    contains illegal characters, like '<', these will be replaced by
+    XML-entities."""
+    value = value.replace('<', '&lt;')
+    i = value.find('&')
+    while i >= 0:
+        if not RX_ENTITY.match(value, i):
+            value = value[:i] + '&amp;' + value[i + 1:]
+        i = value.find('&', i + 1)
+    if value.find('"') >= 0:
+        if value.find("'") >= 0:
+            value = value.replace("'", "&apos;")
+        value = "'%s'" % value
+    else:
+        value = '"%s"' % value
+    return value
 
 
 #######################################################################
