@@ -489,10 +489,11 @@ RX_ENTITY = re.compile(r'&(?:_|:|[A-Z]|[a-z]|[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u
                        r'|[\uFDF0-\uFFFD]|[\U00010000-\U000EFFFF])*;')
 
 
-def validate_XML_attribute_value(value: str) -> str:
-    """Validates an XML-attribute value and returns the quoted value
+def validate_XML_attribute_value(value: Any) -> str:
+    """Validates an XML-attribute value and returns the quoted string-value
     if successful. Otherwise raises a ValueError.
     """
+    value = str(value)
     contains_doublequote = value.find('"') >= 0
     if contains_doublequote and value.find("'") >= 0:
         raise ValueError(('Illegal XML-attribute value: %s  (Cannot be quoted, because '
@@ -509,10 +510,11 @@ def validate_XML_attribute_value(value: str) -> str:
     return ("'%s'" % value) if contains_doublequote else '"%s"' % value
 
 
-def fix_XML_attribute_value(value: str) -> str:
+def fix_XML_attribute_value(value: Any) -> str:
     """Returns the quotes XML-attribute value. In case the values
     contains illegal characters, like '<', these will be replaced by
     XML-entities."""
+    value = str(value)
     value = value.replace('<', '&lt;')
     i = value.find('&')
     while i >= 0:
