@@ -295,6 +295,10 @@ class TestXMLSupport:
         assert fix_XML_attribute_value('''" "''') == """'" "'"""
         assert fix_XML_attribute_value("""' '""") == '''"' '"'''
 
+    def test_other_value_types_than_str(self):
+        fix_XML_attribute_value(3)
+        validate_XML_attribute_value(3)
+
 
 
 class TestMisc:

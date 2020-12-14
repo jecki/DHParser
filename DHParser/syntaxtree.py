@@ -1274,15 +1274,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return ''
             txt = ['<', clean_anonymous_tag_name(node.tag_name)]
             if node.has_attr():
-                txt.extend(' %s=%s' % (k, attr_filter(v)) for k, v in node.attr.items())
+                txt.extend(' %s=%s' % (k, attr_filter(str(v))) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node._pos))
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
                 txt.append(' _pos="%i"' % node._pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(' err="%s"' % clean_attr(
-                    ''.join(str(err).replace('"', "'").replace('&', '&amp;')
-                    for err in root.get_errors(node))))
+                txt.append(' err="%s"' % (
+                    ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
+                            for err in root.get_errors(node))))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
