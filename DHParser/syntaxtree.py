@@ -61,6 +61,10 @@ __all__ = ('WHITESPACE_PTYPE',
            'next_context',
            'select_context_if',
            'select_context',
+           'pick_context',
+           'select_from_context_if',
+           'select_from_context',
+           'pick_from_context',
            'serialize_context',
            'context_sanity_check',
            'ContextMapping',
@@ -1517,6 +1521,32 @@ def pick_context(context: List[Node],
     try:
         return next(select_context(context, criterion,
                                    include_root=include_root, reverse=reverse))
+    except StopIteration:
+        return None
+
+
+def select_from_context_if(context: List[Node], match_function: Callable, reverse: bool=False):
+    """Yields all nodes from context for which the match_function is true."""
+    if reverse:
+        for nd in reversed(context):
+            if match_function(nd):
+                yield nd
+    else:
+        for nd in context:
+            if match_function(nd):
+                yield nd
+
+
+def select_from_context(context: List[Node], criterion: CriteriaType, reverse: bool=False):
+    """Yields all nodes from context which fulfill the criterion."""
+    return select_from_context_if(context, create_match_function(criterion), reverse)
+
+
+def pick_from_context(context: List[Node], criterion: CriteriaType, reverse: bool=False):
+    """Picks the first node from the context that fullfills the criterion. Returns `None`
+    if the context does not contain any node fulfilling the criterion."""
+    try:
+        return next(select_from_context(context, criterion, reverse=reverse))
     except StopIteration:
         return None
 
