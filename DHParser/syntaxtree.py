@@ -62,6 +62,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'select_context_if',
            'select_context',
            'pick_context',
+           'foregoing_str',
+           'ensuing_str',
            'select_from_context_if',
            'select_from_context',
            'pick_from_context',
@@ -1512,17 +1514,45 @@ def select_context(context: List[Node],
 
 def pick_context(context: List[Node],
                  criterion: CriteriaType,
-                 include_root: bool = False,
                  reverse: bool = False) -> Optional[List['Node']]:
     """
     Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
     relative to `self` is returned.
     """
     try:
-        return next(select_context(context, criterion,
-                                   include_root=include_root, reverse=reverse))
+        return next(select_context(context, criterion, reverse=reverse))
     except StopIteration:
         return None
+
+
+def foregoing_str(context: List[Node], length: int = -1) -> str:
+    """Retruns `length` characters from the string content preceding
+    the context."""
+    N = 0
+    l = []
+    ctx = prev_context(context)
+    while ctx and (N < length or length < 0):
+        s = ctx[-1].content
+        l.append(s)
+        N += len(s)
+        ctx = prev_context(ctx)
+    foregoing = ''.join(reversed(l))
+    return foregoing if length < 0 else foregoing[-length:]
+
+
+def ensuing_str(context: List[Node], length: int = -1) -> str:
+    """Returns `length` characters from the string contenxt succeeding
+    the context."""
+    N = 0
+    l = []
+    ctx = next_context(context)
+    while ctx and (N < length or length < 0):
+        s = ctx[-1].content
+        l.append(s)
+        N += len(s)
+        ctx = next_context(ctx)
+    following = ''.join(l)
+    return following if length < 0 else following[:length]
 
 
 def select_from_context_if(context: List[Node], match_function: Callable, reverse: bool=False):
@@ -1583,7 +1613,7 @@ def generate_context_mapping(node: Node) -> ContextMapping:
         pos_list.append(pos)
         ctx_list.append(ctx)
         pos += len(ctx[-1])
-    return (pos_list, ctx_list)
+    return pos_list, ctx_list
 
 
 def map_pos_to_context(i: int, cm: ContextMapping) -> Tuple[List[Node], int]:
