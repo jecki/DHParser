@@ -2,7 +2,7 @@
 
 # preamble
 @ literalws  = right
-@ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # optional whitespace, including at most one linefeed
+@ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # insignificant whitespace, including at most one linefeed
 @ comment    = /%.*/
 @ anonymous  = _WSPC, _GAP, _LB, _PARSEP,
                block_environment, known_environment, text_element,

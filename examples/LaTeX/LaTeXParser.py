@@ -7,31 +7,49 @@
 #######################################################################
 
 
-from collections import defaultdict
+import collections
+from functools import partial
 import os
 import sys
-from functools import partial
-from typing import List, Any
+from typing import Tuple, List, Union, Any, Optional, Callable
 
-dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if dhparser_path not in sys.path:
-    sys.path.append(dhparser_path)
+try:
+    scriptpath = os.path.dirname(__file__)
+except NameError:
+    scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
+if dhparser_parentdir not in sys.path:
+    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
 except ImportError:
     import re
-from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
-    Synonym, Whitespace, Drop, Text, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Series, Capture, Lookahead, \
-    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
-    PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
-    reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
-    flatten, is_empty, collapse, remove_brackets, strip, \
-    is_one_of, remove_tokens, remove_children, TOKEN_PTYPE, WARNING, \
-    access_thread_locals, recompile_grammar, get_config_value, apply_unless, \
-    transform_content, replace_content_with, resume_notices_on, set_tracer, trace_history, EMPTY_NODE
-from DHParser.log import start_logging
+from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
+    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
+    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
+    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
+    replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
+    merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
+    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
+    transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
+    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, \
+    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
+    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
+    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
+    has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
+    has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE
 
 
 #######################################################################
@@ -40,8 +58,13 @@ from DHParser.log import start_logging
 #
 #######################################################################
 
+def nop(arg):
+    return arg
+
+
 def LaTeXPreprocessor(text):
-    return text, lambda i: i
+    return text, nop
+
 
 def get_preprocessor() -> PreprocessorFunc:
     return LaTeXPreprocessor
@@ -63,7 +86,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     tabular_config = Forward()
     text_element = Forward()
-    source_hash__ = "a09a973a846b936cf8617fad4156affd"
+    source_hash__ = "dc94e1c577d4549bdfeb312822a48a44"
     anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -79,9 +102,9 @@ class LaTeXGrammar(Grammar):
     BACKSLASH = RegExp('[\\\\]')
     _LB = Drop(RegExp('\\s*?\\n|$'))
     NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('\\n')))
-    _GAP = Drop(Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__)))
-    _WSPC = Drop(Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+')))))))
-    _PARSEP = Drop(Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC)))))
+    _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
+    _WSPC = Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+'))))))
+    _PARSEP = Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC))))
     S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), NegativeLookahead(_GAP), wsp__)
     LFF = Series(NEW_LINE, Option(_WSPC))
     LF = Series(NEW_LINE, ZeroOrMore(Series(comment__, whitespace__)))
@@ -168,21 +191,18 @@ class LaTeXGrammar(Grammar):
     root__ = latexdoc
     
 
+_raw_grammar = ThreadLocalSingletonFactory(LaTeXGrammar, ident=1)
+
 def get_grammar() -> LaTeXGrammar:
-    """Returns a thread/process-exclusive LaTeXGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.LaTeX_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.LaTeX_00000001_grammar_singleton = LaTeXGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.LaTeX_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.LaTeX_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################
@@ -313,21 +333,15 @@ LaTeX_AST_transformation_table = {
 }
 
 
-def CreateLaTeXTransformer() -> TransformationFunc:
+def LaTeXTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=LaTeX_AST_transformation_table.copy())
 
-def get_transformer() -> TransformationFunc:
-    """Returns a thread/process-exclusive transformation function."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        transformer = THREAD_LOCALS.LaTeX_00000001_transformer_singleton
-    except AttributeError:
-        THREAD_LOCALS.LaTeX_00000001_transformer_singleton = CreateLaTeXTransformer()
-        transformer = THREAD_LOCALS.LaTeX_00000001_transformer_singleton
-    return transformer
+get_transformer = ThreadLocalSingletonFactory(LaTeXTransformer, ident=1)
 
+def transform_LaTeX(cst):
+    get_transformer()(cst)
 
 
 #######################################################################
@@ -339,7 +353,7 @@ def get_transformer() -> TransformationFunc:
 
 def empty_defaultdict():
     """Returns a defaultdict with an empty defaultdict as default value."""
-    return defaultdict(empty_defaultdict)
+    return collections.defaultdict(empty_defaultdict)
 
 
 class LaTeXCompiler(Compiler):
@@ -350,15 +364,14 @@ class LaTeXCompiler(Compiler):
 
     def __init__(self):
         super(LaTeXCompiler, self).__init__()
-        self.metadata = defaultdict(empty_defaultdict)
+        self.metadata = collections.defaultdict(empty_defaultdict)
 
-    def __call__(self, root):
-        result = super().__call__(root)
+    def reset(self):
+        super().reset()
+        # initialize your variables here, not in the constructor!
         self.tree.inline_tags = set()  # {'paragraph'}
         self.tree.empty_tags = set()
         self.tree.omit_tags = {'S', 'PARSEP'}
-        return result
-
 
     def fallback_generic_command(self, node: Node) -> Node:
         if not node.result:
@@ -389,10 +402,8 @@ class LaTeXCompiler(Compiler):
                 node.result = tuple(result)
         return node
 
-    # def on_latexdoc(self, node):
-    #     self.compile(node['preamble'])
-    #     self.compile(node['document'])
-    #     return node
+    def on_latexdoc(self, node):
+        return self.fallback_compiler(node)
 
     # def on_preamble(self, node):
     #     return node
@@ -493,6 +504,9 @@ class LaTeXCompiler(Compiler):
     # def on_tabular_config(self, node):
     #     return node
 
+    # def on_TBCFG_VALUE(self, node):
+    #     return node
+
     # def on_block_of_paragraphs(self, node):
     #     return node
 
@@ -544,6 +558,12 @@ class LaTeXCompiler(Compiler):
     # def on_generic_command(self, node):
     #     return node
 
+    # def on_citet(self, node):
+    #     return node
+
+    # def on_citep(self, node):
+    #     return node
+
     # def on_footnote(self, node):
     #     return node
 
@@ -580,8 +600,8 @@ class LaTeXCompiler(Compiler):
             self.metadata['documentclass'] = node['block'].content
         return node
 
-    def on_pdfinfo(self, node):
-        return node
+    # def on_pdfinfo(self, node):
+    #     return node
 
     # def on_config(self, node):
     #     return node
@@ -628,7 +648,13 @@ class LaTeXCompiler(Compiler):
     # def on_INTEGER(self, node):
     #     return node
 
-    # def on_TEXTCHUNK(self, node):
+    # def on_TEXT(self, node):
+    #     return node
+
+    # def on_LINE(self, node):
+    #     return node
+
+    # def on_LETTERS(self, node):
     #     return node
 
     # def on_LF(self, node):
@@ -637,19 +663,22 @@ class LaTeXCompiler(Compiler):
     # def on_LFF(self, node):
     #     return node
 
-    # def on_PARSEP(self, node):
+    # def on_S(self, node):
     #     return node
 
-    # def on_WSPC(self, node):
+    # def on__PARSEP(self, node):
     #     return node
 
-    # def on_GAP(self, node):
+    # def on__WSPC(self, node):
+    #     return node
+
+    # def on__GAP(self, node):
     #     return node
 
     # def on_NEW_LINE(self, node):
     #     return node
 
-    # def on_LB(self, node):
+    # def on__LB(self, node):
     #     return node
 
     # def on_BACKSLASH(self, node):
@@ -659,15 +688,10 @@ class LaTeXCompiler(Compiler):
     #     return node
 
 
-def get_compiler() -> LaTeXCompiler:
-    """Returns a thread/process-exclusive LaTeXCompiler-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        compiler = THREAD_LOCALS.LaTeX_00000001_compiler_singleton
-    except AttributeError:
-        THREAD_LOCALS.LaTeX_00000001_compiler_singleton = LaTeXCompiler()
-        compiler = THREAD_LOCALS.LaTeX_00000001_compiler_singleton
-    return compiler
+get_compiler = ThreadLocalSingletonFactory(LaTeXCompiler, ident=1)
+
+def compile_LaTeX(ast):
+    return get_compiler()(ast)
 
 
 #######################################################################
@@ -676,23 +700,101 @@ def get_compiler() -> LaTeXCompiler:
 #
 #######################################################################
 
+RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
-def compile_src(source):
-    """Compiles ``source`` and returns (result, errors, ast).
+
+def compile_src(source: str) -> Tuple[Any, List[Error]]:
+    """Compiles ``source`` and returns (result, errors, ast)."""
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
+    return result_tuple[:2]  # drop the AST at the end of the result tuple
+
+
+def serialize_result(result: Any) -> Union[str, bytes]:
+    """Serialization of result. REWRITE THIS, IF YOUR COMPILATION RESULT
+    IS NOT A TREE OF NODES.
     """
-    compiler = get_compiler()
-    cname = compiler.__class__.__name__
-    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
-        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
-    result = compile_source(source, get_preprocessor(),
-                            get_grammar(),
-                            get_transformer(), compiler)
-    return result
+    if isinstance(result, Node):
+        return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
+    else:
+        return repr(result)
+
+
+def process_file(source: str, result_filename: str = '') -> str:
+    """Compiles the source and writes the serialized results back to disk,
+    unless any fatal errors have occurred. Error and Warning messages are
+    written to a file with the same name as `result_filename` with an
+    appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
+    extension. Returns the name of the error-messages file or an empty
+    string, if no errors of warnings occurred.
+    """
+    source_filename = source if is_filename(source) else ''
+    result, errors = compile_src(source)
+    if not has_errors(errors, FATAL):
+        if os.path.abspath(source_filename) != os.path.abspath(result_filename):
+            with open(result_filename, 'w') as f:
+                f.write(serialize_result(result))
+        else:
+            errors.append(Error('Source and destination have the same name "%s"!'
+                                % result_filename, 0, FATAL))
+    if errors:
+        err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
+        err_filename = os.path.splitext(result_filename)[0] + err_ext
+        with open(err_filename, 'w') as f:
+            f.write('\n'.join(canonical_error_strings(errors, source_filename)))
+        return err_filename
+    return ''
+
+
+def batch_process(file_names: List[str], out_dir: str,
+                  *, submit_func: Callable = None,
+                  log_func: Callable = None) -> List[str]:
+    """Compiles all files listed in filenames and writes the results and/or
+    error messages to the directory `our_dir`. Returns a list of error
+    messages files.
+    """
+    def gen_dest_name(name):
+        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
+                                     + RESULT_FILE_EXTENSION)
+
+    error_list =  []
+    if get_config_value('batch_processing_parallelization'):
+        def run_batch(submit_func: Callable):
+            nonlocal error_list
+            err_futures = []
+            for name in file_names:
+                dest_name = gen_dest_name(name)
+                err_futures.append(submit_func(process_file, name, dest_name))
+            for file_name, err_future in zip(file_names, err_futures):
+                error_filename = err_future.result()
+                if log_func:
+                    log_func('Compiling "%s"' % file_name)
+                if error_filename:
+                    error_list.append(error_filename)
+
+        if True or submit_func is None:
+            import concurrent.futures
+            import multiprocessing
+            with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+                run_batch(pool.submit)
+        else:
+            run_batch(submit_func)
+    else:
+        for name in filenames:
+            if log_func:  log_func(name, gen_dest_name(name))
+            error_filename = process_file(name, gen_dest_name(name), log_func)
+            if error_filename:
+                error_list.append(error_filename)
+
+    return error_list
 
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    if __file__.endswith('Parser.py'):
+        grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    else:
+        grammar_path = os.path.splitext(__file__)[0] + '.ebnf'
     parser_update = False
 
     def notify():
@@ -700,7 +802,7 @@ if __name__ == "__main__":
         parser_update = True
         print('recompiling ' + grammar_path)
 
-    if os.path.exists(grammar_path):
+    if os.path.exists(grammar_path) and os.path.isfile(grammar_path):
         if not recompile_grammar(grammar_path, force=False, notify=notify):
             error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
             with open(error_file, encoding="utf-8") as f:
@@ -708,26 +810,79 @@ if __name__ == "__main__":
             sys.exit(1)
         elif parser_update:
             print(os.path.basename(__file__) + ' has changed. '
-              'Please run again in order to apply updated compiler')
+                  'Please run again in order to apply updated compiler')
             sys.exit(0)
     else:
         print('Could not check whether grammar requires recompiling, '
               'because grammar was not found at: ' + grammar_path)
 
-    if len(sys.argv) > 1:
-        # compile file
-        file_name, log_dir = sys.argv[1], ''
-        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
-            file_name, log_dir = sys.argv[2], 'LOGS'
-        start_logging(log_dir)
-        result, errors, _ = compile_src(file_name)
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description="Parses a LaTeX-file and shows its syntax-tree.")
+    parser.add_argument('files', nargs='+')
+    parser.add_argument('-d', '--debug', action='store_const', const='debug',
+                        help='Store debug information in LOGS subdirectory')
+    parser.add_argument('-x', '--xml', action='store_const', const='xml',
+                        help='Store result as XML instead of S-expression')
+    parser.add_argument('-o', '--out', nargs=1, default=['out'],
+                        help='Output directory for batch processing')
+    parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
+                        help='Verbose output')
+
+    args = parser.parse_args()
+    file_names, out, log_dir = args.files, args.out[0], ''
+
+    # if not os.path.exists(file_name):
+    #     print('File "%s" not found!' % file_name)
+    #     sys.exit(1)
+    # if not os.path.isfile(file_name):
+    #     print('"%s" is not a file!' % file_name)
+    #     sys.exit(1)
+
+    if args.debug is not None:
+        log_dir = 'LOGS'
+        set_config_value('history_tracking', True)
+        set_config_value('resume_notices', True)
+        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
+    start_logging(log_dir)
+
+    if args.xml:
+        RESULT_FILE_EXTENSION = '.xml'
+
+    def echo(message: str):
+        if args.verbose:
+            print(message)
+
+    batch_processing = True
+    if len(file_names) == 1:
+        if os.path.isdir(file_names[0]):
+            dir_name = file_names[0]
+            echo('Processing all files in directory: ' + dir_name)
+            file_names = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)
+                          if os.path.isfile(os.path.join(dir_name, fn))]
+        elif not ('-o' in sys.argv or '--out' in sys.argv):
+            batch_processing = False
+
+    if batch_processing:
+        if not os.path.exists(out):
+            os.mkdir(out)
+        elif not os.path.isdir(out):
+            print('Output directory "%s" exists and is not a directory!' % out)
+            sys.exit(1)
+        error_files = batch_process(file_names, out, log_func=print if args.verbose else None)
+        if error_files:
+            category = "ERRORS" if any(f.endswith('_ERRORS.txt') for f in error_files) \
+                else "warnings"
+            print("There have been %s! Please check files:" % category)
+            print('\n'.join(error_files))
+            if category == "ERRORS":
+                sys.exit(1)
+    else:
+        result, errors = compile_src(file_names[0])
+
         if errors:
-            cwd = os.getcwd()
-            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
-            for error in errors:
-                print(rel_path + ':' + str(error))
+            for err_str in canonical_erorr_strings(errors, file_names[0]):
+                print(err_str)
             sys.exit(1)
         else:
-            print(result.customized_XML() if isinstance(result, Node) else result)
-    else:
-        print("Usage: LaTeXParser.py [FILENAME]")
+            print(result.serialize(how='default' if args.xml is None else 'xml')
+                  if isinstance(result, Node) else result)
