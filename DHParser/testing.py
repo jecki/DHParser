@@ -30,11 +30,9 @@ import asyncio
 import collections
 import concurrent.futures
 import copy
-# import difflib
 import fnmatch
 import inspect
 import json
-import multiprocessing
 import os
 import sys
 import threading
@@ -609,9 +607,10 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     tests = [fn for fn in sorted(os.listdir('.'))
              if any(fnmatch.fnmatch(fn, pattern) for pattern in fn_patterns)]
 
-    if len(tests) > 1 and get_config_value('test_parallelization'):
+    if len(tests) > 1 and get_config_value('test_parallelization') \
+            and '--singlethreaded' not in sys.argv:
         # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
-        with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+        with concurrent.futures.ProcessPoolExecutor() as pool:
             results = []
             for filename in tests:
                 parameters = filename, parser_factory, transformer_factory, report, verbose
@@ -923,8 +922,9 @@ def run_path(path):
         sys.path.append(path)
         files = os.listdir(path)
         result_futures = []
-        if len(files) > 1 and get_config_value('test_parallelization'):
-            with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+        if len(files) > 1 and get_config_value('test_parallelization') \
+                and '--singlethreaded' not in sys.argv:
+            with concurrent.futures.ProcessPoolExecutor() as pool:
                 for f in files:
                     result_futures.append(pool.submit(run_file, f))
                     # run_file(f)  # for testing!

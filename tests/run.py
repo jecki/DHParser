@@ -76,13 +76,20 @@ if __name__ == "__main__":
         found.append('pypy ')
     print('Interpreters found: ' + ''.join(found))
 
-    if len(sys.argv) > 1:
+    arguments = sys.argv.copy()
+    if '--singlethreaded' in arguments:
+        singlethreaded = True
+        del arguments[arguments.index('--singlethreaded')]
+    else:
+        singlethreaded = False
+
+    if len(arguments) > 1:
         # use interpreters from command line
         interpreters = []
-        for interpreter in sys.argv[1:]:
+        for interpreter in arguments[1:]:
             interpreter = interpreter.strip() + ' '
             if interpreter not in found:
-                print('Interpreter ' + sys.argv[1] + ' not found.')
+                print('Interpreter ' + arguments[1] + ' not found.')
                 sys.exit(1)
             else:
                 interpreters.append(interpreter)
@@ -113,11 +120,14 @@ if __name__ == "__main__":
                     if filename.endswith('.py') and (filename.startswith('test_') or
                                                      filename.startswith('notest')):
                         command = interpreter + os.path.join('tests', filename)
-                        # run_unittests(command)
-                        results.append(pool.submit(run_unittests, command))
+                        if singlethreaded:
+                            run_unittests(command)
+                        else:
+                            results.append(pool.submit(run_unittests, command))
 
-        done, not_done = concurrent.futures.wait(results)
-        assert not not_done, str(not_done)
+        if not singlethreaded:
+            done, not_done = concurrent.futures.wait(results)
+            assert not not_done, str(not_done)
 
     elapsed = time.time() - timestamp
     print('\n Test-Duration: %.2f seconds' % elapsed)
