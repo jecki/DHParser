@@ -4,7 +4,6 @@
 
 import concurrent.futures
 import doctest
-import multiprocessing
 import os
 import subprocess
 import sys
@@ -15,6 +14,14 @@ scriptdir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(scriptdir, '../'))
 
 lock = threading.Lock()
+
+
+def run_cmd(parameters: list):
+    try:
+        subprocess.run(parameters)
+        return True
+    except FileNotFoundError:
+        return False
 
 
 def run_doctests(module):
@@ -36,31 +43,51 @@ def run_unittests(command):
 
 
 if __name__ == "__main__":
-    interpreters = [sys.executable + ' ']
-    ['python3 ' if os.system('python3 -V') == 0 else 'python ']
-    if os.system('python3.5 -V') == 0:
-        interpreters.append('python3.5 ')
-    elif os.system('~/.local/bin/python3.5 -V') == 0:
-        interpreters.append('~/.local/bin/python3.5 ')
-    if os.system('python3.6 -V') == 0:
-        interpreters.append('python3.6 ')
-    elif os.system('~/.local/bin/python3.6 -V') == 0:
-        interpreters.append('~/.local/bin/python3.6 ')
-    if os.system('python3.7 -V') == 0:
-        interpreters.append('python3.7 ')
-    elif os.system('~/.local/bin/python3.7 -V') == 0:
-        interpreters.append('~/.local/bin/python3.7 ')
-    if os.system('python3.9 -V') == 0:
-        interpreters.append('python3.9 ')
-    elif os.system('~/.local/bin/python3.9 -V') == 0:
-        interpreters.append('~/.local/bin/python3.9 ')
-    if os.system('pypy3 -V') == 0:
-        interpreters.append('pypy3 ')
-    elif os.system('pypy36 -V') == 0:
-        interpreters.append('pypy36 ')
-    elif os.system('pypy -V') == 0:
-        interpreters.append('pypy ')
-    print('Interpreters found: ' + ''.join(interpreters))
+    found = []
+    if run_cmd(['python', '-V']):
+        output = subprocess.run(['python', '-V'], capture_output=True).stdout
+        if output.find(b'Python 3') >= 0:
+            found.append('python ')
+        elif run_cmd(['python3', '-V']):
+            found.append('python3')
+    elif run_cmd(['python3', '-V']):
+        found.append('python3')
+    if run_cmd(['python3.5', '-V']):
+        found.append('python3.5 ')
+    elif run_cmd(['~/.local/bin/python3.5', '-V']):
+        found.append('~/.local/bin/python3.5 ')
+    if run_cmd(['python3.6', '-V']):
+        found.append('python3.6 ')
+    elif run_cmd(['~/.local/bin/python3.6', '-V']):
+        found.append('~/.local/bin/python3.6 ')
+    if run_cmd(['python3.7', '-V']):
+        found.append('python3.7 ')
+    elif run_cmd(['~/.local/bin/python3.7', '-V']):
+        found.append('~/.local/bin/python3.7 ')
+    if run_cmd(['python3.9', '-V']):
+        found.append('python3.8 ')
+    elif run_cmd(['~/.local/bin/python3.8', '-V']):
+        found.append('~/.local/bin/python3.8 ')
+    if run_cmd(['pypy3', '-V']):
+        found.append('pypy3 ')
+    elif run_cmd(['pypy36', '-V']):
+        found.append('pypy36 ')
+    elif run_cmd(['pypy', '-V']):
+        found.append('pypy ')
+    print('Interpreters found: ' + ''.join(found))
+
+    if len(sys.argv) > 1:
+        # use interpreters from command line
+        interpreters = []
+        for interpreter in sys.argv[1:]:
+            interpreter = interpreter.strip() + ' '
+            if interpreter not in found:
+                print('Interpreter ' + sys.argv[1] + ' not found.')
+                sys.exit(1)
+            else:
+                interpreters.append(interpreter)
+    else:
+        interpreters = found
 
     cwd = os.getcwd()
     os.chdir(os.path.join(scriptdir, '..'))
@@ -69,7 +96,7 @@ if __name__ == "__main__":
 
     run_doctests('toolkit')
 
-    with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
+    with concurrent.futures.ProcessPoolExecutor() as pool:
         results = []
 
         # doctests
@@ -81,7 +108,7 @@ if __name__ == "__main__":
 
         # unit tests
         for interpreter in interpreters:
-            if os.system(interpreter + '--version') == 0:
+            if run_cmd([interpreter.strip(), '--version']):
                 for filename in os.listdir('tests'):
                     if filename.endswith('.py') and (filename.startswith('test_') or
                                                      filename.startswith('notest')):
@@ -89,7 +116,8 @@ if __name__ == "__main__":
                         # run_unittests(command)
                         results.append(pool.submit(run_unittests, command))
 
-        concurrent.futures.wait(results)
+        done, not_done = concurrent.futures.wait(results)
+        assert not not_done, str(not_done)
 
     elapsed = time.time() - timestamp
     print('\n Test-Duration: %.2f seconds' % elapsed)
