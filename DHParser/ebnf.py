@@ -1511,9 +1511,6 @@ class EBNFCompiler(Compiler):
         truly_recursive = {sym for sym in self.recursive
                            if sym in self.referred_symbols(sym)}
 
-        if truly_recursive != self.recursive:
-            print("BINGO")
-
         # move truly_recursive symbols to the top of the list
         top = 1   # however, leave root parser at the very top!
         while top < N and definitions[top][0] in truly_recursive:
@@ -1530,10 +1527,9 @@ class EBNFCompiler(Compiler):
             for i in range(top + 1, N):
                 if topsym in self.directly_referred(definitions[i][0]):
                     definitions[top], definitions[i] = definitions[i], definitions[top]
-                    top += 1
                     break
             else:
-                top = N
+                top += 1
 
         self.recursive = truly_recursive
 

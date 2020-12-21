@@ -1009,6 +1009,7 @@ class TestPopRetrieve:
             EOF        = !/./ [ :?defsign ]   # eat up captured defsigns
         """
         # print(raw_compileEBNF(lang).result)
+        # set_config_value('compiled_EBNF_log', 'mylog.txt')
         parser = grammar_provider(lang)()
         st = parser("X := 1")
         assert not st.error_flag, str(st.errors)
