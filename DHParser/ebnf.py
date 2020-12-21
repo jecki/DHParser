@@ -1143,6 +1143,11 @@ class EBNFCompiler(Compiler):
                 to the set of symbols that are directly or indirectly
                 referred to in the definition of the symbol.
 
+        directly_referred_cache: A dictionary that caches the the results
+                of method `directly_referred_symbols()`, which yields
+                the set of symbols that are referred to in the definition
+                of a particular symbol.
+
         symbols:  A mapping of symbol names to their first usage (not
                 their definition!) in the EBNF source.
 
@@ -1449,6 +1454,22 @@ class EBNFCompiler(Compiler):
         return search_list
 
 
+    def directly_referred(self, symbol: str) -> FrozenSet[str]:
+        """Returns the set of symbols that are referred to in the definition
+        of `symbol`."""
+        try:
+            return self.directly_referred_cache[symbol]
+        except KeyError:
+            pass
+        try:
+            referred_nodes = self.rules[symbol]
+        except KeyError:
+            referred_nodes = []  # Missing Symbol definition error will be caught later
+        result = frozenset({nd.content for nd in referred_nodes[1:]})
+        self.directly_referred_cache[symbol] = result
+        return result
+
+
     def referred_symbols(self, symbol: str) -> FrozenSet[str]:
         """Returns the set of all symbols that are directly or indirectly
         referred to in the definition of `symbol`. The symbol itself can
@@ -1457,17 +1478,15 @@ class EBNFCompiler(Compiler):
         `referred_symbols()` only yields reliable results if the collection
         of definitions has been completed.
         """
-        if symbol in self.referred_symbols_cache:
+
+        try:
             return self.referred_symbols_cache[symbol]
+        except KeyError:
+            pass
         collected = set()  # type: Set[str]
 
         def gather(sym: str):
-            try:
-                referred = self.rules[sym]
-            except KeyError:
-                referred = []  # Missing Symbol definition error will be caught later
-            for nd in referred[1:]:
-                s = nd.content
+            for s in self.directly_referred(sym):
                 if s not in collected and s not in EBNFCompiler.RESERVED_SYMBOLS:
                     collected.add(s)
                     gather(s)
@@ -1480,12 +1499,44 @@ class EBNFCompiler(Compiler):
     def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
         """Reorders the definitions so as to minimize the number of Forward
         declarations. Forward declarations remain inevitable only where
-        recursion is involved."""
-        pass
-        # for symbol in self.recursive:
-        #     if symbol not in self.referred_symbols(symbol):
+        recursion is involved.
+        """
+        def index(sym: str, defs: List[Tuple[str, str]]) -> int:
+            for i, defn in enumerate(defs):
+                if defn[0] == sym:
+                    return i
+            raise ValueError(sym + 'not in definitions')
 
-        
+        N = len(definitions)
+        truly_recursive = {sym for sym in self.recursive
+                           if sym in self.referred_symbols(sym)}
+
+        if truly_recursive != self.recursive:
+            print("BINGO")
+
+        # move truly_recursive symbols to the top of the list
+        top = 1   # however, leave root parser at the very top!
+        while top < N and definitions[top][0] in truly_recursive:
+            top += 1
+        for i in range(top, N):
+            if definitions[i][0] in truly_recursive:
+                definitions[top], definitions[i] = definitions[i], definitions[top]
+                top += 1
+
+        # order the other definitions
+
+        while top < N:
+            topsym = definitions[top][0]
+            for i in range(top + 1, N):
+                if topsym in self.directly_referred(definitions[i][0]):
+                    definitions[top], definitions[i] = definitions[i], definitions[top]
+                    top += 1
+                    break
+            else:
+                top = N
+
+        self.recursive = truly_recursive
+
 
     def assemble_parser(self, definitions: List[Tuple[str, str]]) -> str:
         """
