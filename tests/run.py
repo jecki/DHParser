@@ -40,6 +40,7 @@ def run_unittests(command):
     filename = args[1]
     print('\nUNITTEST ' + args[0] + ' ' + filename)
     subprocess.run(args)
+    print('COMPLETED ' + args[0] + ' ' + filename + '\n')
 
 
 if __name__ == "__main__":
@@ -126,7 +127,7 @@ if __name__ == "__main__":
                             results.append(pool.submit(run_unittests, command))
 
         if not singlethreaded:
-            done, not_done = concurrent.futures.wait(results)
+            done, not_done = concurrent.futures.wait(results, timeout=120)
             assert not not_done, str(not_done)
 
     elapsed = time.time() - timestamp

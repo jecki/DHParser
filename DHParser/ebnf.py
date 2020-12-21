@@ -28,7 +28,7 @@ from collections import OrderedDict
 from functools import partial
 import keyword
 import os
-from typing import Callable, Dict, List, Set, Tuple, Sequence, Union, Optional, Any
+from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Sequence, Union, Optional
 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
 from DHParser.configuration import access_thread_locals, get_config_value, \
@@ -1138,6 +1138,11 @@ class EBNFCompiler(Compiler):
                 Now `[node.content for node in self.rules['alternative']]`
                 yields `['alternative = a | b', 'a', 'b']`
 
+        referred_symbols_cache: A dictionary that caches the results of
+                method `referred_symbols()`. `referred_symbols()` maps a
+                to the set of symbols that are directly or indirectly
+                referred to in the definition of the symbol.
+
         symbols:  A mapping of symbol names to their first usage (not
                 their definition!) in the EBNF source.
 
@@ -1249,23 +1254,25 @@ class EBNFCompiler(Compiler):
 
     def reset(self):
         super(EBNFCompiler, self).reset()
-        self._result = ''                    # type: str
-        self.re_flags = set()                # type: Set[str]
-        self.rules = OrderedDict()           # type: OrderedDict[str, List[Node]]
-        self.current_symbols = []            # type: List[Node]
-        self.cache_literal_symbols = None    # type: Optional[Dict[str, str]]
-        self.symbols = {}                    # type: Dict[str, Node]
-        self.variables = set()               # type: Set[str]
-        self.recursive = set()               # type: Set[str]
-        self.definitions = {}                # type: Dict[str, str]
-        self.required_keywords = set()       # type: Set[str]
-        self.deferred_tasks = []             # type: List[Callable]
-        self.root_symbol = ""                # type: str
-        self.drop_flag = False               # type: bool
-        self.directives = EBNFDirectives()   # type: EBNFDirectives
-        self.defined_directives = dict()     # type: Dict[str, List[Node]]
-        self.consumed_custom_errors = set()  # type: Set[str]
-        self.consumed_skip_rules = set()     # type: Set[str]
+        self._result = ''                      # type: str
+        self.re_flags = set()                  # type: Set[str]
+        self.rules = OrderedDict()             # type: OrderedDict[str, List[Node]]
+        self.referred_symbols_cache = dict()   # type: Dict[str, FrozenSet[str]]
+        self.directly_referred_cache = dict()  # type: Dict[str, FrozenSet[str]]
+        self.current_symbols = []              # type: List[Node]
+        self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
+        self.symbols = {}                      # type: Dict[str, Node]
+        self.variables = set()                 # type: Set[str]
+        self.recursive = set()                 # type: Set[str]
+        self.definitions = {}                  # type: Dict[str, str]
+        self.required_keywords = set()         # type: Set[str]
+        self.deferred_tasks = []               # type: List[Callable]
+        self.root_symbol = ""                  # type: str
+        self.drop_flag = False                 # type: bool
+        self.directives = EBNFDirectives()     # type: EBNFDirectives
+        self.defined_directives = dict()       # type: Dict[str, List[Node]]
+        self.consumed_custom_errors = set()    # type: Set[str]
+        self.consumed_skip_rules = set()       # type: Set[str]
         self.anonymous_regexp = re.compile(get_config_value('default_anonymous_regexp'))
         self.grammar_id += 1
 
@@ -1442,9 +1449,16 @@ class EBNFCompiler(Compiler):
         return search_list
 
 
-    def referred_symbols(self, symbol: str) -> Set[str]:
+    def referred_symbols(self, symbol: str) -> FrozenSet[str]:
         """Returns the set of all symbols that are directly or indirectly
-        referred to in the definition of `symbol`."""
+        referred to in the definition of `symbol`. The symbol itself can
+        be contained in this set, if and only if its rule is recursive.
+
+        `referred_symbols()` only yields reliable results if the collection
+        of definitions has been completed.
+        """
+        if symbol in self.referred_symbols_cache:
+            return self.referred_symbols_cache[symbol]
         collected = set()  # type: Set[str]
 
         def gather(sym: str):
@@ -1458,7 +1472,20 @@ class EBNFCompiler(Compiler):
                     collected.add(s)
                     gather(s)
         gather(symbol)
-        return collected
+        result = frozenset(collected)
+        self.referred_symbols_cache[symbol] = result
+        return result
+
+
+    def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
+        """Reorders the definitions so as to minimize the number of Forward
+        declarations. Forward declarations remain inevitable only where
+        recursion is involved."""
+        pass
+        # for symbol in self.recursive:
+        #     if symbol not in self.referred_symbols(symbol):
+
+        
 
     def assemble_parser(self, definitions: List[Tuple[str, str]]) -> str:
         """
@@ -1497,6 +1524,9 @@ class EBNFCompiler(Compiler):
 
         for task in self.deferred_tasks:
             task()
+
+        # minimize the necessary number of forwared declarations
+        self.optimize_definitions_order(definitions)
 
         # provide for capturing of symbols that are variables, i.e. the
         # value of which will be retrieved at some point during the parsing process
@@ -1598,7 +1628,7 @@ class EBNFCompiler(Compiler):
                     try:
                         def_node = self.rules[symbol][0]
                         self.tree.new_error(
-                            def_node, '"Skip-rules" for symbol "{}" will never be used, beacuse '
+                            def_node, '"Skip-rules" for symbol "{}" will never be used, because '
                             'the mandatory marker "§" does not appear in its definiendum or has '
                             'already been consumed earlier.'
                             .format(symbol), UNUSED_ERROR_HANDLING_WARNING)

@@ -32,7 +32,7 @@ for an example.
 
 from collections import defaultdict
 import copy
-from typing import Callable, cast, List, Tuple, Set, Dict, \
+from typing import Callable, cast, List, Tuple, Set, AbstractSet, Dict, \
     DefaultDict, Sequence, Union, Optional, Iterator
 
 from DHParser.configuration import get_config_value
@@ -689,7 +689,7 @@ class Parser:
         worrying about forgetting the return value of procedure, because a
         return value of `None` means "carry on".
         """
-        def positive_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
+        def positive_flip(f: ApplyFunc, flagged: AbstractSet[ApplyFunc]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == True`
             as meaning that `f` has already been applied."""
@@ -699,7 +699,7 @@ class Parser:
                 flagged.add(f)
                 return False
 
-        def negative_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
+        def negative_flip(f: ApplyFunc, flagged: AbstractSet[ApplyFunc]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == False`
             as meaning that `f` has already been applied."""
