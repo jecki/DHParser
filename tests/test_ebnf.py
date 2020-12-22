@@ -372,8 +372,9 @@ class TestSelfHosting:
         compiler_name = "EBNF"
         compiler = get_ebnf_compiler(compiler_name, EBNF)
         parser = get_ebnf_grammar()
-        result, errors, syntax_tree = compile_source(EBNF, None, parser,
-                                            get_ebnf_transformer(), compiler)
+        result, errors, syntax_tree = compile_source(
+            EBNF, None, parser, get_ebnf_transformer(), compiler)
+        # print(result)
         assert not errors, str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser
@@ -1264,29 +1265,51 @@ class TestHeuristics:
         # assert s != "array = `[` [_element {`,` _element}] `]`"
 
 
-# Reordering of rules in order to minimize the number of Forwad-Declarations
-# has not yet been implemented in class ebnf.EBNFCompiler !!!
-#
-# class TestRuleOrder:
-#     def test_rule_specification_order_does_not_matter(self):
-#         normal_order = """
-#             A = B
-#             B = C
-#             C = "Hallo Welt"
-#             """
-#         parser = create_parser(normal_order)
-#         assert parser.B.__class__.__name__ != "Forward"
-#
-#         # Now B, should not be a Forward-Parser
-#         reverse_order = """
-#             C = "Hallo Welt"
-#             B = C
-#             A = B
-#             """
-#         parser = create_parser(reverse_order)
-#         # If order of rule specification did not matter,
-#         # B should not be a Forward-parser:
-#         assert parser.B.__class__.__name__ != "Forward"
+class TestRuleOrder:
+    """Reordering of rules in order to minimize the number of Forward-Declarations."""
+
+    def test_rule_specification_order_does_not_matter(self):
+        normal_order = """
+            document = A
+            A = B
+            B = C
+            C = "Hallo Welt"
+            """
+        # set_config_value('compiled_EBNF_log', 'auto_reorder_test.log')
+        parser = create_parser(normal_order)
+        assert parser.B.__class__.__name__ != "Forward"
+
+        # Now B, should not be a Forward-Parser
+        reverse_order = """
+            document = A
+            C = "Hallo Welt"
+            B = C
+            A = B
+            """
+        parser = create_parser(reverse_order)
+        # If order of rule specification did not matter,
+        # B should not be a Forward-parser:
+        assert parser.B.__class__.__name__ != "Forward"
+
+    def test_recursive_root(self):
+        reverse_order = """
+            C = "Hallo Welt" [A]
+            B = C
+            A = B
+            """
+        # set_config_value('compiled_EBNF_log', 'auto_reorder_test.log')
+        parser = create_parser(reverse_order)
+        assert parser.B.__class__.__name__ != "Forward"
+
+    def test_recursive_root2(self):
+        reverse_order = """
+            C = "Hallo Welt"
+            B = C
+            A = B
+            """
+        # set_config_value('compiled_EBNF_log', 'auto_reorder_test.log')
+        parser = create_parser(reverse_order)
+        assert parser.B.__class__.__name__ != "Forward"
 
 
 if __name__ == "__main__":

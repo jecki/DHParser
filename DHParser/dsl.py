@@ -299,7 +299,9 @@ def create_parser(ebnf_src: str, branding="DSL", additional_code: str = '') -> G
     essentially syntactic sugar for `grammar_provider(ebnf)()`.
     """
     grammar_factory = grammar_provider(ebnf_src, branding, additional_code)
-    return grammar_factory()
+    grammar = grammar_factory()
+    grammar.python_src__ = grammar_factory.python_src__
+    return grammar
 
 
 def split_source(file_name: str, file_content: str) -> List[str]:

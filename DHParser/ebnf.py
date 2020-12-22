@@ -1508,11 +1508,12 @@ class EBNFCompiler(Compiler):
             raise ValueError(sym + 'not in definitions')
 
         N = len(definitions)
+        root = definitions[0][0] if N > 0 else ''
         truly_recursive = {sym for sym in self.recursive
-                           if sym in self.referred_symbols(sym)}
+                           if sym in self.referred_symbols(sym) or sym == root}
 
         # move truly_recursive symbols to the top of the list
-        top = 1   # however, leave root parser at the very top!
+        top = 1  # however, leave the root symbol at the top
         while top < N and definitions[top][0] in truly_recursive:
             top += 1
         for i in range(top, N):
