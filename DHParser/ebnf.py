@@ -1501,6 +1501,9 @@ class EBNFCompiler(Compiler):
         declarations. Forward declarations remain inevitable only where
         recursion is involved.
         """
+        if not get_config_value('reorder_definitions'):
+            return
+
         def index(sym: str, defs: List[Tuple[str, str]]) -> int:
             for i, defn in enumerate(defs):
                 if defn[0] == sym:

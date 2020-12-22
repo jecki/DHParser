@@ -335,8 +335,16 @@ CONFIG_PRESET['log_syntax_trees'] = set()
 #           `parse`. It slightly slows down instantiation of Grammar
 #           classes, though.
 # 'none' -  no static analysis at all.
-# Default value: "none"
+# Default value: "early"
 CONFIG_PRESET['static_analysis'] = "early"
+
+# Allows to change the order of the definitions in an EBNF source
+# text to minimize the number of forward-declarations in the resulting
+# grammar class.
+# True  - reordering of definitions is allowed
+# False - definitions will not be reordered
+# Default value: 'True'
+CONFIG_PRESET['reorder_definitions'] = True
 
 # DHParser.ebnf.EBNFCompiler class adds the the EBNF-grammar to the
 # docstring of the generated Grammar-class
