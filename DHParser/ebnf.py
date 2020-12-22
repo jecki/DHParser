@@ -1489,12 +1489,32 @@ class EBNFCompiler(Compiler):
             for s in self.directly_referred(sym):
                 if s not in collected and s not in EBNFCompiler.RESERVED_SYMBOLS:
                     collected.add(s)
-                    gather(s)
+                    if s != symbol:
+                        gather(s)
         gather(symbol)
         result = frozenset(collected)
         self.referred_symbols_cache[symbol] = result
         return result
 
+    def DEBUG_recursive_path(self, symbol: str) -> Tuple[str]:
+        """Returns the recursive path from symbol to itself."""
+        path = []
+        recursive_path = ()
+        collected = set()
+
+        def gather(sym: str):
+            nonlocal path, recursive_path, collected
+            path.append(sym)
+            for s in self.directly_referred(sym):
+                if s not in collected and s not in EBNFCompiler.RESERVED_SYMBOLS:
+                    collected.add(s)
+                    if s == symbol:
+                        recursive_path = tuple(path + [s])
+                    else:
+                        gather(s)
+            path.pop()
+        gather(symbol)
+        return recursive_path
 
     def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
         """Reorders the definitions so as to minimize the number of Forward
@@ -1514,6 +1534,8 @@ class EBNFCompiler(Compiler):
         root = definitions[0][0] if N > 0 else ''
         truly_recursive = {sym for sym in self.recursive
                            if sym in self.referred_symbols(sym) or sym == root}
+        # for sym in truly_recursive:
+        #     print(sym + '\n' + '->'.join(self.DEBUG_recursive_path(sym)) + '\n')
 
         # move truly_recursive symbols to the top of the list
         top = 1  # however, leave the root symbol at the top
