@@ -37,6 +37,7 @@ def evaluate_presets(flag):
         flag.value = 1
     else:
         flag.value = 0
+    finalize_presets()
 
 
 class TestConfigMultiprocessing:

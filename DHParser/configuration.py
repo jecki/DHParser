@@ -31,27 +31,16 @@ program and before any DHParser-function is invoked.
 
 from typing import Dict, Any
 
-__all__ = ('access_presets',
+__all__ = ('ALLOWED_PRESET_VALUES',
+           'validate_value',
+           'access_presets',
            'finalize_presets',
+           'get_preset_value',
+           'set_preset_value',
            'THREAD_LOCALS',
            'access_thread_locals',
            'get_config_value',
-           'set_config_value',
-           'XML_SERIALIZATION',
-           'SXPRESSION_SERIALIZATION',
-           'INDENTED_SERIALIZATION',
-           'JSON_SERIALIZATION',
-           'SERIALIZATIONS',
-           'ATTR_ERR_FIX',
-           'ATTR_ERR_FAIL',
-           'ATTR_ERR_IGNORE',
-           'EBNF_FIXED_SYNTAX',
-           'EBNF_CLASSIC_SYNTAX',
-           'EBNF_ANY_SYNTAX_STRICT',
-           'EBNF_CONFIGURABLE_SYNTAX',
-           'EBNF_ANY_SYNTAX_HEURISTICAL',
-           'EBNF_REGULAR_EXPRESSION_SYNTAX',
-           'EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX')
+           'set_config_value')
 
 
 ########################################################################
@@ -63,7 +52,30 @@ __all__ = ('access_presets',
 
 CONFIG_PRESET = dict()  # type: Dict[str, Any]
 CONFIG_PRESET['syncfile_path'] = ''
+ACCESSING_PRESETS = False
+PRESETS_CHANGED = False
 THREAD_LOCALS = None
+ALLOWED_PRESET_VALUES = dict()  # Dict[str, Union[Set, Tuple[int, int]]
+# dictionary that maps config variables to a set or range of allowed values
+
+
+def validate_value(key: str, value: Any):
+    """Raises a Type- or ValueError, if the values of variable `key` are
+    restricted to a certain set or range and the value does not lie within
+    this set or range."""
+    global ALLOWED_PRESET_VALUES
+    allowed = ALLOWED_PRESET_VALUES.get(key, None)
+    if allowed:
+        if isinstance(allowed, tuple):
+            if not isinstance(value, (int, float)):
+                raise TypeError('Value %s is not an int or float as required!' % str(value))
+            elif not allowed[0] <= value <= allowed[1]:
+                raise ValueError('Value %s lies not within the range from %s to %s (included)!'
+                                 % (str(value), str(allowed[0]), str(allowed[1])))
+        else:
+            if value not in allowed:
+                raise ValueError('Value %s is not one of the allowed values: %s'
+                                 % (str(value), str(allowed)))
 
 
 def get_syncfile_path(pid: int) -> str:
@@ -72,18 +84,23 @@ def get_syncfile_path(pid: int) -> str:
     return os.path.join(tempfile.gettempdir(), 'DHParser_%i.cfg' % pid)
 
 
-def access_presets() -> Dict[str, Any]:
+def access_presets():
     """
-    Returns a dictionary of presets for configuration values.
-    If any preset values are changed after calling `access_presets()`,
-    `finalize_presets()` should be called to make sure that processes
-    spawned after changing the preset values, will be able to read
-    the changed values.
-    See: https://docs.python.org/3/library/multiprocessing.html#the-spawn-and-forkserver-start-methods
+    Allows read and write access to preset values via `get_preset_value()`
+    and `set_preset_value()`. Any call to `access_presets()` should be
+    matched by a call to `finalize_presets()` to ensure propagation of
+    changed preset-values to spawned processes. For an explanation why,
+    see: https://docs.python.org/3/library/multiprocessing.html#the-spawn-and-forkserver-start-methods
     """
+    global ACCESSING_PRESETS
+    if ACCESSING_PRESETS:
+        raise AssertionError('Presets are already being accessed! '
+                             'Calls to access_presets() cannot be nested.')
+    ACCESSING_PRESETS = True
     import multiprocessing
     global CONFIG_PRESET
-    if not CONFIG_PRESET['syncfile_path'] and multiprocessing.get_start_method() != 'fork':
+    if not CONFIG_PRESET['syncfile_path'] \
+            and multiprocessing.get_start_method() != 'fork':
         import os
         import pickle
         syncfile_path = get_syncfile_path(os.getppid())  # assume this is a spawned process
@@ -94,8 +111,9 @@ def access_presets() -> Dict[str, Any]:
             f = open(syncfile_path, 'rb')
             preset = pickle.load(f)
             assert isinstance(preset, dict)
-            assert preset['syncfile_path'] == syncfile_path, \
-                'Conflicting syncfile paths %s != %s' % (preset['syncfile_path'], syncfile_path)
+            if  preset['syncfile_path'] != syncfile_path:
+                raise AssertionError('Conflicting syncfile paths %s != %s'
+                                     % (preset['syncfile_path'], syncfile_path))
             CONFIG_PRESET = preset
         except FileNotFoundError:
             pass
@@ -116,24 +134,47 @@ def finalize_presets():
     This method should always be called after changing preset values to
     make sure the changes will be visible to processes spawned later.
     """
-    import atexit
-    import multiprocessing
-    import os
-    import pickle
-    global CONFIG_PRESET
-    if multiprocessing.get_start_method() != 'fork':
-        syncfile_path = get_syncfile_path(os.getpid())
-        existing_syncfile = CONFIG_PRESET['syncfile_path']
-        assert ((not existing_syncfile or existing_syncfile == syncfile_path)
-                and (not os.path.exists((get_syncfile_path(os.getppid()))))), \
-            "finalize_presets() can only be called from the main process!"
-        with open(syncfile_path, 'wb') as f:
-            CONFIG_PRESET['syncfile_path'] = syncfile_path
-            if existing_syncfile != syncfile_path:
-                atexit.register(remove_cfg_tempfile, syncfile_path)
-            pickle.dump(CONFIG_PRESET, f)
+    global ACCESSING_PRESETS, PRESETS_CHANGED, CONFIG_PRESET
+    if not ACCESSING_PRESETS:
+        raise AssertionError('Presets are not being accessed and therefore cannot be finalized!')
+    if PRESETS_CHANGED:
+        import multiprocessing
+        if multiprocessing.get_start_method() != 'fork':
+            import atexit
+            import os
+            import pickle
+            syncfile_path = get_syncfile_path(os.getpid())
+            existing_syncfile = CONFIG_PRESET['syncfile_path']
+            assert ((not existing_syncfile or existing_syncfile == syncfile_path)
+                    and (not os.path.exists((get_syncfile_path(os.getppid()))))), \
+                "finalize_presets() can only be called from the main process!"
+            with open(syncfile_path, 'wb') as f:
+                CONFIG_PRESET['syncfile_path'] = syncfile_path
+                if existing_syncfile != syncfile_path:
+                    atexit.register(remove_cfg_tempfile, syncfile_path)
+                pickle.dump(CONFIG_PRESET, f)
+        PRESETS_CHANGED = False
+    ACCESSING_PRESETS = False
     # if THREAD_LOCALS is not None:
     #     THREAD_LOCALS.config = {}  # reset THREAD_LOCALS
+
+
+def set_preset_value(key: str, value: Any):
+    global CONFIG_PRESET, ACCESSING_PRESETS, PRESETS_CHANGED
+    if not ACCESSING_PRESETS:
+        raise AssertionError('Presets must be made accessible with access_presets() first, '
+                             'before they can be set!')
+    validate_value(key, value)
+    CONFIG_PRESET[key] = value
+    PRESETS_CHANGED = True
+
+
+def get_preset_value(key: str):
+    global CONFIG_PRESET, ACCESSING_PRESETS
+    if not ACCESSING_PRESETS:
+        raise AssertionError('Presets must be made accessible with access_presets() first, '
+                             'before they can be read!')
+    return CONFIG_PRESET[key]
 
 
 def access_thread_locals() -> Any:
@@ -163,8 +204,9 @@ def get_config_value(key: str) -> Any:
     try:
         return cfg[key]
     except KeyError:
-        CONFIG_PRESET = access_presets()
-        value = CONFIG_PRESET[key]
+        access_presets()
+        value = get_preset_value(key)
+        finalize_presets()
         THREAD_LOCALS.config[key] = value
         return value
 
@@ -184,6 +226,7 @@ def set_config_value(key: str, value: Any):
     except AttributeError:
         THREAD_LOCALS.config = dict()
         cfg = THREAD_LOCALS.config
+    validate_value(key, value)
     cfg[key] = value
 
 
@@ -261,19 +304,13 @@ CONFIG_PRESET['left_recursion'] = True
 #                  example, to return syntax trees from remote procedure calls.
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
-XML_SERIALIZATION = "XML"
-JSON_SERIALIZATION = "json"
-INDENTED_SERIALIZATION = "indented"
-SXPRESSION_SERIALIZATION = "S-expression"
-
-SERIALIZATIONS = frozenset({XML_SERIALIZATION,
-                            JSON_SERIALIZATION,
-                            INDENTED_SERIALIZATION,
-                            SXPRESSION_SERIALIZATION})
-
-CONFIG_PRESET['cst_serialization'] = SXPRESSION_SERIALIZATION
-CONFIG_PRESET['ast_serialization'] = SXPRESSION_SERIALIZATION
-CONFIG_PRESET['default_serialization'] = SXPRESSION_SERIALIZATION
+_serializations = frozenset({'XML', 'json', 'indented', 'S-expression'})
+CONFIG_PRESET['cst_serialization'] = 'S-expression'
+CONFIG_PRESET['ast_serialization'] = 'S-expression'
+CONFIG_PRESET['default_serialization'] = 'S-expression'
+ALLOWED_PRESET_VALUES['cst_serialization'] = _serializations
+ALLOWED_PRESET_VALUES['ast_serialization'] = _serializations
+ALLOWED_PRESET_VALUES['default_serialization'] = _serializations
 
 # Defines the maximum line length for flattened S-expressions.
 # Below this threshold S-expressions will be returned in flattened
@@ -289,10 +326,6 @@ CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 CONFIG_PRESET['compact_sxpr_threshold'] = 20
 
 
-ATTR_ERR_IGNORE = "ignore"
-ATTR_ERR_FIX    = "fix"
-ATTR_ERR_FAIL   = "fail"
-
 # How to treat illegal attribute values when serializing as XML,
 # e.g. attr="<". Possible values are:
 # 'ignore' - faulty attribute values will be serialized nonetheless
@@ -301,8 +334,8 @@ ATTR_ERR_FAIL   = "fail"
 # 'fail'  - an error will be raised. Observe that this error will be
 #           raised when serializing as XML, not when setting the value
 # Default value = "fail"
-CONFIG_PRESET['xml_attribute_error_handling'] = ATTR_ERR_FAIL
-
+CONFIG_PRESET['xml_attribute_error_handling'] = 'fail'
+ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fix', 'fail'})
 
 ########################################################################
 #
@@ -397,17 +430,15 @@ CONFIG_PRESET['default_literalws'] = "none"
 #       alternative-parser. Does not allow regular expressions between, i.e.
 #       / ... / within the EBNF-code!
 # Default value: "fixed"
-
-EBNF_FIXED_SYNTAX = "fixed"
-EBNF_CLASSIC_SYNTAX = "classic"
-EBNF_ANY_SYNTAX_STRICT = "strict"
-EBNF_CONFIGURABLE_SYNTAX = "configurable"
-EBNF_ANY_SYNTAX_HEURISTICAL = "heuristic"
-EBNF_REGULAR_EXPRESSION_SYNTAX = "regex-like"
-EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX = "peg-like"
-
-CONFIG_PRESET['syntax_variant'] = EBNF_FIXED_SYNTAX
-
+CONFIG_PRESET['syntax_variant'] = 'fixed'
+ALLOWED_PRESET_VALUES['syntax_variant'] = frozenset({
+    'fixed',
+    'classic',
+    'strict',
+    'configurable',
+    'heuristic',
+    'regex-like',
+    'peg-like'})
 
 # Set of delimiters when using the 'configurable'-Grammar
 CONFIG_PRESET['delimiter_set'] = {
@@ -474,6 +505,17 @@ CONFIG_PRESET['debug_compiler'] = False
 # Default value: '' (empty string, i.e. no log)
 CONFIG_PRESET['compiled_EBNF_log'] = ''
 
+# Defines the kind of threading that `toolkit.instantiate_executor()`
+# will allow. Possible values are:
+# 'multitprocessing" - Full multiprocessing will be allowed.
+# 'multithreading' -   A ThreadPoolExecutor will be substituted for any
+#         ProcessPoolExecutor.
+# 'singlethread' -     A SingleThreadExecutor will be substituted for
+#         any ProcessPoolExecutor or ThreadPoolExecutor.
+# 'commandline' -      If any of the above is specified on the command
+#         line with two leading minus-signs, e.g. '--singlethread'
+#
+CONFIG_PRESET['debug_parallel_execution'] = 'commandline'
 
 ########################################################################
 #

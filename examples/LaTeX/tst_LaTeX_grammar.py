@@ -30,13 +30,9 @@ for path in (os.path.join('..', '..'), '.'):
         sys.path.append(fullpath)
 
 
-from DHParser import configuration
 from DHParser import dsl
 import DHParser.log
 from DHParser import testing
-
-
-configuration.access_presets()['test_parallelization'] = True
 
 
 def recompile_grammar(grammar_src, force):

@@ -31,9 +31,7 @@ scriptpath = os.path.abspath(scriptpath)
 from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source, INFINITE, Interleave
-from DHParser.configuration import access_thread_locals, get_config_value, \
-    EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
-    EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX, set_config_value
+from DHParser.configuration import get_config_value, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
@@ -1078,7 +1076,7 @@ class TestSyntaxExtensions:
         assert not st.errors
 
     def test_simple_char_range(self):
-        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_STRICT)
+        set_config_value('syntax_variant', 'strict')
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
         # print(raw_compileEBNF(lang).result)
         parser = create_parser(lang)
@@ -1086,7 +1084,7 @@ class TestSyntaxExtensions:
         assert st.as_sxpr() == '(Char "賌")'
 
     def test_full_char_range(self):
-        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_HEURISTICAL)
+        set_config_value('syntax_variant', 'heuristic')
         lang = """
             Identifier <- IdentStart IdentCont* Spacing
             IdentCont  <- IdentStart / [0-9] 
@@ -1101,7 +1099,7 @@ class TestSyntaxExtensions:
         assert not st.errors
         st = parser('3tvp ')
         assert st.errors
-        set_config_value('syntax_variant', EBNF_ANY_SYNTAX_STRICT)
+        set_config_value('syntax_variant', 'strict')
 
 
 class TestModeSetting:
@@ -1131,24 +1129,24 @@ class TestModeSetting:
 
     def test_setmode_getmode(self):
         gr = get_ebnf_grammar()
-        gr.mode = EBNF_ANY_SYNTAX_STRICT
-        assert gr.mode == EBNF_ANY_SYNTAX_STRICT
-        gr.mode = EBNF_REGULAR_EXPRESSION_SYNTAX
-        assert gr.mode == EBNF_REGULAR_EXPRESSION_SYNTAX
-        gr.mode = EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
-        assert gr.mode == EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
-        gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
-        assert gr.mode == EBNF_ANY_SYNTAX_HEURISTICAL
+        gr.mode = 'strict'
+        assert gr.mode == 'strict'
+        gr.mode = 'regex-like'
+        assert gr.mode == 'regex-like'
+        gr.mode = 'peg-like'
+        assert gr.mode == 'peg-like'
+        gr.mode = 'heuristic'
+        assert gr.mode == 'heuristic'
 
-        gr.mode = EBNF_CLASSIC_SYNTAX
-        assert gr.mode == EBNF_ANY_SYNTAX_STRICT
+        gr.mode = 'classic'
+        assert gr.mode == 'strict'
 
     def test_heuristic_mode(self):
         gr = get_ebnf_grammar()
-        gr.mode = EBNF_ANY_SYNTAX_STRICT
+        gr.mode = 'strict'
         st = gr(self.testdoc)
         assert st.errors
-        gr.mode = EBNF_ANY_SYNTAX_HEURISTICAL
+        gr.mode = 'heuristic'
         st = gr(self.testdoc)
         assert not st.errors, str(st.errors)
 
@@ -1301,7 +1299,7 @@ class TestRuleOrder:
         parser = create_parser(reverse_order)
         assert parser.B.__class__.__name__ != "Forward"
 
-    def test_recursive_root2(self):
+    def test_recursive_root_detached_root(self):
         reverse_order = """
             C = "Hallo Welt"
             B = C

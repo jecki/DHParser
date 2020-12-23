@@ -27,8 +27,7 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.configuration import get_config_value, set_config_value, INDENTED_SERIALIZATION, \
-    SXPRESSION_SERIALIZATION
+from DHParser.configuration import get_config_value, set_config_value
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
     prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
@@ -532,7 +531,7 @@ class TestSerialization:
         # assert compact == 'A\n  B\n    C `(attr "val")\n      "D"\n    E\n      "F"\n  G\n    "H"'
         assert compact == 'A\n  B\n    C `(attr "val") "D"\n    E "F"\n  G "H"'
         tree = parse_xml('<note><priority level="high" /><remark></remark></note>')
-        assert tree.serialize(how=INDENTED_SERIALIZATION) == 'note\n  priority `(level "high")\n  remark'
+        assert tree.serialize(how='indented') == 'note\n  priority `(level "high")\n  remark'
         set_config_value('flatten_sxpr_threshold', threshold)
 
     def test_xml_inlining(self):

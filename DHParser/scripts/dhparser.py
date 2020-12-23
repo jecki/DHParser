@@ -36,8 +36,7 @@ else:
 
 
 from DHParser.compile import compile_source
-from DHParser.configuration import access_presets, finalize_presets, \
-    EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_FIXED_SYNTAX
+from DHParser.configuration import access_presets, set_preset_value, finalize_presets
 from DHParser.dsl import compileDSL, compile_on_disk, read_template
 from DHParser.error import is_error
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -181,8 +180,8 @@ def main():
     """Creates a project (if a project name has been passed as command line
     parameter) or runs a quick self-test.
     """
-    config = access_presets()
-    config['syntax_variant'] = EBNF_ANY_SYNTAX_HEURISTICAL
+    access_presets()
+    set_preset_value('syntax_variant', 'heuristic')
     finalize_presets()
     if len(sys.argv) > 1:
         if sys.argv[1].lower() == "--selftest":

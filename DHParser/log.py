@@ -58,7 +58,7 @@ import os
 from typing import List, Tuple, Union, Optional
 
 from DHParser.configuration import access_presets, finalize_presets, get_config_value, \
-    set_config_value
+    set_config_value, get_preset_value, set_preset_value
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
@@ -95,12 +95,12 @@ def start_logging(dirname: str = "LOGS"):
     """Turns logging on an sets the log-directory to `dirname`.
     The log-directory, if it does not already exist, will be created
     lazily, i.e. only when logging actually starts."""
-    CFG = access_presets()
+    access_presets()
     log_dir = os.path.abspath(dirname) if dirname else ''
-    if log_dir != CFG['log_dir']:
-        CFG['log_dir'] = log_dir
+    if log_dir != get_preset_value('log_dir'):
+        set_preset_value('log_dir', log_dir)
         set_config_value('log_dir', log_dir)
-        finalize_presets()
+    finalize_presets()
 
 
 def suspend_logging() -> str:
@@ -114,8 +114,9 @@ def suspend_logging() -> str:
 def resume_logging(log_dir: str = ''):
     """Resumes logging in the current thread with the given log-dir."""
     if not 'log_dir':
-        CFG = access_presets()
-        log_dir = CFG['log_dir']
+        access_presets()
+        log_dir = get_preset_value('log_dir')
+        finalize_presets()
     set_config_value('log_dir', log_dir)
 
 
@@ -179,8 +180,10 @@ def is_logging(thread_local_query: bool = True) -> bool:
     if thread_local_query:
         return bool(get_config_value('log_dir'))
     else:
-        CFG = access_presets()
-        return bool(CFG['log_dir'])
+        access_presets()
+        result = bool(get_preset_value('log_dir'))
+        finalize_presets()
+        return result
 
 
 def create_log(log_name: str) -> str:

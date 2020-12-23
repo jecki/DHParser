@@ -31,13 +31,11 @@ import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
     Tuple, Container, Optional, Dict
 
-from DHParser.configuration import SERIALIZATIONS, XML_SERIALIZATION, \
-    SXPRESSION_SERIALIZATION, INDENTED_SERIALIZATION, JSON_SERIALIZATION, \
-    ATTR_ERR_IGNORE, ATTR_ERR_FAIL, ATTR_ERR_FIX, get_config_value
+from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, RX_ENTITY, \
+from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value
 
 
@@ -1264,12 +1262,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return ("'%s'" % value) if value.find('"') >= 0 else '"%s"' % value
 
         attr_err_handling = get_config_value('xml_attribute_error_handling')
-        if attr_err_handling == ATTR_ERR_FAIL:
+        if attr_err_handling == 'fail':
             attr_filter = validate_XML_attribute_value
-        elif attr_err_handling == ATTR_ERR_FIX:
+        elif attr_err_handling == 'fix':
             attr_filter = fix_XML_attribute_value
         else:
-            assert attr_err_handling == ATTR_ERR_IGNORE, 'Illegal value for configuration ' +\
+            assert attr_err_handling == 'ignore', 'Illegal value for configuration ' +\
                 'variable "xml_attribute_error_handling": ' + attr_err_handling
             attr_filter = attr_err_ignore
 
@@ -1396,14 +1394,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # flatten_threshold = get_config_value('flatten_sxpr_threshold')
         compact_threshold = get_config_value('compact_sxpr_threshold')
 
-        if switch == SXPRESSION_SERIALIZATION.lower():
+        if switch == 's-expression':
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
-        elif switch == XML_SERIALIZATION.lower():
+        elif switch == 'xml':
             return self.as_xml()
-        elif switch == JSON_SERIALIZATION.lower():
+        elif switch == 'json':
             return self.as_json()
-        elif switch == INDENTED_SERIALIZATION.lower():
+        elif switch == 'indented':
             sxpr = self.as_sxpr(flatten_threshold=0)
             if sxpr.find('\n') >= 0:
                 sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
@@ -1422,7 +1420,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             s = how if how == switch else (how + '/' + switch)
             raise ValueError('Unknown serialization "%s". Allowed values are either: %s or : %s'
-                             % (s, "ast, cst, default", ", ".join(list(SERIALIZATIONS))))
+                             % (s, "ast, cst, default",
+                                ", ".join(ALLOWED_PRESET_VALUES['default_serialization'])))
 
 
 # Navigate contexts ###################################################

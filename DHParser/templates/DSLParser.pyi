@@ -70,7 +70,7 @@ def batch_process(file_names: List[str], out_dir: str,
                 if error_filename:
                     error_list.append(error_filename)
 
-        if True or submit_func is None:
+        if submit_func is None:
             import concurrent.futures
             import multiprocessing
             with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:

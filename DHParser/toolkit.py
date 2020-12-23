@@ -26,6 +26,7 @@ functions that are very generic.
 
 import ast
 import bisect
+import concurrent.futures
 import functools
 import hashlib
 import io
@@ -43,7 +44,7 @@ except ImportError:
     import re
 
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional
+from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional, Type
 
 
 try:
@@ -55,7 +56,7 @@ except ImportError:
     cython_optimized = False
     import DHParser.shadow_cython as cython
 
-from DHParser.configuration import access_thread_locals
+from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.stringview import StringView
 
 
@@ -999,6 +1000,62 @@ def json_rpc(method: str,
     if ID is not None:
         rpc['id'] = ID
     return json_dumps(rpc, partially_serialized=partially_serialized)
+
+
+#######################################################################
+#
+#  concurrent execution (wrappers for concurrent.futures)
+#
+#######################################################################
+
+class SingleThreadExecutor(concurrent.futures.Executor):
+    """SingleThreadExecutor is a replacement for
+    concurrent.future.ProcessPoolExecutor and
+    concurrent.future.ThreadPoolExecutor that executes any submitted
+    task immediately in the submitting thread. This helps to avoid
+    writing extra code for the case that multithreading or
+    multiprocesssing has been turned off in the configuration. To do
+    so is helpful for debugging.
+
+    It is not recommended to use this in asynchronous code or code that
+    relies on the submit() or map()-method of executors to return quickly.
+    """
+    def submit(self, fn, *args, **kwargs):
+        future = concurrent.futures.Future()
+        try:
+            result = fn(*args, **kwargs)
+            future.set_result(result)
+        except BaseException as e:
+            future.set_exception(e)
+        return future
+
+
+def instantiate_executor(allow_parallel: bool,
+                         preferred_executor: Type[concurrent.futures.Executor],
+                         *args, **kwargs) -> concurrent.futures.Executor:
+    """Instantiates an Executor of a particular type, if the value of the
+    configuration variable 'debug_parallel_execution' allows to do so.
+    Otherwise a surrogate executor will be returned.
+    If 'allow_parallel` is False, a SinglethredExecutor will be instantiated,
+    regardless of the preferred_executor and any configuration values.
+    """
+    if allow_parallel:
+        mode = get_config_value('debug_parallel_execution')  # type: str
+        if mode == "commandline":
+            options = [arg for arg in sys.argv if arg[:2] == '--']  # type: List[str]
+            if '--singlethread' in options:  mode = 'singlethread'
+            elif '--multithreading' in options:  mode = 'multithreading'
+            else:  mode = 'multiprocessing'
+        if mode == "singlethread":
+            return SingleThreadExecutor()
+        elif mode == "multithreading":
+            if issubclass(preferred_executor, concurrent.futures.ProcessPoolExecutor):
+                return concurrent.futures.ThreadPoolExecutor(*args, **kwargs)
+        else:
+            assert mode == "multiprocessing", \
+                'Config variable "debug_parallel_execution" as illegal value "%s"' % mode
+        return preferred_executor(*args, **kwargs)
+    return SingleThreadExecutor()
 
 
 #######################################################################

@@ -31,9 +31,7 @@ import os
 from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Sequence, Union, Optional
 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
-from DHParser.configuration import access_thread_locals, get_config_value, \
-    EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX, \
-    EBNF_REGULAR_EXPRESSION_SYNTAX, EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+from DHParser.configuration import access_thread_locals, get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
@@ -119,13 +117,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \\
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, \\
-    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \\
+    get_config_value, node_maker, access_thread_locals, access_presets, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
-    has_errors, ERROR, FATAL
+    has_errors, ERROR, FATAL, set_preset_value, get_preset_value
 '''
 
 
@@ -462,13 +459,13 @@ class EBNFGrammar(Grammar):
             which(self.char_range_heuristics)
         )
         if signature == ('custom', 'custom', 'custom'):
-            return EBNF_ANY_SYNTAX_HEURISTICAL
+            return 'heuristic'
         elif signature == ('never', 'always', 'always'):
-            return EBNF_ANY_SYNTAX_STRICT  # or EBNF_CLASSIC_SYNTAX
+            return 'strict'  # or 'classic'
         elif signature == ('custom', 'never', 'always'):
-            return EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX
+            return 'peg-like'
         elif signature == ('custom', 'always', 'always'):
-            return EBNF_REGULAR_EXPRESSION_SYNTAX
+            return 'regex-like'
         else:
             return "undefined"
 
@@ -483,30 +480,25 @@ class EBNFGrammar(Grammar):
 
         always = Always._parse
         never = Never._parse
-        if mode == EBNF_ANY_SYNTAX_HEURISTICAL:
+        if mode == 'heuristic':
             set_parsefunc(self.free_char, self.free_char_parsefunc__)
             set_parsefunc(self.regex_heuristics, self.regex_heuristics_parserfunc__)
             set_parsefunc(self.char_range_heuristics, self.char_range_heuristics_parsefunc__)
-        elif mode in (EBNF_ANY_SYNTAX_STRICT, EBNF_CLASSIC_SYNTAX):
+        elif mode in ('strict', 'classic'):
             set_parsefunc(self.free_char, never)
             set_parsefunc(self.regex_heuristics, always)
             set_parsefunc(self.char_range_heuristics, always)
-        elif mode == EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX:
+        elif mode == 'peg-like':
             set_parsefunc(self.free_char, self.free_char_parsefunc__)
             set_parsefunc(self.regex_heuristics, never)
             set_parsefunc(self.char_range_heuristics, always)
-        elif  mode == EBNF_REGULAR_EXPRESSION_SYNTAX:
+        elif  mode == 'regex-like':
             set_parsefunc(self.free_char, self.free_char_parsefunc__)
             set_parsefunc(self.regex_heuristics, always)
             set_parsefunc(self.char_range_heuristics, always)
         else:
-            raise ValueError('Mode must be one of: ' + ', '.join((
-                EBNF_ANY_SYNTAX_HEURISTICAL,
-                EBNF_ANY_SYNTAX_STRICT,
-                EBNF_PARSING_EXPRESSION_GRAMMAR_SYNTAX,
-                EBNF_REGULAR_EXPRESSION_SYNTAX,
-                EBNF_CLASSIC_SYNTAX
-            )))
+            raise ValueError('Mode must be one of: ' + ', '.join(
+                ALLOWED_PRESET_VALUES['syntax_variant']))
 
 
 class FixedEBNFGrammar(Grammar):

@@ -26,7 +26,6 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.configuration import SXPRESSION_SERIALIZATION
 from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
     tree_sanity_check, flatten_sxpr, WHITESPACE_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
@@ -330,7 +329,7 @@ class TestConstructiveTransformations:
         tree = parse_sxpr('(A (B 1) (B 2) (B 3))').with_pos(0)
         trans_table = {'A': delimit_children(node_maker('c', ','))}
         traverse(tree, trans_table)
-        original_result = tree.serialize(how=SXPRESSION_SERIALIZATION)
+        original_result = tree.serialize(how='S-expression')
         assert original_result == '(A (B "1") (c ",") (B "2") (c ",") (B "3"))', original_result
 
     def test_complex_delimiter(self):

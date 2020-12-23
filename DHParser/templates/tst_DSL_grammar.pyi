@@ -51,9 +51,9 @@ def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
 
 
 if __name__ == '__main__':
-    # from DHParser.configuration import access_presets, finalize_presets
-    # CONFIG_PRESETS = access_presets()
-    # CONFIG_PRESET['test_parallelization'] = True
+    # from DHParser.configuration import access_presets, set_preset_value, finalize_presets
+    # access_presets()
+    # set_preset_value('test_parallelization', True)
     # finalize_presets()
 
     argv = sys.argv[:]
