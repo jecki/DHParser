@@ -43,13 +43,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, \
-    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    get_config_value, node_maker, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
-    has_errors, ERROR, FATAL
+    has_errors, ERROR, FATAL, set_preset_value, get_preset_value
 
 
 #######################################################################
@@ -324,39 +323,33 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
+    error_list =  []
+
     def gen_dest_name(name):
         return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
                                      + RESULT_FILE_EXTENSION)
 
-    error_list =  []
-    if get_config_value('batch_processing_parallelization'):
-        def run_batch(submit_func: Callable):
-            nonlocal error_list
-            err_futures = []
-            for name in file_names:
-                dest_name = gen_dest_name(name)
-                err_futures.append(submit_func(process_file, name, dest_name))
-            for file_name, err_future in zip(file_names, err_futures):
-                error_filename = err_future.result()
-                if log_func:
-                    log_func('Compiling "%s"' % file_name)
-                if error_filename:
-                    error_list.append(error_filename)
-
-        if True or submit_func is None:
-            import concurrent.futures
-            import multiprocessing
-            with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
-                run_batch(pool.submit)
-        else:
-            run_batch(submit_func)
-    else:
-        for name in filenames:
-            if log_func:  log_func(name, gen_dest_name(name))
-            error_filename = process_file(name, gen_dest_name(name), log_func)
+    def run_batch(submit_func: Callable):
+        nonlocal error_list
+        err_futures = []
+        for name in file_names:
+            dest_name = gen_dest_name(name)
+            err_futures.append(submit_func(process_file, name, dest_name))
+        for file_name, err_future in zip(file_names, err_futures):
+            error_filename = err_future.result()
+            if log_func:
+                log_func('Compiling "%s"' % file_name)
             if error_filename:
                 error_list.append(error_filename)
 
+    if submit_func is None:
+        import concurrent.futures
+        from DHParser.toolkit import instantiate_executor
+        with instantiate_executor(get_config_value('batch_processing_parallelization'),
+                                  concurrent.futures.ProcessPoolExecutor) as pool:
+            run_batch(pool.submit)
+    else:
+        run_batch(submit_func)
     return error_list
 
 
@@ -398,6 +391,8 @@ if __name__ == "__main__":
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
+    parser.add_argument('--singlethread', action='store_const', const='singlethread',
+                        help='Sun batch jobs in a single thread (recommended only for debugging)')
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -451,9 +446,10 @@ if __name__ == "__main__":
         result, errors = compile_src(file_names[0])
 
         if errors:
-            for err_str in canonical_erorr_strings(errors, file_names[0]):
+            for err_str in canonical_error_strings(errors, file_names[0]):
                 print(err_str)
-            sys.exit(1)
-        else:
-            print(result.serialize(how='default' if args.xml is None else 'xml')
-                  if isinstance(result, Node) else result)
+            if has_errors(errors, ERROR):
+                sys.exit(1)
+
+        print(result.serialize(how='default' if args.xml is None else 'xml')
+              if isinstance(result, Node) else result)

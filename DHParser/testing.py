@@ -48,7 +48,7 @@ from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYT
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
-from DHParser.toolkit import load_if_file, re, re_find, concurrent_ident
+from DHParser.toolkit import load_if_file, re, re_find, concurrent_ident, instantiate_executor
 
 
 __all__ = ('unit_from_config',
@@ -553,6 +553,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 pass
             with open(os.path.join(report, unit_name + '.md'), 'w', encoding='utf8') as f:
                 f.write(test_report)
+                f.flush()
 
     print('\n'.join(output))
     return errata
@@ -607,35 +608,26 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     tests = [fn for fn in sorted(os.listdir('.'))
              if any(fnmatch.fnmatch(fn, pattern) for pattern in fn_patterns)]
 
-    if len(tests) > 1 and get_config_value('test_parallelization') \
-            and '--singlethreaded' not in sys.argv:
-        # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
-        with concurrent.futures.ProcessPoolExecutor() as pool:
-            results = []
-            for filename in tests:
-                parameters = filename, parser_factory, transformer_factory, report, verbose
-                results.append((filename, pool.submit(grammar_unit, *parameters)))
-            for filename, err_future in results:
-                try:
-                    errata = err_future.result()
-                    if errata:
-                        all_errors[filename] = errata
-                except ValueError as e:
-                    if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
-                        raise e
-                except AssertionError as e:
-                    e.args = ('When processing "%s":\n%s' % (filename, e.args[0]),)
-                    raise e
-
-    else:
+    # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
+    with instantiate_executor(get_config_value('test_parallelization'),
+                              concurrent.futures.ProcessPoolExecutor) as pool:
         results = []
         for filename in tests:
             parameters = filename, parser_factory, transformer_factory, report, verbose
-            results.append((filename, grammar_unit(*parameters)))
-        for filename, errata in results:
-            if errata:
-                all_errors[filename] = errata
-
+            results.append(pool.submit(grammar_unit, *parameters))
+        done, not_done = concurrent.futures.wait(results)
+        assert not not_done, str(not_done)
+        for filename, err_future in zip(tests, results):
+            try:
+                errata = err_future.result()
+                if errata:
+                    all_errors[filename] = errata
+            except ValueError as e:
+                if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
+                    raise e
+            except AssertionError as e:
+                e.args = ('When processing "%s":\n%s' % (filename, e.args[0]),)
+                raise e
     os.chdir(save_cwd)
     error_report = []
     err_N = 0
@@ -921,21 +913,18 @@ def run_path(path):
     if os.path.isdir(path):
         sys.path.append(path)
         files = os.listdir(path)
-        result_futures = []
-        if len(files) > 1 and get_config_value('test_parallelization') \
-                and '--singlethreaded' not in sys.argv:
-            with concurrent.futures.ProcessPoolExecutor() as pool:
-                for f in files:
-                    result_futures.append(pool.submit(run_file, f))
-                    # run_file(f)  # for testing!
-                for r in result_futures:
-                    try:
-                        _ = r.result()
-                    except AssertionError as failure:
-                        print(failure)
-        else:
+        results = []
+        with instantiate_executor(get_config_value('test_parallelization'),
+                                  concurrent.futures.ProcessPoolExecutor) as pool:
             for f in files:
-                run_file(f)
+                results.append(pool.submit(run_file, f))
+                # run_file(f)  # for testing!
+            concurrent.futures.wait(results)
+            for r in results:
+                try:
+                    _ = r.result()
+                except AssertionError as failure:
+                    print(failure)
 
     else:
         path, fname = os.path.split(path)

@@ -113,7 +113,7 @@ def tst_func():
             with open(os.path.splitext(filepath)[0] + '.xml', 'w', encoding='utf-8') as f:
                 f.write(output.customized_XML())
             with open(os.path.splitext(filepath)[0] + '.sxpr', 'w', encoding='utf-8') as f:
-                f.write(output.serialize(DHParser.configuration.SXPRESSION_SERIALIZATION))
+                f.write(output.serialize('S-expression'))
 
 def cpu_profile(func):
     pr = profile.Profile()

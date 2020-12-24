@@ -13,6 +13,10 @@ import threading
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(scriptdir, '../'))
 
+from DHParser.configuration import get_config_value
+from DHParser.toolkit import instantiate_executor
+
+
 lock = threading.Lock()
 
 
@@ -77,17 +81,12 @@ if __name__ == "__main__":
         found.append('pypy ')
     print('Interpreters found: ' + ''.join(found))
 
-    arguments = sys.argv.copy()
-    if '--singlethreaded' in arguments:
-        singlethreaded = True
-        del arguments[arguments.index('--singlethreaded')]
-    else:
-        singlethreaded = False
+    arguments = [arg for arg in sys.argv[1:] if arg[:1] != '-']
 
     if len(arguments) > 1:
         # use interpreters from command line
         interpreters = []
-        for interpreter in arguments[1:]:
+        for interpreter in arguments:
             interpreter = interpreter.strip() + ' '
             if interpreter not in found:
                 print('Interpreter ' + arguments[1] + ' not found.')
@@ -104,7 +103,8 @@ if __name__ == "__main__":
 
     run_doctests('toolkit')
 
-    with concurrent.futures.ProcessPoolExecutor() as pool:
+    with instantiate_executor(get_config_value('test_parallelization'),
+                              concurrent.futures.ProcessPoolExecutor) as pool:
         results = []
 
         # doctests
@@ -121,14 +121,10 @@ if __name__ == "__main__":
                     if filename.endswith('.py') and (filename.startswith('test_') or
                                                      filename.startswith('notest')):
                         command = interpreter + os.path.join('tests', filename)
-                        if singlethreaded:
-                            run_unittests(command)
-                        else:
-                            results.append(pool.submit(run_unittests, command))
+                        results.append(pool.submit(run_unittests, command))
 
-        if not singlethreaded:
-            done, not_done = concurrent.futures.wait(results, timeout=120)
-            assert not not_done, str(not_done)
+        done, not_done = concurrent.futures.wait(results, timeout=120)
+        assert not not_done, str(not_done)
 
     elapsed = time.time() - timestamp
     print('\n Test-Duration: %.2f seconds' % elapsed)

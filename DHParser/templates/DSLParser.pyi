@@ -51,39 +51,33 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
+    error_list =  []
+
     def gen_dest_name(name):
         return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
                                      + RESULT_FILE_EXTENSION)
 
-    error_list =  []
-    if get_config_value('batch_processing_parallelization'):
-        def run_batch(submit_func: Callable):
-            nonlocal error_list
-            err_futures = []
-            for name in file_names:
-                dest_name = gen_dest_name(name)
-                err_futures.append(submit_func(process_file, name, dest_name))
-            for file_name, err_future in zip(file_names, err_futures):
-                error_filename = err_future.result()
-                if log_func:
-                    log_func('Compiling "%s"' % file_name)
-                if error_filename:
-                    error_list.append(error_filename)
-
-        if submit_func is None:
-            import concurrent.futures
-            import multiprocessing
-            with concurrent.futures.ProcessPoolExecutor(multiprocessing.cpu_count()) as pool:
-                run_batch(pool.submit)
-        else:
-            run_batch(submit_func)
-    else:
-        for name in filenames:
-            if log_func:  log_func(name, gen_dest_name(name))
-            error_filename = process_file(name, gen_dest_name(name), log_func)
+    def run_batch(submit_func: Callable):
+        nonlocal error_list
+        err_futures = []
+        for name in file_names:
+            dest_name = gen_dest_name(name)
+            err_futures.append(submit_func(process_file, name, dest_name))
+        for file_name, err_future in zip(file_names, err_futures):
+            error_filename = err_future.result()
+            if log_func:
+                log_func('Compiling "%s"' % file_name)
             if error_filename:
                 error_list.append(error_filename)
 
+    if submit_func is None:
+        import concurrent.futures
+        from DHParser.toolkit import instantiate_executor
+        with instantiate_executor(get_config_value('batch_processing_parallelization'),
+                                  concurrent.futures.ProcessPoolExecutor) as pool:
+            run_batch(pool.submit)
+    else:
+        run_batch(submit_func)
     return error_list
 
 
@@ -125,6 +119,8 @@ if __name__ == "__main__":
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
+    parser.add_argument('--singlethread', action='store_const', const='singlethread',
+                        help='Sun batch jobs in a single thread (recommended only for debugging)')
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''

@@ -76,7 +76,7 @@ class TestDHParserCommandLineTool:
         # test compiler creation and execution
         system(self.python + '../DHParser/scripts/dhparser.py ' + data_dir + '/neu '
                + self.nulldevice)
-        system(self.python + data_dir + '/neu/tst_neu_grammar.py ' + self.nulldevice)
+        system(self.python + data_dir + '/neu/tst_neu_grammar.py --singlethread ' + self.nulldevice)
         system(self.python + data_dir + '/neu/neuParser.py ' + data_dir + '/neu/example.dsl '
                   '>' + data_dir + '/neu/example.xml')
         with open(data_dir + '/neu/example.xml', 'r', encoding='utf-8') as f:
@@ -87,15 +87,13 @@ class TestDHParserCommandLineTool:
         # test server
         system(self.python + data_dir + '/neu/neuServer.py --stopserver' + self.nulldevice)
         system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl '
-                  '>' + data_dir + '/neu/example.xml')
+               '>' + data_dir + '/neu/example.xml')
         with open(data_dir + '/neu/example.xml', 'r', encoding='utf-8') as f:
             json = f.read()
         assert json.find('document') >= 0, json
         system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl ' + self.nulldevice)
         system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl ' + self.nulldevice)
         system(self.python + data_dir + '/neu/neuServer.py --stopserver' + self.nulldevice)
-        pass
-
 
 
 if __name__ == "__main__":
