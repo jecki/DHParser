@@ -1309,6 +1309,29 @@ class TestRuleOrder:
         parser = create_parser(reverse_order)
         assert parser.B.__class__.__name__ != "Forward"
 
+    def test_resusive_paths(self):
+        lang = """
+            A = B | C
+            B = C [`+` A]
+            C = `x` [`-` A] [`*` B]
+        """
+        ebnf_grammar = get_ebnf_grammar()
+        st = ebnf_grammar(lang)
+        assert not st.errors, str(st.errors)
+        ebnf_transformer = get_ebnf_transformer()
+        ebnf_transformer(st)
+        ebnf_compiler = get_ebnf_compiler()
+        python_src = ebnf_compiler(st)
+        pathsA = ebnf_compiler.recursive_paths('A')
+        assert pathsA == frozenset({('A', 'B', 'C', 'A'), ('A', 'B', 'A'),
+                                    ('A', 'C', 'B', 'A'), ('A', 'C', 'A')})
+        pathsB = ebnf_compiler.recursive_paths('B')
+        assert pathsB == frozenset({('B', 'C', 'A', 'B'), ('B', 'A', 'C', 'B'),
+                                    ('B', 'A', 'B'), ('B', 'C', 'B')})
+        pathsC = ebnf_compiler.recursive_paths('C')
+        assert pathsC == frozenset({('C', 'A', 'B', 'C'), ('C', 'A', 'C'),
+                                    ('C', 'B', 'C'), ('C', 'B', 'A', 'C')})
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

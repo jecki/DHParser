@@ -1488,25 +1488,26 @@ class EBNFCompiler(Compiler):
         self.referred_symbols_cache[symbol] = result
         return result
 
-    def DEBUG_recursive_path(self, symbol: str) -> Tuple[str]:
-        """Returns the recursive path from symbol to itself."""
+    def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str]]:
+        """Returns the recursive paths from symbol to itself. If
+        sym is not recursive, the returned tuple (of paths) will be empty.
+        This method exists only for debugging (so far...)."""
         path = []
-        recursive_path = ()
-        collected = set()
+        recursive_paths = set()  # type: Set[Tuple[str]]
 
         def gather(sym: str):
-            nonlocal path, recursive_path, collected
+            nonlocal path, recursive_paths
             path.append(sym)
             for s in self.directly_referred(sym):
-                if s not in collected and s not in EBNFCompiler.RESERVED_SYMBOLS:
-                    collected.add(s)
+                if s not in EBNFCompiler.RESERVED_SYMBOLS:
                     if s == symbol:
-                        recursive_path = tuple(path + [s])
-                    else:
+                        new_path = tuple(path + [s])
+                        recursive_paths.add(tuple(path + [s]))
+                    elif s not in path:
                         gather(s)
             path.pop()
         gather(symbol)
-        return recursive_path
+        return frozenset(recursive_paths)
 
     def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
         """Reorders the definitions so as to minimize the number of Forward
@@ -1527,7 +1528,8 @@ class EBNFCompiler(Compiler):
         truly_recursive = {sym for sym in self.recursive
                            if sym in self.referred_symbols(sym) or sym == root}
         # for sym in truly_recursive:
-        #     print(sym + '\n' + '->'.join(self.DEBUG_recursive_path(sym)) + '\n')
+        #     print(sym + '\n' + '\n'.join(
+        #         str(path) for path in self.DEBUG_recursive_paths(sym)) + '\n')
 
         # move truly_recursive symbols to the top of the list
         top = 1  # however, leave the root symbol at the top
