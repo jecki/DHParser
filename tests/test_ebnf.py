@@ -28,7 +28,8 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 scriptpath = os.path.abspath(scriptpath)
 
-from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR
+from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR, \
+    normalize_circular_path
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source, INFINITE, Interleave
 from DHParser.configuration import get_config_value, set_config_value
@@ -1323,15 +1324,110 @@ class TestRuleOrder:
         ebnf_compiler = get_ebnf_compiler()
         python_src = ebnf_compiler(st)
         pathsA = ebnf_compiler.recursive_paths('A')
-        assert pathsA == frozenset({('A', 'B', 'C', 'A'), ('A', 'B', 'A'),
-                                    ('A', 'C', 'B', 'A'), ('A', 'C', 'A')})
+        assert pathsA == frozenset({('A', 'B', 'C'), ('A', 'B'),
+                                    ('A', 'C', 'B'), ('A', 'C')})
         pathsB = ebnf_compiler.recursive_paths('B')
-        assert pathsB == frozenset({('B', 'C', 'A', 'B'), ('B', 'A', 'C', 'B'),
-                                    ('B', 'A', 'B'), ('B', 'C', 'B')})
+        assert pathsB == frozenset({('B', 'C', 'A'), ('B', 'A', 'C'),
+                                    ('B', 'A'), ('B', 'C')})
         pathsC = ebnf_compiler.recursive_paths('C')
-        assert pathsC == frozenset({('C', 'A', 'B', 'C'), ('C', 'A', 'C'),
-                                    ('C', 'B', 'C'), ('C', 'B', 'A', 'C')})
+        assert pathsC == frozenset({('C', 'A', 'B'), ('C', 'A'),
+                                    ('C', 'B'), ('C', 'B', 'A')})
 
+    def test_order_of_declarations(self):
+        """If the order of definitions changes, the following invariants should hold:
+        1. The number of Forward declarations is the same
+        2. No two Forwardly-declared symbols yield exactly the same set of recursive paths
+        3. The union of sets of recursive paths from all farwad-declared symbol
+           remains the same.
+        4. But: Depending on the order of definitions the symbols which are declared as
+           Forward symbols can change within the limits of the previous 3 invariantes.
+        """
+
+        def compileEBNF(lang):
+            ebnf_grammar = get_ebnf_grammar()
+            st = ebnf_grammar(lang)
+            assert not st.errors, str(st.errors)
+            ebnf_transformer = get_ebnf_transformer()
+            ebnf_transformer(st)
+            ebnf_compiler = get_ebnf_compiler()
+            ebnf_compiler(st)
+            return ebnf_compiler
+
+        def all_paths(compiler_obj):
+            paths = [normalize_circular_path(compiler_obj.recursive_paths(sym))
+                     for sym in compiler_obj.forward]
+            for i in range(len(paths)):
+                for k in range(i + 1, len(paths)):
+                    assert paths[i] ^ paths[k]
+            return paths[0].union(*paths[1:])
+
+        lang = """doc = A
+            A = B | C
+            B = C [`+` A]
+            C = `x` [`-` A] [`*` B]
+        """
+        compiler_obj = compileEBNF(lang)
+        # print(lang)
+        # for sym in compiler_obj.forward:
+        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
+        A = all_paths(compiler_obj)
+        lang = """doc = A
+            A = B | C
+            C = `x` [`-` A] [`*` B]
+            B = C [`+` A]
+        """
+        compiler_obj = compileEBNF(lang)
+        # print(lang)
+        # for sym in compiler_obj.forward:
+        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
+        # print('---')
+        B = all_paths(compiler_obj)
+        assert A == B, str(A) + str(B)
+
+        lang = """doc = A
+            A = B | C
+            B = C [`+` A]
+            C = `x` [`-` A]
+        """
+        compiler_obj = compileEBNF(lang)
+        # print(lang)
+        # for sym in compiler_obj.forward:
+        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
+        A = all_paths(compiler_obj)
+        lang = """doc = A
+            A = B | C
+            C = `x` [`-` A]
+            B = C [`+` A]
+        """
+        compiler_obj = compileEBNF(lang)
+        # print(lang)
+        # for sym in compiler_obj.forward:
+        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
+        # print('---')
+        B = all_paths(compiler_obj)
+        assert A == B, str(A) + str(B)
+
+        lang = """doc = A
+            A = B | C
+            B = C [`+` A]
+            C = `x` [`*` B]
+        """
+        compiler_obj = compileEBNF(lang)
+        # print(lang)
+        # for sym in compiler_obj.forward:
+        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
+        A = all_paths(compiler_obj)
+        lang = """doc = A
+            A = B | C
+            C = `x` [`*` B]
+            B = C [`+` A]
+        """
+        compiler_obj = compileEBNF(lang)
+        # print(lang)
+        # for sym in compiler_obj.forward:
+        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
+        B = all_paths(compiler_obj)
+        assert A == B, str(A) + str(B)
 
 if __name__ == "__main__":
     from DHParser.testing import runner

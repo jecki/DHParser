@@ -44,7 +44,8 @@ except ImportError:
     import re
 
 import typing
-from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, Optional, Type
+from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
+    Optional, Type
 
 
 try:
@@ -107,6 +108,7 @@ __all__ = ('typing',
            'json_dumps',
            'json_rpc',
            'sane_parser_name',
+           'normalize_circular_path',
            'DHPARSER_DIR',
            'DHPARSER_PARENTDIR')
 
@@ -295,11 +297,43 @@ def sane_parser_name(name) -> bool:
     return name and name[:2] != '__' and name[-2:] != '__'
 
 
+def normalize_circular_path(path: Union[Tuple[str], AbstractSet[Tuple[str]]]) \
+        -> Union[Tuple[str], Set[Tuple[str]]]:
+    """Returns a normalized version of a `circular path` represented as
+    a tuple or - if called with a set of paths instead of a single path
+    - a set of normalized paths.
+
+    A circular (or "recursive") path is a tuple of items, the order of which
+    matters, but not the starting point. This can, for example, be a tuple of
+    references from one symbol defined in an EBNF source text back to
+    (but excluding) itself.
+
+    For example, when defining a grammar for arithmetic, the tuple
+    ('expression', 'term', 'factor') if a recursive path, because the
+    definition of a factor includes a (bracketed) expression and thus
+    refers back to `expression`
+    Normalizing is done by "ring-shifting" the tuple so that it starts
+    with the alphabetically first symbol in the path.
+
+    >>> normalize_circular_path(('term', 'factor', 'expression'))
+    ('expression', 'term', 'factor')
+    """
+    if isinstance(path, AbstractSet):
+        return {normalize_circular_path(p) for p in path}
+    else:
+        assert isinstance(path, Tuple)
+        first_sym = min(path)
+        i = path.index(first_sym)
+        return path[i:] + path[:i]
+
+
+
 #######################################################################
 #
 #  string manipulation and regular expressions
 #
 #######################################################################
+
 
 NEVER_MATCH_PATTERN = r'..(?<=^)'
 RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)

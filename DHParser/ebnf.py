@@ -45,7 +45,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, EMPTY_NODE
 from DHParser.toolkit import load_if_file, escape_re, escape_control_characters, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
-    RX_NEVER_MATCH
+    RX_NEVER_MATCH, cython
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of
@@ -1148,8 +1148,7 @@ class EBNFCompiler(Compiler):
                 symbols need to be captured they are called variables.
                 See `test_parser.TestPopRetrieve` for an example.
 
-        recursive:  A set of symbols that are used recursively and
-                therefore require a `Forward`-operator.
+        forward:  A set of symbols that require a forward operator.
 
         definitions:  A dictionary of definitions. Other than `rules`
                 this maps the symbols to their compiled definienda.
@@ -1198,6 +1197,9 @@ class EBNFCompiler(Compiler):
                 can also be set by a directive. The default value is a regular
                 expression that catches names with a leading underscore.
                 See also `parser.Grammar.anonymous__`
+
+        python_src:  A string that contains the python source code that was
+                the outcome of the last EBNF-compilation.
 
         grammar_name:  The name of the grammar to be compiled
 
@@ -1251,7 +1253,7 @@ class EBNFCompiler(Compiler):
 
     def reset(self):
         super(EBNFCompiler, self).reset()
-        self._result = ''                      # type: str
+        self.python_src = ''                   # type: str
         self.re_flags = set()                  # type: Set[str]
         self.rules = OrderedDict()             # type: OrderedDict[str, List[Node]]
         self.referred_symbols_cache = dict()   # type: Dict[str, FrozenSet[str]]
@@ -1260,7 +1262,7 @@ class EBNFCompiler(Compiler):
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, Node]
         self.variables = set()                 # type: Set[str]
-        self.recursive = set()                 # type: Set[str]
+        self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
         self.required_keywords = set()         # type: Set[str]
         self.deferred_tasks = []               # type: List[Callable]
@@ -1276,7 +1278,7 @@ class EBNFCompiler(Compiler):
 
     @property
     def result(self) -> str:
-        return self._result
+        return self.python_src
 
 
     def set_grammar_name(self, grammar_name: str = "", grammar_source: str = ""):
@@ -1488,6 +1490,7 @@ class EBNFCompiler(Compiler):
         self.referred_symbols_cache[symbol] = result
         return result
 
+
     def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str]]:
         """Returns the recursive paths from symbol to itself. If
         sym is not recursive, the returned tuple (of paths) will be empty.
@@ -1501,14 +1504,16 @@ class EBNFCompiler(Compiler):
             for s in self.directly_referred(sym):
                 if s not in EBNFCompiler.RESERVED_SYMBOLS:
                     if s == symbol:
-                        new_path = tuple(path + [s])
-                        recursive_paths.add(tuple(path + [s]))
+                        recursive_paths.add(tuple(path))
                     elif s not in path:
                         gather(s)
             path.pop()
         gather(symbol)
         return frozenset(recursive_paths)
 
+
+    @cython.locals(N=cython.int, top=cython.int, pointer=cython.int,
+                   i=cython.int, k = cython.int, j=cython.int)
     def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
         """Reorders the definitions so as to minimize the number of Forward
         declarations. Forward declarations remain inevitable only where
@@ -1516,42 +1521,54 @@ class EBNFCompiler(Compiler):
         """
         if not get_config_value('reorder_definitions'):
             return
-
-        def index(sym: str, defs: List[Tuple[str, str]]) -> int:
-            for i, defn in enumerate(defs):
-                if defn[0] == sym:
-                    return i
-            raise ValueError(sym + 'not in definitions')
-
         N = len(definitions)
         root = definitions[0][0] if N > 0 else ''
-        truly_recursive = {sym for sym in self.recursive
+        recursive = {sym for sym in self.forward
                            if sym in self.referred_symbols(sym) or sym == root}
-        # for sym in truly_recursive:
-        #     print(sym + '\n' + '\n'.join(
-        #         str(path) for path in self.DEBUG_recursive_paths(sym)) + '\n')
 
-        # move truly_recursive symbols to the top of the list
+        # move recursive symbols to the top of the list
+
         top = 1  # however, leave the root symbol at the top
-        while top < N and definitions[top][0] in truly_recursive:
+        while top < N and definitions[top][0] in recursive:
             top += 1
         for i in range(top, N):
-            if definitions[i][0] in truly_recursive:
+            if definitions[i][0] in recursive:
                 definitions[top], definitions[i] = definitions[i], definitions[top]
                 top += 1
 
         # order the other definitions
 
-        while top < N:
-            topsym = definitions[top][0]
-            for i in range(top + 1, N):
+        pointer = top
+        while pointer < N:
+            topsym = definitions[pointer][0]
+            for i in range(pointer + 1, N):
                 if topsym in self.directly_referred(definitions[i][0]):
-                    definitions[top], definitions[i] = definitions[i], definitions[top]
+                    definitions[pointer], definitions[i] = definitions[i], definitions[pointer]
                     break
             else:
-                top += 1
+                pointer += 1
 
-        self.recursive = truly_recursive
+        # try to place as many recursive symbols as possible among the
+        # non-forwardly-defined-symbols
+
+        i = top - len(recursive)
+        while i < top:
+            sym = definitions[i][0]
+            referred = self.directly_referred(sym)
+            if root not in referred:
+                k = i
+                while k < N and definitions[k][0] not in referred:
+                    k += 1
+                j = k
+                while j < N and sym not in self.directly_referred(definitions[j][0]):
+                    j += 1
+                if j == N:
+                    definitions.insert(k, definitions[i])
+                    del definitions[i]
+                    top -= 1
+                    recursive.remove(sym)
+            i += 1
+        self.forward = recursive
 
 
     def assemble_parser(self, definitions: List[Tuple[str, str]]) -> str:
@@ -1761,9 +1778,9 @@ class EBNFCompiler(Compiler):
         self.root_symbol = definitions[0][0] if definitions else ""
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
-                         for symbol in sorted(list(self.recursive))]
+                         for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:
-            if symbol in self.recursive:
+            if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:
                 declarations += [symbol + ' = ' + statement]
@@ -1820,9 +1837,9 @@ class EBNFCompiler(Compiler):
         if self.root_symbol and 'root__' not in self.rules:
             declarations.append('root__ = ' + self.root_symbol)
         declarations.append('')
-        self._result = '\n    '.join(declarations) \
-                       + GRAMMAR_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)
-        return self._result
+        self.python_src = '\n    '.join(declarations) \
+                          + GRAMMAR_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)
+        return self.python_src
 
 
     # compilation methods ###
@@ -1855,15 +1872,15 @@ class EBNFCompiler(Compiler):
         if not self.definitions:
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
 
-        grammar_python_src = self.assemble_parser(definitions)
+        python_src = self.assemble_parser(definitions)
         if get_config_value('static_analysis') == 'early':
             errors = []
             try:
                 grammar_class = compile_python_object(
                     DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) +
-                    grammar_python_src, (self.grammar_name or "DSL") + "Grammar")
+                    python_src, (self.grammar_name or "DSL") + "Grammar")
                 errors = grammar_class().static_analysis_errors__
-                grammar_python_src = grammar_python_src.replace(
+                python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',
                     'static_analysis_pending__ = []  # type: List[bool]', 1)
             except NameError:
@@ -1874,7 +1891,8 @@ class EBNFCompiler(Compiler):
                 symdef_node = self.rules[sym][0]
                 err.pos = self.rules[sym][0].pos
                 self.tree.add_error(symdef_node, err)
-        return grammar_python_src
+        self.python_src = python_src
+        return python_src
 
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
@@ -2455,7 +2473,7 @@ class EBNFCompiler(Compiler):
                 # redundant definitions or usages of symbols can be detected later
                 self.symbols[symbol] = node
             if symbol in self.rules:
-                self.recursive.add(symbol)
+                self.forward.add(symbol)
             if symbol in EBNFCompiler.KEYWORD_SUBSTITUTION:
                 keyword = EBNFCompiler.KEYWORD_SUBSTITUTION[symbol]
                 self.required_keywords.add(keyword)
