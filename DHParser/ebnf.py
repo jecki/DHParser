@@ -1524,7 +1524,7 @@ class EBNFCompiler(Compiler):
         N = len(definitions)
         root = definitions[0][0] if N > 0 else ''
         recursive = {sym for sym in self.forward
-                           if sym in self.referred_symbols(sym) or sym == root}
+                     if sym in self.referred_symbols(sym) or sym == root}
 
         # move recursive symbols to the top of the list
 
@@ -1609,7 +1609,7 @@ class EBNFCompiler(Compiler):
         for task in self.deferred_tasks:
             task()
 
-        # minimize the necessary number of forwared declarations
+        # minimize the necessary number of forward declarations
         self.optimize_definitions_order(definitions)
 
         # provide for capturing of symbols that are variables, i.e. the
