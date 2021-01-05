@@ -253,7 +253,7 @@ class TestNode:
                 for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
         assert ''.join(tags) == "abdfg", ''.join(tags)
 
-    def test_select_context(self):
+    def test_tree_select_context_if(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
         contexts = []
         for ctx in tree.select_context_if(lambda ctx: ctx[-1].tag_name >= 'd',
@@ -265,6 +265,13 @@ class TestNode:
                                           include_root=True, reverse=True):
             contexts.append(''.join(nd.tag_name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
+
+    def test_tree_select_context(self):
+        tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
+        l = [str(nd) for nd in tree.select('B')]
+        assert ''.join(l) == '12'
+        l = [str(ctx[-1]) for ctx in tree.select_context('B')]
+        assert ''.join(l) == '12'
 
     def test_select_children(self):
         tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
@@ -695,7 +702,7 @@ class TestContextNavigation:
         ctx, rel_pos = map_pos_to_context(i, cm)
         assert ctx[-1].tag_name == 'E' and rel_pos == 2
 
-    def test_select_context(self):
+    def test_standalone_select_context_if(self):
         start = self.tree.pick_context('E')
         save = start.copy()
         sequence = []

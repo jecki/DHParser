@@ -176,29 +176,62 @@ class Compiler:
         self.finalize()
         return result
 
+    # def OBSOLETE_fallback_compiler(self, node: Node) -> Any:
+    #     """This is a generic compiler function which will be called on
+    #     all those node types for which no compiler method `on_XXX` has
+    #     been defined.
+    #
+    #     OBSOLETE, because it does not allow manipulation or parent tree
+    #               during transformation
+    #     """
+    #     result = []
+    #     if node.children:
+    #         for child in node.children:
+    #             nd = self.compile(child)
+    #             if nd is not None:
+    #                 try:
+    #                     if nd.tag_name != EMPTY_PTYPE:
+    #                         result.append(nd)
+    #                 except AttributeError:
+    #                     pass
+    #                 if not isinstance(nd, Node):
+    #                     tn = node.tag_name
+    #                     raise TypeError(
+    #                         'Fallback compiler for Node `%s` received a value of type '
+    #                         '`%s` from child `%s` instead of the required return type `Node`. '
+    #                         'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
+    #                         'method `on_%s(self, node)` in class `%s` to avoid this error!'
+    #                         % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
+    #         node.result = tuple(result)
+    #     return node
+
     def fallback_compiler(self, node: Node) -> Any:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
-        result = []
+        replacements = {}  # type: Dict[Node, Node]
         if node.children:
             for child in node.children:
                 nd = self.compile(child)
-                if nd is not None:
-                    try:
-                        if nd.tag_name != EMPTY_PTYPE:
-                            result.append(nd)
-                    except AttributeError:
-                        pass
-                    if not isinstance(nd, Node):
-                        tn = node.tag_name
-                        raise TypeError(
-                            'Fallback compiler for Node `%s` received a value of type '
-                            '`%s` from child `%s` instead of the required return type `Node`. '
-                            'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
-                            'method `on_%s(self, node)` in class `%s` to avoid this error!'
-                            % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
-            node.result = tuple(result)
+                if id(nd) != id(child):
+                    replacements[id(child)] = nd
+                if nd is not None and not isinstance(nd, Node):
+                    tn = node.tag_name
+                    raise TypeError(
+                        'Fallback compiler for Node `%s` received a value of type '
+                        '`%s` from child `%s` instead of the required return type `Node`. '
+                        'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
+                        'method `on_%s(self, node)` in class `%s` to avoid this error!'
+                        % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
+            if replacements:
+                # replace Nodes the identity of which has been changed during transformation
+                # and drop any returned None-results
+                result = []
+                for child in node.children:
+                    nd = replacements.get(id(child), child)
+                    if nd is not None and nd.tag_name != EMPTY_PTYPE:
+                        result.append(nd)
+                node.result = tuple(result)
         return node
 
     def compile(self, node: Node) -> Any:
