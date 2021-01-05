@@ -50,6 +50,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'StrictResultType',
            'ChildrenType',
            'CriteriaType',
+           'MatchFunction',
+           'ContextMatchFunction',
            'ALL_NODES',
            'LEAF_NODES',
            'ALL_CONTEXTS',
@@ -57,6 +59,10 @@ __all__ = ('WHITESPACE_PTYPE',
            'Node',
            'prev_context',
            'next_context',
+           'leaf_context',
+           'PickChildFunction',
+           'FIRST_CHILD',
+           'LAST_CHILD',
            'select_context_if',
            'select_context',
            'pick_context',
@@ -159,6 +165,10 @@ def flatten_xml(xml: str) -> str:
 # - one of several tag_names
 # - a function Node -> bool
 CriteriaType = Union['Node', str, Container[str], Callable, int]
+
+MatchFunction = Callable[['Node'], bool]
+ContextMatchFunction = Callable[[List['Node']], bool]
+
 ALL_NODES = lambda nd: True
 LEAF_NODES = lambda nd: not nd._children
 
@@ -166,7 +176,7 @@ ALL_CONTEXTS = lambda ctx: True
 LEAF_CONTEXTS = lambda ctx: not ctx[-1].children
 
 
-def create_match_function(criterion: CriteriaType) -> Callable:
+def create_match_function(criterion: CriteriaType) -> MatchFunction:
     """
     Returns a valid match-function (Node -> bool) for the given criterion.
     Match-functions are used to find an select particular nodes from a
@@ -186,7 +196,7 @@ def create_match_function(criterion: CriteriaType) -> Callable:
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type")
 
 
-def create_context_match_function(criterion: CriteriaType) -> Callable:
+def create_context_match_function(criterion: CriteriaType) -> ContextMatchFunction:
     """
     Returns a valid context-match-function (List[Node] -> bool) for the
     given criterion. Context-match-functions are used to find and select
@@ -379,8 +389,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         return True
 
-    def __hash__(self):
-        return hash(self.tag_name)
+    # def __hash__(self):
+    #     return hash(self.tag_name)  # very bad idea!
 
     def equals(self, other: 'Node', ignore_attr_order: bool = False) -> bool:
         """
@@ -605,7 +615,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.attr.get(attribute, default)
         return default
 
-    def with_attr(self, *attr_dict, **attributes):
+    def with_attr(self, *attr_dict, **attributes) -> 'Node':
         """
         Adds the attributes which are passed to `with_attr()` either as an
         attribute dictionary or as keyword parameters to the node's attributes
@@ -761,6 +771,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :raises: ValueError, if no child matching the criterion `what` was found.
         """
         assert 0 <= start < stop
+        if not self.children:
+            raise ValueError('Tried to find the index of a child in a Node without children')
         mf = create_match_function(what)
         for i, child in enumerate(self._children[start:stop]):
             if mf(child):
@@ -776,7 +788,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         children = self._children
         return tuple(i for i in range(len(children)) if mf(children[i]))
 
-    def select_if(self, match_function: Callable,
+    def select_if(self, match_function: MatchFunction,
                   include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
         Finds nodes in the tree for which `match_function` returns True.
@@ -903,7 +915,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # context selection ###
 
-    def select_context_if(self, match_function: Callable,
+    def select_context_if(self, match_function: ContextMatchFunction,
                           include_root: bool = False,
                           reverse: bool = False) -> Iterator[List['Node']]:
         """
@@ -1473,8 +1485,30 @@ def next_context(context: List[Node]) -> Optional[List[Node]]:
     return None
 
 
+PickChildFunction = Callable[[Node], Node]
+LAST_CHILD = lambda nd: nd.result[-1]
+FIRST_CHILD = lambda nd: nd.result[0]
+
+
+def leaf_context(context: Optional[List[Node]], pick_child: PickChildFunction) \
+        -> Optional[List[Node]]:
+    """Returns the context of a leaf of the tree originating in 'context[-1]`
+    The function `pick_child` determines which branch to follow during each
+    iteration, as long as the top of the context is not yet a leaf node.
+    A `context`-parameter value of `None` will simply be passed through.
+    """
+    if context:
+        ctx = context.copy()
+        top = ctx[-1]
+        while top.children:
+            top = pick_child(top)
+            ctx.append(top)
+        return ctx
+    return None
+
+
 def select_context_if(context: List[Node],
-                      match_function: Callable,
+                      match_function: ContextMatchFunction,
                       reverse: bool = False) -> Iterator[List[Node]]:
     """
     Creates an Iterator yielding all `contexts` for which the
@@ -1554,7 +1588,9 @@ def ensuing_str(context: List[Node], length: int = -1) -> str:
     return following if length < 0 else following[:length]
 
 
-def select_from_context_if(context: List[Node], match_function: Callable, reverse: bool=False):
+def select_from_context_if(context: List[Node],
+                           match_function: MatchFunction,
+                           reverse: bool=False):
     """Yields all nodes from context for which the match_function is true."""
     if reverse:
         for nd in reversed(context):
