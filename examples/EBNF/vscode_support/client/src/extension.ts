@@ -3,6 +3,9 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
+ /* See the VSCode-API: https://code.visualstudio.com/api
+    and https://code.visualstudio.com/api/references/vscode-api */
+
 import * as net from 'net';
 import { workspace, commands, Disposable, ExtensionContext, OutputChannel } from 'vscode';
 
