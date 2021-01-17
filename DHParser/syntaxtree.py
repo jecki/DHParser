@@ -60,6 +60,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'prev_context',
            'next_context',
            'leaf_context',
+           'prev_leaf_context',
+           'next_leaf_context',
            'PickChildFunction',
            'FIRST_CHILD',
            'LAST_CHILD',
@@ -1505,6 +1507,10 @@ def leaf_context(context: Optional[List[Node]], pick_child: PickChildFunction) \
             ctx.append(top)
         return ctx
     return None
+
+
+next_leaf_context = lambda ctx: leaf_context(next_context(ctx), FIRST_CHILD)
+prev_leaf_context = lambda ctx: leaf_context(prev_context(ctx), LAST_CHILD)
 
 
 def select_context_if(context: List[Node],
