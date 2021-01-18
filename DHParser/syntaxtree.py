@@ -1613,7 +1613,8 @@ def select_from_context(context: List[Node], criterion: CriteriaType, reverse: b
     return select_from_context_if(context, create_match_function(criterion), reverse)
 
 
-def pick_from_context(context: List[Node], criterion: CriteriaType, reverse: bool=False):
+def pick_from_context(context: List[Node], criterion: CriteriaType, reverse: bool=False) \
+        -> Optional[Node]:
     """Picks the first node from the context that fullfills the criterion. Returns `None`
     if the context does not contain any node fulfilling the criterion."""
     try:
