@@ -113,7 +113,9 @@ def unit_from_config(config_str, filename):
 
     pos = eat_comments(cfg, 0)
     section_match = RX_SECTION.match(cfg, pos)
+    first_section_missing = True
     while section_match:
+        first_section_missing = False
         d = section_match.groupdict()
         stage = d['stage']
         if stage not in UNIT_STAGES:
@@ -145,8 +147,11 @@ def unit_from_config(config_str, filename):
         section_match = RX_SECTION.match(cfg, pos)
 
     if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
-        raise SyntaxError('in file "%s" in line %i' % (filename, cfg[:pos].count('\n') + 2))
-
+        err_head = 'N' if first_section_missing else 'Test NAME:STRING or n'
+        err_str = err_head + 'ew section [TEST:PARSER] expected, ' \
+                  + 'where TEST is "match", "fail" or "ast"; in file ' \
+                  + '"%s", line %i' % (filename, cfg[:pos + 1].count('\n') + 1)
+        raise SyntaxError(err_str)
     return unit
 
 

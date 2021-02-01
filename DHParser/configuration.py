@@ -29,7 +29,7 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 __all__ = ('ALLOWED_PRESET_VALUES',
            'validate_value',
@@ -120,7 +120,6 @@ def access_presets():
         finally:
             if f is not None:
                 f.close()
-    return CONFIG_PRESET
 
 
 def remove_cfg_tempfile(filename: str):
@@ -169,12 +168,19 @@ def set_preset_value(key: str, value: Any):
     PRESETS_CHANGED = True
 
 
-def get_preset_value(key: str):
+class NoDefault:
+    pass
+NO_DEFAULT = NoDefault()
+
+
+def get_preset_value(key: str, default: Any = NO_DEFAULT):
     global CONFIG_PRESET, ACCESSING_PRESETS
     if not ACCESSING_PRESETS:
         raise AssertionError('Presets must be made accessible with access_presets() first, '
                              'before they can be read!')
-    return CONFIG_PRESET[key]
+    if default is NO_DEFAULT:
+        return CONFIG_PRESET[key]  # may raise a KeyError
+    return CONFIG_PRESET.get(key, default)
 
 
 def access_thread_locals() -> Any:

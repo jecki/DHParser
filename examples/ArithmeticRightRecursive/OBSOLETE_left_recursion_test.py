@@ -6,12 +6,14 @@ LOGGING = True
 
 sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
-from DHParser import grammar_provider
+from DHParser import grammar_provider, access_presets, finalize_presets, set_config_preset
 
 
-CONFIG_PRESET['ast_serialization'] = "S-expression"
-CONFIG_PRESET['test_parallelization'] = False
-CONFIG_PRESET['left_recursion_depth'] = 2
+access_presets()
+set_config_preset('ast_serialization', "S-expression")
+set_config_preset('test_parallelization', False)
+set_config_preset('left_recursion_depth', 2)
+finalize_presets()
 
 
 arithmetic_syntax = """

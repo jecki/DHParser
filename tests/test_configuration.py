@@ -27,13 +27,14 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.configuration import access_presets, finalize_presets
+from DHParser.configuration import access_presets, finalize_presets, \
+    set_preset_value, get_preset_value
 
 
 def evaluate_presets(flag):
-    CONFIG_PRESET = access_presets()
-    if CONFIG_PRESET.get('test', 'failure') != 'failure' and \
-            CONFIG_PRESET.get('test2', 'failure') != 'failure':
+    access_presets()
+    if get_preset_value('test', 'failure') != 'failure' and \
+            get_preset_value('test2', 'failure') != 'failure':
         flag.value = 1
     else:
         flag.value = 0
@@ -46,11 +47,11 @@ class TestConfigMultiprocessing:
         """Checks whether changes to CONFIG_PRESET before spawning / forking
         new processes will be present in spawned or forked processes
         afterwards."""
-        CONFIG_PRESET = access_presets()
-        CONFIG_PRESET['test'] = 'multiprocessing presets test'
+        access_presets()
+        set_preset_value('test', 'multiprocessing presets test')
         finalize_presets()
-        CONFIG_PRESET = access_presets()
-        CONFIG_PRESET['test2'] = 'multiprocessing presets test2'
+        access_presets()
+        set_preset_value('test2', 'multiprocessing presets test2')
         finalize_presets()
         flag = multiprocessing.Value('b', 0)
         p = multiprocessing.Process(target=evaluate_presets, args=(flag,))

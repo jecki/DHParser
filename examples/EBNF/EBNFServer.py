@@ -647,8 +647,6 @@ if __name__ == "__main__":
         sys.path.append(dhparserdir)
         # import subprocess
         # subprocess.run(['gedit', dhparserdir.replace('/', '_')])
-    # from DHParser import configuration
-    # configuration.CONFIG_PRESET['log_server'] = True
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Setup and Control of a Server for processing EBNF-files.")
