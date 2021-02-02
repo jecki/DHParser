@@ -29,7 +29,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    remove_empty, remove_tokens, flatten, is_empty, lean_left, \
+    remove_empty, remove_tokens, flatten, is_empty, lean_left, ThreadLocalSingletonFactory, \
     collapse, collapse_children_if, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, set_tracer, trace_history, \
@@ -62,10 +62,9 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     """
     element = Forward()
     expression = Forward()
-    sign = Forward()
     tail = Forward()
     term = Forward()
-    source_hash__ = "f778e5ac380080a3c5408cc55398660d"
+    source_hash__ = "34a84d77ec6f6b92070f9e4fd0a5d3ca"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -94,36 +93,33 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     tail_pow = Series(tail_value, Option(i), Drop(Text("^")), element)
     tail_elem = Alternative(tail_pow, tail_value)
     value = Series(Alternative(number, tail_value), Option(i))
+    sign = Alternative(PLUS, MINUS)
+    add = Series(term, Series(Drop(Text("+")), dwsp__), expression)
     pow = Series(value, Drop(Text("^")), Option(sign), element)
-    element.set(Alternative(pow, value))
-    sign.set(Alternative(PLUS, MINUS))
     seq = Series(tail_elem, tail)
-    tail.set(Series(Alternative(seq, tail_elem), Option(i)))
+    sub = Series(term, Series(Drop(Text("-")), dwsp__), expression)
     factor = Series(Option(sign), Alternative(Series(Option(element), tail), element), dwsp__)
     div = Series(factor, Series(Drop(Text("/")), dwsp__), term)
     mul = Series(factor, Series(Drop(Text("*")), dwsp__), term)
+    element.set(Alternative(pow, value))
+    tail.set(Series(Alternative(seq, tail_elem), Option(i)))
     term.set(Alternative(mul, div, factor))
-    sub = Series(term, Series(Drop(Text("-")), dwsp__), expression)
-    add = Series(term, Series(Drop(Text("+")), dwsp__), expression)
     expression.set(Alternative(add, sub, term))
     root__ = expression
     
 
+_raw_grammar = ThreadLocalSingletonFactory(ArithmeticRightRecursiveGrammar, ident=1)
+
 def get_grammar() -> ArithmeticRightRecursiveGrammar:
-    """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton = ArithmeticRightRecursiveGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_ArithmeticRightRecursive(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

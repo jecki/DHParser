@@ -74,7 +74,7 @@ class json_fail_tolerantGrammar(Grammar):
     r"""Parser for a json_fail_tolerant source file.
     """
     _element = Forward()
-    source_hash__ = "f7dcda9a8e9f079fbb0f353f78c64bb9"
+    source_hash__ = "d958a85b4f3c116848d2648ca5c1febd"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -95,8 +95,8 @@ class json_fail_tolerantGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Text("]"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_ARRAY_SEPARATOR"])
-    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Text("}"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1, err_msgs=error_messages__["_OBJECT_SEPARATOR"])
+    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Text("]"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1)
+    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Text("}"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1)
     _EOF = NegativeLookahead(RegExp('.'))
     EXP = Option(Series(Alternative(Drop(Text("E")), Drop(Text("e"))), Option(Alternative(Drop(Text("+")), Drop(Text("-")))), RegExp('[0-9]+')))
     DOT = Text(".")
@@ -111,30 +111,27 @@ class json_fail_tolerantGrammar(Grammar):
     null = Series(Text("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Text('"')), _CHARACTERS, Drop(Text('"')), dwsp__, mandatory=1, err_msgs=error_messages__["string"], skip=skip_rules__["string"])
+    string = Series(Drop(Text('"')), _CHARACTERS, Drop(Text('"')), dwsp__, mandatory=1)
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(_ARRAY_SEPARATOR, _element, mandatory=1)))), Series(Drop(Text("]")), dwsp__))
-    member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1, err_msgs=error_messages__["member"])
+    member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
     object = Series(Series(Drop(Text("{")), dwsp__), member, ZeroOrMore(Series(_OBJECT_SEPARATOR, member, mandatory=1)), Series(Drop(Text("}")), dwsp__), mandatory=3)
     _element.set(Alternative(object, array, string, number, bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
     
 
+_raw_grammar = ThreadLocalSingletonFactory(json_fail_tolerantGrammar, ident=1)
+
 def get_grammar() -> json_fail_tolerantGrammar:
-    """Returns a thread/process-exclusive json_fail_tolerantGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton = json_fail_tolerantGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.json_fail_tolerant_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_json_fail_tolerant(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

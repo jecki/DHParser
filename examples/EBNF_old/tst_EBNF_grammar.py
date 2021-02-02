@@ -16,8 +16,7 @@ if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)
 
 try:
-    from DHParser.configuration import get_config_value, set_config_value, \
-        EBNF_ANY_SYNTAX_HEURISTICAL, EBNF_ANY_SYNTAX_STRICT
+    from DHParser.configuration import get_config_value, set_config_value
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
@@ -34,7 +33,7 @@ def recompile_grammar(grammar_src, force):
     DHParser.log.start_logging('LOGS')
     # recompiles Grammar only if it has changed
     saved_syntax_variant = get_config_value('syntax_variant')
-    set_config_value('syntax_variant', EBNF_ANY_SYNTAX_HEURISTICAL)
+    set_config_value('syntax_variant', 'heuristic')
     if not dsl.recompile_grammar(grammar_src, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +

@@ -36,8 +36,8 @@ from DHParser import start_logging, is_filename, load_if_file, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     forbid, assert_content, remove_infix_operator, \
     error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, INDENTED_SERIALIZATION, \
-    JSON_SERIALIZATION, access_thread_locals, access_presets, finalize_presets
+    get_config_value, access_thread_locals, access_presets, finalize_presets, THREAD_LOCALS, \
+    resume_notices_on, set_tracer, trace_history, ThreadLocalSingletonFactory
 
 
 #######################################################################
@@ -64,7 +64,7 @@ class yamlGrammar(Grammar):
     """
     element = Forward()
     value = Forward()
-    source_hash__ = "6f6dbe7b100619eca73feb883320edc1"
+    source_hash__ = "77a7148de4df4673628ba878d0c12d19"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -94,21 +94,18 @@ class yamlGrammar(Grammar):
     root__ = json
     
 
+_raw_grammar = ThreadLocalSingletonFactory(yamlGrammar, ident=1)
+
 def get_grammar() -> yamlGrammar:
-    """Returns a thread/process-exclusive yamlGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.yaml_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.yaml_00000001_grammar_singleton = yamlGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.yaml_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.yaml_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_yaml(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

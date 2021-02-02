@@ -34,9 +34,9 @@ from DHParser import start_logging, is_filename, load_if_file, \
     remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    forbid, assert_content, remove_infix_operator, \
+    forbid, assert_content, remove_infix_operator, resume_notices_on, THREAD_LOCALS, \
     error_on, recompile_grammar, left_associative, lean_left, access_thread_locals, \
-    get_config_value
+    get_config_value, ThreadLocalSingletonFactory, set_tracer, trace_history
 
 
 #######################################################################
@@ -63,7 +63,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "98c0199c8e6885e042bf8cecf82d0523"
+    source_hash__ = "c26bf1eb08a888559f192b19514bc772"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -82,28 +82,25 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group))
     div = Series(factor, Series(Drop(Text("/")), dwsp__), term)
     mul = Series(factor, Series(Drop(Text("*")), dwsp__), term)
-    term.set(Alternative(mul, div, factor))
-    sub = Series(term, Series(Drop(Text("-")), dwsp__), expression)
     add = Series(term, Series(Drop(Text("+")), dwsp__), expression)
+    sub = Series(term, Series(Drop(Text("-")), dwsp__), expression)
+    term.set(Alternative(mul, div, factor))
     expression.set(Alternative(add, sub, term))
     root__ = expression
     
 
+_raw_grammar = ThreadLocalSingletonFactory(ArithmeticRightRecursiveGrammar, ident=1)
+
 def get_grammar() -> ArithmeticRightRecursiveGrammar:
-    """Returns a thread/process-exclusive ArithmeticRightRecursiveGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton = ArithmeticRightRecursiveGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.ArithmeticRightRecursive_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_ArithmeticRightRecursive(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

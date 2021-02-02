@@ -42,12 +42,11 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, \
-    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    get_config_value, node_maker, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent
+    has_attr, has_parent, ThreadLocalSingletonFactory
 
 
 #######################################################################
@@ -73,7 +72,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example source file.
     """
-    source_hash__ = "c3a238ed73fb9bd4dee1c253015b64d9"
+    source_hash__ = "ac94d19db5744d229fe6a6815c4471c5"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -90,21 +89,18 @@ class readme_exampleGrammar(Grammar):
     root__ = key_store
     
 
+_raw_grammar = ThreadLocalSingletonFactory(readme_exampleGrammar, ident=1)
+
 def get_grammar() -> readme_exampleGrammar:
-    """Returns a thread/process-exclusive readme_exampleGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.readme_example_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.readme_example_00000001_grammar_singleton = readme_exampleGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.readme_example_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.readme_example_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_readme_example(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

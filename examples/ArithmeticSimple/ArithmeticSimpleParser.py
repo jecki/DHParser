@@ -34,7 +34,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    forbid, assert_content, remove_infix_operator, \
+    forbid, assert_content, remove_infix_operator, ThreadLocalSingletonFactory, \
     error_on, recompile_grammar, left_associative, access_thread_locals, get_config_value
 
 
@@ -61,7 +61,7 @@ class ArithmeticSimpleGrammar(Grammar):
     r"""Parser for an ArithmeticSimple source file.
     """
     expression = Forward()
-    source_hash__ = "361c57149e6014387fdc3631ab19f560"
+    source_hash__ = "b71be6a6745f20dda18beebbda77902b"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -87,21 +87,18 @@ class ArithmeticSimpleGrammar(Grammar):
     root__ = expression
     
 
+_raw_grammar = ThreadLocalSingletonFactory(ArithmeticSimpleGrammar, ident=1)
+
 def get_grammar() -> ArithmeticSimpleGrammar:
-    """Returns a thread/process-exclusive ArithmeticSimpleGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton = ArithmeticSimpleGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.ArithmeticSimple_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_ArithmeticSimple(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

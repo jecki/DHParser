@@ -39,7 +39,8 @@ except ModuleNotFoundError:
 
 
 if __name__ == "__main__":
-    configuration.access_presets()['test_parallelization'] = True
+    configuration.access_presets()
+    configuration.set_preset_value('test_parallelization', True)
     configuration.finalize_presets()
     if not DHParser.dsl.recompile_grammar('BibTeX.ebnf', force=False):  # recompiles Grammar only if it has changed
         print('\nErrors while recompiling "BibTeX.ebnf":\n--------------------------------------\n\n')

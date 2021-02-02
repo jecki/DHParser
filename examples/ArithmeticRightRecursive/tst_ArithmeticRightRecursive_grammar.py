@@ -19,7 +19,7 @@ try:
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing, create_test_templates, access_presets, finalize_presets, \
-        set_config_preset
+        set_preset_value
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
@@ -51,8 +51,8 @@ def run_grammar_tests(glob_pattern):
 
 if __name__ == '__main__':
     access_presets()
-    set_config_preset('ast_serialization', "S-expression")
-    set_config_preset('test_parallelization', True)
+    set_preset_value('ast_serialization', "S-expression")
+    set_preset_value('test_parallelization', True)
     finalize_presets()
 
     argv = sys.argv[:]

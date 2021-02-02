@@ -74,7 +74,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "7fdd12e54c49a249275e774e627eb297"
+    source_hash__ = "617e7a1c058de72b8118e59a3452d821"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -107,21 +107,18 @@ class jsonGrammar(Grammar):
     root__ = json
     
 
+_raw_grammar = ThreadLocalSingletonFactory(jsonGrammar, ident=1)
+
 def get_grammar() -> jsonGrammar:
-    """Returns a thread/process-exclusive jsonGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.json_00000001_grammar_singleton = jsonGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.json_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.json_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_json(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

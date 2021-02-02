@@ -46,7 +46,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, access_presets, finalize_presets, set_preset_value
+    has_attr, has_parent, access_presets, finalize_presets, set_preset_value, \
+    ThreadLocalSingletonFactory
 
 
 #######################################################################
@@ -72,7 +73,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class atfGrammar(Grammar):
     r"""Parser for an atf source file.
     """
-    source_hash__ = "af67ade2378ac6709bec4140471be6ed"
+    source_hash__ = "4ae7748240bfd917fc406c93eb9214f7"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -87,21 +88,18 @@ class atfGrammar(Grammar):
     root__ = document
     
 
+_raw_grammar = ThreadLocalSingletonFactory(atfGrammar, ident=1)
+
 def get_grammar() -> atfGrammar:
-    """Returns a thread/process-exclusive atfGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.atf_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.atf_00000001_grammar_singleton = atfGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.atf_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.atf_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_atf(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################
