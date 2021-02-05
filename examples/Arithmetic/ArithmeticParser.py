@@ -11,13 +11,12 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable
 
 try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'..\..'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
@@ -43,12 +42,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, node_maker, access_thread_locals, access_presets, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, \
+    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
-    has_errors, ERROR, FATAL, set_preset_value, get_preset_value
+    has_attr, has_parent
 
 
 #######################################################################
@@ -57,12 +56,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def nop(arg):
-    return arg
-
-
 def ArithmeticPreprocessor(text):
-    return text, nop
+    return text, lambda i: i
 
 
 def get_preprocessor() -> PreprocessorFunc:
@@ -79,7 +74,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "63317dae9799e961704579764f281fcd"
+    source_hash__ = "2a01036cad49be914c8bb1cb13c532c7"
     anonymous__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -105,18 +100,21 @@ class ArithmeticGrammar(Grammar):
     root__ = expression
     
 
-_raw_grammar = ThreadLocalSingletonFactory(ArithmeticGrammar, ident=1)
-
 def get_grammar() -> ArithmeticGrammar:
-    grammar = _raw_grammar()
+    """Returns a thread/process-exclusive ArithmeticGrammar-singleton."""
+    THREAD_LOCALS = access_thread_locals()
+    try:
+        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
+    except AttributeError:
+        THREAD_LOCALS.Arithmetic_00000001_grammar_singleton = ArithmeticGrammar()
+        if hasattr(get_grammar, 'python_src__'):
+            THREAD_LOCALS.Arithmetic_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
+        grammar = THREAD_LOCALS.Arithmetic_00000001_grammar_singleton
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
-    
-def parse_Arithmetic(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################
@@ -127,33 +125,27 @@ def parse_Arithmetic(document, start_parser = "root_parser__", *, complete_match
 
 Arithmetic_AST_transformation_table = {
     # AST Transformations for the Arithmetic-grammar
-    "<": flatten,
-    "expression": [],
-    "term": [],
-    "factor": [],
-    "sign": [],
-    "group": [],
-    "PLUS": [],
-    "MINUS": [],
-    "MUL": [],
-    "DIV": [],
-    "POSITIVE": [],
-    "NEGATIVE": [],
-    "NUMBER": [],
-    "VARIABLE": [],
-    "*": replace_by_single_child
+    "expression, term": [left_associative, replace_by_single_child],
+    "factor, sign": replace_by_single_child,
+    "group": [remove_tokens('(', ')'), replace_by_single_child],
 }
 
 
-def ArithmeticTransformer() -> TransformationFunc:
+def CreateArithmeticTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=Arithmetic_AST_transformation_table.copy())
 
-get_transformer = ThreadLocalSingletonFactory(ArithmeticTransformer, ident=1)
 
-def transform_Arithmetic(cst):
-    get_transformer()(cst)
+def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
+    try:
+        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
+    except AttributeError:
+        THREAD_LOCALS.Arithmetic_00000001_transformer_singleton = CreateArithmeticTransformer()
+        transformer = THREAD_LOCALS.Arithmetic_00000001_transformer_singleton
+    return transformer
 
 
 #######################################################################
@@ -213,10 +205,16 @@ class ArithmeticCompiler(Compiler):
     #     return node
 
 
-get_compiler = ThreadLocalSingletonFactory(ArithmeticCompiler, ident=1)
 
-def compile_Arithmetic(ast):
-    return get_compiler()(ast)
+def get_compiler() -> ArithmeticCompiler:
+    """Returns a thread/process-exclusive ArithmeticCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
+    try:
+        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
+    except AttributeError:
+        THREAD_LOCALS.Arithmetic_00000001_compiler_singleton = ArithmeticCompiler()
+        compiler = THREAD_LOCALS.Arithmetic_00000001_compiler_singleton
+    return compiler
 
 
 #######################################################################
@@ -225,87 +223,12 @@ def compile_Arithmetic(ast):
 #
 #######################################################################
 
-RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
-
-
-def compile_src(source: str) -> Tuple[Any, List[Error]]:
-    """Compiles ``source`` and returns (result, errors, ast)."""
+def compile_src(source):
+    """Compiles ``source`` and returns (result, errors, ast).
+    """
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
                                   get_compiler())
-    return result_tuple[:2]  # drop the AST at the end of the result tuple
-
-
-def serialize_result(result: Any) -> Union[str, bytes]:
-    """Serialization of result. REWRITE THIS, IF YOUR COMPILATION RESULT
-    IS NOT A TREE OF NODES.
-    """
-    if isinstance(result, Node):
-        return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
-    else:
-        return repr(result)
-
-
-def process_file(source: str, result_filename: str = '') -> str:
-    """Compiles the source and writes the serialized results back to disk,
-    unless any fatal errors have occurred. Error and Warning messages are
-    written to a file with the same name as `result_filename` with an
-    appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
-    extension. Returns the name of the error-messages file or an empty
-    string, if no errors of warnings occurred.
-    """
-    source_filename = source if is_filename(source) else ''
-    result, errors = compile_src(source)
-    if not has_errors(errors, FATAL):
-        if os.path.abspath(source_filename) != os.path.abspath(result_filename):
-            with open(result_filename, 'w') as f:
-                f.write(serialize_result(result))
-        else:
-            errors.append(Error('Source and destination have the same name "%s"!'
-                                % result_filename, 0, FATAL))
-    if errors:
-        err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
-        err_filename = os.path.splitext(result_filename)[0] + err_ext
-        with open(err_filename, 'w') as f:
-            f.write('\n'.join(canonical_error_strings(errors, source_filename)))
-        return err_filename
-    return ''
-
-
-def batch_process(file_names: List[str], out_dir: str,
-                  *, submit_func: Callable = None,
-                  log_func: Callable = None) -> List[str]:
-    """Compiles all files listed in filenames and writes the results and/or
-    error messages to the directory `our_dir`. Returns a list of error
-    messages files.
-    """
-    error_list =  []
-
-    def gen_dest_name(name):
-        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
-                                     + RESULT_FILE_EXTENSION)
-
-    def run_batch(submit_func: Callable):
-        nonlocal error_list
-        err_futures = []
-        for name in file_names:
-            dest_name = gen_dest_name(name)
-            err_futures.append(submit_func(process_file, name, dest_name))
-        for file_name, err_future in zip(file_names, err_futures):
-            error_filename = err_future.result()
-            if log_func:
-                log_func('Compiling "%s"' % file_name)
-            if error_filename:
-                error_list.append(error_filename)
-
-    if submit_func is None:
-        import concurrent.futures
-        from DHParser.toolkit import instantiate_executor
-        with instantiate_executor(get_config_value('batch_processing_parallelization'),
-                                  concurrent.futures.ProcessPoolExecutor) as pool:
-            run_batch(pool.submit)
-    else:
-        run_batch(submit_func)
-    return error_list
+    return result_tuple
 
 
 if __name__ == "__main__":
@@ -337,27 +260,19 @@ if __name__ == "__main__":
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Parses a Arithmetic-file and shows its syntax-tree.")
-    parser.add_argument('files', nargs='+')
-    parser.add_argument('-d', '--debug', action='store_const', const='debug',
-                        help='Store debug information in LOGS subdirectory')
-    parser.add_argument('-x', '--xml', action='store_const', const='xml',
-                        help='Store result as XML instead of S-expression')
-    parser.add_argument('-o', '--out', nargs=1, default=['out'],
-                        help='Output directory for batch processing')
-    parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
-                        help='Verbose output')
-    parser.add_argument('--singlethread', action='store_const', const='singlethread',
-                        help='Sun batch jobs in a single thread (recommended only for debugging)')
+    parser.add_argument('files', nargs=1)
+    parser.add_argument('-d', '--debug', action='store_const', const='debug')
+    parser.add_argument('-x', '--xml', action='store_const', const='xml')
 
     args = parser.parse_args()
-    file_names, out, log_dir = args.files, args.out[0], ''
+    file_name, log_dir = args.files[0], ''
 
-    # if not os.path.exists(file_name):
-    #     print('File "%s" not found!' % file_name)
-    #     sys.exit(1)
-    # if not os.path.isfile(file_name):
-    #     print('"%s" is not a file!' % file_name)
-    #     sys.exit(1)
+    if not os.path.exists(file_name):
+        print('File "%s" not found!' % file_name)
+        sys.exit(1)
+    if not os.path.isfile(file_name):
+        print('"%s" is not a file!' % file_name)
+        sys.exit(1)
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -366,45 +281,14 @@ if __name__ == "__main__":
         set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
 
-    if args.xml:
-        RESULT_FILE_EXTENSION = '.xml'
+    result, errors, _ = compile_src(file_name)
 
-    def echo(message: str):
-        if args.verbose:
-            print(message)
-
-    batch_processing = True
-    if len(file_names) == 1:
-        if os.path.isdir(file_names[0]):
-            dir_name = file_names[0]
-            echo('Processing all files in directory: ' + dir_name)
-            file_names = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)
-                          if os.path.isfile(os.path.join(dir_name, fn))]
-        elif not ('-o' in sys.argv or '--out' in sys.argv):
-            batch_processing = False
-
-    if batch_processing:
-        if not os.path.exists(out):
-            os.mkdir(out)
-        elif not os.path.isdir(out):
-            print('Output directory "%s" exists and is not a directory!' % out)
-            sys.exit(1)
-        error_files = batch_process(file_names, out, log_func=print if args.verbose else None)
-        if error_files:
-            category = "ERRORS" if any(f.endswith('_ERRORS.txt') for f in error_files) \
-                else "warnings"
-            print("There have been %s! Please check files:" % category)
-            print('\n'.join(error_files))
-            if category == "ERRORS":
-                sys.exit(1)
+    if errors:
+        cwd = os.getcwd()
+        rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
+        for error in errors:
+            print(rel_path + ':' + str(error))
+        sys.exit(1)
     else:
-        result, errors = compile_src(file_names[0])
-
-        if errors:
-            for err_str in canonical_error_strings(errors, file_names[0]):
-                print(err_str)
-            if has_errors(errors, ERROR):
-                sys.exit(1)
-
         print(result.serialize(how='default' if args.xml is None else 'xml')
               if isinstance(result, Node) else result)
