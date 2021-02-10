@@ -18,6 +18,8 @@
 """Module lsp.py defines (some of) the constants and data structures from
 the Language Server Protocol. See:
 <https://microsoft.github.io/language-server-protocol/specifications/specification-current/>
+
+EXPERIMENTAL
 """
 
 
@@ -42,7 +44,7 @@ class TextDocumentSyncKind(enum.IntEnum):
 class CompletionTriggerKind(enum.IntEnum):
     Invoked = 1
     TriggerCharacter = 2
-    TriggerForIncompleteCompletions =3
+    TriggerForIncompleteCompletions = 3
 
 
 class CompletionItemKind(enum.IntEnum):
