@@ -26,6 +26,7 @@ parser classes are defined in the ``parse`` module.
 from collections import OrderedDict
 import bisect
 import copy
+import functools
 import json
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
@@ -57,6 +58,17 @@ __all__ = ('WHITESPACE_PTYPE',
            'ALL_CONTEXTS',
            'LEAF_CONTEXTS',
            'Node',
+           'validate_token_sequence',
+           'has_token',
+           'add_token',
+           'remove_token',
+           'eq_tokens',
+           'has_token_on_attr',
+           'add_token_to_attr',
+           'remove_token_from_attr',
+           'has_class',
+           'add_class',
+           'remove_class',
            'prev_context',
            'next_context',
            'leaf_context',
@@ -1436,6 +1448,104 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             raise ValueError('Unknown serialization "%s". Allowed values are either: %s or : %s'
                              % (s, "ast, cst, default",
                                 ", ".join(ALLOWED_PRESET_VALUES['default_serialization'])))
+
+
+# Attribute handling ##################################################
+
+def validate_token_sequence(token_sequence: str) -> bool:
+    """Returns True, if `token_sequence` is properly formed.
+
+    Token sequences are stirngs or words which are separated by
+    single blanks with no leading or trailing blank
+    """
+    return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
+        and token_sequence.find('  ') < 0
+
+
+def has_token(token_sequence: str, tokens: str) -> bool:
+    """Returns true, if `token` is contained in the blank-spearated
+    token sequence. If `token` itself is a blank-separated sequence of
+    tokens, True is returned if all tokens are contained in
+    `token_sequence`.
+
+    >>> has_token('bold italic', 'italic')
+    True
+    >>> has_token('bold italic', 'normal')
+    False
+    >>> has_token('bold italic', 'italic bold')
+    True
+    >>> has_token('bold italic', 'bold normal')
+    False
+    """
+    # assert validate_token_sequence(token_sequence)
+    # assert validate_token_sequence(token)
+    return not tokens or set(tokens.split(' ')) <= set(token_sequence.split(' '))
+
+
+def add_token(token_sequence: str, tokens: str) -> str:
+    """Adds the tokens from 'tokens' that are not already contained in
+    `token_sequence` to the end of `token_sequence`
+
+    >>> add_token('', 'italic')
+    'italic'
+    >>> add_token('bold italic', 'large')
+    'bold italic large'
+    >>> add_token('bold italic', 'bold')
+    'bold italic'
+    >>> add_token('red thin', 'stroked red')
+    'red thin stroked'
+    """
+    for tk in tokens.split(' '):
+        if tk and token_sequence.find(tk) < 0:
+            token_sequence += ' ' + tk
+    return token_sequence.lstrip()
+
+
+def remove_token(token_sequence, tokens: str) -> str:
+    """Removes all `tokens` from  `token_sequence`.
+
+    >>> remove_token('red thin stroked', 'thin')
+    'red stroked'
+    >>> remove_token('red thin stroked', 'blue')
+    'red thin stroked'
+    >>> remove_token('red thin stroked', 'blue stroked')
+    'red thin'
+    """
+    for tk in tokens.split(' '):
+        token_sequence = token_sequence.replace(tk, '').strip().replace('  ', ' ')
+    return token_sequence
+
+
+def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
+    """Returns True if bothe token sequences contain the same tokens,
+    no matter in what order.
+    >>> eq_tokens('red thin stroked', 'stroked red thin')
+    True
+    >>> eq_tokens('red thin', 'thin blue')
+    False
+    """
+    return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
+
+
+def has_token_on_attr(node: Node, tokens: str, attribute: str):
+    """Returns True, if 'attribute' of 'node' contains all 'tokens'."""
+    return has_token(node.get_attr(attribute, ''), tokens)
+
+
+def add_token_to_attr(node: Node, tokens: str, attribute: str):
+    """Adds all `tokens` to `attribute` of `node`."""
+    if tokens:
+        node.attr[attribute] = add_token(node.get_attr(attribute, ''), tokens)
+
+
+def remove_token_from_attr(node: Node, tokens: str, attribute: str):
+    """Removes all `tokens` from `attribute` of `node`."""
+    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), tokens)
+
+
+has_class = functools.partial(has_token_on_attr, attribute='class')
+add_class = functools.partial(add_token_to_attr, attribute='class')
+remove_class = functools.partial(remove_token_from_attr, attribute='class')
 
 
 # Navigate contexts ###################################################

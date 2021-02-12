@@ -192,6 +192,14 @@ class EBNFBlockingTasks:
 RECOMPILE_DELAY = 0.2
 
 
+def TE(insertText: str) -> str:
+    # """Turn an insertion-text into a TextEdit-template."""
+    # return {'range': {'start': {'line': 0, 'character': 0},
+    #                   'end': {'line': 0, 'character': 0}},
+    #         'newText': insertText}
+    return insertText.lstrip('@ ')
+
+
 class EBNFLanguageServerProtocol:
     """
     For the specification and implementation of the language server protocol, see:
@@ -246,7 +254,7 @@ class EBNFLanguageServerProtocol:
                 "textDocumentSync": TextDocumentSyncKind.Incremental,
                 "completionProvider": {
                     "resolveProvider": False,
-                    "triggerCharacters": ['@']
+                    "triggerCharacters": ['@' , ' '] # is necessary to avoid VSC kicking in
                 }
             }
         }
@@ -267,12 +275,17 @@ class EBNFLanguageServerProtocol:
 
         from itertools import chain
         self.completions.sort()
-        self.completion_items = [{k: v for k, v in chain(zip(self.completion_fields, item),
-                                                         [['kind', CompletionItemKind.Keyword]])}
+        self.completion_items1 = [{k: v for k, v in chain(zip(self.completion_fields, item),
+                                                          [['kind', CompletionItemKind.Keyword]])}
                                  for item in self.completions]
-        for item in self.completion_items:
-            item['insertText'] = item['insertText'].lstrip('@')
+        self.completion_items2 = [item.copy() for item in self.completion_items1]
+        for item in self.completion_items1:
+            item['insertText'] = item['insertText'][1:]
+        for item in self.completion_items2:
+            item['insertText'] = item['insertText'][2:]
         self.completion_labels = [f[0] for f in self.completions]
+
+        self.can_publishDiagnostics = False
 
     def connect(self, connection):
         self.connection = connection
@@ -281,6 +294,8 @@ class EBNFLanguageServerProtocol:
         self.lsp_data['processId'] = kwargs['processId']
         self.lsp_data['rootUri'] = kwargs['rootUri']
         self.lsp_data['clientCapabilities'] = kwargs['capabilities']
+        self.can_publishDiagnostics = 'publishDiagnostics' \
+                                      in self.lsp_data['clientCapabilities']['textDocument']
         return {'capabilities': self.lsp_data['serverCapabilities'],
                 'serverInfo': self.lsp_data['serverInfo']}
 
@@ -322,7 +337,7 @@ class EBNFLanguageServerProtocol:
         text = textDocument['text']
         text_buffer = TextBuffer(text, int(textDocument.get('version', -1)))
         self.current_text[uri] = text_buffer
-        if 'publishDiagnostics' in self.lsp_data['clientCapabilities']['textDocument']:
+        if self.can_publishDiagnostics:
             await self.compile_text(uri)
         return None
 
@@ -345,7 +360,7 @@ class EBNFLanguageServerProtocol:
             else:
                 text_buffer = TextBuffer(contentChanges[0]['text'], version)
                 self.current_text[uri] = text_buffer
-            if 'publishDiagnostics' in self.lsp_data['clientCapabilities']['textDocument']:
+            if self.can_publishDiagnostics:
                 await asyncio.sleep(RECOMPILE_DELAY)
                 await self.compile_text(uri)
         return None
@@ -353,40 +368,43 @@ class EBNFLanguageServerProtocol:
     def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
         from DHParser.lsp import CompletionTriggerKind, shortlist
         from DHParser.toolkit import JSONnull
-        line_nr = position['line']
+        line = position['line']
         col = position['character']
         buffer = self.current_text[textDocument['uri']]
-        line = buffer[line_nr]
+        line_str = buffer[line]
+        at_pos = line_str.rfind('@', 0, col)
 
-        def compute_items(chars: str) -> dict:
+        def compute_items(chars: str) -> list:
             a, b = shortlist(self.completion_labels, chars)
             if a == b:
-                # only None, i.e. not replying to the completion request at all
-                # stops short the display of completion items -
-                # which is what we want, once the list is exhaustet
-                return None
+                # returning a completion item without insertText-field
+                # supresses the display of VSC's self-generated items
+                # Other than returning None, this does not result
+                # in a cancel event.
+                return [{'lablel': ''}]  # None
             else:
-                return {
-                    'isIncomplete': False,  # b - a > 1 or self.completion_labels[1] != chars,
-                    'items': self.completion_items[a:b]
-                }
+                if col == at_pos + 1:
+                    return self.completion_items1[a:min(a + 10, b)]
+                else:
+                    return self.completion_items2[a:min(a + 10, b)]
 
-        def compute_filter_chars(line: str, col: int) -> str:
-            a = line.rfind('@', 0, col)
-            if a >= 0:
-                if a + 1 < len(line) and line[a + 1] != ' ':
-                    return '@ ' + line[a + 1:col]
-                return line[a:col]
+        def compute_filter_chars(line_str: str, col: int) -> str:
+            if at_pos >= 0:
+                if at_pos + 1 < len(line_str) and line_str[at_pos + 1] != ' ':
+                    return '@ ' + line_str[at_pos + 1 : col]
+                return line_str[at_pos:col]
             return ''
 
         trigger_kind = context['triggerKind']
         if trigger_kind == CompletionTriggerKind.TriggerCharacter:
-            result = self.completion_items
+            chars = compute_filter_chars(line_str, col)
+            result = compute_items(chars)
+            # result = self.completion_items
         elif trigger_kind == CompletionTriggerKind.Invoked:
-            chars = compute_filter_chars(line, col)
+            chars = compute_filter_chars(line_str, col)
             result = compute_items(chars)
         else:  # assume CompletionTriggerKind.TriggerForIncompleteCompletions
-            chars = compute_filter_chars(line, col)
+            chars = compute_filter_chars(line_str, col)
             result = compute_items(chars)
         return result
 

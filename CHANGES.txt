@@ -1,13 +1,13 @@
 DHParser Version 0.9.5
 ......................
 
-- batch processing: just add several files or a directory or shell pattern
-  to the xxxParser.py or xxxServer.py-Skripts
+- batch processing: just add several files or a directory or a
+  shell pattern to the xxxParser.py or xxxServer.py-Skripts
 - DHParser.compile.Compiler is now more tolerant w.r.t to compiler-methods
   that manipulate the parent tree (`fallback_compiler`-method rewritten)
 - DHParser.syntaxtree: more functions for navigating contexts, e.g.
   prev_context, next_context.
-
+- DHParser.syntaxtree: added a mini API for manipulating attributes
 
 DHParser Version 0.9.4 (6.10.2020)
 ..................................
