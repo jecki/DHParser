@@ -21,6 +21,126 @@ Module ``syntaxtree`` defines the ``Node``-class for syntax trees as well
 as an abstract base class for parser-objects. The latter is defined
 here, because node-objects refer to parser-objects. All concrete
 parser classes are defined in the ``parse`` module.
+
+
+Nodes can be created and nested to form "trees":
+>>> n1 = Node('leaf', 'A')
+>>> n2 = Node('leaf', 'B')
+>>> t = Node('tree', (n1, n2))
+>>> t
+Node('tree', (Node('leaf', 'A'), Node('leaf', 'B')))
+
+Trees of Nodes can be serialized as S-expressions, XML or
+JSON (not shown here):
+>>> t.as_sxpr()
+'(tree (leaf "A") (leaf "B"))'
+>>> print(t.as_xml())
+<tree>
+  <leaf>A</leaf>
+  <leaf>B</leaf>
+</tree>
+
+The children-property yields the tuple of immediate descendants:
+>>> t.children
+(Node('leaf', 'A'), Node('leaf', 'B'))
+
+"Leaf-nodes", i.e. Nodes without children yield an empty tuple:
+>>> n1.children
+()
+
+The content-property in turn yield the concatenation of all strings
+of all descendant nodes (children, chidren's children, ...) in order:
+>>> t.content
+'AB'
+>>> n1.content
+'A'
+
+So, if a text is parsed (without dropping any parts of the text),
+the content-property of the root-node yields the original text
+as string, while the tree of nodes represents its structure.
+
+Nodes can either have child-nodes or contain a text-string, but not
+both. (There are no mixed nodes as in XML!) The result-property
+gives acces to whatever a node contains. This can either be a
+tuple of children or a text-string.
+>>> t.result
+(Node('leaf', 'A'), Node('leaf', 'B'))
+>>> n1.result
+'A'
+
+By assigning to the result-property the contained data can be changed.
+This can be used to reshape Node-trees, re-assign text-strings and
+also to replace children by a text-string and vice versa:
+>>> blossom = Node('blossom', 'red')
+>>> t.result = (*t.result, blossom)
+>>> t.as_sxpr()
+'(tree (leaf "A") (leaf "B") (blossom "red"))'
+>>> blossom.result = "blue"
+>>> t.as_sxpr()
+'(tree (leaf "A") (leaf "B") (blossom "blue"))'
+
+The property has been called "result", because in the course of parsing
+a text, it is filled with the result of a parsing operation.
+
+Indexing and Slicing can be used to access the immediate children:
+>>> t[0]
+Node('leaf', 'A')
+>>> t[-1]
+Node('blossom', 'blue')
+>>> t['blossom']
+Node('blossom', 'blue')
+>>> t['leaf']
+(Node('leaf', 'A'), Node('leaf', 'B'))
+
+All nodes have tag_name. Just as tags in XML, the tag_names are
+not individual names but can be thought of as the type of a node.
+Tag-names can, of course be re-assigned:
+>>> t.tag_name
+'tree'
+>>> t['blossom'].tag_name
+'blossom'
+>>> t.tag_name = 'trunk'
+>>> t.as_sxpr()
+'(trunk (leaf "A") (leaf "B") (blossom "blue"))'
+
+Trees of nodes can of course be deeply nested:
+>>> b = Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
+>>> t.result = (b, *t.result)
+>>> t.as_sxpr()
+'(trunk (branch (leaf "C") (leaf "D")) (leaf "A") (leaf "B") (blossom "blue"))'
+>>> t.content
+'CDABblue'
+
+There are a number of useful functions to help navigating a tree and finding
+particular nodes within in a tree:
+>>> list(t.select('leaf'))
+[Node('leaf', 'C'), Node('leaf', 'D'), Node('leaf', 'A'), Node('leaf', 'B')]
+>>> list(t.select(lambda node: node.content == 'blue'))
+[Node('blossom', 'blue')]
+
+The pick functions always picks the first node fulfilling the criterion:
+>>> first_match = t.pick('leaf')
+>>> first_match
+Node('leaf', 'C')
+
+While nodes contain references to their children, a node does not contain
+a references to its parent. As a last resort (because it is slow) the
+node's parent can be found by the `find_parent`-function which must be
+executed ony ancestor of the node:
+>>> t.find_parent(first_match)
+Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
+
+It is much more elegant to keep track of a node's ancestry by using a
+"context" which is a simple List of ancestors, the item of which is
+the node itself. For most search methods such as select, there exists
+a pendant that returns this context instead of just the node itself:
+>>> first_context = t.pick_context('leaf')
+>>> first_context[-1] == first_match
+True
+>>> first_context[0] == t
+True
+>>> [ancestor.tag_name for ancestor in first_context]
+['trunk', 'branch', 'leaf']
 """
 
 from collections import OrderedDict
@@ -337,119 +457,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             S-expression-output.
 
     Examples:
-
-    Nodes can be created and nested to form "trees":
-    >>> n1 = Node('leaf', 'A')
-    >>> n2 = Node('leaf', 'B')
-    >>> t = Node('tree', (n1, n2))
-    >>> t
-    Node('tree', (Node('leaf', 'A'), Node('leaf', 'B')))
-
-    Nodes can be serialized as S-expressions, XML or JSON (not shown here):
-    >>> t.as_sxpr()
-    '(tree (leaf "A") (leaf "B"))'
-    >>> print(t.as_xml())
-    <tree>
-      <leaf>A</leaf>
-      <leaf>B</leaf>
-    </tree>
-
-    The children-property yields the tuple of immediate descendants:
-    >>> t.children
-    (Node('leaf', 'A'), Node('leaf', 'B'))
-
-    "Leaf-nodes", i.e. Nodes without children yield an empty tuple:
-    >>> n1.children
-    ()
-
-    The content-property in turn yield the concatenation of all strings
-    of all descendant nodes (children, chidren's children, ...) in order:
-    >>> t.content
-    'AB'
-    >>> n1.content
-    'A'
-
-    Nodes can either have child-nodes or contain a text-string, but not
-    both. (There are no mixed nodes as in XML!) To access whatever a node
-    contains, be it children or a text-string, use the result property
-    >>> t.result
-    (Node('leaf', 'A'), Node('leaf', 'B'))
-    >>> n1.result
-    'A'
-
-    By assigning to the result-property the contained data can be changed.
-    This can be used to reshape Node-trees, re-assign text-strings and
-    also to replace children by a text-string and vice versa:
-    >>> blossom = Node('blossom', 'red')
-    >>> t.result = (*t.result, blossom)
-    >>> t.as_sxpr()
-    '(tree (leaf "A") (leaf "B") (blossom "red"))'
-    >>> blossom.result = "blue"
-    >>> t.as_sxpr()
-    '(tree (leaf "A") (leaf "B") (blossom "blue"))'
-
-    The property has been called "result", because in the course of parsing
-    a text, it is filled with the result of a parsing operation.
-
-    Indexing and Slicing can be used to access the immediate children:
-    >>> t[0]
-    Node('leaf', 'A')
-    >>> t[-1]
-    Node('blossom', 'blue')
-    >>> t['blossom']
-    Node('blossom', 'blue')
-    >>> t['leaf']
-    (Node('leaf', 'A'), Node('leaf', 'B'))
-
-    All nodes have tag_name. Just as tags in XML, the tag_names are
-    not individual names but can be thought of as the type of a node.
-    Tag-names can, of course be re-assigned:
-    >>> t.tag_name
-    'tree'
-    >>> t['blossom'].tag_name
-    'blossom'
-    >>> t.tag_name = 'trunk'
-    >>> t.as_sxpr()
-    '(trunk (leaf "A") (leaf "B") (blossom "blue"))'
-
-    Trees of nodes can of course be deeply nested:
-    >>> b = Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
-    >>> t.result = (b, *t.result)
-    >>> t.as_sxpr()
-    '(trunk (branch (leaf "C") (leaf "D")) (leaf "A") (leaf "B") (blossom "blue"))'
-    >>> t.content
-    'CDABblue'
-
-    There are a number of useful functions to help finding particular nodes
-    in a tree:
-    >>> list(t.select('leaf'))
-    [Node('leaf', 'C'), Node('leaf', 'D'), Node('leaf', 'A'), Node('leaf', 'B')]
-    >>> list(t.select(lambda node: node.content == 'blue'))
-    [Node('blossom', 'blue')]
-
-    The pick functions always picks the first node fulfilling the criterion:
-    >>> first_match = t.pick('leaf')
-    >>> first_match
-    Node('leaf', 'C')
-
-    While nodes contain references to their children, a node does not contain
-    a references to its parent. As a last resort (because it is slow) the
-    node's parent can be found by the `find_parent`-function which must be
-    executed ony ancestor of the node:
-    >>> t.find_parent(first_match)
-    Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
-
-    It is much more elegant to keep track of a node's ancestry by using a
-    "context" which is a simple List of ancestors, the item of which is
-    the node itself. For most search methods such as select, there exists
-    a pendant that returns this context instead of just the node itself:
-    >>> first_context = t.pick_context('leaf')
-    >>> first_context[-1] == first_match
-    True
-    >>> first_context[0] == t
-    True
-    >>> [ancestor.tag_name for ancestor in first_context]
-    ['trunk', 'branch', 'leaf']
 
     Examples for attributes still needed!!!
     """
@@ -1790,7 +1797,7 @@ def pick_context(context: List[Node],
 
 
 def foregoing_str(context: List[Node], length: int = -1) -> str:
-    """Retruns `length` characters from the string content preceding
+    """Returns `length` characters from the string content preceding
     the context."""
     N = 0
     l = []
@@ -1805,7 +1812,7 @@ def foregoing_str(context: List[Node], length: int = -1) -> str:
 
 
 def ensuing_str(context: List[Node], length: int = -1) -> str:
-    """Returns `length` characters from the string contenxt succeeding
+    """Returns `length` characters from the string content succeeding
     the context."""
     N = 0
     l = []
@@ -1863,7 +1870,7 @@ ContextMapping = Tuple[List[int], List[List[Node]]]  # A mapping of character po
 def generate_context_mapping(node: Node) -> ContextMapping:
     """
     Generates and returns a context mapping for all leave-nodes of the
-    tree originating in `node`. A context mapping is am ordered mapping
+    tree originating in `node`. A context mapping is an ordered mapping
     of the first text position of every leaf-node to the context of
     this node.
 
@@ -1891,7 +1898,7 @@ def map_pos_to_context(i: int, cm: ContextMapping) -> Tuple[List[Node], int]:
         context mapping `cm` was generated
     :param cm:  a context mapping
     :return:    tuple (context, relative position) where relative
-        postition is the position of i relative to the actual
+        position is the position of i relative to the actual
         position of the last node in the context.
     """
     ctx_index = bisect.bisect_right(cm[0], i) - 1
@@ -1971,7 +1978,7 @@ def tree_sanity_check(tree: Node) -> bool:
     """
     node_set = set()  # type: Set[Node]
     for node in tree.select_if(lambda nd: True, include_root=True):
-        if node in node_set or isinstance(Node, FrozenNode):
+        if not isinstance(node, Node) or node in node_set or isinstance(node, FrozenNode):
             return False
         node_set.add(node)
     return True
@@ -2105,15 +2112,6 @@ class RootNode(Node):
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
         return self
 
-    def validate(self):
-        """Raises a ValueError if the tree contains any object that is not
-        a Node. This can happen, because for performance-reasons the types
-        of the parameters will not be cheked upon node creation. """
-        for node in self.select(ALL_NODES):
-            if not isinstance(node, Node):
-                raise ValueError('%s is not a Node!' % repr(node))
-        return True
-
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
         """
         Adds an Error object to the tree, locating it at a specific node.
@@ -2198,8 +2196,8 @@ class RootNode(Node):
         """
         Transfers errors to a different node. While errors never get lost
         during AST-transformation, because they are kept by the RootNode,
-        the nodes they were connected to may be dropped in the course of the
-        transformation. This function allows to attach error from a node that
+        the nodes they are connected to may be dropped in the course of the
+        transformation. This function allows to attach errors from a node that
         will be dropped to a different node.
         """
         srcId = id(src)
@@ -2229,15 +2227,17 @@ class RootNode(Node):
         return self.errors
 
     def did_match(self) -> bool:
-        """Returns True, if the parser that has generated this tree did
+        """
+        Returns True, if the parser that has generated this tree did
         match, False otherwise. Depending on wether the Grammar-object that
         that generated the syntax tree was called with `complete_match=True`
         or not this requires either the complete document to have been
         matched or only the beginning.
 
-        Note: That if the parser did match, this does not mean that it must
+        Note: If the parser did match, this does not mean that it must
         have matched without errors. It simply means the no
-        PARSER_STOPPED_BEFORE_END-error has occurred."""
+        PARSER_STOPPED_BEFORE_END-error has occurred.
+        """
         return self.tag_name != '__not_yet_ready__' \
             and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
 
