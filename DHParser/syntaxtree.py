@@ -207,7 +207,8 @@ def create_match_function(criterion: CriteriaType) -> MatchFunction:
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.tag_name in cast(Container, criterion)
-    raise TypeError("Criterion %s of type %s does not represent a legal criteria type")
+    raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
+                    % (repr(criterion), type(criterion)))
 
 
 def create_context_match_function(criterion: CriteriaType) -> ContextMatchFunction:
@@ -283,9 +284,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     of the node's content in the source code, but may also be left
     uninitialized.
 
-    Examples:
-    TODO: Add some examples here!
-
     Attributes and Properties:
         tag_name (str):  The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name.
@@ -305,7 +303,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         content (str):  Yields the contents of the tree as string. The
             difference to ``str(node)`` is that ``node.content`` does
-            not add the error messages to the returned string.
+            not add the error messages to the returned string. READ ONLY!
 
         len (int):  The full length of the node's string result if the
             node is a leaf node or, otherwise, the length of the concatenated
@@ -337,6 +335,123 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             dictionary is created lazily upon first usage. The attr
             will only be shown in the XML-Representation, not in the
             S-expression-output.
+
+    Examples:
+
+    Nodes can be created and nested to form "trees":
+    >>> n1 = Node('leaf', 'A')
+    >>> n2 = Node('leaf', 'B')
+    >>> t = Node('tree', (n1, n2))
+    >>> t
+    Node('tree', (Node('leaf', 'A'), Node('leaf', 'B')))
+
+    Nodes can be serialized as S-expressions, XML or JSON (not shown here):
+    >>> t.as_sxpr()
+    '(tree (leaf "A") (leaf "B"))'
+    >>> print(t.as_xml())
+    <tree>
+      <leaf>A</leaf>
+      <leaf>B</leaf>
+    </tree>
+
+    The children-property yields the tuple of immediate descendants:
+    >>> t.children
+    (Node('leaf', 'A'), Node('leaf', 'B'))
+
+    "Leaf-nodes", i.e. Nodes without children yield an empty tuple:
+    >>> n1.children
+    ()
+
+    The content-property in turn yield the concatenation of all strings
+    of all descendant nodes (children, chidren's children, ...) in order:
+    >>> t.content
+    'AB'
+    >>> n1.content
+    'A'
+
+    Nodes can either have child-nodes or contain a text-string, but not
+    both. (There are no mixed nodes as in XML!) To access whatever a node
+    contains, be it children or a text-string, use the result property
+    >>> t.result
+    (Node('leaf', 'A'), Node('leaf', 'B'))
+    >>> n1.result
+    'A'
+
+    By assigning to the result-property the contained data can be changed.
+    This can be used to reshape Node-trees, re-assign text-strings and
+    also to replace children by a text-string and vice versa:
+    >>> blossom = Node('blossom', 'red')
+    >>> t.result = (*t.result, blossom)
+    >>> t.as_sxpr()
+    '(tree (leaf "A") (leaf "B") (blossom "red"))'
+    >>> blossom.result = "blue"
+    >>> t.as_sxpr()
+    '(tree (leaf "A") (leaf "B") (blossom "blue"))'
+
+    The property has been called "result", because in the course of parsing
+    a text, it is filled with the result of a parsing operation.
+
+    Indexing and Slicing can be used to access the immediate children:
+    >>> t[0]
+    Node('leaf', 'A')
+    >>> t[-1]
+    Node('blossom', 'blue')
+    >>> t['blossom']
+    Node('blossom', 'blue')
+    >>> t['leaf']
+    (Node('leaf', 'A'), Node('leaf', 'B'))
+
+    All nodes have tag_name. Just as tags in XML, the tag_names are
+    not individual names but can be thought of as the type of a node.
+    Tag-names can, of course be re-assigned:
+    >>> t.tag_name
+    'tree'
+    >>> t['blossom'].tag_name
+    'blossom'
+    >>> t.tag_name = 'trunk'
+    >>> t.as_sxpr()
+    '(trunk (leaf "A") (leaf "B") (blossom "blue"))'
+
+    Trees of nodes can of course be deeply nested:
+    >>> b = Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
+    >>> t.result = (b, *t.result)
+    >>> t.as_sxpr()
+    '(trunk (branch (leaf "C") (leaf "D")) (leaf "A") (leaf "B") (blossom "blue"))'
+    >>> t.content
+    'CDABblue'
+
+    There are a number of useful functions to help finding particular nodes
+    in a tree:
+    >>> list(t.select('leaf'))
+    [Node('leaf', 'C'), Node('leaf', 'D'), Node('leaf', 'A'), Node('leaf', 'B')]
+    >>> list(t.select(lambda node: node.content == 'blue'))
+    [Node('blossom', 'blue')]
+
+    The pick functions always picks the first node fulfilling the criterion:
+    >>> first_match = t.pick('leaf')
+    >>> first_match
+    Node('leaf', 'C')
+
+    While nodes contain references to their children, a node does not contain
+    a references to its parent. As a last resort (because it is slow) the
+    node's parent can be found by the `find_parent`-function which must be
+    executed ony ancestor of the node:
+    >>> t.find_parent(first_match)
+    Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
+
+    It is much more elegant to keep track of a node's ancestry by using a
+    "context" which is a simple List of ancestors, the item of which is
+    the node itself. For most search methods such as select, there exists
+    a pendant that returns this context instead of just the node itself:
+    >>> first_context = t.pick_context('leaf')
+    >>> first_context[-1] == first_match
+    True
+    >>> first_context[0] == t
+    True
+    >>> [ancestor.tag_name for ancestor in first_context]
+    ['trunk', 'branch', 'leaf']
+
+    Examples for attributes still needed!!!
     """
 
     __slots__ = '_result', '_children', '_pos', 'tag_name', '_xml_attr'
@@ -682,7 +797,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int]) -> Union['Node', Sequence['Node']]:
+    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', Sequence['Node']]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
@@ -706,7 +821,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             IndexError: if key was an integer index that did not exist
             ValueError: if the __getitem__ has been called on a leaf node.
         """
-        if isinstance(key, int):
+        if isinstance(key, (int, slice)):
             return self._children[key]
         else:
             mf = create_match_function(key)
@@ -1989,6 +2104,15 @@ class RootNode(Node):
         if id(node) in self.error_nodes:
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
         return self
+
+    def validate(self):
+        """Raises a ValueError if the tree contains any object that is not
+        a Node. This can happen, because for performance-reasons the types
+        of the parameters will not be cheked upon node creation. """
+        for node in self.select(ALL_NODES):
+            if not isinstance(node, Node):
+                raise ValueError('%s is not a Node!' % repr(node))
+        return True
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
         """
