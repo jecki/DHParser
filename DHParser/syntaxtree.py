@@ -238,11 +238,21 @@ a pendant that returns this context instead of just the node itself:
 True
 >>> last_context[0] == sentence
 True
->>> [ancestor.tag_name for ancestor in last_context]
-['sentence', 'phrase', 'word']
+>>> [(ancestor.tag_name, ancestor.content) for ancestor in last_context]
+[('sentence', 'This is Buckingham Palace'),\
+ ('phrase', 'Buckingham Palace'),\
+ ('word', 'Palace')]
 
 A context points to a pariticular part of text by marking the path from
-the root to the node the content of which contains this text.
+the root to the node the content of which contains this text. When
+analysing or transforming a tree-structured text, it is often helpful
+to "zoom" in and out of a particular part of text (pointed to by a
+context) or to move forward and backward from a particular location
+(again represented by a context).
+
+The `next_context()` and `prev_context()`-functions allow to move
+one step forward or backward from a context:
+
 
 """
 
@@ -1690,7 +1700,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 def validate_token_sequence(token_sequence: str) -> bool:
     """Returns True, if `token_sequence` is properly formed.
 
-    Token sequences are stirngs or words which are separated by
+    Token sequences are strings or words which are separated by
     single blanks with no leading or trailing blank
     """
     return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
