@@ -2217,7 +2217,7 @@ class RootNode(Node):
             assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
                 "Wrong error position when processing error: %s\n" % str(error) + \
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, len(node) - 1))
-            assert node.pos >= 0
+            assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
         self.error_nodes.setdefault(id(node), []).append(error)
         if node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
