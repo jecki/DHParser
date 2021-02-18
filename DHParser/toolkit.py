@@ -739,6 +739,8 @@ def linebreaks(text: Union[StringView, str]) -> List[int]:
     """
     Returns a list of indices all line breaks in the text.
     """
+    assert isinstance(text, (StringView, str)), \
+        "Type %s of `text` is not a string type!" % str(type(text))
     lbr = [-1]
     i = text.find('\n', 0)
     while i >= 0:

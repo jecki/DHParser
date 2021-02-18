@@ -124,7 +124,7 @@ True
 'unknown'
 
 If called with no parameters or an empty string as attribute name,
-`has_attr()` return True, if any attributes are present:
+`has_attr()` returns True, if at least one attribute is present:
 >>> parent.has_attr()
 False
 
@@ -133,7 +133,42 @@ Attributes can be deleted like dictionary entries:
 >>> node.has_attr('price')
 False
 
-POSTITION-PROPERTY
+Node-objects contain a special "write once, read afterwards"-property
+named `pos` that is meant to capture the source code position of the
+content represented by the Node. Usually, the `pos` values are
+initialized with the corresponding source code location by the parser.
+
+The main purpose of keeping source-code locations in the node-objects
+is to equip the messages of errors that are detected in later
+processing stages with source code locations. In later processing
+stages the tree may already have been reshaped and its string-content
+may have been changed, say, by normalising whitespace or dropping
+delimiters.
+
+Before the `pos`-field can be read, it must have been initialized with
+the `with_pos`-method, which recursively initializes the `pos`-field of
+the child nodes according to the offset of the string values from the
+main field.
+
+>>> import copy; essentials = copy.deepcopy(parent)
+>>> print(essentials.with_pos(0).as_xml(src=essentials.content))
+<phrase line="1" col="1">
+  <word line="1" col="1">Buckingham</word>
+  <blank line="1" col="11"> </blank>
+  <word line="1" col="12">Palace</word>
+</phrase>
+>>> essentials[-1].pos, essentials.content.find('Palace')
+(11, 11)
+>>> essentials.result = tuple(child for child in essentials.children \
+                              if child.tag_name != 'blank')
+>>> print(essentials.as_xml(src=essentials.content))
+<phrase line="1" col="1">
+  <word line="1" col="1">Buckingham</word>
+  <word line="1" col="12">Palace</word>
+</phrase>
+>>> essentials[-1].pos, essentials.content.find('Palace')
+(11, 10)
+
 
 # Serializing and de-serializing syntax-trees
 
@@ -206,8 +241,9 @@ True
 >>> [ancestor.tag_name for ancestor in last_context]
 ['sentence', 'phrase', 'word']
 
-If a context marks a pariticular part of text within a structured text by
-capturing the path from the root to the node the content of which is thi
+A context points to a pariticular part of text by marking the path from
+the root to the node the content of which contains this text.
+
 """
 
 from collections import OrderedDict
@@ -563,7 +599,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             duplicate = self.__class__(self.tag_name, self.result, True)
         duplicate._pos = self._pos
         if self.has_attr():
-            duplicate.attr.update(copy.deepcopy(self._xml_attr))
+            duplicate.attr.update(self._xml_attr)
+            # duplicate.attr.update(copy.deepcopy(self._xml_attr))
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
         return duplicate
 
@@ -801,13 +838,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         try:
             if self._xml_attr is None:          # cython compatibility
-                self._xml_attr = OrderedDict()
+                self._xml_attr = OrderedDict()  # type: Dict[str, str]
         except AttributeError:
             self._xml_attr = OrderedDict()
         return self._xml_attr
 
     @attr.setter
-    def attr(self, attr_dict: OrderedDict):
+    def attr(self, attr_dict: OrderedDict[str, str]):
         self._xml_attr = attr_dict
 
     def get_attr(self, attribute: str, default: str) -> str:
@@ -2145,7 +2182,7 @@ class RootNode(Node):
         new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
         map_id = dict(zip(old_node_ids, new_node_ids))
         if self.has_attr():
-            duplicate.attr.update(copy.deepcopy(self._xml_attr))
+            duplicate.attr.update(self._xml_attr)
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
         duplicate.errors = copy.copy(self.errors)
         duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
