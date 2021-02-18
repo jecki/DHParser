@@ -17,130 +17,197 @@
 
 
 """
-Module ``syntaxtree`` defines the ``Node``-class for syntax trees as well
-as an abstract base class for parser-objects. The latter is defined
-here, because node-objects refer to parser-objects. All concrete
-parser classes are defined in the ``parse`` module.
+Module ``syntaxtree`` encapsulates the functionality for creating
+hand handling syntax-trees. This includes serialization and
+deserialization of syntax-trees, navigating and serching syntax-trees
+as well as annotating sytanx trees with attributes and error messages.
 
+# The Node-class
 
-Nodes can be created and nested to form "trees":
->>> n1 = Node('leaf', 'A')
->>> n2 = Node('leaf', 'B')
->>> t = Node('tree', (n1, n2))
->>> t
-Node('tree', (Node('leaf', 'A'), Node('leaf', 'B')))
+Syntax trees are composed of Node-objects which are linked
+unidirectionally from parent to chilren. Nodes can contain either
+child-nodes, in which case they are informally called "branch-nodes" or
+test-strings, in which case they informally called "leaf nodes", but
+not both at the same time. (There are no mixed nodes as in XML!)
 
-Trees of Nodes can be serialized as S-expressions, XML or
-JSON (not shown here):
->>> t.as_sxpr()
-'(tree (leaf "A") (leaf "B"))'
->>> print(t.as_xml())
-<tree>
-  <leaf>A</leaf>
-  <leaf>B</leaf>
-</tree>
+In order to test whether a Node is leaf-node one can check for the
+absence of children.
+>>> node = Node('word', 'Palace')
+>>> assert not node.children
 
-The children-property yields the tuple of immediate descendants:
->>> t.children
-(Node('leaf', 'A'), Node('leaf', 'B'))
+The data of a node can be queried by reading the result-property:
+>>> node.result
+'Palace'
 
-"Leaf-nodes", i.e. Nodes without children yield an empty tuple:
->>> n1.children
+The `result` is always a string or a tuple of Nodes, even if the
+node-object has been initialized with a single node:
+>>> parent = Node('phrase', node)
+>>> parent.result
+(Node('word', 'Palace'),)
+
+The `result`-property can be assigned to, in order to changae the data
+of a node:
+>>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
+
+More conveniently than printing the result-propery, nodes can be
+serialized as S-expressions (well-known from the computer languages
+"lisp" and "scheme"):
+>>> print(parent.as_sxpr())
+(phrase (word "Buckingham") (blank " ") (word "Palace"))
+
+It is also possible to serialize nodes as XML-snippet:
+>>> print(parent.as_xml())
+<phrase>
+  <word>Buckingham</word>
+  <blank> </blank>
+  <word>Palace</word>
+</phrase>
+
+Content-equality of Nodes must be tested with the `equals()`-method.
+The equality operator `==` tests merely for the identity of the
+node-object, not for the euqality of the content of two different
+node-objects:
+>>> n1 = Node('dollars', '1')
+>>> n2 = Node('dollars', '1')
+>>> n1.equals(n2)
+True
+>>> n1 == n2
+False
+
+An empty node is always a leaf-node, that is, if initialized with an
+empty tuple, the node's result will actually be the empty string:
+>>> empty = Node('void', ())
+>>> empty.result
+''
+>>> assert empty.equals(Node('void', ''))
+
+Next to the `result`-property, a node's content can be queried with
+either its `children`-property or its `content`-property. The former
+yields the tuple of child-nodes. The latter yields the string-content
+of the node, which in the case of a "branch-node" is the (recursively
+generated) concatenated string-content of all of its children:
+>>> node.content
+'Palace'
+>>> node.children
 ()
+>>> parent.content
+'Buckingham Palace'
+>>> parent.children
+(Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace'))
 
-The content-property in turn yield the concatenation of all strings
-of all descendant nodes (children, chidren's children, ...) in order:
->>> t.content
-'AB'
->>> n1.content
-'A'
+Both the `content`-property and the `children`-propery are
+read-only-properties. In order to change the data of a node, its
+`result`-property must be assigned to (as shown above).
 
-So, if a text is parsed (without dropping any parts of the text),
-the content-property of the root-node yields the original text
-as string, while the tree of nodes represents its structure.
+Just like HTML- oder XML-tags, nodes can be annotated with attributes.
+Attributes are stored in an ordered dictionary that maps string
+identifiers, i.e. the attribute name, to the string-content of the
+attribute. This dictionary can be accessed via the `attr`-property:
+>>> node.attr['price'] = 'very high'
+>>> print(node.as_xml())
+<word price="very high">Palace</word>
 
-Nodes can either have child-nodes or contain a text-string, but not
-both. (There are no mixed nodes as in XML!) The result-property
-gives acces to whatever a node contains. This can either be a
-tuple of children or a text-string.
->>> t.result
-(Node('leaf', 'A'), Node('leaf', 'B'))
->>> n1.result
-'A'
+When serializing as S-expressions attributes are shown as a nested list
+marked with a "tick":
+>>> print(node.as_sxpr())
+(word `(price "very high") "Palace")
 
-By assigning to the result-property the contained data can be changed.
-This can be used to reshape Node-trees, re-assign text-strings and
-also to replace children by a text-string and vice versa:
->>> blossom = Node('blossom', 'red')
->>> t.result = (*t.result, blossom)
->>> t.as_sxpr()
-'(tree (leaf "A") (leaf "B") (blossom "red"))'
->>> blossom.result = "blue"
->>> t.as_sxpr()
-'(tree (leaf "A") (leaf "B") (blossom "blue"))'
+Attributes can be queried via the `has_attr()` and `get_attr()`-methods.
+This is to be preferred over accessing the `attr`-property for querying,
+because the attribute dictionary is created lazily on the first
+access of the `attr`-property.
+>>> node.has_attr('price')
+True
+>>> node.get_attr('price', '')
+'very high'
+>>> parent.get_attr('price', 'unknown')
+'unknown'
 
-The property has been called "result", because in the course of parsing
-a text, it is filled with the result of a parsing operation.
+If called with no parameters or an empty string as attribute name,
+`has_attr()` return True, if any attributes are present:
+>>> parent.has_attr()
+False
 
-Indexing and Slicing can be used to access the immediate children:
->>> t[0]
-Node('leaf', 'A')
->>> t[-1]
-Node('blossom', 'blue')
->>> t['blossom']
-Node('blossom', 'blue')
->>> t['leaf']
-(Node('leaf', 'A'), Node('leaf', 'B'))
+Attributes can be deleted like dictionary entries:
+>>> del node.attr['price']
+>>> node.has_attr('price')
+False
 
-All nodes have tag_name. Just as tags in XML, the tag_names are
-not individual names but can be thought of as the type of a node.
-Tag-names can, of course be re-assigned:
->>> t.tag_name
-'tree'
->>> t['blossom'].tag_name
-'blossom'
->>> t.tag_name = 'trunk'
->>> t.as_sxpr()
-'(trunk (leaf "A") (leaf "B") (blossom "blue"))'
+POSTITION-PROPERTY
 
-Trees of nodes can of course be deeply nested:
->>> b = Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
->>> t.result = (b, *t.result)
->>> t.as_sxpr()
-'(trunk (branch (leaf "C") (leaf "D")) (leaf "A") (leaf "B") (blossom "blue"))'
->>> t.content
-'CDABblue'
+# Serializing and de-serializing syntax-trees
+
+Syntax trees can be serialized as S-expressions, XML, JSON and indented
+text. Module 'syntaxtree' also contains two simple parsers
+(`parse_sxpr()`, `parse_xml()`) to convert XML-snippets and
+S-expressions into trees composed of Node-objects. There is also a
+function to parse JSON (`parse_json_syntaxtree()`), but in contrast
+to the former two functions it can only deserialize previously
+JSON-serialized trees and not any kind of JSON-file. There is no
+function to deserialize indented text.
+
+In order to make parameterizing serialization easier, the Node-class
+also defines a generic `serialize()`-method next to the more specialized
+`as_sxpr()`-, `as_json()`- and `as_xml()`-methods.
+
+Examples:
+>>> sentence = parse_sxpr(\
+    '(sentence (word "This") (blank " ") (word "is") (blank " ") '\
+    '          (phrase (word "Buckingham") (blank " ") (word "Palace")))')
+>>> print(sentence.serialize(how='indented'))
+sentence
+  word "This"
+  blank " "
+  word "is"
+  blank " "
+  phrase
+    word "Buckingham"
+    blank " "
+    word "Palace"
+>>> sxpr = sentence.serialize(how='sxpr')
+>>> round_trip = parse_sxpr(sxpr)
+>>> assert sentence.equals(round_trip)
+
+
+# Navigating nodes and "contexts"
 
 There are a number of useful functions to help navigating a tree and finding
 particular nodes within in a tree:
->>> list(t.select('leaf'))
-[Node('leaf', 'C'), Node('leaf', 'D'), Node('leaf', 'A'), Node('leaf', 'B')]
->>> list(t.select(lambda node: node.content == 'blue'))
-[Node('blossom', 'blue')]
+>>> list(sentence.select('word'))
+[Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'), Node('word', 'Palace')]
+>>> list(sentence.select(lambda node: node.content == ' '))
+[Node('blank', ' '), Node('blank', ' '), Node('blank', ' ')]
 
 The pick functions always picks the first node fulfilling the criterion:
->>> first_match = t.pick('leaf')
->>> first_match
-Node('leaf', 'C')
+>>> sentence.pick('word')
+Node('word', 'This')
+
+Or, reversing the direction:
+>>> last_match = sentence.pick('word', reverse=True)
+>>> last_match
+Node('word', 'Palace')
 
 While nodes contain references to their children, a node does not contain
 a references to its parent. As a last resort (because it is slow) the
 node's parent can be found by the `find_parent`-function which must be
 executed ony ancestor of the node:
->>> t.find_parent(first_match)
-Node('branch', (Node('leaf', 'C'), Node('leaf', 'D')))
+>>> sentence.find_parent(last_match)
+Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
 
 It is much more elegant to keep track of a node's ancestry by using a
 "context" which is a simple List of ancestors, the item of which is
 the node itself. For most search methods such as select, there exists
 a pendant that returns this context instead of just the node itself:
->>> first_context = t.pick_context('leaf')
->>> first_context[-1] == first_match
+>>> last_context = sentence.pick_context('word', reverse=True)
+>>> last_context[-1] == last_match
 True
->>> first_context[0] == t
+>>> last_context[0] == sentence
 True
->>> [ancestor.tag_name for ancestor in first_context]
-['trunk', 'branch', 'leaf']
+>>> [ancestor.tag_name for ancestor in last_context]
+['sentence', 'phrase', 'word']
+
+If a context marks a pariticular part of text within a structured text by
+capturing the path from the root to the node the content of which is thi
 """
 
 from collections import OrderedDict
@@ -455,10 +522,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             dictionary is created lazily upon first usage. The attr
             will only be shown in the XML-Representation, not in the
             S-expression-output.
-
-    Examples:
-
-    Examples for attributes still needed!!!
     """
 
     __slots__ = '_result', '_children', '_pos', 'tag_name', '_xml_attr'
@@ -467,8 +530,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                  result: Union[Tuple['Node', ...], 'Node', StringView, str],
                  leafhint: bool = False) -> None:
         """
-        Initializes the ``Node``-object with the ``Parser``-Instance
-        that generated the node and the parser's result.
+        Initializes the ``Node``-object with a tag name and the result of a
+        parsing operation. The result of a parsing operation can either be
+        one or more child-nodes, in which case the Node is informally
+        considered to be a "branch-node", or a text-string, in which case
+        the node is informally considered to be a "leaf-node".
+
+        :param tag_name: a tag_name for the node. If the node has been created
+            by a parser, this is either the parser's name, e.g. "phrase",
+            or if the parser wasn't named the parser's type, i.e. name of the
+            parser's class, preceeded by a colon, e.g. ":Series"
+        :param result: the result of the parsing operation that generated the
+            node or, more generally, the data that the node contains.
+        :param leafhint: default: False. Can be set to true to indicate that
+            `result` is a string type. This is an optimization to circumvent
+             type-checking the `result`-parameter.
         """
         self._pos = -1                   # type: int
         # Assignment to self.result initializes the attr _result and children
@@ -1542,7 +1618,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # flatten_threshold = get_config_value('flatten_sxpr_threshold')
         compact_threshold = get_config_value('compact_sxpr_threshold')
 
-        if switch == 's-expression':
+        if switch in ('s-expression', 'sxpr'):
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == 'xml':
@@ -1701,7 +1777,7 @@ def next_context(context: List[Node]) -> Optional[List[Node]]:
     """Returns the context of the successor of the last Node in the
     context. The successor is the sibling of the same parent Node
     succeeding the the node, or if it already is the last sibling, the
-    parent's sibling succeeding the parent, or grand-parente's sibling and
+    parent's sibling succeeding the parent, or grand-parent's sibling and
     so on. In case no successor is found when the first ancestor has been
     reached, None is returned.
     """
@@ -2123,6 +2199,7 @@ class RootNode(Node):
             node_list = []
             nd = None
             for nd in self.select_if(lambda nd: not nd._children):
+                assert nd.pos >= 0
                 if nd.pos <= error.pos < nd.pos + len(nd):
                     node = nd
                     break
@@ -2140,7 +2217,7 @@ class RootNode(Node):
             assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
                 "Wrong error position when processing error: %s\n" % str(error) + \
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, len(node) - 1))
-            # assert node.pos == error.pos or isinstance(node, FrozenNode)
+            assert node.pos >= 0
         self.error_nodes.setdefault(id(node), []).append(error)
         if node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
