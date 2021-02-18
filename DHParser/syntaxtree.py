@@ -238,10 +238,10 @@ a pendant that returns this context instead of just the node itself:
 True
 >>> last_context[0] == sentence
 True
->>> [(ancestor.tag_name, ancestor.content) for ancestor in last_context]
-[('sentence', 'This is Buckingham Palace'),\
- ('phrase', 'Buckingham Palace'),\
- ('word', 'Palace')]
+>>> pp_ctx = lambda ctx: [(ancestor.tag_name, ancestor.content) \
+                          for ancestor in ctx]
+>>> pp_ctx(last_context)
+[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('word', 'Palace')]
 
 A context points to a pariticular part of text by marking the path from
 the root to the node the content of which contains this text. When
@@ -251,7 +251,29 @@ context) or to move forward and backward from a particular location
 (again represented by a context).
 
 The `next_context()` and `prev_context()`-functions allow to move
-one step forward or backward from a context:
+one step forward or backward from a given context:
+>>> pointer = prev_context(last_context)
+>>> pp_ctx(pointer)
+[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('blank', ' ')]
+
+`prev_context()` and `next_context()` automatically zoom out by one step, if they move past
+the first or last child of the last but one node in the list:
+>>> pointer = prev_context(pointer)
+>>> pp_ctx(pointer)
+[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('word', 'Buckingham')]
+>>> pp_ctx(prev_context(pointer))
+[('sentence', 'This is Buckingham Palace'), ('blank', ' ')]
+
+Thus:
+>>> next_context(prev_context(pointer)) == pointer
+False
+>>> pointer = prev_context(pointer)
+>>> pp_ctx(next_context(pointer))
+[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace')]
+
+However, it is possible to zoom back into a context:
+>>> pp_ctx(zoom_into_context(next_context(pointer), FIRST_CHILD, steps=1))
+[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('word', 'Buckingham')]
 
 
 """
@@ -270,7 +292,7 @@ from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
-    validate_XML_attribute_value, fix_XML_attribute_value
+    validate_XML_attribute_value, fix_XML_attribute_value, abbreviate_middle
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -304,6 +326,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'remove_class',
            'prev_context',
            'next_context',
+           'zoom_into_context',
            'leaf_context',
            'prev_leaf_context',
            'next_leaf_context',
@@ -1795,7 +1818,6 @@ remove_class = functools.partial(remove_token_from_attr, attribute='class')
 
 # Navigate contexts ###################################################
 
-
 @cython.locals(i=cython.int, k=cython.int)
 def prev_context(context: List[Node]) -> Optional[List[Node]]:
     """Returns the context of the predecessor of the last Node in the
@@ -1847,9 +1869,13 @@ LAST_CHILD = lambda nd: nd.result[-1]
 FIRST_CHILD = lambda nd: nd.result[0]
 
 
-def leaf_context(context: Optional[List[Node]], pick_child: PickChildFunction) \
-        -> Optional[List[Node]]:
-    """Returns the context of a leaf of the tree originating in 'context[-1]`
+def zoom_into_context(context: Optional[List[Node]],
+                      pick_child: PickChildFunction,
+                      steps: int) \
+                      -> Optional[List[Node]]:
+    """Returns the context of a descendant that follows `steps` generations
+    up the tree originating in 'context[-1]`. If `steps` < 0 this will be
+    as many generations as are needed to reach a leaf-node.
     The function `pick_child` determines which branch to follow during each
     iteration, as long as the top of the context is not yet a leaf node.
     A `context`-parameter value of `None` will simply be passed through.
@@ -1857,13 +1883,15 @@ def leaf_context(context: Optional[List[Node]], pick_child: PickChildFunction) \
     if context:
         ctx = context.copy()
         top = ctx[-1]
-        while top.children:
+        while top.children and steps > 0:
             top = pick_child(top)
             ctx.append(top)
+            steps -= 1
         return ctx
     return None
 
 
+leaf_context = functools.partial(zoom_into_context, steps=-1)
 next_leaf_context = lambda ctx: leaf_context(next_context(ctx), FIRST_CHILD)
 prev_leaf_context = lambda ctx: leaf_context(prev_context(ctx), LAST_CHILD)
 
