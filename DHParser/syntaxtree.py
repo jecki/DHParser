@@ -323,6 +323,50 @@ Node-class traverse the tree pre-order. See the difference::
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
+Sometimes it may be more convenient to search for a specific feature in
+the string-content of a text, rather than in the structured tree. For
+example, finding matching brackets in tree-strcutured text can be quite
+cumbersome if brackets are not "tagged" individually. For theses cases
+it is possible to generate a context mapping that maps text position to
+the contexts of the leaf-nodes to which they belong::
+
+    >>> flat_text = sentence.content
+    >>> ctx_mapping = generate_context_mapping(sentence)
+    >>> leaf_positions, contexts = ctx_mapping
+    >>> { k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in contexts))}
+    {0: '(word "This")', 4: '(blank " ")', 5: '(word "is")', 7: '(blank " ")', 8: '(word "Buckingham")', 18: '(blank " ")', 19: '(word "Palace")'}
+
+Now let's find all letters that are followed by a whitespace character::
+
+    >>> import re; locations = [m.start() for m in re.finditer(r'\w ', flat_text)]
+    >>> targets = [map_pos_to_context(loc, ctx_mapping) for loc in locations]
+
+The target returned by `map_pos_to_context()` is a tuple of the target
+context and the relative position of the location that falls within this
+context::
+
+    >>> [(serialize_context(ctx), relative_pos) for ctx, relative_pos in targets]
+    [('sentence <- word', 3), ('sentence <- word', 1), ('sentence <- phrase <- word', 9)]
+
+Now, the structured text can be manipulated at the precise locations
+where string search yielded a match. Let's turn our text into a little
+riddle by replacing the letters of the leaf-nodes before the match
+locations with three dots::
+
+    >>> for ctx, pos in targets: ctx[-1].result = '...' + ctx[-1].content[pos:]
+    >>> str(sentence)
+    '...s ...s ...m Palace'
+
+The positions resemble the text positions of the text represented by the tree at the
+very moment when the context mapping is generated, not the source positions captured
+by the `pos`-propery of the node-objects! This also means that the mapping becomes
+outdated the very moment, the tree is being restructured.
+
+
+Adding Error Messages
+---------------------
+
+TO BE CONTINUED...
 
 """
 
