@@ -145,9 +145,17 @@ class TestStringView:
         s = StringView('"22"')
         assert s.strip('"') == '22'
 
-    def text_split(self):
+    def test_split(self):
         s = StringView(' 1,2,3,4,5 ', 1, -1)
         assert s.split(',') == ['1', '2', '3', '4', '5']
+
+    def test_index_error(self):
+        s = StringView('0123456789')
+        try:
+            s[25]
+            assert False, "IndexError expected!"
+        except IndexError:
+            pass
 
 
 class TestTextBuffer:

@@ -183,6 +183,8 @@ class StringView:  # collections.abc.Sized
             start, stop = fast_real_indices(index.start, index.stop, self._len)
             return StringView(self._text, self._begin + start, self._begin + stop)
         except AttributeError:
+            if index >= self._len:
+                raise IndexError("StringView index %i out of range 0 - %i" % (index, self._len))
             return StringView(self._text, self._begin + index, self._begin + index + 1)
             # return self._text[self._begin + index] # leads to type errors
 

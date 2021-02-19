@@ -71,6 +71,13 @@ class TestParseSxpression:
         assert str(tree) == "LIUTPR. leg. 21 ..."
         assert tree.attr['unterbedeutungstiefe'] == '0'
 
+    def test_parse_s_expression_malformed(self):
+        try:
+            s = parse_sxpr('(A (B 1) (C (D (E 2) (F 3)) (G 4) (H (I 5) (J 6)) (K 7)')
+            assert False, "ValueError exptected!"
+        except ValueError:
+            pass
+
     def test_endlessloop_error(self):
         tree = parse_sxpr(r'(LINEFEED "\\")')
         assert tree

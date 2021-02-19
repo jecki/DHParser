@@ -22,7 +22,8 @@ hand handling syntax-trees. This includes serialization and
 deserialization of syntax-trees, navigating and serching syntax-trees
 as well as annotating sytanx trees with attributes and error messages.
 
-# The Node-class
+The Node-class
+--------------
 
 Syntax trees are composed of Node-objects which are linked
 unidirectionally from parent to chilren. Nodes can contain either
@@ -31,69 +32,71 @@ test-strings, in which case they informally called "leaf nodes", but
 not both at the same time. (There are no mixed nodes as in XML!)
 
 In order to test whether a Node is leaf-node one can check for the
-absence of children.
->>> node = Node('word', 'Palace')
->>> assert not node.children
+absence of children::
+    >>> node = Node('word', 'Palace')
+    >>> assert not node.children
 
-The data of a node can be queried by reading the result-property:
->>> node.result
-'Palace'
+The data of a node can be queried by reading the result-property::
+
+    >>> node.result
+    'Palace'
 
 The `result` is always a string or a tuple of Nodes, even if the
-node-object has been initialized with a single node:
->>> parent = Node('phrase', node)
->>> parent.result
-(Node('word', 'Palace'),)
+node-object has been initialized with a single node::
+    >>> parent = Node('phrase', node)
+    >>> parent.result
+    (Node('word', 'Palace'),)
 
 The `result`-property can be assigned to, in order to changae the data
-of a node:
->>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
+of a node::
+    >>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
 
 More conveniently than printing the result-propery, nodes can be
 serialized as S-expressions (well-known from the computer languages
-"lisp" and "scheme"):
->>> print(parent.as_sxpr())
-(phrase (word "Buckingham") (blank " ") (word "Palace"))
+"lisp" and "scheme")::
+    >>> print(parent.as_sxpr())
+    (phrase (word "Buckingham") (blank " ") (word "Palace"))
 
-It is also possible to serialize nodes as XML-snippet:
->>> print(parent.as_xml())
-<phrase>
-  <word>Buckingham</word>
-  <blank> </blank>
-  <word>Palace</word>
-</phrase>
+It is also possible to serialize nodes as XML-snippet::
+
+    >>> print(parent.as_xml())
+    <phrase>
+      <word>Buckingham</word>
+      <blank> </blank>
+      <word>Palace</word>
+    </phrase>
 
 Content-equality of Nodes must be tested with the `equals()`-method.
 The equality operator `==` tests merely for the identity of the
 node-object, not for the euqality of the content of two different
-node-objects:
->>> n1 = Node('dollars', '1')
->>> n2 = Node('dollars', '1')
->>> n1.equals(n2)
-True
->>> n1 == n2
-False
+node-objects::
+    >>> n1 = Node('dollars', '1')
+    >>> n2 = Node('dollars', '1')
+    >>> n1.equals(n2)
+    True
+    >>> n1 == n2
+    False
 
 An empty node is always a leaf-node, that is, if initialized with an
-empty tuple, the node's result will actually be the empty string:
->>> empty = Node('void', ())
->>> empty.result
-''
->>> assert empty.equals(Node('void', ''))
+empty tuple, the node's result will actually be the empty string::
+    >>> empty = Node('void', ())
+    >>> empty.result
+    ''
+    >>> assert empty.equals(Node('void', ''))
 
 Next to the `result`-property, a node's content can be queried with
 either its `children`-property or its `content`-property. The former
 yields the tuple of child-nodes. The latter yields the string-content
 of the node, which in the case of a "branch-node" is the (recursively
-generated) concatenated string-content of all of its children:
->>> node.content
-'Palace'
->>> node.children
-()
->>> parent.content
-'Buckingham Palace'
->>> parent.children
-(Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace'))
+generated) concatenated string-content of all of its children::
+    >>> node.content
+    'Palace'
+    >>> node.children
+    ()
+    >>> parent.content
+    'Buckingham Palace'
+    >>> parent.children
+    (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace'))
 
 Both the `content`-property and the `children`-propery are
 read-only-properties. In order to change the data of a node, its
@@ -102,36 +105,37 @@ read-only-properties. In order to change the data of a node, its
 Just like HTML- oder XML-tags, nodes can be annotated with attributes.
 Attributes are stored in an ordered dictionary that maps string
 identifiers, i.e. the attribute name, to the string-content of the
-attribute. This dictionary can be accessed via the `attr`-property:
->>> node.attr['price'] = 'very high'
->>> print(node.as_xml())
-<word price="very high">Palace</word>
+attribute. This dictionary can be accessed via the `attr`-property::
+    >>> node.attr['price'] = 'very high'
+    >>> print(node.as_xml())
+    <word price="very high">Palace</word>
 
 When serializing as S-expressions attributes are shown as a nested list
-marked with a "tick":
->>> print(node.as_sxpr())
-(word `(price "very high") "Palace")
+marked with a "tick"::
+    >>> print(node.as_sxpr())
+    (word `(price "very high") "Palace")
 
 Attributes can be queried via the `has_attr()` and `get_attr()`-methods.
 This is to be preferred over accessing the `attr`-property for querying,
 because the attribute dictionary is created lazily on the first
-access of the `attr`-property.
->>> node.has_attr('price')
-True
->>> node.get_attr('price', '')
-'very high'
->>> parent.get_attr('price', 'unknown')
-'unknown'
+access of the `attr`-property::
+    >>> node.has_attr('price')
+    True
+    >>> node.get_attr('price', '')
+    'very high'
+    >>> parent.get_attr('price', 'unknown')
+    'unknown'
 
 If called with no parameters or an empty string as attribute name,
-`has_attr()` returns True, if at least one attribute is present:
->>> parent.has_attr()
-False
+`has_attr()` returns True, if at least one attribute is present::
+    >>> parent.has_attr()
+    False
 
-Attributes can be deleted like dictionary entries:
->>> del node.attr['price']
->>> node.has_attr('price')
-False
+Attributes can be deleted like dictionary entries::
+
+    >>> del node.attr['price']
+    >>> node.has_attr('price')
+    False
 
 Node-objects contain a special "write once, read afterwards"-property
 named `pos` that is meant to capture the source code position of the
@@ -148,29 +152,28 @@ delimiters.
 Before the `pos`-field can be read, it must have been initialized with
 the `with_pos`-method, which recursively initializes the `pos`-field of
 the child nodes according to the offset of the string values from the
-main field.
-
->>> import copy; essentials = copy.deepcopy(parent)
->>> print(essentials.with_pos(0).as_xml(src=essentials.content))
-<phrase line="1" col="1">
-  <word line="1" col="1">Buckingham</word>
-  <blank line="1" col="11"> </blank>
-  <word line="1" col="12">Palace</word>
-</phrase>
->>> essentials[-1].pos, essentials.content.find('Palace')
-(11, 11)
->>> essentials.result = tuple(child for child in essentials.children \
-                              if child.tag_name != 'blank')
->>> print(essentials.as_xml(src=essentials.content))
-<phrase line="1" col="1">
-  <word line="1" col="1">Buckingham</word>
-  <word line="1" col="12">Palace</word>
-</phrase>
->>> essentials[-1].pos, essentials.content.find('Palace')
-(11, 10)
+main field::
+    >>> import copy; essentials = copy.deepcopy(parent)
+    >>> print(essentials.with_pos(0).as_xml(src=essentials.content))
+    <phrase line="1" col="1">
+      <word line="1" col="1">Buckingham</word>
+      <blank line="1" col="11"> </blank>
+      <word line="1" col="12">Palace</word>
+    </phrase>
+    >>> essentials[-1].pos, essentials.content.find('Palace')
+    (11, 11)
+    >>> essentials.result = tuple(child for child in essentials.children if child.tag_name != 'blank')
+    >>> print(essentials.as_xml(src=essentials.content))
+    <phrase line="1" col="1">
+      <word line="1" col="1">Buckingham</word>
+      <word line="1" col="12">Palace</word>
+    </phrase>
+    >>> essentials[-1].pos, essentials.content.find('Palace')
+    (11, 10)
 
 
-# Serializing and de-serializing syntax-trees
+Serializing and de-serializing syntax-trees
+-------------------------------------------
 
 Syntax trees can be serialized as S-expressions, XML, JSON and indented
 text. Module 'syntaxtree' also contains two simple parsers
@@ -183,65 +186,63 @@ function to deserialize indented text.
 
 In order to make parameterizing serialization easier, the Node-class
 also defines a generic `serialize()`-method next to the more specialized
-`as_sxpr()`-, `as_json()`- and `as_xml()`-methods.
-
-Examples:
->>> sentence = parse_sxpr(\
-    '(sentence (word "This") (blank " ") (word "is") (blank " ") '\
-    '          (phrase (word "Buckingham") (blank " ") (word "Palace")))')
->>> print(sentence.serialize(how='indented'))
-sentence
-  word "This"
-  blank " "
-  word "is"
-  blank " "
-  phrase
-    word "Buckingham"
-    blank " "
-    word "Palace"
->>> sxpr = sentence.serialize(how='sxpr')
->>> round_trip = parse_sxpr(sxpr)
->>> assert sentence.equals(round_trip)
+`as_sxpr()`-, `as_json()`- and `as_xml()`-methods::
+    >>> s = '(sentence (word "This") (blank " ") (word "is") (blank " ") (phrase (word "Buckingham") (blank " ") (word "Palace")))'
+    >>> sentence = parse_sxpr(s)
+    >>> print(sentence.serialize(how='indented'))
+    sentence
+      word "This"
+      blank " "
+      word "is"
+      blank " "
+      phrase
+        word "Buckingham"
+        blank " "
+        word "Palace"
+    >>> sxpr = sentence.serialize(how='sxpr')
+    >>> round_trip = parse_sxpr(sxpr)
+    >>> assert sentence.equals(round_trip)
 
 
-# Navigating nodes and "contexts"
+Navigating and searching nodes and "contexts"
+---------------------------------------------
 
 There are a number of useful functions to help navigating a tree and finding
-particular nodes within in a tree:
->>> list(sentence.select('word'))
-[Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'), Node('word', 'Palace')]
->>> list(sentence.select(lambda node: node.content == ' '))
-[Node('blank', ' '), Node('blank', ' '), Node('blank', ' ')]
+particular nodes within in a tree::
+    >>> list(sentence.select('word'))
+    [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'), Node('word', 'Palace')]
+    >>> list(sentence.select(lambda node: node.content == ' '))
+    [Node('blank', ' '), Node('blank', ' '), Node('blank', ' ')]
 
-The pick functions always picks the first node fulfilling the criterion:
->>> sentence.pick('word')
-Node('word', 'This')
+The pick functions always picks the first node fulfilling the criterion::
 
-Or, reversing the direction:
->>> last_match = sentence.pick('word', reverse=True)
->>> last_match
-Node('word', 'Palace')
+    >>> sentence.pick('word')
+    Node('word', 'This')
+
+Or, reversing the direction::
+
+    >>> last_match = sentence.pick('word', reverse=True)
+    >>> last_match
+    Node('word', 'Palace')
 
 While nodes contain references to their children, a node does not contain
 a references to its parent. As a last resort (because it is slow) the
 node's parent can be found by the `find_parent`-function which must be
-executed ony ancestor of the node:
->>> sentence.find_parent(last_match)
-Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+executed ony ancestor of the node::
+    >>> sentence.find_parent(last_match)
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
 
 It is much more elegant to keep track of a node's ancestry by using a
 "context" which is a simple List of ancestors, the item of which is
 the node itself. For most search methods such as select, there exists
-a pendant that returns this context instead of just the node itself:
->>> last_context = sentence.pick_context('word', reverse=True)
->>> last_context[-1] == last_match
-True
->>> last_context[0] == sentence
-True
->>> pp_ctx = lambda ctx: [(ancestor.tag_name, ancestor.content) \
-                          for ancestor in ctx]
->>> pp_ctx(last_context)
-[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('word', 'Palace')]
+a pendant that returns this context instead of just the node itself::
+    >>> last_context = sentence.pick_context('word', reverse=True)
+    >>> last_context[-1] == last_match
+    True
+    >>> last_context[0] == sentence
+    True
+    >>> serialize_context(last_context)
+    'sentence <- phrase <- word'
 
 A context points to a pariticular part of text by marking the path from
 the root to the node the content of which contains this text. When
@@ -251,29 +252,76 @@ context) or to move forward and backward from a particular location
 (again represented by a context).
 
 The `next_context()` and `prev_context()`-functions allow to move
-one step forward or backward from a given context:
->>> pointer = prev_context(last_context)
->>> pp_ctx(pointer)
-[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('blank', ' ')]
+one step forward or backward from a given context::
+    >>> pointer = prev_context(last_context)
+    >>> serialize_context(pointer, with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- blank: '
 
 `prev_context()` and `next_context()` automatically zoom out by one step, if they move past
-the first or last child of the last but one node in the list:
->>> pointer = prev_context(pointer)
->>> pp_ctx(pointer)
-[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('word', 'Buckingham')]
->>> pp_ctx(prev_context(pointer))
-[('sentence', 'This is Buckingham Palace'), ('blank', ' ')]
+the first or last child of the last but one node in the list::
+    >>> pointer = prev_context(pointer)
+    >>> serialize_context(pointer, with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+    >>> serialize_context(prev_context(pointer), with_content=-1)
+    'sentence:This is Buckingham Palace <- blank: '
 
-Thus:
->>> next_context(prev_context(pointer)) == pointer
-False
->>> pointer = prev_context(pointer)
->>> pp_ctx(next_context(pointer))
-[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace')]
+Thus::
 
-However, it is possible to zoom back into a context:
->>> pp_ctx(zoom_into_context(next_context(pointer), FIRST_CHILD, steps=1))
-[('sentence', 'This is Buckingham Palace'), ('phrase', 'Buckingham Palace'), ('word', 'Buckingham')]
+    >>> next_context(prev_context(pointer)) == pointer
+    False
+    >>> pointer = prev_context(pointer)
+    >>> serialize_context(next_context(pointer), with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace'
+
+The reason for this beaviour is that `prev_context()` and
+`next_context()` try to move to the context which contains the string
+content preeceding or succeeding that of the given context. Therefore,
+these functions move to the next sibling on the same branch, rather
+traversing the complete tree like the `select()` and `select_context()-
+methods of the Node-class. However, when moving past the first or last
+sibling, it is not clear what the next node on the same level should
+be. To keep it easy, the function "zooms out" and returns the next
+sibling of the parent.
+
+It is, of course, possible to zoom back into a context::
+
+    >>> serialize_context(zoom_into_context(next_context(pointer), FIRST_CHILD, steps=1), with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+
+Often it is preferable to move through the leaf-nodes and their
+contexts right away. Functions like `next_leaf_context()` and
+`prev_leaf_context()` provide syntactic sugar for this case::
+    >>> pointer = next_leaf_context(pointer)
+    >>> serialize_context(pointer, with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+
+It is also possible to inspect just the string content surrounding a
+context, rather than its structural environment::
+    >>> ensuing_str(pointer)
+    ' Palace'
+    >>> assert foregoing_str(pointer, length=1) == ' ', "Blank expected!"
+
+It is also possible to systematically iterate through the contexts
+forward or backward - just like the `node.select_context()`-method,
+but starting from an arbitraty context, instead of the one end or
+the other end of the tree rooted in `node`::
+    >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
+    >>> pointer = t.pick_context('G')
+    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ALL_CONTEXTS)]
+    ['A <- G:4', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- H:56', 'A <- K:7', 'A:1234567']
+    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ALL_CONTEXTS, reverse=True)]
+    ['A <- G:4', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- C <- D:23', 'A <- C:23', 'A <- B:1', 'A:1234567']
+
+Another important difference, besides the starting point is then the
+`select()`-generators of the `syntaxtree`-module traverse the tree
+post-order (or "depth first"), while the respective methods ot the
+Node-class traverse the tree pre-order. See the difference::
+    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ALL_CONTEXTS, include_root=True)]
+    >>> l[l.index('A <- G:4'):]
+    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
+    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ALL_CONTEXTS, include_root=True, reverse=True)]
+    >>> l[l.index('A <- G:4'):]
+    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
 
 """
@@ -540,8 +588,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     of the node's content in the source code, but may also be left
     uninitialized.
 
-    Attributes and Properties:
-        tag_name (str):  The name of the node, which is either its
+    :ivar tag_name: The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name.
 
             By convention the parser's class name when used as tag name
@@ -550,24 +597,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             empty string is considered as "anonymous". See
             `Node.anonymous()`-property
 
-        result (str or tuple):  The result of the parser which
-            generated this node, which can be either a string or a
-            tuple of child nodes.
+    :ivar result: The result of the parser which generated this node,
+            which can be either a string or a tuple of child nodes.
 
-        children (tuple):  The tuple of child nodes or an empty tuple
+    :ivar children: The tuple of child nodes or an empty tuple
             if there are no child nodes. READ ONLY!
 
-        content (str):  Yields the contents of the tree as string. The
+    :ivar content: Yields the contents of the tree as string. The
             difference to ``str(node)`` is that ``node.content`` does
             not add the error messages to the returned string. READ ONLY!
 
-        len (int):  The full length of the node's string result if the
+    :ivar len: The full length of the node's string result if the
             node is a leaf node or, otherwise, the length of the concatenated
             string result's of its descendants. The figure always represents
             the length before AST-transformation and will never change
             through AST-transformation. READ ONLY!
 
-        pos (int):  the position of the node within the parsed text.
+    :ivar pos: the position of the node within the parsed text.
 
             The default value of ``pos`` is -1 meaning invalid by default.
             Setting pos to a value >= 0 will trigger the assignment
@@ -587,7 +633,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             correctly locating errors which might only be detected at
             later stages of the tree-transformation within the source text.
 
-        attr (dict): An optional dictionary of XML-attr. This
+    :ivar attr: An optional dictionary of XML-attr. This
             dictionary is created lazily upon first usage. The attr
             will only be shown in the XML-Representation, not in the
             S-expression-output.
@@ -851,7 +897,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         Returns a dictionary of XML-attr attached to the node.
 
-        Examples:
+        Examples::
+
             >>> node = Node('', '')
             >>> print('Any attributes present?', node.has_attr())
             Any attributes present? False
@@ -907,12 +954,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param attributes: alternatively, a squences of keyword parameters
         :return: `self`
 
-        Example:
-        >>> node = Node('test', '').with_attr(animal = "frog", plant= "tree")
-        >>> dict(node.attr)
-        {'animal': 'frog', 'plant': 'tree'}
-        >>> node.with_attr({'building': 'skyscraper'}).repr
-        "Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})"
+        Example::
+
+            >>> node = Node('test', '').with_attr(animal = "frog", plant= "tree")
+            >>> dict(node.attr)
+            {'animal': 'frog', 'plant': 'tree'}
+            >>> node.with_attr({'building': 'skyscraper'}).repr
+            "Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})"
         """
         if attr_dict:
             assert not attributes, "Node.with_attr() can be called either exclusively with " \
@@ -1734,16 +1782,15 @@ def has_token(token_sequence: str, tokens: str) -> bool:
     """Returns true, if `token` is contained in the blank-spearated
     token sequence. If `token` itself is a blank-separated sequence of
     tokens, True is returned if all tokens are contained in
-    `token_sequence`.
-
-    >>> has_token('bold italic', 'italic')
-    True
-    >>> has_token('bold italic', 'normal')
-    False
-    >>> has_token('bold italic', 'italic bold')
-    True
-    >>> has_token('bold italic', 'bold normal')
-    False
+    `token_sequence`::
+        >>> has_token('bold italic', 'italic')
+        True
+        >>> has_token('bold italic', 'normal')
+        False
+        >>> has_token('bold italic', 'italic bold')
+        True
+        >>> has_token('bold italic', 'bold normal')
+        False
     """
     # assert validate_token_sequence(token_sequence)
     # assert validate_token_sequence(token)
@@ -1752,16 +1799,15 @@ def has_token(token_sequence: str, tokens: str) -> bool:
 
 def add_token(token_sequence: str, tokens: str) -> str:
     """Adds the tokens from 'tokens' that are not already contained in
-    `token_sequence` to the end of `token_sequence`
-
-    >>> add_token('', 'italic')
-    'italic'
-    >>> add_token('bold italic', 'large')
-    'bold italic large'
-    >>> add_token('bold italic', 'bold')
-    'bold italic'
-    >>> add_token('red thin', 'stroked red')
-    'red thin stroked'
+    `token_sequence` to the end of `token_sequence`::
+        >>> add_token('', 'italic')
+        'italic'
+        >>> add_token('bold italic', 'large')
+        'bold italic large'
+        >>> add_token('bold italic', 'bold')
+        'bold italic'
+        >>> add_token('red thin', 'stroked red')
+        'red thin stroked'
     """
     for tk in tokens.split(' '):
         if tk and token_sequence.find(tk) < 0:
@@ -1770,14 +1816,14 @@ def add_token(token_sequence: str, tokens: str) -> str:
 
 
 def remove_token(token_sequence, tokens: str) -> str:
-    """Removes all `tokens` from  `token_sequence`.
+    """Removes all `tokens` from  `token_sequence`::
 
-    >>> remove_token('red thin stroked', 'thin')
-    'red stroked'
-    >>> remove_token('red thin stroked', 'blue')
-    'red thin stroked'
-    >>> remove_token('red thin stroked', 'blue stroked')
-    'red thin'
+        >>> remove_token('red thin stroked', 'thin')
+        'red stroked'
+        >>> remove_token('red thin stroked', 'blue')
+        'red thin stroked'
+        >>> remove_token('red thin stroked', 'blue stroked')
+        'red thin'
     """
     for tk in tokens.split(' '):
         token_sequence = token_sequence.replace(tk, '').strip().replace('  ', ' ')
@@ -1786,11 +1832,11 @@ def remove_token(token_sequence, tokens: str) -> str:
 
 def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
     """Returns True if bothe token sequences contain the same tokens,
-    no matter in what order.
-    >>> eq_tokens('red thin stroked', 'stroked red thin')
-    True
-    >>> eq_tokens('red thin', 'thin blue')
-    False
+    no matter in what order::
+        >>> eq_tokens('red thin stroked', 'stroked red thin')
+        True
+        >>> eq_tokens('red thin', 'thin blue')
+        False
     """
     return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
 
@@ -1883,7 +1929,7 @@ def zoom_into_context(context: Optional[List[Node]],
     if context:
         ctx = context.copy()
         top = ctx[-1]
-        while top.children and steps > 0:
+        while top.children and steps != 0:
             top = pick_child(top)
             ctx.append(top)
             steps -= 1
@@ -1894,6 +1940,36 @@ def zoom_into_context(context: Optional[List[Node]],
 leaf_context = functools.partial(zoom_into_context, steps=-1)
 next_leaf_context = lambda ctx: leaf_context(next_context(ctx), FIRST_CHILD)
 prev_leaf_context = lambda ctx: leaf_context(prev_context(ctx), LAST_CHILD)
+
+
+def foregoing_str(context: List[Node], length: int = -1) -> str:
+    """Returns `length` characters from the string content preceding
+    the context."""
+    N = 0
+    l = []
+    ctx = prev_context(context)
+    while ctx and (N < length or length < 0):
+        s = ctx[-1].content
+        l.append(s)
+        N += len(s)
+        ctx = prev_context(ctx)
+    foregoing = ''.join(reversed(l))
+    return foregoing if length < 0 else foregoing[-length:]
+
+
+def ensuing_str(context: List[Node], length: int = -1) -> str:
+    """Returns `length` characters from the string content succeeding
+    the context."""
+    N = 0
+    l = []
+    ctx = next_context(context)
+    while ctx and (N < length or length < 0):
+        s = ctx[-1].content
+        l.append(s)
+        N += len(s)
+        ctx = next_context(ctx)
+    following = ''.join(l)
+    return following if length < 0 else following[:length]
 
 
 def select_context_if(context: List[Node],
@@ -1947,36 +2023,6 @@ def pick_context(context: List[Node],
         return None
 
 
-def foregoing_str(context: List[Node], length: int = -1) -> str:
-    """Returns `length` characters from the string content preceding
-    the context."""
-    N = 0
-    l = []
-    ctx = prev_context(context)
-    while ctx and (N < length or length < 0):
-        s = ctx[-1].content
-        l.append(s)
-        N += len(s)
-        ctx = prev_context(ctx)
-    foregoing = ''.join(reversed(l))
-    return foregoing if length < 0 else foregoing[-length:]
-
-
-def ensuing_str(context: List[Node], length: int = -1) -> str:
-    """Returns `length` characters from the string content succeeding
-    the context."""
-    N = 0
-    l = []
-    ctx = next_context(context)
-    while ctx and (N < length or length < 0):
-        s = ctx[-1].content
-        l.append(s)
-        N += len(s)
-        ctx = next_context(ctx)
-    following = ''.join(l)
-    return following if length < 0 else following[:length]
-
-
 def select_from_context_if(context: List[Node],
                            match_function: MatchFunction,
                            reverse: bool=False):
@@ -2006,8 +2052,20 @@ def pick_from_context(context: List[Node], criterion: CriteriaType, reverse: boo
         return None
 
 
-def serialize_context(context: List[Node], with_content: bool = False, delimiter: str = ' <- '):
-    lines = [nd.tag_name + ((':' + nd.content) if with_content else '') for nd in context]
+def serialize_context(context: List[Node], with_content: int = 0, delimiter: str = ' <- '):
+    """Serializes a context as string.
+
+    :param context: the context to serialized.
+    :param with_content: the number of nodes from the end of the context for
+        which the content will be displayed next to the tag_name.
+    :param delimiter: The delimiter separating the nodes in the returned string.
+    """
+    if with_content == 0:
+        lines = [nd.tag_name for nd in context]
+    else:
+        n = with_content if with_content > 0 else len(context)
+        lines = [nd.tag_name for nd in context[:-n]]
+        lines.extend(nd.tag_name + ':' + str(nd.content) for nd in context[-n:])
     return delimiter.join(lines)
 
 
@@ -2020,8 +2078,8 @@ ContextMapping = Tuple[List[int], List[List[Node]]]  # A mapping of character po
 
 def generate_context_mapping(node: Node) -> ContextMapping:
     """
-    Generates and returns a context mapping for all leave-nodes of the
-    tree originating in `node`. A context mapping is an ordered mapping
+    Generates a context mapping for all leave-nodes of the tree
+    originating in `node`. A context mapping is an ordered mapping
     of the first text position of every leaf-node to the context of
     this node.
 
@@ -2461,7 +2519,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         except IndexError:
             errmsg = ('Malformed S-expression. Unprocessed part: "%s"' % s) if s \
                 else 'Malformed S-expression. Closing bracket(s) ")" missing.'
-            raise AssertionError(errmsg)
+            raise ValueError(errmsg)
         nonlocal remaining
         remaining = s
 
