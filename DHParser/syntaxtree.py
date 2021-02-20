@@ -384,7 +384,7 @@ from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
-    validate_XML_attribute_value, fix_XML_attribute_value, abbreviate_middle
+    validate_XML_attribute_value, fix_XML_attribute_value, identity
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -1604,7 +1604,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 elif src is not None:
                     txt.append(' `(pos %i)' % node.pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(" `(%s)" % ';  '.join(str(err) for err in root.get_errors(node)))
+                txt.append(" `(%s)" % ';  '.join(str(err) for err in root.node_errors(node)))
             return "".join(txt)
 
         def closing(node: Node) -> str:
@@ -1672,7 +1672,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
                 txt.append(' err="%s"' % (
                     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
-                            for err in root.get_errors(node))))
+                            for err in root.node_errors(node))))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
@@ -2272,7 +2272,9 @@ class RootNode(Node):
         empty_tags (set oif strings): see `Node.as_xml()` for an explanation.
     """
 
-    def __init__(self, node: Optional[Node] = None):
+    def __init__(self, node: Optional[Node] = None,
+                 source: Union[str, StringView] = '',
+                 source_mapping: SourceMapFunc = identity):
         super().__init__('__not_yet_ready__', '')
         self.errors = []               # type: List[Error]
         self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
@@ -2280,9 +2282,10 @@ class RootNode(Node):
         self.error_flag = 0
         if node is not None:
             self.swallow(node)
-        # info on source code (to be carreid along all stages of tree-processing)
-        self.source = ""               # type: str
-        self.source_mapping = lambda i: i  # type: SourceMapFunc
+        # info on source code (to be carried along all stages of tree-processing)
+        self.source = source           # type: str
+        self.source_mapping = source_mapping  # type: SourceMapFunc
+        self.lbreaks = linebreaks(source)  # List[int]
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]
         self.omit_tags = set()    # type: Set[str]
@@ -2335,7 +2338,10 @@ class RootNode(Node):
         duplicate.tag_name = self.tag_name
         return duplicate
 
-    def swallow(self, node: Optional[Node]) -> 'RootNode':
+    def swallow(self, node: Optional[Node],
+                source: Union[str, StringView] = '',
+                source_mapping: SourceMapFunc = identity) \
+            -> 'RootNode':
         """
         Put `self` in the place of `node` by copying all its data.
         Returns self.
@@ -2347,6 +2353,10 @@ class RootNode(Node):
         It is possible to add errors to a RootNode object, before it
         has actually swallowed the root of the syntax tree.
         """
+        if source:
+            self.source = source
+            self.lbreaks = linebreaks(source)
+        if source_mapping != identity:  self.source_mapping = source_mapping
         if self.tag_name != '__not_yet_ready__':
             raise AssertionError('RootNode.swallow() has already been called!')
         if node is None:
@@ -2369,6 +2379,7 @@ class RootNode(Node):
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
+        assert isinstance(error, Error)
         if not node:
             # find the first leaf-node from the left that could contain the error
             # judging from its position
@@ -2417,7 +2428,7 @@ class RootNode(Node):
         self.add_error(node, error)
         return self
 
-    def get_errors(self, node: Node) -> List[Error]:
+    def node_errors(self, node: Node) -> List[Error]:
         """
         Returns the List of errors that occurred on the node or any child node
         at the position of the node that has already been removed from the tree,

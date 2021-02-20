@@ -420,17 +420,17 @@ class TestRootNode:
         # TODO: extend this test to the more compilcated case of removed nodes
         number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
         result = Grammar(number)("3.1416")
-        assert not result.get_errors(result.children[1])
-        assert not result.get_errors(result)
+        assert not result.node_errors(result.children[1])
+        assert not result.node_errors(result)
 
         result = Grammar(number)("x.1416")
-        assert result.get_errors(result[0])
-        assert not result.get_errors(result)
+        assert result.node_errors(result[0])
+        assert not result.node_errors(result)
 
         number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         result = Grammar(number)("3.1416")
-        assert not result.get_errors(result)
-        assert result.get_errors(result[1])
+        assert not result.node_errors(result)
+        assert result.node_errors(result[1])
 
     def test_copy_errors(self):
         tree = RootNode(parse_sxpr('(A (B "1") (C "2"))').with_pos(0))

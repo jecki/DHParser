@@ -65,6 +65,7 @@ __all__ = ('typing',
            'cython',
            'cython_optimized',
            'identify_python',
+           'identity',
            'gen_id',
            'ThreadLocalSingletonFactory',
            'NEVER_MATCH_PATTERN',
@@ -119,11 +120,18 @@ __all__ = ('typing',
 #
 #######################################################################
 
-
 def identify_python() -> str:
     """Returns a reasonable identification string for the python interpreter,
     e.g. "cpython 3.8.6"."""
     return "%s %i.%i.%i" % (sys.implementation.name, *sys.version_info[:3])
+
+
+def identity(x):
+    """Canonical identity function. The purpose of defining identity()
+    here is to allow it to serve as a default value and to be
+    able to check whether a function parameter has been assigned
+    another than the default value or not."""
+    return x
 
 
 global_id_counter = multiprocessing.Value('L', 0)
