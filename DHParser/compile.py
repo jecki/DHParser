@@ -48,7 +48,7 @@ from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename, NOPE
+from DHParser.toolkit import load_if_file, is_filename, identity
 
 
 __all__ = ('CompilerError',
@@ -357,18 +357,13 @@ def compile_source(source: str,
 
     if preprocessor is None:
         source_text = original_text  # type: str
-        source_mapping = lambda i: i  # type: SourceMapFunc
+        source_mapping = identity    # type: SourceMapFunc
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text))
 
-    # if out_source_data is not NOPE:
-    #     assert out_source_data == []
-    #     out_source_data.append(original_text)
-    #     out_source_data.append(source_mapping)
-
     # parsing
 
-    syntax_tree = parser(source_text)  # type: RootNode
+    syntax_tree = parser(source_text, source_mapping=source_mapping)  # type: RootNode
     syntax_tree.source = original_text
     syntax_tree.source_mapping = source_mapping
     if 'cst' in log_syntax_trees:
@@ -430,7 +425,8 @@ def compile_source(source: str,
                 result = compiler(syntax_tree)
 
     messages = syntax_tree.errors_sorted  # type: List[Error]
-    adjust_error_locations(messages, original_text, source_mapping)
+    # Obsolete, because RootNode adjusts error locations whenever an error is added:
+    # adjust_error_locations(messages, original_text, source_mapping)
     return result, messages, ast
 
 
@@ -502,7 +498,8 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Erro
 
     messages = tree.errors_sorted  # type: List[Error]
     new_msgs = [msg for msg in messages if msg.line < 0]
-    adjust_error_locations(new_msgs, tree.source, tree.source_mapping)
+    # Obsolete, because RootNode adjusts error locations whenever an error is added:
+    # adjust_error_locations(new_msgs, tree.source, tree.source_mapping)
     return tree, messages
 
 

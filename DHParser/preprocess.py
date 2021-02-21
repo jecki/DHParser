@@ -23,8 +23,8 @@ to map the locations of parser and compiler errors to the
 non-preprocessed source text.
 
 Preprocessing (and source mapping of errors) will only be needed
-for some domain specific languages, most notable those that
-cannot completely be described with context-free grammars.
+for some domain specific languages, most notably those that
+cannot completely be described entirely with context-free grammars.
 """
 
 

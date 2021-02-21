@@ -50,7 +50,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
-    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col
+    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, identity
 
 
 __all__ = ('ParserError',
@@ -1334,6 +1334,7 @@ class Grammar:
     def __call__(self,
                  document: str,
                  start_parser: Union[str, Parser] = "root_parser__",
+                 source_mapping = identity,
                  *, complete_match: bool = True) -> RootNode:
         """
         Parses a document with with parser-combinators.
@@ -1484,7 +1485,7 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
-        self.tree__.swallow(result)
+        self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
         # self.history_tracking__ = save_history_tracking
@@ -2254,7 +2255,7 @@ class Counted(UnaryParser):
     >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
     '(:Counted (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
-    '(ZOMBIE__ `(Error (1040): Parser did not match!))'
+    '(ZOMBIE__ `(1:1: Error (1040): Parser did not match!))'
     >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
     >>> result = Grammar(moves)('AAABABB')
     >>> result.tag_name, result.content

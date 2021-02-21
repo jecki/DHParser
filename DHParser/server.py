@@ -912,7 +912,7 @@ class Server:
         values: `SERVER_OFFLINE`, `SERVER_STARTING`, `SERVER_ONLINE`,
         `SERVER_TERMINATING`
     :var host: The host, the server runs on, e.g. "127.0.0.1"
-    :var port: The port of the server, e.g. 8888
+    :var port: The port of the server, e.g. 8890
     :var server: The asyncio.Server if the server is online, or `None`.
     :var serving_task: The task in which the asyncio.Server is run.
     :var stop_response:  The response string that is written to the stream

@@ -380,7 +380,8 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
     Tuple, Container, Optional, Dict
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
-from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END
+from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
+    adjust_error_locations
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
@@ -968,7 +969,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self._xml_attr
 
     @attr.setter
-    def attr(self, attr_dict: OrderedDict[str, str]):
+    def attr(self, attr_dict: Dict[str, str]):
         self._xml_attr = attr_dict
 
     def get_attr(self, attribute: str, default: str) -> str:
@@ -2252,24 +2253,26 @@ class RootNode(Node):
     during the parsing process, already. In order to connect the root node to
     the tree, when parsing is finished, the swallow()-method must be called.
 
-        errors (list):  A list of all errors that have occurred so far during
-                processing (i.e. parsing, AST-transformation, compiling)
-                of this tree.
+    :ivar errors:  A list of all errors that have occurred so far during
+        processing (i.e. parsing, AST-transformation, compiling) of this tree.
+    :ivar errors_sorted: (read-only property) The list of errors orderd by
+        their position.
+    :ivar error_nodes: A mapping of node-ids to a list of errors that
+        occurred on the node with the respective id.
+    :ivar error_positions: A mapping of locations to a set of ids of nodes
+        that contain an error at that particular location
+    :ivar error_flag: the highest warning or error level of all errors
+        that occurred.
 
-        error_nodes (dict): A mapping of node-ids to a list of errors that
-                occurred on the node with the respective id.
+    :ivar source:  The source code (after preprocessing)
+    :ivar source_mapping:  A source mapping function to map source code
+        position to positions of the non-preprocessed source.
+        See module `preprocess`
+    :ivar lbreaks: A list of indicies of all linebreaks in the source.
 
-        error_positions (dict): A mapping of locations to a set of ids of
-                nodes that contain an error at that particular location
-
-        error_flag (int):  the highest warning or error level of all errors
-                that occurred.
-
-        inline_tags (set of strings): see `Node.as_xml()` for an explanation.
-
-        omit_tags (set of strings): see `Node.as_xml()` for an explanation.
-
-        empty_tags (set oif strings): see `Node.as_xml()` for an explanation.
+    :ivar inline_tags: see `Node.as_xml()` for an explanation.
+    :ivar omit_tags: see `Node.as_xml()` for an explanation.
+    :ivar empty_tags: see `Node.as_xml()` for an explanation.
     """
 
     def __init__(self, node: Optional[Node] = None,
@@ -2280,8 +2283,6 @@ class RootNode(Node):
         self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
         self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
         self.error_flag = 0
-        if node is not None:
-            self.swallow(node)
         # info on source code (to be carried along all stages of tree-processing)
         self.source = source           # type: str
         self.source_mapping = source_mapping  # type: SourceMapFunc
@@ -2290,6 +2291,8 @@ class RootNode(Node):
         self.inline_tags = set()  # type: Set[str]
         self.omit_tags = set()    # type: Set[str]
         self.empty_tags = set()   # type: Set[str]
+        if node is not None:
+            self.swallow(node, source, source_mapping)
 
     # def clear_errors(self):
     #     """
@@ -2353,7 +2356,7 @@ class RootNode(Node):
         It is possible to add errors to a RootNode object, before it
         has actually swallowed the root of the syntax tree.
         """
-        if source:
+        if source and source != self.source:
             self.source = source
             self.lbreaks = linebreaks(source)
         if source_mapping != identity:  self.source_mapping = source_mapping
@@ -2373,6 +2376,8 @@ class RootNode(Node):
         # self._content = node._content
         if id(node) in self.error_nodes:
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
+        if self.source:
+            adjust_error_locations(self.errors, self.source, self.source_mapping)
         return self
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
@@ -2409,6 +2414,8 @@ class RootNode(Node):
         self.error_nodes.setdefault(id(node), []).append(error)
         if node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
+        if self.source:
+            adjust_error_locations([error], self.source, self.source_mapping)
         self.errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         return self

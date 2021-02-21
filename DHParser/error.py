@@ -183,7 +183,7 @@ class Error:
         self.orig_pos = orig_pos  # type: int
         self.line = line          # type: int
         self.column = column      # type: int
-        # support for Languager Server Protocol Diagnostics
+        # support for Language Server Protocol Diagnostics
         # see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#diagnostic
         self.length = length      # type: int
         self.end_line = -1        # type: int
