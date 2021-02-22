@@ -207,6 +207,24 @@ also defines a generic `serialize()`-method next to the more specialized
 Navigating and searching nodes and "contexts"
 ---------------------------------------------
 
+Transforming syntax trees is usually done by traversing the complete
+tree and applying specific transformation functions on each node.
+Modules "transform" and "compile" provide high-level interfaces and
+scaffolding classes for the traversal and transformation of
+syntax-trees.
+
+Module `syntaxtree` does not provide any functions for transforming
+trees, but it provides low-evel functions for navigating trees.
+These functions cover three different purposes:
+
+1. Downtree-navigation within the subtree spanned by a prticular node.
+2. Uptree- and horizontal navigation to the neigborhood ("siblinings")
+   ancestry of a given node.
+3. Navigation by looking at the string-representation of the tree.
+
+Navigating "downtree" within a tree spanned by a node
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 There are a number of useful functions to help navigating a tree and finding
 particular nodes within in a tree::
     >>> list(sentence.select('word'))
@@ -231,6 +249,9 @@ node's parent can be found by the `find_parent`-function which must be
 executed ony ancestor of the node::
     >>> sentence.find_parent(last_match)
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+
+Navigating "uptree" within the neighborhood and ancestry of a node
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 It is much more elegant to keep track of a node's ancestry by using a
 "context" which is a simple List of ancestors, the item of which is
@@ -323,12 +344,16 @@ Node-class traverse the tree pre-order. See the difference::
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
+Navigating a tree via its flat string representation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Sometimes it may be more convenient to search for a specific feature in
 the string-content of a text, rather than in the structured tree. For
 example, finding matching brackets in tree-strcutured text can be quite
 cumbersome if brackets are not "tagged" individually. For theses cases
 it is possible to generate a context mapping that maps text position to
-the contexts of the leaf-nodes to which they belong::
+the contexts of the leaf-nodes to which they belong. The context-mapping
+can be thought of as a "string-view" on the tree::
 
     >>> flat_text = sentence.content
     >>> ctx_mapping = generate_context_mapping(sentence)
@@ -1570,7 +1595,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 flatten_threshold: int = 92) -> str:
         """
         Returns content as S-expression, i.e. in lisp-like form. If this
-        method is called on a RootNode-object,
+        method is called on a RootNode-object, error strings will be displayed
+        as pseudo-attributes of the nodes where the error is located.
 
         Args:
             src:  The source text or `None`. In case the source text is
