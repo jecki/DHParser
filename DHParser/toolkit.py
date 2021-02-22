@@ -46,7 +46,11 @@ except ImportError:
 import typing
 from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
     Optional, Type
-
+try:
+    from typing import Protocol
+except ImportError:
+    class Protocol:
+        pass
 
 try:
     import cython
@@ -62,6 +66,7 @@ from DHParser.stringview import StringView
 
 
 __all__ = ('typing',
+           'Protocol',
            'cython',
            'cython_optimized',
            'identify_python',

@@ -410,7 +410,7 @@ from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
-    validate_XML_attribute_value, fix_XML_attribute_value, identity
+    validate_XML_attribute_value, fix_XML_attribute_value, identity, Protocol
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -1837,6 +1837,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                                 ", ".join(ALLOWED_PRESET_VALUES['default_serialization'])))
 
 
+# Error Handling stub #################################################
+
+# class ErrorInfo(Protocol):
+#     @property
+#     def error_nodes(self) -> Dict[int, List[Error]]:
+#         ...
+#
+#     def node_errors(self) -> List[Error]:
+#         ...
+
+
 # Attribute handling ##################################################
 
 def validate_token_sequence(token_sequence: str) -> bool:
@@ -2466,7 +2477,7 @@ class RootNode(Node):
         Returns the List of errors that occurred on the node or any child node
         at the position of the node that has already been removed from the tree,
         for example, because it was an anonymous empty child node.
-        The position of the node is here understood to cover then range:
+        The position of the node is here understood to cover the range:
         [node.pos, node.pos + len(node)[
         """
         node_id = id(node)           # type: int
