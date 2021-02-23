@@ -1024,7 +1024,7 @@ class Grammar:
                 calling method :func:`rollback_to__(location)`.
 
         suspend_memoization__: A flag that if set suspends memoization of
-                results  from returning parsers. This flag is needed by the
+                results from returning parsers. This flag is needed by the
                 left-recursion handling algorithm (see `Parser.__call__`
                 and `Forward.__call__`) as well as the context-sensitive
                 parsers (see function `Grammar.push_rollback__()`).
@@ -3336,11 +3336,10 @@ class Forward(UnaryParser):
             expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
             root__     = expression
 
-    Parameters:
-        recursion_counter:  Mapping of places to how often the parser
-                has already been called recursively at this place. This
-                is needed to implement left recursion. The number of
-                calls becomes irrelevant once a result has been memoized.
+    :ivar recursion_counter:  Mapping of places to how often the parser
+            has already been called recursively at this place. This
+            is needed to implement left recursion. The number of
+            calls becomes irrelevant once a result has been memoized.
     """
 
     def __init__(self):
