@@ -22,6 +22,7 @@ hand handling syntax-trees. This includes serialization and
 deserialization of syntax-trees, navigating and serching syntax-trees
 as well as annotating sytanx trees with attributes and error messages.
 
+
 The Node-class
 --------------
 
@@ -204,8 +205,8 @@ also defines a generic `serialize()`-method next to the more specialized
     >>> assert sentence.equals(round_trip)
 
 
-Navigating and searching nodes and "contexts"
----------------------------------------------
+Navigating and searching nodes and tree-contexts
+------------------------------------------------
 
 Transforming syntax trees is usually done by traversing the complete
 tree and applying specific transformation functions on each node.
@@ -221,6 +222,7 @@ These functions cover three different purposes:
 2. Uptree- and horizontal navigation to the neigborhood ("siblinings")
    ancestry of a given node.
 3. Navigation by looking at the string-representation of the tree.
+
 
 Navigating "downtree" within a tree spanned by a node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -250,13 +252,15 @@ executed ony ancestor of the node::
     >>> sentence.find_parent(last_match)
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
 
-Navigating "uptree" within the neighborhood and ancestry of a node
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Navigating "uptree" within the neighborhood and lineage of a node
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 It is much more elegant to keep track of a node's ancestry by using a
-"context" which is a simple List of ancestors, the item of which is
-the node itself. For most search methods such as select, there exists
-a pendant that returns this context instead of just the node itself::
+"tree-context" which is a simple List of ancestors starting with the
+root-node and including the node itself as its last item. For most
+search methods such as select, there exists a pendant that returns
+this context instead of just the node itself::
     >>> last_context = sentence.pick_context('word', reverse=True)
     >>> last_context[-1] == last_match
     True
@@ -265,12 +269,15 @@ a pendant that returns this context instead of just the node itself::
     >>> serialize_context(last_context)
     'sentence <- phrase <- word'
 
-A context points to a pariticular part of text by marking the path from
-the root to the node the content of which contains this text. When
-analysing or transforming a tree-structured text, it is often helpful
-to "zoom" in and out of a particular part of text (pointed to by a
-context) or to move forward and backward from a particular location
-(again represented by a context).
+One can also think of a tree-context as a breadcrumb-trail that
+"points" to a particular part of text by marking the path from the root
+to the node, the content of which contains this text. This node does
+not need to be a leaf node, but can be any branching on the way from
+the root to the leaves of the tree. When analysing or
+transforming a tree-structured text, it is often helpful to "zoom" in
+and out of a particular part of text (pointed to by a context) or to
+move forward and backward from a particular location (again represented
+by a context).
 
 The `next_context()` and `prev_context()`-functions allow to move
 one step forward or backward from a given context::
@@ -344,6 +351,7 @@ Node-class traverse the tree pre-order. See the difference::
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
+
 Navigating a tree via its flat-string-representation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -402,7 +410,7 @@ import functools
 import json
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
-    Tuple, Container, Optional, Dict
+    Tuple, Container, Optional, Dict, Any
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
@@ -425,7 +433,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'StrictResultType',
            'ChildrenType',
            'CriteriaType',
-           'MatchFunction',
+           'NodeMatchFunction',
            'ContextMatchFunction',
            'ALL_NODES',
            'LEAF_NODES',
@@ -509,11 +517,12 @@ ZOMBIE_TAG = "ZOMBIE__"
 # - tag_name
 # - one of several tag_names
 # - a function Node -> bool
-CriteriaType = Union['Node', str, Container[str], Callable, int]
+re_pattern = Any
+CriteriaType = Union['Node', str, Container[str], Callable, int, re_pattern]
 
 TreeContext = List['Node']
-MatchFunction = Callable[['Node'], bool]
-ContextMatchFunction = Callable[[List['Node']], bool]
+NodeMatchFunction = Callable[['Node'], bool]
+ContextMatchFunction = Callable[[TreeContext], bool]
 
 ALL_NODES = lambda nd: True
 LEAF_NODES = lambda nd: not nd._children
@@ -522,14 +531,34 @@ ALL_CONTEXTS = lambda ctx: True
 LEAF_CONTEXTS = lambda ctx: not ctx[-1].children
 
 
-def create_match_function(criterion: CriteriaType) -> MatchFunction:
+def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
     """
-    Returns a valid match-function (Node -> bool) for the given criterion.
-    Match-functions are used to find an select particular nodes from a
-    tree of nodes.
+    Creates a node-match-function (Node -> bool) for the given criterion
+    that returns True, if the node passed to the function matches the
+    criterion.
+
+    ==================== ===================================================
+         criterion                         type of match
+    ==================== ===================================================
+    id (int)             object identity
+    Node                 object identity
+    FrozenNode           equality of tag name, string content and attributes
+    tag name (str)       equality of tag name only
+    multiple tag names   equality of tag name with one of the given names
+    pattern (re.Pattern) full match of content with pattern
+    match function       match function returns `True`
+    ==================== ===================================================
+
+    :param criterion: Either a node, the id of a node, a frozen node,
+        a tag_name or a container (usually a set) of multiple tag names,
+        a regular expression pattern or another match function.
+
+    :returns: a match-function (Node -> bool) for the given criterion.
     """
     if isinstance(criterion, int):
         return lambda nd: id(nd) == criterion
+    elif isinstance(criterion, FrozenNode):
+        return lambda nd: nd.equals(criterion, ignore_attr_order=True)
     elif isinstance(criterion, Node):
         return lambda nd: nd == criterion
         # return lambda nd: nd.equals(criterion)  # may yield wrong results for Node.index()
@@ -539,26 +568,44 @@ def create_match_function(criterion: CriteriaType) -> MatchFunction:
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.tag_name in cast(Container, criterion)
+    elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
+        return lambda nd: criterion.fullmatch(nd.content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
                     % (repr(criterion), type(criterion)))
 
 
 def create_context_match_function(criterion: CriteriaType) -> ContextMatchFunction:
     """
-    Returns a valid context-match-function (List[Node] -> bool) for the
-    given criterion. Context-match-functions are used to find and select
-    particular contexts (lists of ancestors up to and including a particular
-    node) from a tree of nodes.
+    Creates a context-match-function (TreeContext -> bool) for the given
+    criterion that returns True, if the last node in the context passed
+    to the function matches the criterion.
+
+    See :py:func:`create_match_function()` for a description of the possible
+    criteria and their meaning.
+
+    :param criterion: Either a node, the id of a node, a frozen node,
+        a tag_name or a container (usually a set) of multiple tag names,
+        a regular expression pattern or another match function.
+
+    :returns: a match-function (TreeContext -> bool) for the given criterion.
     """
-    if isinstance(criterion, Node):
-        return lambda ctx: ctx[-1].equals(criterion)
+    if isinstance(criterion, int):
+        return lambda ctx: id(ctx[-1]) == criterion
+    elif isinstance(criterion, FrozenNode):
+        return lambda ctx: ctx[-1].equals(criterion, ignore_attr_order=True)
+    elif isinstance(criterion, Node):
+        return lambda ctx: ctx[-1] == criterion
+        # return lambda ctx[-1]: ctx[-1].equals(criterion)  # may yield wrong results for Node.ictx[-1]ex()
     elif isinstance(criterion, str):
         return lambda ctx: ctx[-1].tag_name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda ctx: ctx[-1].tag_name in cast(Container, criterion)
-    raise TypeError("Criterion %s of type %s does not represent a legal criteria type")
+    elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
+        return lambda ctx: criterion.fullmatch(ctx[-1].content)
+    raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
+                    % (repr(criterion), type(criterion)))
 
 
 # support functions for tree-serialization ############################
@@ -578,17 +625,24 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     is exceeded the the unflattened S-expression is returned. A
     negative number means that the S-expression will always be
     flattened. Zero or (any postive integer <= 3) essentially means
-    that the expression will not be flattened.
+    that the expression will not be flattened. Example::
 
-    Example:
     >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
     '(a (b c))'
+
+    :param sxpr: and S-expression in string form
+    :param threshold: maximum allowed string-length of the flattened
+        S-exrpession. A value < 0 means that it may be arbitrarily long.
+
+    :return: Either flattened S-expression or, if the threshold has been
+        overstepped, the original S-expression without leading or
+        trailing whitespace.
     """
     assert RX_IS_SXPR.match(sxpr)
     if threshold == 0:
         return sxpr
     flat = re.sub(r'\s(?=\))', '', re.sub(r'(?<!")\s+', ' ', sxpr).replace('\n', '')).strip()
-    if len(flat) > threshold >= 0:
+    if len(flat) > threshold > 0:
         return sxpr.strip()
     return flat
 
@@ -597,8 +651,12 @@ def flatten_xml(xml: str) -> str:
     """
     Returns an XML-tree as a one liner without unnecessary whitespace,
     i.e. only whitespace within leaf-nodes is preserved.
+
     A more precise alternative to `flatten_xml` is to use Node.as_xml()
-    ans passing a set containing the top level tag to parameter `inline_tags`.
+    and passing a set containing the top level tag to parameter `inline_tags`.
+
+    :param xml: the XML-Text to be "flattened"
+    :returns: the flattened XML-Text
     """
     # works only with regex
     # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
@@ -615,9 +673,13 @@ RX_AMPERSAND = re.compile(r'&(?!\w+;)')
 
 def clean_anonymous_tag_name(tag_name: str) -> str:
     """Cleans anonymous tag-names for serialization, so that the colon does not
-    lead to invalid XML:
+    lead to invalid XML::
+
     >>> clean_anonymous_tag_name(':Series')
     'ANONYMOUS_Series__'
+
+    :param tag_name: the original tag name
+    :returns: the XML-conform tag_name
     """
     if tag_name[:1] == ':':
         return 'ANONYMOUS_%s__' % tag_name[1:]
@@ -630,9 +692,10 @@ def clean_anonymous_tag_name(tag_name: str) -> str:
 #
 #######################################################################
 
+
 ChildrenType = Tuple['Node', ...]
 StrictResultType = Union[ChildrenType, StringView, str]
-ResultType = Union[ChildrenType, 'Node', StringView, str]
+ResultType = Union[StrictResultType, 'Node']
 
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
@@ -742,7 +805,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param tag_name: a tag_name for the node. If the node has been created
             by a parser, this is either the parser's name, e.g. "phrase",
             or if the parser wasn't named the parser's type, i.e. name of the
-            parser's class, preceeded by a colon, e.g. ":Series"
+            parser's class, preceded by a colon, e.g. ":Series"
         :param result: the result of the parsing operation that generated the
             node or, more generally, the data that the node contains.
         :param leafhint: default: False. Can be set to true to indicate that
@@ -808,7 +871,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # def __hash__(self):
     #     return hash(self.tag_name)  # very bad idea!
 
-    def equals(self, other: 'Node', ignore_attr_order: bool = False) -> bool:
+    def equals(self, other: 'Node', ignore_attr_order: bool = True) -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
         if their tag name is the same, if their results are equal and
@@ -816,8 +879,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         `ignore_attr_order` is `True` or the attributes also appear in the
         same order.
 
-        Returns True, if the tree originating in node `self` is equal by
-        value to the tree originating in node `other`.
+        :param other: The node to which `self` shall be compared.
+        :returns: True, if the tree originating in node `self` is equal by
+            value to the tree originating in node `other`.
         """
         if self.tag_name == other.tag_name and self.compare_attr(other, ignore_attr_order):
             if self._children:
@@ -881,23 +945,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 prev = child
 
     @property
-    def result(self) -> Union[Tuple['Node', ...], StringView, str]:
+    def result(self) -> StrictResultType:
         """
         Returns the result from the parser that created the node.
-        Error messages are not included in the result. Use `self.content()`
-        if the result plus any error messages is needed.
         """
         return self._result
 
     @result.setter
-    def result(self, result: Union[Tuple['Node', ...], 'Node', StringView, str]):
+    def result(self, result: ResultType):
         self._set_result(result)
         # fix position values for children that are added after the parsing process
         if self._pos >= 0:
             self._init_child_pos()
 
     @property
-    def children(self) -> Tuple['Node', ...]:
+    def children(self) -> ChildrenType:
+        """Returns the tuple of child-nodes or an empty tuple if the node does
+        node have any child-nodes but only string content."""
         return self._children
 
     def _leaf_data(self) -> List[str]:
@@ -927,6 +991,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return ''.join(fragments)
         self._result = str(self._result)
         return self._result
+
         # unoptimized
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
@@ -942,13 +1007,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def with_pos(self, pos: int) -> 'Node':
         """
-        Initialize position value. Usually, the parser guard
-        (`parse.Parser.__call__`) takes care of assigning the
-        position in the document to newly created nodes. However,
-        when Nodes are created outside the reach of the parser
-        guard, their document-position must be assigned manually.
-        Position values of the child nodes are assigned recursively, too.
-        Returns the node itself for convenience.
+        Initializes the node's position value. Usually, the parser takes
+        care of assigning the positions in the document to the nodes of
+        the parse-tree. However, when Nodes are created outside the reach
+        of the parser guard, their document-position must be assigned
+        manually. Position values of the child nodes are assigned
+        recursively, too. Example::
+
+        >>> node = Node('test', 'position').with_pos(10)
+        >>> node.pos
+        10
+
+        :param pos: The position assigned to be assigned to the node.
+            Value must be >= 0.
+        :returns: the node itself (for convenience).
+        :raises: AssertionError if position has already been assigned or
+            if parameter `pos` has a value < 0.
         """
         # condition self.pos == pos cannot be assumed when tokens or whitespace
         # are dropped early!
@@ -983,7 +1057,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @property
     def attr(self):
         """
-        Returns a dictionary of XML-attr attached to the node.
+        Returns a dictionary of XML-attributes attached to the node.
 
         Examples::
 
@@ -999,10 +1073,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> node.attr
             OrderedDict()
 
-        NOTE: Use `node.attr_active()` rather than bool(node.attr) to check the
-        presence of any attributes. Attribute dictionaries are created lazily
-        and node.attr would create a dictionary, even though it may never be
-        needed any more.
+        NOTE: Use :py:func:`Node.has_attr()` rather than `bool(node.attr)`
+        to probe the presence of attributes. Attribute dictionaries are
+        created lazily and `node.attr` would create a dictionary, even
+        though it may never be needed, any more.
         """
         try:
             if self._xml_attr is None:          # cython compatibility
@@ -1026,7 +1100,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param attribute: The attribute, the value of which shall be looked up
         :param default: A default value that is returned, in case attribute
             does not exist.
-        :return: str
+        :returns: the attribute's value or, if unassigned, the default value.
         """
         if self.has_attr():
             return self.attr.get(attribute, default)
@@ -1036,19 +1110,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         Adds the attributes which are passed to `with_attr()` either as an
         attribute dictionary or as keyword parameters to the node's attributes
-        and returns `self`.
-
-        :param attr_dict:  a dictionary of attribute keys and values
-        :param attributes: alternatively, a squences of keyword parameters
-        :return: `self`
-
-        Example::
+        and returns `self`. Example::
 
             >>> node = Node('test', '').with_attr(animal = "frog", plant= "tree")
             >>> dict(node.attr)
             {'animal': 'frog', 'plant': 'tree'}
             >>> node.with_attr({'building': 'skyscraper'}).repr
             "Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})"
+
+        :param attr_dict:  a dictionary of attribute keys and values
+        :param attributes: alternatively, a squences of keyword parameters
+        :return: `self`
         """
         if attr_dict:
             assert not attributes, "Node.with_attr() can be called either exclusively with " \
@@ -1066,10 +1138,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self.attr.update(attributes)
         return self
 
-    def compare_attr(self, other: 'Node', ignore_order: bool = False) -> bool:
+    def compare_attr(self, other: 'Node', ignore_order: bool = True) -> bool:
         """
-        Returns True, if `self` and `other` have the same attributes with the
-        same attribute values. If `ignore_order` is False (default), the
+        Returns True, if `self` and `other` have the same attributes with
+        the same attribute values. If `ignore_order` is False, the
         attributes must also appear in the same order.
         """
         if self.has_attr():
@@ -1097,15 +1169,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> flatten_sxpr(tree["X"].as_sxpr())
             '(X (c "d"))'
 
-        Args:
-            key(str): A criterion (tag name(s), match function, node) or
-                an index of the child that shall be returned.
-        Returns:
-            Node: The node with the given index (always type Node),
-                all nodes which have a given tag name (type Node if there
-                exists only one or type Tuple[Node] if there are more than
-                one).
-        Raises:
+        :param key(str): A criterion (tag name(s), match function, node) or
+            an index of the child that shall be returned.
+        :returns: The node with the given index (always type Node) or a
+            tuple of all nodes which have a given tag name, if `key` was a
+            tag-name and there is more than one child-node with this tag-name
+        :raises:
             KeyError:   if no matching child was found.
             IndexError: if key was an integer index that did not exist
             ValueError: if the __getitem__ has been called on a leaf node.
@@ -1120,31 +1189,40 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             raise IndexError('index out of range') if isinstance(key, int) \
                 else KeyError(str(key))
 
-    def __delitem__(self, key: Union[CriteriaType, int]):
+    def __delitem__(self, key: Union[int, slice, CriteriaType]):
         """
-        Removes children from the node.
-        :param key:  A criterion (tag name(s), match function, node) or
-                an index of the child(ren) that shall be removed.
+        Removes children from the node. Note that integer values passed to
+        parameter `key` are always interpreted as index, not as an object id
+        as comparison criterion.
+
+        :param key: An integer index of slice of child-nodes to be deleted
+            or a criterion for selecting child-nodes for deletion.
         """
         if isinstance(key, int):
             if 0 <= key < len(self._children):
                 raise IndexError("index %s out of range [0, %i[" % (key, len(self._children)))
             self.result = self._children[:key] + self._children[key + 1:]
+        elif isinstance(key, slice):
+            children = list(self.children)
+            for i in range(*key.indices(len(children))):
+                children[i] = None
+            self.result = tuple(child for child in children if child is not None)
         else:
             assert not isinstance(self.result, str)
             mf = create_match_function(key)
             self.result = tuple(child for child in self._children if not mf(child))
 
-    def get(self, key: Union[CriteriaType, int],
+    def get(self, key: Union[int, slice, CriteriaType],
             surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
         """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
         child with the given index or tag_name exists, the ``surrogate`` is
         returned instead. This mimics the behaviour of Python's dictionary's
-        get-method.
+        `get()`-method.
+
         The type of the return value is always the same type as that of the
         surrogate. If the surrogate is a Node, but there are several items
-        matching key, then the first of these will be returned.
+        matching `key`, then only the first of these will be returned.
         """
         try:
             items = self[key]
@@ -1157,15 +1235,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def __contains__(self, what: CriteriaType) -> bool:
         """
-        Returns true if a child with the given tag name exists.
-        Args:
-            what: a criterion that describes what (kind of) child node
-            shall be looked for among the children of the node. This
-            can a node, a tag name or collection of tag names or an
-            arbitrary matching function (Node -> bool).
-        Returns:
-            bool:  True, if at least one child which fulfills the criterion
-                exists
+        Returns true if at least one child that matches the given criterion
+        exists. See :py:func:`create_match_function()` for a catalogue of
+        possible criteria.
+
+        :param what: a criterion that describes the child-node
+        :returns: True, if at least one child fulfills the criterion
         """
         mf = create_match_function(what)
         for child in self._children:
@@ -1176,7 +1251,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(start=cython.int, stop=cython.int, i=cython.int)
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
-        Returns the first index of the child that fulfills the criterion
+        Returns the index of the first child that fulfills the criterion
         `what`. If the parameters start and stop are given, the search is
         restricted to the children with indices from the half-open interval
         [start:end[. If no such child exists a ValueError is raised.
@@ -1185,7 +1260,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             of which shall be returned.
         :param start: the first index to start searching.
         :param stop: the last index that shall be searched
-        :return: the index of the first child with the given tag name.
+        :returns: the index of the first child that matches `what`.
         :raises: ValueError, if no child matching the criterion `what` was found.
         """
         assert 0 <= start < stop
@@ -1206,15 +1281,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         children = self._children
         return tuple(i for i in range(len(children)) if mf(children[i]))
 
-    def select_if(self, match_function: MatchFunction,
+    def select_if(self, match_function: NodeMatchFunction,
                   include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
-        Finds nodes in the tree for which `match_function` returns True.
-        See see more general function `Node.select()` for a detailed description.
-
-        `select_if` is a generator that yields all nodes for which the
-        given `match_function` evaluates to True. The tree is
-        traversed pre-order.
+        Generates an iterator over all nodes in the tree for which
+        `match_function()` returns True. See the more general function
+        :py:func`Node.select()` for a detailed description and examples.
+        The tree is traversed pre-order by the iterator.
         """
         if include_root and match_function(self):
             yield self
@@ -1228,21 +1301,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def select(self, criterion: CriteriaType,
                include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
         """
-        Finds nodes in the tree that fulfill a given criterion. This criterion
-        can either be a bool-valued callable a tag_name or a set of tag_names.
+        Generates an iterator over all nodes in the tree that fulfill the
+        given criterion. See :py:func:`create_match_function()` for a
+        catalogue of possible criteria.
 
-        See function `Node.select` for some examples.
-
-        Args:
-            criterion: A "criterion" for identifying the nodes to be selected.
-                This can either be a tag name (string), a collection of
-                tag names or a match function (Node -> bool)
-            include_root (bool): If False, only descendant nodes will be
-                checked for a match.
-            reverse (bool): If True, the tree will be walked in reverse
+        :param criterion: The criterion for selecting nodes.
+        :param include_root: If False, only descendant nodes will be checked
+            for a match.
+        :param reverse: If True, the tree will be walked in reverse
                 order, i.e. last children first.
-        Yields:
-            Node: All nodes of the tree which fulfill the given criterion
+        :returns: An iterator over all descendant nodes which fulfill the
+           given criterion. Traversal is pre-order.
 
         Examples::
 
@@ -1261,7 +1330,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self.select_if(create_match_function(criterion), include_root, reverse)
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
-        """Returns an iterator over all direct children of a node that fulfill `criterion`."""
+        """Returns an iterator over all direct children of a node that
+        fulfil the given `criterion`. See :py:func:`Node.select()` for a description
+        of the parameters.
+        """
         match_function = create_match_function(criterion)
         if reverse:
             for child in reversed(tuple(self.select_children(criterion, False))):
@@ -1275,14 +1347,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
              include_root: bool = False,
              reverse: bool = False) -> Optional['Node']:
         """
-        Picks the first (or last if run in reverse mode) descendant that fulfills
-        the given criterion which can be either a match-function or a tag-name or
-        a container of tag-names.
+        Picks the first (or last if run in reverse mode) descendant that
+        fulfils the given criterion. See :py:func:`create_match_function()`
+        for a catalogue of possible criteria.
 
-        This function is syntactic sugar for
-        ``next(node.select(criterion, ...))``. However, rather than
-        raising a StopIterationError if no descendant with the given tag-name
-        exists, it returns None.
+        This function is syntactic sugar for `next(node.select(criterion, ...))`.
+        However, rather than raising a StopIterationError if no descendant
+        with the given tag-name exists, it returns `None`.
         """
         try:
             return next(self.select(criterion,
@@ -1292,12 +1363,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def pick_child(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
         """
-        Picks the first child (or last if run in reverse mode) descendant that fulfills
-        the given criterion which can be either a match-function or a tag-name or
-        a container of tag-names.
+        Picks the first child (or last if run in reverse mode) descendant
+        that fulfils the given criterion. See :py:func:`create_match_function()`
+        for a catalogue of possible criteria.
 
         This function is syntactic sugar for
-        ``next(node.select_children(criterion, False))``. However, rather than
+        `next(node.select_children(criterion, False))`. However, rather than
         raising a StopIterationError if no descendant with the given tag-name
         exists, it returns None.
         """
@@ -1311,7 +1382,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         Returns the leaf-Node that covers the given `location`, where
         location is the actual position within self.content (not the
-        source code position that the pos-attribute represents)
+        source code position that the pos-attribute represents). If
+        the location lies out side the node's string content, `None` is
+        returnde.
         """
         end = 0
         for nd in self.select_if(lambda nd: not nd._children, include_root=True):
@@ -1335,10 +1408,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_context_if(self, match_function: ContextMatchFunction,
                           include_root: bool = False,
-                          reverse: bool = False) -> Iterator[List['Node']]:
+                          reverse: bool = False) -> Iterator[TreeContext]:
         """
-        Like `Node.select_if()` but yields the entire context (i.e. list of
-        descendants, the last one being the matching node) instead of just
+        Like :py:func:`Node.select_if()` but yields the entire context (i.e. list
+        of descendants, the last one being the matching node) instead of just
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
         receives the complete context as argument, rather than just the last node!
         """
@@ -1356,9 +1429,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_context(self, criterion: CriteriaType,
                        include_root: bool = False,
-                       reverse: bool = False) -> Iterator[List['Node']]:
+                       reverse: bool = False) -> Iterator[TreeContext]:
         """
-        Like `Node.select()` but yields the entire context (i.e. list of
+        Like :py:func:`Node.select()` but yields the entire context (i.e. list of
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
@@ -1367,10 +1440,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def pick_context(self, criterion: CriteriaType,
                      include_root: bool = False,
-                     reverse: bool = False) -> List['Node']:
+                     reverse: bool = False) -> TreeContext:
         """
-        Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
-        relative to `self` is returned.
+        Like :py:func:`Node.pick()`, only that the entire context (i.e.
+        chain of descendants) relative to `self` is returned.
         """
         try:
             return next(self.select_context(criterion,
@@ -1379,10 +1452,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return []
 
     @cython.locals(location=cython.int, end=cython.int)
-    def locate_context(self, location: int) -> List['Node']:
+    def locate_context(self, location: int) -> TreeContext:
         """
-        Like `Node.locate()`,  only that the entire context (i.e. chain of descendants)
-        relative to `self` is returned.
+        Like :py:func:`Node.locate()`, only that the entire context (i.e.
+        chain of descendants) relative to `self` is returned.
         """
         end = 0
         for ctx in self.select_context_if(lambda ctx: not ctx[-1]._children, include_root=True):
@@ -1391,7 +1464,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return ctx
         return []
 
-    def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> List['Node']:
+    def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> TreeContext:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
         the public method `reconstruct_context`, this method returns the chain of ancestors
@@ -1408,12 +1481,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return ctx
         return []
 
-    def reconstruct_context(self, node: 'Node') -> List['Node']:
+    def reconstruct_context(self, node: 'Node') -> TreeContext:
         """
         Determines the chain of ancestors of a node that leads up to self.
         :param node: the descendant node, the ancestry of which shall be determined.
         :return: the list of nodes starting with self and leading to `node`
-        :raises: ValueError in case `node` does not occur in the tree rooted in `self`
+        :raises: ValueError, in case `node` does not occur in the tree rooted in `self`
         """
         if node == self:
             return [node]
@@ -1466,7 +1539,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def right_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return result[:index] + (subst,)
 
-        def cut(ctx: List['Node'], cut_func: Callable) -> 'Node':
+        def cut(ctx: TreeContext, cut_func: Callable) -> 'Node':
             child = ctx[-1]
             tainted = False
             for i in range(len(ctx) - 1, 0, -1):
@@ -1486,8 +1559,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if begin.pos > end.pos:
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        ctxA = self.reconstruct_context(begin)  # type: List[Node]
-        ctxB = self.reconstruct_context(end)    # type: List[Node]
+        ctxA = self.reconstruct_context(begin)  # type: TreeContext
+        ctxB = self.reconstruct_context(end)    # type: TreeContext
         for a, b in zip(ctxA, ctxB):
             if a != b:
                 break
@@ -1526,18 +1599,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         function parameters. This could be an XML-representation or a
         lisp-like S-expression.
 
-        Args:
-            tab (str):  The indentation string, e.g. '\t' or '    '
-            open_fn:   (Node->str) A function that returns an opening
-                string (e.g. an XML-tag_name) for a given node
-            close_fn:  (Node->str) A function that returns a closing
-                string (e.g. an XML-tag_name) for a given node.
-            data_fn:   (str->str) A function that filters the data string
-                before printing, e.g. to add quotation marks
+        :param tab:  The indentation string, e.g. '\t' or '    '
+        :param open_fn: A function (Node -> str) that returns an
+            opening string (e.g. an XML-tag_name) for a given node
+        :param close_fn:  A function (Node -> str) that returns a closing
+            string (e.g. an XML-tag_name) for a given node.
+        :param data_fn:  A function (str -> str) that filters the data
+            string before printing, e.g. to add quotation marks
 
-        Returns (str):
-            A string that contains a (serialized) tree representation
-            of the node and its children.
+        :returns:  A list of strings that, if concatenated, yield a
+            serialized tree representation of the node and its children.
         """
         head = open_fn(self)
         tail = close_fn(self)
@@ -1612,23 +1683,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 compact: bool = False,
                 flatten_threshold: int = 92) -> str:
         """
-        Returns content as S-expression, i.e. in lisp-like form. If this
+        Serializes the tree as S-expression, i.e. in lisp-like form. If this
         method is called on a RootNode-object, error strings will be displayed
         as pseudo-attributes of the nodes where the error is located.
 
-        Args:
-            src:  The source text or `None`. In case the source text is
-                given the position of the element in the text will be
-                reported as position, line, column. In case the empty string is
-                given rather than None, only the position value will be
-                reported in case it has been initialized, i.e. pos >= 0.
-            indentation: The number of whitespaces for indentation
-            compact:  If True, a compact representation is returned where
-                brackets are omitted and only the indentation indicates the
-                tree structure.
-            flatten_threshold:  Return the S-expression in flattened form if
-                the flattened expression does not exceed the threshold length.
-                A negative number means that it will always be flattened.
+        :param src:  The source text or `None`. In case the source text is
+            given the position of the element in the text will be
+            reported as position, line, column. In case the empty string is
+            given rather than None, only the position value will be
+            reported in case it has been initialized, i.e. pos >= 0.
+        :param indentation: The number of whitespaces for indentation
+        :param compact:  If True, a compact representation is returned where
+            brackets are omitted and only the indentation indicates the
+            tree structure.
+        :param flatten_threshold:  Return the S-expression in flattened form if
+            the flattened expression does not exceed the threshold length.
+            A negative number means that it will always be flattened.
+        :returns: A string containing the S-expression serialization of the tree.
         """
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
         lbreaks = linebreaks(src) if src else []  # type: List[int]
@@ -1670,7 +1741,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                inline_tags: Set[str] = set(),
                omit_tags: Set[str] = set(),
                empty_tags: Set[str] = set()) -> str:
-        """Returns content as XML-tree.
+        """Serializes the tree of nodes as XML.
 
         :param src: The source text or `None`. In case the source text is
                 given, the position will also be reported as line and column.
@@ -1684,7 +1755,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 requires its content to be either a tuple of children or string content.
         :param empty_tags: A set of tags which shall be rendered as empty elements, e.g.
                 "<empty/>" instead of "<empty><empty>".
-        :return: The XML-string representing the tree originating in `self`
+        :returns: The XML-string representing the tree originating in `self`
         """
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
@@ -1755,7 +1826,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # JSON serialization ###
 
     def to_json_obj(self) -> list:
-        """Serialize node or tree as JSON-serializable nested list."""
+        """Converts the tree into a JSON-serializable nested list."""
         jo = [self.tag_name,
               [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
         pos = self._pos
@@ -1767,7 +1838,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     @staticmethod
     def from_json_obj(json_obj: Union[Dict, Sequence]) -> 'Node':
-        """Convert a JSON-object representing a node (or tree) back into a
+        """Converts a JSON-object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
         assert isinstance(json_obj, Sequence)
@@ -1786,6 +1857,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return node
 
     def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
+        """Serializes the tree originating in `self` as JSON-string."""
         return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
@@ -1794,11 +1866,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(vsize=cython.int, i=cython.int, threshold=cython.int)
     def serialize(self: 'Node', how: str = 'default') -> str:
         """
-        Serializes the tree starting with `node` either as S-expression, XML, JSON,
-        or in compact form. Possible values for `how` are 'S-expression', 'XML',
-        'JSON', 'indented' accordingly, or 'AST', 'CST', 'default' in
-        which case the value of respective configuration variable determines the
-        serialization format. (See module `configuration.py`.)
+        Serializes the tree originating in the node `self` either as
+        S-expression, XML, JSON, or in compact form. Possible values for
+        `how` are 'S-expression', 'XML', 'JSON', 'indented' accordingly, or
+        'AST', 'CST', 'default', in which case the value of respective
+        configuration variable determines the serialization format.
+        (See module :py:mod:`DHParser.configuration`.)
         """
         def exceeds_compact_threshold(node: Node, threshold: int) -> bool:
             """Returns True, if the S-expression-serialization of the tree
@@ -1865,13 +1938,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 # Navigate contexts ###################################################
 
 @cython.locals(i=cython.int, k=cython.int)
-def prev_context(context: List[Node]) -> Optional[List[Node]]:
-    """Returns the context of the predecessor of the last Node in the
-    context. The predecessor is the sibling of the same parent Node
-    preceding the node, or if it already is the first sibling, the parent's
-    sibling preceeding the parent, or grand-parent's sibling and so on.
-    In case no predecessor is found when the first ancestor has been
-    reached, None is returned.
+def prev_context(context: TreeContext) -> Optional[TreeContext]:
+    """Returns the context of the predecessor of the last node in the
+    context. The predecessor is the sibling of the same parent-node
+    preceding the node, or, if it already is the first sibling, the parent's
+    sibling preceding the parent, or grand-parent's sibling and so on.
+    In case no predecessor is found, when the first ancestor has been
+    reached, `None` is returned.
     """
     assert isinstance(context, list)
     node = context[-1]
@@ -1888,13 +1961,13 @@ def prev_context(context: List[Node]) -> Optional[List[Node]]:
 
 
 @cython.locals(i=cython.int, k=cython.int)
-def next_context(context: List[Node]) -> Optional[List[Node]]:
-    """Returns the context of the successor of the last Node in the
+def next_context(context: TreeContext) -> Optional[TreeContext]:
+    """Returns the context of the successor of the last node in the
     context. The successor is the sibling of the same parent Node
     succeeding the the node, or if it already is the last sibling, the
     parent's sibling succeeding the parent, or grand-parent's sibling and
     so on. In case no successor is found when the first ancestor has been
-    reached, None is returned.
+    reached, `None` is returned.
     """
     assert isinstance(context, list)
     node = context[-1]
@@ -1915,10 +1988,10 @@ LAST_CHILD = lambda nd: nd.result[-1]
 FIRST_CHILD = lambda nd: nd.result[0]
 
 
-def zoom_into_context(context: Optional[List[Node]],
+def zoom_into_context(context: Optional[TreeContext],
                       pick_child: PickChildFunction,
                       steps: int) \
-                      -> Optional[List[Node]]:
+                      -> Optional[TreeContext]:
     """Returns the context of a descendant that follows `steps` generations
     up the tree originating in 'context[-1]`. If `steps` < 0 this will be
     as many generations as are needed to reach a leaf-node.
@@ -1942,7 +2015,7 @@ next_leaf_context = lambda ctx: leaf_context(next_context(ctx), FIRST_CHILD)
 prev_leaf_context = lambda ctx: leaf_context(prev_context(ctx), LAST_CHILD)
 
 
-def foregoing_str(context: List[Node], length: int = -1) -> str:
+def foregoing_str(context: TreeContext, length: int = -1) -> str:
     """Returns `length` characters from the string content preceding
     the context."""
     N = 0
@@ -1957,7 +2030,7 @@ def foregoing_str(context: List[Node], length: int = -1) -> str:
     return foregoing if length < 0 else foregoing[-length:]
 
 
-def ensuing_str(context: List[Node], length: int = -1) -> str:
+def ensuing_str(context: TreeContext, length: int = -1) -> str:
     """Returns `length` characters from the string content succeeding
     the context."""
     N = 0
@@ -1972,12 +2045,12 @@ def ensuing_str(context: List[Node], length: int = -1) -> str:
     return following if length < 0 else following[:length]
 
 
-def select_context_if(context: List[Node],
+def select_context_if(context: TreeContext,
                       match_function: ContextMatchFunction,
-                      reverse: bool = False) -> Iterator[List[Node]]:
+                      reverse: bool = False) -> Iterator[TreeContext]:
     """
     Creates an Iterator yielding all `contexts` for which the
-    `match_function` is true, starting from `context`
+    `match_function` is true, starting from `context`.
     """
     context = context.copy()
     while context:
@@ -1999,9 +2072,9 @@ def select_context_if(context: List[Node],
             context.extend(innermost_ctx)
 
 
-def select_context(context: List[Node],
+def select_context(context: TreeContext,
                    criterion: CriteriaType,
-                   reverse: bool = False) -> Iterator[List[Node]]:
+                   reverse: bool = False) -> Iterator[TreeContext]:
     """
     Like `select_context_if()` but yields the entire context (i.e. list of
     descendants, the last one being the matching node) instead of just
@@ -2010,9 +2083,9 @@ def select_context(context: List[Node],
     return select_context_if(context, create_context_match_function(criterion), reverse)
 
 
-def pick_context(context: List[Node],
+def pick_context(context: TreeContext,
                  criterion: CriteriaType,
-                 reverse: bool = False) -> Optional[List['Node']]:
+                 reverse: bool = False) -> Optional[TreeContext]:
     """
     Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
     relative to `self` is returned.
@@ -2023,8 +2096,8 @@ def pick_context(context: List[Node],
         return None
 
 
-def select_from_context_if(context: List[Node],
-                           match_function: MatchFunction,
+def select_from_context_if(context: TreeContext,
+                           match_function: NodeMatchFunction,
                            reverse: bool=False):
     """Yields all nodes from context for which the match_function is true."""
     if reverse:
@@ -2037,14 +2110,14 @@ def select_from_context_if(context: List[Node],
                 yield nd
 
 
-def select_from_context(context: List[Node], criterion: CriteriaType, reverse: bool=False):
+def select_from_context(context: TreeContext, criterion: CriteriaType, reverse: bool=False):
     """Yields all nodes from context which fulfill the criterion."""
     return select_from_context_if(context, create_match_function(criterion), reverse)
 
 
-def pick_from_context(context: List[Node], criterion: CriteriaType, reverse: bool=False) \
+def pick_from_context(context: TreeContext, criterion: CriteriaType, reverse: bool=False) \
         -> Optional[Node]:
-    """Picks the first node from the context that fullfills the criterion. Returns `None`
+    """Picks the first node from the context that fulfils the criterion. Returns `None`
     if the context does not contain any node fulfilling the criterion."""
     try:
         return next(select_from_context(context, criterion, reverse=reverse))
@@ -2052,13 +2125,15 @@ def pick_from_context(context: List[Node], criterion: CriteriaType, reverse: boo
         return None
 
 
-def serialize_context(context: List[Node], with_content: int = 0, delimiter: str = ' <- '):
+def serialize_context(context: TreeContext, with_content: int = 0, delimiter: str = ' <- ') \
+        -> str:
     """Serializes a context as string.
 
     :param context: the context to serialized.
     :param with_content: the number of nodes from the end of the context for
         which the content will be displayed next to the tag_name.
     :param delimiter: The delimiter separating the nodes in the returned string.
+    :returns: the string-serialization of the given context.
     """
     if with_content == 0:
         lines = [nd.tag_name for nd in context]
@@ -2069,14 +2144,16 @@ def serialize_context(context: List[Node], with_content: int = 0, delimiter: str
     return delimiter.join(lines)
 
 
-def context_sanity_check(context: List[Node]) -> bool:
+def context_sanity_check(context: TreeContext) -> bool:
+    """Checks whether the nodes following in the context-list are really
+    immediate descendants of each other."""
     return all(context[i] in context[i - 1]._children for i in range(1, len(context)))
 
 
 # Context-mapping (allowing a "string-view" on syntax-trees) ##########
 
 
-ContextMapping = Tuple[List[int], List[List[Node]]]  # A mapping of character positions to contexts
+ContextMapping = Tuple[List[int], List[TreeContext]]  # A mapping of character positions to contexts
 
 
 def generate_context_mapping(node: Node) -> ContextMapping:
@@ -2091,7 +2168,7 @@ def generate_context_mapping(node: Node) -> ContextMapping:
 
     :param node: the root of the tree for which a context mapping shall be
         generated.
-    :return: The context mapping for the node.
+    :returns: The context mapping for the node.
     """
     pos = 0
     pos_list, ctx_list = [], []
@@ -2102,14 +2179,14 @@ def generate_context_mapping(node: Node) -> ContextMapping:
     return pos_list, ctx_list
 
 
-def map_pos_to_context(i: int, cm: ContextMapping) -> Tuple[List[Node], int]:
+def map_pos_to_context(i: int, cm: ContextMapping) -> Tuple[TreeContext, int]:
     """Yields the context and relative position for the absolute
     position `i`.
 
     :param i:   a position in the content of the tree for which the
         context mapping `cm` was generated
     :param cm:  a context mapping
-    :return:    tuple (context, relative position) where relative
+    :returns:    tuple (context, relative position) where relative
         position is the position of i relative to the actual
         position of the last node in the context.
     """
@@ -2124,7 +2201,7 @@ def validate_token_sequence(token_sequence: str) -> bool:
     """Returns True, if `token_sequence` is properly formed.
 
     Token sequences are strings or words which are separated by
-    single blanks with no leading or trailing blank
+    single blanks with no leading or trailing blank.
     """
     return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
         and token_sequence.find('  ') < 0
@@ -2214,7 +2291,6 @@ add_class = functools.partial(add_token_to_attr, attribute='class')
 remove_class = functools.partial(remove_token_from_attr, attribute='class')
 
 
-
 #######################################################################
 #
 # FrozenNode - an immutable Node
@@ -2234,7 +2310,9 @@ class FrozenNode(Node):
     Frozen nodes must only be used temporarily during parsing or
     tree-transformation and should not occur in the product of the
     transformation any more. This can be verified with
-    :py:func:`tree_sanity_check()`.
+    :py:func:`tree_sanity_check()`. Or, as comparison criterion for
+    content equality when picking or selecting nodes or contexts from
+    a tree (see :py:func:`create_match_function()`).
     """
 
     def __init__(self, tag_name: str, result: ResultType, leafhint: bool = True) -> None:
@@ -2255,21 +2333,27 @@ class FrozenNode(Node):
 
     @property
     def attr(self):
-        raise NotImplementedError("Attributes cannot be accessed on a frozen node")
+        try:
+            return self._xml_attr
+        except AttributeError:
+            return OrderedDict()  # assignments will be void!
 
     @attr.setter
     def attr(self, attr_dict: OrderedDict):
-        raise NotImplementedError("Frozen nodes cannot store attributes")
+        if self.has_attr():
+            raise AssertionError("Frozen nodes' attributes can only be set once")
+        else:
+            self._xml_attr = attr_dict
 
     def with_pos(self, pos: int) -> 'Node':
         raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 
     def to_json_obj(self) -> List:
-        raise NotImplementedError("Frozen nodes cannot and should not be serialized!")
+        raise NotImplementedError("Frozen nodes cannot and be serialized as JSON!")
 
     @staticmethod
     def from_json_obj(json_obj: Union[Dict, Sequence]) -> 'Node':
-        raise NotImplementedError("Frozen nodes cannot and should not be deserialized!")
+        raise NotImplementedError("Frozen nodes cannot be deserialized from JSON!")
 
 
 PLACEHOLDER = FrozenNode('__PLACEHOLDER__', '')
@@ -2284,7 +2368,7 @@ def tree_sanity_check(tree: Node) -> bool:
     before any kind of tree generation (i.e. parsing) or transformation
     is finished.
     :param tree: the root of the tree to be checked
-    :return: True, if the tree is `sane`, False otherwise.
+    :returns: `True`, if the tree is "sane", `False` otherwise.
     """
     node_set = set()  # type: Set[Node]
     for node in tree.select_if(lambda nd: True, include_root=True):
@@ -2335,7 +2419,7 @@ class RootNode(Node):
     :ivar source_mapping:  A source mapping function to map source code
         position to positions of the non-preprocessed source.
         See module `preprocess`
-    :ivar lbreaks: A list of indicies of all linebreaks in the source.
+    :ivar lbreaks: A list of indices of all linebreaks in the source.
 
     :ivar inline_tags: see `Node.as_xml()` for an explanation.
     :ivar omit_tags: see `Node.as_xml()` for an explanation.
@@ -2493,10 +2577,10 @@ class RootNode(Node):
                   code: ErrorCode = ERROR) -> 'RootNode':
         """
         Adds an error to this tree, locating it at a specific node.
-        Parameters:
-            node(Node):   The node where the error occurred
-            message(str): A string with the error message.abs
-            code(int):    An error code to identify the kind of error
+
+        :param node:   the node where the error occurred
+        :param message: a string with the error message.abs
+        :param code:    an error code to identify the type of the error
         """
         error = Error(message, node.pos, code)
         self.add_error(node, error)

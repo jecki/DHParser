@@ -2053,10 +2053,10 @@ class NaryParser(CombinedParser):
     contains one or more other parsers, like the alternative
     parser for example.
 
-    The NnaryOperator base class supplies __deepcopy__ and apply methods
-    for unary parsers. The __deepcopy__ method needs to be
-    overwritten, however, if the constructor of a derived class has
-    additional parameters.
+    The NaryOperator base class supplies __deepcopy__ and apply methods
+    for n-ary parsers. The __deepcopy__ method needs to be overwritten,
+    however, if the constructor of a derived class takes additional
+    parameters.
     """
 
     def __init__(self, *parsers: Parser) -> None:

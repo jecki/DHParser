@@ -32,13 +32,12 @@ from functools import partial, singledispatch, reduce
 import inspect
 import operator
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
-    Tuple, List, Sequence, Union, Optional, Text
+    Tuple, List, Sequence, Union, Text
 
-from DHParser.error import Error, ErrorCode, AST_TRANSFORM_CRASH, ERROR
+from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
-    RootNode, parse_sxpr, flatten_sxpr, ZOMBIE_TAG
-from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython, \
-    escape_formatstr
+    RootNode, parse_sxpr, flatten_sxpr, TreeContext
+from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
 
 
 __all__ = ('TransformationDict',
@@ -133,11 +132,11 @@ __all__ = ('TransformationDict',
            'peek')
 
 
-TransformationProc = Callable[[List[Node]], None]
+TransformationProc = Callable[[TreeContext], None]
 TransformationDict = Dict[str, Sequence[Callable]]
 TransformationFunc = Union[Callable[[Node], Any], partial]
 ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
-ConditionFunc = Callable  # Callable[[List[Node]], bool]
+ConditionFunc = Callable  # Callable[[TreeContext], bool]
 KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
 
@@ -188,7 +187,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
 
     def type_guard(t):
         """Raises an error if type `t` is a generic type or could be mistaken
-        for the type of the canonical first parameter "List[Node] of
+        for the type of the canonical first parameter "TreeContext of
         transformation functions. Returns `t`."""
         # if isinstance(t, GenericMeta):
         #     raise TypeError("Generic Type %s not permitted\n in transformation_factory "
@@ -200,10 +199,10 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             raise TypeError("Generic Type %s not permitted\n in transformation_factory "
                             "decorator. Use the equivalent non-generic type instead!"
                             % str(t))
-        if issubtype(List[Node], t):
+        if issubtype(TreeContext, t):
             raise TypeError("Sequence type %s not permitted\nin transformation_factory "
                             "decorator, because it could be mistaken for a base class "
-                            "of List[Node]\nwhich is the type of the canonical first "
+                            "of TreeContext\nwhich is the type of the canonical first "
                             "argument of transformation functions. Try 'tuple' instead!"
                             % str(t))
         return t
@@ -380,7 +379,7 @@ def traverse(root_node: Node,
 
 
 @transformation_factory(dict)
-def traverse_locally(context: List[Node],
+def traverse_locally(context: TreeContext,
                      processing_table: Dict,              # actually: ProcessingTableType
                      key_func: Callable = key_tag_name):  # actually: KeyFunc
     """
@@ -403,7 +402,7 @@ def condition_guard(value) -> bool:
     return value
 
 
-def apply_transformations(context: List[Node], transformation: Union[Callable, Sequence[Callable]]):
+def apply_transformations(context: TreeContext, transformation: Union[Callable, Sequence[Callable]]):
     """Applies a single or a sequence of transformations to a context."""
     if callable(transformation):
         transformation_guard(transformation(context))
@@ -414,14 +413,14 @@ def apply_transformations(context: List[Node], transformation: Union[Callable, S
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_if(context: List[Node], transformation: Union[Callable, Tuple[Callable]], condition: Callable):
+def apply_if(context: TreeContext, transformation: Union[Callable, Tuple[Callable]], condition: Callable):
     """Applies a transformation only if a certain condition is met."""
     if condition_guard(condition(context)):
         apply_transformations(context, transformation)
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_ifelse(context: List[Node],
+def apply_ifelse(context: TreeContext,
                  if_transformation: Union[Callable, Tuple[Callable]],
                  else_transformation: Union[Callable, Tuple[Callable]],
                  condition: Callable):
@@ -434,7 +433,7 @@ def apply_ifelse(context: List[Node],
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_unless(context: List[Node], transformation: Union[Callable, Tuple[Callable]], condition: Callable):
+def apply_unless(context: TreeContext, transformation: Union[Callable, Tuple[Callable]], condition: Callable):
     """Applies a transformation if a certain condition is *not* met."""
     if not condition_guard(condition(context)):
         apply_transformations(context, transformation)
@@ -443,30 +442,30 @@ def apply_unless(context: List[Node], transformation: Union[Callable, Tuple[Call
 ## boolean operators
 
 
-def always(context: List[Node]) -> bool:
+def always(context: TreeContext) -> bool:
     """Always returns True, no matter what the state of the context is."""
     return True
 
 
-def never(context: List[Node]) -> bool:
+def never(context: TreeContext) -> bool:
     """Always returns True, no matter what the state of the context is."""
     return False
 
 @transformation_factory(collections.abc.Callable)
-def neg(context: List[Node], bool_func: collections.abc.Callable) -> bool:
+def neg(context: TreeContext, bool_func: collections.abc.Callable) -> bool:
     """Returns the inverted boolean result of `bool_func(context)`"""
     return not bool_func(context)
 
 
 @transformation_factory(collections.abc.Set)
-def any_of(context: List[Node], bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+def any_of(context: TreeContext, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
     """Returns True, if any of the bool functions in `bool_func_set` evaluate to True
     for the given context."""
     return any(bf(context) for bf in bool_func_set)
 
 
 @transformation_factory(collections.abc.Set)
-def all_of(context: List[Node], bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+def all_of(context: TreeContext, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
     """Returns True, if all of the bool functions in `bool_func_set` evaluate to True
     for the given context."""
     return all(bf(context) for bf in bool_func_set)
@@ -485,18 +484,18 @@ def all_of(context: List[Node], bool_func_set: AbstractSet[collections.abc.Calla
 #######################################################################
 
 
-def is_single_child(context: List[Node]) -> bool:
+def is_single_child(context: TreeContext) -> bool:
     """Returns ``True`` if the current node does not have any siblings."""
     return len(context[-2].children) == 1
 
 
 # TODO: ambiguous: named, tagging...
-def is_named(context: List[Node]) -> bool:
+def is_named(context: TreeContext) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
     return not context[-1].anonymous
 
 
-def is_anonymous(context: List[Node]) -> bool:
+def is_anonymous(context: TreeContext) -> bool:
     """Returns ``True`` if the current node's parser is an anonymous parser."""
     return context[-1].anonymous
 
@@ -504,7 +503,7 @@ def is_anonymous(context: List[Node]) -> bool:
 RX_WHITESPACE = re.compile(r'\s*$')
 
 
-def contains_only_whitespace(context: List[Node]) -> bool:
+def contains_only_whitespace(context: TreeContext) -> bool:
     r"""Returns ``True`` for nodes that contain only whitespace regardless
     of the tag_name, i.e. nodes the content of which matches the regular
     expression /\s*/, including empty nodes. Note, that this is not true
@@ -512,13 +511,13 @@ def contains_only_whitespace(context: List[Node]) -> bool:
     return bool(RX_WHITESPACE.match(context[-1].content))
 
 
-def is_empty(context: List[Node]) -> bool:
+def is_empty(context: TreeContext) -> bool:
     """Returns ``True`` if the current node's content is empty."""
     return not context[-1].result
 
 
 @transformation_factory(collections.abc.Set)
-def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> bool:
+def is_token(context: TreeContext, tokens: AbstractSet[str] = frozenset()) -> bool:
     """
     Checks whether the last node in the context has the tag_name ":Text"
     and it's content matches one of the given tokens. Leading and trailing
@@ -530,19 +529,19 @@ def is_token(context: List[Node], tokens: AbstractSet[str] = frozenset()) -> boo
 
 
 @transformation_factory(collections.abc.Set)
-def is_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+def is_one_of(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's tag_name is one of the given tag names."""
     return context[-1].tag_name in tag_name_set
 
 
 @transformation_factory(collections.abc.Set)
-def not_one_of(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+def not_one_of(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's tag_name is not one of the given tag names."""
     return context[-1].tag_name not in tag_name_set
 
 
 @transformation_factory(collections.abc.Set)
-def matches_re(context: List[Node], patterns: AbstractSet[str]) -> bool:
+def matches_re(context: TreeContext, patterns: AbstractSet[str]) -> bool:
     """
     Returns true, if the node's tag_name matches one of the regular
     expressions in `patterns`. For example, ':.*' matches all anonymous nodes.
@@ -555,7 +554,7 @@ def matches_re(context: List[Node], patterns: AbstractSet[str]) -> bool:
 
 
 @transformation_factory(str)
-def has_attr(context: List[Node], attr: str) -> bool:
+def has_attr(context: TreeContext, attr: str) -> bool:
     """
     Returns true, if the node has the attribute `attr`, no matter
     what its value is.
@@ -565,7 +564,7 @@ def has_attr(context: List[Node], attr: str) -> bool:
 
 
 @transformation_factory(str)
-def attr_equals(context: List[Node], attr: str, value: str) -> bool:
+def attr_equals(context: TreeContext, attr: str, value: str) -> bool:
     """
     Returns true, if the node has the attribute `attr` and its value equals
     `value`.
@@ -575,7 +574,7 @@ def attr_equals(context: List[Node], attr: str, value: str) -> bool:
 
 
 @transformation_factory
-def has_content(context: List[Node], regexp: str) -> bool:
+def has_content(context: TreeContext, regexp: str) -> bool:
     """
     Checks a node's content against a regular expression.
 
@@ -588,7 +587,7 @@ def has_content(context: List[Node], regexp: str) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_ancestor(context: List[Node],
+def has_ancestor(context: TreeContext,
                  tag_name_set: AbstractSet[str],
                  generations: int =-1) -> bool:
     """
@@ -609,14 +608,14 @@ def has_ancestor(context: List[Node],
 
 
 @transformation_factory(collections.abc.Set)
-def has_parent(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+def has_parent(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
     """Checks whether the immediate predecessor in the context has one of the
     given tags."""
     return has_ancestor(context, tag_name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
-def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
+def has_descendant(context: TreeContext, tag_name_set: AbstractSet[str],
                    generations: int = -1) -> bool:
     assert generations != 0
     for child in context[-1].children:
@@ -629,14 +628,14 @@ def has_descendant(context: List[Node], tag_name_set: AbstractSet[str],
 
 
 @transformation_factory(collections.abc.Set)
-def has_child(context: List[Node], tag_name_set: AbstractSet[str]) -> bool:
+def has_child(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
     """Checks whether at least one child (i.e. immediate descendant) has one of
     the given tags."""
     return has_descendant(context, tag_name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
-def has_sibling(context: List[Node], tag_name_set: AbstractSet[str]):
+def has_sibling(context: TreeContext, tag_name_set: AbstractSet[str]):
     if len(context) >= 2:
         node = context[-1]
         for child in context[-2].children:
@@ -735,7 +734,7 @@ def _reduce_child(node: Node, child: Node, root: RootNode):
 #######################################################################
 
 
-def replace_by_single_child(context: List[Node]):
+def replace_by_single_child(context: TreeContext):
     """
     Removes single branch node, replacing it by its immediate descendant.
     Replacement only takes place, if the last node in the context has
@@ -748,7 +747,7 @@ def replace_by_single_child(context: List[Node]):
         _replace_by(node, node.children[0], cast(RootNode, context[0]))
 
 
-def replace_by_children(context: List[Node]):
+def replace_by_children(context: TreeContext):
     """
     Eliminates the last node in the context by replacing it with its children.
     The attributes of this node will be dropped. In case the last node is
@@ -769,7 +768,7 @@ def replace_by_children(context: List[Node]):
         parent._set_result(result[:i] + node.children + result[i + 1:])
 
 
-def reduce_single_child(context: List[Node]):
+def reduce_single_child(context: TreeContext):
     """
     Reduces a single branch node by transferring the result of its
     immediate descendant to this node, but keeping this node's parser entry.
@@ -784,7 +783,7 @@ def reduce_single_child(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Callable)
-def replace_or_reduce(context: List[Node], condition: Callable = is_named):
+def replace_or_reduce(context: TreeContext, condition: Callable = is_named):
     """
     Replaces node by a single child, if condition is met on child,
     otherwise (i.e. if the child is anonymous) reduces the child.
@@ -799,7 +798,7 @@ def replace_or_reduce(context: List[Node], condition: Callable = is_named):
 
 
 @transformation_factory(str)
-def change_tag_name(context: List[Node], tag_name: str, restriction: Callable = always):
+def change_tag_name(context: TreeContext, tag_name: str, restriction: Callable = always):
     """
     Changes the tag name of the last node in the context.
 
@@ -817,7 +816,7 @@ def change_tag_name(context: List[Node], tag_name: str, restriction: Callable = 
 
 
 @transformation_factory(dict)
-def replace_tag_names(context: List[Node], replacements: Dict[str, str]):
+def replace_tag_names(context: TreeContext, replacements: Dict[str, str]):
     """
     Replaces the tag names of the children of the last node in the context
     according to the replacement dictionary.
@@ -835,7 +834,7 @@ def replace_tag_names(context: List[Node], replacements: Dict[str, str]):
 
 
 @transformation_factory(collections.abc.Callable)
-def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: bool = True):
+def flatten(context: TreeContext, condition: Callable = is_anonymous, recursive: bool = True):
     """
     Flattens all children, that fulfill the given ``condition``
     (default: all unnamed children). Flattening means that wherever a
@@ -871,7 +870,7 @@ def flatten(context: List[Node], condition: Callable = is_anonymous, recursive: 
         node._set_result(tuple(new_result))
 
 
-def collapse(context: List[Node]):
+def collapse(context: TreeContext):
     """
     Collapses all sub-nodes of a node by replacing them with the
     string representation of the node. USE WITH CARE!
@@ -889,7 +888,7 @@ def collapse(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Callable)
-def collapse_children_if(context: List[Node], condition: Callable, target_tag: str):
+def collapse_children_if(context: TreeContext, condition: Callable, target_tag: str):
     """
     (Recursively) merges the content of all adjacent child nodes that
     fulfill the given `condition` into a single leaf node with the tag-name
@@ -954,7 +953,7 @@ def collapse_children_if(context: List[Node], condition: Callable, target_tag: s
 
 
 @transformation_factory(collections.abc.Callable)
-def transform_content(context: List[Node], func: Callable):  # Callable[[ResultType], ResultType]
+def transform_content(context: TreeContext, func: Callable):  # Callable[[ResultType], ResultType]
     """
     Replaces the content of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
@@ -964,7 +963,7 @@ def transform_content(context: List[Node], func: Callable):  # Callable[[ResultT
 
 
 @transformation_factory  # (str)
-def replace_content_with(context: List[Node], content: str):  # Callable[[Node], ResultType]
+def replace_content_with(context: TreeContext, content: str):  # Callable[[Node], ResultType]
     """
     Replaces the content of the node with the given text content.
     """
@@ -973,7 +972,7 @@ def replace_content_with(context: List[Node], content: str):  # Callable[[Node],
 
 
 @transformation_factory
-def add_attributes(context: List[Node], attributes: dict):  # Dict[str, str]
+def add_attributes(context: TreeContext, attributes: dict):  # Dict[str, str]
     """
     Adds the attributes in the dictionary to the XML-Attributes of the last node
     in the given context.
@@ -998,7 +997,7 @@ def normalize_whitespace(context):
 
 
 @transformation_factory(collections.abc.Callable)
-def merge_adjacent(context: List[Node], condition: Callable, tag_name: str = ''):
+def merge_adjacent(context: TreeContext, condition: Callable, tag_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
     is assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
@@ -1034,7 +1033,7 @@ def merge_adjacent(context: List[Node], condition: Callable, tag_name: str = '')
 
 
 @transformation_factory(collections.abc.Callable)
-def merge_connected(context: List[Node], content: Callable, delimiter: Callable,
+def merge_connected(context: TreeContext, content: Callable, delimiter: Callable,
                     content_name: str = '', delimiter_name: str = ''):
     """
     Merges sequences of content and delimiters. Other than `merge_adjacent()`, which
@@ -1043,8 +1042,8 @@ def merge_connected(context: List[Node], content: Callable, delimiter: Callable,
 
     :param context: The context, i.e. list of "ancestor" nodes, ranging from the
         root node (`context[0]`) to the current node (`context[-1]`)
-    :param content: Condition to identify content nodes. (List[Node] -> bool)
-    :param delimiter: Condition to identify delimiter nodes. (List[Node] -> bool)
+    :param content: Condition to identify content nodes. (TreeContext -> bool)
+    :param delimiter: Condition to identify delimiter nodes. (TreeContext -> bool)
     :param content_name: tag name for the merged content blocks
     :param delimiter_name: tag name for the merged delimiters at the fringe
     """
@@ -1110,7 +1109,7 @@ def merge_results(dest: Node, src: Tuple[Node, ...], root: RootNode) -> bool:
 
 @transformation_factory(collections.abc.Callable)
 @cython.locals(a=cython.int, b=cython.int, i=cython.int)
-def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
+def move_adjacent(context: TreeContext, condition: Callable, merge: bool = True):
     """
     Moves adjacent nodes that fulfill the given condition to the parent node.
     If the `merge`-flag is set, a moved node will be merged with its
@@ -1178,7 +1177,7 @@ def move_adjacent(context: List[Node], condition: Callable, merge: bool = True):
         parent._set_result(parent.children[:a + 1] + before + (node,) + after + parent.children[b:])
 
 
-def left_associative(context: List[Node]):
+def left_associative(context: TreeContext):
     """
     Rearranges a flat node with infix operators into a left associative tree.
     """
@@ -1196,7 +1195,7 @@ def left_associative(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Set)
-def lean_left(context: List[Node], operators: AbstractSet[str]):
+def lean_left(context: TreeContext, operators: AbstractSet[str]):
     """
     Turns a right leaning tree into a left leaning tree:
 
@@ -1240,7 +1239,7 @@ def lean_left(context: List[Node], operators: AbstractSet[str]):
 
 
 @transformation_factory(collections.abc.Callable)
-def lstrip(context: List[Node], condition: Callable = contains_only_whitespace):
+def lstrip(context: TreeContext, condition: Callable = contains_only_whitespace):
     """Recursively removes all leading child-nodes that fulfill a given condition."""
     node = context[-1]
     i = 1
@@ -1254,7 +1253,7 @@ def lstrip(context: List[Node], condition: Callable = contains_only_whitespace):
 
 
 @transformation_factory(collections.abc.Callable)
-def rstrip(context: List[Node], condition: Callable = contains_only_whitespace):
+def rstrip(context: TreeContext, condition: Callable = contains_only_whitespace):
     """Recursively removes all leading nodes that fulfill a given condition."""
     node = context[-1]
     i, L = 0, len(node.children)
@@ -1269,14 +1268,14 @@ def rstrip(context: List[Node], condition: Callable = contains_only_whitespace):
 
 
 @transformation_factory(collections.abc.Callable)
-def strip(context: List[Node], condition: Callable = contains_only_whitespace):
+def strip(context: TreeContext, condition: Callable = contains_only_whitespace):
     """Removes leading and trailing child-nodes that fulfill a given condition."""
     lstrip(context, condition)
     rstrip(context, condition)
 
 
 @transformation_factory  # (slice)
-def keep_children(context: List[Node], section: slice = slice(None)):
+def keep_children(context: TreeContext, section: slice = slice(None)):
     """Keeps only child-nodes which fall into a slice of the result field."""
     node = context[-1]
     if node.children:
@@ -1284,7 +1283,7 @@ def keep_children(context: List[Node], section: slice = slice(None)):
 
 
 @transformation_factory(collections.abc.Callable)
-def keep_children_if(context: List[Node], condition: Callable):
+def keep_children_if(context: TreeContext, condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
@@ -1292,7 +1291,7 @@ def keep_children_if(context: List[Node], condition: Callable):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
+def keep_tokens(context: TreeContext, tokens: AbstractSet[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1300,19 +1299,19 @@ def keep_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_nodes(context: List[Node], tag_names: AbstractSet[str]):
+def keep_nodes(context: TreeContext, tag_names: AbstractSet[str]):
     """Removes children by tag name."""
     keep_children_if(context, partial(is_one_of, tag_name_set=tag_names))
 
 
 @transformation_factory
-def keep_content(context: List[Node], regexp: str):
+def keep_content(context: TreeContext, regexp: str):
     """Removes children depending on their string value."""
     keep_children_if(context, partial(has_content, regexp=regexp))
 
 
 @transformation_factory(collections.abc.Callable)
-def remove_children_if(context: List[Node], condition: Callable):
+def remove_children_if(context: TreeContext, condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
     if node.children:
@@ -1328,7 +1327,7 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 # remove_single_child = apply_if(keep_children(slice(0)), lambda ctx: len(ctx[-1].children) == 1)
 
 
-# def remove_first(context: List[Node]):
+# def remove_first(context: TreeContext):
 #     """Removes the first non-whitespace child."""
 #     node = context[-1]
 #     if node.children:
@@ -1340,7 +1339,7 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 #         node.result = node.children[:i] + node.children[i + 1:]
 #
 #
-# def remove_last(context: List[Node]):
+# def remove_last(context: TreeContext):
 #     """Removes the last non-whitespace child."""
 #     node = context[-1]
 #     if node.children:
@@ -1353,7 +1352,7 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 #         node.result = node.children[:i] + node.children[i + 1:]
 
 
-def remove_brackets(context: List[Node]):
+def remove_brackets(context: TreeContext):
     """Removes any leading or trailing sequence of whitespaces, tokens or regexps."""
     children = context[-1].children
     if children:
@@ -1374,7 +1373,7 @@ def remove_brackets(context: List[Node]):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
+def remove_tokens(context: TreeContext, tokens: AbstractSet[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1382,19 +1381,19 @@ def remove_tokens(context: List[Node], tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_children(context: List[Node], tag_names: AbstractSet[str]):
+def remove_children(context: TreeContext, tag_names: AbstractSet[str]):
     """Removes children by tag name."""
     remove_children_if(context, partial(is_one_of, tag_name_set=tag_names))
 
 
 @transformation_factory
-def remove_content(context: List[Node], regexp: str):
+def remove_content(context: TreeContext, regexp: str):
     """Removes children depending on their string value."""
     remove_children_if(context, partial(has_content, regexp=regexp))
 
 
 @transformation_factory(collections.abc.Callable)
-def remove_if(context: List[Node], condition: Callable):
+def remove_if(context: TreeContext, condition: Callable):
     """Removes node if condition is `True`"""
     if condition(context):
         try:
@@ -1458,7 +1457,7 @@ def node_maker(tag_name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(context: List[Node], tag_names: AbstractSet[str] = frozenset()) -> Tuple[int]:
+def positions_of(context: TreeContext, tag_names: AbstractSet[str] = frozenset()) -> Tuple[int]:
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `tag_names`.
     """
@@ -1466,7 +1465,7 @@ def positions_of(context: List[Node], tag_names: AbstractSet[str] = frozenset())
 
 
 @transformation_factory
-def delimiter_positions(context: List[Node]):
+def delimiter_positions(context: TreeContext):
     """Returns a tuple of positions "between" all children."""
     return tuple(range(1, len(context[-1].children)))
 
@@ -1474,7 +1473,7 @@ def delimiter_positions(context: List[Node]):
 PositionType = Union[int, tuple, Callable]
 
 
-def normalize_position_representation(context: List[Node], position: PositionType) -> Tuple[int]:
+def normalize_position_representation(context: TreeContext, position: PositionType) -> Tuple[int]:
     """Converts a position-representation in any of the forms that `PositionType`
     allows into a (possibly empty) tuple of integers."""
     if callable(position):
@@ -1489,7 +1488,7 @@ def normalize_position_representation(context: List[Node], position: PositionTyp
 
 
 @transformation_factory(int, tuple, collections.abc.Callable)
-def insert(context: List[Node], position: PositionType, node_factory: Callable):
+def insert(context: TreeContext, position: PositionType, node_factory: Callable):
     """Inserts a delimiter at a specific position within the children. If
     `position` is `None` nothing will be inserted. Position values greater
     or equal the number of children mean that the delimiter will be appended
@@ -1515,7 +1514,7 @@ def insert(context: List[Node], position: PositionType, node_factory: Callable):
 
 
 @transformation_factory(collections.abc.Callable)
-def delimit_children(context: List[Node], node_factory: Callable):
+def delimit_children(context: TreeContext, node_factory: Callable):
     """Add a delimiter drawn from the `node_factory` between all children."""
     insert(context, delimiter_positions, node_factory)
 
@@ -1529,7 +1528,7 @@ def delimit_children(context: List[Node], node_factory: Callable):
 
 # @transformation_factory
 @transformation_factory(str)
-def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = ERROR):
+def add_error(context: TreeContext, error_msg: str, error_code: ErrorCode = ERROR):
     """
     Raises an error unconditionally. This makes sense in case illegal paths are
     encoded in the syntax to provide more accurate error messages.
@@ -1548,7 +1547,7 @@ def add_error(context: List[Node], error_msg: str, error_code: ErrorCode = ERROR
 
 
 @transformation_factory(collections.abc.Callable)
-def error_on(context: List[Node],
+def error_on(context: TreeContext,
              condition: Callable,
              error_msg: str = '',
              error_code: ErrorCode = ERROR):
@@ -1566,7 +1565,7 @@ def error_on(context: List[Node],
 
 #
 # @transformation_factory(collections.abc.Callable)
-# def warn_on(context: List[Node], condition: Callable, warning: str = ''):
+# def warn_on(context: TreeContext, condition: Callable, warning: str = ''):
 #     """
 #     Checks for `condition`; adds an warning message if condition is not met.
 #     """
@@ -1587,7 +1586,7 @@ assert_has_children = error_on(lambda nd: nd.children, 'Element "%s" has no chil
 
 
 @transformation_factory
-def assert_content(context: List[Node], regexp: str):
+def assert_content(context: TreeContext, regexp: str):
     node = context[-1]
     if not has_content(context, regexp):
         cast(RootNode, context[0]).new_error(node, 'Element "%s" violates %s on %s'
@@ -1595,7 +1594,7 @@ def assert_content(context: List[Node], regexp: str):
 
 
 @transformation_factory(collections.abc.Set)
-def require(context: List[Node], child_tags: AbstractSet[str]):
+def require(context: TreeContext, child_tags: AbstractSet[str]):
     node = context[-1]
     for child in node.children:
         if child.tag_name not in child_tags:
@@ -1604,7 +1603,7 @@ def require(context: List[Node], child_tags: AbstractSet[str]):
 
 
 @transformation_factory(collections.abc.Set)
-def forbid(context: List[Node], child_tags: AbstractSet[str]):
+def forbid(context: TreeContext, child_tags: AbstractSet[str]):
     node = context[-1]
     for child in node.children:
         if child.tag_name in child_tags:
@@ -1612,6 +1611,6 @@ def forbid(context: List[Node], child_tags: AbstractSet[str]):
                                                  % (child.tag_name, node.tag_name))
 
 
-def peek(context: List[Node]):
+def peek(context: TreeContext):
     """For debugging: Prints the last node in the context as S-expression."""
     print(context[-1].as_sxpr(compact=True))

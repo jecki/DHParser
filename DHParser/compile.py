@@ -42,7 +42,7 @@ from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
-from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE
+from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.error import adjust_error_locations, is_error, is_fatal, Error, \
@@ -133,7 +133,7 @@ class Compiler:
     def reset(self):
         self.source = ''  # type: str
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
-        self.context = []  # type: List[Node]
+        self.context = []  # type: TreeContext
         self._None_check = True  # type: bool
         self._dirty_flag = False
         self._debug = get_config_value('debug_compiler')  # type: bool
