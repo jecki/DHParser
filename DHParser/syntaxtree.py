@@ -344,7 +344,7 @@ Node-class traverse the tree pre-order. See the difference::
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
-Navigating a tree via its flat string representation
+Navigating a tree via its flat-string-representation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sometimes it may be more convenient to search for a specific feature in
@@ -420,6 +420,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'LEAF_PTYPES',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
+           'TreeContext',
            'ResultType',
            'StrictResultType',
            'ChildrenType',
@@ -495,56 +496,12 @@ ZOMBIE_TAG = "ZOMBIE__"
 
 #######################################################################
 #
-# syntaxtree nodes
+# support functions
 #
 #######################################################################
 
 
-RX_IS_SXPR = re.compile(r'\s*\(')
-RX_IS_XML = re.compile(r'\s*<')
-RX_ATTR_NAME = re.compile(r'[\w.:-]')
-
-
-def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
-    """
-    Returns S-expression ``sxpr`` as a one-liner without unnecessary
-    whitespace.
-
-    The ``threshold`` value is a maximum number of
-    characters allowed in the flattened expression. If this number
-    is exceeded the the unflattened S-expression is returned. A
-    negative number means that the S-expression will always be
-    flattened. Zero or (any postive integer <= 3) essentially means
-    that the expression will not be flattened.
-
-    Example:
-    >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
-    '(a (b c))'
-    """
-    assert RX_IS_SXPR.match(sxpr)
-    if threshold == 0:
-        return sxpr
-    flat = re.sub(r'\s(?=\))', '', re.sub(r'(?<!")\s+', ' ', sxpr).replace('\n', '')).strip()
-    if len(flat) > threshold >= 0:
-        return sxpr.strip()
-    return flat
-
-
-def flatten_xml(xml: str) -> str:
-    """
-    Returns an XML-tree as a one liner without unnecessary whitespace,
-    i.e. only whitespace within leaf-nodes is preserved.
-    A more precise alternative to `flatten_xml` is to use Node.as_xml()
-    ans passing a set containing the top level tag to parameter `inline_tags`.
-    """
-    # works only with regex
-    # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
-    assert RX_IS_XML.match(xml)
-
-    def tag_only(m):
-        """Return only the tag, drop the whitespace."""
-        return m.groupdict()['closing_tag']
-    return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
+# support functions for searching an navigating trees #################
 
 
 # criteria for finding nodes:
@@ -554,6 +511,7 @@ def flatten_xml(xml: str) -> str:
 # - a function Node -> bool
 CriteriaType = Union['Node', str, Container[str], Callable, int]
 
+TreeContext = List['Node']
 MatchFunction = Callable[['Node'], bool]
 ContextMatchFunction = Callable[[List['Node']], bool]
 
@@ -603,7 +561,56 @@ def create_context_match_function(criterion: CriteriaType) -> ContextMatchFuncti
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type")
 
 
-RX_AMP = re.compile(r'&(?!\w+;)')
+# support functions for tree-serialization ############################
+
+
+RX_IS_SXPR = re.compile(r'\s*\(')
+RX_IS_XML = re.compile(r'\s*<')
+RX_ATTR_NAME = re.compile(r'[\w.:-]')
+
+def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
+    """
+    Returns S-expression ``sxpr`` as a one-liner without unnecessary
+    whitespace.
+
+    The ``threshold`` value is a maximum number of
+    characters allowed in the flattened expression. If this number
+    is exceeded the the unflattened S-expression is returned. A
+    negative number means that the S-expression will always be
+    flattened. Zero or (any postive integer <= 3) essentially means
+    that the expression will not be flattened.
+
+    Example:
+    >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
+    '(a (b c))'
+    """
+    assert RX_IS_SXPR.match(sxpr)
+    if threshold == 0:
+        return sxpr
+    flat = re.sub(r'\s(?=\))', '', re.sub(r'(?<!")\s+', ' ', sxpr).replace('\n', '')).strip()
+    if len(flat) > threshold >= 0:
+        return sxpr.strip()
+    return flat
+
+
+def flatten_xml(xml: str) -> str:
+    """
+    Returns an XML-tree as a one liner without unnecessary whitespace,
+    i.e. only whitespace within leaf-nodes is preserved.
+    A more precise alternative to `flatten_xml` is to use Node.as_xml()
+    ans passing a set containing the top level tag to parameter `inline_tags`.
+    """
+    # works only with regex
+    # return re.sub(r'\s+(?=<\w)', '', re.sub(r'(?<=</\w+>)\s+', '', xml))
+    assert RX_IS_XML.match(xml)
+
+    def tag_only(m):
+        """Return only the tag, drop the whitespace."""
+        return m.groupdict()['closing_tag']
+    return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
+
+
+RX_AMPERSAND = re.compile(r'&(?!\w+;)')
 
 
 def clean_anonymous_tag_name(tag_name: str) -> str:
@@ -615,6 +622,17 @@ def clean_anonymous_tag_name(tag_name: str) -> str:
     if tag_name[:1] == ':':
         return 'ANONYMOUS_%s__' % tag_name[1:]
     return tag_name
+
+
+#######################################################################
+#
+# Node class
+#
+#######################################################################
+
+ChildrenType = Tuple['Node', ...]
+StrictResultType = Union[ChildrenType, StringView, str]
+ResultType = Union[ChildrenType, 'Node', StringView, str]
 
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
@@ -1716,7 +1734,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
-            content = RX_AMP.sub('&amp;', content)
+            content = RX_AMPERSAND.sub('&amp;', content)
             content = content.replace('<', '&lt;').replace('>', '&gt;')
             return content
 
@@ -1837,111 +1855,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                                 ", ".join(ALLOWED_PRESET_VALUES['default_serialization'])))
 
 
-# Error Handling stub #################################################
-
-# class ErrorInfo(Protocol):
-#     @property
-#     def error_nodes(self) -> Dict[int, List[Error]]:
-#         ...
+#######################################################################
 #
-#     def node_errors(self) -> List[Error]:
-#         ...
-
-
-# Attribute handling ##################################################
-
-def validate_token_sequence(token_sequence: str) -> bool:
-    """Returns True, if `token_sequence` is properly formed.
-
-    Token sequences are strings or words which are separated by
-    single blanks with no leading or trailing blank
-    """
-    return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
-        and token_sequence.find('  ') < 0
-
-
-def has_token(token_sequence: str, tokens: str) -> bool:
-    """Returns true, if `token` is contained in the blank-spearated
-    token sequence. If `token` itself is a blank-separated sequence of
-    tokens, True is returned if all tokens are contained in
-    `token_sequence`::
-        >>> has_token('bold italic', 'italic')
-        True
-        >>> has_token('bold italic', 'normal')
-        False
-        >>> has_token('bold italic', 'italic bold')
-        True
-        >>> has_token('bold italic', 'bold normal')
-        False
-    """
-    # assert validate_token_sequence(token_sequence)
-    # assert validate_token_sequence(token)
-    return not tokens or set(tokens.split(' ')) <= set(token_sequence.split(' '))
-
-
-def add_token(token_sequence: str, tokens: str) -> str:
-    """Adds the tokens from 'tokens' that are not already contained in
-    `token_sequence` to the end of `token_sequence`::
-        >>> add_token('', 'italic')
-        'italic'
-        >>> add_token('bold italic', 'large')
-        'bold italic large'
-        >>> add_token('bold italic', 'bold')
-        'bold italic'
-        >>> add_token('red thin', 'stroked red')
-        'red thin stroked'
-    """
-    for tk in tokens.split(' '):
-        if tk and token_sequence.find(tk) < 0:
-            token_sequence += ' ' + tk
-    return token_sequence.lstrip()
-
-
-def remove_token(token_sequence, tokens: str) -> str:
-    """Removes all `tokens` from  `token_sequence`::
-
-        >>> remove_token('red thin stroked', 'thin')
-        'red stroked'
-        >>> remove_token('red thin stroked', 'blue')
-        'red thin stroked'
-        >>> remove_token('red thin stroked', 'blue stroked')
-        'red thin'
-    """
-    for tk in tokens.split(' '):
-        token_sequence = token_sequence.replace(tk, '').strip().replace('  ', ' ')
-    return token_sequence
-
-
-def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
-    """Returns True if bothe token sequences contain the same tokens,
-    no matter in what order::
-        >>> eq_tokens('red thin stroked', 'stroked red thin')
-        True
-        >>> eq_tokens('red thin', 'thin blue')
-        False
-    """
-    return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
-
-
-def has_token_on_attr(node: Node, tokens: str, attribute: str):
-    """Returns True, if 'attribute' of 'node' contains all 'tokens'."""
-    return has_token(node.get_attr(attribute, ''), tokens)
-
-
-def add_token_to_attr(node: Node, tokens: str, attribute: str):
-    """Adds all `tokens` to `attribute` of `node`."""
-    if tokens:
-        node.attr[attribute] = add_token(node.get_attr(attribute, ''), tokens)
-
-
-def remove_token_from_attr(node: Node, tokens: str, attribute: str):
-    """Removes all `tokens` from `attribute` of `node`."""
-    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), tokens)
-
-
-has_class = functools.partial(has_token_on_attr, attribute='class')
-add_class = functools.partial(add_token_to_attr, attribute='class')
-remove_class = functools.partial(remove_token_from_attr, attribute='class')
+# Functions related to the Node class
+#
+#######################################################################
 
 
 # Navigate contexts ###################################################
@@ -2155,6 +2073,9 @@ def context_sanity_check(context: List[Node]) -> bool:
     return all(context[i] in context[i - 1]._children for i in range(1, len(context)))
 
 
+# Context-mapping (allowing a "string-view" on syntax-trees) ##########
+
+
 ContextMapping = Tuple[List[int], List[List[Node]]]  # A mapping of character positions to contexts
 
 
@@ -2196,26 +2117,124 @@ def map_pos_to_context(i: int, cm: ContextMapping) -> Tuple[List[Node], int]:
     return cm[1][ctx_index], i - cm[0][ctx_index]
 
 
-# FrozenNode ##########################################################
+# Attribute handling ##################################################
 
 
-ChildrenType = Tuple[Node, ...]
-StrictResultType = Union[ChildrenType, StringView, str]
-ResultType = Union[ChildrenType, Node, StringView, str]
+def validate_token_sequence(token_sequence: str) -> bool:
+    """Returns True, if `token_sequence` is properly formed.
+
+    Token sequences are strings or words which are separated by
+    single blanks with no leading or trailing blank
+    """
+    return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
+        and token_sequence.find('  ') < 0
+
+
+def has_token(token_sequence: str, tokens: str) -> bool:
+    """Returns true, if `token` is contained in the blank-spearated
+    token sequence. If `token` itself is a blank-separated sequence of
+    tokens, True is returned if all tokens are contained in
+    `token_sequence`::
+        >>> has_token('bold italic', 'italic')
+        True
+        >>> has_token('bold italic', 'normal')
+        False
+        >>> has_token('bold italic', 'italic bold')
+        True
+        >>> has_token('bold italic', 'bold normal')
+        False
+    """
+    # assert validate_token_sequence(token_sequence)
+    # assert validate_token_sequence(token)
+    return not tokens or set(tokens.split(' ')) <= set(token_sequence.split(' '))
+
+
+def add_token(token_sequence: str, tokens: str) -> str:
+    """Adds the tokens from 'tokens' that are not already contained in
+    `token_sequence` to the end of `token_sequence`::
+        >>> add_token('', 'italic')
+        'italic'
+        >>> add_token('bold italic', 'large')
+        'bold italic large'
+        >>> add_token('bold italic', 'bold')
+        'bold italic'
+        >>> add_token('red thin', 'stroked red')
+        'red thin stroked'
+    """
+    for tk in tokens.split(' '):
+        if tk and token_sequence.find(tk) < 0:
+            token_sequence += ' ' + tk
+    return token_sequence.lstrip()
+
+
+def remove_token(token_sequence, tokens: str) -> str:
+    """Removes all `tokens` from  `token_sequence`::
+
+        >>> remove_token('red thin stroked', 'thin')
+        'red stroked'
+        >>> remove_token('red thin stroked', 'blue')
+        'red thin stroked'
+        >>> remove_token('red thin stroked', 'blue stroked')
+        'red thin'
+    """
+    for tk in tokens.split(' '):
+        token_sequence = token_sequence.replace(tk, '').strip().replace('  ', ' ')
+    return token_sequence
+
+
+def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
+    """Returns True if bothe token sequences contain the same tokens,
+    no matter in what order::
+        >>> eq_tokens('red thin stroked', 'stroked red thin')
+        True
+        >>> eq_tokens('red thin', 'thin blue')
+        False
+    """
+    return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
+
+
+def has_token_on_attr(node: Node, tokens: str, attribute: str):
+    """Returns True, if 'attribute' of 'node' contains all 'tokens'."""
+    return has_token(node.get_attr(attribute, ''), tokens)
+
+
+def add_token_to_attr(node: Node, tokens: str, attribute: str):
+    """Adds all `tokens` to `attribute` of `node`."""
+    if tokens:
+        node.attr[attribute] = add_token(node.get_attr(attribute, ''), tokens)
+
+
+def remove_token_from_attr(node: Node, tokens: str, attribute: str):
+    """Removes all `tokens` from `attribute` of `node`."""
+    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), tokens)
+
+
+has_class = functools.partial(has_token_on_attr, attribute='class')
+add_class = functools.partial(add_token_to_attr, attribute='class')
+remove_class = functools.partial(remove_token_from_attr, attribute='class')
+
+
+
+#######################################################################
+#
+# FrozenNode - an immutable Node
+#
+#######################################################################
 
 
 class FrozenNode(Node):
     """
     FrozenNode is an immutable kind of Node, i.e. it must not be changed
     after initialization. The purpose is mainly to allow certain kinds of
-    optimization, like not having to instantiate empty nodes (because they
-    are always the same and will be dropped while parsing, anyway) or,
-    rather, throw errors if the program tries to treat a node that is
-    supposed to be a temporary (frozen) node as if it was a regular node.
+    optimizations, like not having to instantiate empty nodes (because they
+    are always the same and will be dropped while parsing, anyway) and
+    to be able to trigger errors if the program tries to treat such
+    temporary nodes as a regular ones. (See :py:mod:`DHParser.parse`)
 
     Frozen nodes must only be used temporarily during parsing or
     tree-transformation and should not occur in the product of the
-    transformation any more. This can be verified with `tree_sanity_check()`.
+    transformation any more. This can be verified with
+    :py:func:`tree_sanity_check()`.
     """
 
     def __init__(self, tag_name: str, result: ResultType, leafhint: bool = True) -> None:
@@ -2275,7 +2294,11 @@ def tree_sanity_check(tree: Node) -> bool:
     return True
 
 
-# Tree of nodes #######################################################
+# #####################################################################
+#
+# RootNode - manage global properties of trees, like error messages
+#
+#######################################################################
 
 
 class RootNode(Node):
@@ -2284,6 +2307,13 @@ class RootNode(Node):
     foremost the list off errors that occurred during tree generation
     (i.e. parsing) or any transformation of the tree. Other properties concern
     the customization of the XML-serialization.
+
+    Although errors are local properties that occur on a specific point or
+    chunk of source code, instead of attaching the errors to the nodes on
+    which they have occurred, the list of errors in managed globally by the
+    root-node object. Otherwise it would be hard to keep track of the
+    errors when during the transformation of trees node are replaced or
+    dropped that might also contain error messages.
 
     The root node can be instantiated before the tree is fully parsed. This is
     necessary, because the root node is needed for managing error messages
