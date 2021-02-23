@@ -46,7 +46,11 @@ except ImportError:
 import typing
 from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
     Optional, Type
-
+try:
+    from typing import Protocol
+except ImportError:
+    class Protocol:
+        pass
 
 try:
     import cython
@@ -62,9 +66,11 @@ from DHParser.stringview import StringView
 
 
 __all__ = ('typing',
+           'Protocol',
            'cython',
            'cython_optimized',
            'identify_python',
+           'identity',
            'gen_id',
            'ThreadLocalSingletonFactory',
            'NEVER_MATCH_PATTERN',
@@ -119,11 +125,18 @@ __all__ = ('typing',
 #
 #######################################################################
 
-
 def identify_python() -> str:
     """Returns a reasonable identification string for the python interpreter,
     e.g. "cpython 3.8.6"."""
     return "%s %i.%i.%i" % (sys.implementation.name, *sys.version_info[:3])
+
+
+def identity(x):
+    """Canonical identity function. The purpose of defining identity()
+    here is to allow it to serve as a default value and to be
+    able to check whether a function parameter has been assigned
+    another than the default value or not."""
+    return x
 
 
 global_id_counter = multiprocessing.Value('L', 0)
@@ -739,6 +752,8 @@ def linebreaks(text: Union[StringView, str]) -> List[int]:
     """
     Returns a list of indices all line breaks in the text.
     """
+    assert isinstance(text, (StringView, str)), \
+        "Type %s of `text` is not a string type!" % str(type(text))
     lbr = [-1]
     i = text.find('\n', 0)
     while i >= 0:
