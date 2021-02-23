@@ -18,7 +18,7 @@
 
 """
 Module ``syntaxtree`` encapsulates the functionality for creating
-hand handling syntax-trees. This includes serialization and
+and handling syntax-trees. This includes serialization and
 deserialization of syntax-trees, navigating and serching syntax-trees
 as well as annotating sytanx trees with attributes and error messages.
 
