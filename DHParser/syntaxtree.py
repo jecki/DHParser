@@ -1073,7 +1073,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> node.attr
             OrderedDict()
 
-        NOTE: Use :py:func:`Node.has_attr()` rather than `bool(node.attr)`
+        NOTE: Use :py:meth:`Node.has_attr()` rather than `bool(node.attr)`
         to probe the presence of attributes. Attribute dictionaries are
         created lazily and `node.attr` would create a dictionary, even
         though it may never be needed, any more.
@@ -1286,7 +1286,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         Generates an iterator over all nodes in the tree for which
         `match_function()` returns True. See the more general function
-        :py:func`Node.select()` for a detailed description and examples.
+        :py:meth:`Node.select()` for a detailed description and examples.
         The tree is traversed pre-order by the iterator.
         """
         if include_root and match_function(self):
@@ -1331,7 +1331,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
         """Returns an iterator over all direct children of a node that
-        fulfil the given `criterion`. See :py:func:`Node.select()` for a description
+        fulfil the given `criterion`. See :py:meth:`Node.select()` for a description
         of the parameters.
         """
         match_function = create_match_function(criterion)
@@ -1431,7 +1431,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                        include_root: bool = False,
                        reverse: bool = False) -> Iterator[TreeContext]:
         """
-        Like :py:func:`Node.select()` but yields the entire context (i.e. list of
+        Like :py:meth:`Node.select()` but yields the entire context (i.e. list of
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
@@ -1442,7 +1442,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                      include_root: bool = False,
                      reverse: bool = False) -> TreeContext:
         """
-        Like :py:func:`Node.pick()`, only that the entire context (i.e.
+        Like :py:meth:`Node.pick()`, only that the entire context (i.e.
         chain of descendants) relative to `self` is returned.
         """
         try:
@@ -1454,7 +1454,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(location=cython.int, end=cython.int)
     def locate_context(self, location: int) -> TreeContext:
         """
-        Like :py:func:`Node.locate()`, only that the entire context (i.e.
+        Like :py:meth:`Node.locate()`, only that the entire context (i.e.
         chain of descendants) relative to `self` is returned.
         """
         end = 0
