@@ -396,11 +396,96 @@ by the `pos`-propery of the node-objects! This also means that the mapping becom
 outdated the very moment, the tree is being restructured.
 
 
+Support for attribute-handling
+------------------------------
+
+One important use case of attributes is to add or remove css-classes to the
+"class"-attribute. The "class"-attribute understood as containg a set of
+whitespace delimited strings. Module "syntaxtree" provides a few functions
+to simplify class-handling::
+
+>>> paragraph = Node('p', 'veni vidi vici')
+>>> add_class(paragraph, 'smallprint')
+>>> paragraph.attr['class']
+'smallprint'
+
+Although the class-attribute is filled with a sequence of strings, it should
+behave like a set of strings. For example, one and the same class name should
+not appear twice in the class attribute::
+
+>>> add_class(paragraph, 'smallprint justified')
+>>> paragraph.attr['class']
+'smallprint justified'
+
+Plus, the order of the class strings does not matter, when checking for
+elements::
+
+>>> has_class(paragraph, 'justified smallprint')
+True
+
+>>> remove_class(paragraph, 'smallprint')
+>>> has_class(paragraph, 'smallprint')
+False
+>>> has_class(paragraph, 'justified smallprint')
+False
+>>> has_class(paragraph, 'justified')
+True
+
+The same logic of treating blank separated sequences of strings as sets can also
+be applied to other attributes:
+
+>>> car = Node('car', 'Porsche')
+>>> add_token_to_attr(car, "Linda Peter", 'owner')
+>>> car.attr['owner']
+'Linda Peter'
+
+Or, more generally, to strings containing whitespace-separated substrings:
+
+>>> add_token('Linda Paula', 'Peter Paula')
+'Linda Paula Peter'
+
+
 Adding Error Messages
 ---------------------
 
-TO BE CONTINUED...
+Although errors are typically located at a particualr point or range of the source
+code, DHParser treats them as global properties of the syntax tree (albeit with a
+location), rather than attaching them to particular nodes. This has two advantages:
 
+1. When restructuring the tree and removing or adding nodes during the
+   abtract-syntax-tree-transformation and possibly further tree-transformation,
+   error messages do not accidently get lost.
+2. It is not necessary to add another slot to the Node class for keeping an
+   error list which most of the time would remain empty, anyway.
+
+In order to track errors and other global properties, Module `syntaxtree` provides
+the `RootNode`-class. The root-object of a syntax-tree produced by parsing
+is of type `RootNode`. If a root node needs to be created manually, it is necessary
+to create a `Node`-object and either pass it to `RootNode` as parameter on
+instantiation or, later, to the :py:meth:`swallow()`-method of the RootNode-object::
+
+>>> document = RootNode(sentence, str(sentence))
+
+The second parameter is normally the source code. In this example we simply use the
+string representation of the syntax-tree originating in `sentence`. Before any
+errors can be added the source-position fields of the nodes of the tree must have
+be been initialized. Usually, this is done by the parser. Since the syntax-tree
+in this example does not stem from a parsing-process, we have to do it manually:
+
+>>> _ = document.with_pos(0)
+
+Now, let's mark all "word"-nodes that contain non-letter characters with an
+error-message. There should be plenty of them, because, earlier, we have replaced
+some of the words partially with "..."::
+
+>>> import re
+>>> len([document.new_error(node, "word contains illegal characters") \
+         for node in document.select('word') if re.fullmatch(r'\w*', node.content) is None])
+3
+>>> for error in document.errors_sorted:  print(error)
+1:1: Error (1000): word contains illegal characters
+1:6: Error (1000): word contains illegal characters
+1:11: Error (1000): word contains illegal characters
 """
 
 from collections import OrderedDict
