@@ -1022,6 +1022,7 @@ KNOWN_DIRECTIVES = {
     '$SYMBOL_resume': 'List or regexes or functions to find reentry point for parent parser'
 }
 
+
 class EBNFDirectives:
     """
     A Record that keeps information about compiler directives
