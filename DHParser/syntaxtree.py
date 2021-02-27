@@ -366,7 +366,7 @@ can be thought of as a "string-view" on the tree::
     >>> flat_text = sentence.content
     >>> ctx_mapping = generate_context_mapping(sentence)
     >>> leaf_positions, contexts = ctx_mapping
-    >>> { k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in contexts))}
+    >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in contexts))}
     {0: '(word "This")', 4: '(blank " ")', 5: '(word "is")', 7: '(blank " ")', 8: '(word "Buckingham")', 18: '(blank " ")', 19: '(word "Palace")'}
 
 Now let's find all letters that are followed by a whitespace character::
@@ -396,8 +396,55 @@ by the `pos`-propery of the node-objects! This also means that the mapping becom
 outdated the very moment, the tree is being restructured.
 
 
-Support for attribute-handling
-------------------------------
+Adding Error Messages
+---------------------
+
+Although errors are typically located at a particualr point or range of the source
+code, DHParser treats them as global properties of the syntax tree (albeit with a
+location), rather than attaching them to particular nodes. This has two advantages:
+
+1. When restructuring the tree and removing or adding nodes during the
+   abtract-syntax-tree-transformation and possibly further tree-transformation,
+   error messages do not accidently get lost.
+2. It is not necessary to add another slot to the Node class for keeping an
+   error list which most of the time would remain empty, anyway.
+
+In order to track errors and other global properties, Module `syntaxtree` provides
+the `RootNode`-class. The root-object of a syntax-tree produced by parsing
+is of type `RootNode`. If a root node needs to be created manually, it is necessary
+to create a `Node`-object and either pass it to `RootNode` as parameter on
+instantiation or, later, to the :py:meth:`swallow()`-method of the RootNode-object::
+
+>>> document = RootNode(sentence, str(sentence))
+
+The second parameter is normally the source code. In this example we simply use the
+string representation of the syntax-tree originating in `sentence`. Before any
+errors can be added the source-position fields of the nodes of the tree must have
+be been initialized. Usually, this is done by the parser. Since the syntax-tree
+in this example does not stem from a parsing-process, we have to do it manually:
+
+>>> _ = document.with_pos(0)
+
+Now, let's mark all "word"-nodes that contain non-letter characters with an
+error-message. There should be plenty of them, because, earlier, we have replaced
+some of the words partially with "..."::
+
+>>> import re
+>>> len([document.new_error(node, "word contains illegal characters") \
+         for node in document.select('word') if re.fullmatch(r'\w*', node.content) is None])
+3
+>>> for error in document.errors_sorted:  print(error)
+1:1: Error (1000): word contains illegal characters
+1:6: Error (1000): word contains illegal characters
+1:11: Error (1000): word contains illegal characters
+
+The format of the string representation of Error-objects resembles that of
+compilers and is understood by many Text-Editors which mark the errors in
+the source code.
+
+
+A Mini-API for attribute-handling
+---------------------------------
 
 One important use case of attributes is to add or remove css-classes to the
 "class"-attribute. The "class"-attribute understood as containg a set of
@@ -443,49 +490,6 @@ Or, more generally, to strings containing whitespace-separated substrings:
 
 >>> add_token('Linda Paula', 'Peter Paula')
 'Linda Paula Peter'
-
-
-Adding Error Messages
----------------------
-
-Although errors are typically located at a particualr point or range of the source
-code, DHParser treats them as global properties of the syntax tree (albeit with a
-location), rather than attaching them to particular nodes. This has two advantages:
-
-1. When restructuring the tree and removing or adding nodes during the
-   abtract-syntax-tree-transformation and possibly further tree-transformation,
-   error messages do not accidently get lost.
-2. It is not necessary to add another slot to the Node class for keeping an
-   error list which most of the time would remain empty, anyway.
-
-In order to track errors and other global properties, Module `syntaxtree` provides
-the `RootNode`-class. The root-object of a syntax-tree produced by parsing
-is of type `RootNode`. If a root node needs to be created manually, it is necessary
-to create a `Node`-object and either pass it to `RootNode` as parameter on
-instantiation or, later, to the :py:meth:`swallow()`-method of the RootNode-object::
-
->>> document = RootNode(sentence, str(sentence))
-
-The second parameter is normally the source code. In this example we simply use the
-string representation of the syntax-tree originating in `sentence`. Before any
-errors can be added the source-position fields of the nodes of the tree must have
-be been initialized. Usually, this is done by the parser. Since the syntax-tree
-in this example does not stem from a parsing-process, we have to do it manually:
-
->>> _ = document.with_pos(0)
-
-Now, let's mark all "word"-nodes that contain non-letter characters with an
-error-message. There should be plenty of them, because, earlier, we have replaced
-some of the words partially with "..."::
-
->>> import re
->>> len([document.new_error(node, "word contains illegal characters") \
-         for node in document.select('word') if re.fullmatch(r'\w*', node.content) is None])
-3
->>> for error in document.errors_sorted:  print(error)
-1:1: Error (1000): word contains illegal characters
-1:6: Error (1000): word contains illegal characters
-1:11: Error (1000): word contains illegal characters
 """
 
 from collections import OrderedDict
