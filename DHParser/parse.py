@@ -49,7 +49,7 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
+from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, identity
 
 
@@ -1841,7 +1841,7 @@ class RegExp(Parser):
                 return 'whitespace__'
         except (AttributeError, NameError):
             pass
-        return '/' + escape_control_characters('%s' % abbreviate_middle(pattern, 118))\
+        return '/' + escape_ctrl_chars('%s' % abbreviate_middle(pattern, 118))\
             .replace('/', '\\/') + '/'
 
 

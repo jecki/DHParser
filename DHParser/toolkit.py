@@ -81,7 +81,7 @@ __all__ = ('typing',
            'RxPatternType',
            're_find',
            'escape_re',
-           'escape_control_characters',
+           'escape_ctrl_chars',
            'is_filename',
            'relative_path',
            'concurrent_ident',
@@ -391,7 +391,7 @@ def escape_re(strg: str) -> str:
     return re.escape(strg)
 
 
-def escape_control_characters(strg: str) -> str:
+def escape_ctrl_chars(strg: str) -> str:
     r"""
     Replace all control characters (e.g. `\n` `\t`) in a string
     by their back-slashed representation and replaces backslash by
