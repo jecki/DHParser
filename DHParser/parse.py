@@ -36,7 +36,7 @@ from typing import Callable, cast, List, Tuple, Set, AbstractSet, Dict, \
     DefaultDict, Sequence, Union, Optional, Iterator
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
+from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
     PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
