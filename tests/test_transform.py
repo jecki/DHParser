@@ -306,6 +306,11 @@ class TestWhitespaceTransformations:
         traverse(sentence, transformations)
         assert sentence.content == "Hallo Welt", sentence.content
 
+    def test_merge_adjacent_with_attributes(self):
+        tree = parse_sxpr('(A (L " ") (L `(spatium "3+1") " "))')
+        merge_adjacent([tree], is_one_of('L'), 'L')
+        assert len(tree.children) == 1
+        assert tree.children[0].get_attr('spatium', 'FEHLER') == "3+1"
 
 class TestAttributeHandling:
     def test_swap_attributes(self):

@@ -651,12 +651,14 @@ def has_sibling(context: TreeContext, tag_name_set: AbstractSet[str]):
 #######################################################################
 
 
-def update_attr(dest: Node, src: Tuple[Node, ...], root: RootNode):
+def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: RootNode):
     """
     Adds all attributes from `src` to `dest` and transfers all errors
     from `src` to `dest`. This is needed, in order to keep the attributes
     if the child node is going to be eliminated.
     """
+    if isinstance(src, Node):
+        src = (Node,)
     for s in src:
         # update attributes
         if s != dest and hasattr(s, '_xml_attr'):
@@ -1021,8 +1023,7 @@ def merge_adjacent(context: TreeContext, condition: Callable, tag_name: str = ''
                     head = adjacent[0]
                     tag_names = {nd.tag_name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
-                    for nd in adjacent[1:]:
-                        update_attr(head, nd, cast(RootNode, context[0]))
+                    update_attr(head, adjacent[1:], cast(RootNode, context[0]))
                     if tag_name in tag_names:
                         head.tag_name = tag_name
                     new_result.append(head)
@@ -1069,8 +1070,7 @@ def merge_connected(context: TreeContext, content: Callable, delimiter: Callable
                     head = adjacent[0]
                     tag_names = {nd.tag_name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
-                    for nd in adjacent[1:]:
-                        update_attr(head, nd, cast(RootNode, context[0]))
+                    update_attr(head, adjacent[1:], cast(RootNode, context[0]))
                     if content_name in tag_names:
                         head.tag_name = content_name
                     new_result.append(head)
