@@ -151,7 +151,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     function with the same name, which returns a partial-function that
     takes just the context-parameter.
 
-    Additionally, there is some some syntactic sugar for
+    Additionally, there is some syntactic sugar for
     transformation-functions that receive a collection as their second
     parameter and do not have any further parameters. In this case a
     list of parameters passed to the factory function will be converted
