@@ -56,23 +56,21 @@ definitions. The definiens of those definitions either is a string
 literal or regular expression or other symbols or a combination
 of these with four different operators: 1. sequences
 2. alternatives 3. options and 4. repetitions. Here is how these
-elements are denoted in classical and regex-like EBNF-syntax
+elements are denoted in classical and regex-like EBNF-syntax:
 
-    ..table::
-
-    ========================  ==============  ==============
-    element                   classical EBNF  regex-like
-    ========================  ==============  ==============
-    insignificant whitespace  ~               ~
-    string literal            "..." or `...`  "..." or `...`
-    regular expr.             /.../           /.../
-    sequences                 A B C           A B C
-    alternatives              A | B | C       A | B | C
-    options                   [ ... ]         ...?
-    repetions                 { ... }         ...*
-    one or more                               ...+
-    grouping                  (...)           (...)
-    ========================  ==============  ==============
+========================  ================  ================
+element                   classical EBNF    regex-like
+========================  ================  ================
+insignificant whitespace  ~                 ~
+string literal            "..." or \`...\`  "..." or \`...\`
+regular expr.             /.../             /.../
+sequences                 A B C             A B C
+alternatives              A | B | C         A | B | C
+options                   [ ... ]           ...?
+repetions                 { ... }           ...*
+one or more                                 ...+
+grouping                  (...)             (...)
+========================  ================  ================
 
 "insignificant whitespace" is a speciality of DHParser. Denoting
 insignificant whitespace with a particular sign `~` allows to eliminate
