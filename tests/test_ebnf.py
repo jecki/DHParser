@@ -117,6 +117,18 @@ class TestDirectives:
         st = parser('')
         assert not st.errors and str(st) == ''
 
+    def test_drop(self):
+        lang = r"""
+            @ drop = backticked, whitespace
+            @ literalws = right
+            doc  = "*" word `*`
+            word = /\w+/
+        """
+        parser = create_parser(lang)
+        st = parser('* Hund*')
+        assert str(st) == "*Hund"
+
+
 
 class TestReservedSymbols:
     def test_comment_usage(self):

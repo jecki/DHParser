@@ -16,6 +16,9 @@
 # permissions and limitations under the License.
 
 
+
+
+
 """
 Module ``syntaxtree`` encapsulates the functionality for creating
 and handling syntax-trees. This includes serialization and
@@ -1987,7 +1990,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # flatten_threshold = get_config_value('flatten_sxpr_threshold')
         compact_threshold = get_config_value('compact_sxpr_threshold')
 
-        if switch in ('s-expression', 'sxpr'):
+        if switch in ('S-expression', 'S-Expression', 's-expression', 'sxpr'):
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == 'xml':
@@ -2667,7 +2670,7 @@ class RootNode(Node):
         """
         Adds an error to this tree, locating it at a specific node.
 
-        :param node:   the node where the error occurred
+        :param node:    the node where the error occurred
         :param message: a string with the error message.abs
         :param code:    an error code to identify the type of the error
         """

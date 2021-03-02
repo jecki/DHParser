@@ -67,7 +67,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         if mre.first_throw:
             origin = mre.node.tag_name
             if origin[:1] == ':':
-                origin = grammar.associated_symbol(mre.parser).tag_name + '->' + origin
+                origin = grammar.associated_symbol__(mre.parser).tag_name + '->' + origin
             notice = Error(  # resume notice
                 'Resuming from parser "{}" at position {}:{} with parser "{}": {}'
                 .format(origin, *lc, resumer, repr(target)),

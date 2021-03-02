@@ -452,7 +452,7 @@ class Parser:
         This is the closest parser with a pname that contains this parser."""
         if not self._symbol:
             try:
-                self._symbol = self.grammar.associated_symbol(self).pname
+                self._symbol = self.grammar.associated_symbol__(self).pname
             except AttributeError:
                 # return an empty string, if parser is not connected to grammar,
                 # but be sure not to save the empty string in self._symbol
@@ -502,7 +502,7 @@ class Parser:
                 # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
                 rules = grammar.resume_rules__.get(
-                    self.pname or grammar.associated_symbol(self).pname, [])
+                    self.pname or grammar.associated_symbol__(self).pname, [])
                 rest = pe.rest[len(pe.node):]
                 i = reentry_point(rest, rules, grammar.comment_rx__,
                                   grammar.reentry_search_window__)
@@ -1034,7 +1034,7 @@ class Grammar:
                 (resulting in a maximum recursion depth reached error) when
                 the grammar definition contains left recursions.
 
-        associated_symbol_cache__: A cache for the associated_symbol()-method.
+        associated_symbol_cache__: A cache for the associated_symbol__()-method.
 
         # mirrored class attributes:
 
@@ -1244,7 +1244,7 @@ class Grammar:
             and (static_analysis
                  or (static_analysis is None
                      and get_config_value('static_analysis') in {'early', 'late'}))):
-            result = self.static_analysis()
+            result = self.static_analysis__()
             # clears any stored errors without overwriting the pointer
             while self.static_analysis_errors__:
                 self.static_analysis_errors__.pop()
@@ -1527,7 +1527,7 @@ class Grammar:
             else -2  # (self.document__.__len__() + 1)
 
 
-    def as_ebnf(self) -> str:
+    def as_ebnf__(self) -> str:
         """
         Serializes the Grammar object as a grammar-description in the
         Extended Backus-Naur-Form. Does not serialize directives and
@@ -1543,7 +1543,7 @@ class Grammar:
         return '\n'.join(ebnf)
 
 
-    def associated_symbol(self, parser: Parser) -> Parser:
+    def associated_symbol__(self, parser: Parser) -> Parser:
         r"""Returns the closest named parser that contains `parser`.
         If `parser` is a named parser itself, `parser` is returned.
         If `parser` is not connected to any symbol in the Grammar,
@@ -1553,7 +1553,7 @@ class Grammar:
         >>> word.pname = 'word'
         >>> gr = Grammar(word)
         >>> anonymous_re = gr['word'].parsers[0]
-        >>> gr.associated_symbol(anonymous_re).pname
+        >>> gr.associated_symbol__(anonymous_re).pname
         'word'
         """
         symbol = self.associated_symbol_cache__.get(parser, None)   # type: Optional[Parser]
@@ -1581,7 +1581,7 @@ class Grammar:
         return symbol
 
 
-    def static_analysis(self) -> List[AnalysisError]:
+    def static_analysis__(self) -> List[AnalysisError]:
         """
         Checks the parser tree statically for possible errors.
 
@@ -2364,7 +2364,7 @@ class MandatoryNary(NaryParser):
         `self.grammar.skip_rules__`. If no reentry-point was found or the
         skip-list ist empty, -1 is returned.
         """
-        skip = self.grammar.skip_rules__.get(self.grammar.associated_symbol(self).pname, [])
+        skip = self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname, [])
         if skip:
             gr = self._grammar
             return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
@@ -2402,7 +2402,7 @@ class MandatoryNary(NaryParser):
         location = grammar.document_length__ - len(text_)
         err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
         found = text_[:10].replace('\n', '\\n ') + '...'
-        sym = self.grammar.associated_symbol(self).pname
+        sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
         for search, message in err_msgs:
             is_func = callable(search)           # search rule is a function: StringView -> bool
@@ -2441,7 +2441,7 @@ class MandatoryNary(NaryParser):
         errors = super().static_analysis()
         msg = []
         length = len(self.parsers)
-        sym = self.grammar.associated_symbol(self).pname
+        sym = self.grammar.associated_symbol__(self).pname
         # if self.mandatory == NO_MANDATORY and sym in self.grammar.error_messages__:
         #     msg.append('Custom error messages require that parameter "mandatory" is set!')
         # elif self.mandatory == NO_MANDATORY and sym in self.grammar.skip_rules__:
