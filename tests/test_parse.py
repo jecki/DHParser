@@ -107,7 +107,7 @@ class TestParserClass:
             root__ = word
         gr = MyGrammar()
         regex = gr['word'].parsers[-1].parser
-        result = gr.associated_symbol(regex).symbol
+        result = gr.associated_symbol__(regex).symbol
         assert result == 'word', result
 
 
@@ -303,11 +303,11 @@ class TestInfiLoopsAndRecursion:
     #     snippet = " "
     #     syntax_tree = parser(snippet)
     #     assert any(e.code == INFINITE_LOOP for e in syntax_tree.errors)
-    #     res = parser.static_analysis()
+    #     res = parser.static_analysis__()
     #     assert res and res[0][2].code == INFINITE_LOOP
     #     minilang = """not_forever = { / / } \n"""
     #     parser = grammar_provider(minilang)()
-    #     res = parser.static_analysis()
+    #     res = parser.static_analysis__()
     #     assert not res
     #     set_config_value('static_analysis', save)
 
@@ -593,7 +593,7 @@ class TestSeries:
     def test_ebnf_serialization(self):
         ebnf_grammar = get_ebnf_grammar()
         # TODO: Add test here
-        ebnf = ebnf_grammar.as_ebnf()
+        ebnf = ebnf_grammar.as_ebnf__()
         # print(ebnf)
 
 
@@ -1576,7 +1576,7 @@ class TestStaticAnalysis:
     def test_cyclical_ebnf_error(self):
         doc = Text('proper');  doc.pname = "doc"
         grammar = Grammar(doc)
-        # grammar.static_analysis()
+        # grammar.static_analysis__()
         lang = "doc = 'proper'  # this works!"
         lang1 = "doc = { doc }  # this parser never reaches a leaf parser."
         lang2 = """doc = word | sentence  # a more convoluted example

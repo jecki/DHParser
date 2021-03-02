@@ -92,7 +92,7 @@ The structure of a JSON file can easily be described in EBNF::
               'member     = string §":" ~ _element                          \\n'\
               'array      = "[" ~ ( _element ( "," ~ _element )* )? §"]" ~  \\n'\
               'string     = `"` §_CHARS `"` ~                               \\n'\
-              '  _CHARS   = /[^"\\]+/ | /\\[\/bnrt\\]/                      \\n'\
+              '  _CHARS   = /[^"\\\\\]+/ | /\\\\\\\[\/bnrt\\\\\]/           \\n'\
               'number     = _INT _FRAC? _EXP? ~                             \\n'\
               '  _INT     = `-` /[1-9][0-9]+/ | /[0-9]/                     \\n'\
               '  _FRAC    = `.` /[0-9]+/                                    \\n'\
@@ -100,13 +100,53 @@ The structure of a JSON file can easily be described in EBNF::
               'bool       = "true" ~ | "false" ~                            \\n'\
               'null       = "null" ~                                        \\n'
 
-Let's try this on our test-string. In order to compile this grammar into
-executable Python-code, we use the high-level-function
+This is a rather common EBNF-grammar. A few peculiarities are noteworthy, though:
+First of all you might notice that some elements have names with a leading
+underscore "_". It is a convention to mark those elements, in which we are on
+interested on their own account, with an underscore "_". When moving from the
+concrete syntax-tree to a more abstract syntax-tree, these elements could be
+substituted by their content, to simplify the tree.
+
+Secondly, some elements carry a name written in captial letters. This is also
+a convention to mark those elements which with other parser-generators would
+represent tokens delivered by a lexical scanner. DHParser is a "scanner-less"
+parser, which means that the breaking down of the string into meaningful tokens
+is done in place with regular expressions (like in the definition of "_EOF")
+or simple combinations of regular expressions (see the definition of "_INT" above).
+Their is no sharp distinction between tokens and other symbols in DHParser,
+but we keep it as a loose convention. Regular expression are enclosed in forward
+slashes and follow the standard syntax of Perl-style regular expression that is
+also used by the "re"-module of the Python standard library. (Don't worry about
+the number of backslashes in the line defining "_CHARS" for now!)
+
+Finally, it is another helpful conention to indent the defintions of symbols
+that have only been introduced to simplify an otherwise uneccessarily
+complicated definition (e.g. the definition of "number", above) or to make
+it more understandable by giving names to its componentns (like "_EOF").
+
+Let's try this grammar on our test-string.  In order to compile
+this grammar into executable Python-code, we use the high-level-function
 :py:func:`create_parser()` from :py:mod:`DHParser.dsl`-module.
 
 >>> from DHParser.dsl import create_parser
+>>> # from DHParser.dsl import compileEBNF
+>>> # print(compileEBNF(grammar))
 >>> parser = create_parser(grammar, branding="JSON")
->>> contrete_syntax_tree = parser(grammar)
+>>> syntax_tree = parser(testdata)
+>>> syntax_tree.content
+'{"list": [1, 2, "string"], "int": 3, "bool": false}'
+
+As expected serializing the content of the resulting syntax-tree yields exactly
+the input-string of the parsing process. What we cannot see here, is that the
+parser has structured the string into the individual elements described in the
+grammar. Since the concrete syntax-tree that the parser vields is rather
+verbose, it would not make sense to print it out. We'll just look at a small
+part of it, to see what it looks like. Let's just pick the sub-tree that
+captures the first json-string within the syntax-tree::
+
+>>> print(syntax_tree.pick('string').as_sxpr())
+(string (:Text '"') (_CHARS "list") (:Text '"'))
+
 
 """
 
@@ -123,7 +163,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
-    EMPTY_GRAMMAR_ERROR
+    EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -1065,10 +1105,11 @@ WHITESPACE_TYPES = {'horizontal': r'[\t ]*',  # default: horizontal
                     'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
                     'vertical': r'\s*'}
 
-DROP_STRINGS = 'strings'
-DROP_WSPC    = 'whitespace'
-DROP_REGEXP  = 'regexps'
-DROP_VALUES  = {DROP_STRINGS, DROP_WSPC, DROP_REGEXP}
+DROP_STRINGS     = 'strings'
+DROP_BACKTICKED  = 'backticked'
+DROP_WSPC        = 'whitespace'
+DROP_REGEXP      = 'regexps'
+DROP_VALUES      = {DROP_STRINGS, DROP_BACKTICKED, DROP_WSPC, DROP_REGEXP}
 
 # Representation of Python code or, rather, something that will be output as Python code
 ReprType = Union[str, unrepr]
@@ -1489,7 +1530,7 @@ class EBNFCompiler(Compiler):
             re.compile(rx)
         except Exception as re_error:
             self.tree.new_error(node, "malformed regular expression %s: %s" %
-                                (repr(rx), str(re_error)))
+                                (repr(rx), str(re_error)), MALFORMED_REGULAR_EXPRESSION)
         return rx
 
 
@@ -1961,7 +2002,8 @@ class EBNFCompiler(Compiler):
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
 
         python_src = self.assemble_parser(definitions)
-        if get_config_value('static_analysis') == 'early':
+        if get_config_value('static_analysis') == 'early' and not \
+                any(e.code == MALFORMED_REGULAR_EXPRESSION for e in self.tree.errors):
             errors = []
             try:
                 grammar_class = compile_python_object(
@@ -2613,7 +2655,7 @@ class EBNFCompiler(Compiler):
             tk = rpl + tk[1:-1] + rpl
         else:
             tk = rpl + tk.replace('"', '\\"')[1:-1] + rpl
-        return self.TEXT_PARSER(tk, self.drop_on(DROP_STRINGS))
+        return self.TEXT_PARSER(tk, self.drop_on(DROP_BACKTICKED))
 
 
     def on_regexp(self, node: Node) -> str:

@@ -58,6 +58,7 @@ __all__ = ('CompilerError',
            'ResultTuple',
            'compile_source',
            'visitor_name',
+           'attr_visitor_name',
            'TreeProcessor',
            'process_tree')
 
@@ -74,13 +75,25 @@ class CompilerError(Exception):
 
 def visitor_name(node_name: str) -> str:
     """
-    Returns the method name for `node_name`, e.g.::
+    Returns the visitor_method name for `node_name`, e.g.::
 
-        >>> visitor_name('expression')
-        'on_expression'
+    >>> visitor_name('expression')
+    'on_expression'
     """
     # assert re.match(r'\w+$', node_name)
     return 'on_' + node_name
+
+
+def attr_visitor_name(attr_name: str) -> str:
+    """
+    Returns the visitor_method name for `attr_name`, e.g.::
+
+    >>> attr_visitor_name('class')
+    'attr_class'
+    """
+    # assert re.match(r'\w+$', node_name)
+    return 'attr_' + attr_name
+
 
 
 ROOTNODE_PLACEHOLDER = RootNode()
@@ -106,28 +119,35 @@ class Compiler:
     method which will pick the right `on_XXX`-method. It is not
     recommended to call the `on_XXX`-methods directly.
 
-    Attributes:
-        source: The source text of the AST to be compiled. This needs to be
+    :ivar source: The source text of the AST to be compiled. This needs to be
                 assigned by the user of the Compiler object - as is done
                 by function `compile_source()`
-        context:  A list of parent nodes that ends with the currently
+    :ivar context:  A list of parent nodes that ends with the currently
                 compiled node.
-        tree:  The root of the abstract syntax tree.
-        finalizers:  A stack of tuples (function, parameters) that will be
+    :ivar tree: The root of the abstract syntax tree.
+    :ivar finalizers:  A stack of tuples (function, parameters) that will be
                 called in reverse order after compilation.
 
-        _dirty_flag:  A flag indicating that the compiler has already been
+    :ivar has_attribute_visitors:  A flag indicating that the class has
+                attribute-visitor-methods which are named 'attr_ATTRIBUTENAME'
+                and will be called if the currently processed node has one
+                or more attributes for which such visitors exist.
+
+    :ivar _dirty_flag:  A flag indicating that the compiler has already been
                 called at least once and that therefore all compilation
                 variables must be reset when it is called again.
-        _debug: A flag indicating that debugging is turned on the value
+    :ivar _debug: A flag indicating that debugging is turned on. The value
                 for this flag is read before each call of the configuration
-                (see debugging section in DHParser.configuration)
+                (see debugging section in DHParser.configuration).
                 If debugging is turned on the compiler class raises en
-                error if a node is attempted to be compiled twice.
-        _debug_already_compiled: A set of nodes that have already been compiled.
+                error if there is an attempt to be compile one and the same
+                node a second time..
+    :ivar _debug_already_compiled: A set of nodes that have already been compiled.
     """
 
     def __init__(self):
+        self.has_attribute_visitors = any(field[0:5] == 'attr_' and callable(getattr(self, field))
+                                          for field in dir(self))
         self.reset()
 
     def reset(self):
@@ -176,36 +196,7 @@ class Compiler:
         self.finalize()
         return result
 
-    # def OBSOLETE_fallback_compiler(self, node: Node) -> Any:
-    #     """This is a generic compiler function which will be called on
-    #     all those node types for which no compiler method `on_XXX` has
-    #     been defined.
-    #
-    #     OBSOLETE, because it does not allow manipulation or parent tree
-    #               during transformation
-    #     """
-    #     result = []
-    #     if node.children:
-    #         for child in node.children:
-    #             nd = self.compile(child)
-    #             if nd is not None:
-    #                 try:
-    #                     if nd.tag_name != EMPTY_PTYPE:
-    #                         result.append(nd)
-    #                 except AttributeError:
-    #                     pass
-    #                 if not isinstance(nd, Node):
-    #                     tn = node.tag_name
-    #                     raise TypeError(
-    #                         'Fallback compiler for Node `%s` received a value of type '
-    #                         '`%s` from child `%s` instead of the required return type `Node`. '
-    #                         'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
-    #                         'method `on_%s(self, node)` in class `%s` to avoid this error!'
-    #                         % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
-    #         node.result = tuple(result)
-    #     return node
-
-    def fallback_compiler(self, node: Node) -> Any:
+    def fallback_compiler(self, node: Node, block_attribute_visitors: bool=False) -> Any:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
@@ -232,6 +223,13 @@ class Compiler:
                     if nd is not None and nd.tag_name != EMPTY_PTYPE:
                         result.append(nd)
                 node.result = tuple(result)
+        if self.has_attribute_visitors and not block_attribute_visitors and node.has_attr():
+            for attribute, value in node.attr:
+                try:
+                    attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
+                    node = attribute_visitor(node, value) or node
+                except AttributeError:
+                    pass
         return node
 
     def compile(self, node: Node) -> Any:
@@ -253,7 +251,7 @@ class Compiler:
 
         elem = node.tag_name
         if elem[:1] == ':':
-            elem = elem[1:]
+            elem = elem[1:] + '__'
         try:
             compiler = self.__getattribute__(visitor_name(elem))
         except AttributeError:
@@ -323,19 +321,19 @@ def compile_source(source: str,
     no fatal errors occurred in any of the earlier stages of the processing
     pipeline.
 
-    :param source (str): The input text for compilation or a the name of a
+    :param source: The input text for compilation or a the name of a
             file containing the input text.
-    :param preprocessor (function):  text -> text. A preprocessor function
+    :param preprocessor:  text -> text. A preprocessor function
             or None, if no preprocessor is needed.
-    :param parser (function):  A parsing function or grammar class
-    :param transformer (function):  A transformation function that takes
+    :param parser:  A parsing function or grammar class
+    :param transformer:  A transformation function that takes
             the root-node of the concrete syntax tree as an argument and
             transforms it (in place) into an abstract syntax tree.
-    :param compiler (function): A compiler function or compiler class
+    :param compiler: A compiler function or compiler class
             instance
-    :param preserve_AST (bool): Preserves the AST-tree.
+    :param preserve_AST: Preserves the AST-tree.
 
-    :return: The result of the compilation as a 3-tuple
+    :returns: The result of the compilation as a 3-tuple
         (result, errors, abstract syntax tree). In detail:
 
         1. The result as returned by the compiler or ``None`` in case of failure
@@ -431,7 +429,7 @@ def compile_source(source: str,
 
 
 class TreeProcessor(Compiler):
-    """A special kind of Compiler class that take a tree as input (just like
+    """A special kind of Compiler class that takes a tree as input (just like
     `Compiler`) but always yields a tree as result.
 
     The intended use case for TreeProcessor are digital-humanities-applications
@@ -448,13 +446,13 @@ class TreeProcessor(Compiler):
     def __call__(self, root: RootNode) -> RootNode:
         assert isinstance(root, RootNode)
         result = super().__call__(root)
-        assert isinstance(result, RootNode), result.as_sxpr()
+        assert isinstance(result, RootNode), str(result)
         return cast(RootNode, result)
 
 
 def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Error]]:
     """Process a tree with the tree-processor `tp` only if no fatal error
-    has occurred so far. Catch any Python exceptions in case
+    has occurred so far. Catch any Python-exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
     Don't catch Python-exceptions if no errors have occurred earlier.
 
@@ -465,13 +463,12 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Erro
     error. Processing stages should be written with possible errors
     occurring in earlier stages in mind, though. However, because it could
     be difficult to provide for all possible kinds of badly structured
-    trees resulting from errors, exceptions occurring on code processing
+    trees resulting from errors, exceptions occurring when processing
     potentially faulty trees will be dealt with gracefully.
 
     Although process_tree returns the root-node of the processed tree,
     tree processing should generally be assumed to change the tree
-    in place, even if a different root-node is returned than was passed
-    to the tree. If the input tree shall be preserved, it is necessary to
+    in place. If the input tree shall be preserved, it is necessary to
     make a deep copy of the input tree, before calling process_tree.
     """
     assert isinstance(tp, TreeProcessor)
@@ -517,4 +514,4 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Erro
 
 # TODO: Verify compiler against grammar,
 #       i.e. make sure that for all on_X()-methods, `X` is the name of a parser
-# TODO: AST validation against an ASDSL-Specification
+# TODO: AST validation against an ASDL-Specification

@@ -89,6 +89,7 @@ __all__ = ('ErrorCode',
            'DUPLICATE_PARSERS_IN_ALTERNATIVE',
            'BAD_ORDER_OF_ALTERNATIVES',
            'BAD_REPETITION_COUNT',
+           'MALFORMED_REGULAR_EXPRESSION',
            'EMPTY_GRAMMAR_ERROR',
            'TREE_PROCESSING_CRASH',
            'COMPILER_CRASH',
@@ -153,6 +154,7 @@ BAD_MANDATORY_SETUP                      = ErrorCode(1550)
 DUPLICATE_PARSERS_IN_ALTERNATIVE         = ErrorCode(1560)
 BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
 BAD_REPETITION_COUNT                     = ErrorCode(1580)
+MALFORMED_REGULAR_EXPRESSION             = ErrorCode(1585)
 EMPTY_GRAMMAR_ERROR                      = ErrorCode(1590)
 
 # fatal errors

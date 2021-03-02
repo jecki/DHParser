@@ -302,9 +302,6 @@ CONFIG_PRESET['left_recursion'] = True
 # 'indented'     - compact tree output, i.e. children a represented on
 #                  indented lines with no opening or closing tags, brackets
 #                  etc.
-# 'smart'        - serialize as S-expression if the S-expression fits on
-#                  one line (see 'flatten_sxpr_threshold'), otherwise
-#                  serialize as compact tree output
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
