@@ -1340,6 +1340,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return True
         return False
 
+    def remove(self, node: 'Node'):
+        """Removes `node` from the children of the node."""
+        if not self.children:
+            raise ValueError('Node.remove(x): Called on a node without children')
+        i = len(self._children)
+        self.result = tuple(nd for nd in self._children if nd != node)
+        if len(self.result) >= i:
+            raise ValueError('Node.remove(x): x not among children')
+
+    def insert(self, index: int, node: 'Node'):
+        """Inserts a node at position `index`"""
+        if not self.children and self.content:
+            raise ValueError('Node.insert(i, node): Called on a leaf-node')
+        result = list(self.children)
+        result.insert(index, node)
+        self.result = tuple(result)
+
     @cython.locals(start=cython.int, stop=cython.int, i=cython.int)
     def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
         """
@@ -1357,7 +1374,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         assert 0 <= start < stop
         if not self.children:
-            raise ValueError('Tried to find the index of a child in a Node without children')
+            raise ValueError('Node.index(x): Called on a Node without children')
         mf = create_match_function(what)
         for i, child in enumerate(self._children[start:stop]):
             if mf(child):

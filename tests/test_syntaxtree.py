@@ -388,6 +388,14 @@ class TestNode:
         node = Node('tag', '<&>')
         assert node.as_xml() == '<tag>&lt;&amp;&gt;</tag>'
 
+    def test_insert_remove(self):
+        node = parse_sxpr('(R (A "1") (B "2") (C "3"))')
+        B = node.pick('B')
+        node.remove(B)
+        assert node.as_sxpr() == '(R (A "1") (C "3"))'
+        node.insert(0, B)
+        assert node.as_sxpr() == '(R (B "2") (A "1") (C "3"))'
+
 
 class TestRootNode:
     def test_error_handling(self):
