@@ -36,7 +36,7 @@ from typing import Callable, cast, List, Tuple, Set, AbstractSet, Dict, \
     DefaultDict, Sequence, Union, Optional, Iterator
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, ErrorCode, is_error, MANDATORY_CONTINUATION, \
+from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
     PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
@@ -49,7 +49,7 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
-from DHParser.toolkit import sane_parser_name, escape_control_characters, re, cython, \
+from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, identity
 
 
@@ -1024,7 +1024,7 @@ class Grammar:
                 calling method :func:`rollback_to__(location)`.
 
         suspend_memoization__: A flag that if set suspends memoization of
-                results  from returning parsers. This flag is needed by the
+                results from returning parsers. This flag is needed by the
                 left-recursion handling algorithm (see `Parser.__call__`
                 and `Forward.__call__`) as well as the context-sensitive
                 parsers (see function `Grammar.push_rollback__()`).
@@ -1841,7 +1841,7 @@ class RegExp(Parser):
                 return 'whitespace__'
         except (AttributeError, NameError):
             pass
-        return '/' + escape_control_characters('%s' % abbreviate_middle(pattern, 118))\
+        return '/' + escape_ctrl_chars('%s' % abbreviate_middle(pattern, 118))\
             .replace('/', '\\/') + '/'
 
 
@@ -3336,11 +3336,10 @@ class Forward(UnaryParser):
             expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
             root__     = expression
 
-    Parameters:
-        recursion_counter:  Mapping of places to how often the parser
-                has already been called recursively at this place. This
-                is needed to implement left recursion. The number of
-                calls becomes irrelevant once a result has been memoized.
+    :ivar recursion_counter:  Mapping of places to how often the parser
+            has already been called recursively at this place. This
+            is needed to implement left recursion. The number of
+            calls becomes irrelevant once a result has been memoized.
     """
 
     def __init__(self):

@@ -62,7 +62,7 @@ from DHParser.configuration import access_presets, finalize_presets, get_config_
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
-from DHParser.toolkit import escape_control_characters, abbreviate_middle, cython
+from DHParser.toolkit import escape_ctrl_chars, abbreviate_middle, cython
 
 __all__ = ('CallItem',
            'start_logging',
@@ -443,7 +443,7 @@ class HistoryRecord:
         else:
             s = self.text
             excerpt = s[:36] + ' ...' if len(s) > 36 else s
-        excerpt = escape_control_characters(str(excerpt))
+        excerpt = escape_ctrl_chars(str(excerpt))
         return excerpt
 
     # @property
