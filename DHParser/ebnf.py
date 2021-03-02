@@ -100,7 +100,13 @@ The structure of a JSON file can easily be described in EBNF::
               'bool       = "true" ~ | "false" ~                            \\n'\
               'null       = "null" ~                                        \\n'
 
-Let's try this on our test-string
+Let's try this on our test-string. In order to compile this grammar into
+executable Python-code, we use the high-level-function
+:py:func:`create_parser()` from :py:mod:`DHParser.dsl`-module.
+
+>>> from DHParser.dsl import create_parser
+>>> parser = create_parser(grammar, branding="JSON")
+>>> contrete_syntax_tree = parser(grammar)
 
 """
 
