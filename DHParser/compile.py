@@ -224,7 +224,7 @@ class Compiler:
                         result.append(nd)
                 node.result = tuple(result)
         if self.has_attribute_visitors and not block_attribute_visitors and node.has_attr():
-            for attribute, value in node.attr:
+            for attribute, value in node.attr.items():
                 try:
                     attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
                     node = attribute_visitor(node, value) or node
