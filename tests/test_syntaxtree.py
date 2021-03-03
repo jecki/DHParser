@@ -396,6 +396,23 @@ class TestNode:
         node.insert(0, B)
         assert node.as_sxpr() == '(R (B "2") (A "1") (C "3"))'
 
+    def test_as_etree(self):
+        import xml.etree.ElementTree as ET
+        sxpr = '(R (A "1") (S (B `(class "bold") "2")) (C "3"))'
+        xml = '<R><A>1</A><S><B class="bold">2</B></S><C>3</C></R>'
+        node = parse_sxpr(sxpr)
+        et = node.as_etree()
+        assert ET.tostring(et, encoding="unicode") == xml
+        node = Node.from_etree(et)
+        assert node.as_sxpr() == sxpr
+        et = ET.XML('<R>mixed <A>1</A>mode <!-- comment --><B class="italic" /></R>')
+        ET.dump(et)
+        node = Node.from_etree(et)
+        print(node.as_sxpr())
+        et = node.as_etree()
+        ET.dump(et)
+
+
 
 class TestRootNode:
     def test_error_handling(self):

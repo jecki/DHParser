@@ -2036,6 +2036,35 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                              % (s, "ast, cst, default",
                                 ", ".join(ALLOWED_PRESET_VALUES['default_serialization'])))
 
+    # Export as Element-Tree ###
+
+    def as_etree(self, text_tags: Set[str] = {":Text"}):
+        """Returns the tree as standard-library xml-ElementTree."""
+        import xml.etree.ElementTree as ET
+        attributes = self.attr if self.has_attr() else {}
+        if self.children:
+            element = ET.Element(self.tag_name, attrib=attributes)
+            element.extend(child.as_etree() for child in self.children)
+        else:
+            element = ET.Element(self.tag_name, attrib=attributes)
+            element.text = self.content
+        return element
+
+    @staticmethod
+    def from_etree(et, text_tag: str = ':Text') -> 'Node':
+        """Converts a standard-library xml-ElementTree to a tree of nodes."""
+        sub_elements = et.findall('*')
+        if sub_elements:
+            children = [Node(text_tag, et.text)] if et.text else []
+            for el in sub_elements:
+                children.append(Node.from_etree(el))
+                if el.tail:
+                    children.append(Node(text_tag, el.tail))
+            node = Node(et.tag, tuple(children))
+        else:
+            node = Node(et.tag, et.text or '').with_attr(et.attrib)
+        return node
+
 
 #######################################################################
 #
@@ -2786,7 +2815,7 @@ class RootNode(Node):
 
 #######################################################################
 #
-# S-expression- and XML-parsers and JSON-reader
+# S-expression- and XML-parsers and JSON-reader, ElementTree-converter
 #
 #######################################################################
 
