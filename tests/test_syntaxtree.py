@@ -402,16 +402,17 @@ class TestNode:
         xml = '<R><A>1</A><S><B class="bold">2</B></S><C>3</C></R>'
         node = parse_sxpr(sxpr)
         et = node.as_etree()
-        assert ET.tostring(et, encoding="unicode") == xml
+        assert ET.tostring(et, encoding="unicode") == xml, ET.tostring(et, encoding="unicode")
         node = Node.from_etree(et)
         assert node.as_sxpr() == sxpr
         et = ET.XML('<R>mixed <A>1</A>mode <!-- comment --><B class="italic" /></R>')
-        ET.dump(et)
         node = Node.from_etree(et)
-        print(node.as_sxpr())
+        expected_sxpr = '(R (:Text "mixed ") (A "1") (:Text "mode ") (B `(class "italic")))'
+        assert node.as_sxpr() == expected_sxpr
         et = node.as_etree()
-        ET.dump(et)
-
+        et = ET.XML(ET.tostring(et, encoding="unicode"))
+        node = Node.from_etree(et)
+        assert node.as_sxpr() == expected_sxpr
 
 
 class TestRootNode:

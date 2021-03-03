@@ -763,11 +763,11 @@ def flatten_xml(xml: str) -> str:
 RX_AMPERSAND = re.compile(r'&(?!\w+;)')
 
 
-def clean_anonymous_tag_name(tag_name: str) -> str:
+def xml_tag_name(tag_name: str) -> str:
     """Cleans anonymous tag-names for serialization, so that the colon does not
     lead to invalid XML::
 
-    >>> clean_anonymous_tag_name(':Series')
+    >>> xml_tag_name(':Series')
     'ANONYMOUS_Series__'
 
     :param tag_name: the original tag name
@@ -775,6 +775,17 @@ def clean_anonymous_tag_name(tag_name: str) -> str:
     """
     if tag_name[:1] == ':':
         return 'ANONYMOUS_%s__' % tag_name[1:]
+    return tag_name
+
+
+def restore_tag_name(tag_name: str) -> str:
+    """Reverts the function :py:func:`xml_tag_name`::
+
+    >>> restore_tag_name('ANONYMOUS_Series__')
+    ':Series'
+    """
+    if tag_name[-2:] == "__" and tag_name[:10] == "ANONYMOUS_":
+        return ':' + tag_name[10:-2]
     return tag_name
 
 
@@ -1887,7 +1898,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             nonlocal attr_filter
             if node.tag_name in omit_tags and not node.has_attr():
                 return ''
-            txt = ['<', clean_anonymous_tag_name(node.tag_name)]
+            txt = ['<', xml_tag_name(node.tag_name)]
             if node.has_attr():
                 txt.extend(' %s=%s' % (k, attr_filter(str(v))) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
@@ -1910,7 +1921,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in empty_tags or (node.tag_name in omit_tags and not node.has_attr()):
                 return ''
-            return '</' + clean_anonymous_tag_name(node.tag_name) + '>'
+            return '</' + xml_tag_name(node.tag_name) + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
@@ -2042,11 +2053,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Returns the tree as standard-library xml-ElementTree."""
         import xml.etree.ElementTree as ET
         attributes = self.attr if self.has_attr() else {}
+        tag_name = xml_tag_name(self.tag_name) if self.tag_name[:1] == ':' else self.tag_name
         if self.children:
-            element = ET.Element(self.tag_name, attrib=attributes)
+            element = ET.Element(tag_name, attrib=attributes)
             element.extend(child.as_etree() for child in self.children)
         else:
-            element = ET.Element(self.tag_name, attrib=attributes)
+            element = ET.Element(tag_name, attrib=attributes)
             element.text = self.content
         return element
 
@@ -2060,9 +2072,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 children.append(Node.from_etree(el))
                 if el.tail:
                     children.append(Node(text_tag, el.tail))
-            node = Node(et.tag, tuple(children))
+            node = Node(restore_tag_name(et.tag), tuple(children))
         else:
-            node = Node(et.tag, et.text or '').with_attr(et.attrib)
+            node = Node(restore_tag_name(et.tag), et.text or '').with_attr(et.attrib)
         return node
 
 
@@ -3045,6 +3057,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         else:
             result = tuple(res)
 
+        if name and not class_name:  name = restore_tag_name(name)
         node = Node(name or ':' + class_name, result)
         if not ignore_pos and '_pos' in attrs:
             node._pos = int(attrs['_pos'])
