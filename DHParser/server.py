@@ -192,7 +192,7 @@ def substitute_default_host_and_port(host, port):
     if host == USE_DEFAULT_HOST:
         host = get_config_value('server_default_host')
     if port == USE_DEFAULT_PORT:
-        port = get_config_value('server_default_port')
+        port = int(get_config_value('server_default_port'))
     return host, port
 
 
@@ -325,7 +325,8 @@ async def asyncio_connect(
     connected = False
     reader, writer = None, None
     save_error = ConnectionError  # type: Union[Type[ConnectionError], ConnectionRefusedError]
-    while delay < retry_timeout:
+    OSError_countdown = 10
+    while not connected and delay < retry_timeout:
         try:
             reader, writer = await asyncio.open_connection(host, port)
             delay = retry_timeout
@@ -333,10 +334,19 @@ async def asyncio_connect(
         except ConnectionRefusedError as error:
             save_error = error
             if delay > 0.0:
-                time.sleep(delay)
+                await asyncio.sleep(delay)
                 delay *= 1.5
             else:
                 delay = retry_timeout  # exit while loop
+        except OSError as error:
+            # workaround for strange erratic OSError (MacOS only?)
+            OSError_countdown -= 1
+            if OSError_countdown < 0:
+                save_error = error
+                delay = retry_timeout
+            else:
+                await asyncio.sleep(0)
+
     if connected and reader is not None and writer is not None:
         return reader, writer
     else:
@@ -1896,7 +1906,7 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
             if delay > 0.0:
-                time.sleep(delay)
+                await asyncio.sleep(delay)
                 delay *= 1.5
             else:
                 delay = timeout  # exit while loop
@@ -1921,26 +1931,28 @@ async def send_stop_request(reader: StreamReaderType, writer: StreamWriterType):
         await writer.wait_closed()
 
 
+async def send_stop_server(host: str, port: int, timeout) -> Optional[Exception]:
+    try:
+        reader, writer = await asyncio.open_connection(host, port)
+        await send_stop_request(reader, writer)
+        if timeout > 0.0:
+            if not await has_server_stopped(host, port, timeout):
+                raise AssertionError('Could not stop server on host %s port %i '
+                                     'within timeout %f !' % (host, port, timeout))
+    except ConnectionRefusedError as error:
+        return error
+    except ConnectionResetError as error:
+        return error
+    return None
+
+
 def stop_tcp_server(host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
                     timeout: float = 3.0) -> Optional[Exception]:
     """Sends a STOP_SERVER_REQUEST to a running tcp server. Returns any
     legitimate exceptions that occur if the server has already been closed."""
-    async def send_stop_server(host: str, port: int) -> Optional[Exception]:
-        try:
-            reader, writer = await asyncio.open_connection(host, port)
-            await send_stop_request(reader, writer)
-            if timeout > 0.0:
-                if not await has_server_stopped(host, port, timeout):
-                    raise AssertionError('Could not stop server on host %s port %i '
-                                         'within timeout %f !' % (host, port, timeout))
-        except ConnectionRefusedError as error:
-            return error
-        except ConnectionResetError as error:
-            return error
-        return None
 
     host, port = substitute_default_host_and_port(host, port)
-    return asyncio_run(send_stop_server(host, port))
+    return asyncio_run(send_stop_server(host, port, timeout))
 
 
 def stop_stream_server(reader: StreamReaderType, writer: StreamWriterType) -> Optional[Exception]:

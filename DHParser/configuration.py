@@ -29,6 +29,7 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
+import threading
 from typing import Dict, Any, Optional
 
 __all__ = ('ALLOWED_PRESET_VALUES',
@@ -57,6 +58,9 @@ PRESETS_CHANGED = False
 THREAD_LOCALS = None
 ALLOWED_PRESET_VALUES = dict()  # Dict[str, Union[Set, Tuple[int, int]]
 # dictionary that maps config variables to a set or range of allowed values
+
+
+access_lock = threading.Lock()
 
 
 def validate_value(key: str, value: Any):
@@ -201,20 +205,21 @@ def get_config_value(key: str) -> Any:
     :param key:  the key (an immutable, usually a string)
     :return:     the value
     """
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        cfg = THREAD_LOCALS.config
-    except AttributeError:
-        THREAD_LOCALS.config = dict()
-        cfg = THREAD_LOCALS.config
-    try:
-        return cfg[key]
-    except KeyError:
-        access_presets()
-        value = get_preset_value(key)
-        finalize_presets()
-        THREAD_LOCALS.config[key] = value
-        return value
+    with access_lock:
+        THREAD_LOCALS = access_thread_locals()
+        try:
+            cfg = THREAD_LOCALS.config
+        except AttributeError:
+            THREAD_LOCALS.config = dict()
+            cfg = THREAD_LOCALS.config
+        try:
+            return cfg[key]
+        except KeyError:
+            access_presets()
+            value = get_preset_value(key)
+            finalize_presets()
+            THREAD_LOCALS.config[key] = value
+            return value
 
 
 def set_config_value(key: str, value: Any):
@@ -226,14 +231,15 @@ def set_config_value(key: str, value: Any):
     :param key:    the key (an immutable, usually a string)
     :param value:  the value
     """
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        cfg = THREAD_LOCALS.config
-    except AttributeError:
-        THREAD_LOCALS.config = dict()
-        cfg = THREAD_LOCALS.config
-    validate_value(key, value)
-    cfg[key] = value
+    with access_lock:
+        THREAD_LOCALS = access_thread_locals()
+        try:
+            cfg = THREAD_LOCALS.config
+        except AttributeError:
+            THREAD_LOCALS.config = dict()
+            cfg = THREAD_LOCALS.config
+        validate_value(key, value)
+        cfg[key] = value
 
 
 ########################################################################

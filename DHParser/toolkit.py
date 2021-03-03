@@ -139,7 +139,8 @@ def identity(x):
     return x
 
 
-global_id_counter = multiprocessing.Value('L', 0)
+if __name__ == "__main__":
+  global_id_counter = multiprocessing.Value('L', 0)
 
 
 def gen_id() -> int:

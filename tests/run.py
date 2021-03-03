@@ -17,7 +17,7 @@ from DHParser.configuration import get_config_value
 from DHParser.toolkit import instantiate_executor
 
 
-lock = threading.Lock()
+lock = None  # threading.Lock() initialized in __main__
 
 
 def run_cmd(parameters: list):
@@ -48,6 +48,7 @@ def run_unittests(command):
 
 
 if __name__ == "__main__":
+    lock = threading.Lock()
     found = []
     if run_cmd(['python', '-V']):
         output = subprocess.run(['python', '-V'], capture_output=True).stdout
