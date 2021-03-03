@@ -171,10 +171,13 @@ captures the first json-array within the syntax-tree::
 The nodes of the syntax-tree carry the names of the production rules
 by which they have been generated. But some nodes carry names that
 do not appear in the grammar and that have been prefixed by a colon ":".
-These nodes are called "anonymous" nodes.
+These nodes are called "anonymous" nodes, because they do not have an
+individual name. The name name that follows after the colon is the
+type-name of the parser-component that produced the node.
 
-Simplifying Syntax-Trees while Parsing
+Simplifying Syntax-Trees while parsing
 --------------------------------------
+
 
 
 
