@@ -2056,7 +2056,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         tag_name = xml_tag_name(self.tag_name) if self.tag_name[:1] == ':' else self.tag_name
         if self.children:
             element = ET.Element(tag_name, attrib=attributes)
-            element.extend(child.as_etree() for child in self.children)
+            element.extend([child.as_etree() for child in self.children])
         else:
             element = ET.Element(tag_name, attrib=attributes)
             element.text = self.content

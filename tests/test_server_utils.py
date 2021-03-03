@@ -184,10 +184,10 @@ class TestUtils:
             'line 178, in test_pp_json_stacktrace"\n' \
             '  "    raise AssertionError()"\n' \
             '  "AssertionError"\n  ""}'.\
-            replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1)
+            replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1).replace('./', '')
         # print(ppjsn)
         # print(expected)
-        assert ppjsn == expected
+        assert ppjsn == expected, '\n\n' + ppjsn + '\n\n' + expected
 
 if __name__ == "__main__":
     from DHParser.testing import runner
