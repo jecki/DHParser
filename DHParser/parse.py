@@ -1999,14 +1999,14 @@ class CombinedParser(Parser):
                     return Node(self.tag_name, tuple(nr))
                 else:
                     return EMPTY_NODE
-            return Node(self.tag_name, results)  # unoptimized code
+            return Node(self.tag_name, tuple(results))  # unoptimized code
         elif N == 1:
             return self._return_value(results[0])
         elif self._grammar.flatten_tree__:
             if self.anonymous:
                 return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
             return Node(self.tag_name, ())
-        return Node(self.tag_name, results)  # unoptimized code
+        return Node(self.tag_name, tuple(results))  # unoptimized code
 
     def location_info(self) -> str:
         """Returns a description of the location of the parser within the grammar
@@ -2541,7 +2541,7 @@ class Series(MandatoryNary):
 
     def __add__(self, other: Parser) -> 'Series':
         if not isinstance(self, Series):
-            # for some reason cython called __add__ instead of __radd__,
+            # for some reason cython calls __add__ instead of __radd__,
             # so we have to repeat the __radd__ code here...
             self, other = other, self
             other_parsers = cast('Series', other).parsers if isinstance(other, Series) \

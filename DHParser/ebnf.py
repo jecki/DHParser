@@ -169,17 +169,47 @@ captures the first json-array within the syntax-tree::
   (:Text "]"))
 
 The nodes of the syntax-tree carry the names of the production rules
-by which they have been generated. But some nodes carry names that
-do not appear in the grammar and that have been prefixed by a colon ":".
-These nodes are called "anonymous" nodes, because they do not have an
-individual name. The name name that follows after the colon is the
-type-name of the parser-component that produced the node.
+by which they have been generated. Nodes, that have been created by
+components of a prduction receive the name of of the parser-type
+that has created the node (see :py:mod:`DHParser.parse`) prefixed
+with a colon ":". In DHParser, these nodes are called "anonymous",
+because they lack the name of a proper grammatical component.
 
 Simplifying Syntax-Trees while parsing
 --------------------------------------
 
+Usually, anonymous Nodes are what you want to get rid of in the course
+of transforming the concrete syntax-tree into an abstract syntax-tree.
+(See :py:mod:`DHParser.transform`)::
 
-
+>>> parser.flatten_tree__ = False; syntax_tree = parser(testdata)
+>>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+(array
+  (:Text "[")
+  (:Option
+    (:Series
+      (_element
+        (number
+          (_INT
+            (:RegExp "1"))))
+      (:ZeroOrMore
+        (:Series
+          (:Text ",")
+          (:Whitespace " ")
+          (_element
+            (number
+              (_INT
+                (:RegExp "2")))))
+        (:Series
+          (:Text ",")
+          (:Whitespace " ")
+          (_element
+            (string
+              (:Text '"')
+              (_CHARS
+                (:RegExp "string"))
+              (:Text '"')))))))
+  (:Text "]"))
 
 """
 
