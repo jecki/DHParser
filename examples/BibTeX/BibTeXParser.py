@@ -60,7 +60,7 @@ class BibTeXGrammar(Grammar):
     """
     text = Forward()
     source_hash__ = "f070f9a8eaff76cdd1669dcb63d8b8f3"
-    anonymous__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?i)%[^\n]*\n'

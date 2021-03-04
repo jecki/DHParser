@@ -341,8 +341,8 @@ class Parser:
        The results produced by these parsers can later be retrieved in
        the AST by the parser name.
 
-    2. *Anonymous parsers* where the name-field just contains the empty
-       string. AST-transformation of Anonymous parsers can be hooked
+    2. *Disposable parsers* where the name-field just contains the empty
+       string. AST-transformation of disposable parsers can be hooked
        only to their class name, and not to the individual parser.
 
     Parser objects are callable and parsing is done by calling a parser
@@ -362,13 +362,12 @@ class Parser:
 
     Attributes and Properties:
 
-        pname:  The parser's name or a (possibly empty) alias name in case
-                of an anonymous parser.
+        pname:  The parser's name.
 
-        anonymous: A property indicating that the parser remains anonymous
-                anonymous with respect to the nodes it returns. For performance
+        disposable: A property indicating that the parser returns
+                anonymous nodes. For performance
                 reasons this is implemented as an object variable rather
-                than a property. This property must always be equal to
+                than a property. This property should always be equal to
                 `self.tag_name[0] == ":"`.
 
         drop_content: A property (for performance reasons implemented as
@@ -410,7 +409,7 @@ class Parser:
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
         self.pname = ''               # type: str
-        self.anonymous = True         # type: bool
+        self.disposable = True         # type: bool
         self.drop_content = False     # type: bool
         self.tag_name = self.ptype    # type: str
         self.cycle_detection = set()  # type: Set[ApplyFunc]
@@ -727,14 +726,14 @@ class Parser:
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
     """Duplicates all attributes of the Parser-class from `src` to `duplicate`."""
     duplicate.pname = src.pname
-    duplicate.anonymous = src.anonymous
+    duplicate.disposable = src.disposable
     duplicate.drop_content = src.drop_content
     duplicate.tag_name = src.tag_name
 
 
 def Drop(parser: Parser) -> Parser:
     """Returns the parser with the `parser.drop_content`-property set to `True`."""
-    assert parser.anonymous, "Parser must be anonymous to be allowed to drop ist content."
+    assert parser.disposable, "Parser must be anonymous to be allowed to drop ist content."
     if isinstance(parser, Forward):
         cast(Forward, parser).parser.drop_content = True
     parser.drop_content = True
@@ -905,7 +904,7 @@ class Grammar:
     field `parser.pname` contains the variable name after instantiation
     of the Grammar class. The parser will never the less remain anonymous
     with respect to the tag names of the nodes it generates, if its name
-    is matched by the `anonymous__` regular expression.
+    is matched by the `disposable__` regular expression.
     If one and the same parser is assigned to several class variables
     such as, for example, the parser `expression` in the example above,
     which is also assigned to `root__`, the first name sticks.
@@ -944,12 +943,10 @@ class Grammar:
                 where a semi-colon ";" is expected) with more informative error
                 messages.
 
-        anonymous__: A regular expression to identify names of parsers that are
+        disposable__: A regular expression to identify names of parsers that are
                 assigned to class fields but shall never the less yield anonymous
                 nodes (i.e. nodes the tag name of which starts with a colon ":"
-                followed by the parser's class name). The default is to treat all
-                parsers starting with an underscore as anonymous in addition to those
-                parsers that are not directly assigned to a class field.
+                followed by the parser's class name).
 
         parser_initialization__:  Before the grammar class (!) has been initialized,
                  which happens upon the first time it is instantiated (see
@@ -1112,10 +1109,10 @@ class Grammar:
     root__ = PARSER_PLACEHOLDER   # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: List[str]
-    resume_rules__ = dict()       # type: Dict[str, ResumeList]
-    skip_rules__ = dict()         # type: Dict[str, ResumeList]
-    error_messages__ = dict()     # type: Dict[str, Tuple[PatternMatchType, str]]
-    anonymous__ = RX_NEVER_MATCH  # type: RxPatternType
+    resume_rules__ = dict()        # type: Dict[str, ResumeList]
+    skip_rules__ = dict()          # type: Dict[str, ResumeList]
+    error_messages__ = dict()      # type: Dict[str, Tuple[PatternMatchType, str]]
+    disposable__ = RX_NEVER_MATCH  # type: RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
     WHITESPACE__ = r'[\t ]*'
@@ -1151,15 +1148,15 @@ class Grammar:
             cdict = cls.__dict__
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and sane_parser_name(entry):
-                    anonymous = True if cls.anonymous__.match(entry) else False
+                    anonymous = True if cls.disposable__.match(entry) else False
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
                             cast(Forward, parser).parser.pname = entry
-                            cast(Forward, parser).parser.anonymous = anonymous
+                            cast(Forward, parser).parser.disposable = anonymous
                     else:
                         parser.pname = entry
-                        parser.anonymous = anonymous
+                        parser.disposable = anonymous
             if cls != Grammar:
                 cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
                 # cls.parser_initialization__[0] = "done"
@@ -1328,8 +1325,8 @@ class Grammar:
                  % (parser.pname, str(self.__dict__[parser.pname])))
             setattr(self, parser.pname, parser)
         parser.tag_name = parser.pname
-        if parser.anonymous:
-            parser.tag_name += parser.ptype
+        if parser.disposable:
+            parser.tag_name = parser.ptype
         self.all_parsers__.add(parser)
         parser.grammar = self
 
@@ -1777,7 +1774,7 @@ class Text(Parser):
         if text.startswith(self.text):
             if self.drop_content:
                 return EMPTY_NODE, text[self.len:]
-            elif self.text or not self.anonymous:
+            elif self.text or not self.disposable:
                 return Node(self.tag_name, self.text, True), text[self.len:]
             return EMPTY_NODE, text
         return None, text
@@ -1825,7 +1822,7 @@ class RegExp(Parser):
         match = text.match(self.regexp)
         if match:
             capture = match.group(0)
-            if capture or not self.anonymous:
+            if capture or not self.disposable:
                 end = text.index(match.end())
                 if self.drop_content:
                     return EMPTY_NODE, text[end:]
@@ -1963,16 +1960,14 @@ class CombinedParser(Parser):
         assert node is None or isinstance(node, Node)
         if self._grammar.flatten_tree__:
             if node is not None:
-                if self.anonymous:
+                if self.disposable:
                     if self.drop_content:
                         return EMPTY_NODE
-                    # if node.anonymous and node.pname:
-                    #     node.tag_name = self.tag_name
                     return node
                 if node.anonymous:
                     return Node(self.tag_name, node._result)
                 return Node(self.tag_name, node)
-            elif self.anonymous:
+            elif self.disposable:
                 return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
             return Node(self.tag_name, ())
         if self.drop_content:
@@ -2000,7 +1995,7 @@ class CombinedParser(Parser):
                         nr.extend(child.children)
                     elif child._result or not child.anonymous:
                         nr.append(child)
-                if nr or not self.anonymous:
+                if nr or not self.disposable:
                     return Node(self.tag_name, tuple(nr))
                 else:
                     return EMPTY_NODE
@@ -2008,7 +2003,7 @@ class CombinedParser(Parser):
         elif N == 1:
             return self._return_value(results[0])
         elif self._grammar.flatten_tree__:
-            if self.anonymous:
+            if self.disposable:
                 return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
             return Node(self.tag_name, ())
         return Node(self.tag_name, tuple(results))  # unoptimized code
@@ -2905,7 +2900,7 @@ class Lookahead(FlowParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
-            return (EMPTY_NODE if self.anonymous else Node(self.tag_name, '')), text
+            return (EMPTY_NODE if self.disposable else Node(self.tag_name, '')), text
         else:
             return None, text
 
@@ -3175,7 +3170,7 @@ class Retrieve(ContextSensitive):
         """Returns a tag name for the retrieved node. If the Retrieve-parser
         has a tag name, this overrides the tag name of the retrieved symbol's
         parser."""
-        if self.anonymous or not self.tag_name:
+        if self.disposable or not self.tag_name:
             if self.parser.pname:
                 return self.parser.tag_name
             # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
@@ -3303,7 +3298,7 @@ class Synonym(UnaryParser):
         if node is not None:
             if self.drop_content:
                 return EMPTY_NODE, text
-            if not self.anonymous:
+            if not self.disposable:
                 if node is EMPTY_NODE:
                     return Node(self.tag_name, ''), text
                 if node.anonymous:
@@ -3363,7 +3358,7 @@ class Forward(UnaryParser):
         parser = copy.deepcopy(self.parser, memo)
         duplicate.parser = parser
         duplicate.pname = self.pname        # Forward-Parsers should not have a name!
-        duplicate.anonymous = self.anonymous
+        duplicate.disposable = self.disposable
         duplicate.tag_name = self.tag_name  # Forward-Parser should not have a tag name!
         duplicate.drop_content = parser.drop_content
         return duplicate

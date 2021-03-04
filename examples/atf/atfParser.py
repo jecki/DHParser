@@ -74,7 +74,7 @@ class atfGrammar(Grammar):
     r"""Parser for an atf source file.
     """
     source_hash__ = "4ae7748240bfd917fc406c93eb9214f7"
-    anonymous__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*'

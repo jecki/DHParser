@@ -2,7 +2,7 @@
 
 @ whitespace = horizontal                       # Insiginifikanter Leerraum ~ umfasst keine Zeilenwechsel
 @ literalws  = right                            # Leerraum rechts von Zeichenkettenliteralen wird automatisch erfasst
-@ anonymous  = JAHRESZAHL, ZEICHENFOLGE, ENDE,  # Diese Elementnamen erscheinen nicht als tags und werden automatisch
+@ disposable = JAHRESZAHL, ZEICHENFOLGE, ENDE,  # Diese Elementnamen erscheinen nicht als tags und werden automatisch
                LEERRAUM, ziel, wortfolge        # reduziert, wenn sie einzelne Kind-Elemente im Syntaxbaum sind
 @ drop       = whitespace, strings, ENDE,       # Impliziter Leerraum ~, Zeichenketten "..." und das
                LEERRAUM                         # ENDE-Element werden schon beim einlesen gelöscht

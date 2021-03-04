@@ -3,7 +3,7 @@
 @ comment    = /#.*(?:\n|$)/
 @ whitespace = /\s*/
 @ literalws  = right
-@ anonymous  = pure_elem, EOF
+@ disposable = pure_elem, EOF
 @ drop       = whitespace, EOF
 
 

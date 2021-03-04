@@ -208,7 +208,7 @@ class EBNFLanguageServerProtocol:
         https://langserver.org/
     """
     completion_fields = ['label', 'insertText', 'insertTextFormat', 'documentation']
-    completions = [['@ anonymous', '@ anonymous = /${1:_\\w+}/', 2,
+    completions = [['@ disposable', '@ disposable = /${1:_\\w+}/', 2,
                     'List of symbols or a regular expression to identify those definitions '
                     'that shall not yield named tags in the syntax tree.'],
                    ['@ comment', '@ comment = /${1:#.*(?:\\n|$)}/', 2,

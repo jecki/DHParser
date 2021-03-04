@@ -108,7 +108,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
     # Don't track returning parsers except in case an error has occurred!
     if ((self.tag_name != WHITESPACE_PTYPE)
         and (grammar.moving_forward__
-             or (not self.anonymous
+             or (not self.disposable
                  and (node
                       or grammar.history__ and grammar.history__[-1].node)))):
         # record history

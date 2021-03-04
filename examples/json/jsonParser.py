@@ -80,7 +80,7 @@ class jsonGrammar(Grammar):
     """
     _element = Forward()
     source_hash__ = "bd32b246b5aa5fbdb1e18ac24d1da53b"
-    anonymous__ = re.compile('_[A-Za-z]+|[A-Z]+')
+    disposable__ = re.compile('_[A-Za-z]+|[A-Z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?:\/\/|#).*'

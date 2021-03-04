@@ -399,7 +399,7 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 # r'_' catches names with a leading underscore. The default value is a
 # regular expression that matches no string whatsoever.
 # Default value: r'..(?<=^)'  # never match.
-CONFIG_PRESET['default_anonymous_regexp'] = r'..(?<=^)'
+CONFIG_PRESET['default_disposable_regexp'] = r'..(?<=^)'
 
 
 # Default value for implicit insignificant whitespace adjacent to literals.

@@ -73,7 +73,7 @@ class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example source file.
     """
     source_hash__ = "ac94d19db5744d229fe6a6815c4471c5"
-    anonymous__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*'

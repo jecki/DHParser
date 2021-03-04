@@ -65,7 +65,7 @@ class ArithmeticRightRecursiveGrammar(Grammar):
     tail = Forward()
     term = Forward()
     source_hash__ = "34a84d77ec6f6b92070f9e4fd0a5d3ca"
-    anonymous__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*'

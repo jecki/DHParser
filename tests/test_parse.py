@@ -274,14 +274,14 @@ class TestInfiLoopsAndRecursion:
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
     def test_break_infinite_loop_Interleave(self):
-        forever = Interleave(Always(), repetitions = [(0, INFINITE)])
+        forever = Interleave(Always(), repetitions=[(0, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
         forever = Interleave(Always(), Always(),
-                             repetitions = [(5, INFINITE), (INFINITE, INFINITE)])
+                             repetitions=[(5, INFINITE), (INFINITE, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
-        forever = Interleave(Always(), repetitions = [(1000, INFINITE - 1)])
+        forever = Interleave(Always(), repetitions=[(1000, INFINITE - 1)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         assert repr(result) == "Node(':EMPTY', '')", repr(result)
 
@@ -1127,7 +1127,7 @@ EBNF_with_Errors = r"""# Test code with errors. All places marked by a "$" shoul
 @ comment    = /#.*(?:\n|$)/
 @ whitespace = /\s*/
 @ literalws  = right
-@ anonymous  = pure_elem, EOF
+@ disposable = pure_elem, EOF
 @ drop       = whitespace, EOF
 
 
@@ -1438,7 +1438,7 @@ class TestMetaParser:
     mp = CombinedParser()
     mp.grammar = Grammar()  # override placeholder warning
     mp.pname = "named"
-    mp.anonymous = False
+    mp.disposable = False
     mp.tag_name = mp.pname
 
     def test_return_value(self):
@@ -1465,7 +1465,7 @@ class TestMetaParser:
         nd = self.mp._return_value(EMPTY_NODE)
         assert nd.tag_name == 'named' and not nd.children, nd.as_sxpr()
         self.mp.pname = ''
-        self.mp.anonymous = True
+        self.mp.disposable = True
         self.mp.tag_name = ':unnamed'
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'tagged', nd.as_sxpr()

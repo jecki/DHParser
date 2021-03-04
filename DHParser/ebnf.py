@@ -258,7 +258,7 @@ only as placeholders to render the definition of the grammar a bit
 more readable, not because we are intested in the text that is
 captured by the production associated with them in their own right::
 
->>> anonymize_symbols = '@ anonymous = /_\w+/ \\n'
+>>> disposable_symbols = '@ disposable = /_\w+/ \\n'
 
 Instead of passing a comma-separated list of symbols to the directive,
 which would also have been possible, we have leveraged our convention
@@ -267,7 +267,7 @@ symbols that shall by anonymized with a regular expression.
 
 Now, let's examine the effect of these two directives::
 
->>> grammar = drop_insignificant_wsp + anonymize_symbols + grammar
+>>> grammar = drop_insignificant_wsp + disposable_symbols + grammar
 >>> parser = create_parser(grammar, 'JSON')
 >>> syntax_tree = parser(testdata)
 >>> syntax_tree.content
@@ -454,7 +454,7 @@ class EBNFGrammar(Grammar):
 
         @ whitespace = /\s*/                            # whitespace includes linefeed
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-        @ anonymous  = pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+        @ disposable = pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
         @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
         @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
@@ -592,7 +592,7 @@ class EBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "3bda01686407a47a9fd0a709bda53ae3"
-    anonymous__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [
@@ -794,7 +794,7 @@ class FixedEBNFGrammar(Grammar):
             # or python-style: # ... \n, excluding, however, character markers: #x20
         @ whitespace = /\s*/                            # whitespace includes linefeed
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-        @ anonymous  = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+        @ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
         @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
         @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
@@ -934,7 +934,7 @@ class FixedEBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "d0735678e82e6d7cbf75958080a607ff"
-    anonymous__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {
@@ -1262,13 +1262,13 @@ DROP_VALUES      = {DROP_STRINGS, DROP_BACKTICKED, DROP_WSPC, DROP_REGEXP}
 ReprType = Union[str, unrepr]
 
 
-KNOWN_DIRECTIVES = {
+VALID_DIRECTIVES = {
     'comment': r'Regular expression for comments, e.g. /#.*(?:\n|$)/',
     'whitespace': r'Regular expression for whitespace, e.g. /\s*/',
     'literalws': 'Controls implicit whitespace adjacent to literals: left, right, both, none',
     'ignorecase': 'Controls case-sensitivity: on, off',
     '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
-    'anonymous': 'List of symbols that are NOT to appear as tag-names',
+    'disposable': 'List of symbols that are NOT to appear as tag-names',
     'drop': 'List of tags to be dropped early from syntax tree, '
             'special values: strings, whitespace, regexps',
     '$SYMBOL_filer': 'Function that transforms captured values of the given symbol on retrieval',
@@ -1322,7 +1322,7 @@ class EBNFDirectives:
 
         drop:   A set that may contain the elements `DROP_STRINGS` and
                 `DROP_WSP', 'DROP_REGEXP' or any name of a symbol
-                of an anonymous parser (e.g. '_linefeed') the results
+                of a disposable parser (e.g. '_linefeed') the results
                 of which will be dropped during the parsing process,
                 already.
 
@@ -1467,12 +1467,12 @@ class EBNFCompiler(Compiler):
         re_flags:  A set of regular expression flags to be added to all
                 regular expressions found in the current parsing process
 
-        anonymous_regexp: A regular expression to identify symbols that stand
+        disposable_regexp: A regular expression to identify symbols that stand
                 for parsers that shall yield anonymous nodes. The pattern of
                 the regular expression is configured in configuration.py but
                 can also be set by a directive. The default value is a regular
                 expression that catches names with a leading underscore.
-                See also `parser.Grammar.anonymous__`
+                See also `parser.Grammar.disposable__`
 
         python_src:  A string that contains the python source code that was
                 the outcome of the last EBNF-compilation.
@@ -1548,7 +1548,7 @@ class EBNFCompiler(Compiler):
         self.defined_directives = dict()       # type: Dict[str, List[Node]]
         self.consumed_custom_errors = set()    # type: Set[str]
         self.consumed_skip_rules = set()       # type: Set[str]
-        self.anonymous_regexp = re.compile(get_config_value('default_anonymous_regexp'))
+        self.disposable_regexp = re.compile(get_config_value('default_disposable_regexp'))
         self.grammar_id += 1
 
 
@@ -2037,8 +2037,8 @@ class EBNFCompiler(Compiler):
                         + ('. Grammar:' if self.grammar_source and show_source else '.')]
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
         definitions.append(('static_analysis_pending__', '[True]'))
-        definitions.append(('anonymous__',
-                            're.compile(' + repr(self.anonymous_regexp.pattern) + ')'))
+        definitions.append(('disposable__',
+                            're.compile(' + repr(self.disposable_regexp.pattern) + ')'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
@@ -2227,12 +2227,12 @@ class EBNFCompiler(Compiler):
         nd.result = "".join(parts)
         nd.tag_name = "literal"
 
-    def add_to_anonymous_regexp(self, pattern):
-        if self.anonymous_regexp is RX_NEVER_MATCH:
-            self.anonymous_regexp = re.compile(pattern)
+    def add_to_disposable_regexp(self, pattern):
+        if self.disposable_regexp is RX_NEVER_MATCH:
+            self.disposable_regexp = re.compile(pattern)
         else:
-            old_pattern = self.anonymous_regexp.pattern
-            self.anonymous_regexp = re.compile('(?:%s)|(?:%s)' % (old_pattern, pattern))
+            old_pattern = self.disposable_regexp.pattern
+            self.disposable_regexp = re.compile('(?:%s)|(?:%s)' % (old_pattern, pattern))
 
     def on_directive(self, node: Node) -> str:
         for child in node.children:
@@ -2273,7 +2273,7 @@ class EBNFCompiler(Compiler):
                                         "match the empty string, /%s/ does not." % value)
             self.directives[key] = value
 
-        elif key == 'anonymous':
+        elif key == 'disposable':
             if node.children[1].tag_name == "regexp":
                 check_argnum()
                 re_pattern = node.children[1].content
@@ -2282,7 +2282,7 @@ class EBNFCompiler(Compiler):
                         node, "The regular expression r'%s' matches any symbol, "
                         "which is not allowed!" % re_pattern)
                 else:
-                    self.add_to_anonymous_regexp(re_pattern)
+                    self.add_to_disposable_regexp(re_pattern)
             else:
                 args = node.children[1:]
                 assert all(child.tag_name == "symbol" for child in args)
@@ -2290,7 +2290,7 @@ class EBNFCompiler(Compiler):
                 for asym in alist:
                     if asym not in self.symbols:
                         self.symbols[asym] = node
-                self.add_to_anonymous_regexp('$|'.join(alist) + '$')
+                self.add_to_disposable_regexp('$|'.join(alist) + '$')
 
         elif key == 'drop':
             if len(node.children) <= 1:
@@ -2298,25 +2298,25 @@ class EBNFCompiler(Compiler):
             unmatched = []  # type: List[str]  # dropped syms that are not already anonymous syms
             for child in node.children[1:]:
                 content = child.content
-                if self.anonymous_regexp.match(content):
+                if self.disposable_regexp.match(content):
                     self.directives[key].add(content)
                 elif content.lower() in DROP_VALUES:
                     self.directives[key].add(content.lower())
                 else:
                     unmatched.append(content)
-                    if self.anonymous_regexp == RX_NEVER_MATCH:
+                    if self.disposable_regexp == RX_NEVER_MATCH:
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
-                                            'Should be one of %s or an anonymous parser, where '
-                                            'the "@anonymous"-directive must precede the '
+                                            'Should be one of %s or a disposable parser, where '
+                                            'the "@disposable"-directive must precede the '
                                             '@drop-directive.' % (content, str(DROP_VALUES)))
                     else:
                         self.tree.new_error(
                             node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
                             '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
-                                                                self.anonymous_regexp.pattern))
+                                                                self.disposable_regexp.pattern))
             if unmatched:
                 self.directives[key].add(content)
-                self.add_to_anonymous_regexp('$|'.join(unmatched) + '$')
+                self.add_to_disposable_regexp('$|'.join(unmatched) + '$')
 
         elif key == 'ignorecase':
             check_argnum()
@@ -2391,7 +2391,7 @@ class EBNFCompiler(Compiler):
                                     'the symbolname. Please, write: "%s"' % (kl[0], proper_usage))
             else:
                 self.tree.new_error(node, 'Unknown directive %s ! (Known directives: %s.)' %
-                                    (key, ', '.join(k for k in KNOWN_DIRECTIVES.keys())))
+                                    (key, ', '.join(k for k in VALID_DIRECTIVES.keys())))
 
         return ""
 
@@ -2640,9 +2640,9 @@ class EBNFCompiler(Compiler):
         node.result = node.children[1:]
         assert prefix in {'::', ':?', ':'}
 
-        if self.anonymous_regexp.match(arg):
+        if self.disposable_regexp.match(arg):
             self.tree.new_error(
-                node, 'Retrieve operator "%s" does not work with anonymous parsers like %s'
+                node, 'Retrieve operator "%s" does not work with disposable parsers like %s'
                 % (prefix, arg))
             return arg
 

@@ -75,7 +75,7 @@ class json_fail_tolerantGrammar(Grammar):
     """
     _element = Forward()
     source_hash__ = "d958a85b4f3c116848d2648ca5c1febd"
-    anonymous__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'member': [(re.compile(r'[\'`´]'), 'String values must be enclosed by double-quotation marks: "..."!')],

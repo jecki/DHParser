@@ -75,7 +75,7 @@ class jsonGrammar(Grammar):
     """
     _element = Forward()
     source_hash__ = "617e7a1c058de72b8118e59a3452d821"
-    anonymous__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?:\/\/|#).*'

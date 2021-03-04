@@ -35,8 +35,8 @@ def as_ebnf(self) -> str:
         ebnf.append('@ whitespace = /%s/' % self.WHITESPACE__)
     if hasattr(self, 'COMMENT__'):
         ebnf.append('@ whitespace = /%s/' % self.COMMENT__)
-    if hasattr(self, 'anonymous__'):
-        ebnf.append('@ anonymous = /%s/' % self.anonymous__.pattern)
+    if hasattr(self, 'disposable__'):
+        ebnf.append('@ disposable = /%s/' % self.disposable__.pattern)
 
     # TODO: add directives; pay special attention to whitespace!!!
 

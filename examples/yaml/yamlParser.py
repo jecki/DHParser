@@ -65,7 +65,7 @@ class yamlGrammar(Grammar):
     element = Forward()
     value = Forward()
     source_hash__ = "77a7148de4df4673628ba878d0c12d19"
-    anonymous__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?:\/\/|#).*'

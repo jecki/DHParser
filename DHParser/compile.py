@@ -238,7 +238,7 @@ class Compiler:
         result of the compilation.
 
         The method's name is derived from either the node's parser
-        name or, if the parser is anonymous, the node's parser's class
+        name or, if the parser is disposable, the node's parser's class
         name by adding the prefix ``on_``.
 
         Note that ``compile`` does not call any compilation functions

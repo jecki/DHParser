@@ -496,7 +496,7 @@ def is_named(context: TreeContext) -> bool:
 
 
 def is_anonymous(context: TreeContext) -> bool:
-    """Returns ``True`` if the current node's parser is an anonymous parser."""
+    """Returns ``True`` if the current node is anonymous."""
     return context[-1].anonymous
 
 

@@ -320,7 +320,7 @@ EBNF = r"""
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
-@ anonymous  = pure_elem, element
+@ disposable = pure_elem, element
 
 #: top-level
 
@@ -471,13 +471,13 @@ class TestSynonymDetection:
         assert grammar('b').as_sxpr() == '(a (b "b"))'
 
     def test_synonym_anonymous_elimination(self):
-        ebnf = r"""@ anonymous = /_\w+$/
+        ebnf = r"""@ disposable = /_\w+$/
                   a = _b
                   _b = /b/
         """
         grammar = grammar_provider(ebnf)()
-        assert not grammar['a'].anonymous
-        assert grammar['_b'].anonymous
+        assert not grammar['a'].disposable
+        assert grammar['_b'].disposable
         assert grammar['a'].pname == 'a', grammar['a'].pname
         assert grammar['_b'].pname == '_b', grammar['_b'].pname
         assert grammar('b').as_sxpr() == '(a "b")', grammar('b').as_sxpr()
@@ -1243,7 +1243,7 @@ class TestDrop:
         parser = create_parser(lang)
         st = parser('ABC')
         assert str(st) == "ABC"
-        parser = create_parser('@ anonymous = B\n@ drop = B\n' + lang)
+        parser = create_parser('@ disposable = B\n@ drop = B\n' + lang)
         st = parser('ABC')
         assert str(st) == "AC"
 
