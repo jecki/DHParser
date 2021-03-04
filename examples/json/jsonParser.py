@@ -79,7 +79,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "daa269448372c300359c9c6875a23031"
+    source_hash__ = "bd32b246b5aa5fbdb1e18ac24d1da53b"
     anonymous__ = re.compile('_[A-Za-z]+|[A-Z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -90,22 +90,22 @@ class jsonGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     _EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(Drop(Text("E")), Drop(Text("e"))), Option(Alternative(Drop(Text("+")), Drop(Text("-")))), RegExp('[0-9]+')))
+    EXP = Option(Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+')))
     DOT = Text(".")
     FRAC = Option(Series(DOT, RegExp('[0-9]+')))
     NEG = Text("-")
-    INT = Alternative(Series(Option(NEG), RegExp('[1-9][0-9]+')), RegExp('[0-9]'))
+    INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
     HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
     UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
     ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
     PLAIN = RegExp('[^"\\\\]+')
     _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
     null = Series(Text("null"), dwsp__)
-    false = Series(Drop(Text("false")), dwsp__)
-    true = Series(Drop(Text("true")), dwsp__)
+    false = Series(Text("false"), dwsp__)
+    true = Series(Text("true"), dwsp__)
     _bool = Alternative(true, false)
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Text('"')), _CHARACTERS, Drop(Text('"')), dwsp__, mandatory=1)
+    string = Series(Text('"'), _CHARACTERS, Text('"'), dwsp__, mandatory=1)
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element)))), Series(Drop(Text("]")), dwsp__), mandatory=2)
     member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
     object = Series(Series(Drop(Text("{")), dwsp__), member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)), Series(Drop(Text("}")), dwsp__), mandatory=3)

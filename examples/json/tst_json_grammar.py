@@ -18,6 +18,7 @@ try:
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
+    from DHParser.configuration import set_config_value, access_presets, set_preset_value, finalize_presets
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
@@ -52,6 +53,10 @@ if __name__ == '__main__':
     if len(argv) > 1 and sys.argv[1] == "--debug":
         LOGGING = 'LOGS'
         del argv[1]
+        access_presets()
+        set_preset_value('history_tracking', True)
+        finalize_presets()
+        DHParser.log.start_logging(LOGGING)
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
         os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
         # if called with a single filename that is either an EBNF file or a known

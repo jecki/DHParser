@@ -381,7 +381,8 @@ class Parser:
 
         tag_name: The tag_name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
-                `pname`, otherwise it is the name of the parser's type.
+                `pname`, otherwise it is the name of the parser's type
+                prefixed with a colon ":".
 
         visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
@@ -1964,7 +1965,7 @@ class CombinedParser(Parser):
                     if self.drop_content:
                         return EMPTY_NODE
                     return node
-                if node.tag_name[0] == ':':  # faster than node.is_anonymous()
+                if node.anonymous:
                     return Node(self.tag_name, node._result)
                 return Node(self.tag_name, node)
             elif self.anonymous:
@@ -1991,9 +1992,9 @@ class CombinedParser(Parser):
                 nr = []  # type: List[Node]
                 # flatten parse tree
                 for child in results:
-                    if child.children and child.tag_name[0] == ':':  # faster than c.is_anonymous():
+                    if child.children and child.anonymous:  # faster than c.is_anonymous():
                         nr.extend(child.children)
-                    elif child._result or child.tag_name[0] != ':':
+                    elif child._result or not child.anonymous:
                         nr.append(child)
                 if nr or not self.anonymous:
                     return Node(self.tag_name, tuple(nr))
@@ -3302,7 +3303,7 @@ class Synonym(UnaryParser):
             if not self.anonymous:
                 if node is EMPTY_NODE:
                     return Node(self.tag_name, ''), text
-                if node.tag_name[:1] == ':':
+                if node.anonymous:
                     # eliminate anonymous child-node on the fly
                     node.tag_name = self.tag_name
                 else:

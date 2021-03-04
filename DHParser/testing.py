@@ -392,7 +392,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         if not get_config_value('test_parallelization'):
             print('  Testing parser: ' + parser_name)
 
-        track_history = False
+        track_history = get_config_value('history_tracking')
         try:
             if has_lookahead(parser_name):
                 set_tracer(all_descendants(parser[parser_name]), trace_history)
