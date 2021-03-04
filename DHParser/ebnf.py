@@ -182,7 +182,9 @@ Usually, anonymous nodes are what you want to get rid of in the course
 of transforming the concrete syntax-tree into an abstract syntax-tree.
 (See :py:mod:`DHParser.transform`). DHParser already eliminates per
 default all anonymous nodes that are not leaf-nodes by replacing them
-with their children during parsing. Without this optimization, each
+with their children during parsing. Anonymous leaf-nodes will be
+replaced by their content, if they are a single child of some parent,
+and otherwise be left in place. Without this optimization, each
 construct of the EBNF-grammar would leave a node in the syntax-tree::
 
 >>> parser.flatten_tree__ = False; syntax_tree = parser(testdata)
@@ -226,7 +228,11 @@ syntax-trees during the parsing stage, already. These are not turned
 on by default, because they allow to drop content or to remove named
 nodes from the tree; but they must be turned on by "directives" that
 are listed at the top of an EBNF-grammar and that guide the
-parser-generation process.
+parser-generation process. DHParser-directives always start with an
+`@`-sign. For example, the `@drop`-directive advises the parser to
+drop certain nodes ::
+
+>>>
 
 
 """
