@@ -1966,7 +1966,7 @@ class CombinedParser(Parser):
                 if self.anonymous:
                     if self.drop_content:
                         return EMPTY_NODE
-                    # if node.anonymous:
+                    # if node.anonymous and node.pname:
                     #     node.tag_name = self.tag_name
                     return node
                 if node.anonymous:
