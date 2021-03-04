@@ -175,12 +175,15 @@ that has created the node (see :py:mod:`DHParser.parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
 because they lack the name of a proper grammatical component.
 
-Simplifying Syntax-Trees while parsing
+Simplifying Syntax-Trees while Parsing
 --------------------------------------
 
-Usually, anonymous Nodes are what you want to get rid of in the course
+Usually, anonymous nodes are what you want to get rid of in the course
 of transforming the concrete syntax-tree into an abstract syntax-tree.
-(See :py:mod:`DHParser.transform`)::
+(See :py:mod:`DHParser.transform`). DHParser already eliminates per
+default all anonymous nodes that are not leaf-nodes by replacing them
+with their children during parsing. Without this optimization, each
+construct of the EBNF-grammar would leave a node in the syntax-tree::
 
 >>> parser.flatten_tree__ = False; syntax_tree = parser(testdata)
 >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
@@ -210,6 +213,21 @@ of transforming the concrete syntax-tree into an abstract syntax-tree.
                 (:RegExp "string"))
               (:Text '"')))))))
   (:Text "]"))
+
+This can be helpful for understanding how parsing that is directed by
+an EBNF-grammar works (next to looking at the logs of the complete
+parsing-process, see :py:mod:`DHParser.trace`), but other than that it
+is advisable to streamline the syntax-tree as early on as possible,
+because the processing time of all subsequent tree-processing stages
+increases with the number of nodes in the tree.
+
+Because of this DHParser offers further means of simplifying
+syntax-trees during the parsing stage, already. These are not turned
+on by default, because they allow to drop content or to remove named
+nodes from the tree; but they must be turned on by "directives" that
+are listed at the top of an EBNF-grammar and that guide the
+parser-generation process.
+
 
 """
 
