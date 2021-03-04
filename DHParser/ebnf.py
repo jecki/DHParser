@@ -295,9 +295,6 @@ obvious, if we look at (a section of) the syntax-tree::
     (:Text '"'))
   (:Text "]"))
 
-
-
-
 """
 
 

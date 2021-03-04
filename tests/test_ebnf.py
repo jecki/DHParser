@@ -480,7 +480,7 @@ class TestSynonymDetection:
         assert grammar['_b'].anonymous
         assert grammar['a'].pname == 'a', grammar['a'].pname
         assert grammar['_b'].pname == '_b', grammar['_b'].pname
-        assert grammar('b').as_sxpr() == '(a "b")'
+        assert grammar('b').as_sxpr() == '(a "b")', grammar('b').as_sxpr()
 
 
 class TestFlowControlOperators:

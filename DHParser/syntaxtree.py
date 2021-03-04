@@ -1000,12 +1000,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Returns True, if the Node is an "anonymous" Node, i.e. a node that
         has not been created by a named parser.
 
-        The tag name of anonymous node is a colon followed by the class name
+        The tag name of anonymous node contains a colon followed by the class name
         of the parser that created the node, i.e. ":Series". It is recommended
         practice to remove (or name) all anonymous nodes during the
         AST-transformation.
         """
-        return not self.tag_name or self.tag_name[0] == ':'
+        return not self.tag_name or self.tag_name.find(':') >= 0
 
     # node content ###
 

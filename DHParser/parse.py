@@ -1327,7 +1327,9 @@ class Grammar:
                  'already exists in grammar object: %s!'
                  % (parser.pname, str(self.__dict__[parser.pname])))
             setattr(self, parser.pname, parser)
-        parser.tag_name = parser.ptype if parser.anonymous else parser.pname
+        parser.tag_name = parser.pname
+        if parser.anonymous:
+            parser.tag_name += parser.ptype
         self.all_parsers__.add(parser)
         parser.grammar = self
 
@@ -1964,6 +1966,8 @@ class CombinedParser(Parser):
                 if self.anonymous:
                     if self.drop_content:
                         return EMPTY_NODE
+                    # if node.anonymous:
+                    #     node.tag_name = self.tag_name
                     return node
                 if node.anonymous:
                     return Node(self.tag_name, node._result)
@@ -2161,7 +2165,7 @@ class ZeroOrMore(Option):
             length = text.__len__()
             if node is None:
                 break
-            if node._result or node.tag_name[:1] != ':':  # drop anonymous empty nodes
+            if node._result or not node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2207,7 +2211,7 @@ class OneOrMore(UnaryParser):
             if node is None:
                 break
             match_flag = True
-            if node._result or node.tag_name[:1] != ':':  # drop anonymous empty nodes
+            if node._result or not node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2522,7 +2526,7 @@ class Series(MandatoryNary):
                     else:
                         results.append(node)
                         break
-            if node._result or not node.tag_name.startswith(':'):  # drop anonymous empty nodes
+            if node._result or not node.anonymous:  # drop anonymous empty nodes
                 results.append(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
@@ -2767,8 +2771,7 @@ class Interleave(MandatoryNary):
                 if parser not in consumed:
                     node, text__ = parser(text_)
                     if node is not None:
-                        if node._result or node.tag_name[:1] != ':':
-                            # drop anonymous empty nodes
+                        if node._result or not node.anonymous:  # drop anonymous empty nodes
                             results += (node,)
                             text_ = text__
                         counter[i] += 1
