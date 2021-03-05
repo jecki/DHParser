@@ -91,10 +91,10 @@ The structure of a JSON file can easily be described in EBNF::
 >>> grammar = 'json       = ~ _element _EOF                                 \\n'\
               '  _EOF     = /$/                                             \\n'\
               '_element   = object | array | string | number | bool | null  \\n'\
-              'object     = "{" ~ member ( "," ~ §member )* §"}" ~          \\n'\
-              'member     = string §":" ~ _element                          \\n'\
-              'array      = "[" ~ ( _element ( "," ~ _element )* )? §"]" ~  \\n'\
-              'string     = `"` §_CHARS `"` ~                               \\n'\
+              'object     = "{" ~ member ( "," ~ §member )* "}" ~           \\n'\
+              'member     = string ":" ~ _element                           \\n'\
+              'array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~   \\n'\
+              'string     = `"` _CHARS `"` ~                                \\n'\
               '  _CHARS   = /[^"\\\\\]+/ | /\\\\\\\[\/bnrt\\\\\]/           \\n'\
               'number     = _INT _FRAC? _EXP? ~                             \\n'\
               '  _INT     = `-`? ( /[1-9][0-9]+/ | /[0-9]/ )                \\n'\
@@ -258,7 +258,7 @@ only as placeholders to render the definition of the grammar a bit
 more readable, not because we are intested in the text that is
 captured by the production associated with them in their own right::
 
->>> disposable_symbols = '@ disposable = /_\w+/ \\n'
+>>> disposable_symbols = '@disposable = /_\w+/ \\n'
 
 Instead of passing a comma-separated list of symbols to the directive,
 which would also have been possible, we have leveraged our convention
@@ -267,8 +267,8 @@ symbols that shall by anonymized with a regular expression.
 
 Now, let's examine the effect of these two directives::
 
->>> grammar = drop_insignificant_wsp + disposable_symbols + grammar
->>> parser = create_parser(grammar, 'JSON')
+>>> refined_grammar = drop_insignificant_wsp + disposable_symbols + grammar
+>>> parser = create_parser(refined_grammar, 'JSON')
 >>> syntax_tree = parser(testdata)
 >>> syntax_tree.content
 '{"array":[1,2.0,"a string"],"number":-1.3e+25,"bool":false}'
@@ -294,6 +294,119 @@ obvious, if we look at (a section of) the syntax-tree::
     (:RegExp "a string")
     (:Text '"'))
   (:Text "]"))
+
+This tree looks more streamlined. But it still contains more structure
+than we might like to see in an abstract syntax tree. In particular, it
+still contains als the delimiters ("[", ",", '"', ...) next to the data. But
+other than in the UTF-8 representation of our json data, the delimiters are
+not needed any more, because the structural information is now retained
+in the tree-structure.
+
+So how can we get rid of those delimiters? The rather coarse-grained tools
+that DHParser offers in the parsing stage require some care to do this
+properly.
+
+The @drop-directive allows to drop all unnamed strings (i.e. strings
+that are not directly assigned to a symbol) and backticked strings (for
+the difference between strings and backticked strings, see below) and
+regular expressions. However, using `@drop = whitespace, strings, backticked`
+would also drop those parts captured as string that contain data::
+
+>>> refined_grammar = '@drop = whitespace, strings, backticked \\n' \
+                      + disposable_symbols + grammar
+>>> parser = create_parser(refined_grammar, 'JSON')
+>>> syntax_tree = parser(testdata)
+>>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+(array
+  (number "1")
+  (number
+    (:RegExp "2")
+    (:RegExp "0"))
+  (string "a string"))
+
+Here, suddenly, the number "2.0" has been turned into "20"! There
+are three ways to get around this problem:
+
+1. Assigning all non-delmiter strings to symbols. In this case
+   we would have to rewrite the definition of number as such::
+
+  number     = _INT _FRAC? _EXP? ~
+    _INT     = _MINUS? ( /[1-9][0-9]+/ | /[0-9]/ )
+    _FRAC    = _DOT /[0-9]+/
+    _EXP     = (_Ecap|_Esmall) [_PLUS|MINUS] /[0-9]+/
+    _MINUS   = `-`
+    _PLUS    = `+`
+    _DOT     = `.`
+    _Ecap    = `E`
+    _Esmall  = `e`
+
+  A simpler alternative of this technique would be to make use of
+  the fact that the document-parts captured by regular expresseion
+  are not dropped (although regular expressions can also be listed
+  in the @drop-directive, if needed) and that at the same time
+  delimiters are almost always simple strings containing keywords
+  or punctuation characters. Thus, one only needs to rewrite those
+  string-expressions that capture data as regular expressions::
+
+  number     = _INT _FRAC? _EXP? ~
+    _INT     = /[-]/ ( /[1-9][0-9]+/ | /[0-9]/ )
+    _FRAC    = /[.]/ /[0-9]+/
+    _EXP     = (/E/|/e/) [/[-+]/] /[0-9]+/
+
+  2. Assigning all delimiter strings to symbols and drop the nodes
+  and content captured by these symbols. This means doing exactly
+  the opposite of the first solution. Here is an excerpt of what
+  a JSON-grammar emploing this technique would look like::
+
+  @disposable = /_\w+/
+  @drop = whitespace, _BEGIN_ARRAY, _END_ARRAY, _KOMMA, _BEGIN_OBJECT, ...
+  ...
+  array = _BEGIN_ARRAY ~ ( _element ( _KOMMA ~ _element )* )? §_END_ARRAY ~
+  ...
+
+  It is important that all symbols listed for dropping are also made
+  disposable, either by listing them in the disposable-directive as well
+  or using names that the regular-expressions for disposables matches.
+  Otherwise, DHParser does not allow to drop the content of named nodes,
+  because the default assumption is that symbols in the grammar are
+  defined to capture meaningful parts of the document that contain
+  relevant data.
+
+  3. Bailing out and leaving the further simplification of the syntax-tree
+  to the next tree-processing stage which, if you follow DHParser's suggested
+  usage pattern, is the abstract-syntax-tree-transformation proper
+  and which allows for a much more fine-grained specification of
+  transformation rules. See :py:mod:`DHParser.transformation`.
+
+To round this section up, we present the full grammar for a streamlined
+JSON-Parser according to the first solution-strategy::
+
+>>> json_gr = '@disposable = /_\\\\w+/                                      \\n'\
+              '@drop      = whitespace, strings, backticked, _EOF           \\n'\
+              'json       = ~ _element _EOF                                 \\n'\
+              '  _EOF     = /$/                                             \\n'\
+              '_element   = object | array | string | number | bool | null  \\n'\
+              'object     = "{" ~ member ( "," ~ §member )* "}" ~           \\n'\
+              'member     = string ":" ~ _element                           \\n'\
+              'array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~   \\n'\
+              'string     = `"` _CHARS `"` ~                                \\n'\
+              '  _CHARS   = /[^"\\\\\]+/ | /\\\\\\\[\/bnrt\\\\\]/           \\n'\
+              'number     = _INT _FRAC? _EXP? ~                             \\n'\
+              '  _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ )              \\n'\
+              '  _FRAC    = /[.]/ /[0-9]+/                                  \\n'\
+              '  _EXP     = /[Ee]/ [/[-+]/] /[0-9]+/                        \\n'\
+              'bool       = "true" ~ | "false" ~                            \\n'\
+              'null       = "null" ~                                        \\n'
+>>> json_parser = create_parser(json_gr, 'JSON')
+>>> syntax_tree = json_parser(testdata)
+>>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+(array
+  (number "1")
+  (number
+    (:RegExp "2")
+    (:RegExp ".")
+    (:RegExp "0"))
+  (string "a string"))
 
 """
 
