@@ -395,8 +395,8 @@ JSON-Parser according to the first solution-strategy::
               '  _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ )              \\n'\
               '  _FRAC    = /[.]/ /[0-9]+/                                  \\n'\
               '  _EXP     = /[Ee]/ [/[-+]/] /[0-9]+/                        \\n'\
-              'bool       = "true" ~ | "false" ~                            \\n'\
-              'null       = "null" ~                                        \\n'
+              'bool       = /true/ ~ | /false/ ~                            \\n'\
+              'null       = /null/ ~                                        \\n'
 >>> json_parser = create_parser(json_gr, 'JSON')
 >>> syntax_tree = json_parser(testdata)
 >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
@@ -407,6 +407,28 @@ JSON-Parser according to the first solution-strategy::
     (:RegExp ".")
     (:RegExp "0"))
   (string "a string"))
+
+Merging the content of the remaining anonymous leaf-nodes and assigning
+the merged content to their named parent nodes yields the abstract syntax tree
+of the json data::
+
+>>> from DHParser.transform import crunch_tree
+>>> crunch_tree(syntax_tree)
+>>> print(syntax_tree.as_sxpr(compact=True))
+(json
+  (object
+    (member
+      (string "array")
+      (array
+        (number "1")
+        (number "2.0")
+        (string "a string")))
+    (member
+      (string "number")
+      (number "-1.3e+25"))
+    (member
+      (string "bool")
+      (bool "false"))))
 
 """
 

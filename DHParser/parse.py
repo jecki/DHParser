@@ -1991,9 +1991,10 @@ class CombinedParser(Parser):
                 nr = []  # type: List[Node]
                 # flatten parse tree
                 for child in results:
-                    if child.children and child.anonymous:  # faster than c.is_anonymous():
+                    c_anonymous = child.anonymous
+                    if child.children and c_anonymous:
                         nr.extend(child.children)
-                    elif child._result or not child.anonymous:
+                    elif child._result or not c_anonymous:
                         nr.append(child)
                 if nr or not self.disposable:
                     return Node(self.tag_name, tuple(nr))

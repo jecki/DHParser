@@ -48,6 +48,7 @@ __all__ = ('TransformationDict',
            'transformation_factory',
            'key_tag_name',
            'traverse',
+           'crunch_tree',
            'always',
            'never',
            'neg',
@@ -368,6 +369,29 @@ def traverse(root_node: Node,
 
     traverse_recursive([root_node])
     # assert processing_table['__cache__']
+
+
+#######################################################################
+#
+# specialized full tree transformations
+#
+#######################################################################
+
+def crunch_tree(node: Node):
+    """Recursively traverses the tree and "crunches" nodes that contain
+    only anonymous child nodes that ar leaves. "Crunching" means the
+    node's result will be replaced by the merged content of the children.
+    """
+    if node.children:
+        crunch = True
+        for child in node.children:
+            if child.children:
+                crunch_tree(child)
+                crunch = False
+            elif not child.anonymous:
+                crunch = False
+        if crunch:
+            node.result = node.content
 
 
 #######################################################################
