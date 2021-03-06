@@ -76,6 +76,7 @@ __all__ = ('ParserError',
            'mixin_comment',
            'mixin_nonempty',
            'CombinedParser',
+           'OutputOptimization',
            'UnaryParser',
            'NaryParser',
            'Drop',
@@ -1182,7 +1183,7 @@ class Grammar:
     def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
 
-        :param root: If not None, this is goind to be the root parser of the grammar.
+        :param root: If not None, this is going to be the root parser of the grammar.
             This allows to first construct an ensemble of parser objects and then
             link those objects in a grammar-object, rather than adding the parsers
             as fields to a derived class of class Grammar. (See the doc-tests in this
@@ -1224,6 +1225,7 @@ class Grammar:
             self.root_parser__ = copy.deepcopy(root)
             if not self.root_parser__.pname:
                 self.root_parser__.pname = "root"
+                self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
             self.static_analysis_errors__ = []       # type: List[AnalysisError]
         else:
@@ -1324,9 +1326,10 @@ class Grammar:
                  'already exists in grammar object: %s!'
                  % (parser.pname, str(self.__dict__[parser.pname])))
             setattr(self, parser.pname, parser)
-        parser.tag_name = parser.pname
         if parser.disposable:
             parser.tag_name = parser.ptype
+        else:
+            parser.tag_name = parser.pname
         self.all_parsers__.add(parser)
         parser.grammar = self
 
@@ -1931,6 +1934,8 @@ def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
 ########################################################################
 
 
+
+
 class CombinedParser(Parser):
     """Class CombinedParser is the base class for all parsers that
     call ("combine") other parsers. It contains functions for the
@@ -1946,7 +1951,18 @@ class CombinedParser(Parser):
     speed up.
     """
 
-    def _return_value(self, node: Optional[Node]) -> Node:
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__()
+        copy_combined_parser_attrs(self, duplicate)
+        return duplicate
+
+    def _return_value_no_optimization(self, node: Optional[Node]) -> Node:
+        # assert node is None or isinstance(node, Node)
+        if self.drop_content:
+            return EMPTY_NODE
+        return Node(self.tag_name, node or ())  # unoptimized code
+
+    def _return_value_flatten(self, node: Optional[Node]) -> Node:
         """
         Generates a return node if a single node has been returned from
         any descendant parsers. Anonymous empty nodes will be dropped.
@@ -1957,25 +1973,28 @@ class CombinedParser(Parser):
         setting `grammar.flatten_tree__` to False, a new node will be
         generated and the descendant node will be its single child.
         """
-        assert node is None or isinstance(node, Node)
-        if self._grammar.flatten_tree__:
-            if node is not None:
-                if self.disposable:
-                    if self.drop_content:
-                        return EMPTY_NODE
-                    return node
-                if node.anonymous:
-                    return Node(self.tag_name, node._result)
-                return Node(self.tag_name, node)
-            elif self.disposable:
-                return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-            return Node(self.tag_name, ())
-        if self.drop_content:
-            return EMPTY_NODE
-        return Node(self.tag_name, node or ())  # unoptimized code
+        # assert node is None or isinstance(node, Node)
+        if node is not None:
+            if self.disposable:
+                if self.drop_content:
+                    return EMPTY_NODE
+                return node
+            if node.anonymous:
+                return Node(self.tag_name, node._result)
+            return Node(self.tag_name, node)
+        elif self.disposable:
+            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        return Node(self.tag_name, ())
 
     @cython.locals(N=cython.int)
-    def _return_values(self, results: Sequence[Node]) -> Node:
+    def _return_values_no_optimization(self, results: Sequence[Node]) -> Node:
+        # assert isinstance(results, (list, tuple))
+        if self.drop_content:
+            return EMPTY_NODE
+        return Node(self.tag_name, tuple(results))  # unoptimized
+
+    @cython.locals(N=cython.int)
+    def _return_values_flatten(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
@@ -1987,33 +2006,125 @@ class CombinedParser(Parser):
             return EMPTY_NODE
         N = len(results)
         if N > 1:
-            if self._grammar.flatten_tree__:  # possible optimization: always flatten tree
-                nr = []  # type: List[Node]
-                # flatten parse tree
-                for child in results:
-                    c_anonymous = child.anonymous
-                    if child.children and c_anonymous:
-                        nr.extend(child.children)
-                    elif child._result or not c_anonymous:
-                        nr.append(child)
-                if nr or not self.disposable:
-                    return Node(self.tag_name, tuple(nr))
-                else:
-                    return EMPTY_NODE
-            return Node(self.tag_name, tuple(results))  # unoptimized code
+            nr = []  # type: List[Node]
+            # flatten parse tree
+            for child in results:
+                c_anonymous = child.anonymous
+                if child._children and c_anonymous:
+                    nr.extend(child._children)
+                elif child._result or not c_anonymous:
+                    nr.append(child)
+            if nr or not self.disposable:
+                return Node(self.tag_name, tuple(nr))
+            else:
+                return EMPTY_NODE
         elif N == 1:
             return self._return_value(results[0])
-        elif self._grammar.flatten_tree__:
-            if self.disposable:
-                return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-            return Node(self.tag_name, ())
-        return Node(self.tag_name, tuple(results))  # unoptimized code
+        if self.disposable:
+            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        return Node(self.tag_name, ())
+
+    @cython.locals(N=cython.int)
+    def _return_values_crunch(self, results: Sequence[Node]) -> Node:
+        """
+        Generates a return node from a tuple of returned nodes from
+        descendant parsers. Anonymous empty nodes will be removed from
+        the tuple. Anonymous child nodes will be flattened if
+        `grammar.flatten_tree__` is True. Plus, nodes that contain
+        only anonymous leaf-nodes as children will be "crunched", i.e.
+        the content of these nodes will be joined and assigned to the
+        parent.
+        """
+        # assert isinstance(results, (list, tuple))
+        if self.drop_content:
+            return EMPTY_NODE
+        N = len(results)
+        if N > 1:
+            nr = []  # type: List[Node]
+            # flatten and parse tree
+            crunch = True
+            for child in results:
+                if child.anonymous:
+                    grandchildren = child._children
+                    if grandchildren:
+                        nr.extend(grandchildren)
+                        crunch &= all(not grandchild._children and grandchild.anonymous
+                                      for grandchild in grandchildren)
+                    elif child._result:
+                        nr.append(child)
+                else:
+                    nr.append(child)
+                    crunch = False
+            if nr:
+                if crunch:
+                    return Node(self.tag_name, ''.join(nd._result for nd in nr))
+                return Node(self.tag_name, tuple(nr))
+            return EMPTY_NODE if self.disposable else Node(self.tag_name, "")
+        elif N == 1:
+            return self._return_value(results[0])
+        if self.disposable:
+            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        return Node(self.tag_name, ())
 
     def location_info(self) -> str:
         """Returns a description of the location of the parser within the grammar
         for the purpose of transparent error reporting."""
         return '%s%s in definition of "%s" as %s' \
             % (self.pname or '_', self.ptype, self.symbol, str(self))
+
+    NO_TREE_REDUCTION = 0
+    FLATTEN = 1
+    CRUNCH = 2
+    DEFAULT_OPTIMIZATION = FLATTEN
+
+    _return_value = _return_value_flatten
+    _return_values = _return_values_flatten
+
+
+def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):
+    assert isinstance(src, CombinedParser)
+    copy_parser_base_attrs(src, duplicate)
+    duplicate._return_value = duplicate.__getattribute__(src._return_value.__name__)
+    duplicate._return_values = duplicate.__getattribute__(src._return_values.__name__)
+
+
+def OutputOptimization(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> Parser:
+    """Applies tree-reduction level to CombinedParsers::
+
+    >>> root = Text('A') + Text('B') | Text('C') + Text('D')
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.NO_TREE_REDUCTION))
+    >>> tree = grammar('AB')
+    >>> print(tree.as_sxpr())
+    (root (:Series (:Text "A") (:Text "B")))
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.FLATTEN))  # default
+    >>> tree = grammar('AB')
+    >>> print(tree.as_sxpr())
+    (root (:Text "A") (:Text "B"))
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.CRUNCH))  # default
+    >>> tree = grammar('AB')
+    >>> print(tree.as_sxpr())
+    (root "AB")
+    """
+    def apply_func(context: List[Parser]) -> None:
+        nonlocal level
+        parser = context[-1]
+        if isinstance(parser, CombinedParser):
+            if level == CombinedParser.NO_TREE_REDUCTION:
+                cast(CombinedParser, parser)._return_value = parser._return_value_no_optimization
+                cast(CombinedParser, parser)._return_values = parser._return_values_no_optimization
+            elif level == CombinedParser.FLATTEN:
+                cast(CombinedParser, parser)._return_value = parser._return_value_flatten
+                cast(CombinedParser, parser)._return_values = parser._return_values_flatten
+            else:  # level == CombinedParser.CRUNCH
+                cast(CombinedParser, parser)._return_value = parser._return_value_flatten
+                cast(CombinedParser, parser)._return_values = parser._return_values_crunch
+
+    assert isinstance(root_parser, Parser)
+    assert level in (CombinedParser.NO_TREE_REDUCTION,
+                     CombinedParser.FLATTEN,
+                     CombinedParser.CRUNCH)
+    root_parser.apply(apply_func)
+    return root_parser
 
 
 class UnaryParser(CombinedParser):
@@ -2035,7 +2146,7 @@ class UnaryParser(CombinedParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
-        copy_parser_base_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -2070,7 +2181,7 @@ class NaryParser(CombinedParser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
-        copy_parser_base_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -2096,7 +2207,7 @@ class Option(UnaryParser):
         >>> Grammar(number)('3.14159').content
         '3.14159'
         >>> Grammar(number)('3.14159').as_sxpr()
-        '(:Series (:RegExp "3") (:RegExp ".14159"))'
+        '(root (:RegExp "3") (:RegExp ".14159"))'
         >>> Grammar(number)('-1').content
         '-1'
 
@@ -2143,7 +2254,7 @@ class ZeroOrMore(Option):
         '.'
         >>> forever = ZeroOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
-        Node(':EMPTY', '')
+        Node('root', '')
 
     EBNF-Notation: ``{ ... }``
 
@@ -2188,7 +2299,7 @@ class OneOrMore(UnaryParser):
         ' <<< Error on "." | Parser "root = {/\\\\w+,?/ ~}+ `.` ~" did not match! >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
-        Node(':EMPTY', '')
+        Node('root', '')
 
     EBNF-Notation: ``{ ... }+``
 
@@ -2252,20 +2363,20 @@ class Counted(UnaryParser):
     >>> A2_4
     `A`{2,4}
     >>> Grammar(A2_4)('AA').as_sxpr()
-    '(:Counted (:Text "A") (:Text "A"))'
+    '(root (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
-    '(:Counted (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
+    '(root (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
     '(ZOMBIE__ `(1:1: Error (1040): Parser did not match!))'
     >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
     >>> result = Grammar(moves)('AAABABB')
     >>> result.tag_name, result.content
-    (':OneOrMore', 'AAABABB')
+    ('root', 'AAABABB')
     >>> moves = Counted(Text('A'), (2, 3)) * Counted(Text('B'), (2, 3))
     >>> moves
     `A`{2,3} ° `B`{2,3}
     >>> Grammar(moves)('AAABB').as_sxpr()
-    '(:Interleave (:Text "A") (:Text "A") (:Text "A") (:Text "B") (:Text "B"))'
+    '(root (:Text "A") (:Text "A") (:Text "A") (:Text "B") (:Text "B"))'
 
     While a Counted-parser could be treated as a special case of Interleave-parser,
     defining a dedicated class makes the purpose clearer and runs slightly faster.
@@ -2277,7 +2388,7 @@ class Counted(UnaryParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser, self.repetitions)
-        copy_parser_base_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
     @cython.locals(n=cython.int, length=cython.int)
@@ -2356,7 +2467,7 @@ class MandatoryNary(NaryParser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
-        copy_parser_base_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
     @cython.returns(cython.int)
@@ -2750,7 +2861,7 @@ class Interleave(MandatoryNary):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    repetitions=self.repetitions)
-        copy_parser_base_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
     @cython.locals(i=cython.int, n=cython.int, length=cython.int, reloc=cython.int)
@@ -3158,7 +3269,7 @@ class Retrieve(ContextSensitive):
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.match)
-        copy_parser_base_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
     @property
@@ -3245,7 +3356,7 @@ class Pop(Retrieve):
     # def __deepcopy__(self, memo):
     #     symbol = copy.deepcopy(self.parser, memo)
     #     duplicate = self.__class__(symbol, self.match)
-    #     copy_parser_base_attrs(self, duplicate)
+    #     copy_combined_parser_attrs(self, duplicate)
     #     duplicate.values = self.values[:]
     #     return duplicate
 

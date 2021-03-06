@@ -190,7 +190,9 @@ replaced by their content, if they are a single child of some parent,
 and otherwise be left in place. Without this optimization, each
 construct of the EBNF-grammar would leave a node in the syntax-tree::
 
->>> parser.flatten_tree__ = False; syntax_tree = parser(testdata)
+>>> from DHParser.parse import CombinedParser, OutputOptimization
+>>> _ = OutputOptimization(parser.json, CombinedParser.NO_TREE_REDUCTION)
+>>> syntax_tree = parser(testdata)
 >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
 (array
   (:Text "[")
