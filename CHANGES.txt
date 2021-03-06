@@ -7,6 +7,7 @@ DHParser Version 0.9.5
   that manipulate the parent tree (`fallback_compiler`-method rewritten)
 - DHParser.syntaxtree: more functions for navigating contexts, e.g.
   prev_context, next_context.
+- DHParser.syntaxtree: added insert() and remove() methods to Node class
 - DHParser.syntaxtree: added a mini API for manipulating attributes
 
 DHParser Version 0.9.4 (6.10.2020)
