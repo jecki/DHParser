@@ -596,7 +596,7 @@ class Parser:
         raise NotImplementedError
 
     def is_optional(self) -> Optional[bool]:
-        """Returns `True`, if the parser can never fails, i.e. never yields
+        """Returns `True`, if the parser can never fail, i.e. never yields
         `None`, instead of a node. Returns `False`, if the parser can fail.
         Returns `None` if it is not known whether the parser can fail.
         """
@@ -617,6 +617,12 @@ class Parser:
                 # if proxy is a method it must be a method of self
                 assert proxy.__self__ == self
             self._parse_proxy = cast(ParseFunc, proxy)
+
+    def with_pname(self, pname: str) -> Parser:
+        """Sets the parser name to `pname` and returns `self`."""
+        self.pname = pname
+        self.tag_name = pname or self.ptype
+        return self
 
     @property
     def grammar(self) -> 'Grammar':
@@ -1987,7 +1993,7 @@ class CombinedParser(Parser):
         return Node(self.tag_name, ())
 
     @cython.locals(N=cython.int)
-    def _return_values_no_optimization(self, results: Sequence[Node]) -> Node:
+    def _return_values_no_tree_reduction(self, results: Sequence[Node]) -> Node:
         # assert isinstance(results, (list, tuple))
         if self.drop_content:
             return EMPTY_NODE
@@ -2025,13 +2031,13 @@ class CombinedParser(Parser):
         return Node(self.tag_name, ())
 
     @cython.locals(N=cython.int)
-    def _return_values_crunch(self, results: Sequence[Node]) -> Node:
+    def _return_values_squeeze(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
         the tuple. Anonymous child nodes will be flattened if
         `grammar.flatten_tree__` is True. Plus, nodes that contain
-        only anonymous leaf-nodes as children will be "crunched", i.e.
+        only anonymous leaf-nodes as children will be "squeezed", i.e.
         the content of these nodes will be joined and assigned to the
         parent.
         """
@@ -2042,23 +2048,78 @@ class CombinedParser(Parser):
         if N > 1:
             nr = []  # type: List[Node]
             # flatten and parse tree
-            crunch = True
+            squeeze = True
             for child in results:
                 if child.anonymous:
                     grandchildren = child._children
                     if grandchildren:
                         nr.extend(grandchildren)
-                        crunch &= all(not grandchild._children and grandchild.anonymous
+                        squeeze &= all(not grandchild._children and grandchild.anonymous
                                       for grandchild in grandchildren)
                     elif child._result:
                         nr.append(child)
                 else:
                     nr.append(child)
-                    crunch = False
+                    squeeze = False
             if nr:
-                if crunch:
-                    return Node(self.tag_name, ''.join(nd._result for nd in nr))
+                if squeeze:
+                    result = ''.join(nd._result for nd in nr)
+                    if result or not self.disposable:
+                        return Node(self.tag_name, result)
+                    return EMPTY_NODE
                 return Node(self.tag_name, tuple(nr))
+            return EMPTY_NODE if self.disposable else Node(self.tag_name, "")
+        elif N == 1:
+            return self._return_value(results[0])
+        if self.disposable:
+            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
+        return Node(self.tag_name, ())
+
+    @cython.locals(N=cython.int)
+    def _return_values_squeeze_tight(self, results: Sequence[Node]) -> Node:
+        """
+        Generates a return node from a tuple of returned nodes from
+        descendant parsers. Anonymous empty nodes will be removed from
+        the tuple. Anonymous child nodes will be flattened if
+        `grammar.flatten_tree__` is True. Plus, nodes that contain
+        only anonymous leaf-nodes as children will be "squeezed", i.e.
+        the content of these nodes will be joined and assigned to the
+        parent.
+        """
+        # assert isinstance(results, (list, tuple))
+        if self.drop_content:
+            return EMPTY_NODE
+        N = len(results)
+        if N > 1:
+            nr = []  # type: List[Node]
+            # flatten and parse tree
+            for child in results:
+                if child.anonymous:
+                    grandchildren = child._children
+                    if grandchildren:
+                        nr.extend(grandchildren)
+                    elif child._result:
+                        nr.append(child)
+                else:
+                    nr.append(child)
+            if nr:
+                squeezed = []
+                tail_is_anonymous_leaf = False
+                for nd in nr:
+                    head_is_anonymous_leaf = not nd._children and nd.anonymous
+                    if tail_is_anonymous_leaf and head_is_anonymous_leaf:
+                        squeezed[-1].result += nd._result
+                    else:
+                        squeezed.append(nd)
+                    tail_is_anonymous_leaf = head_is_anonymous_leaf
+                if len(squeezed) > 1:
+                    return Node(self.tag_name, tuple(squeezed))
+                if tail_is_anonymous_leaf:
+                    result = squeezed[0].result
+                    if result or not self.disposable:
+                        return Node(self.tag_name, squeezed[0].result)
+                    return EMPTY_NODE
+                return Node(self.tag_name, squeezed[0])
             return EMPTY_NODE if self.disposable else Node(self.tag_name, "")
         elif N == 1:
             return self._return_value(results[0])
@@ -2073,8 +2134,9 @@ class CombinedParser(Parser):
             % (self.pname or '_', self.ptype, self.symbol, str(self))
 
     NO_TREE_REDUCTION = 0
-    FLATTEN = 1
-    CRUNCH = 2
+    FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
+    SQUEEZE = 2  # "squeeze" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
+    SQUEEZE_TIGHT = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
     DEFAULT_OPTIMIZATION = FLATTEN
 
     _return_value = _return_value_flatten
@@ -2100,7 +2162,11 @@ def OutputOptimization(root_parser: Parser, level: int = CombinedParser.FLATTEN)
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B"))
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.CRUNCH))  # default
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE))
+    >>> tree = grammar('AB')
+    >>> print(tree.as_sxpr())
+    (root "AB")
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE_TIGHT))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
@@ -2111,18 +2177,22 @@ def OutputOptimization(root_parser: Parser, level: int = CombinedParser.FLATTEN)
         if isinstance(parser, CombinedParser):
             if level == CombinedParser.NO_TREE_REDUCTION:
                 cast(CombinedParser, parser)._return_value = parser._return_value_no_optimization
-                cast(CombinedParser, parser)._return_values = parser._return_values_no_optimization
+                cast(CombinedParser, parser)._return_values = parser._return_values_no_tree_reduction
             elif level == CombinedParser.FLATTEN:
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
                 cast(CombinedParser, parser)._return_values = parser._return_values_flatten
-            else:  # level == CombinedParser.CRUNCH
+            elif level == CombinedParser.SQUEEZE:
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
-                cast(CombinedParser, parser)._return_values = parser._return_values_crunch
+                cast(CombinedParser, parser)._return_values = parser._return_values_squeeze
+            else:  # level == CombinedParser.SQUEEZE_TIGHT
+                cast(CombinedParser, parser)._return_value = parser._return_value_flatten
+                cast(CombinedParser, parser)._return_values = parser._return_values_squeeze_tight
 
     assert isinstance(root_parser, Parser)
     assert level in (CombinedParser.NO_TREE_REDUCTION,
                      CombinedParser.FLATTEN,
-                     CombinedParser.CRUNCH)
+                     CombinedParser.SQUEEZE,
+                     CombinedParser.SQUEEZE_TIGHT)
     root_parser.apply(apply_func)
     return root_parser
 
