@@ -618,10 +618,11 @@ class Parser:
                 assert proxy.__self__ == self
             self._parse_proxy = cast(ParseFunc, proxy)
 
-    def with_pname(self, pname: str) -> Parser:
+    def with_pname(self, pname: str) -> 'Parser':
         """Sets the parser name to `pname` and returns `self`."""
         self.pname = pname
         self.tag_name = pname or self.ptype
+        self.disposable = not self.pname
         return self
 
     @property
@@ -2170,6 +2171,33 @@ def OutputOptimization(root_parser: Parser, level: int = CombinedParser.FLATTEN)
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
+
+    >>> root = Text('A') + Text('B') + (Text('C').with_pname('important') | Text('D'))
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.NO_TREE_REDUCTION))
+    >>> tree = grammar('ABC')
+    >>> print(tree.as_sxpr())
+    (root (:Text "A") (:Text "B") (:Alternative (important "C")))
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.FLATTEN))  # default
+    >>> tree = grammar('ABC')
+    >>> print(tree.as_sxpr())
+    (root (:Text "A") (:Text "B") (important "C"))
+    >>> tree = grammar('ABD')
+    >>> print(tree.as_sxpr())
+    (root (:Text "A") (:Text "B") (:Text "D"))
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE))
+    >>> tree = grammar('ABC')
+    >>> print(tree.as_sxpr())
+    (root (:Text "A") (:Text "B") (important "C"))
+    >>> tree = grammar('ABD')
+    >>> print(tree.as_sxpr())
+    (root "ABD")
+    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE_TIGHT))
+    >>> tree = grammar('ABC')
+    >>> print(tree.as_sxpr())
+    (root (:Text "AB") (important "C"))
+    >>> tree = grammar('ABD')
+    >>> print(tree.as_sxpr())
+    (root "ABD")
     """
     def apply_func(context: List[Parser]) -> None:
         nonlocal level
