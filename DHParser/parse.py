@@ -1941,8 +1941,6 @@ def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
 ########################################################################
 
 
-
-
 class CombinedParser(Parser):
     """Class CombinedParser is the base class for all parsers that
     call ("combine") other parsers. It contains functions for the
@@ -2036,11 +2034,10 @@ class CombinedParser(Parser):
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
-        the tuple. Anonymous child nodes will be flattened if
-        `grammar.flatten_tree__` is True. Plus, nodes that contain
-        only anonymous leaf-nodes as children will be "squeezed", i.e.
-        the content of these nodes will be joined and assigned to the
-        parent.
+        the tuple. Anonymous child nodes will be flattened. Plus, nodes
+        that contain only anonymous leaf-nodes as children will be
+        "squeezed", i.e. the content of these nodes will be joined and
+        assigned to the parent.
         """
         # assert isinstance(results, (list, tuple))
         if self.drop_content:
@@ -2081,11 +2078,10 @@ class CombinedParser(Parser):
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
-        the tuple. Anonymous child nodes will be flattened if
-        `grammar.flatten_tree__` is True. Plus, nodes that contain
-        only anonymous leaf-nodes as children will be "squeezed", i.e.
-        the content of these nodes will be joined and assigned to the
-        parent.
+        the tuple. Anonymous child nodes will be flattened. Plus, any
+        anonymous leaf-nodes adjacent to each other will be merged and,
+        in cases where only one anonymous node is left, be reduced to
+        its parent.
         """
         # assert isinstance(results, (list, tuple))
         if self.drop_content:
