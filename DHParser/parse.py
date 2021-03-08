@@ -618,7 +618,7 @@ class Parser:
                 assert proxy.__self__ == self
             self._parse_proxy = cast(ParseFunc, proxy)
 
-    def with_pname(self, pname: str) -> 'Parser':
+    def name(self, pname: str) -> 'Parser':
         """Sets the parser name to `pname` and returns `self`."""
         self.pname = pname
         self.tag_name = pname or self.ptype
@@ -2172,7 +2172,7 @@ def OutputOptimization(root_parser: Parser, level: int = CombinedParser.FLATTEN)
     >>> print(tree.as_sxpr())
     (root "AB")
 
-    >>> root = Text('A') + Text('B') + (Text('C').with_pname('important') | Text('D'))
+    >>> root = Text('A') + Text('B') + (Text('C').name('important') | Text('D'))
     >>> grammar = Grammar(OutputOptimization(root, CombinedParser.NO_TREE_REDUCTION))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
