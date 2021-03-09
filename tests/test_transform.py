@@ -20,19 +20,21 @@ limitations under the License.
 """
 
 import collections.abc
+import copy
 import os
 import sys
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
+from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, PLACEHOLDER, \
     tree_sanity_check, flatten_sxpr, WHITESPACE_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     merge_adjacent, is_one_of, swap_attributes, delimit_children, sequeeze_tree, \
-    positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes
+    positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes, \
+    squeeze, BLOCK_ANONYMOUS_LEAVES
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -405,17 +407,32 @@ class TestBoolean:
         traverse(tree, trans_table)
         assert flatten_sxpr(tree.as_sxpr()) == '(A (X `(renamed "True") "1") (C "1") (X `(renamed "True") "2"))'
 
-class TestCrunch:
-    def test_crunch_tree(self):
-        tree = parse_sxpr('''(array
+class TestOptimizations:
+    model = RootNode(parse_sxpr('''(array
           (number "1")
           (number
             (:RegExp "2")
             (:RegExp ".")
             (:RegExp "0"))
-          (string "a string"))''')
+          (string "a string"))''')).with_pos(0)
+
+    def raise_error(self, context):
+        raise AssertionError()
+
+    def test_squeeze_tree(self):
+        tree = copy.deepcopy(TestOptimizations.model)
         sequeeze_tree(tree)
         assert tree.as_sxpr() == '''(array (number "1") (number "2.0") (string "a string"))'''
+
+    def test_blocking(self):
+        tree = copy.deepcopy(TestOptimizations.model)
+        transtable = {
+            '<': BLOCK_ANONYMOUS_LEAVES,
+            'number': [squeeze, reduce_single_child],
+            ':RegExp': self.raise_error
+        }
+        traverse(tree, transtable)
+        assert tree.equals(parse_sxpr('(array (number "1") (number "2.0") (string "a string"))'))
 
 
 if __name__ == "__main__":

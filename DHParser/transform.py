@@ -47,8 +47,11 @@ __all__ = ('TransformationDict',
            'KeyFunc',
            'transformation_factory',
            'key_tag_name',
+           'Filter',
+           'BLOCK_LEAVES',
+           'BLOCK_ANONYMOUS_LEAVES',
+           'BLOCK_CHILDREN',
            'traverse',
-           'sequeeze_tree',
            'always',
            'never',
            'neg',
@@ -70,6 +73,7 @@ __all__ = ('TransformationDict',
            'add_attributes',
            'normalize_whitespace',
            'merge_adjacent',
+           'squeeze',
            'merge_connected',
            'merge_results',
            'move_adjacent',
@@ -80,6 +84,7 @@ __all__ = ('TransformationDict',
            'apply_ifelse',
            'traverse_locally',
            'is_anonymous',
+           'is_anonymous_leaf',
            'contains_only_whitespace',
            # 'is_any_kind_of_whitespace',
            'is_empty',
@@ -94,6 +99,7 @@ __all__ = ('TransformationDict',
            'has_parent',
            'has_descendant',
            'has_child',
+           'has_children',
            'has_sibling',
            'lstrip',
            'rstrip',
@@ -133,9 +139,15 @@ __all__ = ('TransformationDict',
            'peek')
 
 
+class Filter:
+    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+        raise NotImplementedError
+
+
 TransformationProc = Callable[[TreeContext], None]
-TransformationDict = Dict[str, Sequence[Callable]]
-TransformationFunc = Union[Callable[[Node], Any], partial]
+TransformationDict = Dict[str, Union[Callable, Sequence[Callable]]]
+TransformationCache = Dict[str, Tuple[Sequence[Filter], Sequence[Callable]]]
+TransformationFunc = Union[Callable[[TreeContext], Any], partial]
 ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[TreeContext], bool]
 KeyFunc = Callable[[Node], str]
@@ -273,6 +285,25 @@ def key_tag_name(node: Node) -> str:
     return node.tag_name
 
 
+class BlockChildren(Filter):
+    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+        return ()
+
+class BlockLeaves(Filter):
+    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+        return tuple(child for child in children if child._children)
+
+
+class BlockAnonymousLeaves(Filter):
+    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+        return tuple(child for child in children if child._children or not child.anonymous)
+
+
+BLOCK_CHILDREN = BlockChildren()
+BLOCK_LEAVES = BlockLeaves()
+BLOCK_ANONYMOUS_LEAVES = BlockAnonymousLeaves()
+
+
 def traverse(root_node: Node,
              processing_table: ProcessingTableType,
              key_func: KeyFunc = key_tag_name) -> None:
@@ -341,24 +372,43 @@ def traverse(root_node: Node,
         processing_table.clear()
         processing_table.update(table)
 
+    def split_filter(callables: Sequence[Callable]) -> Tuple[List[Filter], List[Callable]]:
+        i = 0
+        filter = []
+        for callable in callables:
+            if isinstance(callable, Filter):
+                filter.append(callable)
+                i += 1
+            else:  break
+        callables = list(callables[i:])
+        assert not any(isinstance(callable, Filter) for callable in callables)
+        return filter, callables
+
     def traverse_recursive(context):
         nonlocal cache
         node = context[-1]
-        if node.children:
-            context.append(PLACEHOLDER)
-            for child in node.children:
-                context[-1] = child
-                traverse_recursive(context)  # depth first
-            context.pop()
 
         key = key_func(node)
         try:
-            sequence = cache[key]
+            filters, sequence = cache[key]
         except KeyError:
-            sequence = table.get('<', []) \
-                + table.get(key, table.get('*', [])) \
-                + table.get('>', [])
-            cache[key] = sequence
+            filters, pre = split_filter(table.get('<', []))
+            assert BLOCK_CHILDREN not in filters
+            more_filters, main = split_filter(table.get(key, table.get('*', [])))
+            post = table.get('>', [])
+            assert not any(isinstance(callable, Filter) for callable in post)
+            sequence = pre + main + post
+            cache[key] = (filters + more_filters, sequence)
+
+        children = node.children
+        for filter in filters:
+            children = filter(children)
+        if children:
+            context.append(PLACEHOLDER)
+            for child in children:
+                context[-1] = child
+                traverse_recursive(context)  # depth first
+            context.pop()
 
         for call in sequence:
             try:
@@ -524,6 +574,11 @@ def is_anonymous(context: TreeContext) -> bool:
     return context[-1].anonymous
 
 
+def is_anonymous_leaf(context: TreeContext) -> bool:
+    """Returns `True` if context ends in an anonymous leaf-node"""
+    return not context[-1].children and context[-1].anonymous
+
+
 RX_WHITESPACE = re.compile(r'\s*$')
 
 
@@ -636,6 +691,11 @@ def has_parent(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
     """Checks whether the immediate predecessor in the context has one of the
     given tags."""
     return has_ancestor(context, tag_name_set, 1)
+
+
+def has_children(context: TreeContext) -> bool:
+    """Checks whether last node in context has children."""
+    return bool(context[-1]._children)
 
 
 @transformation_factory(collections.abc.Set)
@@ -1055,6 +1115,9 @@ def merge_adjacent(context: TreeContext, condition: Callable, tag_name: str = ''
                 new_result.append(children[i])
                 i += 1
         node._set_result(tuple(new_result))
+
+
+squeeze = merge_adjacent(is_anonymous_leaf)  # like parse.CombinedParser.SQUEEZE_TIGHT
 
 
 @transformation_factory(collections.abc.Callable)
