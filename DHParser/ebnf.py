@@ -190,8 +190,8 @@ replaced by their content, if they are a single child of some parent,
 and otherwise be left in place. Without this optimization, each
 construct of the EBNF-grammar would leave a node in the syntax-tree::
 
->>> from DHParser.parse import CombinedParser, OutputOptimization
->>> _ = OutputOptimization(parser.json, CombinedParser.NO_TREE_REDUCTION)
+>>> from DHParser.parse import CombinedParser, OutputReduction
+>>> _ = OutputReduction(parser.json, CombinedParser.NO_TREE_REDUCTION)
 >>> syntax_tree = parser(testdata)
 >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
 (array
@@ -1405,8 +1405,8 @@ VALID_DIRECTIVES = {
     'literalws': 'Controls implicit whitespace adjacent to literals: left, right, both, none',
     'ignorecase': 'Controls case-sensitivity: on, off',
     '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
-    'disposable': 'List of symbols that are NOT to appear as tag-names',
-    'drop': 'List of tags to be dropped early from syntax tree, '
+    'disposable': 'List of symbols that shall not be turned into tag-names',
+    'drop': 'List of tags to be dropped with all their content from the tree, '
             'special values: strings, whitespace, regexps',
     '$SYMBOL_filer': 'Function that transforms captured values of the given symbol on retrieval',
     '$SYMBOL_error': 'Pair of regular expression an custom error message if regex matches',

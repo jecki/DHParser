@@ -34,7 +34,7 @@ python
     # specify the grammar of your DSL in EBNF-notation
     grammar = '''@ drop = whitespace, strings
     key_store   = ~ { entry }
-    entry       = key "="~ value          # ~ menas: insignificant whitespace 
+    entry       = key "="~ value          # ~ means: insignificant whitespace 
     key         = /\w+/~                  # Scannerless parsing: Use regular
     value       = /\"[^"\n]*\"/~          # expressions wherever you like'''
 

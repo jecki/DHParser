@@ -76,7 +76,7 @@ __all__ = ('ParserError',
            'mixin_comment',
            'mixin_nonempty',
            'CombinedParser',
-           'OutputOptimization',
+           'OutputReduction',
            'UnaryParser',
            'NaryParser',
            'Drop',
@@ -2138,47 +2138,47 @@ def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):
     duplicate._return_values = duplicate.__getattribute__(src._return_values.__name__)
 
 
-def OutputOptimization(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> Parser:
+def OutputReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> Parser:
     """Applies tree-reduction level to CombinedParsers::
 
     >>> root = Text('A') + Text('B') | Text('C') + Text('D')
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.NO_TREE_REDUCTION))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.NO_TREE_REDUCTION))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root (:Series (:Text "A") (:Text "B")))
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.FLATTEN))  # default
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.FLATTEN))  # default
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B"))
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE_TIGHT))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE_TIGHT))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
 
     >>> root = Text('A') + Text('B') + (Text('C').name('important') | Text('D'))
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.NO_TREE_REDUCTION))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.NO_TREE_REDUCTION))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (:Alternative (important "C")))
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.FLATTEN))  # default
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.FLATTEN))  # default
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (important "C"))
     >>> tree = grammar('ABD')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (:Text "D"))
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (important "C"))
     >>> tree = grammar('ABD')
     >>> print(tree.as_sxpr())
     (root "ABD")
-    >>> grammar = Grammar(OutputOptimization(root, CombinedParser.SQUEEZE_TIGHT))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE_TIGHT))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "AB") (important "C"))
