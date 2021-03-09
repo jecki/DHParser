@@ -414,8 +414,8 @@ Merging the content of the remaining anonymous leaf-nodes and assigning
 the merged content to their named parent nodes yields the abstract syntax tree
 of the json data::
 
->>> from DHParser.transform import crunch_tree
->>> crunch_tree(syntax_tree)
+>>> from DHParser.transform import sequeeze_tree
+>>> sequeeze_tree(syntax_tree)
 >>> print(syntax_tree.as_sxpr(compact=True))
 (json
   (object

@@ -1099,11 +1099,6 @@ class Grammar:
         # These values of theses parameters are copied from the global configuration
         # in the constructor of the Grammar object. (see mpodule `configuration.py`)
 
-        flatten_tree__:  If True (default), anonymous nodes will be flattened
-                during parsing already. This greatly reduces the concrete syntax
-                tree and simplifies and speeds up abstract syntax tree generation.
-                Default is on.
-
         max_parser_dropouts__: Maximum allowed number of retries after errors
                 where the parser would exit before the complete document has
                 been parsed. Default is 1, as usually the retry-attemts lead
@@ -1181,7 +1176,6 @@ class Grammar:
         duplicate = self.__class__(self.root_parser__)
         duplicate.history_tracking__ = self.history_tracking__
         duplicate.resume_notices__ = self.resume_notices__
-        duplicate.flatten_tree__ = self.flatten_tree__
         duplicate.max_parser_dropouts__ = self.max_parser_dropouts__
         duplicate.reentry_search_window__ = self.reentry_search_window__
         return duplicate
@@ -1214,7 +1208,6 @@ class Grammar:
         self.left_recursion__ = get_config_value('left_recursion')                # type: bool
         self.history_tracking__ = get_config_value('history_tracking')            # type: bool
         self.resume_notices__ = get_config_value('resume_notices')                # type: bool
-        self.flatten_tree__ = get_config_value('flatten_tree')                    # type: bool
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
         self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
         self.associated_symbol_cache__ = dict()  # type: Dict[Parser, Parser]
@@ -1974,8 +1967,7 @@ class CombinedParser(Parser):
         If `self` is an unnamed parser, a non-empty descendant node
         will be passed through. If the descendant node is anonymous,
         it will be dropped and only its result will be kept.
-        In all other cases or if the optimization is turned off by
-        setting `grammar.flatten_tree__` to False, a new node will be
+        In all other cases a new node will be
         generated and the descendant node will be its single child.
         """
         # assert node is None or isinstance(node, Node)
@@ -2003,8 +1995,7 @@ class CombinedParser(Parser):
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
-        the tuple. Anonymous child nodes will be flattened if
-        `grammar.flatten_tree__` is True.
+        the tuple. Anonymous child nodes will be flattened.
         """
         # assert isinstance(results, (list, tuple))
         if self.drop_content:

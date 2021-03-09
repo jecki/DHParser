@@ -1442,8 +1442,6 @@ class TestMetaParser:
     mp.tag_name = mp.pname
 
     def test_return_value(self):
-        save = get_config_value('flatten_tree')
-        set_config_value('flatten_tree', True)
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.tag_name == 'named', nd.as_sxpr()
         assert len(nd.children) == 1
@@ -1485,7 +1483,6 @@ class TestMetaParser:
         assert not nd.content
         assert self.mp._return_value(None) == EMPTY_NODE
         assert self.mp._return_value(EMPTY_NODE) == EMPTY_NODE
-        set_config_value('flatten_tree', save)
 
     def test_return_values(self):
         self.mp.pname = "named"

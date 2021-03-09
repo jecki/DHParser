@@ -255,14 +255,6 @@ def set_config_value(key: str, value: Any):
 # that reflect the configuration parameters must be manipulated directly
 # to change the configuration of a Grammar-object.
 
-# Flattens anonymous nodes, by removing the node and adding its children
-# to the parent node in place of the removed node. This is a very useful
-# optimization that should be turned on except for learning or teaching
-# purposes, in which case a concrete syntax tree that more diligently
-# reflects the parser structure may be helpful.
-# Default value: True
-CONFIG_PRESET['flatten_tree'] = True
-
 # Maximum allowed number of retries after errors where the parser
 # would exit before the complete document has been parsed. Should
 # not be set too high, because automatic retry works poorly.

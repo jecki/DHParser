@@ -31,7 +31,7 @@ from DHParser.syntaxtree import Node, parse_sxpr, parse_xml, PLACEHOLDER, \
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
-    merge_adjacent, is_one_of, swap_attributes, delimit_children, crunch_tree, \
+    merge_adjacent, is_one_of, swap_attributes, delimit_children, sequeeze_tree, \
     positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -414,7 +414,7 @@ class TestCrunch:
             (:RegExp ".")
             (:RegExp "0"))
           (string "a string"))''')
-        crunch_tree(tree)
+        sequeeze_tree(tree)
         assert tree.as_sxpr() == '''(array (number "1") (number "2.0") (string "a string"))'''
 
 
