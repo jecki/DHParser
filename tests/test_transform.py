@@ -32,9 +32,9 @@ from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, PLACEHOLD
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
-    merge_adjacent, is_one_of, swap_attributes, delimit_children, sequeeze_tree, \
+    merge_adjacent, is_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes, \
-    squeeze, BLOCK_ANONYMOUS_LEAVES
+    merge_leaves, BLOCK_ANONYMOUS_LEAVES
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -421,14 +421,14 @@ class TestOptimizations:
 
     def test_squeeze_tree(self):
         tree = copy.deepcopy(TestOptimizations.model)
-        sequeeze_tree(tree)
+        merge_treetops(tree)
         assert tree.as_sxpr() == '''(array (number "1") (number "2.0") (string "a string"))'''
 
     def test_blocking(self):
         tree = copy.deepcopy(TestOptimizations.model)
         transtable = {
             '<': BLOCK_ANONYMOUS_LEAVES,
-            'number': [squeeze, reduce_single_child],
+            'number': [merge_leaves, reduce_single_child],
             ':RegExp': self.raise_error
         }
         traverse(tree, transtable)

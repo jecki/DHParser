@@ -73,7 +73,7 @@ __all__ = ('TransformationDict',
            'add_attributes',
            'normalize_whitespace',
            'merge_adjacent',
-           'squeeze',
+           'merge_leaves',
            'merge_connected',
            'merge_results',
            'move_adjacent',
@@ -427,16 +427,16 @@ def traverse(root_node: Node,
 #
 #######################################################################
 
-def sequeeze_tree(node: Node):
-    """Recursively traverses the tree and "squeezes" nodes that contain
-    only anonymous child nodes that ar leaves. "squeezing" means the
+def merge_treetops(node: Node):
+    """Recursively traverses the tree and "merges" nodes that contain
+    only anonymous child nodes that are leaves. "mergeing" here means the
     node's result will be replaced by the merged content of the children.
     """
     if node.children:
         crunch = True
         for child in node.children:
             if child.children:
-                sequeeze_tree(child)
+                merge_treetops(child)
                 crunch = False
             elif not child.anonymous:
                 crunch = False
@@ -1117,7 +1117,7 @@ def merge_adjacent(context: TreeContext, condition: Callable, tag_name: str = ''
         node._set_result(tuple(new_result))
 
 
-squeeze = merge_adjacent(is_anonymous_leaf)  # like parse.CombinedParser.SQUEEZE_TIGHT
+merge_leaves = merge_adjacent(is_anonymous_leaf)
 
 
 @transformation_factory(collections.abc.Callable)

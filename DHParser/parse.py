@@ -2021,13 +2021,13 @@ class CombinedParser(Parser):
         return Node(self.tag_name, ())
 
     @cython.locals(N=cython.int)
-    def _return_values_squeeze(self, results: Sequence[Node]) -> Node:
+    def _return_values_merge_treetops(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
         the tuple. Anonymous child nodes will be flattened. Plus, nodes
         that contain only anonymous leaf-nodes as children will be
-        "squeezed", i.e. the content of these nodes will be joined and
+        merged, i.e. the content of these nodes will be joined and
         assigned to the parent.
         """
         # assert isinstance(results, (list, tuple))
@@ -2037,21 +2037,21 @@ class CombinedParser(Parser):
         if N > 1:
             nr = []  # type: List[Node]
             # flatten and parse tree
-            squeeze = True
+            merge = True
             for child in results:
                 if child.anonymous:
                     grandchildren = child._children
                     if grandchildren:
                         nr.extend(grandchildren)
-                        squeeze &= all(not grandchild._children and grandchild.anonymous
+                        merge &= all(not grandchild._children and grandchild.anonymous
                                       for grandchild in grandchildren)
                     elif child._result:
                         nr.append(child)
                 else:
                     nr.append(child)
-                    squeeze = False
+                    merge = False
             if nr:
-                if squeeze:
+                if merge:
                     result = ''.join(nd._result for nd in nr)
                     if result or not self.disposable:
                         return Node(self.tag_name, result)
@@ -2065,7 +2065,7 @@ class CombinedParser(Parser):
         return Node(self.tag_name, ())
 
     @cython.locals(N=cython.int)
-    def _return_values_squeeze_tight(self, results: Sequence[Node]) -> Node:
+    def _return_values_merge_leaves(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from
         descendant parsers. Anonymous empty nodes will be removed from
@@ -2091,23 +2091,23 @@ class CombinedParser(Parser):
                 else:
                     nr.append(child)
             if nr:
-                squeezed = []
+                merged = []
                 tail_is_anonymous_leaf = False
                 for nd in nr:
                     head_is_anonymous_leaf = not nd._children and nd.anonymous
                     if tail_is_anonymous_leaf and head_is_anonymous_leaf:
-                        squeezed[-1].result += nd._result
+                        merged[-1].result += nd._result
                     else:
-                        squeezed.append(nd)
+                        merged.append(nd)
                     tail_is_anonymous_leaf = head_is_anonymous_leaf
-                if len(squeezed) > 1:
-                    return Node(self.tag_name, tuple(squeezed))
+                if len(merged) > 1:
+                    return Node(self.tag_name, tuple(merged))
                 if tail_is_anonymous_leaf:
-                    result = squeezed[0].result
+                    result = merged[0].result
                     if result or not self.disposable:
-                        return Node(self.tag_name, squeezed[0].result)
+                        return Node(self.tag_name, merged[0].result)
                     return EMPTY_NODE
-                return Node(self.tag_name, squeezed[0])
+                return Node(self.tag_name, merged[0])
             return EMPTY_NODE if self.disposable else Node(self.tag_name, "")
         elif N == 1:
             return self._return_value(results[0])
@@ -2123,8 +2123,8 @@ class CombinedParser(Parser):
 
     NO_TREE_REDUCTION = 0
     FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
-    SQUEEZE = 2  # "squeeze" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
-    SQUEEZE_TIGHT = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
+    MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
+    MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
     DEFAULT_OPTIMIZATION = FLATTEN
 
     _return_value = _return_value_flatten
@@ -2150,11 +2150,11 @@ def OutputReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) ->
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B"))
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_TREETOPS))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE_TIGHT))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_LEAVES))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
@@ -2171,14 +2171,14 @@ def OutputReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) ->
     >>> tree = grammar('ABD')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (:Text "D"))
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_TREETOPS))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (important "C"))
     >>> tree = grammar('ABD')
     >>> print(tree.as_sxpr())
     (root "ABD")
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.SQUEEZE_TIGHT))
+    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_LEAVES))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "AB") (important "C"))
@@ -2196,18 +2196,18 @@ def OutputReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) ->
             elif level == CombinedParser.FLATTEN:
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
                 cast(CombinedParser, parser)._return_values = parser._return_values_flatten
-            elif level == CombinedParser.SQUEEZE:
+            elif level == CombinedParser.MERGE_TREETOPS:
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
-                cast(CombinedParser, parser)._return_values = parser._return_values_squeeze
+                cast(CombinedParser, parser)._return_values = parser._return_values_merge_treetops
             else:  # level == CombinedParser.SQUEEZE_TIGHT
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
-                cast(CombinedParser, parser)._return_values = parser._return_values_squeeze_tight
+                cast(CombinedParser, parser)._return_values = parser._return_values_merge_leaves
 
     assert isinstance(root_parser, Parser)
     assert level in (CombinedParser.NO_TREE_REDUCTION,
                      CombinedParser.FLATTEN,
-                     CombinedParser.SQUEEZE,
-                     CombinedParser.SQUEEZE_TIGHT)
+                     CombinedParser.MERGE_TREETOPS,
+                     CombinedParser.MERGE_LEAVES)
     root_parser.apply(apply_func)
     return root_parser
 
