@@ -1231,7 +1231,7 @@ class TestAlternativeReordering:
         assert any(e.code == BAD_ORDER_OF_ALTERNATIVES for e in errors)
 
 
-class TestDrop:
+class TestTreeOptimization:
     def test_drop_anonymous(self):
         lang = """
             doc = A B C
@@ -1246,6 +1246,27 @@ class TestDrop:
         parser = create_parser('@ disposable = B\n@ drop = B\n' + lang)
         st = parser('ABC')
         assert str(st) == "AC"
+
+    def test_tree_reduction(self):
+        lang = """@reduction = none
+           root = 'A' 'B' (important | 'D')
+           important = 'C' 
+        """
+        parser = create_parser(lang)
+        st = parser('ABC')
+        assert st.as_sxpr() == '(root (:Text "A") (:Text "B") (:Alternative (important "C")))'
+        parser = create_parser(lang.replace('none', 'flatten'))
+        assert parser('ABC').as_sxpr() == '(root (:Text "A") (:Text "B") (important "C"))'
+        parser = create_parser(lang.replace('none', 'merge_treetops'))
+        # print(parser.python_src__)
+        assert parser('ABC').as_sxpr() == '(root (:Text "A") (:Text "B") (important "C"))'
+        assert parser('ABD').as_sxpr() == '(root "ABD")'
+        parser = create_parser(lang.replace('none', 'merge_leaves'))
+        assert parser('ABC').as_sxpr() == '(root (:Text "AB") (important "C"))'
+        assert parser('ABD').as_sxpr() == '(root "ABD")'
+        parser = create_parser(lang.replace('none', 'merge'))
+        assert parser('ABC').as_sxpr() == '(root (:Text "AB") (important "C"))'
+        assert parser('ABD').as_sxpr() == '(root "ABD")'
 
 
 class TestHeuristics:

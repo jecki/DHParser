@@ -190,8 +190,8 @@ replaced by their content, if they are a single child of some parent,
 and otherwise be left in place. Without this optimization, each
 construct of the EBNF-grammar would leave a node in the syntax-tree::
 
->>> from DHParser.parse import CombinedParser, OutputReduction
->>> _ = OutputReduction(parser.json, CombinedParser.NO_TREE_REDUCTION)
+>>> from DHParser.parse import CombinedParser, TreeReduction
+>>> _ = TreeReduction(parser.json, CombinedParser.NO_TREE_REDUCTION)
 >>> syntax_tree = parser(testdata)
 >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
 (array
@@ -381,7 +381,11 @@ are three ways to get around this problem:
   transformation rules. See :py:mod:`DHParser.transformation`.
 
 To round this section up, we present the full grammar for a streamlined
-JSON-Parser according to the first solution-strategy::
+JSON-Parser according to the first solution-strategy. Observe, that the
+values of "bool" and "null" are now defined with regular expressions
+instead of string-literals, because the latter would be dropped because
+of the `@drop = ... strings, ...`-directive, leaving an empty named node
+without a value, wheneever a bool value or null occurs in the input::
 
 >>> json_gr = '@disposable = /_\\\\w+/                                      \\n'\
               '@drop      = whitespace, strings, backticked, _EOF           \\n'\
@@ -411,11 +415,11 @@ JSON-Parser according to the first solution-strategy::
   (string "a string"))
 
 Merging the content of the remaining anonymous leaf-nodes and assigning
-the merged content to their named parent nodes yields the abstract syntax tree
-of the json data::
+the merged content to their named parent nodes (if possible) yields the
+abstract syntax tree of the json data::
 
->>> from DHParser.transform import merge_treetops
->>> merge_treetops(syntax_tree)
+>>> _ = TreeReduction(json_parser.json, CombinedParser.MERGE_LEAVES)
+>>> syntax_tree = json_parser(testdata)
 >>> print(syntax_tree.as_sxpr(compact=True))
 (json
   (object
@@ -432,6 +436,8 @@ of the json data::
       (string "bool")
       (bool "false"))))
 
+The same effect can also be reached by adding the "@reduction = merge"
+-directive at the top of the grammar.
 """
 
 
@@ -442,7 +448,8 @@ import os
 from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Sequence, Union, Optional
 
 from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
-from DHParser.configuration import access_thread_locals, get_config_value, ALLOWED_PRESET_VALUES
+from DHParser.configuration import access_thread_locals, get_config_value, \
+    NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
@@ -451,7 +458,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
-    INFINITE, matching_bracket, ParseFunc, update_scanner
+    INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
@@ -515,10 +522,10 @@ except ImportError:
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \\
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \\
-    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \\
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \\
+    compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \\
+    remove_if, Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \\
@@ -1408,6 +1415,8 @@ VALID_DIRECTIVES = {
     'disposable': 'List of symbols that shall not be turned into tag-names',
     'drop': 'List of tags to be dropped with all their content from the tree, '
             'special values: strings, whitespace, regexps',
+    '[tree_]reduction': 'Reduction level for simplifying the tree while parsing.'
+                        'Possible levels: none, flatten, merge_treetops, merge',
     '$SYMBOL_filer': 'Function that transforms captured values of the given symbol on retrieval',
     '$SYMBOL_error': 'Pair of regular expression an custom error message if regex matches',
     '$SYMBOL_skip': 'List of regexes or functions to find reentry point after an error',
@@ -1457,11 +1466,20 @@ class EBNFDirectives:
                 the failing parser (`parser.Series` or `parser.Interleave`)
                 has returned.
 
+        disposable: A regular expression to identify "disposable" symbols,
+                i.e. symbols that will not appear as tag-names. Instead
+                the nodes produced by the parsers associated with these
+                symbols will yield anonymous nodes just like "inner"
+                parsers that are not directly assigned to a symbol.
+
         drop:   A set that may contain the elements `DROP_STRINGS` and
                 `DROP_WSP', 'DROP_REGEXP' or any name of a symbol
                 of a disposable parser (e.g. '_linefeed') the results
                 of which will be dropped during the parsing process,
                 already.
+
+        reduction: The reduction level (0-3) for early tree-reduction
+                during the parsing stage.
 
         super_ws(property): Cache for the "super whitespace" which
                 is a regular expression that merges whitespace and
@@ -1470,19 +1488,23 @@ class EBNFDirectives:
                 with the values parsed from the EBNF source.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
-                 'resume', 'drop', '_super_ws']
+                 'resume', 'disposable', 'drop', 'reduction', '_super_ws']
+
+    REPEATABLE_DIRECTIVES = {'tokens', 'preprocessor_tokens', 'disposable', 'drop'}
 
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
         self.comment = ''      # type: str
         self.literalws = {get_config_value('default_literalws')}  # type: Set[str]
-        self.tokens = set()    # type: Set[str]
-        self.filter = dict()   # type: Dict[str, str]
-        self.error = dict()    # type: Dict[str, List[Tuple[ReprType, ReprType]]]
-        self.skip = dict()     # type: Dict[str, List[Union[unrepr, str]]]
-        self.resume = dict()   # type: Dict[str, List[Union[unrepr, str]]]
-        self.drop = set()      # type: Set[str]
-        self._super_ws = None  # type: Optional[str]
+        self.tokens = set()       # type: Set[str]
+        self.filter = dict()      # type: Dict[str, str]
+        self.error = dict()       # type: Dict[str, List[Tuple[ReprType, ReprType]]]
+        self.skip = dict()        # type: Dict[str, List[Union[unrepr, str]]]
+        self.resume = dict()      # type: Dict[str, List[Union[unrepr, str]]]
+        self.disposable = get_config_value('default_disposable_regexp')  # type: str
+        self.drop = set()         # type: Set[str]
+        self.reduction = 1        # type: int
+        self._super_ws = None     # type: Optional[str]
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -1588,7 +1610,7 @@ class EBNFCompiler(Compiler):
         defined_directives:  A dictionary of all directives that have already
                 been defined, mapped onto the list of nodes where they have
                 been (re-)defined. With the exception of those directives
-                contained in EBNFCompiler.REPEATABLE_DIRECTIVES, directives
+                contained in EBNFDirectives.REPEATABLE_DIRECTIVES, directives
                 must only be defined once.
 
         consumed_custom_errors:  A set of symbols for which a custom error
@@ -1655,8 +1677,6 @@ class EBNFCompiler(Compiler):
                     '&': 'Lookahead', '!': 'NegativeLookahead',
                     '<-&': 'Lookbehind', '<-!': 'NegativeLookbehind',
                     '::': 'Pop', ':?': 'Pop', ':': 'Retrieve'}
-    REPEATABLE_DIRECTIVES = {'tokens'}
-
 
     def __init__(self, grammar_name="DSL", grammar_source=""):
         self.grammar_id = 0  # type: int
@@ -1685,7 +1705,6 @@ class EBNFCompiler(Compiler):
         self.defined_directives = dict()       # type: Dict[str, List[Node]]
         self.consumed_custom_errors = set()    # type: Set[str]
         self.consumed_skip_rules = set()       # type: Set[str]
-        self.disposable_regexp = re.compile(get_config_value('default_disposable_regexp'))
         self.grammar_id += 1
 
 
@@ -2175,7 +2194,7 @@ class EBNFCompiler(Compiler):
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
         definitions.append(('static_analysis_pending__', '[True]'))
         definitions.append(('disposable__',
-                            're.compile(' + repr(self.disposable_regexp.pattern) + ')'))
+                            're.compile(' + repr(self.directives.disposable) + ')'))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
@@ -2247,8 +2266,13 @@ class EBNFCompiler(Compiler):
 
         # set root_symbol parser and assemble python grammar definition
 
-        if self.root_symbol and 'root__' not in self.rules:
-            declarations.append('root__ = ' + self.root_symbol)
+        if self.root_symbol:
+            if self.directives.reduction != CombinedParser.DEFAULT_OPTIMIZATION:
+                opt = ', CombinedParser.' + ('NO_TREE_REDUCTION', 'FLATTEN', 'MERGE_TREETOPS',
+                                             'MERGE_LEAVES')[self.directives.reduction] + ')'
+                declarations.append('root__ = TreeReduction(' + self.root_symbol + opt)
+            else:
+                declarations.append('root__ = ' + self.root_symbol)
         declarations.append('')
         self.python_src = '\n    '.join(declarations) \
                           + GRAMMAR_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)
@@ -2365,11 +2389,11 @@ class EBNFCompiler(Compiler):
         nd.tag_name = "literal"
 
     def add_to_disposable_regexp(self, pattern):
-        if self.disposable_regexp is RX_NEVER_MATCH:
-            self.disposable_regexp = re.compile(pattern)
+        if self.directives.disposable == NEVER_MATCH_PATTERN:
+            self.directives.disposable = pattern
         else:
-            old_pattern = self.disposable_regexp.pattern
-            self.disposable_regexp = re.compile('(?:%s)|(?:%s)' % (old_pattern, pattern))
+            old_pattern = self.directives.disposable
+            self.directives.disposable = '(?:%s)|(?:%s)' % (old_pattern, pattern)
 
     def on_directive(self, node: Node) -> str:
         for child in node.children:
@@ -2382,7 +2406,7 @@ class EBNFCompiler(Compiler):
         key = node.children[0].content
         assert key not in self.directives.tokens
 
-        if key not in self.REPEATABLE_DIRECTIVES and not key.endswith('_error') \
+        if key not in EBNFDirectives.REPEATABLE_DIRECTIVES and not key.endswith('_error') \
                 and key in self.defined_directives:
             self.tree.new_error(node, 'Directive "%s" has already been defined earlier. '
                                 % key + 'Later definition will be ignored!',
@@ -2435,13 +2459,13 @@ class EBNFCompiler(Compiler):
             unmatched = []  # type: List[str]  # dropped syms that are not already anonymous syms
             for child in node.children[1:]:
                 content = child.content
-                if self.disposable_regexp.match(content):
+                if re.match(self.directives.disposable, content):
                     self.directives[key].add(content)
                 elif content.lower() in DROP_VALUES:
                     self.directives[key].add(content.lower())
                 else:
                     unmatched.append(content)
-                    if self.disposable_regexp == RX_NEVER_MATCH:
+                    if self.directives.disposable == NEVER_MATCH_PATTERN:
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
                                             'Should be one of %s or a disposable parser, where '
                                             'the "@disposable"-directive must precede the '
@@ -2450,13 +2474,27 @@ class EBNFCompiler(Compiler):
                         self.tree.new_error(
                             node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
                             '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
-                                                                self.disposable_regexp.pattern))
+                                                                self.directives.disposable))
             if unmatched:
                 self.directives[key].add(content)
                 self.add_to_disposable_regexp('$|'.join(unmatched) + '$')
 
+        elif key in ('reduction', 'tree_reduction'):
+            check_argnum(1)
+            arg = node.children[1].content
+            if arg not in ('none', 'flatten', 'merge_treetops', 'merge', 'merge_leaves',
+                           '0', '1', '2', '3'):
+                self.tree.new_error(node, 'Wrong value "%s" for Directive "%s". ' % (arg, key) +
+                                    'Choose from: 0-4 or none, flatten, merge_treetop, merge.')
+            elif arg.isdigit():
+                self.directives.reduction = int(arg)
+            else:
+                level = {'none': 0, 'flatten': 1, 'merge_treetops': 2,
+                         'merge': 3, 'merge_leaves': 3}[arg]
+                self.directives.reduction = level
+
         elif key == 'ignorecase':
-            check_argnum()
+            check_argnum(1)
             if node.children[1].content.lower() not in {"off", "false", "no"}:
                 self.re_flags.add('i')
 
@@ -2470,7 +2508,7 @@ class EBNFCompiler(Compiler):
                 else set() if 'none' in values else values
             self.directives.literalws = wsp
 
-        elif key in {'tokens', 'preprocessor_tokens'}:
+        elif key in ('tokens', 'preprocessor_tokens'):
             tokens = {child.content.strip() for child in node.children[1:]}
             redeclared = self.directives.tokens & tokens
             if redeclared:
@@ -2777,7 +2815,7 @@ class EBNFCompiler(Compiler):
         node.result = node.children[1:]
         assert prefix in {'::', ':?', ':'}
 
-        if self.disposable_regexp.match(arg):
+        if re.match(self.directives.disposable, arg):
             self.tree.new_error(
                 node, 'Retrieve operator "%s" does not work with disposable parsers like %s'
                 % (prefix, arg))

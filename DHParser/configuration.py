@@ -41,7 +41,8 @@ __all__ = ('ALLOWED_PRESET_VALUES',
            'THREAD_LOCALS',
            'access_thread_locals',
            'get_config_value',
-           'set_config_value')
+           'set_config_value',
+           'NEVER_MATCH_PATTERN')
 
 
 ########################################################################
@@ -391,7 +392,8 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 # r'_' catches names with a leading underscore. The default value is a
 # regular expression that matches no string whatsoever.
 # Default value: r'..(?<=^)'  # never match.
-CONFIG_PRESET['default_disposable_regexp'] = r'..(?<=^)'
+NEVER_MATCH_PATTERN = r'..(?<=^)'
+CONFIG_PRESET['default_disposable_regexp'] = NEVER_MATCH_PATTERN
 
 
 # Default value for implicit insignificant whitespace adjacent to literals.

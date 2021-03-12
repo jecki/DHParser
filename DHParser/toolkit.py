@@ -61,7 +61,7 @@ except ImportError:
     cython_optimized = False
     import DHParser.shadow_cython as cython
 
-from DHParser.configuration import access_thread_locals, get_config_value
+from DHParser.configuration import access_thread_locals, get_config_value, NEVER_MATCH_PATTERN
 from DHParser.stringview import StringView
 
 
@@ -73,7 +73,6 @@ __all__ = ('typing',
            'identity',
            'gen_id',
            'ThreadLocalSingletonFactory',
-           'NEVER_MATCH_PATTERN',
            'RX_NEVER_MATCH',
            'RX_ENTITY',
            'validate_XML_attribute_value',
@@ -349,7 +348,6 @@ def normalize_circular_path(path: Union[Tuple[str], AbstractSet[Tuple[str]]]) \
 #######################################################################
 
 
-NEVER_MATCH_PATTERN = r'..(?<=^)'
 RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
 RxPatternType = Any
 

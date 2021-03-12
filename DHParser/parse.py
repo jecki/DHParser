@@ -76,7 +76,7 @@ __all__ = ('ParserError',
            'mixin_comment',
            'mixin_nonempty',
            'CombinedParser',
-           'OutputReduction',
+           'TreeReduction',
            'UnaryParser',
            'NaryParser',
            'Drop',
@@ -973,7 +973,7 @@ class Grammar:
         static_analysis_errors__: A list of errors and warnings that were found in the
                 static analysis
 
-        python__src__:  For the purpose of debugging and inspection, this field can
+        python_src__:  For the purpose of debugging and inspection, this field can
                  take the python src of the concrete grammar class
                  (see `dsl.grammar_provider`).
 
@@ -2138,47 +2138,47 @@ def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):
     duplicate._return_values = duplicate.__getattribute__(src._return_values.__name__)
 
 
-def OutputReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> Parser:
+def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> Parser:
     """Applies tree-reduction level to CombinedParsers::
 
     >>> root = Text('A') + Text('B') | Text('C') + Text('D')
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.NO_TREE_REDUCTION))
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.NO_TREE_REDUCTION))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root (:Series (:Text "A") (:Text "B")))
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.FLATTEN))  # default
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.FLATTEN))  # default
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B"))
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_TREETOPS))
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_TREETOPS))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_LEAVES))
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_LEAVES))
     >>> tree = grammar('AB')
     >>> print(tree.as_sxpr())
     (root "AB")
 
     >>> root = Text('A') + Text('B') + (Text('C').name('important') | Text('D'))
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.NO_TREE_REDUCTION))
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.NO_TREE_REDUCTION))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (:Alternative (important "C")))
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.FLATTEN))  # default
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.FLATTEN))  # default
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (important "C"))
     >>> tree = grammar('ABD')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (:Text "D"))
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_TREETOPS))
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_TREETOPS))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "A") (:Text "B") (important "C"))
     >>> tree = grammar('ABD')
     >>> print(tree.as_sxpr())
     (root "ABD")
-    >>> grammar = Grammar(OutputReduction(root, CombinedParser.MERGE_LEAVES))
+    >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_LEAVES))
     >>> tree = grammar('ABC')
     >>> print(tree.as_sxpr())
     (root (:Text "AB") (important "C"))
