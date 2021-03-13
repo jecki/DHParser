@@ -414,12 +414,16 @@ without a value, wheneever a bool value or null occurs in the input::
     (:RegExp "0"))
   (string "a string"))
 
-Merging the content of the remaining anonymous leaf-nodes and assigning
-the merged content to their named parent nodes (if possible) yields the
-abstract syntax tree of the json data::
+This time the data is not distorted, any more. One oddity reamins, however: We
+are most probably not interested in the fact that the number 2.0 consists of
+three components, each of which hast been captured by a regular expression.
+Luckiliy, there exists yet another directive that allows to reduce the tree
+further by merging adjacent anonymous leaf-nodes::
 
->>> _ = TreeReduction(json_parser.json, CombinedParser.MERGE_LEAVES)
->>> syntax_tree = json_parser(testdata)
+>>> maximal_tree_reduction = '@reduction = merge'
+>>> slick_grammar = '\\n'.join([maximal_tree_reduction, json_gr])
+>>> slick_parser = create_parser(slick_grammar, 'JSON')
+>>> syntax_tree = slick_parser(testdata)
 >>> print(syntax_tree.as_sxpr(compact=True))
 (json
   (object
@@ -436,8 +440,19 @@ abstract syntax tree of the json data::
       (string "bool")
       (bool "false"))))
 
-The same effect can also be reached by adding the "@reduction = merge"
--directive at the top of the grammar.
+Merging adjacent anonymous leaf-nodes takes place after the @drop-directive
+comes into effect. It should be observed that merging only produces the desired
+result, if any delimiters have been dropped previously, because otherwise
+delimiters would be merged with content. Therefore, the `@reduction = merge`-
+directive should at best only be applied in conjunction with the `@drop` and
+`@dispose`-directives.
+
+Applying any of the here described tree-reduction (or "simplification" for
+that matter) requires a bit of careful planning concerning which nodes
+will be named and which nodes will be dropped. This, however, pays off in
+terms of speed and considerably simplified abtract-syntax-tree generation
+stage, because most of the unnecessary structure of concrete-syntax-trees
+has already been eliminated at the parsing stage.
 """
 
 
