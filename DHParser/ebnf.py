@@ -453,6 +453,67 @@ will be named and which nodes will be dropped. This, however, pays off in
 terms of speed and considerably simplified abtract-syntax-tree generation
 stage, because most of the unnecessary structure of concrete-syntax-trees
 has already been eliminated at the parsing stage.
+
+Comments and Whitespace
+-----------------------
+
+Why whitespace isn't trivial
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Handling whitespace in text-documents is not all trivial, because
+whitespace can serve several different purposes and there can be
+different kinds of whitespace: Whitespace can serve a syntactic function
+as delimiter. But whitespace can also be purely asthetic to render
+a document more readable.
+
+Depending on the data model, whitespace can be considered as
+significant and be included in the data or as
+insignificant and be excluded from the data and only be re-inserted
+when displaying the data in a human-readable-form. (For example, one
+can model a sentence as a seuqence of words and spaces or just as
+a sequence of words.) Note, that "significance" does not correlate
+with the syntatic or asthetic function, but only depends on whether
+you'd like to keep the whitespace in you data or not.
+
+There can be different kinds of whitespace with different meaning
+(and differing significance). For example, one can make a difference
+between horozontal whitespace (spaces and tabs) and vertical
+whitespace (including linefeeds). And there can be different sizes
+of whitespace with different meaning. For example in LaTeX, a single
+linefeed still counts as plain whitespace while an empty line (i.e.
+whitespace including two or more not linefeeds) signals a new
+paragraph.
+
+Finally, even the position of whitespace can make a difference.
+A certain number of whitespaces at the beginning of a line can
+have the meaning of "indentation" (as in Python code) while at
+the end of the line or between brackets it is just plain
+insignificant whitespace.
+
+Coding Whitespace in EBNF-Grammars
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A reasonable approach to handling whitespace in EBNF-Grammars is
+to first make the distinction between significant and insignificant
+whitespace, i.e. between the whitespace you'd like to include
+in your data and additional whitespace which shall not be included
+in the data, either because it does not have any particular meaning
+at all or it serves as
+
+
+
+Fail-tolerant Parsing
+---------------------
+
+
+Lookahead and Lookbehing when parsing
+-------------------------------------
+
+
+Semantic Actions and Storing Variables
+--------------------------------------
+
+
 """
 
 
