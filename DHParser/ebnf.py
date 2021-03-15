@@ -493,13 +493,6 @@ insignificant whitespace.
 Coding Whitespace in EBNF-Grammars
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A reasonable approach to handling whitespace in EBNF-Grammars is
-to first make the distinction between significant and insignificant
-whitespace, i.e. between the whitespace you'd like to include
-in your data and additional whitespace which shall not be included
-in the data, either because it does not have any particular meaning
-at all or it serves as
-
 
 
 Fail-tolerant Parsing
