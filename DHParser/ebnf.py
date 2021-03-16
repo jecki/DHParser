@@ -488,11 +488,23 @@ Finally, even the position of whitespace can make a difference.
 A certain number of whitespaces at the beginning of a line can
 have the meaning of "indentation" (as in Python code) while at
 the end of the line or between brackets it is just plain
-insignificant whitespace.
+insignificant whitespace. (This is actually something, where
+the boundaries of the EBNF-formalism become visible and you'd
+probably use a preprocessor or some kind of "semantic actions"
+to handle such cases. There is some support for either of these
+in DHParser.)
 
 Coding Whitespace in EBNF-Grammars
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+A reasonable approach to coding whitespace is to use one
+particular symbol for each kind of whitespace. Those kinds of
+whitespace that are insignficant, i.e. that do not need to
+appear in the data, should be dropped from the syntax-tree.
+With DHParser this can be done already while parsing, using
+the `@disposable` and `@drop`-directives.
+
+...
 
 
 Fail-tolerant Parsing
