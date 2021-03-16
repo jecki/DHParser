@@ -81,6 +81,20 @@ class TestDirectives:
         syntax_tree = parser("3 + 4 \n\n * 12")
         assert syntax_tree.errors_sorted
 
+    def test_whitespace_comments(self):
+        lang = "@whitespace = linefeed\n@comment = /%.*/\n" + self.mini_language
+        MinilangParser = grammar_provider(lang)
+        parser = MinilangParser()
+        assert parser
+        syntax_tree = parser("3 + 4 \n \n * 12")
+        assert syntax_tree.errors_sorted
+        syntax_tree = parser("3 + 4 \n  %comment \n * 12")
+        assert not syntax_tree.errors_sorted
+        syntax_tree = parser("3 + 4 \n  %comment\n\n * 12")
+        assert syntax_tree.errors_sorted
+        syntax_tree = parser("3 + 4 \n\n%comment\n * 12")
+        assert syntax_tree.errors_sorted
+
     def test_whitespace_vertical(self):
         lang = "@ whitespace = vertical\n" + self.mini_language
         parser = grammar_provider(lang)()

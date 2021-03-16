@@ -502,9 +502,41 @@ particular symbol for each kind of whitespace. Those kinds of
 whitespace that are insignficant, i.e. that do not need to
 appear in the data, should be dropped from the syntax-tree.
 With DHParser this can be done already while parsing, using
-the `@disposable` and `@drop`-directives.
+the `@disposable` and `@drop`-directives described earlier.
 
-...
+But let's first look at an example which only includes significant
+whitespace. The following parser parses sequences of paragraphs which
+consist of sequences of sentences which consist of sequences
+of main clauses and subordinate clauses which consist of sequences
+of words:
+
+>>> text_gr = 'document       = S* paragraph (PBR paragraph)* S* _EOF       \\n'\
+              '  _EOF         = /$/                                         \\n'\
+              'paragraph      = sentence (S sentence)*                      \\n'\
+              'sentence       = (clause _c_delimiter S)* clause _s_delimiter \\n'\
+              '  _c_delimiter = KOMMA | COLON | SEMICOLON                   \\n'\
+              '  _s_delimiter = DOT | QUESTION_MARK | EXCLAMATION_MARK      \\n'\
+              'clause         = word (S word)*                              \\n'\
+              'word           = (CAPITAL_LETTER | LETTER) LETTER*           \\n'\
+              'LETTER         = /[a-z]/                                     \\n'\
+              'CAPITAL_LETTER = /[A-Z]/                                     \\n'\
+              'DOT            = `.`                                         \\n'\
+              'QUESTION_MARK  = `?`                                         \\n'\
+              'EXCLAMATION_MARK = `!`                                       \\n'\
+              'KOMMA          = `,`                                         \\n'\
+              'COLON          = `:`                                         \\n'\
+              'SEMICOLON      = `;`                                         \\n'\
+              'PBR            = /[ \\\\t]*\\\\n[ \\\\t]*\\\\n[ \\\\t]*)/    \\n'\
+              'S              = /[ \\\\t]*(?:\\\\n[ \\\\t]*)?(?!\\\\n)/     \\n'
+
+
+
+A common problem with whitespace is that it tends to pollute
+the Grammar, because whereever you'd like to allow whitespace,
+you'd have to insert a symbol for whitespace. The same problem
+existis when it comes to allowing comments, because you'd
+probably allow to insert comments in as many places as possible.
+
 
 
 Fail-tolerant Parsing
@@ -675,9 +707,10 @@ class EBNFGrammar(Grammar):
         @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
         # comments can be either C-Style: /* ... */
         # or pascal/modula/oberon-style: (* ... *)
-        # or python-style: # ... \n, excluding, however, character markers: #x20
+        # or python-style: # ... \n,
+        # excluding, however, character markers: #x20
 
-        @ whitespace = /\s*/                            # whitespace includes linefeed
+        @ whitespace = /\s*/                            # whitespace includes linefeeds
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
         @ disposable = pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
         @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
@@ -1016,8 +1049,9 @@ class FixedEBNFGrammar(Grammar):
         @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
             # comments can be either C-Style: /* ... */
             # or pascal/modula/oberon-style: (* ... *)
-            # or python-style: # ... \n, excluding, however, character markers: #x20
-        @ whitespace = /\s*/                            # whitespace includes linefeed
+            # or python-style: # ... \n,
+            # excluding, however, character markers: #x20
+        @ whitespace = /\s*/                            # whitespace includes linefeeds
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
         @ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
         @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
@@ -1473,8 +1507,8 @@ def compile_{NAME}(ast):
 '''
 
 
-WHITESPACE_TYPES = {'horizontal': r'[\t ]*',  # default: horizontal
-                    'linefeed': r'[ \t]*\n?(?!\s*\n)[ \t]*',
+WHITESPACE_TYPES = {'linefeed': r'[ \t]*(?:\n[ \t]*)?(?!\n)',  # default
+                    'horizontal': r'[\t ]*',
                     'vertical': r'\s*'}
 
 DROP_STRINGS     = 'strings'

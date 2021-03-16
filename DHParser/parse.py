@@ -1117,8 +1117,8 @@ class Grammar:
     error_messages__ = dict()      # type: Dict[str, Tuple[PatternMatchType, str]]
     disposable__ = RX_NEVER_MATCH  # type: RxPatternType
     # some default values
-    COMMENT__ = r''  # type: str  # r'#.*(?:\n|$)'
-    WHITESPACE__ = r'[\t ]*'
+    COMMENT__ = r''  # type: str  # r'#.*'  or r'#.*(?:\n|$)' if combined with horizontal wspc
+    WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'  # spaces plus at most a single linefeed
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)  # type: str
     static_analysis_pending__ = [True]  # type: List[bool]
     static_analysis_errors__ = []  # type: List[AnalysisError]
