@@ -494,8 +494,8 @@ probably use a preprocessor or some kind of "semantic actions"
 to handle such cases. There is some support for either of these
 in DHParser.)
 
-Coding Whitespace in EBNF-Grammars
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Coding significant Whitespace in EBNF-Grammars
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A reasonable approach to coding whitespace is to use one
 particular symbol for each kind of whitespace. Those kinds of
@@ -508,26 +508,101 @@ But let's first look at an example which only includes significant
 whitespace. The following parser parses sequences of paragraphs which
 consist of sequences of sentences which consist of sequences
 of main clauses and subordinate clauses which consist of sequences
-of words:
+of words::
 
->>> text_gr = 'document       = S* paragraph (PBR paragraph)* S* _EOF       \\n'\
+>>> text_gr = '@disposable = /_\\\\w+/                                      \\n'\
+              'document       = S* paragraph (PBR paragraph)* S* _EOF       \\n'\
               '  _EOF         = /$/                                         \\n'\
               'paragraph      = sentence (S sentence)*                      \\n'\
               'sentence       = (clause _c_delimiter S)* clause _s_delimiter \\n'\
               '  _c_delimiter = KOMMA | COLON | SEMICOLON                   \\n'\
               '  _s_delimiter = DOT | QUESTION_MARK | EXCLAMATION_MARK      \\n'\
               'clause         = word (S word)*                              \\n'\
-              'word           = (CAPITAL_LETTER | LETTER) LETTER*           \\n'\
-              'LETTER         = /[a-z]/                                     \\n'\
-              'CAPITAL_LETTER = /[A-Z]/                                     \\n'\
+              "word           = /(?:[A-Z]|[a-z])[a-z']*/                    \\n"\
               'DOT            = `.`                                         \\n'\
               'QUESTION_MARK  = `?`                                         \\n'\
               'EXCLAMATION_MARK = `!`                                       \\n'\
               'KOMMA          = `,`                                         \\n'\
               'COLON          = `:`                                         \\n'\
               'SEMICOLON      = `;`                                         \\n'\
-              'PBR            = /[ \\\\t]*\\\\n[ \\\\t]*\\\\n[ \\\\t]*)/    \\n'\
-              'S              = /[ \\\\t]*(?:\\\\n[ \\\\t]*)?(?!\\\\n)/     \\n'
+              'PBR            = /[ \\\\t]*\\\\n[ \\\\t]*\\\\n[ \\\\t]*/     \\n'\
+              'S              = /(?=[ \\\\n\\\\t])[ \\\\t]*(?:\\\\n[ \\\\t]*)?(?!\\\\n)/\\n'
+
+Here, we have two types of significant whitespace `PBR` ("paragraph-break") and `S`
+("space"). Both types allow for a certain amount of flexibility, so that two
+whitespaces of the same type do not need to have exactly the same content, but
+we could always normalize these whitespaces in a subsequent transformation step.
+
+Two typical design patterns for significant whitespace are noteworthy, here:
+
+1. Both whitespaces match only if there was at least one whitespace character.
+   We may allow whitespace to be optional (as at the beginning and end of the
+   document), but if the option has not been taken, we don't to see an empty
+   whitespace-tag in the document, later on.
+   (For insignificant whitespace, the opposite convention can be more convenient,
+   because, typically, insignificant whitespace is dropped anyway, whether it's
+   got content or not.)
+
+2. The grammar is construed in such a way that the whitespace always appears
+   *between* different elements at the same level, but not after the last or
+   before the first element. The whitespace after the last word of a sentence
+   or before the first word of a sentence is really whitespace between
+   two sentences. If we pick out a sentence or a clause, we will have no
+   dangling whitespace at its beginning or end.
+   (Again, for soon to be dropped insignificant whitespace, another convention
+   can be more advisable.)
+
+Let's jsut try our grammar on an example::
+
+>>> text_example = \
+    'I want to say, in all seriousness, that a great deal of harm is being\\n'\
+    'done in the modern world by belief in the virtuousness of work, and that\\n'\
+    'the road to happiness and prosperity lies in an organized diminution of\\n'\
+    'work.\\n'\
+    '\\n'\
+    'First of all: what is work? Work is of two kinds: first, altering the\\n'\
+    "position of matter at or near the earth's surface relatively to other\\n"\
+    'such matter; second, telling other people to do so. The first kind is\\n'\
+    'unpleasant and ill paid; the second is pleasant and highly paid.'
+
+>>> text_parser = create_parser(text_gr, 'Text')
+>>> text_as_data = text_parser(text_example)
+>>> sentence = text_as_data.pick(\
+        lambda nd: nd.tag_name == "sentence" and nd.content.startswith('First'))
+>>> print(sentence.as_sxpr(compact=True))
+(sentence
+  (clause
+    (word "First")
+    (S " ")
+    (word "of")
+    (S " ")
+    (word "all"))
+  (COLON ":")
+  (S " ")
+  (clause
+    (word "what")
+    (S " ")
+    (word "is")
+    (S " ")
+    (word "work"))
+  (QUESTION_MARK "?"))
+
+Again, it is a question of design, whether we leave whitespace in the data or
+not. Leaving it has the advantage, that serialization becomse as simple as
+printing the content of the data-tree::
+
+>>> print(sentence)
+First of all: what is work?
+
+Otherwise one would have to programm a dedicated serialization routine. Especially,
+if you receive data from a different source, you'll appreciate not having to
+do this - and so will other people, receiving your data. Think about it! However,
+dropping the whitespace will yield more consice data.
+
+
+Adding Comments
+^^^^^^^^^^^^^^^
+
 
 
 
