@@ -807,17 +807,17 @@ def mixin_nonempty(whitespace: str) -> str:
     If `whitespace`  does not match the empty string '', anyway,
     then it will be returned unaltered.
 
-    WARNING: `non_empty_ws` does not work regular expressions the matched
+    WARNING: `minin_nonempty` does not work for regular expressions the matched
     strings of which can be followed by a symbol that can also occur at
     the start of the regular expression.
 
     In particular, it does not work for fixed size regular expressions,
-    that ist / / or /   / or /\t/ won't work, but / */ or /\s*/ or /\s+/
-    do work. There is no test for this. Fixed sizes regular expressions
-    run through `non_empty_ws` will not match at any more if they are applied
+    that is / / or /   / or /\t/ won't work, but / */ or /\s*/ or /\s+/
+    do work. There is no test for this. Fixed-size regular expressions
+    run through `mixin_nonempty` will not match at any more if they are applied
     to the beginning or the middle of a sequence of whitespaces!
 
-    In order to be safe, you whitespace regular expressions should follow
+    In order to be safe, your whitespace regular expressions should follow
     the rule: "Whitespace cannot be followed by whitespace" or "Either
     grab it all or leave it all".
 

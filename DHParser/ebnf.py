@@ -512,7 +512,7 @@ consist of sequences of sentences which consist of sequences
 of main clauses and subordinate clauses which consist of sequences
 of words::
 
->>> text_gr = '@disposable = /_\\\\w+/                                      \\n'\
+>>> text_gr = '@ disposable = /_\\\\w+/                                     \\n'\
               'document       = S* paragraph (PBR paragraph)* S* _EOF       \\n'\
               '  _EOF         = /$/                                         \\n'\
               'paragraph      = sentence (S sentence)*                      \\n'\
@@ -554,7 +554,7 @@ Two typical design patterns for significant whitespace are noteworthy, here:
    (Again, for soon to be dropped insignificant whitespace, another convention
    can be more advisable.)
 
-Let's jsut try our grammar on an example::
+Let's just try our grammar on an example::
 
 >>> text_example = \
     'I want to say, in all seriousness, that a great deal of harm is being\\n'\
@@ -601,11 +601,10 @@ if you receive data from a different source, you'll appreciate not having to
 do this - and so will other people, receiving your data. Think about it! However,
 dropping the whitespace will yield more consice data.
 
-
-Adding Comments
+Coding Comments
 ^^^^^^^^^^^^^^^
 
-
+Allowing comments in domain-specific languages
 
 
 A common problem with whitespace is that it tends to pollute
@@ -2045,7 +2044,7 @@ class EBNFCompiler(Compiler):
 
     def gen_search_rule(self, nd: Node) -> ReprType:
         """Generates a search rule, which can be either a string for simple
-        string search or a regular expression from the nodes content. Returns
+        string search or a regular expression from the node's content. Returns
         an empty string in case the node is neither regexp nor literal.
         """
         if nd.tag_name == 'regexp':
