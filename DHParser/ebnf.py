@@ -457,6 +457,8 @@ has already been eliminated at the parsing stage.
 Comments and Whitespace
 -----------------------
 
+
+
 Why whitespace isn't trivial
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -651,10 +653,11 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
-    RX_NEVER_MATCH, cython
+    cython
 from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, \
-    remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of
+    remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
+    BLOCK_LEAVES
 from DHParser.versionnumber import __version__
 
 
@@ -1446,7 +1449,7 @@ def parse_ebnf(ebnf: str) -> Node:
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
-        [remove_children_if(all_of(not_one_of('regexp'), is_empty))],
+        [BLOCK_LEAVES, remove_children_if(all_of(not_one_of('regexp'), is_empty))],
     "syntax":
         [],
     "directive":

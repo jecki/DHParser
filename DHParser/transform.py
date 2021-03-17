@@ -398,6 +398,9 @@ def traverse(root_node: Node,
             post = table.get('>', [])
             assert not any(isinstance(callable, Filter) for callable in post)
             sequence = pre + main + post
+            all_filters = filters + more_filters
+            if BLOCK_CHILDREN in all_filters:
+                all_filters = [BLOCK_CHILDREN]
             cache[key] = (filters + more_filters, sequence)
 
         children = node.children
