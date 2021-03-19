@@ -420,10 +420,9 @@ three components, each of which hast been captured by a regular expression.
 Luckiliy, there exists yet another directive that allows to reduce the tree
 further by merging adjacent anonymous leaf-nodes::
 
->>> maximal_tree_reduction = '@reduction = merge'
->>> slick_grammar = '\\n'.join([maximal_tree_reduction, json_gr])
->>> slick_parser = create_parser(slick_grammar, 'JSON')
->>> syntax_tree = slick_parser(testdata)
+>>> json_gr = '@reduction = merge \\n' + json_gr
+>>> json_parser = create_parser(json_gr, 'JSON')
+>>> syntax_tree = json_parser(testdata)
 >>> print(syntax_tree.as_sxpr(compact=True))
 (json
   (object
@@ -776,6 +775,55 @@ to at most a single linefeed::
 >>> print(syntax_tree.errors)
 []
 
+When redefining the tilde-whitespace, make sure that your regular expression
+also matches the empty string! There is no need to worry that the syntax tree
+get's cluttered by empty whitespace-nodes, because tilde-whitespace always
+yeidls anonymous nodes and DHParser drops empty anonymous nodes right away.
+
+Comments can be defined using the `@comment`-directive. DHParser automatically
+intermingles comments and whitespace so that where-ever tilde-whitespace is
+allowed, a comment defined by the `@comment`-directive is also allowed:
+
+>>> json_gr = '@comment = /#[^\\\\n]*(?:\\\\n|$)/ \\n' + json_gr
+>>> json_parser = create_parser(json_gr, "JSON")
+>>> testdata = '{"array": [1, 2.0, "a string"], # a string\\n'\
+               ' "number": -1.3e+25,  # a number\\n'\
+               ' "bool": false}  # a bool'
+>>> syntax_tree = json_parser(testdata)
+>>> print(syntax_tree.as_sxpr(compact = True))
+(json
+  (object
+    (member
+      (string "array")
+      (array
+        (number "1")
+        (number "2.0")
+        (string "a string")))
+    (member
+      (string "number")
+      (number "-1.3e+25"))
+    (member
+      (string "bool")
+      (bool "false"))))
+
+Since the json-grammar still contains the `@drop = whitespace, ...`-
+directive from earlier on (next to other tree-reductions), the comments
+have been nicely dropped along with the tilde-whitespace.
+
+There is one caveat: When using comments alongside with whitespace that
+captures at most one linefeed, the comments should be defined in such
+a way that the last charcter of a comment is never a linefeed.
+
+Also a few limitations of the tilde-whitespace and directive-defined
+comments should be kept in mind: 1. Only one kind of insignificant
+whitespace can be defined this way. If there are more kinds of
+insignificant whitespace, all but one need to be defined conventionally
+as part of the grammar. 2. Both directive-defined comments and
+tilde-whitespace can only be defined by a regular expresseion. In
+particular, nested comments are impossible to define with regular
+expressions, only.
+
+However, using tilde-whitespace has yet one more benefit.
 
 
 Lookahead and Lookbehind
