@@ -457,8 +457,6 @@ has already been eliminated at the parsing stage.
 Comments and Whitespace
 -----------------------
 
-
-
 Why whitespace isn't trivial
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -513,7 +511,7 @@ of main clauses and subordinate clauses which consist of sequences
 of words::
 
 >>> text_gr = '@ disposable = /_\\\\w+/                                     \\n'\
-              'document       = S* paragraph (PBR paragraph)* S* _EOF       \\n'\
+              'document       = PBR* S? paragraph (PBR paragraph)* PBR* S? _EOF\\n'\
               '  _EOF         = /$/                                         \\n'\
               'paragraph      = sentence (S sentence)*                      \\n'\
               'sentence       = (clause _c_delimiter S)* clause _s_delimiter \\n'\
@@ -661,6 +659,14 @@ word S word S word
   (S
     (pure_S " "))
   (word "work"))
+
+We will not worry about the more sub-structure of the S-nodes right now. If
+we are not interested in the comments, we could use the `@disposable`,
+`@drop` and `@reduction = merge`-directives to simplify these at the
+parsing stage. Or, we could extract the comments and normalize the whitespace
+at a later tree-processing stage. For now, let's just check wehter our
+comments work as expected::
+
 >>> syntax_tree = extended_parser('What{check this again!} is work?')
 >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
 word S word S word
@@ -669,21 +675,55 @@ word S word S word
 word S word S word
 >>> syntax_tree = extended_parser('What{check this again!}is work?')
 >>> print(syntax_tree.errors[0])
-1:1: Error (1040): Parser "document = {S} paragraph {PBR paragraph} {S} _EOF" did not match!
+1:1: Error (1040): Parser "document = {PBR} [S] paragraph {PBR paragraph} {PBR} [S] _EOF" did not match!
 
 The last error was to be expected, because we did not allow comments
 to serve a substitutes for whitespace. The error message might not be
 as clear about the actual error as we might wish, though, but this is a topic
-for later.
+for later. Let's check whether putting comments near paragraph breaks
+works as well::
 
+>>> test_text = 'Happiness lies in the diminuniation of work.\\n'\
+                '  \\n  '\
+                '  { Here comes the comment } \\n'\
+                '  \\n  '\
+                'What is work?'
+>>> syntax_tree = extended_parser(test_text)
+>>> print(' '.join(nd.tag_name for nd in syntax_tree.children))
+paragraph PBR paragraph
+>>> test_text = 'Happiness lies in the diminuniation of work.\\n'\
+                '  { Here comes the comment } \\n'\
+                'What is work?'
+>>> syntax_tree = extended_parser(test_text)
+>>> print(' '.join(nd.tag_name for nd in syntax_tree.children))
+paragraph
 
-
+The last result might look surprising at first, but since a paragraph
+break requires at least one empty line as a separator, the input text
+is correctly understood by the parser as a sinlge paragrpah with
+two sentence interspersed by a sinlge whitespace which, incidently,
+contains a comment::
+>>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('paragraph').children))
+sentence S sentence
+>>> print(syntax_tree.pick('paragraph')['S'].as_sxpr(compact=True))
+(S
+  (pure_S
+    ""
+    "  ")
+  (COMMENT "{ Here comes the comment }")
+  (pure_S
+    " "
+    ""))
 
 A common problem with whitespace is that it tends to pollute
 the Grammar, because whereever you'd like to allow whitespace,
 you'd have to insert a symbol for whitespace. The same problem
 existis when it comes to allowing comments, because you'd
 probably allow to insert comments in as many places as possible.
+
+DHParser's support for insignificant whitespace and comments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 
 
