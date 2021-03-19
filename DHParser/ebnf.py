@@ -404,8 +404,6 @@ without a value, wheneever a bool value or null occurs in the input::
               'bool       = /true/ ~ | /false/ ~                            \\n'\
               'null       = /null/ ~                                        \\n'
 >>> json_parser = create_parser(json_gr, 'JSON')
->>> print(json_parser.python_src__)
-
 >>> syntax_tree = json_parser(testdata)
 >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
 (array
@@ -770,9 +768,14 @@ to at most a single linefeed::
 
 >>> testdata = '{"array": [1, 2.0, "a string"], \\n\\n\\n "number": -1.3e+25, "bool": false}'
 >>> syntax_tree = json_parser(testdata)
->>> print(syntax_tree.as_sxpr())
-
+>>> print(syntax_tree.errors[0])
+1:32: Error (1010): member expected, » \\n \\n \\n  "numb...« found!
 >>> json_gr = '@whitespace = /\s*/ \\n' + json_gr
+>>> json_parser = create_parser(json_gr, "JSON")
+>>> syntax_tree = json_parser(testdata)
+>>> print(syntax_tree.errors)
+[]
+
 
 
 
@@ -1848,7 +1851,7 @@ class EBNFDirectives:
     REPEATABLE_DIRECTIVES = {'tokens', 'preprocessor_tokens', 'disposable', 'drop'}
 
     def __init__(self):
-        self.whitespace = WHITESPACE_TYPES['vertical']  # type: str
+        self.whitespace = WHITESPACE_TYPES['linefeed']  # type: str
         self.comment = ''      # type: str
         self.literalws = {get_config_value('default_literalws')}  # type: Set[str]
         self.tokens = set()       # type: Set[str]
