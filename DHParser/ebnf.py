@@ -752,7 +752,23 @@ very often, it is more convenient not to mark it with a
 question-mark or, if you use classical EBNF-syntax, to enclose
 it with square brackets.
 
-The default regular expression for the tilde-whitespace.
+The default regular expression for the tilde-whitespace captures
+arbitraily many spaces and tabs and at most one linefeed, but
+not an empty line (`[ \t]*(?:\n[ \t]*)?(?!\n)`), as this is
+the most convenient way to define whitespace for text-data.
+However, the tilde whitespace can also be definied with any
+other regular expression with the `@whitespace`-directive.
+
+Let's go back to our JSON-grammar and define the optional
+insignificant whitespace marked by the tilde-character in such a
+way that it matches any amount of horizontal or vertical
+whitespace, which makes much more sense in the context of json
+than the default tilde-whitespace that is restricted vertically
+to at most a single linefeed::
+
+>>> json_gr = '@whitespace = /\s*/ \\n' + json_gr
+
+
 
 
 
