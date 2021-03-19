@@ -724,6 +724,35 @@ probably allow to insert comments in as many places as possible.
 DHParser's support for insignificant whitespace and comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Coding insignificant whitespace and comments is exactly the
+same as coding siginificant whitespace and comments and does not
+need to be repeated, here. (The combination of insignificant
+whitespace and significant comments, is slightly more complicated,
+and probably best outsourced to some degree to the post-parsing
+processing stages. It will not be discussed here.) However,
+DHParser offers some special support for insignificant
+whitesapce and comments, which can make working with these
+easier in some cases.
+
+First of all, DHParser has a special dedicated token for
+insignificant whitespace which is the tilde `~`-character.
+We have seen this earlier in the definition of the json-Grammar.
+
+The `~` whitespace marker differs from the usual pattern for
+defining whitespace in that it is implicitly optional, or what
+amounts to the same, it matches the empty string. Normally,
+it is to be considered bad practice to define a symbol as
+optional. Rahter, a symbol should always match something and
+only at the places where it is used, it should be marked as
+optional. If this rule is obeyed, it is always easy to tell,
+wether some element is optional or not at a specific place
+in the Grammar. Otherwise, it can become quite confusing
+indeed. However, since the tilde character is usually used
+very often, it is more convenient not to mark it with a
+question-mark or, if you use classical EBNF-syntax, to enclose
+it with square brackets.
+
+The default regular expression for the tilde-whitespace.
 
 
 
