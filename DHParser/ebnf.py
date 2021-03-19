@@ -404,6 +404,8 @@ without a value, wheneever a bool value or null occurs in the input::
               'bool       = /true/ ~ | /false/ ~                            \\n'\
               'null       = /null/ ~                                        \\n'
 >>> json_parser = create_parser(json_gr, 'JSON')
+>>> print(json_parser.python_src__)
+
 >>> syntax_tree = json_parser(testdata)
 >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
 (array
@@ -765,6 +767,10 @@ way that it matches any amount of horizontal or vertical
 whitespace, which makes much more sense in the context of json
 than the default tilde-whitespace that is restricted vertically
 to at most a single linefeed::
+
+>>> testdata = '{"array": [1, 2.0, "a string"], \\n\\n\\n "number": -1.3e+25, "bool": false}'
+>>> syntax_tree = json_parser(testdata)
+>>> print(syntax_tree.as_sxpr())
 
 >>> json_gr = '@whitespace = /\s*/ \\n' + json_gr
 
