@@ -778,15 +778,13 @@ to at most a single linefeed::
 
 
 
-
+Lookahead and Lookbehind
+------------------------
 
 
 Fail-tolerant Parsing
 ---------------------
 
-
-Lookahead and Lookbehing when parsing
--------------------------------------
 
 
 Semantic Actions and Storing Variables
