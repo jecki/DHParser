@@ -528,7 +528,7 @@ of words::
               'COLON          = `:`                                         \\n'\
               'SEMICOLON      = `;`                                         \\n'\
               'PBR            = /[ \\\\t]*\\\\n[ \\\\t]*\\\\n[ \\\\t]*/     \\n'\
-              'S              = /(?=[ \\\\n\\\\t])[ \\\\t]*(?:\\\\n[ \\\\t]*)?(?!\\\\n)/\\n'
+              'S              = /(?=[ \\\\n\\\\t])[ \\\\t]*(?:\\\\n[ \\\\t]*)?(?!\\\\n)/'
 
 Here, we have two types of significant whitespace `PBR` ("paragraph-break") and `S`
 ("space"). Both types allow for a certain amount of flexibility, so that two
@@ -590,7 +590,7 @@ Let's just try our grammar on an example::
   (QUESTION_MARK "?"))
 
 Again, it is a question of design, whether we leave whitespace in the data or
-not. Leaving it has the advantage, that serialization becomse as simple as
+not. Leaving it has the advantage, that serialization become as simple as
 printing the content of the data-tree::
 
 >>> print(sentence)
@@ -604,7 +604,79 @@ dropping the whitespace will yield more consice data.
 Coding Comments
 ^^^^^^^^^^^^^^^
 
-Allowing comments in domain-specific languages
+Allowing comments in a domain-specific language almost always makes sense,
+because it allows users to annotate the source texts while working on them
+and to share those comments with collaborators. From a technical point of
+view, adding comments to a DSL raises two questions:
+
+1. At what places shall we allow to insert comments in the source code?
+   Common answers are: a) at the end of a line, b) almost everywhere, or
+   c) both.
+
+2. How do we avoid pollution of the EBNF-grammar with comment markers?
+   It's already curtails the readability that we have to put whitespace
+   symbols in so many places. And speaking of comments at the end of
+   the line: If linefeeds aren't important for us - as in our toy-grammar
+   for prose-text, above - we probably wouldn't want to reframe our
+   grammar jsut to allow for at the end of the line comments.
+
+Luckily, there exists a simple and highly intuitive solution that takes
+care of both of these concerns: We admitt comments, whereever whitespace
+is allowed. And we code this by defining a symbol that means: "whitespace
+and, optionally, a comment".
+
+Let's try this with our prose-text-grammar. In order to do so, we have
+to define a symbols for comments, a symbol for pure whitespace, and,
+finally, a symbol for whitespace with optional comment. Since, in
+our grammar, we actually have two kinds of whitespace, `S` and `PBR`,
+we'll have to redefine both of them. As delimiters for comments, we
+use curly braces::
+
+>>> wsp_gr = '\\nPBR   = pure_PBR COMMENT (pure_PBR | pure_S)?       \\n'\
+             '         | (pure_S? COMMENT)? pure_PBR                 \\n'\
+             'S        = pure_S COMMENT pure_S? | COMMENT? pure_S    \\n'\
+             'COMMENT  = /\{[^}]*\}/                                 \\n'\
+             'pure_PBR = /[ \\\\t]*\\\\n[ \\\\t]*\\\\n[ \\\\t]*/     \\n'\
+             'pure_S   = /(?=[ \\\\n\\\\t])[ \\\\t]*(?:\\\\n[ \\\\t]*)?(?!\\\\n)/'
+
+As can be seen, the concrete re-definition of the whitespace tokens
+requires a bit of careful consideration, because we want to allow
+additional whitespace next to comments, but at the same time avoid
+ending up with two whitespaces in sequence in our data. Let's see, if
+we have succeeded::
+
+>>> extended_text_gr = text_gr[:text_gr.find('\\nPBR')] + wsp_gr
+>>> extended_parser = create_parser(extended_text_gr, 'Text')
+>>> syntax_tree = extended_parser('What {check this again!} is work?')
+>>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
+word S word S word
+>>> print(syntax_tree.pick('clause').as_sxpr(compact=True))
+(clause
+  (word "What")
+  (S
+    (pure_S " ")
+    (COMMENT "{check this again!}")
+    (pure_S " "))
+  (word "is")
+  (S
+    (pure_S " "))
+  (word "work"))
+>>> syntax_tree = extended_parser('What{check this again!} is work?')
+>>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
+word S word S word
+>>> syntax_tree = extended_parser('What {check this again!}is work?')
+>>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
+word S word S word
+>>> syntax_tree = extended_parser('What{check this again!}is work?')
+>>> print(syntax_tree.errors[0])
+1:1: Error (1040): Parser "document = {S} paragraph {PBR paragraph} {S} _EOF" did not match!
+
+The last error was to be expected, because we did not allow comments
+to serve a substitutes for whitespace. The error message might not be
+as clear about the actual error as we might wish, though, but this is a topic
+for later.
+
+
 
 
 A common problem with whitespace is that it tends to pollute
