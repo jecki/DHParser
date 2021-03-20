@@ -823,7 +823,28 @@ tilde-whitespace can only be defined by a regular expresseion. In
 particular, nested comments are impossible to define with regular
 expressions, only.
 
-However, using tilde-whitespace has yet one more benefit.
+However, using tilde-whitespace has yet one more benefit: With the
+tilde-whitespace, cluttering of the grammar with whitespace-markers
+can be avoid, by adding implicit whitespace adjacent to string-literals.
+Remember the definition of the JSON-Grammar earlier. If you look at
+a definition like: `object = "{" ~ member ( "," ~ §member )* "}" ~`,
+you'll notice that there are three whitespace markers, one next to
+each delimiter. Naturally, because one usually wants to allow users
+of a domain specific language to put whitespace around delimiters.
+
+You may wonder, why the tilde appears only on the right hand side
+of the literals, although you'd probably like to allow whitespace
+on both side of a literal like "{". But if you look at the grammar
+closely, you'll find that almost every symbol definition ends
+either with a tilde sign or a symbol the definition of which ends
+with a tilde sign, which means that they allow whitespace on the
+right hand side. Now, if all elements of the grammar allow
+whitespace on the right hand side, this means that automatically
+also have whitespace on the left-hand side, too, which is, of
+course the whitespace on the right hand side of the previous
+element.
+
+
 
 
 Lookahead and Lookbehind
