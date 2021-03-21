@@ -769,7 +769,7 @@ to at most a single linefeed::
 >>> syntax_tree = json_parser(testdata)
 >>> print(syntax_tree.errors[0])
 1:32: Error (1010): member expected, » \\n \\n \\n  "numb...« found!
->>> json_gr = '@whitespace = /\s*/ \\n' + json_gr
+>>> json_gr = '@whitespace = /\\\\s*/ \\n' + json_gr
 >>> json_parser = create_parser(json_gr, "JSON")
 >>> syntax_tree = json_parser(testdata)
 >>> print(syntax_tree.errors)
@@ -852,17 +852,67 @@ whitespace is either "eaten" at the right hand side or the left
 hand side of the literal. String literals can either be
 enclose in double quotes "..." or single quotes '...'. Both
 kinds of literals will have implicit whitespace, if the
-`@literalws`-directive is used. However, there is also a special
-type of string-literal, enclosed in backticks, that never carries
-implicit whitespace. This is important, when literals are used
-for signs that enclose content, like the quotation marks for
-our string literal in the JSON-Grammar (see below), because
-whitespace that is part of the enclosed data is not insignificant
-and should not be eaten automatically by the delimiting strings
-or characters. Also, keep in mind that regular expressions do
-not carry implicit whitespace. So, if you are using regular
-expressions as delimiters, you still have to add the tilde character
-where appropriate::
+`@literalws`-directive is used.
+
+(Don't confuse implicit whitespace
+with insignificant whitespace: Insignificnat whitespace is whitespace
+you do not need any more after parsing. Implicit whitespace is
+whitespace you do not denote explicitly in the grammar. It's
+a speciality of DHParser and DHParser allows onl the insignificant
+whitespace denoted by the tilde-character to be declared as
+"implicit".)
+
+If left-adjacent whitespace is declared as implicit with the
+`@literalws`-directive, the expression::
+
+    object     = "{" ~ member ( "," ~ §member )* "}" ~
+
+can be written as::
+
+    object     = "{" member ( "," §member )* "}"
+
+which is easier to read.
+
+For situations where implicit whitespace is not desired, DHParser
+has a special kind of string literal, written with backticks, which
+never carries any implicit whitespace. This is important, when
+literals are used for signs that enclose content, like the quotation
+marks for the string literals in our JSON-Grammar::
+
+    string     = `"` _CHARS '"'  # mind the difference between `"` and '"'!
+
+Regular expressions, also, never carry implicit whitespace.
+So, if you are using regular expressions as delimiters, you
+still have to add the tilde character, if adjacent insignificant
+whitespace is to be allowed::
+
+    bool       = /true/~ | /false/~
+
+The compliete json-grammar now looks like this::
+
+>>> json_gr = '@disposable = /_\\\\w+/                                      \\n'\
+              '@drop      = whitespace, strings, backticked, _EOF           \\n'\
+              '@reduction = merge                                           \\n'\
+              '@whitespace= /\\\\s*/                                        \\n'\
+              '@comment   = /#[^\\\\n]*(?:\\\\n|$)/                         \\n'\
+              '@literalws = right                                           \\n'\
+              'json       = ~ _element _EOF                                 \\n'\
+              '  _EOF     = /$/                                             \\n'\
+              '_element   = object | array | string | number | bool | null  \\n'\
+              'object     = "{" member ( "," §member )* "}"                 \\n'\
+              'member     = string ":" _element                             \\n'\
+              'array      = "[" ( _element ( "," _element )* )? "]"         \\n'\
+            '''string     = `"` _CHARS '"'                                  \\n'''\
+              '  _CHARS   = /[^"\\\\\]+/ | /\\\\\\\[\/bnrt\\\\\]/           \\n'\
+              'number     = _INT _FRAC? _EXP? ~                             \\n'\
+              '  _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ )              \\n'\
+              '  _FRAC    = /[.]/ /[0-9]+/                                  \\n'\
+              '  _EXP     = /[Ee]/ [/[-+]/] /[0-9]+/                        \\n'\
+              'bool       = /true/~ | /false/~                              \\n'\
+              'null       = /null/~                                         \\n'
+>>> json_parser = create_parser(json_gr, "JSON")
+>>> syntax_tree_ = json_parser(testdata)
+>>> assert syntax_tree_.equals(syntax_tree)
 
 
 Lookahead and Lookbehind
