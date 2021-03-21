@@ -829,7 +829,7 @@ can be avoid, by adding implicit whitespace adjacent to string-literals.
 Remember the definition of the JSON-Grammar earlier. If you look at
 a definition like: `object = "{" ~ member ( "," ~ §member )* "}" ~`,
 you'll notice that there are three whitespace markers, one next to
-each delimiter. Naturally, because one usually wants to allow users
+each delimiter. Naturally so, because one usually wants to allow users
 of a domain specific language to put whitespace around delimiters.
 
 You may wonder, why the tilde appears only on the right hand side
@@ -844,7 +844,25 @@ also have whitespace on the left-hand side, too, which is, of
 course the whitespace on the right hand side of the previous
 element.
 
-
+In order to reduce cluttering the grammar with tile-signs, DHParser
+allows to turn on implicit tilde-whitespace adjacent to any
+string literal with the diretive `@ literalws = right` or
+`@ literalws = left`. As the argument of the directive suggests,
+whitespace is either "eaten" at the right hand side or the left
+hand side of the literal. String literals can either be
+enclose in double quotes "..." or single quotes '...'. Both
+kinds of literals will have implicit whitespace, if the
+`@literalws`-directive is used. However, there is also a special
+type of string-literal, enclosed in backticks, that never carries
+implicit whitespace. This is important, when literals are used
+for signs that enclose content, like the quotation marks for
+our string literal in the JSON-Grammar (see below), because
+whitespace that is part of the enclosed data is not insignificant
+and should not be eaten automatically by the delimiting strings
+or characters. Also, keep in mind that regular expressions do
+not carry implicit whitespace. So, if you are using regular
+expressions as delimiters, you still have to add the tilde character
+where appropriate::
 
 
 Lookahead and Lookbehind
