@@ -61,19 +61,19 @@ of these with four different operators: 1. sequences
 2. alternatives 3. options and 4. repetitions. Here is how these
 elements are denoted in classical and regex-like EBNF-syntax:
 
-========================  ================  ================
-element                   classical EBNF    regex-like
-========================  ================  ================
+========================  ================    ================
+element                   classical EBNF      regex-like
+========================  ================    ================
 insignificant whitespace  ~                 ~
-string literal            "..." or \`...\`  "..." or \`...\`
-regular expr.             /.../             /.../
-sequences                 A B C             A B C
-alternatives              A | B | C         A | B | C
-options                   [ ... ]           ...?
-repetions                 { ... }           ...*
-one or more                                 ...+
-grouping                  (...)             (...)
-========================  ================  ================
+string literal            "..." or \\`...\\`  "..." or \\`...\\`
+regular expr.             /.../               /.../
+sequences                 A B C               A B C
+alternatives              A | B | C           A | B | C
+options                   [ ... ]             ...?
+repetions                 { ... }             ...*
+one or more                                   ...+
+grouping                  (...)               (...)
+========================  ================    ================
 
 "insignificant whitespace" is a speciality of DHParser. Denoting
 insignificant whitespace with a particular sign `~` allows to eliminate
@@ -95,7 +95,7 @@ The structure of a JSON file can easily be described in EBNF::
               'member     = string ":" ~ _element                           \\n'\
               'array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~   \\n'\
               'string     = `"` _CHARS `"` ~                                \\n'\
-              '  _CHARS   = /[^"\\\\\]+/ | /\\\\\\\[\/bnrt\\\\\]/           \\n'\
+              '  _CHARS   = /[^"\\\\\\]+/ | /\\\\\\[\\\\/bnrt\\\\\\]/       \\n'\
               'number     = _INT _FRAC? _EXP? ~                             \\n'\
               '  _INT     = `-`? ( /[1-9][0-9]+/ | /[0-9]/ )                \\n'\
               '  _FRAC    = `.` /[0-9]+/                                    \\n'\
@@ -396,7 +396,7 @@ without a value, wheneever a bool value or null occurs in the input::
               'member     = string ":" ~ _element                           \\n'\
               'array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~   \\n'\
               'string     = `"` _CHARS `"` ~                                \\n'\
-              '  _CHARS   = /[^"\\\\\]+/ | /\\\\\\\[\/bnrt\\\\\]/           \\n'\
+              '  _CHARS   = /[^"\\\\\\]+/ | /\\\\\\[\\\\/bnrt\\\\\\]/       \\n'\
               'number     = _INT _FRAC? _EXP? ~                             \\n'\
               '  _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ )              \\n'\
               '  _FRAC    = /[.]/ /[0-9]+/                                  \\n'\
@@ -903,7 +903,7 @@ The compliete json-grammar now looks like this::
               'member     = string ":" _element                             \\n'\
               'array      = "[" ( _element ( "," _element )* )? "]"         \\n'\
             '''string     = `"` _CHARS '"'                                  \\n'''\
-              '  _CHARS   = /[^"\\\\\]+/ | /\\\\\\\[\/bnrt\\\\\]/           \\n'\
+              '  _CHARS   = /[^"\\\\\\]+/ | /\\\\\\[\\\\/bnrt\\\\\\]/       \\n'\
               'number     = _INT _FRAC? _EXP? ~                             \\n'\
               '  _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ )              \\n'\
               '  _FRAC    = /[.]/ /[0-9]+/                                  \\n'\
@@ -2082,7 +2082,7 @@ class EBNFCompiler(Compiler):
                 this maps the symbols to their compiled definienda.
 
         required_keywords: A list of keywords (like `comment__` or
-                `whitespace__` that need to be defined at the beginning
+                `whitespace__`) that need to be defined at the beginning
                 of the grammar class because they are referred to later.
 
         deferred_tasks:  A list of callables that is filled during
