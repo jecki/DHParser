@@ -445,7 +445,7 @@ and you'll see that no errors get reported any more.
 Finally, we can recompile out "example.dsl"-file, and by its XML output we can
 tell that it worked::
 
-    $ python poetryParser.py example.dsl
+    $ python poetryParser.py --xml example.dsl
 
 So far, we have seen *in nuce* how the development workflow for building up
 a DSL-grammar goes. Let's take this a step further by adding more capabilities

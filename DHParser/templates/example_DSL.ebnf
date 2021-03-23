@@ -10,8 +10,8 @@
 @ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /#.*/           # comments range from a '#'-character to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
-# @ disposable = EOF             # EOF is considered to be a disposable parser that can be reduced
-# @ drop      = EOR  # ,whitespace, strings  # EOF, whitespace and string literals will be dropped
+# @ disposable  = EOF             # EOF is considered to be a disposable parser that can be reduced
+# @ drop        = EOF  # ,whitespace, strings  # EOF, whitespace and string literals will be dropped
 
 
 #######################################################################
