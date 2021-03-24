@@ -42,7 +42,7 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
-    DHParser.log.start_logging(LOGGING)
+    DHParser.log.start_logging(os.path.join(TEST_DIRNAME, LOGGING))
     error_report = testing.grammar_suite(
         os.path.join(scriptpath, TEST_DIRNAME),
         get_grammar, get_transformer,
