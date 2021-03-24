@@ -41,7 +41,7 @@ from DHParser.dsl import compileDSL, compile_on_disk, read_template
 from DHParser.error import is_error
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import start_logging
-from DHParser.toolkit import re
+from DHParser.toolkit import re, split_path
 
 
 LOGGING = False
@@ -99,9 +99,9 @@ def create_project(path: str):
     create_file('README.md', README_TEMPLATE.format(name=name))
     reldhparserdir = os.path.relpath(dhparserdir, os.path.abspath('.'))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
-        name=name, reldhparserdir=reldhparserdir))
+        name=name, reldhparserdir=str(split_path(reldhparserdir))[1:-1]))
     create_file('%sServer.py' % name, SERVER_TEMPLATE.replace('DSL', name).replace(
-        'RELDHPARSERDIR', reldhparserdir))
+        'RELDHPARSERDIR', str(split_path(reldhparserdir))[1:-1]))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     os.chmod('%sServer.py' % name, 0o755)

@@ -11,7 +11,7 @@ LOGGING = ''
 TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)
-dhparserdir = os.path.abspath(os.path.join(scriptpath, '{reldhparserdir}'))
+dhparserdir = os.path.abspath(os.path.join(scriptpath, {reldhparserdir}))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparserdir not in sys.path:

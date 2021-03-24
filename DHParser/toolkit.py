@@ -83,6 +83,7 @@ __all__ = ('typing',
            'escape_ctrl_chars',
            'is_filename',
            'relative_path',
+           'split_path',
            'concurrent_ident',
            'unrepr',
            'abbreviate_middle',
@@ -225,6 +226,21 @@ def relative_path(from_path: str, to_path: str) -> str:
     while i < L and from_path[i] == to_path[i]:
         i += 1
     return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
+
+
+def split_path(path: str) -> Tuple[str]:
+    """Splits a filesystem path into its components. Other than
+    os.path.split() it does not only split of the last part::
+
+    >>> splitpath('a/b/c')
+    ('a', 'b', 'c')
+    >>> os.path.split('a/b/c')  # for comparison.
+    ('a/b', 'c')
+    """
+    split = os.path.split(path)
+    while split[0]:
+        split = os.path.split(split[0]) + split[1:]
+    return split[1:]
 
 
 def concurrent_ident() -> str:
@@ -624,6 +640,7 @@ def isgenerictype(t):
 # loading and compiling
 #
 #######################################################################
+
 
 RX_FILEPATH = re.compile(r'[^ \t][^\n\t?*=]+(?<![ \t])')  # r'[\w/:. \\]+'
 
