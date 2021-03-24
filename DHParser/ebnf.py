@@ -1907,7 +1907,7 @@ VALID_DIRECTIVES = {
     '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
     'disposable': 'List of symbols that shall not be turned into tag-names',
     'drop': 'List of tags to be dropped with all their content from the tree, '
-            'special values: strings, whitespace, regexps',
+            'special values: strings, backticked, whitespace, regexps',
     '[tree_]reduction': 'Reduction level for simplifying the tree while parsing.'
                         'Possible levels: none, flatten, merge_treetops, merge',
     '$SYMBOL_filer': 'Function that transforms captured values of the given symbol on retrieval',

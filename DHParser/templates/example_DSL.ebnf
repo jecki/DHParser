@@ -6,12 +6,13 @@
 #
 #######################################################################
 
-@ whitespace  = vertical        # implicit whitespace, includes any number of line feeds
+@ whitespace  = linefeed        # implicit whitespace, includes linefeed, but not empty lines
 @ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /#.*/           # comments range from a '#'-character to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
-# @ disposable  = EOF             # EOF is considered to be a disposable parser that can be reduced
-# @ drop        = EOF  # ,whitespace, strings  # EOF, whitespace and string literals will be dropped
+@ reduction   = flatten         # anonymous nodes are being reduced where possible
+@ disposable  = EOF             # EOF is considered a disposable symbol that can also be reduced
+@ drop        = EOF, whitespace # EOF and insignificant whitespace (tilde) will be dropped
 
 
 #######################################################################
