@@ -1072,16 +1072,16 @@ class TestSyntaxExtensions:
     def teardown(self):
         set_config_value('syntax_variant', self.save)
 
-    def test_difference(self):
-        lang = """
-            doc = /[A-Z]/ - /[D-F]/
-        """
-        parser = create_parser(lang)
-        st = parser("A")
-        assert not st.errors and st.tag_name == "doc" and st.content == "A"
-        st = parser("E")
-        assert st.errors and any(e.code == PARSER_STOPPED_BEFORE_END for e in st.errors)
-
+    # def test_difference(self):
+    #     lang = """
+    #         doc = /[A-Z]/ - /[D-F]/
+    #     """
+    #     parser = create_parser(lang)
+    #     st = parser("A")
+    #     assert not st.errors and st.tag_name == "doc" and st.content == "A"
+    #     st = parser("E")
+    #     assert st.errors and any(e.code == PARSER_STOPPED_BEFORE_END for e in st.errors)
+    #
     def test_any_char(self):
         lang = 'doc = "A".'
         parser = create_parser(lang)

@@ -418,7 +418,7 @@ class Parser:
         self._parse_proxy = self._parse  # type: ParseFunc
         # self.proxied = None           # type: Optional[ParseFunc]
         try:
-            self._grammar = GRAMMAR_PLACEHOLDER  # type: Grammar
+            self._grammar = get_grammar_placeholder()  # type: Grammar
         except NameError:
             pass
         self._symbol = ''             # type: str
@@ -628,7 +628,7 @@ class Parser:
     @property
     def grammar(self) -> 'Grammar':
         try:
-            if self._grammar is not GRAMMAR_PLACEHOLDER:
+            if not is_grammar_placeholder(self._grammar):
                 return self._grammar
             else:
                 raise ValueError('Grammar has not yet been set!')
@@ -638,7 +638,7 @@ class Parser:
     @grammar.setter
     def grammar(self, grammar: 'Grammar'):
         try:
-            if self._grammar == GRAMMAR_PLACEHOLDER:
+            if is_grammar_placeholder(self._grammar):
                 self._grammar = grammar
                 # self._grammar_assigned_notifier()
             elif self._grammar != grammar:
@@ -646,7 +646,7 @@ class Parser:
                                      "to a different Grammar object!")
         except AttributeError:
             pass  # ignore setting of grammar attribute for placeholder parser
-        except NameError:  # Cython: No access to GRAMMAR_PLACEHOLDER, yet :-(
+        except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
@@ -748,7 +748,14 @@ def Drop(parser: Parser) -> Parser:
     return parser
 
 
-PARSER_PLACEHOLDER = Parser()
+PARSER_PLACEHOLDER = None  # type: Optional[Parser]
+
+
+def get_parser_placeholder() -> Parser:
+    global PARSER_PLACEHOLDER
+    if PARSER_PLACEHOLDER is None:
+        PARSER_PLACEHOLDER = Parser()
+    return cast(Parser, PARSER_PLACEHOLDER)
 
 
 def is_parser_placeholder(parser: Optional[Parser]) -> bool:
@@ -1109,7 +1116,7 @@ class Grammar:
                 has been encountered. Default is 10.000 characters.
     """
     python_src__ = ''  # type: str
-    root__ = PARSER_PLACEHOLDER   # type: Parser
+    root__ = get_parser_placeholder()   # type: Parser  # TODO: too early initialization of Parser?
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()        # type: Dict[str, ResumeList]
@@ -1229,7 +1236,7 @@ class Grammar:
             self.static_analysis_pending__ = [True]  # type: List[bool]
             self.static_analysis_errors__ = []       # type: List[AnalysisError]
         else:
-            assert self.__class__ == Grammar or self.__class__.root__ != PARSER_PLACEHOLDER, \
+            assert self.__class__ == Grammar or not is_parser_placeholder(self.__class__.root__),\
                 "Please add `root__` field to definition of class " + self.__class__.__name__
             self.root_parser__ = copy.deepcopy(self.__class__.root__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
@@ -1656,7 +1663,18 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     return " ".join(msg)
 
 
-GRAMMAR_PLACEHOLDER = Grammar()
+_GRAMMAR_PLACEHOLDER = None  # type: Grammar
+
+
+def get_grammar_placeholder() -> Grammar:
+    global _GRAMMAR_PLACEHOLDER
+    if _GRAMMAR_PLACEHOLDER is None:
+        _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
+    return cast(Parser, _GRAMMAR_PLACEHOLDER)
+
+
+def is_grammar_placeholder(grammar: Optional[Grammar]) -> bool:
+    return grammar is None or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER
 
 
 ########################################################################
@@ -3539,8 +3557,8 @@ class Forward(UnaryParser):
     """
 
     def __init__(self):
-        super(Forward, self).__init__(PARSER_PLACEHOLDER)
-        # self.parser = PARSER_PLACEHOLDER  # type: Parser
+        super(Forward, self).__init__(get_parser_placeholder())
+        # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached = False  # type: bool
 
     def reset(self):

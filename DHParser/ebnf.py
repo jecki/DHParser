@@ -1350,9 +1350,11 @@ class EBNFGrammar(Grammar):
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
     root__ = syntax
 
-    free_char_parsefunc__ = free_char._parse
-    char_range_heuristics_parsefunc__ = char_range_heuristics._parse
-    regex_heuristics_parserfunc__ = regex_heuristics._parse
+    def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
+        Grammar.__init__(self, root, static_analysis)
+        self.free_char_parsefunc__ = self.free_char._parse
+        self.char_range_heuristics_parsefunc__ = self.char_range_heuristics._parse
+        self.regex_heuristics_parserfunc__ = self.regex_heuristics._parse
 
     @property
     def mode(self) -> str:
