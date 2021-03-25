@@ -9,6 +9,8 @@ DHParser Version 0.9.5
   prev_context, next_context.
 - DHParser.syntaxtree: added insert() and remove() methods to Node class
 - DHParser.syntaxtree: added a mini API for manipulating attributes
+- DHParser.parse: added early horizontal tree-reduction to class CombinedParser
+- DHParser.ebnf: added ""@reduction"-directive
 
 DHParser Version 0.9.4 (6.10.2020)
 ..................................
