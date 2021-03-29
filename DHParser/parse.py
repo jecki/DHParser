@@ -420,7 +420,7 @@ class Parser:
         try:
             self._grammar = get_grammar_placeholder()  # type: Grammar
         except NameError:
-            pass
+            pass                      # ensures Cython-compatibility
         self._symbol = ''             # type: str
         self.reset()
 
@@ -739,6 +739,7 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser):
     duplicate.tag_name = src.tag_name
 
 
+
 def Drop(parser: Parser) -> Parser:
     """Returns the parser with the `parser.drop_content`-property set to `True`."""
     assert parser.disposable, "Parser must be anonymous to be allowed to drop ist content."
@@ -754,7 +755,11 @@ PARSER_PLACEHOLDER = None  # type: Optional[Parser]
 def get_parser_placeholder() -> Parser:
     global PARSER_PLACEHOLDER
     if PARSER_PLACEHOLDER is None:
-        PARSER_PLACEHOLDER = Parser()
+        PARSER_PLACEHOLDER = Parser.__new__(Parser)  # Parser()
+        PARSER_PLACEHOLDER.pname = ''
+        PARSER_PLACEHOLDER.disposable = False
+        PARSER_PLACEHOLDER.drop_content = False
+        PARSER_PLACEHOLDER.tag_name = ':Parser'
     return cast(Parser, PARSER_PLACEHOLDER)
 
 
