@@ -7,7 +7,7 @@
 
 cdef class Parser:
     cdef public str pname
-    cdef public bint anonymous
+    cdef public bint disposable
     cdef public bint drop_content
     cdef public str tag_name
     cdef public object _grammar
@@ -66,8 +66,15 @@ cdef class Whitespace(RegExp):
     pass
 
 cdef class CombinedParser(Parser):
-    cpdef _return_value(self, node)
-    cpdef _return_values(self, results)
+    cdef public object _return_value
+    cdef public object _return_values
+
+    cpdef _return_value_no_optimization(self, node)
+    cpdef _return_value_flatten(self, node)
+    cpdef _return_values_no_tree_reduction(self, results)
+    cpdef _return_values_flatten(self, results)
+    cpdef _return_values_merge_treetops(self, results)
+    cpdef _return_values_merge_leaves(self, results)
 
 cdef class UnaryParser(CombinedParser):
     cdef public object parser

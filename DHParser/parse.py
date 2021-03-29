@@ -1722,13 +1722,11 @@ class PreprocessorToken(Parser):
         super(PreprocessorToken, self).__init__()
         self.pname = token
         if token:
-            self.anonymous = False
+            self.disposable = False
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.pname)
         copy_parser_base_attrs(self, duplicate)
-        duplicate.anonymous = self.anonymous
-        duplicate.tag_name = self.tag_name
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1967,6 +1965,11 @@ class CombinedParser(Parser):
     speed up.
     """
 
+    def __init__(self):
+        super(CombinedParser, self).__init__()
+        self._return_value = self._return_value_flatten
+        self._return_values = self._return_values_flatten
+
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         copy_combined_parser_attrs(self, duplicate)
@@ -2061,8 +2064,13 @@ class CombinedParser(Parser):
                     grandchildren = child._children
                     if grandchildren:
                         nr.extend(grandchildren)
-                        merge &= all(not grandchild._children and grandchild.anonymous
-                                      for grandchild in grandchildren)
+                        # merge &= all(not grandchild._children and grandchild.anonymous
+                        #               for grandchild in grandchildren)
+                        # cython compatibility:
+                        for grandchild in grandchildren:
+                            if grandchild._children or not grandchild.anonymous:
+                                merge = False
+                                break
                     elif child._result:
                         nr.append(child)
                 else:
@@ -2070,7 +2078,9 @@ class CombinedParser(Parser):
                     merge = False
             if nr:
                 if merge:
-                    result = ''.join(nd._result for nd in nr)
+                    # result = ''.join(nd._result for nd in nr)
+                    # cython compatibility:
+                    result = ''.join([nd._result for nd in nr])
                     if result or not self.disposable:
                         return Node(self.tag_name, result)
                     return EMPTY_NODE
@@ -2144,9 +2154,6 @@ class CombinedParser(Parser):
     MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
     MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
     DEFAULT_OPTIMIZATION = FLATTEN
-
-    _return_value = _return_value_flatten
-    _return_values = _return_values_flatten
 
 
 def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):

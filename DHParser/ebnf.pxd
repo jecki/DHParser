@@ -13,7 +13,9 @@ cdef class EBNFDirectives:
     cdef public dict error
     cdef public dict skip
     cdef public dict resume
+    cdef public str disposable
     cdef public set drop
+    cdef public int reduction
     cdef public object _super_ws
 
 

@@ -53,6 +53,9 @@ cdef class RootNode(Node):
     cdef public object error_nodes
     cdef public object error_positions
     cdef public int error_flag
+    cdef public str source
+    cdef public object source_mapping
+    cdef public list lbreaks
     cdef public set inline_tags
     cdef public set omit_tags
     cdef public set empty_tags
