@@ -19,10 +19,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import cProfile as profile
 import fnmatch
 import os
-import pstats
 import sys
 
 
@@ -116,6 +114,8 @@ def tst_func():
                 f.write(output.serialize('S-expression'))
 
 def cpu_profile(func):
+    import cProfile as profile
+    import pstats
     pr = profile.Profile()
     pr.enable()
     func()
