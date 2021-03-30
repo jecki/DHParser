@@ -489,9 +489,13 @@ class Parser:
 
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
-            if location in visited:
+            cached = visited.get(location, False)
+            if cached:
                 # no history recording in case of memoized results!
-                return visited[location]
+                return cached
+            # if location in visited:
+            #     # no history recording in case of memoized results!
+            #     return visited[location]
 
             memoization_state = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
@@ -1795,11 +1799,13 @@ class Text(Parser):
         return duplicate
 
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
-        if text.startswith(self.text):
+        self_len = self.len    # use local variables for optimization
+        self_text = self.text
+        if text[:self_len] == self_text:  # text.startswith(self.text):
             if self.drop_content:
-                return EMPTY_NODE, text[self.len:]
-            elif self.text or not self.disposable:
-                return Node(self.tag_name, self.text, True), text[self.len:]
+                return EMPTY_NODE, text[self_len:]
+            elif self_text or not self.disposable:
+                return Node(self.tag_name, self_text, True), text[self_len:]
             return EMPTY_NODE, text
         return None, text
 
