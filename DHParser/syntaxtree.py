@@ -1005,7 +1005,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         practice to remove (or name) all anonymous nodes during the
         AST-transformation.
         """
-        return not self.tag_name or self.tag_name[0] == ':'  # self.tag_name.find(':') >= 0
+        tn = self.tag_name
+        return not tn or tn[0] == ':'  # self.tag_name.find(':') >= 0
 
     # node content ###
 

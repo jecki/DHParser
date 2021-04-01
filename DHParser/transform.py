@@ -296,7 +296,12 @@ class BlockLeaves(Filter):
 
 class BlockAnonymousLeaves(Filter):
     def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
-        return tuple(child for child in children if child._children or not child.anonymous)
+        try:
+            return tuple(child for child in children
+                         if child._children or not child.tag_name[0] == ':')
+        except IndexError:
+            return tuple(child for child in children
+                         if child._children or not child.anonymous)
 
 
 BLOCK_CHILDREN = BlockChildren()
@@ -403,7 +408,7 @@ def traverse(root_node: Node,
                 all_filters = [BLOCK_CHILDREN]
             cache[key] = (filters + more_filters, sequence)
 
-        children = node.children
+        children = node._children
         for filter in filters:
             children = filter(children)
         if children:
@@ -435,10 +440,10 @@ def merge_treetops(node: Node):
     only anonymous child nodes that are leaves. "mergeing" here means the
     node's result will be replaced by the merged content of the children.
     """
-    if node.children:
+    if node._children:
         crunch = True
-        for child in node.children:
-            if child.children:
+        for child in node._children:
+            if child._children:
                 merge_treetops(child)
                 crunch = False
             elif not child.anonymous:
@@ -563,23 +568,32 @@ def all_of(context: TreeContext, bool_func_set: AbstractSet[collections.abc.Call
 
 def is_single_child(context: TreeContext) -> bool:
     """Returns ``True`` if the current node does not have any siblings."""
-    return len(context[-2].children) == 1
+    return len(context[-2]._children) == 1
 
 
 # TODO: ambiguous: named, tagging...
 def is_named(context: TreeContext) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
-    return not context[-1].anonymous
+    # return not context[-1].anonymous
+    tn = context[-1].tag_name
+    return tn and tn[0] != ':'
 
 
 def is_anonymous(context: TreeContext) -> bool:
     """Returns ``True`` if the current node is anonymous."""
-    return context[-1].anonymous
+    # return context[-1].anonymous
+    tn = context[-1].tag_name
+    return not tn or tn[0] == ':'
 
 
 def is_anonymous_leaf(context: TreeContext) -> bool:
     """Returns `True` if context ends in an anonymous leaf-node"""
-    return not context[-1].children and context[-1].anonymous
+    # return not context[-1].children and context[-1].anonymous
+    node = context[-1]
+    if node._children:
+        return False
+    tn = node.tag_name
+    return not tn or tn[0] == ':'
 
 
 RX_WHITESPACE = re.compile(r'\s*$')
@@ -705,7 +719,7 @@ def has_children(context: TreeContext) -> bool:
 def has_descendant(context: TreeContext, tag_name_set: AbstractSet[str],
                    generations: int = -1) -> bool:
     assert generations != 0
-    for child in context[-1].children:
+    for child in context[-1]._children:
         if child.tag_name in tag_name_set:
             return True
         if (generations < 0 or generations > 1) \
@@ -725,7 +739,7 @@ def has_child(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
 def has_sibling(context: TreeContext, tag_name_set: AbstractSet[str]):
     if len(context) >= 2:
         node = context[-1]
-        for child in context[-2].children:
+        for child in context[-2]._children:
             if child != node and child.tag_name in tag_name_set:
                 return True
     return False
@@ -790,12 +804,16 @@ def _replace_by(node: Node, child: Node, root: RootNode):
     """
     Replaces node's contents by child's content including the tag name.
     """
-    if node.anonymous or not child.anonymous:
-        node.tag_name = child.tag_name
+    # if node.anonymous or not child.anonymous:
+    #     node.tag_name = child.tag_name
+    nd_tn = node.tag_name
+    ch_tn = child.tag_name
+    if not nd_tn or nd_tn[0] == ':' or (ch_tn and ch_tn[0] != ':'):
+        node.tag_name = ch_tn
         # name, ptype = (node.tag_name.split(':') + [''])[:2]
         # child.parser = MockParser(name, ptype)
         # parser names must not be overwritten, else: child.parser.name = node.parser.name
-    node._set_result(child.result)
+    node._set_result(child._result)
     update_attr(node, (child,), root)
 
 
@@ -803,7 +821,7 @@ def _reduce_child(node: Node, child: Node, root: RootNode):
     """
     Sets node's results to the child's result, keeping node's tag_name.
     """
-    node._set_result(child.result)
+    node._set_result(child._result)
     update_attr(node, (child,), root)
     # update_attr(child, (node,), root)
     # if child.has_attr():
@@ -832,8 +850,8 @@ def replace_by_single_child(context: TreeContext):
     attribute value take precedence.
     """
     node = context[-1]
-    if len(node.children) == 1:
-        _replace_by(node, node.children[0], cast(RootNode, context[0]))
+    if len(node._children) == 1:
+        _replace_by(node, node._children[0], cast(RootNode, context[0]))
 
 
 def replace_by_children(context: TreeContext):
@@ -851,10 +869,10 @@ def replace_by_children(context: TreeContext):
         replace_by_single_child(context)
         return
     node = context[-1]
-    if node.children:
-        result = parent.children  # type: Tuple[Node, ...]
+    if node._children:
+        result = parent._children  # type: Tuple[Node, ...]
         i = result.index(node)
-        parent._set_result(result[:i] + node.children + result[i + 1:])
+        parent._set_result(result[:i] + node._children + result[i + 1:])
 
 
 def reduce_single_child(context: TreeContext):
@@ -867,8 +885,8 @@ def reduce_single_child(context: TreeContext):
     attribute value take precedence.
     """
     node = context[-1]
-    if len(node.children) == 1:
-        _reduce_child(node, node.children[0], cast(RootNode, context[0]))
+    if len(node._children) == 1:
+        _reduce_child(node, node._children[0], cast(RootNode, context[0]))
 
 
 @transformation_factory(collections.abc.Callable)
@@ -878,8 +896,8 @@ def replace_or_reduce(context: TreeContext, condition: Callable = is_named):
     otherwise (i.e. if the child is anonymous) reduces the child.
     """
     node = context[-1]
-    if len(node.children) == 1:
-        child = node.children[0]
+    if len(node._children) == 1:
+        child = node._children[0]
         if condition(context):
             _replace_by(node, child, cast(RootNode, context[0]))
         else:
@@ -918,8 +936,9 @@ def replace_tag_names(context: TreeContext, replacements: Dict[str, str]):
     """
     # assert ZOMBIE_TAG not in replacements, 'Replacing ZOMBIE_TAGS is not allowed, " \
     #     "because they result from errors that could otherwise be overlooked, subsequently!'
-    for child in context[-1].children:
-        child.tag_name = replacements.get(child.tag_name, child.tag_name)
+    for child in context[-1]._children:
+        original_tag_name = child.tag_name
+        child.tag_name = replacements.get(original_tag_name, original_tag_name)
 
 
 @transformation_factory(collections.abc.Callable)
@@ -943,15 +962,15 @@ def flatten(context: TreeContext, condition: Callable = is_anonymous, recursive:
     """
 
     node = context[-1]
-    if node.children:
+    if node._children:
         new_result = []     # type: List[Node]
         context.append(PLACEHOLDER)
-        for child in node.children:
+        for child in node._children:
             context[-1] = child
-            if child.children and condition(context):
+            if child._children and condition(context):
                 if recursive:
                     flatten(context, condition, recursive)
-                new_result.extend(child.children)
+                new_result.extend(child._children)
                 update_attr(node, (child,), cast(RootNode, context[0]))
             else:
                 new_result.append(child)
@@ -994,7 +1013,7 @@ def collapse_children_if(context: TreeContext, condition: Callable, target_tag: 
     assert isinstance(target_tag, str)  # TODO: Delete this when safe
 
     node = context[-1]
-    if not node.children:
+    if not node._children:
         return  # do nothing if its a leaf node
     package = []  # type: List[Node]
     result = []  # type: List[Node]
@@ -1018,14 +1037,14 @@ def collapse_children_if(context: TreeContext, condition: Callable, target_tag: 
             #     tag_name = target_tag
             s = "".join(nd.content for nd in package)
             # TODO: update attributes
-            result.append(Node(target_tag, s))
+            result.append(Node(target_tag, s, True))
             package = []
 
-    for child in node.children:
+    for child in node._children:
         if condition([child]):
-            if child.children:
+            if child._children:
                 collapse_children_if([child], condition, target_tag)
-                for c in child.children:
+                for c in child._children:
                     if condition([c]):
                         package.append(c)
                     else:
@@ -1077,7 +1096,7 @@ def normalize_whitespace(context):
     however.
     """
     node = context[-1]
-    assert not node.children
+    assert not node._children
     if context[-1].tag_name == WHITESPACE_PTYPE:
         if node.result:
             node.result = ' '
@@ -1093,14 +1112,14 @@ def merge_adjacent(context: TreeContext, condition: Callable, tag_name: str = ''
     alike. Otherwise a type-error might ensue.
     """
     node = context[-1]
-    children = node.children
+    children = node._children
     if children:
         new_result = []
         i = 0
         L = len(children)
         while i < L:
             if condition([children[i]]):
-                initial = () if children[i].children else ''
+                initial = () if children[i]._children else ''
                 k = i
                 i += 1
                 while i < L and condition([children[i]]):
@@ -1141,14 +1160,14 @@ def merge_connected(context: TreeContext, content: Callable, delimiter: Callable
     # first, merge all delimiters
     merge_adjacent(context, delimiter, delimiter_name)
     node = context[-1]
-    children = node.children
+    children = node._children
     if children:
         new_result = []
         i = 0
         L = len(children)
         while i < L:
             if content([children[i]]):
-                initial = () if children[i].children else ''
+                initial = () if children[i]._children else ''
                 k = i
                 i += 1
                 while i < L and (content([children[i]]) or delimiter([children[i]])):
@@ -1186,11 +1205,11 @@ def merge_results(dest: Node, src: Tuple[Node, ...], root: RootNode) -> bool:
         >>> str(head)
         '123456'
     """
-    if all(nd.children for nd in src):
-        dest.result = reduce(operator.add, (nd.children for nd in src[1:]), src[0].children)
+    if all(nd._children for nd in src):
+        dest.result = reduce(operator.add, (nd._children for nd in src[1:]), src[0]._children)
         update_attr(dest, src, root)
         return True
-    elif all(not nd.children for nd in src):
+    elif all(not nd._children for nd in src):
         dest.result = reduce(operator.add, (nd.content for nd in src[1:]), src[0].content)
         update_attr(dest, src, root)
         return True
@@ -1209,16 +1228,16 @@ def move_adjacent(context: TreeContext, condition: Callable, merge: bool = True)
     WARNING: This function should never follow replace_by_children() in the transformation list!!!
     """
     node = context[-1]
-    if len(context) <= 1 or not node.children:
+    if len(context) <= 1 or not node._children:
         return
     parent = context[-2]
 
-    assert node in parent.children, \
+    assert node in parent._children, \
         ("Node %s (%s) is not among its parent's children, any more! "
          "This could be due to a transformation that manipulates the parent's result earlier "
          "in the transformation pipeline, like replace_by_children.") % (node.tag_name, id(node))
 
-    children = node.children
+    children = node._children
 
     a, b = 0, len(children)
     while a < b:
@@ -1234,7 +1253,8 @@ def move_adjacent(context: TreeContext, condition: Callable, merge: bool = True)
 
     if before or after:
         node._set_result(children)
-        for i, child in enumerate(parent.children):
+        parent_children = parent._children
+        for i, child in enumerate(parent_children):
             if id(child) == id(node):
                 break
 
@@ -1243,14 +1263,14 @@ def move_adjacent(context: TreeContext, condition: Callable, merge: bool = True)
 
         # merge adjacent nodes that fulfil the condition
         if merge:
-            while a >= 0 and condition([parent.children[a]]):
+            while a >= 0 and condition([parent_children[a]]):
                 a -= 1
-            prevN = parent.children[a + 1:i]
+            prevN = parent_children[a + 1:i]
 
-            N = len(parent.children)
-            while b < N and condition([parent.children[b]]):
+            N = len(parent_children)
+            while b < N and condition([parent_children[b]]):
                 b += 1
-            nextN = parent.children[i + 1:b]
+            nextN = parent_children[i + 1:b]
 
             if len(before) + len(prevN) > 1:
                 target = before[-1] if before else prevN[0]
@@ -1264,7 +1284,7 @@ def move_adjacent(context: TreeContext, condition: Callable, merge: bool = True)
                     after = (target,)
             after = after or nextN
 
-        parent._set_result(parent.children[:a + 1] + before + (node,) + after + parent.children[b:])
+        parent._set_result(parent_children[:a + 1] + before + (node,) + after + parent_children[b:])
 
 
 def left_associative(context: TreeContext):
@@ -1272,13 +1292,13 @@ def left_associative(context: TreeContext):
     Rearranges a flat node with infix operators into a left associative tree.
     """
     node = context[-1]
-    if len(node.children) >= 3:
-        assert (len(node.children) + 1) % 2 == 0
-        rest = list(node.children)
+    if len(node._children) >= 3:
+        assert (len(node._children) + 1) % 2 == 0
+        rest = list(node._children)
         left, rest = rest[0], rest[1:]
         while rest:
             infix, right, rest = rest[0], rest[1], rest[2:]
-            assert not infix.children
+            assert not infix._children
             assert infix.tag_name[0:1] != ":"
             left = Node(infix.tag_name, (left, right))
         node.result = (left,)
@@ -1300,12 +1320,12 @@ def lean_left(context: TreeContext, operators: AbstractSet[str]):
     must be done in a second pass.
     """
     node = context[-1]
-    assert node.children and len(node.children) == 2
+    assert node._children and len(node._children) == 2
     assert node.tag_name in operators
-    right = node.children[1]
+    right = node._children[1]
     if right.tag_name in operators:
-        assert right.children and len(right.children) == 2
-        a, b, c = node.children[0], right.children[0], right.children[1]
+        assert right._children and len(right._children) == 2
+        a, b, c = node._children[0], right._children[0], right._children[1]
         op1 = node.tag_name
         op2 = right.tag_name
         right.result = (a, b)
@@ -1333,28 +1353,30 @@ def lstrip(context: TreeContext, condition: Callable = contains_only_whitespace)
     """Recursively removes all leading child-nodes that fulfill a given condition."""
     node = context[-1]
     i = 1
-    while i > 0 and node.children:
-        lstrip(context + [node.children[0]], condition)
-        i, L = 0, len(node.children)
-        while i < L and condition(context + [node.children[i]]):
+    while i > 0 and node._children:
+        node_children = node._children
+        lstrip(context + [node_children[0]], condition)
+        i, L = 0, len(node_children)
+        while i < L and condition(context + [node_children[i]]):
             i += 1
         if i > 0:
-            node._set_result(node.children[i:])
+            node._set_result(node_children[i:])
 
 
 @transformation_factory(collections.abc.Callable)
 def rstrip(context: TreeContext, condition: Callable = contains_only_whitespace):
     """Recursively removes all leading nodes that fulfill a given condition."""
     node = context[-1]
-    i, L = 0, len(node.children)
-    while i < L and node.children:
-        rstrip(context + [node.children[-1]], condition)
-        L = len(node.children)
+    i, L = 0, len(node._children)
+    while i < L and node._children:
+        node_children = node._children
+        rstrip(context + [node_children[-1]], condition)
+        L = len(node_children)
         i = L
-        while i > 0 and condition(context + [node.children[i - 1]]):
+        while i > 0 and condition(context + [node_children[i - 1]]):
             i -= 1
         if i < L:
-            node._set_result(node.children[:i])
+            node._set_result(node_children[:i])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1368,16 +1390,16 @@ def strip(context: TreeContext, condition: Callable = contains_only_whitespace):
 def keep_children(context: TreeContext, section: slice = slice(None)):
     """Keeps only child-nodes which fall into a slice of the result field."""
     node = context[-1]
-    if node.children:
-        node._set_result(node.children[section])
+    if node._children:
+        node._set_result(node._children[section])
 
 
 @transformation_factory(collections.abc.Callable)
 def keep_children_if(context: TreeContext, condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
-    if node.children:
-        node._set_result(tuple(c for c in node.children if condition(context + [c])))
+    if node._children:
+        node._set_result(tuple(c for c in node._children if condition(context + [c])))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1404,8 +1426,8 @@ def keep_content(context: TreeContext, regexp: str):
 def remove_children_if(context: TreeContext, condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
     node = context[-1]
-    if node.children:
-        node._set_result(tuple(c for c in node.children if not condition(context + [c])))
+    if node._children:
+        node._set_result(tuple(c for c in node._children if not condition(context + [c])))
     pass
 
 
@@ -1444,20 +1466,20 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 
 def remove_brackets(context: TreeContext):
     """Removes any leading or trailing sequence of whitespaces, tokens or regexps."""
-    children = context[-1].children
+    children = context[-1]._children
     if children:
         disposables = LEAF_PTYPES
         i = 0
         while (i < len(children)
                and (children[i].tag_name in disposables
                     or (children[i].tag_name == ':Series'
-                        and all(c.tag_name in disposables for c in children[i].children)))):
+                        and all(c.tag_name in disposables for c in children[i]._children)))):
             i += 1
         k = len(children)
         while (k > 0
                and (children[k - 1].tag_name in disposables
                     or (children[k - 1].tag_name == ':Series'
-                        and all(c.tag_name in disposables for c in children[k - 1].children)))):
+                        and all(c.tag_name in disposables for c in children[k - 1]._children)))):
             k -= 1
         context[-1]._set_result(children[i:k])
 
@@ -1491,7 +1513,7 @@ def remove_if(context: TreeContext, condition: Callable):
         except IndexError:
             return
         node = context[-1]
-        parent._set_result(tuple(nd for nd in parent.children if nd != node))
+        parent._set_result(tuple(nd for nd in parent._children if nd != node))
 
 
 #######################################################################
@@ -1551,13 +1573,13 @@ def positions_of(context: TreeContext, tag_names: AbstractSet[str] = frozenset()
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `tag_names`.
     """
-    return tuple(i for i, c in enumerate(context[-1].children) if c.tag_name in tag_names)
+    return tuple(i for i, c in enumerate(context[-1]._children) if c.tag_name in tag_names)
 
 
 @transformation_factory
 def delimiter_positions(context: TreeContext):
     """Returns a tuple of positions "between" all children."""
-    return tuple(range(1, len(context[-1].children)))
+    return tuple(range(1, len(context[-1]._children)))
 
 
 PositionType = Union[int, tuple, Callable]
@@ -1592,7 +1614,7 @@ def insert(context: TreeContext, position: PositionType, node_factory: Callable)
     if not pos_tuple:
         return
     node = context[-1]
-    children = list(node.children)
+    children = list(node._children)
     assert children or not node.result, "Cannot add nodes to a leaf-node!"
     L = len(children)
     pos_tuple = sorted(tuple((p if p >= 0 else (p + L)) for p in pos_tuple), reverse=True)
@@ -1672,7 +1694,7 @@ def error_on(context: TreeContext,
 #                                  WARNING)
 
 
-assert_has_children = error_on(lambda nd: nd.children, 'Element "%s" has no children')
+assert_has_children = error_on(lambda nd: nd._children, 'Element "%s" has no children')
 
 
 @transformation_factory
@@ -1686,7 +1708,7 @@ def assert_content(context: TreeContext, regexp: str):
 @transformation_factory(collections.abc.Set)
 def require(context: TreeContext, child_tags: AbstractSet[str]):
     node = context[-1]
-    for child in node.children:
+    for child in node._children:
         if child.tag_name not in child_tags:
             cast(RootNode, context[0]).new_error(node, 'Element "%s" is not allowed inside "%s".'
                                                  % (child.tag_name, node.tag_name))
@@ -1695,7 +1717,7 @@ def require(context: TreeContext, child_tags: AbstractSet[str]):
 @transformation_factory(collections.abc.Set)
 def forbid(context: TreeContext, child_tags: AbstractSet[str]):
     node = context[-1]
-    for child in node.children:
+    for child in node._children:
         if child.tag_name in child_tags:
             cast(RootNode, context[0]).new_error(node, 'Element "%s" cannot be nested inside "%s".'
                                                  % (child.tag_name, node.tag_name))

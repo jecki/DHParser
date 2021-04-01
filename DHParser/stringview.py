@@ -98,7 +98,8 @@ def fast_real_indices(begin: Optional[int],
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
-    cbegin = 0 if begin is None else begin
+    # cbegin = 0 if begin is None else begin
+    cbegin = begin if begin else 0
     cend = length if end is None else end
     return pack_index(cbegin, length), pack_index(cend, length)
 
@@ -120,18 +121,24 @@ class StringView:  # collections.abc.Sized
     """
     __slots__ = ['_text', '_begin', '_end', '_len', '_fullstring']
 
+    @cython.locals(_begin=cython.int, _end=cython.int, _len=cython.int)
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         # assert isinstance(text, str)
+        # self._text = text  # type: str
+        # self._begin, self._end = fast_real_indices(begin, end, len(text))
+        # self._len = self._end - self._begin  # type: int
+        # if self._len < 0:
+        #     self._len = 0
+        # self._fullstring = ''  # type: str
         self._text = text  # type: str
-        self._begin, self._end = fast_real_indices(begin, end, len(text))
-        self._len = self._end - self._begin  # type: int
-        if self._len < 0:
-            self._len = 0
+        _begin, _end = fast_real_indices(begin, end, len(text))
+        _len = _end - _begin  # type: int
+        if _len < 0:
+            _len = 0
+        self._begin = _begin   # type: int
+        self._end = _end       # type: int
+        self._len = _len       # type: int
         self._fullstring = ''  # type: str
-        # if (self._begin == 0 and self._len == len(self._text)):
-        #     self._fullstring = self._text  # type: str
-        # else:
-        #     self._fullstring = ''
 
     def __bool__(self) -> bool:
         return self._len != 0  # self._end > self._begin  # and bool(self.text)
@@ -141,22 +148,36 @@ class StringView:  # collections.abc.Sized
 
     def __str__(self) -> str:
         """PERFORMANCE WARNING: This creates a copy of the string-slice!"""
-        if self._fullstring:  # optimization: avoid slicing/copying
-            return self._fullstring
+        _fullstring = self._fullstring  # type: str
+        if _fullstring or self._len == 0:  # optimization: avoid slicing/copying
+            return _fullstring
         # since the slice is being copied now, anyway, the copy might
         # as well be stored in the string view
         # return self.text[self.begin:self.end]  # use this for debugging!
-        self._fullstring = self._text[self._begin:self._end]
-        return self._fullstring
+        _fullstring = self._text[self._begin:self._end]
+        self._fullstring = _fullstring
+        return _fullstring
 
     def __repr__(self) -> str:
         """PERFORMANCE WARNING: This creates a copy of the string-slice!"""
         return repr(str(self))
 
+    @cython.locals(_len=cython.int)
     def __eq__(self, other) -> bool:
         """PERFORMANCE WARNING: This creates copies of the compared string-slices!"""
         # one string copy could be avoided by using find...
-        return len(other) == len(self) and str(self) == str(other)
+        # return len(other) == self._len and str(self) == str(other)
+        _len = self._len
+        if len(other) == _len:
+            if _len == 0:
+                return True
+            _fullstring = self._fullstring  # type: str
+            if _fullstring:
+                return _fullstring == str(other)
+            _fullstring = self._text[self._begin:self._end]
+            self._fullstring = _fullstring
+            return _fullstring == str(other)
+        return False
 
     def __hash__(self) -> int:
         """PERFORMANCE WARNING: This creates a copy of the string-slice!"""
@@ -174,18 +195,21 @@ class StringView:  # collections.abc.Sized
         else:
             return StringView(str(other) + str(self))
 
-    @cython.locals(start=cython.int, stop=cython.int)
+    @cython.locals(start=cython.int, stop=cython.int, _begin=cython.int, _index=cython.int)
     def __getitem__(self, index: Union[slice, int]) -> 'StringView':
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
         try:
             start, stop = fast_real_indices(index.start, index.stop, self._len)
-            return StringView(self._text, self._begin + start, self._begin + stop)
+            _begin = self._begin  # type: int
+            return StringView(self._text, _begin + start, _begin + stop)
         except AttributeError:
-            if index >= self._len:
-                raise IndexError("StringView index %i out of range 0 - %i" % (index, self._len))
-            return StringView(self._text, self._begin + index, self._begin + index + 1)
+            _index = index  # type: int
+            if _index >= self._len:
+                raise IndexError("StringView index %i out of range 0 - %i" % (_index, self._len))
+            _begin = self._begin
+            return StringView(self._text, self._begin + _index, self._begin + _index + 1)
             # return self._text[self._begin + index] # leads to type errors
 
     def get_text(self) -> str:
@@ -209,7 +233,7 @@ class StringView:  # collections.abc.Sized
             _start, _end = fast_real_indices(start, end, self._len)
             return self._text.count(sub, self._begin + _start, self._begin + _end)
 
-    @cython.locals(_start=cython.int, _end=cython.int)
+    @cython.locals(_start=cython.int, _end=cython.int, _begin=cython.int)
     def find(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the lowest index in S where substring `sub` is found,
         such that `sub` is contained within S[start:end].  Optional
@@ -222,13 +246,14 @@ class StringView:  # collections.abc.Sized
             else:
                 return self._fullstring.find(sub, start, end)
         elif start is None and end is None:
-            return max(self._text.find(sub, self._begin, self._end) - self._begin, -1)
+            _begin = self._begin  # type: int
+            return max(self._text.find(sub, _begin, self._end) - _begin, -1)
         else:
+            _begin = self._begin  # type: int
             _start, _end = fast_real_indices(start, end, self._len)
-            return max(self._text.find(sub, self._begin + _start, self._begin + _end)
-                       - self._begin, -1)
+            return max(self._text.find(sub, self._begin + _start, _begin + _end) - _begin, -1)
 
-    @cython.locals(_start=cython.int, _end=cython.int)
+    @cython.locals(_start=cython.int, _end=cython.int, _begin=cython.int)
     def rfind(self, sub: str, start: Optional[int] = None, end: Optional[int] = None) -> int:
         """Returns the highest index in S where substring `sub` is found,
         such that `sub` is contained within S[start:end].  Optional
@@ -241,12 +266,14 @@ class StringView:  # collections.abc.Sized
             else:
                 return self._fullstring.rfind(sub, start, end)
         if start is None and end is None:
-            return max(self._text.rfind(sub, self._begin, self._end) - self._begin, -1)
+            _begin = self._begin  # type: int
+            return max(self._text.rfind(sub, _begin, self._end) - _begin, -1)
         else:
+            _begin = self._begin  # type: int
             _start, _end = fast_real_indices(start, end, self._len)
-            return max(self._text.rfind(sub, self._begin + _start, self._begin + _end)
-                       - self._begin, -1)
+            return max(self._text.rfind(sub, _begin + _start, _begin + _end) - _begin, -1)
 
+    @cython.locals(start=cython.int)
     def startswith(self,
                    prefix: str,
                    start: int = 0,
@@ -259,6 +286,7 @@ class StringView:  # collections.abc.Sized
         end = self._end if end is None else self._begin + end
         return self._text.startswith(prefix, start, end)
 
+    @cython.locals(start=cython.int)
     def endswith(self,
                  suffix: str,
                  start: int = 0,
@@ -271,6 +299,7 @@ class StringView:  # collections.abc.Sized
         end = self._end if end is None else self._begin + end
         return self._text.endswith(suffix, start, end)
 
+    @cython.locals(flags=cython.int)
     def match(self, regex, flags: int = 0):
         """Executes `regex.match` on the StringView object and returns the
         result, which is either a match-object or None. Keep in mind that
@@ -279,6 +308,7 @@ class StringView:  # collections.abc.Sized
         """
         return regex.match(self._text, pos=self._begin, endpos=self._end)
 
+    @cython.locals(absolute_index=cython.int)
     def index(self, absolute_index: int) -> int:
         """Converts an index for a string watched by a StringView object
         to an index relative to the string view object, e.g.::
@@ -293,22 +323,24 @@ class StringView:  # collections.abc.Sized
         """
         return absolute_index - self._begin
 
+    @cython.locals(_begin=cython.int)
     def indices(self, absolute_indices: Iterable[int]) -> Tuple[int, ...]:
         """Converts indices for a string watched by a StringView object
         to indices relative to the string view object. See also: `sv_index()`
         """
-        return tuple(index - self._begin for index in absolute_indices)
+        _begin = self._begin  # type: int
+        return tuple(index - _begin for index in absolute_indices)
 
+    @cython.locals(_begin=cython.int)
     def search(self, regex, start: Optional[int] = None, end: Optional[int] = None):
         """Executes regex.search on the StringView object and returns the
         result, which is either a match-object or None. Keep in mind that
         match.end(), match.span() etc. are mapped to the underlying text,
         not the StringView-object!!!
         """
-        start = self._begin if start is None \
-            else max(self._begin, min(self._begin + start, self._end))
-        end = self._end if end is None \
-            else max(self._begin, min(self._begin + end, self._end))
+        _begin = self._begin  # type: int
+        start = _begin if start is None else max(_begin, min(_begin + start, self._end))
+        end = self._end if end is None else max(_begin, min(_begin + end, self._end))
         return regex.search(self._text, start, end)
 
     def finditer(self, regex):
