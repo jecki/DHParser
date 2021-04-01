@@ -914,9 +914,15 @@ The compliete json-grammar now looks like this::
 >>> syntax_tree_ = json_parser(testdata)
 >>> assert syntax_tree_.equals(syntax_tree)
 
+The whitespace defined by the `@whitespace`-directive can be access from
+within the grammar via the name `WHITESPACE__`. Other than the tilde-sign
+this name refers to the pure whitespace that is not intermingles with
+comments. Similarly, comments defined by the `@comment`-directive can
+be accessed via the symbol `COMMENT__`.
 
 Lookahead and Lookbehind
 ------------------------
+
 
 
 Fail-tolerant Parsing

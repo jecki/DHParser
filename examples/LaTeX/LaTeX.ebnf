@@ -175,7 +175,7 @@ TEXT       = /(?:[^\\%$&\{\}\[\]\n]+(?:\n(?![ \t]*\n))?)+/
 LINE       = /[^\\%$&\{\}\[\]\n]+/          # a line of text
 LETTERS    = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
-LF         = NEW_LINE { COMMENT__ WHITESPACE__ }   # linefeed but not an empty line
+LF         = NEW_LINE { COMMENT__ WHITESPACE__ }  # linefeed but not an empty line
 LFF        = NEW_LINE [ _WSPC ]             # at least one linefeed
 S          = &/[% \t\n]/ !_GAP WSP_RE__     # significant whitespace
 _PARSEP    = { WHITESPACE__ COMMENT__ } _GAP [_WSPC] # paragraph separator
