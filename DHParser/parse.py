@@ -489,13 +489,18 @@ class Parser:
 
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
-            cached = visited.get(location, False)
-            if cached:
+            # cached = visited.get(location, False)
+            # if cached:
+            #     # no history recording in case of memoized results!
+            #     return cached
+            if location in visited:
                 # no history recording in case of memoized results!
-                return cached
-            # if location in visited:
+                return visited[location]
+            # try:
             #     # no history recording in case of memoized results!
             #     return visited[location]
+            # except KeyError:
+            #     pass
 
             memoization_state = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
