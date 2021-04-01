@@ -1709,7 +1709,7 @@ class AnyChar(Parser):
     whatever that is. The parser fails only at the very end of the text."""
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         if len(text) >= 1:
-            return Node(self.tag_name, text[:1]), text[1:]
+            return Node(self.tag_name, text[:1], True), text[1:]
         else:
             return None, text
 
@@ -1766,7 +1766,7 @@ class PreprocessorToken(Parser):
             if text[1:len(self.pname) + 1] == self.pname:
                 if self.drop_content:
                     return EMPTY_NODE, text[end + 1:]
-                return Node(self.tag_name, text[len(self.pname) + 2:end]), text[end + 1:]
+                return Node(self.tag_name, text[len(self.pname) + 2:end], True), text[end + 1:]
         return None, text
 
 
@@ -2013,7 +2013,7 @@ class CombinedParser(Parser):
             return Node(self.tag_name, node)
         elif self.disposable:
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.tag_name, ())
+        return Node(self.tag_name, '', True)
 
     @cython.locals(N=cython.int)
     def _return_values_no_tree_reduction(self, results: Sequence[Node]) -> Node:
@@ -2050,7 +2050,7 @@ class CombinedParser(Parser):
             return self._return_value(results[0])
         if self.disposable:
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.tag_name, ())
+        return Node(self.tag_name, '', True)
 
     @cython.locals(N=cython.int)
     def _return_values_merge_treetops(self, results: Sequence[Node]) -> Node:
@@ -2096,12 +2096,12 @@ class CombinedParser(Parser):
                         return Node(self.tag_name, result)
                     return EMPTY_NODE
                 return Node(self.tag_name, tuple(nr))
-            return EMPTY_NODE if self.disposable else Node(self.tag_name, "")
+            return EMPTY_NODE if self.disposable else Node(self.tag_name, '', True)
         elif N == 1:
             return self._return_value(results[0])
         if self.disposable:
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.tag_name, ())
+        return Node(self.tag_name, '', True)
 
     @cython.locals(N=cython.int)
     def _return_values_merge_leaves(self, results: Sequence[Node]) -> Node:
@@ -2147,12 +2147,12 @@ class CombinedParser(Parser):
                         return Node(self.tag_name, merged[0].result)
                     return EMPTY_NODE
                 return Node(self.tag_name, merged[0])
-            return EMPTY_NODE if self.disposable else Node(self.tag_name, "")
+            return EMPTY_NODE if self.disposable else Node(self.tag_name, '', True)
         elif N == 1:
             return self._return_value(results[0])
         if self.disposable:
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.tag_name, ())
+        return Node(self.tag_name, '', True)
 
     def location_info(self) -> str:
         """Returns a description of the location of the parser within the grammar
@@ -2633,7 +2633,7 @@ class MandatoryNary(NaryParser):
         grammar = self._grammar
         i = reloc if reloc >= 0 else 0
         location = grammar.document_length__ - len(text_)
-        err_node = Node(ZOMBIE_TAG, text_[:i]).with_pos(location)
+        err_node = Node(ZOMBIE_TAG, text_[:i], True).with_pos(location)
         found = text_[:10].replace('\n', '\\n ') + '...'
         sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
@@ -3133,7 +3133,7 @@ class Lookahead(FlowParser):
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
         if self.sign(node is not None):
-            return (EMPTY_NODE if self.disposable else Node(self.tag_name, '')), text
+            return (EMPTY_NODE if self.disposable else Node(self.tag_name, '', True)), text
         else:
             return None, text
 
@@ -3191,7 +3191,7 @@ class Lookbehind(FlowParser):
         if self.sign(does_match):
             if self.drop_content:
                 return EMPTY_NODE, text
-            return Node(self.tag_name, ''), text
+            return Node(self.tag_name, '', True), text
         return None, text
 
     def __repr__(self):
@@ -3444,7 +3444,7 @@ class Retrieve(ContextSensitive):
                 # returns a None match if parser is optional but there was no value to retrieve
                 return None, text
             else:
-                node = Node(tn, '')  # .with_pos(self.grammar.document_length__ - text.__len__())
+                node = Node(tn, '', True)  # .with_pos(self.grammar.document_length__ - text.__len__())
                 self.grammar.tree__.new_error(
                     node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
                     UNDEFINED_RETRIEVE)
@@ -3533,7 +3533,7 @@ class Synonym(UnaryParser):
                 return EMPTY_NODE, text
             if not self.disposable:
                 if node is EMPTY_NODE:
-                    return Node(self.tag_name, ''), text
+                    return Node(self.tag_name, '', True), text
                 if node.tag_name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
                     node.tag_name = self.tag_name
