@@ -1488,6 +1488,7 @@ class TestMetaParser:
         self.mp.pname = "named"
         self.mp.tag_name = self.mp.pname
         rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
+        print(rv.as_sxpr())
         assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
 
     def test_in_context(self):

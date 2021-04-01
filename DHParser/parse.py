@@ -514,7 +514,7 @@ class Parser:
                 if i >= 0 or self == grammar.start_parser__:
                     # either a reentry point was found or the
                     # error has fallen through to the first level
-                    assert pe.node.children or (not pe.node.result)
+                    assert pe.node._children or (not pe.node.result)
                     # apply reentry-rule or catch error at root-parser
                     if i < 0:  i = 0
                     try:
@@ -531,7 +531,7 @@ class Parser:
                     rest = rest[i:]
                     if pe.first_throw:
                         node = pe.node
-                        node.result = node.children + tail
+                        node.result = node._children + tail
                     else:
                         node = Node(
                             self.tag_name,
@@ -2008,7 +2008,7 @@ class CombinedParser(Parser):
                 if self.drop_content:
                     return EMPTY_NODE
                 return node
-            if node.anonymous:
+            if node.tag_name[0] == ':':  # node.anonymous:
                 return Node(self.tag_name, node._result)
             return Node(self.tag_name, node)
         elif self.disposable:
@@ -2037,7 +2037,7 @@ class CombinedParser(Parser):
             nr = []  # type: List[Node]
             # flatten parse tree
             for child in results:
-                c_anonymous = child.anonymous
+                c_anonymous = (child.tag_name[0] == ':')  # child.anonymous
                 if child._children and c_anonymous:
                     nr.extend(child._children)
                 elif child._result or not c_anonymous:
@@ -2071,7 +2071,7 @@ class CombinedParser(Parser):
             # flatten and parse tree
             merge = True
             for child in results:
-                if child.anonymous:
+                if child.tag_name[0] == ':':  # child.anonymous:
                     grandchildren = child._children
                     if grandchildren:
                         nr.extend(grandchildren)
@@ -2079,7 +2079,7 @@ class CombinedParser(Parser):
                         #               for grandchild in grandchildren)
                         # cython compatibility:
                         for grandchild in grandchildren:
-                            if grandchild._children or not grandchild.anonymous:
+                            if grandchild._children or not grandchild.tag_name[0] == ':':  # grandchild.anonymous:
                                 merge = False
                                 break
                     elif child._result:
@@ -2121,7 +2121,7 @@ class CombinedParser(Parser):
             nr = []  # type: List[Node]
             # flatten and parse tree
             for child in results:
-                if child.anonymous:
+                if child.tag_name[0] == ':':  # child.anonymous:
                     grandchildren = child._children
                     if grandchildren:
                         nr.extend(grandchildren)
@@ -2133,7 +2133,7 @@ class CombinedParser(Parser):
                 merged = []
                 tail_is_anonymous_leaf = False
                 for nd in nr:
-                    head_is_anonymous_leaf = not nd._children and nd.anonymous
+                    head_is_anonymous_leaf = not nd._children and nd.tag_name[0] == ':'  # nd.anonymous
                     if tail_is_anonymous_leaf and head_is_anonymous_leaf:
                         merged[-1].result += nd._result
                     else:
@@ -2393,7 +2393,7 @@ class ZeroOrMore(Option):
             length = text.__len__()
             if node is None:
                 break
-            if node._result or not node.anonymous:  # drop anonymous empty nodes
+            if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2439,7 +2439,7 @@ class OneOrMore(UnaryParser):
             if node is None:
                 break
             match_flag = True
-            if node._result or not node.anonymous:  # drop anonymous empty nodes
+            if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2754,7 +2754,7 @@ class Series(MandatoryNary):
                     else:
                         results.append(node)
                         break
-            if node._result or not node.anonymous:  # drop anonymous empty nodes
+            if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results.append(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
@@ -2999,7 +2999,7 @@ class Interleave(MandatoryNary):
                 if parser not in consumed:
                     node, text__ = parser(text_)
                     if node is not None:
-                        if node._result or not node.anonymous:  # drop anonymous empty nodes
+                        if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                             results += (node,)
                             text_ = text__
                         counter[i] += 1
@@ -3534,7 +3534,7 @@ class Synonym(UnaryParser):
             if not self.disposable:
                 if node is EMPTY_NODE:
                     return Node(self.tag_name, ''), text
-                if node.anonymous:
+                if node.tag_name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
                     node.tag_name = self.tag_name
                 else:
