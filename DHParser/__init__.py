@@ -32,7 +32,7 @@ from .preprocess import *
 # from .server import *
 from .stringview import *
 from .syntaxtree import *
-from .testing import *
+# from .testing import *
 from .toolkit import *
 from .trace import *
 from .transform import *
@@ -49,7 +49,7 @@ __all__ = (compile.__all__ +
            # server.__all__ +
            stringview.__all__ +
            syntaxtree.__all__ +
-           testing.__all__ +
+           # testing.__all__ +
            toolkit.__all__ +
            trace.__all__ +
            transform.__all__ +
