@@ -33,6 +33,7 @@ for path in (os.path.join('..', '..'), '.'):
 from DHParser import dsl
 import DHParser.log
 from DHParser import testing
+from DHParser.configuration import access_presets, set_preset_value, finalize_presets
 
 
 def recompile_grammar(grammar_src, force):
@@ -58,6 +59,9 @@ def run_grammar_tests(glob_pattern):
 
 if __name__ == '__main__':
     arg = sys.argv[1] if len(sys.argv) > 1 else '*_test_*.ini'
+    # access_presets()
+    # set_preset_value('ast_serialization', 'XML')
+    # finalize_presets()
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:

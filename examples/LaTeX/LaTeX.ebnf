@@ -5,11 +5,12 @@
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # insignificant whitespace, including at most one linefeed
 @ comment    = /%.*/
 @ reduction  = merge_treetops
-@ disposable = _WSPC, _GAP, _LB, _PARSEP, _LETTERS, INTEGER, FRAC,
+@ disposable = _WSPC, _GAP, _LB, _PARSEP, _LETTERS, _NAME, INTEGER, FRAC,
+               _QUALIFIED, TEXT_NOPAR, TEXT,
                block_environment, known_environment, text_element,
-               line_element, inline_environment, known_inline_env,
+               line_element, inline_environment, known_inline_env, info_block,
                begin_inline_env, end_inline_env, command, known_command
-@ drop       = strings, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB
+@ drop       = strings, backticked, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB
 
 ########################################################################
 #
@@ -94,7 +95,7 @@ block_of_paragraphs = "{" [sequence] §"}"
 sequence            = [_WSPC] { (paragraph | block_environment ) [_PARSEP] }+
 paragraph           = { !blockcmd text_element [S] }+
 text_element        = line_element | LINEFEED
-line_element        = text | block |inline_environment |command
+line_element        = text | inline_environment | block | command
 
 
 #### inline enivronments ####
@@ -129,7 +130,7 @@ multicolumn         = "\multicolumn" "{" INTEGER "}" tabular_config block_of_par
 hline               = "\hline"
 cline               = "\cline{" INTEGER "-" INTEGER "}"
 documentclass       = "\documentclass" [ config ] block
-pdfinfo             = "\pdfinfo" block
+pdfinfo             = "\pdfinfo" info_block
 hypersetup          = "\hypersetup" param_block
 
 
@@ -140,6 +141,10 @@ hypersetup          = "\hypersetup" param_block
 #######################################################################
 
 block      = "{"  { !blockcmd text_element [S] } §/}/
+info_block = "{" §{ info_assoc } "}"
+info_assoc = info_key ~ [ "(" §info_value ")" ]
+info_key   = `/` _NAME
+info_value = TEXT_NOPAR { S TEXT_NOPAR }  # text without parentheses
 # text       = CHARS { S CHARS }
 # text       = LINE { S LINE }
 text       = TEXT { S TEXT }
@@ -162,11 +167,11 @@ structural = "subsection" | "section" | "chapter" | "subsubsection"
 
 config       = "[" § (parameters &"]" | cfg_text) "]"
 param_config = "[" § [parameters] "]"
-param_block  = "{" § [parameters] "}"
+param_block  = "{" [parameters] "}"
 parameters   = association { "," association }  [ WARN_Komma ]
 association  = key~ [ "=" value~ ]
-key          = _LETTERS
-value        = magnitude | _LETTERS | CMDNAME | block
+key          = _QUALIFIED
+value        = magnitude | _LETTERS | CMDNAME | param_block | block
 magnitude    = number [UNIT]
 number       = INTEGER [FRAC]
 cfg_text     = { (~ text) | CMDNAME | SPECIAL }
@@ -188,19 +193,23 @@ WARN_Komma = ","
 #######################################################################
 
 
-CMDNAME    = /\\(?:(?!_)\w)+/~
+CMDNAME    = /\\(?:(?![\d_])\w)+/~
 TXTCOMMAND = /\\text\w+/
 ESCAPED    = /\\[%$&_\/{}]/
 SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 LINEFEED   = /[\\][\\]/
 
-NAME       = /\w+/
+_QUALIFIED = IDENTIFIER { /[:.-]/ IDENTIFIER }
+IDENTIFIER = _NAME
+NAME       = _NAME                          # captured! don't use without retrival
+_NAME      = /(?!\d)\w+/
 INTEGER    = /-?(?:(?:[1-9][0-9]+)|[0-9])/
 FRAC       = /\.[0-9]+/
-UNIT       = /\w+/
+UNIT       = /(?!\d)\w+/
 
 TEXT       = /(?:[^\\%$&\{\}\[\]\n]+(?:\n(?![ \t]*\n))?)+/
+TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parnetheses
 LINE       = /[^\\%$&\{\}\[\]\n]+/          # a line of text
 CHARS      = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters

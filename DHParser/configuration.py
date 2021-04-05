@@ -163,11 +163,15 @@ def finalize_presets():
     #     THREAD_LOCALS.config = {}  # reset THREAD_LOCALS
 
 
-def set_preset_value(key: str, value: Any):
+def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
     global CONFIG_PRESET, ACCESSING_PRESETS, PRESETS_CHANGED
     if not ACCESSING_PRESETS:
         raise AssertionError('Presets must be made accessible with access_presets() first, '
                              'before they can be set!')
+    if not allow_new_key and key not in CONFIG_PRESET:
+        raise ValueError(
+            '"%s" is not a valid config variable. Use "allow_new_key=True" to add new variables '
+            'or choose one of %s' % (key, list(CONFIG_PRESET.keys())))
     validate_value(key, value)
     CONFIG_PRESET[key] = value
     PRESETS_CHANGED = True

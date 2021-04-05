@@ -43,7 +43,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, node_maker, access_thread_locals, access_presets, \
+    get_config_value, node_maker, access_thread_locals, access_presets, has_children, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
@@ -80,10 +80,10 @@ class LaTeXGrammar(Grammar):
     """
     block = Forward()
     block_environment = Forward()
-    block_of_paragraphs = Forward()
     paragraph = Forward()
-    source_hash__ = "6a283c93232baa0bed3a3cedf5fb8426"
-    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|INTEGER$|FRAC$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
+    param_block = Forward()
+    source_hash__ = "51735c8b7660cf8500b4f8a4b24e30ed"
+    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'%.*'
@@ -107,35 +107,44 @@ class LaTeXGrammar(Grammar):
     _LETTERS = RegExp('\\w+')
     CHARS = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
     LINE = RegExp('[^\\\\%$&\\{\\}\\[\\]\\n]+')
+    TEXT_NOPAR = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\(\\)\\n]+(?:\\n(?![ \\t]*\\n))?)+')
     TEXT = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\n]+(?:\\n(?![ \\t]*\\n))?)+')
-    UNIT = RegExp('\\w+')
+    UNIT = RegExp('(?!\\d)\\w+')
     FRAC = RegExp('\\.[0-9]+')
     INTEGER = RegExp('-?(?:(?:[1-9][0-9]+)|[0-9])')
-    NAME = Capture(RegExp('\\w+'))
+    _NAME = RegExp('(?!\\d)\\w+')
+    NAME = Capture(Synonym(_NAME))
+    IDENTIFIER = Synonym(_NAME)
+    _QUALIFIED = Series(IDENTIFIER, ZeroOrMore(Series(Drop(RegExp('[:.-]')), IDENTIFIER)))
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
     ESCAPED = RegExp('\\\\[%$&_/{}]')
     TXTCOMMAND = RegExp('\\\\text\\w+')
-    CMDNAME = Series(RegExp('\\\\(?:(?!_)\\w)+'), dwsp__)
+    CMDNAME = Series(RegExp('\\\\(?:(?![\\d_])\\w)+'), dwsp__)
     WARN_Komma = Series(Text(","), dwsp__)
     text = Series(TEXT, ZeroOrMore(Series(S, TEXT)))
     number = Series(INTEGER, Option(FRAC))
     magnitude = Series(number, Option(UNIT))
-    value = Alternative(magnitude, _LETTERS, CMDNAME, block)
-    key = Synonym(_LETTERS)
+    value = Alternative(magnitude, _LETTERS, CMDNAME, param_block, block)
+    key = Synonym(_QUALIFIED)
     association = Series(key, dwsp__, Option(Series(Series(Drop(Text("=")), dwsp__), value, dwsp__)))
     parameters = Series(association, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), association)), Option(WARN_Komma))
-    param_block = Series(Series(Drop(Text("{")), dwsp__), Option(parameters), Series(Drop(Text("}")), dwsp__), mandatory=1)
+    sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(_PARSEP))))
+    block_of_paragraphs = Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2)
     param_config = Series(Series(Drop(Text("[")), dwsp__), Option(parameters), Series(Drop(Text("]")), dwsp__), mandatory=1)
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     structural = Alternative(Series(Drop(Text("subsection")), dwsp__), Series(Drop(Text("section")), dwsp__), Series(Drop(Text("chapter")), dwsp__), Series(Drop(Text("subsubsection")), dwsp__), Series(Drop(Text("paragraph")), dwsp__), Series(Drop(Text("subparagraph")), dwsp__), Series(Drop(Text("item")), dwsp__))
     begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
     no_command = Alternative(Series(Drop(Text("\\begin{")), dwsp__), Series(Drop(Text("\\end")), dwsp__), Series(BACKSLASH, structural))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
+    info_value = Series(TEXT_NOPAR, ZeroOrMore(Series(S, TEXT_NOPAR)))
+    info_key = Series(Drop(Text("/")), _NAME)
+    info_assoc = Series(info_key, dwsp__, Option(Series(Series(Drop(Text("(")), dwsp__), info_value, Series(Drop(Text(")")), dwsp__), mandatory=1)))
+    info_block = Series(Series(Drop(Text("{")), dwsp__), ZeroOrMore(info_assoc), Series(Drop(Text("}")), dwsp__), mandatory=1)
     heading = Synonym(block)
     hypersetup = Series(Series(Drop(Text("\\hypersetup")), dwsp__), param_block)
-    pdfinfo = Series(Series(Drop(Text("\\pdfinfo")), dwsp__), block)
+    pdfinfo = Series(Series(Drop(Text("\\pdfinfo")), dwsp__), info_block)
     documentclass = Series(Series(Drop(Text("\\documentclass")), dwsp__), Option(config), block)
     cline = Series(Series(Drop(Text("\\cline{")), dwsp__), INTEGER, Series(Drop(Text("-")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__))
     hline = Series(Text("\\hline"), dwsp__)
@@ -158,12 +167,12 @@ class LaTeXGrammar(Grammar):
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo, hypersetup)
-    sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(_PARSEP))))
     SubParagraph = Series(Series(Drop(Text("\\subparagraph")), dwsp__), heading, Option(sequence))
-    frontpages = Synonym(sequence)
     SubParagraphs = OneOrMore(Series(Option(_WSPC), SubParagraph))
+    frontpages = Synonym(sequence)
+    Paragraph = Series(Series(Drop(Text("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
     command = Alternative(known_command, text_command, generic_command)
-    line_element = Alternative(text, block, inline_environment, command)
+    line_element = Alternative(text, inline_environment, block, command)
     text_element = Alternative(line_element, LINEFEED)
     tabular_cell = ZeroOrMore(Series(line_element, Option(S)))
     tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(Drop(Text("&")), dwsp__), Alternative(multicolumn, tabular_cell))), Series(Drop(Text("\\\\")), dwsp__), Alternative(hline, ZeroOrMore(cline)))
@@ -179,10 +188,9 @@ class LaTeXGrammar(Grammar):
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
     preamble = OneOrMore(Series(Option(_WSPC), command))
-    Paragraph = Series(Series(Drop(Text("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
     Index = Series(Option(_WSPC), Series(Drop(Text("\\printindex")), dwsp__))
     Bibliography = Series(Option(_WSPC), Series(Drop(Text("\\bibliography")), dwsp__), heading)
-    Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
     SubSubSection = Series(Series(Drop(Text("\\subsubsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
     SubSubSections = OneOrMore(Series(Option(_WSPC), SubSubSection))
     SubSection = Series(Series(Drop(Text("\\subsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
@@ -192,9 +200,9 @@ class LaTeXGrammar(Grammar):
     Chapter = Series(Series(Drop(Text("\\chapter")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Sections)))
     Chapters = OneOrMore(Series(Option(_WSPC), Chapter))
     document = Series(Option(_WSPC), Series(Drop(Text("\\begin{document}")), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(_WSPC), Series(Drop(Text("\\end{document}")), dwsp__), Option(_WSPC), EOF, mandatory=9)
+    param_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(parameters), Series(Drop(Text("}")), dwsp__)))
     block.set(Series(Series(Drop(Text("{")), dwsp__), ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))), Drop(RegExp('}')), mandatory=2))
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))))
-    block_of_paragraphs.set(Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2))
     block_environment.set(Alternative(known_environment, generic_block))
     latexdoc = Series(preamble, document)
     root__ = TreeReduction(latexdoc, CombinedParser.MERGE_TREETOPS)
@@ -279,7 +287,13 @@ LaTeX_AST_transformation_table = {
     "latexdoc": [],
     "document": [flatten_structure],
     "pdfinfo": [],
-    "association": replace_by_single_child,
+    "TEXT_NOPAR": [apply_unless(normalize_whitespace, has_children)],
+    "info_assoc": [change_tag_name('association'), replace_by_single_child],
+    "info_key": [change_tag_name('key')],
+    "info_value": [apply_unless(normalize_whitespace, has_children), change_tag_name('value')],
+    "parameters": [replace_by_single_child],
+    "association": [replace_by_single_child],
+    "key": reduce_single_child,
     "frontpages": reduce_single_child,
     "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
     "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph": [],
@@ -289,10 +303,10 @@ LaTeX_AST_transformation_table = {
     "block_environment": replace_by_single_child,
     "known_environment": replace_by_single_child,
     "generic_block": [transform_generic_block],
-    "generic_command": [transform_generic_command],  # [flatten],
+    "generic_command": [transform_generic_command, reduce_single_child],  # [flatten],
     "begin_generic_block, end_generic_block": [],
         # [remove_children({'NEW_LINE', 'LFF'}), replace_by_single_child],
-    "itemize, enumerate": [remove_brackets, flatten],
+    "itemize, enumerate": [flatten],
     "item": [],
     "figure": [],
     "quotation": [reduce_single_child, remove_brackets],
@@ -312,16 +326,17 @@ LaTeX_AST_transformation_table = {
     "generic_inline_env": [],
     "begin_inline_env, end_inline_env": [replace_by_single_child],
     "begin_environment, end_environment": [],  # [remove_brackets, reduce_single_child],
-    "inline_math": [remove_brackets, reduce_single_child],
+    "inline_math": [reduce_single_child],
     "command": replace_by_single_child,
     "known_command": replace_by_single_child,
     "text_command": [],
-    "citet, citep": [],
+    "citet, citep": [reduce_single_child],
     "footnote": [],
     "includegraphics": [],
     "caption": [],
-    "config": [remove_brackets, reduce_single_child],
-    "block": [remove_brackets, flatten, reduce_single_child],
+    "config": [reduce_single_child],
+    "cfg_text": [reduce_single_child],
+    "block": [flatten, reduce_single_child],
     "text": collapse,
     "no_command, blockcmd": [],
     "structural": [],
@@ -384,8 +399,8 @@ class LaTeXCompiler(Compiler):
         self.tree.omit_tags = {'S', 'PARSEP'}
 
     def fallback_generic_command(self, node: Node) -> Node:
-        if not node.result:
-            return EMPTY_NODE
+        # if not node.result:
+        #      return EMPTY_NODE
         return node
 
     def fallback_generic_environment(self, node) -> Node:
@@ -568,11 +583,36 @@ class LaTeXCompiler(Compiler):
     # def on_generic_command(self, node):
     #     return node
 
-    # def on_citet(self, node):
-    #     return node
+    def get_author_year(self, bibkey: str) -> str:
+        return bibkey  # for now...
 
-    # def on_citep(self, node):
-    #     return node
+    def arange_citation(self, node):
+        node = self.fallback_compiler(node)
+        if node.children:
+            config = node.pick('config')
+            block = node.pick('block')
+            bibkey = block.content
+            if config is not None:
+                assert len(node.children) == 2
+                block.result = self.get_author_year(bibkey)
+                node.result = (block, Node('text', ', '), config)
+            else:
+                node.result = self.get_author_year(bibkey)
+        else:
+            bibkey = node.content
+            node.result = self.get_author_year(bibkey)
+
+    def on_citet(self, node):
+        self.arange_citation(node)
+        return node
+
+    def on_citep(self, node):
+        self.arange_citation(node)
+        if node.children:
+            node.result = (Node('text', '('), *node.children, Node('text', ')'))
+        else:
+            node.result = '(' + node.content + ')'
+        return node
 
     # def on_footnote(self, node):
     #     return node
