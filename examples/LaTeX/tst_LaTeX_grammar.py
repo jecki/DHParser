@@ -38,7 +38,8 @@ from DHParser import testing
 def recompile_grammar(grammar_src, force):
     # recompiles Grammar only if it has changed
     grammar_path = os.path.join(fullpath, grammar_src)
-    if not dsl.recompile_grammar(grammar_path, force=force):
+    if not dsl.recompile_grammar(grammar_path, force=force,
+                                 notify=lambda :print('grammar changed: recompling')):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
         with open('LaTeX_ebnf_ERRORS.txt') as f:
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar('LaTeX.ebnf', force=True)
+        recompile_grammar('LaTeX.ebnf', force=False)
         sys.path.append('.')
         from LaTeXParser import get_grammar, get_transformer
         error_report = run_grammar_tests(glob_pattern=arg)

@@ -2990,13 +2990,22 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         attributes = OrderedDict()  # type: OrderedDict[str, str]
         eot = s.find('>')
         restart = 0
-        for match in s.finditer(re.compile(r'\s*(?P<attr>\w+)\s*=\s*"(?P<value>.*?)"\s*')):
+        for match in s.finditer(re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')):
             if s.index(match.start()) >= eot:
                 break
             d = match.groupdict()
             attributes[d['attr']] = d['value']
             restart = s.index(match.end())
         return s[restart:], attributes
+
+    def skip_special_tag(s: StringView) -> StringView:
+        """Skip special tags, e.g. <?...>, <!...>, and return the string
+        view at the position of the next normal tag."""
+        assert s[:2] in ('<!', '<?')
+        m = s.search(re.compile(r'<(?![?!])'))
+        i = s.index(m.start()) if m else len(s)
+        k = s.rfind(">", end=i)
+        return s[k+1:] if k >= 0 else s
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
         """
@@ -3005,7 +3014,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         a flag indicating whether the tag is actually a solitary tag as
         indicated by a slash at the end, i.e. <br/>.
         """
-        match = s.match(re.compile(r'<\s*(?P<tagname>[\w:]+)\s*'))
+        match = s.match(re.compile(r'<\s*(?P<tagname>[\w:_.-]+)\s*'))
         assert match
         tagname = match.groupdict()['tagname']
         section = s[s.index(match.end()):]
@@ -3019,7 +3028,7 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         Parses a closing tag and returns the string segment, just after
         the closing tag.
         """
-        match = s.match(re.compile(r'</\s*(?P<tagname>[\w:]+)>'))
+        match = s.match(re.compile(r'</\s*(?P<tagname>[\w:_.-]+)\s*>'))
         assert match, 'XML-closing-tag expected, but found: ' + s[:20]
         tagname = match.groupdict()['tagname']
         return s[s.index(match.end()):], tagname
@@ -3048,9 +3057,12 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
                     res.append(Node(TOKEN_PTYPE, leaf))
-                if s[:1] == "<" and s[:2] != "</":
-                    s, child = parse_full_content(s)
-                    res.append(child)
+                if s[:1] == "<":
+                    if s[:2] in ("<?", "<!"):
+                        s = skip_special_tag(s)
+                    elif s[:2] != "</":
+                        s, child = parse_full_content(s)
+                        res.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname, tagname + ' != ' + closing_tagname
         if len(res) == 1 and res[0].tag_name == TOKEN_PTYPE:
@@ -3059,7 +3071,8 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
             result = tuple(res)
 
         if name and not class_name:  name = restore_tag_name(name)
-        node = Node(name or ':' + class_name, result)
+        if class_name:  class_name = ':' + class_name
+        node = Node(name + class_name, result)
         if not ignore_pos and '_pos' in attrs:
             node._pos = int(attrs['_pos'])
             del attrs['_pos']
@@ -3067,10 +3080,9 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
             node.attr.update(attrs)
         return s, node
 
-    match_header = xml.search(re.compile(r'<(?!\?)'))
+    match_header = xml.search(re.compile(r'<(?![?!])'))
     start = xml.index(match_header.start()) if match_header else 0
     _, tree = parse_full_content(xml[start:])
-    assert _.match(RX_WHITESPACE_TAIL), _
     return tree
 
 

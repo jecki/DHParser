@@ -118,6 +118,37 @@ class TestParseXML:
         tree = parse_xml(r'<LINEFEED>\\</LINEFEED>')
         assert tree
 
+    def test_PI_and_DTD(self):
+        """PIs <?...> and DTDs <!...> and the like should politely be overlooked."""
+        testdata = """<!DOCTYPE nonsense>
+            <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?> 
+            <?xpacket begin="r" id="Arnold-Mueller2017a"?> 
+            <x:xmpmeta xmlns:x="adobe:ns:meta/"> 
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> 
+            <rdf:Description xmlns:bibtex="http://jabref.sourceforge.net/bibteXMP/" 
+            bibtex:bibtexkey="Arnold-Mueller2017a" 
+            bibtex:journal="Informationspraxis" 
+            bibtex:title="Wie permanent sind Permalinks?" 
+            bibtex:type="Article" 
+            bibtex:doi="http://dx.doi.org/10.11588/ip.2016.2.33483" 
+            bibtex:year="2017" 
+            bibtex:volume="3" 
+            bibtex:issue="1" 
+            bibtex:url="http://www.eckhartarnold.de/papers/2016_Permalinks/Arnold_Mueller_2016_Permalinks.html"> 
+            <bibtex:author>Eckhart Arnold</bibtex:author> 
+            </rdf:Description> 
+            <!-- comment -->
+            </rdf:RDF> 
+            </x:xmpmeta> 
+            <?xpacket end="r"?> 
+            <?xpacket end='r'?>"""
+        tree = parse_xml(testdata)
+        assert tree.tag_name == 'x:xmpmeta'
+        author = tree.pick('bibtex:author')
+        assert author and author.content == "Eckhart Arnold"
+        description = tree.pick('rdf:Description')
+        assert description.has_attr('bibtex:title')
+
 
 class TestParseJSON:
     tree = parse_sxpr('(a (b ä) (d (e ö) (h über)))').with_pos(0)
