@@ -48,10 +48,10 @@ class TestConfigMultiprocessing:
         new processes will be present in spawned or forked processes
         afterwards."""
         access_presets()
-        set_preset_value('test', 'multiprocessing presets test')
+        set_preset_value('test', 'multiprocessing presets test', allow_new_key=True)
         finalize_presets()
         access_presets()
-        set_preset_value('test2', 'multiprocessing presets test2')
+        set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
         finalize_presets()
         flag = multiprocessing.Value('b', 0)
         p = multiprocessing.Process(target=evaluate_presets, args=(flag,))

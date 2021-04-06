@@ -12,7 +12,7 @@ from DHParser.versionnumber import __version__
 
 cythonize_modules = [
     'DHParser/stringview.py',
-    'DHParser/toolkit.py',
+    # 'DHParser/toolkit.py',
     # 'DHParser/preprocess.py',
     # 'DHParser/error.py',
     # 'DHParser/syntaxtree.py',
