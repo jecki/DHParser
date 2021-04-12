@@ -1443,8 +1443,8 @@ class Grammar:
                 skip, rest = rest[:fwd], rest[fwd:]
                 if result is None:
                     err_info = '' if not self.history_tracking__ else \
-                               '\n    Most advanced: %s\n    Last match:    %s;' % \
-                               (str(HistoryRecord.most_advanced_match(self.history__)),
+                               '\n    Most advanced fail: %s\n    Last match:    %s;' % \
+                               (str(HistoryRecord.most_advanced_fail(self.history__)),
                                 str(HistoryRecord.last_match(self.history__)))
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.

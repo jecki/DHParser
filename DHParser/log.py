@@ -492,6 +492,27 @@ class HistoryRecord:
         return result
 
 
+    @staticmethod
+    def most_advanced_fail(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:
+        """
+        Returns the closest-to-the-end-fail from the parsing-history.
+        Args:
+            history:  the parsing-history as a list of HistoryRecord objects
+
+        Returns:
+            the history record of the closest-to-the-end-fail or none if either history is
+            empty or no parser failed
+        """
+        remaining = -1
+        result = None
+        for record in history:
+            if (record.status == HistoryRecord.FAIL
+                    and (record.remaining < remaining or remaining < 0)):
+                result = record
+                remaining = record.remaining
+        return result
+
+
 #######################################################################
 #
 #  context specific log functions, i.e. logging of syntax trees,
