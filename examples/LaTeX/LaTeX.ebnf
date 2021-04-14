@@ -168,8 +168,9 @@ structural = "subsection" | "section" | "chapter" | "subsubsection"
 config       = "[" § (parameters &"]" | cfg_text) "]"
 param_config = "[" § [parameters] "]"
 param_block  = "{" [parameters] "}"
-parameters   = association { "," association }  [ WARN_Komma ]
-association  = key~ [ "=" value~ ]
+parameters   = (association | flag) { "," (association | flag) }  [ WARN_Komma ]
+association  = key~ "=" value~
+flag         = _QUALIFIED | magnitude
 key          = _QUALIFIED
 value        = magnitude | _LETTERS | CMDNAME | param_block | block
 magnitude    = number [UNIT]
