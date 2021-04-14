@@ -32,6 +32,7 @@ for path in (os.path.join('..', '..'), '.'):
 
 import DHParser.configuration
 import DHParser.dsl
+from DHParser.error import ERROR
 import DHParser.log
 from DHParser.log import log_parsing_history
 
@@ -56,10 +57,10 @@ compiler = get_compiler()
 
 def fail_on_error(src, result):
     if result.error_flag:
-        print(result.as_sxpr())
         for e in result.errors_sorted:
             print(str(e))
-        sys.exit(1)
+        if result.error_flag >= ERROR:
+            sys.exit(1)
 
 
 def tree_size(tree) -> int:

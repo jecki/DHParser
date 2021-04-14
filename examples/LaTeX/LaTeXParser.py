@@ -82,7 +82,7 @@ class LaTeXGrammar(Grammar):
     block_environment = Forward()
     paragraph = Forward()
     param_block = Forward()
-    source_hash__ = "51735c8b7660cf8500b4f8a4b24e30ed"
+    source_hash__ = "e39eb67ad2082548e4c527b518f575cf"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -128,8 +128,9 @@ class LaTeXGrammar(Grammar):
     magnitude = Series(number, Option(UNIT))
     value = Alternative(magnitude, _LETTERS, CMDNAME, param_block, block)
     key = Synonym(_QUALIFIED)
-    association = Series(key, dwsp__, Option(Series(Series(Drop(Text("=")), dwsp__), value, dwsp__)))
-    parameters = Series(association, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), association)), Option(WARN_Komma))
+    flag = Alternative(_QUALIFIED, magnitude)
+    association = Series(key, dwsp__, Series(Drop(Text("=")), dwsp__), value, dwsp__)
+    parameters = Series(Alternative(association, flag), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(association, flag))), Option(WARN_Komma))
     sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(_PARSEP))))
     block_of_paragraphs = Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2)
     param_config = Series(Series(Drop(Text("[")), dwsp__), Option(parameters), Series(Drop(Text("]")), dwsp__), mandatory=1)
@@ -337,6 +338,7 @@ LaTeX_AST_transformation_table = {
     "config": [reduce_single_child],
     "cfg_text": [reduce_single_child],
     "block": [flatten, reduce_single_child],
+    "flag": [reduce_single_child],
     "text": collapse,
     "no_command, blockcmd": [],
     "structural": [],
@@ -353,6 +355,7 @@ LaTeX_AST_transformation_table = {
     "EOF": [],
     "PARSEP": [replace_content_with('\n\n')],
     ":Whitespace, WSPC, S": streamline_whitespace,
+    "WARN_Komma": add_error('No komma allowed at the end of a list', WARNING),
     "*": apply_unless(replace_by_single_child,
                       lambda ctx: ctx[-1].tag_name[:4] not in ('cmd_', 'env_'))
 }
