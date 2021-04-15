@@ -736,7 +736,6 @@ def compile_python_object(python_src: str, catch_obj_regex="DSL") -> Any:
     the name of which is matched by ``catch_obj_regex``. If catch_obj
     is the empty string, the namespace dictionary will be returned.
     """
-
     if isinstance(catch_obj_regex, str):
         catch_obj_regex = re.compile(catch_obj_regex)
     code = compile(python_src, '<string>', 'exec')

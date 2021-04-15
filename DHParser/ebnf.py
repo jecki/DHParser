@@ -2784,7 +2784,8 @@ class EBNFCompiler(Compiler):
 
 
     def on_ZOMBIE__(self, node: Node) -> str:
-        result = ['Error(s) in EBNF-source!']
+        result = ['Illegal node in AST generated from EBNF-Source!']
+        print(self.tree.as_sxpr())
         if node.children:
             result.append(' Fragments found: ')
             result.extend([str(self.compile(child)) for child in node.children])

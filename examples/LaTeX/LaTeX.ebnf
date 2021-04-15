@@ -6,7 +6,7 @@
 @ comment    = /%.*/
 @ reduction  = merge_treetops
 @ disposable = _WSPC, _GAP, _LB, _PARSEP, _LETTERS, _NAME, INTEGER, FRAC,
-               _QUALIFIED, TEXT_NOPAR, TEXT,
+               _QUALIFIED, TEXT_NOPAR, TEXT, _block_content,
                block_environment, known_environment, text_element,
                line_element, inline_environment, known_inline_env, info_block,
                begin_inline_env, end_inline_env, command, known_command
@@ -95,7 +95,7 @@ block_of_paragraphs = "{" [sequence] §"}"
 sequence            = [_WSPC] { (paragraph | block_environment ) [_PARSEP] }+
 paragraph           = { !blockcmd text_element [S] }+
 text_element        = line_element | LINEFEED
-line_element        = text | inline_environment | block | command
+line_element        = text | inline_environment | command | block
 
 
 #### inline enivronments ####
@@ -120,6 +120,7 @@ known_command       = citet | citep | footnote | includegraphics | caption
                     | hypersetup
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 generic_command     = !no_command CMDNAME [[ ~ config ] ~ block ]
+                    | `{` CMDNAME _block_content §`}`
 
 citet               = "\citet" [config] block
 citep               = ("\citep" | "\cite") [config] block
@@ -140,23 +141,24 @@ hypersetup          = "\hypersetup" param_block
 #
 #######################################################################
 
-block      = "{"  { !blockcmd text_element [S] } §/}/
-info_block = "{" §{ info_assoc } "}"
-info_assoc = info_key ~ [ "(" §info_value ")" ]
-info_key   = `/` _NAME
-info_value = TEXT_NOPAR { S TEXT_NOPAR }  # text without parentheses
-# text       = CHARS { S CHARS }
-# text       = LINE { S LINE }
-text       = TEXT { S TEXT }
+block          = "{" _block_content §`}`
+_block_content =  { !blockcmd text_element [S] }
+info_block     = "{" §{ info_assoc } "}"
+info_assoc     = info_key ~ [ "(" §info_value ")" ]
+info_key       = `/` _NAME
+info_value     = TEXT_NOPAR { S TEXT_NOPAR }  # text without parentheses
+# text           = CHARS { S CHARS }
+# text           = LINE { S LINE }
+text           = TEXT { S TEXT }
 
-no_command = "\begin{" | "\end" | BACKSLASH structural
-blockcmd   = BACKSLASH ( ( "begin{" | "end{" )
-                         ( "enumerate" | "itemize" | "figure" | "quote"
-                         | "quotation" | "tabular") "}"
-                       | structural | begin_generic_block | end_generic_block )
+no_command     = "\begin{" | "\end" | BACKSLASH structural
+blockcmd       = BACKSLASH ( ( "begin{" | "end{" )
+                             ( "enumerate" | "itemize" | "figure" | "quote"
+                             | "quotation" | "tabular") "}"
+                           | structural | begin_generic_block | end_generic_block )
 
-structural = "subsection" | "section" | "chapter" | "subsubsection"
-           | "paragraph" | "subparagraph" | "item"
+structural     = "subsection" | "section" | "chapter" | "subsubsection"
+               | "paragraph" | "subparagraph" | "item"
 
 
 #######################################################################
