@@ -551,6 +551,7 @@ class TestSeries:
         st = parser("A_CD");  assert not st.error_flag
         st = parser("AB_D");  assert st.error_flag
         assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
+        assert str(st.errors_sorted[0]).find("series") >= 0
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
         assert st.errors_sorted[0].code == MANDATORY_CONTINUATION

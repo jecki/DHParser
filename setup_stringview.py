@@ -40,7 +40,7 @@ setuptools.setup(
     long_description = read_me,
     long_description_content_type="text/markdown",
     keywords='parser generator, domain specific languages, Digital Humanities, parser combinators, EBNF',
-    classifiers = [
+    classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Environment :: Console',

@@ -1323,7 +1323,6 @@ class Grammar:
             self._reversed__ = StringView(self.document__.get_text()[::-1])
         return self._reversed__
 
-
     def _add_parser__(self, context: List[Parser]) -> None:
         """
         Adds the particular copy of the parser object to this
@@ -1338,6 +1337,13 @@ class Grammar:
                  'already exists in grammar object: %s!'
                  % (parser.pname, str(self.__dict__[parser.pname])))
             setattr(self, parser.pname, parser)
+        if isinstance(parser, MandatoryNary):
+            for p in reversed(context):
+                if p.pname:
+                    cast(MandatoryNary, parser).nearest_pname = p.pname
+                    break
+            else:
+                assert False, '???'
         if parser.disposable:
             parser.tag_name = parser.ptype
         else:
@@ -2578,12 +2584,13 @@ class MandatoryNary(NaryParser):
         length = len(self.parsers)
         if mandatory < 0:
             mandatory += length
-
         self.mandatory = mandatory  # type: int
+        self.nearest_pname = self.pname     # for now ...
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+        duplicate.nearest_pname = self.nearest_pname
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -2649,14 +2656,16 @@ class MandatoryNary(NaryParser):
                                   location, MALFORMED_ERROR_STRING)
                     grammar.tree__.add_error(err_node, error)
         else:
-            if grammar.history_tracking__:
-                pname = ':root'
-                for pname, _ in reversed(grammar.call_stack__):
-                    if pname[:1] != ':':
-                        break
-                msg = '%s expected by parser %s, »%s« found!' % (expected, repr(pname), found)
-            else:
-                msg = '%s expected, »%s« found!' % (expected, found)
+            msg = '%s expected by parser %s, »%s« found!' \
+                  % (expected, repr(self.nearest_pname), found)
+            # if grammar.history_tracking__:
+            #     pname = ':root'
+            #     for pname, _ in reversed(grammar.call_stack__):
+            #         if pname[:1] != ':':
+            #             break
+            #     msg = '%s expected by parser %s, »%s« found!' % (expected, repr(pname), found)
+            # else:
+            #     msg = '%s expected, »%s« found!' % (expected, found)
         error = Error(msg, location, MANDATORY_CONTINUATION_AT_EOF
                       if (failed_on_lookahead and not text_) else MANDATORY_CONTINUATION)
         grammar.tree__.add_error(err_node, error)

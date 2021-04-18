@@ -320,11 +320,6 @@ class TestCompilerErrors:
             ebnf, None, get_ebnf_grammar(), get_ebnf_transformer(),
             get_ebnf_compiler('UndefinedSymbols'), preserve_AST=True)
         assert any(m.code >= ERROR for m in messages)
-        # assert len(messages) == 1
-        # assert messages[0].code == UNCONNECTED_SYMBOL_WARNING
-        # for m in messages:
-        #     print(m)
-        # print(st.as_sxpr())
 
 
 EBNF = r"""
@@ -399,7 +394,6 @@ class TestSelfHosting:
         parser = get_ebnf_grammar()
         result, errors, syntax_tree = compile_source(
             EBNF, None, parser, get_ebnf_transformer(), compiler)
-        # print(result)
         assert not errors, str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser
@@ -579,9 +573,6 @@ class TestInterleave:
                'form_4 = 2*"d"' \
                'form_5 = ["e"]*3' \
                'form_6 = 5*{"f"}+'
-        # ast = parse_ebnf(ebnf)
-        # transform_ebnf(ast)
-        # print(ast.as_sxpr())
         grammar = create_parser(ebnf)
         assert grammar.form_6.repetitions == (5, INFINITE)
         assert grammar.form_5.repetitions == (0, 3)
@@ -821,7 +812,6 @@ class TestErrorCustomizationErrors:
             series = "A" § "B" "C"
             """
         provider = grammar_provider(lang)
-        # print(provider.python_src__)
         parser = provider()
         result = parser('ADX')
         assert "several strings" in str(result.errors), str(result.errors)
@@ -1023,8 +1013,6 @@ class TestInterleaveResume:
         assert not st.errors
 
         lang = """document = ({ `A` }) ° `B`\n"""
-        # code, errors, ast = compile_ebnf(lang, 'InterleaveTest', True)
-        # print(ast.as_sxpr())
         gr = grammar_provider(lang)()
         mini_suite(gr)
         st = gr('AABAA')
@@ -1105,7 +1093,6 @@ class TestSyntaxExtensions:
     def test_simple_char_range(self):
         set_config_value('syntax_variant', 'strict')
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
-        # print(raw_compileEBNF(lang).result)
         parser = create_parser(lang)
         st = parser('賌')
         assert st.as_sxpr() == '(Char "賌")'
@@ -1118,7 +1105,6 @@ class TestSyntaxExtensions:
             IdentStart <- [a-zA-Z_]
             Spacing    <- (´ ´ / ´\t´ / ´\n´)*      
             """
-        # print(raw_compileEBNF(lang).result)
         parser = create_parser(lang)
         st = parser('marke_8')
         assert not st.errors
@@ -1253,7 +1239,6 @@ class TestTreeOptimization:
             B = `B`
             C = `C`
         """
-        # print(raw_compileEBNF(lang).result)
         parser = create_parser(lang)
         st = parser('ABC')
         assert str(st) == "ABC"
@@ -1414,9 +1399,6 @@ class TestRuleOrder:
             C = `x` [`-` A] [`*` B]
         """
         compiler_obj = compileEBNF(lang)
-        # print(lang)
-        # for sym in compiler_obj.forward:
-        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
         A = all_paths(compiler_obj)
         lang = """doc = A
             A = B | C
@@ -1424,10 +1406,6 @@ class TestRuleOrder:
             B = C [`+` A]
         """
         compiler_obj = compileEBNF(lang)
-        # print(lang)
-        # for sym in compiler_obj.forward:
-        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
-        # print('---')
         B = all_paths(compiler_obj)
         assert A == B, str(A) + str(B)
 
@@ -1437,9 +1415,6 @@ class TestRuleOrder:
             C = `x` [`-` A]
         """
         compiler_obj = compileEBNF(lang)
-        # print(lang)
-        # for sym in compiler_obj.forward:
-        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
         A = all_paths(compiler_obj)
         lang = """doc = A
             A = B | C
@@ -1447,10 +1422,6 @@ class TestRuleOrder:
             B = C [`+` A]
         """
         compiler_obj = compileEBNF(lang)
-        # print(lang)
-        # for sym in compiler_obj.forward:
-        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
-        # print('---')
         B = all_paths(compiler_obj)
         assert A == B, str(A) + str(B)
 
@@ -1460,9 +1431,6 @@ class TestRuleOrder:
             C = `x` [`*` B]
         """
         compiler_obj = compileEBNF(lang)
-        # print(lang)
-        # for sym in compiler_obj.forward:
-        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
         A = all_paths(compiler_obj)
         lang = """doc = A
             A = B | C
@@ -1470,9 +1438,6 @@ class TestRuleOrder:
             B = C [`+` A]
         """
         compiler_obj = compileEBNF(lang)
-        # print(lang)
-        # for sym in compiler_obj.forward:
-        #     print(sym, normalize_circular_path(compiler_obj.recursive_paths(sym)))
         B = all_paths(compiler_obj)
         assert A == B, str(A) + str(B)
 
