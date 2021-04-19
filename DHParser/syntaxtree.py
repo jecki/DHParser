@@ -16,9 +16,6 @@
 # permissions and limitations under the License.
 
 
-
-
-
 """
 Module ``syntaxtree`` encapsulates the functionality for creating
 and handling syntax-trees. This includes serialization and

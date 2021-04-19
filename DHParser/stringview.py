@@ -164,12 +164,15 @@ class StringView:  # collections.abc.Sized
 
     @cython.locals(_len=cython.int)
     def __eq__(self, other) -> bool:
-        """PERFORMANCE WARNING: This creates copies of the compared string-slices!"""
+        """PERFORMANCE WARNING: This create copies of the compared string-slices!"""
         # one string copy could be avoided by using find...
         # return len(other) == self._len and str(self) == str(other)
         _len = self._len
         if len(other) == _len:
             if _len == 0:
+                return True
+            if isinstance(other, StringView) \
+                    and self._text is other._text and self._begin == other._begin:
                 return True
             _fullstring = self._fullstring  # type: str
             if _fullstring:
