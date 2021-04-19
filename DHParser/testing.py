@@ -631,7 +631,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                 if not ignore_unknown_filetypes or str(e).find("Unknown") < 0:
                     raise e
             except AssertionError as e:
-                e.args = ('When processing "%s":\n%s' % (filename, e.args[0]),)
+                e.args = ('When processing "%s":\n%s' % (filename, e.args[0]) if e.args else '',)
                 raise e
     os.chdir(save_cwd)
     error_report = []
