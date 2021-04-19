@@ -2585,12 +2585,10 @@ class MandatoryNary(NaryParser):
         if mandatory < 0:
             mandatory += length
         self.mandatory = mandatory  # type: int
-        self.nearest_pname = self.pname     # for now ...
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
-        duplicate.nearest_pname = self.nearest_pname
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -2657,15 +2655,7 @@ class MandatoryNary(NaryParser):
                     grammar.tree__.add_error(err_node, error)
         else:
             msg = '%s expected by parser %s, »%s« found!' \
-                  % (expected, repr(self.nearest_pname), found)
-            # if grammar.history_tracking__:
-            #     pname = ':root'
-            #     for pname, _ in reversed(grammar.call_stack__):
-            #         if pname[:1] != ':':
-            #             break
-            #     msg = '%s expected by parser %s, »%s« found!' % (expected, repr(pname), found)
-            # else:
-            #     msg = '%s expected, »%s« found!' % (expected, found)
+                  % (expected, repr(sym), found)
         error = Error(msg, location, MANDATORY_CONTINUATION_AT_EOF
                       if (failed_on_lookahead and not text_) else MANDATORY_CONTINUATION)
         grammar.tree__.add_error(err_node, error)
