@@ -2660,10 +2660,10 @@ class MandatoryNary(NaryParser):
         else:
             msg = '%s expected by parser %s, »%s« found!' \
                   % (expected, repr(sym), found)
-        farthest_failure = grammar.farthest_failure__
-        error = Error(msg, max(location, grammar.farthest_failure__),
+        error = Error(msg, location,
                       MANDATORY_CONTINUATION_AT_EOF if (failed_on_lookahead and not text_)
-                      else MANDATORY_CONTINUATION)
+                      else MANDATORY_CONTINUATION,
+                      length = max(self.grammar.farthest_failure__ - location, 1))
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
