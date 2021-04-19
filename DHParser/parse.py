@@ -548,7 +548,10 @@ class Parser:
                     raise pe.new_PE(node=Node(self.tag_name, result).with_pos(location),
                                     rest=text, first_throw=False)
 
-            if node is not None:
+            if node is None:
+                if location > grammar.farthest_failure__:
+                    grammar.farthest_failure__ = location
+            else:
                 node._pos = location
             if not grammar.suspend_memoization__:
                 visited[location] = (node, rest)
@@ -1222,7 +1225,7 @@ class Grammar:
         self.resume_notices__ = get_config_value('resume_notices')                # type: bool
         self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
         self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
-        self.associated_symbol_cache__ = dict()  # type: Dict[Parser, Parser]
+        self.associated_symbol_cache__ = dict()                   # type: Dict[Parser, Parser]
         self._reset__()
 
         # prepare parsers in the class, first
@@ -1311,6 +1314,7 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = False         # type: bool
         self.most_recent_error__ = None       # type: Optional[ParserError]
+        self.farthest_failure__ = 0           # type: int
 
     @property
     def reversed__(self) -> StringView:
@@ -2656,8 +2660,10 @@ class MandatoryNary(NaryParser):
         else:
             msg = '%s expected by parser %s, »%s« found!' \
                   % (expected, repr(sym), found)
-        error = Error(msg, location, MANDATORY_CONTINUATION_AT_EOF
-                      if (failed_on_lookahead and not text_) else MANDATORY_CONTINUATION)
+        farthest_failure = grammar.farthest_failure__
+        error = Error(msg, max(location, grammar.farthest_failure__),
+                      MANDATORY_CONTINUATION_AT_EOF if (failed_on_lookahead and not text_)
+                      else MANDATORY_CONTINUATION)
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
@@ -3111,7 +3117,7 @@ class FlowParser(UnaryParser):
     """
     Base class for all flow parsers like Lookahead and Lookbehind.
     """
-    def sign(self, bool_value) -> bool:
+    def match(self, bool_value) -> bool:
         """Returns the value. Can be overridden to return the inverted bool."""
         return bool_value
 
@@ -3127,7 +3133,7 @@ class Lookahead(FlowParser):
     """
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         node, _ = self.parser(text)
-        if self.sign(node is not None):
+        if self.match(node is not None):
             return (EMPTY_NODE if self.disposable else Node(self.tag_name, '', True)), text
         else:
             return None, text
@@ -3145,6 +3151,17 @@ class Lookahead(FlowParser):
         return errors
 
 
+def _negative_match(grammar, bool_value) -> bool:
+    """Match function for Negative Parsers."""
+    if bool_value:
+        return False
+    else:
+        # invert farthest failure, because, due to negation, it's not
+        # a failure any more and should be overwritten by any other failure
+        grammar.farthest_failure__ = - grammar.farthest_failure__
+        return True
+
+
 class NegativeLookahead(Lookahead):
     """
     Matches, if the contained parser would *not* match for the following
@@ -3153,8 +3170,9 @@ class NegativeLookahead(Lookahead):
     def __repr__(self):
         return '!' + self.parser.repr
 
-    def sign(self, bool_value) -> bool:
-        return not bool_value
+    def match(self, bool_value) -> bool:
+        return _negative_match(self.grammar, bool_value)
+
 
 
 class Lookbehind(FlowParser):
@@ -3183,7 +3201,7 @@ class Lookbehind(FlowParser):
             does_match = backwards_text[:text.__len__()] == self.text
         else:  # assert self.regexp is not None
             does_match = backwards_text.match(self.regexp)
-        if self.sign(does_match):
+        if self.match(does_match):
             if self.drop_content:
                 return EMPTY_NODE, text
             return Node(self.tag_name, '', True), text
@@ -3201,8 +3219,8 @@ class NegativeLookbehind(Lookbehind):
     def __repr__(self):
         return '-!' + self.parser.repr
 
-    def sign(self, bool_value) -> bool:
-        return not bool(bool_value)
+    def match(self, bool_value) -> bool:
+        return _negative_match(self.grammar, bool_value)
 
 
 ########################################################################

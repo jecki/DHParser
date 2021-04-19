@@ -51,6 +51,7 @@ cdef class Grammar:
     cdef public list call_stack__
     cdef public list history__
     cdef public bint moving_forward__
+    cdef public int farthest_failure__
 
 cdef class PreprocessorToken(Parser):
     pass
