@@ -525,8 +525,10 @@ __all__ = ('WHITESPACE_PTYPE',
            'NodeMatchFunction',
            'ContextMatchFunction',
            'ALL_NODES',
+           'NO_NODES',
            'LEAF_NODES',
            'ALL_CONTEXTS',
+           'NO_CONTEXTS',
            'LEAF_CONTEXTS',
            'Node',
            'validate_token_sequence',
@@ -614,9 +616,11 @@ NodeMatchFunction = Callable[['Node'], bool]
 ContextMatchFunction = Callable[[TreeContext], bool]
 
 ALL_NODES = lambda nd: True
+NO_NODES = lambda nd: False
 LEAF_NODES = lambda nd: not nd._children
 
 ALL_CONTEXTS = lambda ctx: True
+NO_CONTEXTS = lambda ctx: False
 LEAF_CONTEXTS = lambda ctx: not ctx[-1].children
 
 
@@ -1400,7 +1404,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return tuple(i for i in range(len(children)) if mf(children[i]))
 
     def select_if(self, match_function: NodeMatchFunction,
-                  include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
+                  include_root: bool = False, reverse: bool = False,
+                  skip_subtree: NodeMatchFunction = NO_NODES) -> Iterator['Node']:
         """
         Generates an iterator over all nodes in the tree for which
         `match_function()` returns True. See the more general function
@@ -1413,11 +1418,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         for child in child_iterator:
             if match_function(child):
                 yield child
-            if child._children:
-                yield from child.select_if(match_function, False, reverse)
+            if child._children and not skip_subtree(child):
+                yield from child.select_if(match_function, False, reverse, skip_subtree)
 
     def select(self, criterion: CriteriaType,
-               include_root: bool = False, reverse: bool = False) -> Iterator['Node']:
+               include_root: bool = False, reverse: bool = False,
+               skip_subtree: CriteriaType = NO_NODES) -> Iterator['Node']:
         """
         Generates an iterator over all nodes in the tree that fulfill the
         given criterion. See :py:func:`create_match_function()` for a
@@ -1428,6 +1434,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             for a match.
         :param reverse: If True, the tree will be walked in reverse
                 order, i.e. last children first.
+        :param skip_subtree: A criterion to identify sub-trees, the returned
+                iterator shall not dive into.
         :returns: An iterator over all descendant nodes which fulfill the
            given criterion. Traversal is pre-order.
 
@@ -1445,7 +1453,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> flatten_sxpr(next(tree.select("X", False)).as_sxpr())
             '(X (c "d"))'
         """
-        return self.select_if(create_match_function(criterion), include_root, reverse)
+        return self.select_if(create_match_function(criterion), include_root, reverse,
+                              create_match_function(skip_subtree))
 
     def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
         """Returns an iterator over all direct children of a node that
@@ -1463,7 +1472,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def pick(self, criterion: CriteriaType,
              include_root: bool = False,
-             reverse: bool = False) -> Optional['Node']:
+             reverse: bool = False,
+             skip_subtree: CriteriaType = NO_NODES) -> Optional['Node']:
         """
         Picks the first (or last if run in reverse mode) descendant that
         fulfils the given criterion. See :py:func:`create_match_function()`
@@ -1474,8 +1484,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         with the given tag-name exists, it returns `None`.
         """
         try:
-            return next(self.select(criterion,
-                                    include_root=include_root, reverse=reverse))
+            return next(self.select(criterion, include_root, reverse, skip_subtree))
         except StopIteration:
             return None
 
@@ -1526,46 +1535,51 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_context_if(self, match_function: ContextMatchFunction,
                           include_root: bool = False,
-                          reverse: bool = False) -> Iterator[TreeContext]:
+                          reverse: bool = False,
+                          skip_subtree: ContextMatchFunction = NO_CONTEXTS) -> Iterator[TreeContext]:
         """
         Like :py:func:`Node.select_if()` but yields the entire context (i.e. list
         of descendants, the last one being the matching node) instead of just
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
         receives the complete context as argument, rather than just the last node!
         """
-        context = [self]
-        if include_root and match_function(context):
-            yield context
-        child_iterator = reversed(self._children) if reverse else self._children
-        for child in child_iterator:
-            child_context = context + [child]
-            if match_function(child_context):
-                yield child_context
-            if child._children:
-                for matched in child.select_context_if(match_function, False, reverse):
-                    yield context + matched
+        def recursive(ctx, include_root):
+            nonlocal match_function, reverse, skip_subtree
+            if include_root and match_function(ctx):
+                yield ctx
+            top = ctx[-1]
+            child_iterator = reversed(top._children) if reverse else top._children
+            for child in child_iterator:
+                child_ctx = ctx + [child]
+                if match_function(child_ctx):
+                    yield child_ctx
+                if child._children and not skip_subtree(child_ctx):
+                    yield from recursive(child_ctx, include_root=False)
+        yield from recursive([self], include_root)
 
     def select_context(self, criterion: CriteriaType,
                        include_root: bool = False,
-                       reverse: bool = False) -> Iterator[TreeContext]:
+                       reverse: bool = False,
+                       skip_subtree: CriteriaType = NO_CONTEXTS) -> Iterator[TreeContext]:
         """
         Like :py:meth:`Node.select()` but yields the entire context (i.e. list of
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
         return self.select_context_if(create_context_match_function(criterion),
-                                      include_root, reverse)
+                                      include_root, reverse,
+                                      create_context_match_function(skip_subtree))
 
     def pick_context(self, criterion: CriteriaType,
                      include_root: bool = False,
-                     reverse: bool = False) -> TreeContext:
+                     reverse: bool = False,
+                     skip_subtree: ContextMatchFunction = NO_CONTEXTS) -> TreeContext:
         """
         Like :py:meth:`Node.pick()`, only that the entire context (i.e.
         chain of descendants) relative to `self` is returned.
         """
         try:
-            return next(self.select_context(criterion,
-                                            include_root=include_root, reverse=reverse))
+            return next(self.select_context(criterion, include_root, reverse, skip_subtree))
         except StopIteration:
             return []
 

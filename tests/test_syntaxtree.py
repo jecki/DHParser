@@ -31,7 +31,7 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
     prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
-    select_context_if, select_context
+    select_context_if, select_context, create_context_match_function
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -290,6 +290,9 @@ class TestNode:
         tags = [node.tag_name
                 for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
         assert ''.join(tags) == "abdfg", ''.join(tags)
+        tags = [node.tag_name
+                for node in self.unique_tree.select(ALL_NODES, include_root=True, skip_subtree='f')]
+        assert ''.join(tags) == "abdf", ''.join(tags)
 
     def test_tree_select_context_if(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
@@ -303,6 +306,23 @@ class TestNode:
                                           include_root=True, reverse=True):
             contexts.append(''.join(nd.tag_name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
+
+    def test_select_context_with_skipping(self):
+        tree = parse_sxpr('(a (b c) (d e) (f (g h)))')
+        check = []
+        contexts = []
+        def select_f(ctx):
+            nonlocal check
+            check.append(''.join(nd.tag_name for nd in ctx))
+            return True
+        for ctx in tree.select_context(select_f, include_root=True):
+            contexts.append(''.join(nd.tag_name for nd in ctx))
+        assert check == contexts == ['a', 'ab', 'ad', 'af', 'afg']
+        check = []
+        contexts = []
+        for ctx in tree.select_context(select_f, include_root=True, skip_subtree='f'):
+            contexts.append(''.join(nd.tag_name for nd in ctx))
+        assert check == contexts == ['a', 'ab', 'ad', 'af']
 
     def test_tree_select_context(self):
         tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
