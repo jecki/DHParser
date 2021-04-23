@@ -1343,13 +1343,13 @@ class Grammar:
                  'already exists in grammar object: %s!'
                  % (parser.pname, str(self.__dict__[parser.pname])))
             setattr(self, parser.pname, parser)
-        if isinstance(parser, MandatoryNary):
-            for p in reversed(context):
-                if p.pname:
-                    cast(MandatoryNary, parser).nearest_pname = p.pname
-                    break
-            else:
-                assert False, '???'
+        # if isinstance(parser, MandatoryNary):
+        #     for p in reversed(context):
+        #         if p.pname:
+        #             cast(MandatoryNary, parser).nearest_pname = p.pname
+        #             break
+        #     else:
+        #         assert False, '???'
         if parser.disposable:
             parser.tag_name = parser.ptype
         else:
