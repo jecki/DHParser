@@ -1156,6 +1156,9 @@ def merge_connected(context: TreeContext, content: Callable, delimiter: Callable
     :param delimiter: Condition to identify delimiter nodes. (TreeContext -> bool)
     :param content_name: tag name for the merged content blocks
     :param delimiter_name: tag name for the merged delimiters at the fringe
+
+    ATTENTION: The condition to identify content nodes and the condition to
+    identify delimiter nodes must never come true for one and the same node!!!
     """
     # first, merge all delimiters
     merge_adjacent(context, delimiter, delimiter_name)
