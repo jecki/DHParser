@@ -274,20 +274,23 @@ class Error:
             diagnostic['relatedInformation'] = [relatedObj(err) for err in self.related]
         return diagnostic
 
-def is_warning(code: int) -> bool:
+def is_warning(code: Union[Error, int]) -> bool:
     """Returns True, if error is merely a warning or a message."""
+    if isinstance(code, Error):  code = code.code
     return code < ERROR
 
 
-def is_error(code: int) -> bool:
+def is_error(code: Union[Error, int]) -> bool:
     """Returns True, if error is a (fatal) error, not just a warning."""
+    if isinstance(code, Error):  code = code.code
     return code >= ERROR
 
 
-def is_fatal(code: int) -> bool:
+def is_fatal(code: Union[Error, int]) -> bool:
     """Returns True, ir error is fatal. Fatal errors are typically raised
     when a crash (i.e. Python exception) occurs at later stages of the
     processing pipeline (e.g. ast transformation, compiling). """
+    if isinstance(code, Error):  code = code.code
     return code >= FATAL
 
 
