@@ -465,6 +465,36 @@ class TestNode:
         node = Node.from_etree(et)
         assert node.as_sxpr() == expected_sxpr
 
+    def test_delete_item(self):
+        sxpr = '(root (A "0") (B "1") (C "2") (D "3"))'
+        node = parse_sxpr(sxpr)
+        try:
+            _ = node.index('E')
+            assert False, 'ValueError expected'
+        except ValueError:
+            pass
+        assert node[-1].tag_name == "D"
+        try:
+            del node[4]
+            assert False, 'IndexError expected'
+        except IndexError:
+            pass
+        try:
+            del node[-5]
+            assert False, 'IndexError expected'
+        except IndexError:
+            pass
+        del node[-2]
+        assert 'C' not in node
+        del node[0]
+        assert 'A' not in node
+        sxpr = '(root (A "0") (B "1") (C "2") (D "3"))'
+        node = parse_sxpr(sxpr)
+        del node[1:3]
+        assert str(node) == "03"
+
+
+
 
 class TestRootNode:
     def test_error_handling(self):

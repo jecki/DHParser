@@ -1304,9 +1304,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             or a criterion for selecting child-nodes for deletion.
         """
         if isinstance(key, int):
-            if 0 <= key < len(self._children):
+            L = len(self._children)
+            k = L + key if key < 0 else key
+            if 0 <= k < L:
+                self.result = self._children[:k] + self._children[k + 1:]
+            else:
                 raise IndexError("index %s out of range [0, %i[" % (key, len(self._children)))
-            self.result = self._children[:key] + self._children[key + 1:]
         elif isinstance(key, slice):
             children = list(self.children)
             for i in range(*key.indices(len(children))):
