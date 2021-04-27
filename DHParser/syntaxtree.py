@@ -235,12 +235,10 @@ particular nodes within in a tree::
     [Node('blank', ' '), Node('blank', ' '), Node('blank', ' ')]
 
 The pick functions always picks the first node fulfilling the criterion::
-
     >>> sentence.pick('word')
     Node('word', 'This')
 
 Or, reversing the direction::
-
     >>> last_match = sentence.pick('word', reverse=True)
     >>> last_match
     Node('word', 'Palace')
@@ -251,6 +249,68 @@ node's parent can be found by the `find_parent`-function which must be
 executed ony ancestor of the node::
     >>> sentence.find_parent(last_match)
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+
+Sometimes, one only wants to select or pick particular children of a node.
+Apart from accessing these via `node.children`, there is a tuple-like
+access to the immediate children via indices and slices::
+    >>> sentence[0]
+    Node('word', 'This')
+    >>> sentence[-1]
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+    >>> sentence[0:3]
+    (Node('word', 'This'), Node('blank', ' '), Node('word', 'is'))
+    >>> sentence.index('blank')
+    1
+    >>> sentence.indices('word')
+    (0, 2)
+
+as well as a dictionary-like access, with the difference that a "key" may
+occur several times::
+    >>> sentence['word']
+    (Node('word', 'This'), Node('word', 'is'))
+    >>> sentence['phrase']
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+
+Be aware that always all matching values will be returned and that the return
+type can accordingly be either a tuple of Nodes or a single Node! An IndexError
+is raised in case the "key" does not exist or an index is out of range.
+
+It is also possible to delete children conveniently with Python's `del`-operator::
+    >>> s_copy = copy.deepcopy(sentence)
+    >>> del s_copy['blank'];  print(s_copy)
+    ThisisBuckingham Palace
+    >>> del s_copy[2][0:2]; print(s_copy.serialize())
+    (sentence (word "This") (word "is") (phrase (word "Palace")))
+
+One can also use the `Node.pick_child()` or `Node.select_children()`-method in
+order to select children with an arbitrary condition::
+    >>> tuple(sentence.select_children(lambda nd: nd.content.find('s') >= 0))
+    (Node('word', 'This'), Node('word', 'is'))
+    >>> sentence.pick_child(lambda nd: nd.content.find('i') >= 0, reverse=True)
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+
+Often, one is neither interested in selecting form the children of a node, nor
+from the entire subtree, but from a certain "depth-range" of a tree-structure.
+Say, you would like to pick all word's from the sentence that are not inside
+a phrase and assume at the same time that words may occur in nested structures::
+
+    >>> nested = copy.deepcopy(sentence)
+    >>> i = nested.index(lambda nd: nd.content == 'is')
+    >>> nested[i].result = Node('word', nested[i].result)
+    >>> nested[i].tag_name = 'italic'
+    >>> nested[0:i + 1]
+    (Node('word', 'This'), Node('blank', ' '), Node('italic', (Node('word', 'is'))))
+
+No, in order to select all words on the level of the sentence, but excluding
+any sub-phrases, it would not be helpful to use methods based on the selection
+of children (i.e. immediate descendents), because the word nested in an
+'italic'-Node would be missed. For this purpose the various selection()-methods
+of class node have a `skip_subtree`-parameter which can be used to block subtrees
+from the iterator based on a criteria (which can be a function, a tag name or
+set of tag names and the like)::
+
+    >>> tuple(nested.select('word', skip_subtree='phrase'))
+    (Node('word', 'This'), Node('word', 'is'))
 
 
 Navigating "uptree" within the neighborhood and lineage of a node
@@ -1576,7 +1636,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pick_context(self, criterion: CriteriaType,
                      include_root: bool = False,
                      reverse: bool = False,
-                     skip_subtree: ContextMatchFunction = NO_CONTEXTS) -> TreeContext:
+                     skip_subtree: CriteriaType = NO_CONTEXTS) -> TreeContext:
         """
         Like :py:meth:`Node.pick()`, only that the entire context (i.e.
         chain of descendants) relative to `self` is returned.

@@ -13,10 +13,7 @@ Welcome to DHParser's documentation!
    :caption: Contents:
 
    StepByStepGuide.rst
-   UserGuide.rst
-   ReferenceManual.rst
-   ModuleReference.rst
-
+   Manual.rst
 
 Indices and tables
 ==================
