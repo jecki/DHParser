@@ -614,7 +614,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
              if any(fnmatch.fnmatch(fn, pattern) for pattern in fn_patterns)]
 
     # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
-    with instantiate_executor(get_config_value('test_parallelization'),
+    with instantiate_executor(get_config_value('test_parallelization') and len(tests) > 1,
                               concurrent.futures.ProcessPoolExecutor) as pool:
         results = []
         for filename in tests:
@@ -919,7 +919,7 @@ def run_path(path):
         sys.path.append(path)
         files = os.listdir(path)
         results = []
-        with instantiate_executor(get_config_value('test_parallelization'),
+        with instantiate_executor(get_config_value('test_parallelization') and len(files) > 1,
                                   concurrent.futures.ProcessPoolExecutor) as pool:
             for f in files:
                 results.append(pool.submit(run_file, f))
