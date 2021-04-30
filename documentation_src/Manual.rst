@@ -32,13 +32,35 @@ reading-order is recommended to understand DHParser:
    that document tress are transformed again and again to produce different
    representations of research data or various output forms. DHParser
    supplies the scaffolding for two different types of tree transformations,
-   both of which a variations of the visitor pattern. The scaffolding supplied
-   by the transform-module
+   both of which a variations of the `visitor pattern`_. The scaffolding supplied
+   by the transform-module allows to specify tree-transformations in a
+   declarative style by filling in a dictionary of tag-names with lists
+   of transformation functions that are called in sequence on a node.
+   A number of transformations are pre-defined that cover the most needed
+   cases that occur in particular when transforming concrete syntax trees
+   to more abstract syntax trees.
+   (An example for this kind of declaratively specified transformation is
+    the ``EBNF_AST_transformation_table`` within the DHParser's ebnf-module.)
+
+4. `compile.py` - The compile-module offers an object-oriented scaffolding
+   for the `visitor pattern`_ that is more suitable for complex
+   transformations that make heavy use of algorithms as well as
+   transformations from trees to non-tree objects like program code.
+   (An example for the latter kind of transformation is the ``EBNFCompiler class``
+    of DHParser's ebnf-module.)
+
+    With the documentation of these four modules you should have enough
+    knowledge to realize projects that follow the workflow described
+    in the `Step by Step Guide`_. There will seldom be need to interact
+    with the other modules directly. However, reading their documentation
+    may help deepening the understanding of how DHParser works under
+    the hood and be useful for more special usa cases.
 
 .. _pyparsing: https://github.com/pyparsing/pyparsing/
 .. _lark: https://github.com/lark-parser/lark
 .. _`language server protocol`: https://langserver.org/
 .. _EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+.. _`visitor pattern`: https://en.wikipedia.org/wiki/Visitor_pattern
 .. _`Step by Step Guide`: StepByStepGuide.rst
 
 
