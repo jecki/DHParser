@@ -1,6 +1,46 @@
-****************
-Module Reference
-****************
+******
+Manual
+******
+
+At the core of DHParser lies a parser generator for parsing expression grammars.
+As a parser generator it offers similar functionality as pyparsing_ or lark_.
+But it goes far beyond a mere parser generator by offering rich support of
+the testing an debugging of grammars, tree-processing (always needed in the
+XML-prone Digital Humanities ;-) ), fail-tolerant grammars and some
+(as of now, experimental) support for editing via the
+`language server protocol`_.
+
+DHParser is both suitable for small projects or "on the fly" use of parsing
+expression grammar as a more powerful substitute for regular expressions and
+for big projects. (The workflow for the latter is described in the `Step by
+Step Guide`_.) The usage and API of DHParser is (or will be) described
+with many examples in the doctrings of its various modules. The following
+reading-order is recommended to understand DHParser:
+
+1. `ebnf.py` - Although DHParser also offers a Python-interface for specifying
+   grammers (similar to pyparsing_), the recommended way of using DHParser
+   is by specifying the grammar in EBNF_. Here it is described how grammars
+   are specified in EBNF_ and how parsers can be auto-generated from these
+   grammars and how they are used to parse text.
+
+2. `syntaxtree.py` - Syntax-trees are the central data-structure of any
+   parsing system. The description to this modules explains how syntax-trees
+   are represented within DHParser, how they can be manipulated, queried
+   and serialized or deserialized as XML, S-expressions or json.
+
+3. `transform.py` - It is not untypical for digital humanities applications
+   that document tress are transformed again and again to produce different
+   representations of research data or various output forms. DHParser
+   supplies the scaffolding for two different types of tree transformations,
+   both of which a variations of the visitor pattern. The scaffolding supplied
+   by the transform-module
+
+.. _pyparsing: https://github.com/pyparsing/pyparsing/
+.. _lark: https://github.com/lark-parser/lark
+.. _`language server protocol`: https://langserver.org/
+.. _EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+.. _`Step by Step Guide`: StepByStepGuide.rst
+
 
 DHParser is split into a number of modules plus one command line utility
 (``dhparser.py``, which will not be described here.)
