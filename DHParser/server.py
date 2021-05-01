@@ -1365,8 +1365,8 @@ class Server:
 
         def connection_alive() -> bool:
             """-> `False` if connection is dead or shall be shut down."""
-            assert self.connection
-            return not self.kill_switch and self.connection.alive and not reader.at_eof()  # and not reader.closed
+            return not self.kill_switch and self.connection and self.connection.alive \
+                   and not reader.at_eof()  # and not reader.closed
 
         buffer = bytearray()  # type: bytearray
         while connection_alive():
@@ -1453,6 +1453,9 @@ class Server:
 
             if self.log_file:   # avoid decoding if logging is off
                 self.log('RECEIVE: ', *pp_transmission(data), '\n\n')
+
+            if self.connection is None or not self.connection.alive:
+                break
 
             if id_connection:
                 if self.connection.alive:
@@ -1558,7 +1561,7 @@ class Server:
                 self.log('SERVER MESSAGE: Closing service-connection.')
                 return
 
-        if self.kill_switch or not self.connection.alive:
+        if self.connection and (self.kill_switch or not self.connection.alive):
             await self.connection.cleanup()
             try:
                 writer.write_eof()

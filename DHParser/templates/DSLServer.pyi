@@ -252,6 +252,10 @@ class DSLLanguageServerProtocol:
                                    log_func=self.connection.log)
         return error_list
 
+    # def simply_compile(self, argstr):
+    #     from DSLParser import compile_src
+    #     return compile_src(argstr)
+
     async def simply_compile(self, argstr: str):
         from functools import partial
         from DSLParser import compile_src

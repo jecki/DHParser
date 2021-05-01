@@ -90,7 +90,7 @@ class TestDHParserCommandLineTool:
                '>' + data_dir + '/neu/example.xml')
         with open(data_dir + '/neu/example.xml', 'r', encoding='utf-8') as f:
             json = f.read()
-        assert json.find('document') >= 0, json
+        assert json.find('document') >= 0, data_dir + ' ' + str(len(json))
         system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl ' + self.nulldevice)
         system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl ' + self.nulldevice)
         system(self.python + data_dir + '/neu/neuServer.py --stopserver' + self.nulldevice)
