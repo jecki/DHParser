@@ -201,6 +201,8 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
     assert len(positions) == len(offsets), '\n' + str(positions) + '\n' + str(offsets)
     assert positions[0] == 0
     assert all(positions[i] < positions[i + 1] for i in range(len(positions) - 1))
+
+    # specific condition for preprocessor tokens
     assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 2))
 
     return SourceMap(positions, offsets)
@@ -243,5 +245,4 @@ def with_source_mapping(result: PreprocessorResult) -> Tuple[str, SourceMapFunc]
 # Includes - support for chaining source texts
 #
 #######################################################################
-
 
