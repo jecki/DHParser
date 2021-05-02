@@ -56,13 +56,16 @@ class TestDHParserCommandLineTool:
         self.python = sys.executable + ' '
 
     def teardown(self):
-        data_dir = TFFN('test_dhparser_data')
-        if os.path.exists(data_dir + '/neu/neuServer.py'):
-            system(self.python + data_dir + '/neu/neuServer.py --stopserver' + self.nulldevice)
-        if os.path.exists(data_dir + '/neu') and os.path.isdir(data_dir + '/neu'):
-            shutil.rmtree(data_dir + '/neu')
-        if os.path.exists(data_dir) and not os.listdir(data_dir):
-            os.rmdir(data_dir)
+        name = TFFN('test_dhparser_data')
+        if os.path.exists(name + '/%sServer.py' % name):
+            system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)
+        if os.path.exists(name) and os.path.isdir(name):
+            shutil.rmtree(name)
+        if os.path.exists(name) and not os.listdir(name):
+            os.rmdir(name)
+        cfg_name = '%sServer.py.cfg' % name
+        if os.path.exists(cfg_name):
+            os.remove(cfg_name)
         os.chdir(self.cwd)
         if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
             for fname in os.listdir(LOG_DIR):
@@ -72,28 +75,25 @@ class TestDHParserCommandLineTool:
         #     os.rmdir('out')
 
     def test_dhparser(self):
-        data_dir = TFFN('test_dhparser_data')
+        name = TFFN('test_dhparser_data')
         # test compiler creation and execution
-        system(self.python + '../DHParser/scripts/dhparser.py ' + data_dir + '/neu '
-               + self.nulldevice)
-        system(self.python + data_dir + '/neu/tst_neu_grammar.py --singlethread ' + self.nulldevice)
-        system(self.python + data_dir + '/neu/neuParser.py ' + data_dir + '/neu/example.dsl '
-                  '>' + data_dir + '/neu/example.xml')
-        with open(data_dir + '/neu/example.xml', 'r', encoding='utf-8') as f:
+        system(self.python + '../DHParser/scripts/dhparser.py ' + name + self.nulldevice)
+        system(self.python + name + '/tst_%s_grammar.py --singlethread ' % name + self.nulldevice)
+        system(self.python + name + '/%sParser.py ' % name + name + '/example.dsl >' + name + '/example.xml')
+        with open(name + '/example.xml', 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('document') >= 0, xml
-        os.remove(data_dir + '/neu/neuParser.py')
-        os.remove(data_dir + '/neu/example.xml')
+        os.remove(name + '/%sParser.py' % name)
+        os.remove(name + '/example.xml')
         # test server
-        system(self.python + data_dir + '/neu/neuServer.py --stopserver' + self.nulldevice)
-        system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl '
-               '>' + data_dir + '/neu/example.xml')
-        with open(data_dir + '/neu/example.xml', 'r', encoding='utf-8') as f:
+        system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)
+        system(self.python + name + '/%sServer.py ' % name + name + '/example.dsl >' + name + '/example.xml')
+        with open(name + '/example.xml', 'r', encoding='utf-8') as f:
             json = f.read()
-        assert json.find('document') >= 0, data_dir + ' ' + str(len(json))
-        system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl ' + self.nulldevice)
-        system(self.python + data_dir + '/neu/neuServer.py ' + data_dir + '/neu/example.dsl ' + self.nulldevice)
-        system(self.python + data_dir + '/neu/neuServer.py --stopserver' + self.nulldevice)
+        assert json.find('document') >= 0, name + ' ' + str(len(json))
+        system(self.python + name + '/%sServer.py ' % name + name + '/example.dsl ' + self.nulldevice)
+        system(self.python + name + '/%sServer.py ' % name + name + '/example.dsl ' + self.nulldevice)
+        system(self.python + name + '/%sServer.py --stopserver' % name+ self.nulldevice)
 
 
 if __name__ == "__main__":
