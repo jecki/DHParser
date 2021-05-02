@@ -166,12 +166,14 @@ RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
 
 
 class Error:
-    __slots__ = ['message', 'code', '_pos', 'orig_pos', 'line', 'column',
-                 'length', 'end_line', 'end_column', 'related', 'relatedUri']
+    __slots__ = ['message', 'code', '_pos', 'line', 'column', 'length',
+                 'end_line', 'end_column', 'related', 'orig_pos', 'orig_doc',
+                 'relatedUri']
 
     def __init__(self, message: str, pos: int, code: ErrorCode = ERROR,
-                 orig_pos: int = -1, line: int = -1, column: int = -1,
-                 length: int = 1, related: Sequence[Tuple['Error', str]] = []) -> None:
+                 line: int = -1, column: int = -1, length: int = 1,
+                 related: Sequence[Tuple['Error', str]] = [],
+                 orig_pos: int = -1, orig_doc: str = '') -> None:
         assert isinstance(code, ErrorCode)
         assert not isinstance(pos, ErrorCode)
         assert code >= 0
@@ -183,6 +185,7 @@ class Error:
         # Problem: Same code might allowedly be used by two different parsers/compilers
         self.code = code          # type: ErrorCode
         self.orig_pos = orig_pos  # type: int
+        self.orig_doc = orig_doc  # type: str
         self.line = line          # type: int
         self.column = column      # type: int
         # support for Language Server Protocol Diagnostics
