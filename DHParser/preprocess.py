@@ -236,3 +236,12 @@ def with_source_mapping(result: PreprocessorResult) -> Tuple[str, SourceMapFunc]
         mapping_func = functools.partial(source_map, srcmap=srcmap)
         return result, mapping_func
     return result
+
+
+#######################################################################
+#
+# Includes - support for chaining source texts
+#
+#######################################################################
+
+
