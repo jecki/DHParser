@@ -793,8 +793,7 @@ class Connection:
         open_tasks = {task for idT, task in self.active_tasks.items()
                       if idT not in self.finished_tasks}
         if open_tasks:
-            _, pending = await asyncio.wait(
-                open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
+            _, pending = await asyncio.wait(open_tasks, timeout=3.0)  # type: Set[asyncio.Future], Set[asyncio.Future]
             for task in pending:
                 task.cancel()
             # wait for task's cancellation to actually finish

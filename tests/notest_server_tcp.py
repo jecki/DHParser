@@ -56,6 +56,7 @@ from DHParser.lsp import gen_lsp_table
 from DHParser.testing import TFFN
 
 TEST_PORT = 8000 + os.getpid() % 1000
+# print('>>> ', sys.version, TEST_PORT)
 # adding pid % 100 hopefully prevents interference, if `test_server.py` is run in
 # parallel with several different python versions, as done by `run.py`
 
