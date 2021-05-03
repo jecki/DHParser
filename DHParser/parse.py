@@ -1680,14 +1680,14 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     return " ".join(msg)
 
 
-_GRAMMAR_PLACEHOLDER = None  # type: Grammar
+_GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
 
 
 def get_grammar_placeholder() -> Grammar:
     global _GRAMMAR_PLACEHOLDER
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
-    return cast(Parser, _GRAMMAR_PLACEHOLDER)
+    return cast(Grammar, _GRAMMAR_PLACEHOLDER)
 
 
 def is_grammar_placeholder(grammar: Optional[Grammar]) -> bool:

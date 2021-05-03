@@ -900,7 +900,7 @@ if __name__ == "__main__":
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
         set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
+        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here!
     start_logging(log_dir)
 
     if args.xml:

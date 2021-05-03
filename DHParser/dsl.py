@@ -16,8 +16,8 @@
 # permissions and limitations under the License.
 
 """
-Module ``dsl`` contains various functions to support the
-compilation of domain specific languages based on an EBNF-grammar.
+Module ``dsl`` contains high-level functions for the compilation
+of domain specific languages based on an EBNF-grammar.
 """
 
 import functools
