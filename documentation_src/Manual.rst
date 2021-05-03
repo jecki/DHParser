@@ -131,8 +131,8 @@ interact with the other modules directly.
 .. _lark: https://github.com/lark-parser/lark
 .. _cython: https://cython.org/
 .. _`language server`: https://langserver.org/
-.. _`language sever protocol`: https://microsoft.github.io/language-server-protocol/
-.. _`language sever protocol specification`: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
+.. _`language server protocol`: https://microsoft.github.io/language-server-protocol/
+.. _`language server protocol specification`: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
 .. _EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
 .. _`visitor pattern`: https://en.wikipedia.org/wiki/Visitor_pattern
 .. _pypy: https://www.pypy.org/

@@ -1602,7 +1602,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         location is the actual position within self.content (not the
         source code position that the pos-attribute represents). If
         the location lies out side the node's string content, `None` is
-        returnde.
+        returned.
         """
         end = 0
         for nd in self.select_if(lambda nd: not nd._children, include_root=True):
@@ -2465,6 +2465,7 @@ def has_token(token_sequence: str, tokens: str) -> bool:
     token sequence. If `token` itself is a blank-separated sequence of
     tokens, True is returned if all tokens are contained in
     `token_sequence`::
+
         >>> has_token('bold italic', 'italic')
         True
         >>> has_token('bold italic', 'normal')
@@ -2482,6 +2483,7 @@ def has_token(token_sequence: str, tokens: str) -> bool:
 def add_token(token_sequence: str, tokens: str) -> str:
     """Adds the tokens from 'tokens' that are not already contained in
     `token_sequence` to the end of `token_sequence`::
+
         >>> add_token('', 'italic')
         'italic'
         >>> add_token('bold italic', 'large')
@@ -2498,7 +2500,8 @@ def add_token(token_sequence: str, tokens: str) -> str:
 
 
 def remove_token(token_sequence, tokens: str) -> str:
-    """Removes all `tokens` from  `token_sequence`::
+    """
+    Removes all `tokens` from  `token_sequence`::
 
         >>> remove_token('red thin stroked', 'thin')
         'red stroked'
@@ -2515,6 +2518,7 @@ def remove_token(token_sequence, tokens: str) -> str:
 def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
     """Returns True if bothe token sequences contain the same tokens,
     no matter in what order::
+
         >>> eq_tokens('red thin stroked', 'stroked red thin')
         True
         >>> eq_tokens('red thin', 'thin blue')
