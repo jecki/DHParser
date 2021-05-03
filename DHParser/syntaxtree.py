@@ -34,6 +34,7 @@ not both at the same time. (There are no mixed nodes as in XML!)
 
 In order to test whether a Node is leaf-node one can check for the
 absence of children::
+
     >>> node = Node('word', 'Palace')
     >>> assert not node.children
 
@@ -44,17 +45,20 @@ The data of a node can be queried by reading the result-property::
 
 The `result` is always a string or a tuple of Nodes, even if the
 node-object has been initialized with a single node::
+
     >>> parent = Node('phrase', node)
     >>> parent.result
     (Node('word', 'Palace'),)
 
 The `result`-property can be assigned to, in order to changae the data
 of a node::
+
     >>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
 
 More conveniently than printing the result-propery, nodes can be
 serialized as S-expressions (well-known from the computer languages
 "lisp" and "scheme")::
+
     >>> print(parent.as_sxpr())
     (phrase (word "Buckingham") (blank " ") (word "Palace"))
 
@@ -71,6 +75,7 @@ Content-equality of Nodes must be tested with the `equals()`-method.
 The equality operator `==` tests merely for the identity of the
 node-object, not for the euqality of the content of two different
 node-objects::
+
     >>> n1 = Node('dollars', '1')
     >>> n2 = Node('dollars', '1')
     >>> n1.equals(n2)
@@ -80,6 +85,7 @@ node-objects::
 
 An empty node is always a leaf-node, that is, if initialized with an
 empty tuple, the node's result will actually be the empty string::
+
     >>> empty = Node('void', ())
     >>> empty.result
     ''
@@ -90,6 +96,7 @@ either its `children`-property or its `content`-property. The former
 yields the tuple of child-nodes. The latter yields the string-content
 of the node, which in the case of a "branch-node" is the (recursively
 generated) concatenated string-content of all of its children::
+
     >>> node.content
     'Palace'
     >>> node.children
@@ -107,12 +114,14 @@ Just like HTML- oder XML-tags, nodes can be annotated with attributes.
 Attributes are stored in an ordered dictionary that maps string
 identifiers, i.e. the attribute name, to the string-content of the
 attribute. This dictionary can be accessed via the `attr`-property::
+
     >>> node.attr['price'] = 'very high'
     >>> print(node.as_xml())
     <word price="very high">Palace</word>
 
 When serializing as S-expressions attributes are shown as a nested list
 marked with a "tick"::
+
     >>> print(node.as_sxpr())
     (word `(price "very high") "Palace")
 
@@ -120,6 +129,7 @@ Attributes can be queried via the `has_attr()` and `get_attr()`-methods.
 This is to be preferred over accessing the `attr`-property for querying,
 because the attribute dictionary is created lazily on the first
 access of the `attr`-property::
+
     >>> node.has_attr('price')
     True
     >>> node.get_attr('price', '')
@@ -129,6 +139,7 @@ access of the `attr`-property::
 
 If called with no parameters or an empty string as attribute name,
 `has_attr()` returns True, if at least one attribute is present::
+
     >>> parent.has_attr()
     False
 
@@ -154,6 +165,7 @@ Before the `pos`-field can be read, it must have been initialized with
 the `with_pos`-method, which recursively initializes the `pos`-field of
 the child nodes according to the offset of the string values from the
 main field::
+
     >>> import copy; essentials = copy.deepcopy(parent)
     >>> print(essentials.with_pos(0).as_xml(src=essentials.content))
     <phrase line="1" col="1">
@@ -188,6 +200,7 @@ function to deserialize indented text.
 In order to make parameterizing serialization easier, the Node-class
 also defines a generic `serialize()`-method next to the more specialized
 `as_sxpr()`-, `as_json()`- and `as_xml()`-methods::
+
     >>> s = '(sentence (word "This") (blank " ") (word "is") (blank " ") (phrase (word "Buckingham") (blank " ") (word "Palace")))'
     >>> sentence = parse_sxpr(s)
     >>> print(sentence.serialize(how='indented'))
@@ -229,16 +242,19 @@ Navigating "downtree" within a tree spanned by a node
 
 There are a number of useful functions to help navigating a tree and finding
 particular nodes within in a tree::
+
     >>> list(sentence.select('word'))
     [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'), Node('word', 'Palace')]
     >>> list(sentence.select(lambda node: node.content == ' '))
     [Node('blank', ' '), Node('blank', ' '), Node('blank', ' ')]
 
 The pick functions always picks the first node fulfilling the criterion::
+
     >>> sentence.pick('word')
     Node('word', 'This')
 
 Or, reversing the direction::
+
     >>> last_match = sentence.pick('word', reverse=True)
     >>> last_match
     Node('word', 'Palace')
@@ -247,12 +263,14 @@ While nodes contain references to their children, a node does not contain
 a references to its parent. As a last resort (because it is slow) the
 node's parent can be found by the `find_parent`-function which must be
 executed ony ancestor of the node::
+
     >>> sentence.find_parent(last_match)
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
 
 Sometimes, one only wants to select or pick particular children of a node.
 Apart from accessing these via `node.children`, there is a tuple-like
 access to the immediate children via indices and slices::
+
     >>> sentence[0]
     Node('word', 'This')
     >>> sentence[-1]
@@ -266,6 +284,7 @@ access to the immediate children via indices and slices::
 
 as well as a dictionary-like access, with the difference that a "key" may
 occur several times::
+
     >>> sentence['word']
     (Node('word', 'This'), Node('word', 'is'))
     >>> sentence['phrase']
@@ -276,6 +295,7 @@ type can accordingly be either a tuple of Nodes or a single Node! An IndexError
 is raised in case the "key" does not exist or an index is out of range.
 
 It is also possible to delete children conveniently with Python's `del`-operator::
+
     >>> s_copy = copy.deepcopy(sentence)
     >>> del s_copy['blank'];  print(s_copy)
     ThisisBuckingham Palace
@@ -284,6 +304,7 @@ It is also possible to delete children conveniently with Python's `del`-operator
 
 One can also use the `Node.pick_child()` or `Node.select_children()`-method in
 order to select children with an arbitrary condition::
+
     >>> tuple(sentence.select_children(lambda nd: nd.content.find('s') >= 0))
     (Node('word', 'This'), Node('word', 'is'))
     >>> sentence.pick_child(lambda nd: nd.content.find('i') >= 0, reverse=True)
@@ -321,6 +342,7 @@ It is much more elegant to keep track of a node's ancestry by using a
 root-node and including the node itself as its last item. For most
 search methods such as select, there exists a pendant that returns
 this context instead of just the node itself::
+
     >>> last_context = sentence.pick_context('word', reverse=True)
     >>> last_context[-1] == last_match
     True
@@ -341,12 +363,14 @@ by a context).
 
 The `next_context()` and `prev_context()`-functions allow to move
 one step forward or backward from a given context::
+
     >>> pointer = prev_context(last_context)
     >>> serialize_context(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- blank: '
 
 `prev_context()` and `next_context()` automatically zoom out by one step, if they move past
 the first or last child of the last but one node in the list::
+
     >>> pointer = prev_context(pointer)
     >>> serialize_context(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
@@ -379,12 +403,14 @@ It is, of course, possible to zoom back into a context::
 Often it is preferable to move through the leaf-nodes and their
 contexts right away. Functions like `next_leaf_context()` and
 `prev_leaf_context()` provide syntactic sugar for this case::
+
     >>> pointer = next_leaf_context(pointer)
     >>> serialize_context(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
 
 It is also possible to inspect just the string content surrounding a
 context, rather than its structural environment::
+
     >>> ensuing_str(pointer)
     ' Palace'
     >>> assert foregoing_str(pointer, length=1) == ' ', "Blank expected!"
@@ -393,6 +419,7 @@ It is also possible to systematically iterate through the contexts
 forward or backward - just like the `node.select_context()`-method,
 but starting from an arbitraty context, instead of the one end or
 the other end of the tree rooted in `node`::
+
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
     >>> pointer = t.pick_context('G')
     >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ALL_CONTEXTS)]
@@ -404,6 +431,7 @@ Another important difference, besides the starting point is then the
 `select()`-generators of the `syntaxtree`-module traverse the tree
 post-order (or "depth first"), while the respective methods ot the
 Node-class traverse the tree pre-order. See the difference::
+
     >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ALL_CONTEXTS, include_root=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
@@ -466,6 +494,7 @@ location), rather than attaching them to particular nodes. This has two advantag
 1. When restructuring the tree and removing or adding nodes during the
    abtract-syntax-tree-transformation and possibly further tree-transformation,
    error messages do not accidently get lost.
+
 2. It is not necessary to add another slot to the Node class for keeping an
    error list which most of the time would remain empty, anyway.
 
@@ -475,7 +504,7 @@ is of type `RootNode`. If a root node needs to be created manually, it is necess
 to create a `Node`-object and either pass it to `RootNode` as parameter on
 instantiation or, later, to the :py:meth:`swallow()`-method of the RootNode-object::
 
->>> document = RootNode(sentence, str(sentence))
+    >>> document = RootNode(sentence, str(sentence))
 
 The second parameter is normally the source code. In this example we simply use the
 string representation of the syntax-tree originating in `sentence`. Before any
@@ -483,20 +512,20 @@ errors can be added the source-position fields of the nodes of the tree must hav
 be been initialized. Usually, this is done by the parser. Since the syntax-tree
 in this example does not stem from a parsing-process, we have to do it manually:
 
->>> _ = document.with_pos(0)
+    >>> _ = document.with_pos(0)
 
 Now, let's mark all "word"-nodes that contain non-letter characters with an
 error-message. There should be plenty of them, because, earlier, we have replaced
 some of the words partially with "..."::
 
->>> import re
->>> len([document.new_error(node, "word contains illegal characters") \
-         for node in document.select('word') if re.fullmatch(r'\w*', node.content) is None])
-3
->>> for error in document.errors_sorted:  print(error)
-1:1: Error (1000): word contains illegal characters
-1:6: Error (1000): word contains illegal characters
-1:11: Error (1000): word contains illegal characters
+    >>> import re
+    >>> len([document.new_error(node, "word contains illegal characters") \
+             for node in document.select('word') if re.fullmatch(r'\w*', node.content) is None])
+    3
+    >>> for error in document.errors_sorted:  print(error)
+    1:1: Error (1000): word contains illegal characters
+    1:6: Error (1000): word contains illegal characters
+    1:11: Error (1000): word contains illegal characters
 
 The format of the string representation of Error-objects resembles that of
 compilers and is understood by many Text-Editors which mark the errors in
@@ -511,45 +540,44 @@ One important use case of attributes is to add or remove css-classes to the
 whitespace delimited strings. Module "syntaxtree" provides a few functions
 to simplify class-handling::
 
->>> paragraph = Node('p', 'veni vidi vici')
->>> add_class(paragraph, 'smallprint')
->>> paragraph.attr['class']
-'smallprint'
+    >>> paragraph = Node('p', 'veni vidi vici')
+    >>> add_class(paragraph, 'smallprint')
+    >>> paragraph.attr['class']
+    'smallprint'
 
 Although the class-attribute is filled with a sequence of strings, it should
 behave like a set of strings. For example, one and the same class name should
 not appear twice in the class attribute::
 
->>> add_class(paragraph, 'smallprint justified')
->>> paragraph.attr['class']
-'smallprint justified'
+    >>> add_class(paragraph, 'smallprint justified')
+    >>> paragraph.attr['class']
+    'smallprint justified'
 
 Plus, the order of the class strings does not matter, when checking for
 elements::
 
->>> has_class(paragraph, 'justified smallprint')
-True
-
->>> remove_class(paragraph, 'smallprint')
->>> has_class(paragraph, 'smallprint')
-False
->>> has_class(paragraph, 'justified smallprint')
-False
->>> has_class(paragraph, 'justified')
-True
+    >>> has_class(paragraph, 'justified smallprint')
+    True
+    >>> remove_class(paragraph, 'smallprint')
+    >>> has_class(paragraph, 'smallprint')
+    False
+    >>> has_class(paragraph, 'justified smallprint')
+    False
+    >>> has_class(paragraph, 'justified')
+    True
 
 The same logic of treating blank separated sequences of strings as sets can also
 be applied to other attributes:
 
->>> car = Node('car', 'Porsche')
->>> add_token_to_attr(car, "Linda Peter", 'owner')
->>> car.attr['owner']
-'Linda Peter'
+    >>> car = Node('car', 'Porsche')
+    >>> add_token_to_attr(car, "Linda Peter", 'owner')
+    >>> car.attr['owner']
+    'Linda Peter'
 
 Or, more generally, to strings containing whitespace-separated substrings:
 
->>> add_token('Linda Paula', 'Peter Paula')
-'Linda Paula Peter'
+    >>> add_token('Linda Paula', 'Peter Paula')
+    'Linda Paula Peter'
 """
 
 from collections import OrderedDict
@@ -780,8 +808,8 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     flattened. Zero or (any postive integer <= 3) essentially means
     that the expression will not be flattened. Example::
 
-    >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
-    '(a (b c))'
+        >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
+        '(a (b c))'
 
     :param sxpr: and S-expression in string form
     :param threshold: maximum allowed string-length of the flattened
@@ -828,8 +856,8 @@ def xml_tag_name(tag_name: str) -> str:
     """Cleans anonymous tag-names for serialization, so that the colon does not
     lead to invalid XML::
 
-    >>> xml_tag_name(':Series')
-    'ANONYMOUS_Series__'
+        >>> xml_tag_name(':Series')
+        'ANONYMOUS_Series__'
 
     :param tag_name: the original tag name
     :returns: the XML-conform tag_name
@@ -1179,9 +1207,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         manually. Position values of the child nodes are assigned
         recursively, too. Example::
 
-        >>> node = Node('test', 'position').with_pos(10)
-        >>> node.pos
-        10
+            >>> node = Node('test', 'position').with_pos(10)
+            >>> node.pos
+            10
 
         :param pos: The position assigned to be assigned to the node.
             Value must be >= 0.

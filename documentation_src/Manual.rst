@@ -38,21 +38,20 @@ reading-order is recommended to understand DHParser:
    of transformation functions that are called in sequence on a node.
    A number of transformations are pre-defined that cover the most needed
    cases that occur in particular when transforming concrete syntax trees
-   to more abstract syntax trees.
-   (An example for this kind of declaratively specified transformation is
-    the ``EBNF_AST_transformation_table`` within the DHParser's ebnf-module.)
+   to more abstract syntax trees. (An example for this kind of declaratively
+   specified transformation is the ``EBNF_AST_transformation_table`` within
+   DHParser's ebnf-module.)
 
 4. `compile` - The compile-module offers an object-oriented scaffolding
    for the `visitor pattern`_ that is more suitable for complex
    transformations that make heavy use of algorithms as well as
    transformations from trees to non-tree objects like program code.
-   (An example for the latter kind of transformation is the ``EBNFCompiler class``
-    of DHParser's ebnf-module.)
+   (An example for the latter kind of transformation is the ``EBNFCompiler``-class of DHParser's ebnf-module.)
 
-    With the documentation of these four modules you should have enough
-    knowledge to realize projects that follow the workflow described
-    in the `Step by Step Guide`_. In most cases there will be no need to
-    interact with the other modules directly.
+With the documentation of these four modules you should have enough
+knowledge to realize projects that follow the workflow described
+in the `Step by Step Guide`_. In most cases there will be no need to
+interact with the other modules directly.
 
 5. `parse` - contains the parsing algorithms and the
    Python-Interface for defining parsers. DHParser features a packrat-parser
