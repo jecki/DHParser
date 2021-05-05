@@ -1,0 +1,7 @@
+@literalws = right
+definitions = ~ definition { definition } EOF
+definition  = definiendum ":=" definiens
+definiendum = word
+definiens   = word { word }
+word        = /[A-Z]?[a-z]*/
+EOF         = /$/
