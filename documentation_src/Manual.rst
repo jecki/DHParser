@@ -1,6 +1,6 @@
-****************
-Module Reference
-****************
+******
+Manual
+******
 
 DHParser is split into a number of modules plus one command line utility
 (``dhparser.py``, which will not be described here.)
