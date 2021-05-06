@@ -946,7 +946,7 @@ example a simple DSL for writing definitions like:
     ...     word        = /[A-Z]?[a-z]*/
     ...     EOF         = /$/ '''
 
- """
+
 
 Fail-tolerant Parsing
 ---------------------
