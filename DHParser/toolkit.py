@@ -595,7 +595,7 @@ def fix_XML_attribute_value(value: Any) -> str:
     return value
 
 
-RX_NON_ASCII = re.compile(r'[^\U00000000-\U00000100]')
+RX_NON_ASCII = re.compile(r'[^\U00000000-\U000000FF]')
 
 
 def lxml_XML_attribute_value(value: Any) -> str:
