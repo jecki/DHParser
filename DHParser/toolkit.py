@@ -581,6 +581,7 @@ def fix_XML_attribute_value(value: Any) -> str:
     XML-entities."""
     value = str(value)
     value = value.replace('<', '&lt;')
+    # value = value.replace('>', '&gt;')
     i = value.find('&')
     while i >= 0:
         if not RX_ENTITY.match(value, i):
