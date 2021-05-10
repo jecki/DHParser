@@ -928,6 +928,26 @@ be accessed via the symbol `COMMENT__`.
 Lookahead and Lookbehind
 ------------------------
 
+Lookahead and lookbehind operators are a convenient way to resolve or rather
+avoid ambiguities while at the same time keeping the DSL lean. Assume for
+example a simple DSL for writing definitions like::
+
+    >>> definitions = '''
+    ...     dog   := carnivorous quadrupel that barks
+    ...     human := featherless biped'''
+
+Now, let's try to draw up a grammar for definitions::
+
+    >>> def_DSL_first_try = ''' # WARNING: This grammar doesn't work, yet!
+    ...     @literalws = right
+    ...     definitions = ~ definition { definition } EOF
+    ...     definition  = definiendum ":=" definiens
+    ...     definiendum = word
+    ...     definiens   = word { word }
+    ...     word        = /[A-Z]?[a-z]*/
+    ...     EOF         = /$/ '''
+    >>> def_parser = create_parser(def_DSL_first_try, "defDSL")
+
 
 
 Fail-tolerant Parsing
