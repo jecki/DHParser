@@ -1379,8 +1379,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             items = tuple(child for child in self._children if mf(child))
             if items:
                 return items if len(items) >= 2 else items[0]
-            raise IndexError('index out of range') if isinstance(key, int) \
-                else KeyError(str(key))
+            raise IndexError('index out of range') if isinstance(key, int) else KeyError(str(key))
 
     def __delitem__(self, key: Union[int, slice, CriteriaType]):
         """
