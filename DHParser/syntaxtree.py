@@ -2011,9 +2011,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
                 txt.append(' _pos="%i"' % node._pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(' err="%s"' % (
-                    ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
-                            for err in root.node_errors(node))))
+                # txt.append(' err="%s"' % (
+                #     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
+                #             for err in root.node_errors(node))))
+                txt.append(' err=' + (attr_filter(''.join(str(err)) for err in root.node_errors(node))))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
