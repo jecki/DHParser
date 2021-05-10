@@ -75,8 +75,10 @@ __all__ = ('typing',
            'ThreadLocalSingletonFactory',
            'RX_NEVER_MATCH',
            'RX_ENTITY',
+           'RX_NON_ASCII',
            'validate_XML_attribute_value',
            'fix_XML_attribute_value',
+           'fix_lxml_attribute_value',
            'RxPatternType',
            're_find',
            'escape_re',
@@ -574,7 +576,7 @@ def validate_XML_attribute_value(value: Any) -> str:
 
 
 def fix_XML_attribute_value(value: Any) -> str:
-    """Returns the quotes XML-attribute value. In case the values
+    """Returns the quoted XML-attribute value. In case the values
     contains illegal characters, like '<', these will be replaced by
     XML-entities."""
     value = str(value)
@@ -591,6 +593,22 @@ def fix_XML_attribute_value(value: Any) -> str:
     else:
         value = '"%s"' % value
     return value
+
+
+RX_NON_ASCII = re.compile(r'[^\U00000000-\U00000100]')
+
+
+def lxml_XML_attribute_value(value: Any) -> str:
+    """Makes sure that the attribute value works with the lxml-library,
+    at the cost of replacing all characters with a code > 256 by
+    a quesiton mark.
+
+    :param value: the original attribute value
+    :return: the quoted and lxml-compatible attribute value.
+    """
+    value = str(value)
+    value = RX_NON_ASCII.sub('?', value)
+    return fix_XML_attribute_value(value)
 
 
 #######################################################################
