@@ -595,7 +595,8 @@ from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
-    validate_XML_attribute_value, fix_XML_attribute_value, identity, Protocol
+    validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
+    identity, Protocol
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -1990,6 +1991,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             attr_filter = validate_XML_attribute_value
         elif attr_err_handling == 'fix':
             attr_filter = fix_XML_attribute_value
+        elif attr_err_handling == 'lxml':
+            attr_filter = lxml_XML_attribute_value
         else:
             assert attr_err_handling == 'ignore', 'Illegal value for configuration ' +\
                 'variable "xml_attribute_error_handling": ' + attr_err_handling

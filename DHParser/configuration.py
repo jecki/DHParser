@@ -336,12 +336,18 @@ CONFIG_PRESET['compact_sxpr_threshold'] = 20
 # e.g. attr="<". Possible values are:
 # 'ignore' - faulty attribute values will be serialized nonetheless
 # 'fix'   - attribute values will be corrected, e.g. "<" will be
-#           replaced by the respective enity and the like
-# 'fail'  - an error will be raised. Observe that this error will be
-#           raised when serializing as XML, not when setting the value
+#           replaced by the respective entity and the like.
+# 'lxml'  - attributes values will be corrected and any non-ASCII
+#           character will be replaced by a question mark to ensure
+#           compatibility with the lxml library.
+# 'fail'  - an error will be raised, when an illegal attribute value
+#           is encountered while serializing a tree as XML. Illegal
+#           attribute values can still be set, though, since they
+#           they concern only the XMl-serialization and not the
+#           S-expression or JSON serialization.
 # Default value = "fail"
 CONFIG_PRESET['xml_attribute_error_handling'] = 'fail'
-ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fix', 'fail'})
+ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fix', 'lxml', 'fail'})
 
 ########################################################################
 #
