@@ -33,6 +33,18 @@ the string representations of the error objects. For example::
             sys.exit(1)
         else:
             print("There have been warnings, but no errors.")
+
+The central class of module DHParser's ``error``  is the ``Error``-class.
+The easiest way to create an error object is by instantiating
+    the Error class with an error message and a source position::
+
+        >>> error = Error('Somethigs went wrong', 123)
+        >>> print(error)
+        Error (1000): Something went wrong
+
+    However, in order to report errors, usually at least a line and
+    column-number
+
 """
 
 import os
@@ -166,6 +178,10 @@ RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
 
 
 class Error:
+    """The Error class encapsulates the all information for a single
+    error.
+    """
+
     __slots__ = ['message', 'code', '_pos', 'line', 'column', 'length',
                  'end_line', 'end_column', 'related', 'orig_pos', 'orig_doc',
                  'relatedUri']
