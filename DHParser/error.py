@@ -36,14 +36,14 @@ the string representations of the error objects. For example::
 
 The central class of module DHParser's ``error``  is the ``Error``-class.
 The easiest way to create an error object is by instantiating
-    the Error class with an error message and a source position::
+the Error class with an error message and a source position::
 
-        >>> error = Error('Somethigs went wrong', 123)
-        >>> print(error)
-        Error (1000): Something went wrong
+    >>> error = Error('Somethigs went wrong', 123)
+    >>> print(error)
+    Error (1000): Something went wrong
 
-    However, in order to report errors, usually at least a line and
-    column-number
+However, in order to report errors, usually at least a line and
+column-number
 
 """
 
