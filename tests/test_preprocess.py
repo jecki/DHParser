@@ -84,7 +84,7 @@ class TestSourceMapping:
         pos = source_map(0, srcmap)
 
 
-def preprocess_indentation(src: str) -> str:
+def preprocess_indentation(src: str, src_name: str) -> str:
     transformed = []
     indent_level = 0
     for line in src.split('\n'):
@@ -109,7 +109,8 @@ def preprocess_indentation(src: str) -> str:
     # print(prettyprint_tokenized(tokenized))
     return tokenized
 
-def preprocess_comments(src: str) -> Tuple[str, SourceMapFunc]:
+
+def preprocess_comments(src: str, src_name: str) -> Tuple[str, SourceMapFunc]:
     lines = src.split('\n')
     positions, offsets = [0], [0]
     pos = 0
@@ -123,7 +124,8 @@ def preprocess_comments(src: str) -> Tuple[str, SourceMapFunc]:
         pos += len(lines[i])
     positions.append(pos)
     offsets.append(offsets[-1])
-    return '\n'.join(lines), partial(source_map, srcmap=SourceMap(positions, offsets))
+    return '\n'.join(lines), \
+           partial(source_map, srcmap=SourceMap('FILE_NAME_DUMMY', positions, offsets))
 
 
 class TestTokenParsing:
@@ -143,13 +145,13 @@ class TestTokenParsing:
                     print(x)  # another comment
                     print(y)
         """)
-    tokenized = preprocess_indentation(code)
+    tokenized = preprocess_indentation(code, 'no_uri')
     srcmap = tokenized_to_original_mapping(tokenized)
 
     def verify_mapping(self, teststr, orig_text, preprocessed_text, mapping):
         mapped_pos = preprocessed_text.find(teststr)
         assert mapped_pos >= 0
-        original_pos = mapping(mapped_pos)
+        file_name, original_pos = mapping(mapped_pos)
         # original_pos = source_map(mapped_pos, self.srcmap)
         assert orig_text[original_pos:original_pos + len(teststr)] == teststr, \
             '"%s" (%i) wrongly mapped onto "%s" (%i)' % \
@@ -174,13 +176,13 @@ class TestTokenParsing:
         previous_index = 0
         L = len(self.code)
         for mapped_index in range(len(self.tokenized)):
-            index = source_map(mapped_index, self.srcmap)
+            _, index = source_map(mapped_index, self.srcmap)
             assert previous_index <= index <= L, \
                 "%i <= %i <= %i violated" % (previous_index, index, L)
             previous_index = index
 
     def test_non_token_preprocessor(self):
-        tokenized, mapping = preprocess_comments(self.code)
+        tokenized, mapping = preprocess_comments(self.code, 'no_uri')
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
@@ -189,7 +191,7 @@ class TestTokenParsing:
 
     def test_chained_preprocessors(self):
         pchain = chain_preprocessors(preprocess_comments, preprocess_indentation)
-        tokenized, mapping = pchain(self.code)
+        tokenized, mapping = pchain(self.code, 'no_uri')
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)

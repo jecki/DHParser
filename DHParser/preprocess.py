@@ -29,9 +29,8 @@ cannot completely be described entirely with context-free grammars.
 
 
 import bisect
-import collections
 import functools
-from typing import Union, Callable, Tuple, List
+from typing import Union, Callable, Tuple, NamedTuple, List
 
 from DHParser.toolkit import re
 
@@ -49,6 +48,7 @@ __all__ = ('RX_TOKEN_NAME',
            'chain_preprocessors',
            'prettyprint_tokenized',
            'SourceMap',
+           'neutral_mapping',
            'tokenized_to_original_mapping',
            'source_map',
            'with_source_mapping')
@@ -62,19 +62,31 @@ RX_TOKEN_NAME = re.compile(r'\w+')
 RX_TOKEN_ARGUMENT = re.compile(r'[^\x1b\x1c\x1d]*')
 RX_TOKEN = re.compile(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 
-SourceMapFunc = Union[Callable[[int], int], functools.partial]
+
+class SourceMap(NamedTuple):
+    source_name: str      # nome or path or uri of the original source file
+    positions: List[int]  # a list of locations
+    offsets: List[int]    # the corresponding offsets to be added from these locations onward
+
+
+class SourceLocation(NamedTuple):
+    name: str  # the file name (or path or uri) of the source code
+    pos: int   # a position within this file
+
+
+SourceMapFunc = Union[Callable[[int], SourceLocation], functools.partial]
 PreprocessorResult = Union[str, Tuple[str, SourceMapFunc]]
-PreprocessorFunc = Union[Callable[[str], PreprocessorResult], functools.partial]
+PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult], functools.partial]
 
 
-def nil_preprocessor(text: str) -> Tuple[str, SourceMapFunc]:
+def nil_preprocessor(source_text: str, source_name: str) -> Tuple[str, SourceMapFunc]:
     """
     A preprocessor that does nothing, i.e. just returns the input.
     """
-    return text, lambda i: i
+    return source_text, lambda i: SourceLocation(source_name, i)
 
 
-def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> int:
+def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
     """
     Sequentially apply a number of mapping functions to a source position.
     In the context of source mapping, the source position usually is a
@@ -82,11 +94,12 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> int:
     be a list of reverse-mappings in reversed order.
     """
     for mapping in mappings:
-        position = mapping(position)
-    return position
+        filename, position = mapping(position)
+    return SourceLocation(filename, position)
 
 
-def _apply_preprocessors(text: str, preprocessors: Tuple[PreprocessorFunc, ...]) \
+def _apply_preprocessors(source_text: str, source_name: str,
+                         preprocessors: Tuple[PreprocessorFunc, ...]) \
         -> Tuple[str, SourceMapFunc]:
     """
     Applies several preprocessing functions sequentially to a source text
@@ -94,10 +107,10 @@ def _apply_preprocessors(text: str, preprocessors: Tuple[PreprocessorFunc, ...])
     positions in the processed text onto the corresponding position in the
     original source test.
     """
-    processed = text
+    processed = source_text
     mapping_chain = []
     for prep in preprocessors:
-        processed, mapping_func = with_source_mapping(prep(processed))
+        processed, mapping_func = with_source_mapping(prep(processed, source_name))
         mapping_chain.append(mapping_func)
     mapping_chain.reverse()
     return processed, functools.partial(_apply_mappings, mappings=mapping_chain)
@@ -164,18 +177,20 @@ def strip_tokens(tokenized: str) -> str:
 #######################################################################
 
 
-SourceMap = collections.namedtuple('SourceMap', ['positions', 'offsets'])
+def neutral_mapping(pos: int) -> SourceLocation:
+    '''Maps source locations on itself and sets the source file name
+    to the empty string.'''
+    return SourceLocation('', pos)
 
 
-def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
+def tokenized_to_original_mapping(tokenized_text: str, source_name: str='UNKNOWN_FILE') -> SourceMap:
     """
     Generates a source map for mapping positions in a text that has
     been enriched with token markers to their original positions.
 
-    Args:
-        tokenized_source: the source text enriched with token markers
-    Returns:
-        a source map, i.e. a list of positions and a list of corresponding
+    :param tokenized_text:  the source text enriched with token markers.
+    :poram source_name:  the name or path or uri of the original source file.
+    :returns:  a source map, i.e. a list of positions and a list of corresponding
         offsets. The list of positions is ordered from smallest to highest.
         An offset is valid for its associated position and all following
         positions until (and excluding) the next position in the list of
@@ -183,18 +198,18 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
     """
     positions, offsets = [0], [0]
     o = 0
-    i = tokenized_source.find(BEGIN_TOKEN)
+    i = tokenized_text.find(BEGIN_TOKEN)
     e = -2
     while i >= 0:
-        d = tokenized_source.find(TOKEN_DELIMITER, i)
-        e = tokenized_source.find(END_TOKEN, i)
+        d = tokenized_text.find(TOKEN_DELIMITER, i)
+        e = tokenized_text.find(END_TOKEN, i)
         assert 0 <= d < e
         o -= (d - i + 2)
         positions.extend([d + 1, e + 1])
         offsets.extend([o + 1, o])
-        i = tokenized_source.find(BEGIN_TOKEN, e + 1)
-    if e + 1 < len(tokenized_source):
-        positions.append(len(tokenized_source) + 1)
+        i = tokenized_text.find(BEGIN_TOKEN, e + 1)
+    if e + 1 < len(tokenized_text):
+        positions.append(len(tokenized_text) + 1)
         offsets.append(offsets[-1])
 
     # post conditions
@@ -205,23 +220,23 @@ def tokenized_to_original_mapping(tokenized_source: str) -> SourceMap:
     # specific condition for preprocessor tokens
     assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 2))
 
-    return SourceMap(positions, offsets)
+    return SourceMap(source_name, positions, offsets)
 
 
-def source_map(position: int, srcmap: SourceMap) -> int:
+def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
     """
     Maps a position in a (pre-)processed text to its corresponding
     position in the original document according to the given source map.
 
-    Args:
-        position: the position in the processed text
-        srcmap:   the source map, i.e. a mapping of locations to offset values
-    Returns:
-        the mapped position
+    :param  position: the position in the processed text
+    :param  srcmap:  the source map, i.e. a mapping of locations to offset values
+    :returns:  the mapped position
     """
     i = bisect.bisect_right(srcmap.positions, position)
     if i:
-        return min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i])
+        return SourceLocation(
+            srcmap.source_name,
+            min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
     raise ValueError
 
 
@@ -232,6 +247,14 @@ def with_source_mapping(result: PreprocessorResult) -> Tuple[str, SourceMapFunc]
     assumed that in this case the preprocessor has just enriched the source
     code with tokens, so that a source mapping can be derived automatically
     with :func:`tokenized_to_original_mapping` (see above).
+
+    :param result:  Either a preprocessed text as atring containing
+            preprocessor tokens, or a tuple of a preprocessed text AND a source
+            mapping function. In the former case the source mapping will be
+            generated, in the latter it will simply be passed through.
+    :returns:  A tuple of the preprocessed text and the source-mapping function
+            that returns the original text position when called with a position
+            in the preprocessed text.
     """
     if isinstance(result, str):
         srcmap = tokenized_to_original_mapping(result)

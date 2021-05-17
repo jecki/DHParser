@@ -200,6 +200,7 @@ class ThreadLocalSingletonFactory:
         return singleton
 
 
+@functools.lru_cache()
 def is_filename(strg: str) -> bool:
     """
     Tries to guess whether string ``strg`` is a file name.

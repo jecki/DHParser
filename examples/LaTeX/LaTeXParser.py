@@ -938,7 +938,7 @@ if __name__ == "__main__":
         result, errors = compile_src(file_names[0])
 
         if errors:
-            for err_str in canonical_erorr_strings(errors, file_names[0]):
+            for err_str in canonical_error_strings(errors, file_names[0]):
                 print(err_str)
             sys.exit(1)
         else:

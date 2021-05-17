@@ -41,7 +41,8 @@ import traceback
 from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
-from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
+from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc, \
+    SourceLocation
 from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
@@ -343,6 +344,7 @@ def compile_source(source: str,
     """
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
+    source_name = source if is_filename(source) else 'source'
     compiler.source = original_text
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
@@ -355,9 +357,9 @@ def compile_source(source: str,
 
     if preprocessor is None:
         source_text = original_text  # type: str
-        source_mapping = identity    # type: SourceMapFunc
+        source_mapping = lambda i: SourceLocation(source_name, i)    # type: SourceMapFunc
     else:
-        source_text, source_mapping = with_source_mapping(preprocessor(original_text))
+        source_text, source_mapping = with_source_mapping(preprocessor(original_text, source_name))
 
     # parsing
 
