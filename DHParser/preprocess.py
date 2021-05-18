@@ -30,15 +30,16 @@ cannot completely be described entirely with context-free grammars.
 
 import bisect
 import functools
-from typing import Union, Callable, Tuple, NamedTuple, List
+from typing import Union, Optional, Callable, Tuple, NamedTuple, List
 
-from DHParser.toolkit import re
+from DHParser.toolkit import re, dataclasses
 
 
 __all__ = ('RX_TOKEN_NAME',
            'BEGIN_TOKEN',
            'TOKEN_DELIMITER',
            'END_TOKEN',
+           'SourceMap',
            'SourceMapFunc',
            'PreprocessorFunc',
            'PreprocessorResult',
@@ -47,11 +48,17 @@ __all__ = ('RX_TOKEN_NAME',
            'nil_preprocessor',
            'chain_preprocessors',
            'prettyprint_tokenized',
-           'SourceMap',
            'neutral_mapping',
            'tokenized_to_original_mapping',
            'source_map',
            'with_source_mapping')
+
+
+#######################################################################
+#
+# Types and constants
+#
+#######################################################################
 
 BEGIN_TOKEN = '\x1b'
 TOKEN_DELIMITER = '\x1c'
@@ -63,23 +70,59 @@ RX_TOKEN_ARGUMENT = re.compile(r'[^\x1b\x1c\x1d]*')
 RX_TOKEN = re.compile(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 
 
-class SourceMap(NamedTuple):
-    source_name: str      # nome or path or uri of the original source file
-    positions: List[int]  # a list of locations
-    offsets: List[int]    # the corresponding offsets to be added from these locations onward
+@dataclasses.dataclass
+class SourceMap:
+    source_name: str       # nome or path or uri of the original source file
+    positions: List[int]   # a list of locations
+    offsets: List[int]     # the corresponding offsets to be added from these locations onward
 
 
 class SourceLocation(NamedTuple):
-    name: str  # the file name (or path or uri) of the source code
+    source_name: str  # the file name (or path or uri) of the source code
     pos: int   # a position within this file
 
 
-SourceMapFunc = Union[Callable[[int], SourceLocation], functools.partial]
-PreprocessorResult = Union[str, Tuple[str, SourceMapFunc]]
-PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult], functools.partial]
+SourceMapFunc = Union[Callable[[int], SourceLocation],
+                      functools.partial]
 
 
-def nil_preprocessor(source_text: str, source_name: str) -> Tuple[str, SourceMapFunc]:
+class Preprocessed(NamedTuple):
+    preprocessed_text: str
+    back_mapping: SourceMapFunc
+
+
+@dataclasses.dataclass
+class IncludeMap(SourceMap):
+    file_names: List[str]  # list of file_names to which the source locations relate
+
+    def has_includes(self) -> bool:
+        L = len(self.file_names)
+        return L > 1 or (L == 1 and self.file_names[0] != self.source_name)
+
+
+class IncludeInfo(NamedTuple):
+    begin: int
+    length: int
+    file_name: str
+
+
+PreprocessorResult = Union[str, Preprocessed]
+
+
+FindIncludeFunc = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
+                        functools.partial]
+PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],
+                         functools.partial]
+
+
+#######################################################################
+#
+# Chaining of preprocessors
+#
+#######################################################################
+
+
+def nil_preprocessor(source_text: str, source_name: str) -> Preprocessed:
     """
     A preprocessor that does nothing, i.e. just returns the input.
     """
@@ -100,7 +143,7 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocat
 
 def _apply_preprocessors(source_text: str, source_name: str,
                          preprocessors: Tuple[PreprocessorFunc, ...]) \
-        -> Tuple[str, SourceMapFunc]:
+        -> Preprocessed:
     """
     Applies several preprocessing functions sequentially to a source text
     and returns the preprocessed text as well as a function that maps text-
@@ -240,7 +283,7 @@ def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
     raise ValueError
 
 
-def with_source_mapping(result: PreprocessorResult) -> Tuple[str, SourceMapFunc]:
+def with_source_mapping(result: PreprocessorResult) -> Preprocessed:
     """
     Normalizes preprocessors results, by adding a mapping if a preprocessor
     only returns the transformed source code and no mapping by itself. It is
@@ -259,7 +302,7 @@ def with_source_mapping(result: PreprocessorResult) -> Tuple[str, SourceMapFunc]
     if isinstance(result, str):
         srcmap = tokenized_to_original_mapping(result)
         mapping_func = functools.partial(source_map, srcmap=srcmap)
-        return result, mapping_func
+        return Preprocessed(result, mapping_func)
     return result
 
 
@@ -267,5 +310,72 @@ def with_source_mapping(result: PreprocessorResult) -> Tuple[str, SourceMapFunc]
 #
 # Includes - support for chaining source texts
 #
+# NOT YET TESTED!!!
+#
 #######################################################################
 
+
+def generate_include_map(source_name: str,
+                         source_text: str,
+                         find_next_include: FindIncludeFunc) -> Tuple[IncludeMap, str]:
+    file_names: set = set()
+
+    def generate_map(source_name, source_text, find_next) -> Tuple[IncludeMap, str]:
+        nonlocal file_names
+        map: IncludeMap = IncludeMap(source_name, [0], [0], [source_name])
+        text_chunks: List[str] = []
+        if source_name in file_names:
+            raise ValueError(f'Circular include of {source_name} detected!')
+        file_names.add(source_name)
+        last_begin = -1
+        last_end = 0
+        begin, length, include_name = find_next(source_text, 0)
+        while begin >= 0:
+            assert begin > last_begin
+            with open(include_name, 'r', encoding='utf-8') as f:
+                include_text = f.read()
+            inner_map, inner_text = generate_map(include_name, include_text, find_next)
+            inner_map.positions = [pos + begin for pos in inner_map.positions]
+            inner_map.offsets = [offset - begin for offset in inner_map.offsets]
+            if begin == map.positions[-1]:
+                map.file_names = map.file_names[:-1] + inner_map.file_names
+                map.positions = map.positions[:-1] + inner_map.positions
+                map.offsets = map.offsets[:-1] + inner_map.offsets
+                text_chunks.append(inner_text)
+            else:
+                text_chunks.append(source_text[last_end:begin])
+                map.file_names.append(include_name)
+                map.positions += inner_map.positions
+                map.offsets += inner_map.offsets
+                text_chunks.append(inner_text)
+            map.file_names.append(source_name)
+            map.positions.append(begin + inner_map.positions[-1])
+            map.offsets.append(map.offsets[-1] - inner_map.positions[-1] + length)
+            last_end = begin + length
+            last_begin = begin
+            begin, length, include_name = find_next(source_text, last_end)
+        text_chunks.append(source_text[last_end:])
+        return map, ''.join(text_chunks)
+
+    return generate_map(source_name, source_text, find_next_include)
+
+
+def includes_map(position: int, inclmap: IncludeMap) -> SourceLocation:
+    i = bisect.bisect_right(inclmap.positions, position)
+    if i:
+        return SourceLocation(
+            inclmap.file_names[i],
+            # min(position + inclmap.offsets[i - 1], inclmap.positions[i] + inclmap.offsets[i])
+            inclmap.positions[i] + inclmap.offsets[i])
+    raise ValueError
+
+
+def preprocess_includes(source_name: str,
+                        source_text: Optional[str],
+                        find_next_include: FindIncludeFunc) -> Preprocessed:
+    if not source_text:
+        with open(source_name, 'r', encoding='utf-8') as f:
+            source_text = f.read()
+    include_map, result = generate_include_map(source_name, source_text, find_next_include)
+    mapping_func = functools.partial(includes_map, inclmap=include_map)
+    return Preprocessed(result, mapping_func)

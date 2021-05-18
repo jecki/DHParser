@@ -43,6 +43,11 @@ try:
 except ImportError:
     import re
 
+try:
+    import dataclasses
+except ImportError:
+    from DHParser.externallibs import dataclasses36 as dataclasses
+
 import typing
 from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
     Optional, Type
@@ -56,16 +61,18 @@ try:
     import cython
     cython_optimized = cython.compiled  # type: bool
     if cython_optimized:  # not ?
-        import DHParser.shadow_cython as cython
+        import DHParser.externallibs.shadow_cython as cython
 except ImportError:
     cython_optimized = False
-    import DHParser.shadow_cython as cython
+    import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.configuration import access_thread_locals, get_config_value, NEVER_MATCH_PATTERN
 from DHParser.stringview import StringView
 
 
 __all__ = ('typing',
+           're',
+           'dataclasses',
            'Protocol',
            'cython',
            'cython_optimized',
