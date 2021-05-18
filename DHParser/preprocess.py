@@ -337,52 +337,104 @@ def generate_include_map(source_name: str,
                          find_next_include: FindIncludeFunc) -> Tuple[IncludeMap, str]:
     file_names: set = set()
 
+    # def generate_map(source_name, source_text, find_next) -> Tuple[IncludeMap, str]:
+    #     nonlocal file_names
+    #     map: IncludeMap = IncludeMap(source_name, [0], [0], [source_name])
+    #     text_chunks: List[str] = []
+    #     source_offset: int = 0
+    #     if source_name in file_names:
+    #         raise ValueError(f'Circular include of {source_name} detected!')
+    #     file_names.add(source_name)
+    #     last_begin = -1
+    #     last_end = 0
+    #     lengths = 0
+    #     begin, length, include_name = find_next(source_text, 0)
+    #     while begin >= 0:
+    #         assert begin > last_begin
+    #         with open(include_name, 'r', encoding='utf-8') as f:
+    #             include_text = f.read()
+    #         inner_map, inner_text = generate_map(include_name, include_text, find_next)
+    #         inner_map.positions = [pos + begin - lengths + source_offset for pos in inner_map.positions]
+    #         inner_map.offsets = [offset - (source_offset + begin - lengths) for offset in inner_map.offsets]
+    #         if begin == map.positions[-1]:  # FEHLER!
+    #             map.file_names = map.file_names[:-1] + inner_map.file_names[:-1]
+    #             map.positions = map.positions[:-1] + inner_map.positions[:-1]
+    #             map.offsets = map.offsets[:-1] + inner_map.offsets[:-1]
+    #             text_chunks.append(inner_text)
+    #         else:
+    #             text_chunks.append(source_text[last_end:begin])
+    #             source_offset += begin - last_end
+    #             map.file_names += inner_map.file_names[:-1]
+    #             map.positions += inner_map.positions[:-1]
+    #             map.offsets += inner_map.offsets[:-1]
+    #             text_chunks.append(inner_text)
+    #         lengths += length
+    #         map.file_names.append(source_name)
+    #         map.positions.append(inner_map.positions[-1])
+    #         map.offsets.append(source_offset + lengths - inner_map.positions[-1])
+    #         last_end = begin + length
+    #         last_begin = begin
+    #         begin, length, include_name = find_next(source_text, last_end)
+    #     rest = source_text[last_end:]
+    #     if rest:
+    #         text_chunks.append(rest)
+    #         map.positions.append(map.positions[-1] + len(rest))
+    #         map.offsets.append(map.offsets[-1])
+    #         map.file_names.append(source_name)
+    #     file_names.remove(source_name)
+    #     return map, ''.join(text_chunks)
+
     def generate_map(source_name, source_text, find_next) -> Tuple[IncludeMap, str]:
         nonlocal file_names
-        map: IncludeMap = IncludeMap(source_name, [0], [0], [source_name])
-        text_chunks: List[str] = []
-        source_offset: int = 0
+        map = IncludeMap(source_name, [0], [0], [source_name])
+        result = []
+
         if source_name in file_names:
             raise ValueError(f'Circular include of {source_name} detected!')
         file_names.add(source_name)
+
+        source_pointer = 0
+        source_offset = 0
+        result_pointer = 0
         last_begin = -1
-        last_end = 0
-        lengths = 0
         begin, length, include_name = find_next(source_text, 0)
         while begin >= 0:
             assert begin > last_begin
+            source_delta = begin - source_pointer
+            source_pointer += source_delta
+            result_pointer += source_delta
             with open(include_name, 'r', encoding='utf-8') as f:
-                include_text = f.read()
-            inner_map, inner_text = generate_map(include_name, include_text, find_next)
-            inner_map.positions = [pos + begin - lengths + source_offset for pos in inner_map.positions]
-            inner_map.offsets = [offset - (source_offset + begin - lengths) for offset in inner_map.offsets]
-            if begin == map.positions[-1]:  # FEHLER!
+                included_text = f.read()
+            inner_map, inner_text = generate_map(include_name, included_text, find_next)
+            inner_map.positions = [pos + result_pointer for pos in inner_map.positions]
+            inner_map.offsets = [offset - result_pointer for offset in inner_map.offsets]
+            if source_delta == 0:
                 map.file_names = map.file_names[:-1] + inner_map.file_names[:-1]
                 map.positions = map.positions[:-1] + inner_map.positions[:-1]
                 map.offsets = map.offsets[:-1] + inner_map.offsets[:-1]
-                text_chunks.append(inner_text)
+                result.append(inner_text)
             else:
-                text_chunks.append(source_text[last_end:begin])
-                source_offset += begin - last_end
+                result.append(source_text[source_pointer - source_delta: source_pointer])
                 map.file_names += inner_map.file_names[:-1]
                 map.positions += inner_map.positions[:-1]
                 map.offsets += inner_map.offsets[:-1]
-                text_chunks.append(inner_text)
-            lengths += length
+                result.append(inner_text)
+            inner_length = len(inner_text)
+            result_pointer += inner_length
             map.file_names.append(source_name)
-            map.positions.append(inner_map.positions[-1])
-            map.offsets.append(source_offset + lengths - inner_map.positions[-1])
-            last_end = begin + length
-            last_begin = begin
-            begin, length, include_name = find_next(source_text, last_end)
-        rest = source_text[last_end:]
+            map.positions.append(result_pointer)
+            source_pointer += length
+            source_offset += length - inner_length
+            map.offsets.append(source_offset)
+            begin, length, include_name = find_next(source_text, source_pointer)
+        rest = source_text[source_pointer:]
         if rest:
-            text_chunks.append(rest)
+            result.append(rest)
             map.positions.append(map.positions[-1] + len(rest))
-            map.offsets.append(map.offsets[-1])
+            map.offsets.append(source_offset)
             map.file_names.append(source_name)
         file_names.remove(source_name)
-        return map, ''.join(text_chunks)
+        return map, ''.join(result)
 
     return generate_map(source_name, source_text, find_next_include)
 

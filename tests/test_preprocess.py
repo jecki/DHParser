@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-scriptpath = os.path.dirname(__file__) or '.'
+scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from functools import partial
@@ -264,11 +264,11 @@ class TestIncludes:
             self.create_files({'main.txt': main, 'sub.txt': sub})
             find_func = generate_find_include_func(r'include\((?P<name>[^)\n]*)\)')
             text, mapping = preprocess_includes('main.txt', None, find_func)
-            print(mapping)
+            # print(mapping)
             assert text == main.replace('include(sub.txt)', 'abc'), text
             for i in range(len(text)):
                 name, k = mapping(i)
-                print(i, k, name)
+                # print(i, k, name)
                 txt = main if name == 'main.txt' else sub
                 assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
 
@@ -280,7 +280,7 @@ class TestIncludes:
         perform('012include(sub.txt)xyzinclude(sub.txt)hij', 'abc')
         perform('012include(sub.txt)include(sub.txt)hij', 'abc')
         perform('include(sub.txt)include(sub.txt)hijinclude(sub.txt)', 'abc')
-
+        perform('012include(sub.txt)hilinclude(sub.txt)include(sub.txt)', 'abc')
 
 if __name__ == "__main__":
     # tp = TestTokenParsing()
