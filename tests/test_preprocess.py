@@ -282,6 +282,38 @@ class TestIncludes:
         perform('include(sub.txt)include(sub.txt)hijinclude(sub.txt)', 'abc')
         perform('012include(sub.txt)hilinclude(sub.txt)include(sub.txt)', 'abc')
 
+    def test_complex_include(self):
+        def perform(**ensemble):
+            self.create_files(ensemble)
+            find_func = generate_find_include_func(r'#include\((?P<name>[^)\n]*)\)')
+            text, mapping = preprocess_includes('main', None, find_func)
+            # print(mapping)
+            substrings = {}
+            for k, v in reversed(ensemble.items()):
+                for name, content in substrings.items():
+                    v = v.replace(f'#include({name})', content)
+                substrings[k] = v
+            assert text == substrings['main']
+            # print(text)
+            for i in range(len(text)):
+                name, k = mapping(i)
+                txt = ensemble[name]
+                # print(name, txt, i, k)
+                assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
+
+        perform(main = '#include(sub)xyz', sub='abc')
+        perform(main = "ABC#include(sub1)DEF#include(sub2)HIJ",
+                sub1 = "UVW#include(sub2)XYZ#include(sub2)",
+                sub2 = "123")
+        try:
+            perform(main="ABC#include(sub1)DEF#include(sub2)HIJ",
+                    sub1="UVW#include(sub2)XYZ#include(sub2)",
+                    sub2="#include(sub1)")
+            assert False, "ValueError expected"
+        except ValueError:
+            pass
+
+
 if __name__ == "__main__":
     # tp = TestTokenParsing()
     # tp.setup()
