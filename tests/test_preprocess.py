@@ -223,6 +223,19 @@ class TestHelpers:
         info = find('''321include(sub.txt)xyz''', 0)
         assert info == IncludeInfo(3, 16, 'sub.txt')
 
+    def test_generate_find_include_w_comments(self):
+        rx = re.compile(r'include\((?P<name>[^)\n]*)\)')
+        comment_rx = re.compile(r'#.*(?:\n|$)')
+        find = generate_find_include_func(rx, comment_rx)
+        test = '''a
+        b # include(alpha)
+        c include(beta)
+        # include(gamma)'''
+        info = find(test, 0)
+        assert info.file_name == "beta"
+        info = find(test, info.begin + info.length)
+        assert info.begin < 0
+
 
 def system(s: str) -> int:
     # return os.system(s)
