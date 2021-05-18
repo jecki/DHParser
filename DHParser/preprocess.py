@@ -30,7 +30,7 @@ cannot completely be described entirely with context-free grammars.
 
 import bisect
 import functools
-from typing import Union, Optional, Callable, Tuple, NamedTuple, List
+from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Any
 
 from DHParser.toolkit import re, dataclasses
 
@@ -126,7 +126,7 @@ def nil_preprocessor(source_text: str, source_name: str) -> Preprocessed:
     """
     A preprocessor that does nothing, i.e. just returns the input.
     """
-    return source_text, lambda i: SourceLocation(source_name, i)
+    return Preprocessed(source_text, lambda i: SourceLocation(source_name, i))
 
 
 def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
@@ -136,6 +136,7 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocat
     position within a preprocessed source text and mappings should therefore
     be a list of reverse-mappings in reversed order.
     """
+    filename = ''
     for mapping in mappings:
         filename, position = mapping(position)
     return SourceLocation(filename, position)
@@ -156,7 +157,7 @@ def _apply_preprocessors(source_text: str, source_name: str,
         processed, mapping_func = with_source_mapping(prep(processed, source_name))
         mapping_chain.append(mapping_func)
     mapping_chain.reverse()
-    return processed, functools.partial(_apply_mappings, mappings=mapping_chain)
+    return Preprocessed(processed, functools.partial(_apply_mappings, mappings=mapping_chain))
 
 
 def chain_preprocessors(*preprocessors) -> PreprocessorFunc:
@@ -315,6 +316,22 @@ def with_source_mapping(result: PreprocessorResult) -> Preprocessed:
 #######################################################################
 
 
+def generate_find_include_func(rx: Union[str, Any]) -> FindIncludeFunc:
+    if isinstance(rx, str):  rx = re.compile(rx)
+
+    def find_include(text: str, begin: int) -> IncludeInfo:
+        nonlocal rx
+        iterator = rx.finditer(text, begin)
+        try:
+            m = next(iterator)
+            begin = m.start()
+            return IncludeInfo(begin, m.end() - begin, m.group('name'))
+        except StopIteration:
+            return IncludeInfo(-1, 0, '')
+
+    return find_include
+
+
 def generate_include_map(source_name: str,
                          source_text: str,
                          find_next_include: FindIncludeFunc) -> Tuple[IncludeMap, str]:
@@ -324,49 +341,58 @@ def generate_include_map(source_name: str,
         nonlocal file_names
         map: IncludeMap = IncludeMap(source_name, [0], [0], [source_name])
         text_chunks: List[str] = []
+        source_offset: int = 0
         if source_name in file_names:
             raise ValueError(f'Circular include of {source_name} detected!')
         file_names.add(source_name)
         last_begin = -1
         last_end = 0
+        lengths = 0
         begin, length, include_name = find_next(source_text, 0)
         while begin >= 0:
             assert begin > last_begin
             with open(include_name, 'r', encoding='utf-8') as f:
                 include_text = f.read()
             inner_map, inner_text = generate_map(include_name, include_text, find_next)
-            inner_map.positions = [pos + begin for pos in inner_map.positions]
-            inner_map.offsets = [offset - begin for offset in inner_map.offsets]
-            if begin == map.positions[-1]:
-                map.file_names = map.file_names[:-1] + inner_map.file_names
-                map.positions = map.positions[:-1] + inner_map.positions
-                map.offsets = map.offsets[:-1] + inner_map.offsets
+            inner_map.positions = [pos + begin - lengths + source_offset for pos in inner_map.positions]
+            inner_map.offsets = [offset - (source_offset + begin - lengths) for offset in inner_map.offsets]
+            if begin == map.positions[-1]:  # FEHLER!
+                map.file_names = map.file_names[:-1] + inner_map.file_names[:-1]
+                map.positions = map.positions[:-1] + inner_map.positions[:-1]
+                map.offsets = map.offsets[:-1] + inner_map.offsets[:-1]
                 text_chunks.append(inner_text)
             else:
                 text_chunks.append(source_text[last_end:begin])
-                map.file_names.append(include_name)
-                map.positions += inner_map.positions
-                map.offsets += inner_map.offsets
+                source_offset += begin - last_end
+                map.file_names += inner_map.file_names[:-1]
+                map.positions += inner_map.positions[:-1]
+                map.offsets += inner_map.offsets[:-1]
                 text_chunks.append(inner_text)
+            lengths += length
             map.file_names.append(source_name)
-            map.positions.append(begin + inner_map.positions[-1])
-            map.offsets.append(map.offsets[-1] - inner_map.positions[-1] + length)
+            map.positions.append(inner_map.positions[-1])
+            map.offsets.append(source_offset + lengths - inner_map.positions[-1])
             last_end = begin + length
             last_begin = begin
             begin, length, include_name = find_next(source_text, last_end)
-        text_chunks.append(source_text[last_end:])
+        rest = source_text[last_end:]
+        if rest:
+            text_chunks.append(rest)
+            map.positions.append(map.positions[-1] + len(rest))
+            map.offsets.append(map.offsets[-1])
+            map.file_names.append(source_name)
+        file_names.remove(source_name)
         return map, ''.join(text_chunks)
 
     return generate_map(source_name, source_text, find_next_include)
 
 
-def includes_map(position: int, inclmap: IncludeMap) -> SourceLocation:
+def srcmap_includes(position: int, inclmap: IncludeMap) -> SourceLocation:
     i = bisect.bisect_right(inclmap.positions, position)
     if i:
         return SourceLocation(
-            inclmap.file_names[i],
-            # min(position + inclmap.offsets[i - 1], inclmap.positions[i] + inclmap.offsets[i])
-            inclmap.positions[i] + inclmap.offsets[i])
+            inclmap.file_names[i - 1],
+            position + inclmap.offsets[i - 1])
     raise ValueError
 
 
@@ -377,5 +403,7 @@ def preprocess_includes(source_name: str,
         with open(source_name, 'r', encoding='utf-8') as f:
             source_text = f.read()
     include_map, result = generate_include_map(source_name, source_text, find_next_include)
-    mapping_func = functools.partial(includes_map, inclmap=include_map)
+    mapping_func = functools.partial(srcmap_includes, inclmap=include_map)
     return Preprocessed(result, mapping_func)
+
+

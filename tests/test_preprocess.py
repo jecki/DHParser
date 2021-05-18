@@ -20,7 +20,11 @@ limitations under the License.
 """
 
 import os
+import platform
+import shutil
+import subprocess
 import sys
+import time
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
@@ -32,9 +36,10 @@ from DHParser.dsl import grammar_provider
 from DHParser import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
     BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors, \
-    strip_tokens
-from DHParser.toolkit import lstrip_docstring, typing
-from typing import Tuple
+    strip_tokens, generate_find_include_func, preprocess_includes, IncludeInfo
+from DHParser.toolkit import lstrip_docstring, typing, re
+from DHParser.testing import TFFN
+from typing import Tuple, Dict
 
 
 class TestMakeToken:
@@ -209,6 +214,72 @@ class TestTokenParsing:
                 break
         else:
             assert False, "wrong error positions"
+
+
+class TestHelpers:
+    def test_generate_find_include_func(self):
+        rx = re.compile(r'include\((?P<name>[^)\n]*)\)')
+        find = generate_find_include_func(rx)
+        info = find('''321include(sub.txt)xyz''', 0)
+        assert info == IncludeInfo(3, 16, 'sub.txt')
+
+
+def system(s: str) -> int:
+    # return os.system(s)
+    return subprocess.call(s, shell=True)
+
+
+class TestIncludes:
+    def setup(self):
+        self.cwd = os.getcwd()
+        os.chdir(scriptpath)
+        # avoid race-condition
+        counter = 10
+        while counter > 0:
+            try:
+                self.dirname = TFFN('test_preprocess_data')
+                os.mkdir(TFFN('test_preprocess_data'))
+                counter = 0
+            except FileExistsError:
+                time.sleep(1)
+                counter -= 1
+        os.chdir(os.path.join(scriptpath, self.dirname))
+
+    def teardown(self):
+        os.chdir(scriptpath)
+        if os.path.exists(self.dirname) and os.path.isdir(self.dirname):
+            shutil.rmtree(self.dirname)
+        if os.path.exists(self.dirname) and not os.listdir(self.dirname):
+            os.rmdir(self.dirname)
+        os.chdir(self.cwd)
+
+
+    def create_files(self, files: Dict[str, str]):
+        for name, content in files.items():
+            with open(name, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+    def test_simple_include(self):
+        def perform(main, sub):
+            self.create_files({'main.txt': main, 'sub.txt': sub})
+            find_func = generate_find_include_func(r'include\((?P<name>[^)\n]*)\)')
+            text, mapping = preprocess_includes('main.txt', None, find_func)
+            print(mapping)
+            assert text == main.replace('include(sub.txt)', 'abc'), text
+            for i in range(len(text)):
+                name, k = mapping(i)
+                print(i, k, name)
+                txt = main if name == 'main.txt' else sub
+                assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
+
+        perform('include(sub.txt)xyz', 'abc')
+        perform('012include(sub.txt)xyz', 'abc')
+        perform('012xyzinclude(sub.txt)', 'abc')
+        perform('01include(sub.txt)2xyz', 'abc')
+
+        perform('012include(sub.txt)xyzinclude(sub.txt)hij', 'abc')
+        perform('012include(sub.txt)include(sub.txt)hij', 'abc')
+        perform('include(sub.txt)include(sub.txt)hijinclude(sub.txt)', 'abc')
 
 
 if __name__ == "__main__":
