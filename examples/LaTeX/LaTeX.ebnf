@@ -3,7 +3,7 @@
 # preamble
 @ literalws  = right
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # insignificant whitespace, including at most one linefeed
-@ comment    = /%.*/
+@ comment    = /%.*/                                # note: trailing linefeed is not part of the comment proper
 @ reduction  = merge_treetops
 @ disposable = _WSPC, _GAP, _LB, _PARSEP, _LETTERS, _NAME, INTEGER, FRAC,
                _QUALIFIED, TEXT_NOPAR, TEXT, _block_content,
@@ -18,11 +18,11 @@
 #
 ########################################################################
 
-latexdoc       = preamble document
+latexdoc       = preamble §document
 preamble       = { [_WSPC] command }+
 
 document       = [_WSPC] "\begin{document}"
-                 frontpages
+                 §frontpages
                  (Chapters | Sections)
                  [Bibliography] [Index] [_WSPC]
                  "\end{document}" [_WSPC] §EOF
@@ -115,11 +115,12 @@ inline_math         = /\$/ /[^$]*/ §/\$/
 #### commands ####
 
 command             = known_command | text_command | generic_command
+
 known_command       = citet | citep | footnote | includegraphics | caption
                     | multicolumn | hline | cline | documentclass | pdfinfo
                     | hypersetup
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
-generic_command     = !no_command CMDNAME [[ ~ config ] ~ block ]
+generic_command     = !no_command CMDNAME [[ ~ config ] { ~ block }+ ]
                     | `{` CMDNAME _block_content §`}`
 
 citet               = "\citet" [config] block
@@ -195,10 +196,9 @@ WARN_Komma = ","
 #
 #######################################################################
 
-
 CMDNAME    = /\\(?:(?![\d_])\w)+/~
 TXTCOMMAND = /\\text\w+/
-ESCAPED    = /\\[%$&_\/{}]/
+ESCAPED    = /\\[%$&_\/{} ]/
 SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 LINEFEED   = /[\\][\\]/

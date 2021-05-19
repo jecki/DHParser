@@ -36,7 +36,7 @@ from DHParser.dsl import grammar_provider
 from DHParser import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
     BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors, \
-    strip_tokens, generate_find_include_func, preprocess_includes, IncludeInfo
+    strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo
 from DHParser.toolkit import lstrip_docstring, typing, re
 from DHParser.testing import TFFN
 from typing import Tuple, Dict
@@ -219,14 +219,14 @@ class TestTokenParsing:
 class TestHelpers:
     def test_generate_find_include_func(self):
         rx = re.compile(r'include\((?P<name>[^)\n]*)\)')
-        find = generate_find_include_func(rx)
+        find = gen_find_include_func(rx)
         info = find('''321include(sub.txt)xyz''', 0)
         assert info == IncludeInfo(3, 16, 'sub.txt')
 
     def test_generate_find_include_w_comments(self):
         rx = re.compile(r'include\((?P<name>[^)\n]*)\)')
         comment_rx = re.compile(r'#.*(?:\n|$)')
-        find = generate_find_include_func(rx, comment_rx)
+        find = gen_find_include_func(rx, comment_rx)
         test = '''a
         b # include(alpha)
         c include(beta)
@@ -275,8 +275,8 @@ class TestIncludes:
     def test_simple_include(self):
         def perform(main, sub):
             self.create_files({'main.txt': main, 'sub.txt': sub})
-            find_func = generate_find_include_func(r'include\((?P<name>[^)\n]*)\)')
-            text, mapping = preprocess_includes('main.txt', None, find_func)
+            find_func = gen_find_include_func(r'include\((?P<name>[^)\n]*)\)')
+            text, mapping = preprocess_includes(None, 'main.txt', find_func)
             # print(mapping)
             assert text == main.replace('include(sub.txt)', 'abc'), text
             for i in range(len(text)):
@@ -298,8 +298,8 @@ class TestIncludes:
     def test_complex_include(self):
         def perform(**ensemble):
             self.create_files(ensemble)
-            find_func = generate_find_include_func(r'#include\((?P<name>[^)\n]*)\)')
-            text, mapping = preprocess_includes('main', None, find_func)
+            find_func = gen_find_include_func(r'#include\((?P<name>[^)\n]*)\)')
+            text, mapping = preprocess_includes(None, 'main', find_func)
             # print(mapping)
             substrings = {}
             for k, v in reversed(ensemble.items()):

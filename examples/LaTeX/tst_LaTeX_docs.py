@@ -48,8 +48,9 @@ if not DHParser.dsl.recompile_grammar(grammar_path, force=False):
     sys.exit(1)
 
 
-from LaTeXParser import get_grammar, get_transformer, get_compiler
+from LaTeXParser import get_preprocessor, get_grammar, get_transformer, get_compiler
 
+preprocessor = get_preprocessor()
 parser = get_grammar()
 transformer = get_transformer()
 compiler = get_compiler()
@@ -81,8 +82,10 @@ def tst_func():
             with open(filepath, 'r', encoding='utf-8') as f:
                 doc = f.read()
 
-            print('\n\nParsing document: "%s"' % file)
-            result = parser(doc)
+            print(f'\n\nPreprocessing document: "{file}"')
+            preprocessed, source_mapper = preprocessor(doc, file)
+            print(f'\n\nParsing document: "{file}"')
+            result = parser(preprocessed)
             print("Number of CST-nodes: " + str(tree_size(result)))
             # print("Number of empty nodes: " + str(count_nodes(result,
             #                                                 lambda n: not bool(n.result))))

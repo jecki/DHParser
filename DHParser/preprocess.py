@@ -30,6 +30,7 @@ cannot completely be described entirely with context-free grammars.
 
 import bisect
 import functools
+import os
 from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Any
 
 from DHParser.toolkit import re, dataclasses
@@ -42,6 +43,7 @@ __all__ = ('RX_TOKEN_NAME',
            'SourceMap',
            'SourceMapFunc',
            'PreprocessorFunc',
+           'Preprocessed',
            'PreprocessorResult',
            'make_token',
            'strip_tokens',
@@ -51,7 +53,9 @@ __all__ = ('RX_TOKEN_NAME',
            'neutral_mapping',
            'tokenized_to_original_mapping',
            'source_map',
-           'with_source_mapping')
+           'with_source_mapping',
+           'gen_find_include_func',
+           'preprocess_includes')
 
 
 #######################################################################
@@ -96,8 +100,7 @@ class IncludeMap(SourceMap):
     file_names: List[str]  # list of file_names to which the source locations relate
 
     def has_includes(self) -> bool:
-        L = len(self.file_names)
-        return L > 1 or (L == 1 and self.file_names[0] != self.source_name)
+        return any(fname != self.source_name for fname in self.file_names)
 
 
 class IncludeInfo(NamedTuple):
@@ -111,7 +114,7 @@ PreprocessorResult = Union[str, Preprocessed]
 
 FindIncludeFunc = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                         functools.partial]
-PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],
+PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
                          functools.partial]
 
 
@@ -302,8 +305,16 @@ def with_source_mapping(result: PreprocessorResult) -> Preprocessed:
     """
     if isinstance(result, str):
         srcmap = tokenized_to_original_mapping(result)
-        mapping_func = functools.partial(source_map, srcmap=srcmap)
-        return Preprocessed(result, mapping_func)
+        token_mapping = functools.partial(source_map, srcmap=srcmap)
+        return Preprocessed(result, token_mapping)
+    # else: # DOES NOT WORK, because there is no way to reliably find out whether
+    #       # token back-mapping has already been done by the provided mapping
+    #     text, mapping = cast(Preprocessed, result)
+    #     if not (hasattr(mapping, 'func') and mapping.func == source_map):
+    #         srcmap = tokenized_to_original_mapping(text)
+    #         token_mapping = functools.partial(source_map, srcmap=srcmap)
+    #         return Preprocessed(
+    #             text, functools.partial(_apply_mappings, mappings=[token_mapping, mapping]))
     return result
 
 
@@ -314,8 +325,8 @@ def with_source_mapping(result: PreprocessorResult) -> Preprocessed:
 #######################################################################
 
 
-def generate_find_include_func(rx: Union[str, Any],
-                               comment_rx: Optional[Union[str, Any]] = None) -> FindIncludeFunc:
+def gen_find_include_func(rx: Union[str, Any],
+                          comment_rx: Optional[Union[str, Any]] = None) -> FindIncludeFunc:
     if isinstance(rx, str):  rx = re.compile(rx)
     if isinstance(comment_rx, str):  comment_rx = re.compile(comment_rx)
 
@@ -362,11 +373,13 @@ def generate_include_map(source_name: str,
             raise ValueError(f'Circular include of {source_name} detected!')
         file_names.add(source_name)
 
+        dirname = os.path.dirname(source_name)
         source_pointer = 0
         source_offset = 0
         result_pointer = 0
         last_begin = -1
         begin, length, include_name = find_next(source_text, 0)
+        include_name = os.path.join(dirname, include_name)
         while begin >= 0:
             assert begin > last_begin
             source_delta = begin - source_pointer
@@ -396,6 +409,7 @@ def generate_include_map(source_name: str,
             source_offset += length - inner_length
             map.offsets.append(source_offset)
             begin, length, include_name = find_next(source_text, source_pointer)
+            include_name = os.path.join(dirname, include_name)
         rest = source_text[source_pointer:]
         if rest:
             result.append(rest)
@@ -417,8 +431,8 @@ def srcmap_includes(position: int, inclmap: IncludeMap) -> SourceLocation:
     raise ValueError
 
 
-def preprocess_includes(source_name: str,
-                        source_text: Optional[str],
+def preprocess_includes(source_text: Optional[str],
+                        source_name: str,
                         find_next_include: FindIncludeFunc) -> Preprocessed:
     if not source_text:
         with open(source_name, 'r', encoding='utf-8') as f:

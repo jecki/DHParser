@@ -48,7 +48,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
-    has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser
+    has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser, \
+    Preprocessed, neutral_mapping, preprocess_includes, gen_find_include_func, flatten_sxpr
 
 
 #######################################################################
@@ -57,12 +58,13 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def nop(arg):
-    return arg
+
+RX_TEX_INPUT = r'\\input{(?P<name>.*)}'
 
 
-def LaTeXPreprocessor(text):
-    return text, nop
+def LaTeXPreprocessor(text: str, file_name: str) -> Preprocessed:
+    find_includes = gen_find_include_func(RX_TEX_INPUT, LaTeXGrammar.comment_rx__)
+    return preprocess_includes(text, file_name, find_includes)
 
 
 def get_preprocessor() -> PreprocessorFunc:
@@ -83,7 +85,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "74b31b1a6754004694c1d25e614d7f32"
+    source_hash__ = "49543176de36a2f3271970b00b62761d"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -120,7 +122,7 @@ class LaTeXGrammar(Grammar):
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
-    ESCAPED = RegExp('\\\\[%$&_/{}]')
+    ESCAPED = RegExp('\\\\[%$&_/{} ]')
     TXTCOMMAND = RegExp('\\\\text\\w+')
     CMDNAME = Series(RegExp('\\\\(?:(?![\\d_])\\w)+'), dwsp__)
     WARN_Komma = Series(Text(","), dwsp__)
@@ -169,7 +171,7 @@ class LaTeXGrammar(Grammar):
     generic_inline_env = Series(begin_inline_env, dwsp__, paragraph, end_inline_env, mandatory=3)
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
-    generic_command = Alternative(Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), dwsp__, block))), Series(Drop(Text("{")), CMDNAME, _block_content, Drop(Text("}")), mandatory=3))
+    generic_command = Alternative(Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), OneOrMore(Series(dwsp__, block))))), Series(Drop(Text("{")), CMDNAME, _block_content, Drop(Text("}")), mandatory=3))
     SubParagraph = Series(Series(Drop(Text("\\subparagraph")), dwsp__), heading, Option(sequence))
     SubParagraphs = OneOrMore(Series(Option(_WSPC), SubParagraph))
     frontpages = Synonym(sequence)
@@ -201,13 +203,13 @@ class LaTeXGrammar(Grammar):
     Sections = OneOrMore(Series(Option(_WSPC), Section))
     Chapter = Series(Series(Drop(Text("\\chapter")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Sections)))
     Chapters = OneOrMore(Series(Option(_WSPC), Chapter))
-    document = Series(Option(_WSPC), Series(Drop(Text("\\begin{document}")), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(_WSPC), Series(Drop(Text("\\end{document}")), dwsp__), Option(_WSPC), EOF, mandatory=9)
+    document = Series(Option(_WSPC), Series(Drop(Text("\\begin{document}")), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(_WSPC), Series(Drop(Text("\\end{document}")), dwsp__), Option(_WSPC), EOF, mandatory=2)
     param_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(parameters), Series(Drop(Text("}")), dwsp__)))
     block.set(Series(Series(Drop(Text("{")), dwsp__), _block_content, Drop(Text("}")), mandatory=2))
     text_element.set(Alternative(line_element, LINEFEED))
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))))
     block_environment.set(Alternative(known_environment, generic_block))
-    latexdoc = Series(preamble, document)
+    latexdoc = Series(preamble, document, mandatory=1)
     root__ = TreeReduction(latexdoc, CombinedParser.MERGE_TREETOPS)
     
 
@@ -267,12 +269,15 @@ def transform_generic_command(context: List[Node]):
 
 def transform_generic_block(context: List[Node]):
     node = context[-1]
-    # assert node.children[0].tag_name == "begin_generic_block"
-    # assert node.children[0].children[0].tag_name == "begin_environment"
-    # assert node.children[-1].tag_name == "end_generic_block"
-    # assert node.children[-1].children[0].tag_name == "end_environment"
-    node.tag_name = 'env_' + node.children[0].children[0].content.lstrip('\\')
-    node.result = node.children[1:-1]
+    if not node.children or not node.children[0].children:
+        context[0].new_error(node, 'unknown kind of block: ' + flatten_sxpr(node.as_sxpr()))
+    else:
+        # assert node.children[0].tag_name == "begin_generic_block"
+        # assert node.children[0].children[0].tag_name == "begin_environment"
+        # assert node.children[-1].tag_name == "end_generic_block"
+        # assert node.children[-1].children[0].tag_name == "end_environment"
+        node.tag_name = 'env_' + node.children[0].children[0].content.lstrip('\\')
+        node.result = node.children[1:-1]
 
 
 def is_expendable(context: List[Node]):
@@ -346,6 +351,7 @@ LaTeX_AST_transformation_table = {
     "structural": [],
     "CMDNAME": [remove_whitespace, reduce_single_child],
     "TXTCOMMAND": [remove_whitespace, reduce_single_child],
+    "NO_CMD": [add_error("unknown kind of command")],
     "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
     "ESCAPED": [transform_content(lambda node: str(node)[1:])],
     "BRACKETS": [],
@@ -940,7 +946,8 @@ if __name__ == "__main__":
         if errors:
             for err_str in canonical_error_strings(errors, file_names[0]):
                 print(err_str)
-            sys.exit(1)
-        else:
-            print(result.serialize(how='default' if args.xml is None else 'xml')
-                  if isinstance(result, Node) else result)
+            if has_errors(errors, ERROR):
+                sys.exit(1)
+
+        print(result.serialize(how='default' if args.xml is None else 'xml')
+              if isinstance(result, Node) else result)
