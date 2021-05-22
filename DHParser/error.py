@@ -195,6 +195,8 @@ class Error:
     :ivar orig_doc:  the name or path or url of the original source file to
         which ``orig_pos`` is related. This is relevant, if the preprocessed
         document has been plugged together from several source files.
+    :ivar orig_offset:  the offset of the included ``oric_doc`` within the
+        outermost including document.
     :ivar line:  the line number where the error occurred in the original text.
         Lines are counted from 1 onward.
     :ivar column:  the column where the error occurred in the original text.
@@ -209,7 +211,7 @@ class Error:
 
     __slots__ = ['message', 'code', '_pos', 'line', 'column', 'length',
                  'end_line', 'end_column', 'related', 'orig_pos', 'orig_doc',
-                 'relatedUri']
+                 'orig_offset', 'relatedUri']
 
     def __init__(self, message: str, pos: int, code: ErrorCode = ERROR,
                  line: int = -1, column: int = -1, length: int = 1,
@@ -227,6 +229,7 @@ class Error:
         self.code = code          # type: ErrorCode
         self.orig_pos = orig_pos  # type: int
         self.orig_doc = orig_doc  # type: str
+        self.orig_offset = 0      # type: int
         self.line = line          # type: int
         self.column = column      # type: int
         # support for Language Server Protocol Diagnostics
@@ -385,39 +388,71 @@ def adjust_error_locations(errors: List[Error],
     Args:
         errors:  The list of errors as returned by the method
             ``errors()`` of a Node object
-        original_text:  The source text on which the errors occurred.
+        original_text:  The source text in which the errors occurred.
             (Needed in order to determine the line and column numbers.)
         source_mapping:  A function that maps error positions to their
             positions in the original source file.
     """
+    def relative_lc(lbreaks: List[int], pos: int, offset: int) -> Tuple[int, int]:
+        if offset == 0:
+            return line_col(lbreaks, pos)
+        else:
+            # assert pos >= offset, f"Precondition pos: {pos} >= offset: {offset} violated!"
+            base_l, base_c = line_col(lbreaks, offset)
+            l, c = line_col(lbreaks, offset + pos)
+            if l > base_l:
+                return l - base_l + 1, c
+            else:
+                return 1, c - base_c + 1
+
     line_breaks = linebreaks(original_text)
     for err in errors:
         assert err.pos >= 0
-        err.orig_doc, err.orig_pos = source_mapping(err.pos)
-        err.line, err.column = line_col(line_breaks, err.orig_pos)
+        err.orig_doc, err.orig_offset, err.orig_pos = source_mapping(err.pos)
+        err.line, err.column = relative_lc(line_breaks, err.orig_pos, err.orig_offset)
         # adjust length in case it exceeds the text size. As this is non-fatal
         # it should be adjusted rather than an error raised to avoid
         # unnecessary special-case treatments in other places
-        if err.orig_pos + err.length > len(original_text):
-            err.length = len(original_text) - err.orig_pos
-        err.end_line, err.end_column = line_col(line_breaks, err.orig_pos + err.length)
+        if err.orig_pos + err.length > len(err.orig_doc):
+            err.length = len(err.orig_doc) - err.orig_pos
+        err.end_line, err.end_column = relative_lc(
+            line_breaks, err.orig_pos + err.length, err.orig_offset)
 
+# def canonical_error_strings(errors: List[Error], source_file_name: str = '') -> List[str]:
+#     """Returns the list of error strings in canonical form that can be parsed by most
+#     editors, i.e. "relative filepath : line : column : severity (code) : error string"
+#     """
+#     if errors:
+#         if is_filename(source_file_name):
+#             cwd = os.getcwd()
+#             if source_file_name.startswith(cwd):
+#                 rel_path = source_file_name[len(cwd)]
+#             else:
+#                 rel_path = source_file_name
+#             error_strings = [rel_path + ':' + str(err) for err in errors]
+#         else:
+#             error_strings = [str(err) for err in errors]
+#     else:
+#         error_strings = []
+#     return error_strings
 
-def canonical_error_strings(errors: List[Error], source_file_name: str = '') -> List[str]:
+def canonical_error_strings(errors: List[Error]) -> List[str]:
     """Returns the list of error strings in canonical form that can be parsed by most
     editors, i.e. "relative filepath : line : column : severity (code) : error string"
     """
     if errors:
-        if is_filename(source_file_name):
-            cwd = os.getcwd()
-            if source_file_name.startswith(cwd):
-                rel_path = source_file_name[len(cwd)]
+        error_strings = []
+        for err in errors:
+            source_file_name = err.orig_doc
+            if is_filename(source_file_name):
+                cwd = os.getcwd()
+                if source_file_name.startswith(cwd):
+                    rel_path = source_file_name[len(cwd)]
+                else:
+                    rel_path = source_file_name
+                error_strings.append(rel_path + ':' + str(err))
             else:
-                rel_path = source_file_name
-            error_strings = [rel_path + ':' + str(err) for err in errors]
-        else:
-            error_strings = [str(err) for err in errors]
+                error_strings.append(str(err))
     else:
         error_strings = []
     return error_strings
-

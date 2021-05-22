@@ -36,16 +36,18 @@ frontpages     = sequence
 #######################################################################
 
 Chapters       = { [_WSPC] Chapter }+
-Chapter        = "\chapter" heading { sequence | Sections }
+Chapter        = `\chapter` [hide_from_toc] heading { sequence | Sections }
 
 Sections       = { [_WSPC] Section }+
-Section        = "\section" heading { sequence | SubSections }
+Section        = `\section` [hide_from_toc] heading { sequence | SubSections }
 
 SubSections    = { [_WSPC] SubSection }+
-SubSection     = "\subsection" heading { sequence | SubSubSections }
+SubSection     = `\subsection` [hide_from_toc] heading { sequence | SubSubSections }
 
 SubSubSections = { [_WSPC] SubSubSection }+
-SubSubSection  = "\subsubsection" heading { sequence | Paragraphs }
+SubSubSection  = `\subsubsection` [hide_from_toc] heading { sequence | Paragraphs }
+
+hide_from_toc  = "*"
 
 Paragraphs     = { [_WSPC] Paragraph  }+
 Paragraph      = "\paragraph" heading { sequence | SubParagraphs }
@@ -148,9 +150,10 @@ info_block     = "{" §{ info_assoc } "}"
 info_assoc     = info_key ~ [ "(" §info_value ")" ]
 info_key       = `/` _NAME
 info_value     = TEXT_NOPAR { S TEXT_NOPAR }  # text without parentheses
-# text           = CHARS { S CHARS }
-# text           = LINE { S LINE }
-text           = TEXT { S TEXT }
+# text           = CHARS { (S | trennung) CHARS }
+# text           = LINE { (S | trennung) LINE }
+text           = TEXT { (S | trennung) TEXT }
+trennung       = `\-`
 
 no_command     = "\begin{" | "\end" | BACKSLASH structural
 blockcmd       = BACKSLASH ( ( "begin{" | "end{" )

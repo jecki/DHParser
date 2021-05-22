@@ -47,16 +47,17 @@ class TestDHParserCommandLineTool:
         counter = 10
         while counter > 0:
             try:
-                os.mkdir(TFFN('test_dhparser_data'))
+                self.dirname = TFFN('test_dhparser_data')
+                os.mkdir(self.dirname)
                 counter = 0
             except FileExistsError:
-                time.sleep(1)
+                time.sleep(0.5)
                 counter -= 1
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
         self.python = sys.executable + ' '
 
     def teardown(self):
-        name = TFFN('test_dhparser_data')
+        name = self.dirname
         if os.path.exists(name + '/%sServer.py' % name):
             system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)
         if os.path.exists(name) and os.path.isdir(name):
@@ -75,7 +76,7 @@ class TestDHParserCommandLineTool:
         #     os.rmdir('out')
 
     def test_dhparser(self):
-        name = TFFN('test_dhparser_data')
+        name = self.dirname
         # test compiler creation and execution
         system(self.python + '../DHParser/scripts/dhparser.py ' + name + self.nulldevice)
         system(self.python + name + '/tst_%s_grammar.py --singlethread ' % name + self.nulldevice)

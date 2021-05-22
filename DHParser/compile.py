@@ -357,7 +357,7 @@ def compile_source(source: str,
 
     if preprocessor is None:
         source_text = original_text  # type: str
-        source_mapping = lambda i: SourceLocation(source_name, i)    # type: SourceMapFunc
+        source_mapping = lambda i: SourceLocation(source_name, 0, i)    # type: SourceMapFunc
     else:
         source_text, source_mapping = with_source_mapping(preprocessor(original_text, source_name))
 

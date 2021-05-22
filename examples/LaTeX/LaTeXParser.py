@@ -49,7 +49,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser, \
-    Preprocessed, neutral_mapping, preprocess_includes, gen_find_include_func, flatten_sxpr
+    Preprocessed, neutral_mapping, preprocess_includes, gen_find_include_func, flatten_sxpr, \
+    replace_content_with
 
 
 #######################################################################
@@ -85,7 +86,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "49543176de36a2f3271970b00b62761d"
+    source_hash__ = "1defeb8c06a45217d1fba760a3364e88"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -126,7 +127,7 @@ class LaTeXGrammar(Grammar):
     TXTCOMMAND = RegExp('\\\\text\\w+')
     CMDNAME = Series(RegExp('\\\\(?:(?![\\d_])\\w)+'), dwsp__)
     WARN_Komma = Series(Text(","), dwsp__)
-    text = Series(TEXT, ZeroOrMore(Series(S, TEXT)))
+    trennung = Text("\\-")
     number = Series(INTEGER, Option(FRAC))
     magnitude = Series(number, Option(UNIT))
     value = Alternative(magnitude, _LETTERS, CMDNAME, param_block, block)
@@ -137,17 +138,18 @@ class LaTeXGrammar(Grammar):
     sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(_PARSEP))))
     block_of_paragraphs = Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2)
     param_config = Series(Series(Drop(Text("[")), dwsp__), Option(parameters), Series(Drop(Text("]")), dwsp__), mandatory=1)
-    cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
+    text = Series(TEXT, ZeroOrMore(Series(Alternative(S, trennung), TEXT)))
     structural = Alternative(Series(Drop(Text("subsection")), dwsp__), Series(Drop(Text("section")), dwsp__), Series(Drop(Text("chapter")), dwsp__), Series(Drop(Text("subsubsection")), dwsp__), Series(Drop(Text("paragraph")), dwsp__), Series(Drop(Text("subparagraph")), dwsp__), Series(Drop(Text("item")), dwsp__))
     begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
     no_command = Alternative(Series(Drop(Text("\\begin{")), dwsp__), Series(Drop(Text("\\end")), dwsp__), Series(BACKSLASH, structural))
+    cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
     info_value = Series(TEXT_NOPAR, ZeroOrMore(Series(S, TEXT_NOPAR)))
     info_key = Series(Drop(Text("/")), _NAME)
     info_assoc = Series(info_key, dwsp__, Option(Series(Series(Drop(Text("(")), dwsp__), info_value, Series(Drop(Text(")")), dwsp__), mandatory=1)))
     info_block = Series(Series(Drop(Text("{")), dwsp__), ZeroOrMore(info_assoc), Series(Drop(Text("}")), dwsp__), mandatory=1)
     end_environment = Series(Drop(RegExp('\\\\end{')), Pop(NAME), Drop(RegExp('}')), mandatory=1)
-    heading = Synonym(block)
+    hide_from_toc = Series(Text("*"), dwsp__)
     hypersetup = Series(Series(Drop(Text("\\hypersetup")), dwsp__), param_block)
     pdfinfo = Series(Series(Drop(Text("\\pdfinfo")), dwsp__), info_block)
     documentclass = Series(Series(Drop(Text("\\documentclass")), dwsp__), Option(config), block)
@@ -172,10 +174,10 @@ class LaTeXGrammar(Grammar):
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
     generic_command = Alternative(Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), OneOrMore(Series(dwsp__, block))))), Series(Drop(Text("{")), CMDNAME, _block_content, Drop(Text("}")), mandatory=3))
+    heading = Synonym(block)
     SubParagraph = Series(Series(Drop(Text("\\subparagraph")), dwsp__), heading, Option(sequence))
-    SubParagraphs = OneOrMore(Series(Option(_WSPC), SubParagraph))
     frontpages = Synonym(sequence)
-    Paragraph = Series(Series(Drop(Text("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    SubParagraphs = OneOrMore(Series(Option(_WSPC), SubParagraph))
     multicolumn = Series(Series(Drop(Text("\\multicolumn")), dwsp__), Series(Drop(Text("{")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__), tabular_config, block_of_paragraphs)
     known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo, hypersetup)
     command = Alternative(known_command, text_command, generic_command)
@@ -192,16 +194,17 @@ class LaTeXGrammar(Grammar):
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
     preamble = OneOrMore(Series(Option(_WSPC), command))
-    Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
+    Paragraph = Series(Series(Drop(Text("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
     Index = Series(Option(_WSPC), Series(Drop(Text("\\printindex")), dwsp__))
     Bibliography = Series(Option(_WSPC), Series(Drop(Text("\\bibliography")), dwsp__), heading)
-    SubSubSection = Series(Series(Drop(Text("\\subsubsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
+    Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
+    SubSubSection = Series(Drop(Text("\\subsubsection")), Option(hide_from_toc), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
     SubSubSections = OneOrMore(Series(Option(_WSPC), SubSubSection))
-    SubSection = Series(Series(Drop(Text("\\subsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSection = Series(Drop(Text("\\subsection")), Option(hide_from_toc), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
     SubSections = OneOrMore(Series(Option(_WSPC), SubSection))
-    Section = Series(Series(Drop(Text("\\section")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSections)))
+    Section = Series(Drop(Text("\\section")), Option(hide_from_toc), heading, ZeroOrMore(Alternative(sequence, SubSections)))
     Sections = OneOrMore(Series(Option(_WSPC), Section))
-    Chapter = Series(Series(Drop(Text("\\chapter")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Sections)))
+    Chapter = Series(Drop(Text("\\chapter")), Option(hide_from_toc), heading, ZeroOrMore(Alternative(sequence, Sections)))
     Chapters = OneOrMore(Series(Option(_WSPC), Chapter))
     document = Series(Option(_WSPC), Series(Drop(Text("\\begin{document}")), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(_WSPC), Series(Drop(Text("\\end{document}")), dwsp__), Option(_WSPC), EOF, mandatory=2)
     param_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(parameters), Series(Drop(Text("}")), dwsp__)))
@@ -305,6 +308,7 @@ LaTeX_AST_transformation_table = {
     "frontpages": reduce_single_child,
     "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
     "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph": [],
+    "hide_from_toc": [replace_content_with('')],
     "heading": reduce_single_child,
     "Bibliography": [],
     "Index": [],
@@ -347,6 +351,7 @@ LaTeX_AST_transformation_table = {
     "block": [flatten, reduce_single_child],
     "flag": [reduce_single_child],
     "text": collapse,
+    "trennung": replace_content_with(''),
     "no_command, blockcmd": [],
     "structural": [],
     "CMDNAME": [remove_whitespace, reduce_single_child],
@@ -944,7 +949,7 @@ if __name__ == "__main__":
         result, errors = compile_src(file_names[0])
 
         if errors:
-            for err_str in canonical_error_strings(errors, file_names[0]):
+            for err_str in canonical_error_strings(errors):
                 print(err_str)
             if has_errors(errors, ERROR):
                 sys.exit(1)

@@ -82,8 +82,9 @@ class SourceMap:
 
 
 class SourceLocation(NamedTuple):
-    source_name: str  # the file name (or path or uri) of the source code
-    pos: int   # a position within this file
+    source_name: str       # the file name (or path or uri) of the source code
+    source_offset: int     # the offset of this file within the complete source text
+    pos: int               # a position within this file
 
 
 SourceMapFunc = Union[Callable[[int], SourceLocation],
@@ -129,7 +130,7 @@ def nil_preprocessor(source_text: str, source_name: str) -> Preprocessed:
     """
     A preprocessor that does nothing, i.e. just returns the input.
     """
-    return Preprocessed(source_text, lambda i: SourceLocation(source_name, i))
+    return Preprocessed(source_text, lambda i: SourceLocation(source_name, 0, i))
 
 
 def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
@@ -141,8 +142,8 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocat
     """
     filename = ''
     for mapping in mappings:
-        filename, position = mapping(position)
-    return SourceLocation(filename, position)
+        filename, offset, position = mapping(position)
+    return SourceLocation(filename, offset, position)
 
 
 def _apply_preprocessors(source_text: str, source_name: str,
@@ -167,6 +168,9 @@ def chain_preprocessors(*preprocessors) -> PreprocessorFunc:
     """
     Merges a sequence of preprocessor functions in to a single function.
     """
+    if any(prep is preprocess_includes for prep in preprocessors[1:]):
+        raise ValueError("The preprocessor for include files must be applied first, "
+                         "and there can be no more than one preprocessor for includes.")
     return functools.partial(_apply_preprocessors, preprocessors=preprocessors)
 
 
@@ -227,7 +231,7 @@ def strip_tokens(tokenized: str) -> str:
 def neutral_mapping(pos: int) -> SourceLocation:
     '''Maps source locations on itself and sets the source file name
     to the empty string.'''
-    return SourceLocation('', pos)
+    return SourceLocation('', 0, pos)
 
 
 def tokenized_to_original_mapping(tokenized_text: str, source_name: str='UNKNOWN_FILE') -> SourceMap:
@@ -283,6 +287,7 @@ def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
     if i:
         return SourceLocation(
             srcmap.source_name,
+            0,
             min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
     raise ValueError
 
@@ -425,9 +430,11 @@ def generate_include_map(source_name: str,
 def srcmap_includes(position: int, inclmap: IncludeMap) -> SourceLocation:
     i = bisect.bisect_right(inclmap.positions, position)
     if i:
+        offset = inclmap.offsets[i - 1]
         return SourceLocation(
             inclmap.file_names[i - 1],
-            position + inclmap.offsets[i - 1])
+            -offset,
+            position + offset)
     raise ValueError
 
 

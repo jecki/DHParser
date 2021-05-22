@@ -156,7 +156,7 @@ class TestTokenParsing:
     def verify_mapping(self, teststr, orig_text, preprocessed_text, mapping):
         mapped_pos = preprocessed_text.find(teststr)
         assert mapped_pos >= 0
-        file_name, original_pos = mapping(mapped_pos)
+        file_name, file_offset, original_pos = mapping(mapped_pos)
         # original_pos = source_map(mapped_pos, self.srcmap)
         assert orig_text[original_pos:original_pos + len(teststr)] == teststr, \
             '"%s" (%i) wrongly mapped onto "%s" (%i)' % \
@@ -181,7 +181,7 @@ class TestTokenParsing:
         previous_index = 0
         L = len(self.code)
         for mapped_index in range(len(self.tokenized)):
-            _, index = source_map(mapped_index, self.srcmap)
+            _, _, index = source_map(mapped_index, self.srcmap)
             assert previous_index <= index <= L, \
                 "%i <= %i <= %i violated" % (previous_index, index, L)
             previous_index = index
@@ -243,8 +243,9 @@ def system(s: str) -> int:
 
 
 class TestIncludes:
+    cwd = os.getcwd()
+
     def setup(self):
-        self.cwd = os.getcwd()
         os.chdir(scriptpath)
         # avoid race-condition
         counter = 10
@@ -254,7 +255,7 @@ class TestIncludes:
                 os.mkdir(TFFN('test_preprocess_data'))
                 counter = 0
             except FileExistsError:
-                time.sleep(1)
+                time.sleep(0.5)
                 counter -= 1
         os.chdir(os.path.join(scriptpath, self.dirname))
 
@@ -264,7 +265,7 @@ class TestIncludes:
             shutil.rmtree(self.dirname)
         if os.path.exists(self.dirname) and not os.listdir(self.dirname):
             os.rmdir(self.dirname)
-        os.chdir(self.cwd)
+        os.chdir(TestIncludes.cwd)
 
 
     def create_files(self, files: Dict[str, str]):
@@ -280,7 +281,7 @@ class TestIncludes:
             # print(mapping)
             assert text == main.replace('include(sub.txt)', 'abc'), text
             for i in range(len(text)):
-                name, k = mapping(i)
+                name, offset, k = mapping(i)
                 # print(i, k, name)
                 txt = main if name == 'main.txt' else sub
                 assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
@@ -302,14 +303,14 @@ class TestIncludes:
             text, mapping = preprocess_includes(None, 'main', find_func)
             # print(mapping)
             substrings = {}
-            for k, v in reversed(ensemble.items()):
+            for k, v in reversed(list(ensemble.items())):
                 for name, content in substrings.items():
                     v = v.replace(f'#include({name})', content)
                 substrings[k] = v
             assert text == substrings['main']
             # print(text)
             for i in range(len(text)):
-                name, k = mapping(i)
+                name, offset, k = mapping(i)
                 txt = ensemble[name]
                 # print(name, txt, i, k)
                 assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
