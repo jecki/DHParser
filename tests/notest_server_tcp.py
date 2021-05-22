@@ -53,7 +53,7 @@ from DHParser.server import Server, spawn_tcp_server, stop_tcp_server, asyncio_r
     split_header, has_server_stopped, STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST, \
     SERVER_OFFLINE, connection_cb_dummy
 from DHParser.lsp import gen_lsp_table
-from DHParser.testing import TFFN
+from DHParser.testing import unique_name
 
 TEST_PORT = 8000 + os.getpid() % 1000
 # print('>>> ', sys.version, TEST_PORT)

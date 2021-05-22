@@ -38,7 +38,7 @@ from DHParser.preprocess import make_token, tokenized_to_original_mapping, sourc
     BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors, \
     strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo
 from DHParser.toolkit import lstrip_docstring, typing, re
-from DHParser.testing import TFFN
+from DHParser.testing import unique_name
 from typing import Tuple, Dict
 
 
@@ -251,8 +251,8 @@ class TestIncludes:
         counter = 10
         while counter > 0:
             try:
-                self.dirname = TFFN('test_preprocess_data')
-                os.mkdir(TFFN('test_preprocess_data'))
+                self.dirname = unique_name('test_preprocess_data')
+                os.mkdir(self.dirname)
                 counter = 0
             except FileExistsError:
                 time.sleep(0.5)

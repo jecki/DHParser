@@ -59,7 +59,7 @@ __all__ = ('unit_from_config',
            'TEST_ARTIFACT',
            'POSSIBLE_ARTIFACTS',
            'grammar_unit',
-           'TFFN',
+           'unique_name',
            'grammar_suite',
            'SymbolsDictType',
            'extract_symbols',
@@ -577,18 +577,16 @@ def reset_unit(test_unit):
                 del tests[key]
 
 
-def TFFN(file_name: str) -> str:
-    """Thread Safe File Name: Returns a thread safe-version of a file
-    name by adding a unique process and thread identificator.
-
-    Thread-Safe filenames are needed when running test that use the same
-    tempory file names in parralel or when running the same test-suite
-    under different constellations, say different Python-interpreters,
-    in parallel. Otherwise it can happen that one thread cleans up a
-    temporary file that an other thread has created.
+def unique_name(file_name: str) -> str:
+    """Turns the file or dirname into a unique name by adding a time stamp.
+    This helps to avoid race conditions when running tests in parallel
+    that create and delete files on the disk.
     """
-    return concurrent_ident() + '_' + file_name
-
+    # return concurrent_ident() + '_' + file_name
+    resolution = 100000
+    name = 'unique_' + str(int(time.time() * resolution)) + '_' + file_name
+    time.sleep(1.0 / resolution)
+    return name
 
 def grammar_suite(directory, parser_factory, transformer_factory,
                   fn_patterns=('*test*',),

@@ -31,7 +31,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
-from DHParser.testing import TFFN
+from DHParser.testing import unique_name
 
 
 def system(s: str) -> int:
@@ -47,7 +47,7 @@ class TestDHParserCommandLineTool:
         counter = 10
         while counter > 0:
             try:
-                self.dirname = TFFN('test_dhparser_data')
+                self.dirname = unique_name('test_dhparser_data')
                 os.mkdir(self.dirname)
                 counter = 0
             except FileExistsError:

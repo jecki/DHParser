@@ -34,7 +34,7 @@ from DHParser.dsl import grammar_provider
 from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
     MANDATORY_CONTINUATION_AT_EOF, ERROR, WARNING
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
-    clean_report, TFFN
+    clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
 
 
@@ -104,24 +104,28 @@ class TestTestfiles:
     def setup(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
-        with open(TFFN('configfile_test_1.ini'), 'w', encoding="utf-8") as f:
+        self.cfg1 = unique_name('configfile_test_1.ini')
+        self.cfg2 = unique_name('configfile_test_2.ini')
+        self.cfg3 = unique_name('configfile_test_3.ini')
+        self.cfg4 = unique_name('configfile_test_4.ini')
+        with open(self.cfg1, 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_1)
-        with open(TFFN('configfile_test_2.ini'), 'w', encoding="utf-8") as f:
+        with open(self.cfg2, 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_2)
-        with open(TFFN('configfile_test_3.ini'), 'w', encoding="utf-8") as f:
+        with open(self.cfg3, 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_3)
-        with open(TFFN('configfile_test_4.ini'), 'w', encoding="utf-8") as f:
+        with open(self.cfg4, 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_4)
 
     def teardown(self):
-        os.remove(TFFN('configfile_test_1.ini'))
-        os.remove(TFFN('configfile_test_2.ini'))
-        os.remove(TFFN('configfile_test_3.ini'))
-        os.remove(TFFN('configfile_test_4.ini'))
+        os.remove(self.cfg1)
+        os.remove(self.cfg2)
+        os.remove(self.cfg3)
+        os.remove(self.cfg4)
         os.chdir(self.save_dir)
 
     def test_unit_from_config_file(self):
-        unit = unit_from_file(TFFN('configfile_test_1.ini'))
+        unit = unit_from_file(self.cfg1)
         assert list(unit.keys()) == ['ParserA']
         assert list(unit['ParserA'].keys()) == ['match', 'fail'], str(list(unit['ParserA'].keys()))
         assert list(unit['ParserA']['match'].keys()) == ['M1', 'M2', 'M3', 'M4']
@@ -130,16 +134,16 @@ class TestTestfiles:
         lines = testcase.split('\n')
         assert len(lines[2]) - len(lines[2].lstrip()) == 4
 
-        unit = unit_from_file(TFFN('configfile_test_2.ini'))
+        unit = unit_from_file(self.cfg2)
         txt = unit['BedeutungsPosition']['match']['M1']
         txt.split('\n')
         for line in txt:
             assert line.rstrip()[0:1] != ' '
 
-        unit = unit_from_file(TFFN('configfile_test_3.ini'))
+        unit = unit_from_file(self.cfg3)
 
         try:
-            unit = unit_from_file(TFFN('configfile_test_4.ini'))
+            unit = unit_from_file(self.cfg4)
             assert False, "Same key used twice should raise a key error!!!"
         except KeyError as e:
             pass
