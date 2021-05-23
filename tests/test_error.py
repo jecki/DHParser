@@ -74,11 +74,11 @@ class TestErrorSupport:
         self.mini_suite(s, linebreaks(s), 1)
 
     def test_boundary_cases(self):
-        err = Error('Error-Test', 0, ERROR)
+        err = Error('Error-Test', 1, ERROR)
         source_mapping = gen_neutral_srcmap_func(' ')
         adjust_error_locations([err], source_mapping)
 
-        err = Error('Error-Test', 1, ERROR)
+        err = Error('Error-Test', 2, ERROR)
         try:
             adjust_error_locations([err], source_mapping)
             assert False, "Error-location outside text. ValueError was expected but not raised"

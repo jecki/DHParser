@@ -130,7 +130,8 @@ def preprocess_comments(src: str, src_name: str) -> Tuple[str, SourceMapFunc]:
     positions.append(pos)
     offsets.append(offsets[-1])
     return '\n'.join(lines), \
-           partial(source_map, srcmap=SourceMap('DUMMY', positions, offsets, ['DUMMY']*len(positions), {'DUMMY': []}))
+           partial(source_map, srcmap=SourceMap(src_name, positions, offsets, [src_name]*len(positions),
+                                                {src_name: [-1, len(src)]}))
 
 
 class TestTokenParsing:

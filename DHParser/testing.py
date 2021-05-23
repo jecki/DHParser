@@ -519,6 +519,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         # run fail tests
 
         for test_name, test_code in tests.get('fail', dict()).items():
+            source_mapper = gen_neutral_srcmap_func(test_code)
             errflag = len(errata)
             try:
                 cst = parser(test_code, parser_name)

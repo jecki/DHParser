@@ -392,8 +392,8 @@ def adjust_error_locations(errors: List[Error], source_mapping: SourceMapFunc):
         assert err.pos >= 0
         err.orig_doc, lbreaks, err.orig_pos = source_mapping(err.pos)
         err.line, err.column = line_col(lbreaks, err.orig_pos)
-        if err.orig_pos + err.length > len(err.orig_doc):
-            err.length = len(err.orig_doc) - err.orig_pos  # err.length should not exceed text length
+        if err.orig_pos + err.length > lbreaks[-1]:
+            err.length = lbreaks[-1] - err.orig_pos  # err.length should not exceed text length
         err.end_line, err.end_column = line_col(lbreaks, err.orig_pos + err.length)
 
 
