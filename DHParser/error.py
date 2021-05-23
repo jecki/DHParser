@@ -62,7 +62,7 @@ __all__ = ('ErrorCode',
            'is_warning',
            'has_errors',
            'only_errors',
-           'adjust_error_locations',
+           'add_source_locations',
            'canonical_error_strings',
            'NO_ERROR',
            'NOTICE',
@@ -377,7 +377,7 @@ def only_errors(messages: Iterable[Error], level: int = ERROR) -> Iterator[Error
 #######################################################################
 
 
-def adjust_error_locations(errors: List[Error], source_mapping: SourceMapFunc):
+def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
     """Adds (or adjusts) line and column numbers of error messages inplace.
 
     Args:

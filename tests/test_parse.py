@@ -31,7 +31,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
-from DHParser.error import Error, is_error, adjust_error_locations, MANDATORY_CONTINUATION, \
+from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
     PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
@@ -1375,7 +1375,7 @@ def next_valid_letter(text, start, end):
         gr = copy.deepcopy(get_ebnf_grammar())
         resume_notices_on(gr)
         cst = gr(EBNF_with_Errors)
-        adjust_error_locations(cst.errors, gen_neutral_srcmap_func(EBNF_with_Errors))
+        add_source_locations(cst.errors, gen_neutral_srcmap_func(EBNF_with_Errors))
         locations = []
         for error in cst.errors_sorted:
             locations.append((error.line, error.column))

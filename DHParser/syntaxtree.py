@@ -591,7 +591,7 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
-    adjust_error_locations
+    add_source_locations
 from DHParser.preprocess import SourceMapFunc, SourceLocation, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
@@ -2794,7 +2794,7 @@ class RootNode(Node):
         if id(node) in self.error_nodes:
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
         if self.source:
-            adjust_error_locations(self.errors, self.source_mapping)
+            add_source_locations(self.errors, self.source_mapping)
         return self
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
@@ -2832,7 +2832,7 @@ class RootNode(Node):
         if node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
         if self.source:
-            adjust_error_locations([error], self.source_mapping)
+            add_source_locations([error], self.source_mapping)
         self.errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         return self

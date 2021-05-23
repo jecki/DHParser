@@ -31,7 +31,7 @@ try:
 except ImportError:
     import re
 
-from DHParser.error import Error, ERROR, adjust_error_locations
+from DHParser.error import Error, ERROR, add_source_locations
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.toolkit import linebreaks, line_col
 
@@ -76,11 +76,11 @@ class TestErrorSupport:
     def test_boundary_cases(self):
         err = Error('Error-Test', 1, ERROR)
         source_mapping = gen_neutral_srcmap_func(' ')
-        adjust_error_locations([err], source_mapping)
+        add_source_locations([err], source_mapping)
 
         err = Error('Error-Test', 2, ERROR)
         try:
-            adjust_error_locations([err], source_mapping)
+            add_source_locations([err], source_mapping)
             assert False, "Error-location outside text. ValueError was expected but not raised"
         except ValueError:
             pass
