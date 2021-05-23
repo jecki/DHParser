@@ -225,7 +225,8 @@ def get_grammar() -> LaTeXGrammar:
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
-    
+
+
 def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
