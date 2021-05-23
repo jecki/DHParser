@@ -377,9 +377,7 @@ def only_errors(messages: Iterable[Error], level: int = ERROR) -> Iterator[Error
 #######################################################################
 
 
-def adjust_error_locations(errors: List[Error],
-                           original_text: Union[StringView, str],
-                           source_mapping: Optional[SourceMapFunc] = None):
+def adjust_error_locations(errors: List[Error], source_mapping: SourceMapFunc):
     """Adds (or adjusts) line and column numbers of error messages inplace.
 
     Args:
@@ -390,21 +388,6 @@ def adjust_error_locations(errors: List[Error],
         source_mapping:  A function that maps error positions to their
             positions in the original source file.
     """
-    def relative_lc(lbreaks: List[int], pos: int, offset: int) -> Tuple[int, int]:
-        if offset == 0:
-            return line_col(lbreaks, pos)
-        else:
-            # assert pos >= offset, f"Precondition pos: {pos} >= offset: {offset} violated!"
-            base_l, base_c = line_col(lbreaks, offset)
-            l, c = line_col(lbreaks, offset + pos)
-            if l > base_l:
-                return l - base_l + 1, c
-            else:
-                return 1, c - base_c + 1
-
-    line_breaks = linebreaks(original_text)
-    if not source_mapping:
-        source_mapping = lambda pos: SourceLocation('', line_breaks, pos)
     for err in errors:
         assert err.pos >= 0
         err.orig_doc, lbreaks, err.orig_pos = source_mapping(err.pos)

@@ -41,7 +41,8 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
-from DHParser.dsl import grammar_provider, create_parser, raw_compileEBNF
+from DHParser.dsl import grammar_provider, create_parser
+from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.syntaxtree import Node, parse_sxpr
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
@@ -1374,7 +1375,7 @@ def next_valid_letter(text, start, end):
         gr = copy.deepcopy(get_ebnf_grammar())
         resume_notices_on(gr)
         cst = gr(EBNF_with_Errors)
-        adjust_error_locations(cst.errors, EBNF_with_Errors)
+        adjust_error_locations(cst.errors, gen_neutral_srcmap_func(EBNF_with_Errors))
         locations = []
         for error in cst.errors_sorted:
             locations.append((error.line, error.column))

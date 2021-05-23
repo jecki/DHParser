@@ -44,6 +44,7 @@ from DHParser.error import Error, is_error, adjust_error_locations, PARSER_LOOKA
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
+from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
@@ -435,10 +436,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
             tests.setdefault('__cst__', {})[test_name] = cst
+            source_mapper = gen_neutral_srcmap_func(test_code)
             errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errors = [e for e in cst.errors_sorted if e.code not in POSSIBLE_ARTIFACTS]
-                adjust_error_locations(errors, test_code)
+                adjust_error_locations(errors, source_mapper)
                 errata.append('Match test "%s" for parser "%s" failed:'
                               '\nExpr.:  %s\n\n%s\n\n' %
                               (test_name, parser_name, md_codeblock(test_code),
@@ -457,7 +459,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 ast_errors = [e for e in ast.errors if e not in old_errors]
                 ast_errors.sort(key=lambda e: e.pos)
                 if is_error(max(e.code for e in ast_errors) if ast_errors else 0):
-                    adjust_error_locations(ast_errors, test_code)
+                    adjust_error_locations(ast_errors, source_mapper)
                     if ast_errors:
                         if errata:  errata[-1] = errata[-1].rstrip('\n')
                         ast_errors.append('\n')
@@ -538,7 +540,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     with local_log_dir('./LOGS'):
                         log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
-                adjust_error_locations(cst.errors, test_code)
+                adjust_error_locations(cst.errors, source_mapper)
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors_sorted)
             if verbose:

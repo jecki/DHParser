@@ -46,10 +46,10 @@ from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMap
 from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
-from DHParser.error import adjust_error_locations, is_error, is_fatal, Error, \
+from DHParser.error import is_error, is_fatal, Error, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename, identity
+from DHParser.toolkit import load_if_file, is_filename
 
 
 __all__ = ('CompilerError',

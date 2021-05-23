@@ -33,6 +33,7 @@ import functools
 import os
 from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Dict, Any
 
+from DHParser.stringview import StringView
 from DHParser.toolkit import re, linebreaks
 
 
@@ -50,8 +51,9 @@ __all__ = ('RX_TOKEN_NAME',
            'nil_preprocessor',
            'chain_preprocessors',
            'prettyprint_tokenized',
+           'gen_neutral_srcmap_func',
            'tokenized_to_original_mapping',
-           'source_map',
+           # 'source_map',
            'with_source_mapping',
            'gen_find_include_func',
            'preprocess_includes')
@@ -221,6 +223,13 @@ def strip_tokens(tokenized: str) -> str:
 #               transformations of the source text
 #
 #######################################################################
+
+
+def gen_neutral_srcmap_func(source_text: Union[StringView, str], source_name: str='') -> SourceMapFunc:
+    """Generates a source map functions that maps positions to itself."""
+    line_breaks = linebreaks(source_text or ' ')
+    if not source_name:  source_name = 'UNKNOWN_FILE'
+    return lambda pos: SourceLocation(source_name, line_breaks, pos)
 
 
 def tokenized_to_original_mapping(tokenized_text: str, source_name: str='UNKNOWN_FILE') -> SourceMap:
