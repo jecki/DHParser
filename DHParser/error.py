@@ -408,31 +408,11 @@ def adjust_error_locations(errors: List[Error],
     for err in errors:
         assert err.pos >= 0
         err.orig_doc, lbreaks, err.orig_pos = source_mapping(err.pos)
-        err.line, err.column = line_col(line_breaks, err.orig_pos)
-        # adjust length in case it exceeds the text size. As this is non-fatal
-        # it should be adjusted rather than an error raised to avoid
-        # unnecessary special-case treatments in other places
+        err.line, err.column = line_col(lbreaks, err.orig_pos)
         if err.orig_pos + err.length > len(err.orig_doc):
-            err.length = len(err.orig_doc) - err.orig_pos
+            err.length = len(err.orig_doc) - err.orig_pos  # err.length should not exceed text length
         err.end_line, err.end_column = line_col(lbreaks, err.orig_pos + err.length)
 
-# def canonical_error_strings(errors: List[Error], source_file_name: str = '') -> List[str]:
-#     """Returns the list of error strings in canonical form that can be parsed by most
-#     editors, i.e. "relative filepath : line : column : severity (code) : error string"
-#     """
-#     if errors:
-#         if is_filename(source_file_name):
-#             cwd = os.getcwd()
-#             if source_file_name.startswith(cwd):
-#                 rel_path = source_file_name[len(cwd)]
-#             else:
-#                 rel_path = source_file_name
-#             error_strings = [rel_path + ':' + str(err) for err in errors]
-#         else:
-#             error_strings = [str(err) for err in errors]
-#     else:
-#         error_strings = []
-#     return error_strings
 
 def canonical_error_strings(errors: List[Error]) -> List[str]:
     """Returns the list of error strings in canonical form that can be parsed by most

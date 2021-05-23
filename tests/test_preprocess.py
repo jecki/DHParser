@@ -301,20 +301,15 @@ class TestIncludes:
             self.create_files(ensemble)
             find_func = gen_find_include_func(r'#include\((?P<name>[^)\n]*)\)')
             text, mapping = preprocess_includes(None, 'main', find_func)
-            # print(mapping)
             substrings = {}
             for k, v in reversed(list(ensemble.items())):
                 for name, content in substrings.items():
                     v = v.replace(f'#include({name})', content)
                 substrings[k] = v
             assert text == substrings['main']
-            # print(text)
             for i in range(len(text)):
                 name, lbreaks, k = mapping(i)
                 txt = ensemble[name]
-                # print(name, substrings[name], text[offset:offset + len(substrings[name])])
-                # assert text[offset:offset + len(substrings[name])] == substrings[name]
-                # print(name, txt, i, k)
                 assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
 
         perform(main = '#include(sub)xyz', sub='abc')

@@ -2758,7 +2758,7 @@ class RootNode(Node):
 
     def swallow(self, node: Optional[Node],
                 source: Union[str, StringView] = '',
-                source_mapping: SourceMapFunc = identity) \
+                source_mapping: Optional[SourceMapFunc] = None) \
             -> 'RootNode':
         """
         Put `self` in the place of `node` by copying all its data.
@@ -2774,7 +2774,11 @@ class RootNode(Node):
         if source and source != self.source:
             self.source = source
             self.lbreaks = linebreaks(source)
-        if source_mapping != identity:  self.source_mapping = source_mapping
+        if source_mapping is None:
+            line_breaks = linebreaks(source)
+            self.source_mapping = lambda pos: SourceLocation('', line_breaks, pos)
+        else:
+            self.source_mapping = source_mapping  # type: SourceMapFunc
         if self.tag_name != '__not_yet_ready__':
             raise AssertionError('RootNode.swallow() has already been called!')
         if node is None:

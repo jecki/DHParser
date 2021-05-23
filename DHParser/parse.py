@@ -45,7 +45,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
     AUTORETRIEVED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.log import CallItem, HistoryRecord
-from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
+from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, SourceMapFunc
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
@@ -1361,7 +1361,7 @@ class Grammar:
     def __call__(self,
                  document: str,
                  start_parser: Union[str, Parser] = "root_parser__",
-                 source_mapping = identity,
+                 source_mapping: Optional[SourceMapFunc] = None,
                  *, complete_match: bool = True) -> RootNode:
         """
         Parses a document with with parser-combinators.
