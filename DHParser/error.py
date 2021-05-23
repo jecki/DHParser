@@ -48,9 +48,9 @@ column-number
 """
 
 import os
-from typing import Iterable, Iterator, Union, List, Any, Sequence, Tuple
+from typing import Iterable, Iterator, Union, List, Optional, Sequence, Tuple
 
-from DHParser.preprocess import SourceMapFunc, neutral_mapping
+from DHParser.preprocess import SourceMapFunc, SourceLocation
 from DHParser.stringview import StringView
 from DHParser.toolkit import linebreaks, line_col, is_filename
 
@@ -195,8 +195,6 @@ class Error:
     :ivar orig_doc:  the name or path or url of the original source file to
         which ``orig_pos`` is related. This is relevant, if the preprocessed
         document has been plugged together from several source files.
-    :ivar orig_offset:  the offset of the included ``oric_doc`` within the
-        outermost including document.
     :ivar line:  the line number where the error occurred in the original text.
         Lines are counted from 1 onward.
     :ivar column:  the column where the error occurred in the original text.
@@ -211,7 +209,7 @@ class Error:
 
     __slots__ = ['message', 'code', '_pos', 'line', 'column', 'length',
                  'end_line', 'end_column', 'related', 'orig_pos', 'orig_doc',
-                 'orig_offset', 'relatedUri']
+                 'relatedUri']
 
     def __init__(self, message: str, pos: int, code: ErrorCode = ERROR,
                  line: int = -1, column: int = -1, length: int = 1,
@@ -229,7 +227,6 @@ class Error:
         self.code = code          # type: ErrorCode
         self.orig_pos = orig_pos  # type: int
         self.orig_doc = orig_doc  # type: str
-        self.orig_offset = 0      # type: int
         self.line = line          # type: int
         self.column = column      # type: int
         # support for Language Server Protocol Diagnostics
@@ -382,7 +379,7 @@ def only_errors(messages: Iterable[Error], level: int = ERROR) -> Iterator[Error
 
 def adjust_error_locations(errors: List[Error],
                            original_text: Union[StringView, str],
-                           source_mapping: SourceMapFunc = neutral_mapping):
+                           source_mapping: Optional[SourceMapFunc] = None):
     """Adds (or adjusts) line and column numbers of error messages inplace.
 
     Args:
@@ -406,17 +403,18 @@ def adjust_error_locations(errors: List[Error],
                 return 1, c - base_c + 1
 
     line_breaks = linebreaks(original_text)
+    if not source_mapping:
+        source_mapping = lambda pos: SourceLocation('', line_breaks, pos)
     for err in errors:
         assert err.pos >= 0
-        err.orig_doc, err.orig_offset, err.orig_pos = source_mapping(err.pos)
-        err.line, err.column = relative_lc(line_breaks, err.orig_pos, err.orig_offset)
+        err.orig_doc, lbreaks, err.orig_pos = source_mapping(err.pos)
+        err.line, err.column = line_col(line_breaks, err.orig_pos)
         # adjust length in case it exceeds the text size. As this is non-fatal
         # it should be adjusted rather than an error raised to avoid
         # unnecessary special-case treatments in other places
         if err.orig_pos + err.length > len(err.orig_doc):
             err.length = len(err.orig_doc) - err.orig_pos
-        err.end_line, err.end_column = relative_lc(
-            line_breaks, err.orig_pos + err.length, err.orig_offset)
+        err.end_line, err.end_column = line_col(lbreaks, err.orig_pos + err.length)
 
 # def canonical_error_strings(errors: List[Error], source_file_name: str = '') -> List[str]:
 #     """Returns the list of error strings in canonical form that can be parsed by most

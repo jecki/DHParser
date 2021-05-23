@@ -49,7 +49,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser, \
-    Preprocessed, neutral_mapping, preprocess_includes, gen_find_include_func, flatten_sxpr, \
+    Preprocessed, preprocess_includes, gen_find_include_func, flatten_sxpr, \
     replace_content_with
 
 

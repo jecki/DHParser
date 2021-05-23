@@ -31,9 +31,9 @@ cannot completely be described entirely with context-free grammars.
 import bisect
 import functools
 import os
-from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Any
+from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Dict, Any
 
-from DHParser.toolkit import re, dataclasses
+from DHParser.toolkit import re, linebreaks
 
 
 __all__ = ('RX_TOKEN_NAME',
@@ -50,7 +50,6 @@ __all__ = ('RX_TOKEN_NAME',
            'nil_preprocessor',
            'chain_preprocessors',
            'prettyprint_tokenized',
-           'neutral_mapping',
            'tokenized_to_original_mapping',
            'source_map',
            'with_source_mapping',
@@ -74,17 +73,28 @@ RX_TOKEN_ARGUMENT = re.compile(r'[^\x1b\x1c\x1d]*')
 RX_TOKEN = re.compile(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 
 
-@dataclasses.dataclass
-class SourceMap:
-    source_name: str       # nome or path or uri of the original source file
-    positions: List[int]   # a list of locations
-    offsets: List[int]     # the corresponding offsets to be added from these locations onward
+class IncludeInfo(NamedTuple):
+    begin: int
+    length: int
+    file_name: str
+
+
+class SourceMap(NamedTuple):
+    source_name: str            # nome or path or uri of the original source file
+    positions: List[int]        # a list of locations
+    offsets: List[int]          # the corresponding offsets to be added from these locations onward
+    file_names: List[str]       # list of file_names to which the source locations relate
+    lbreaks_dict: Dict[str, List[int]]  # line breaks of the included texts
+
+
+def has_includes(sm: SourceMap) -> bool:
+    return any(fname != sm.source_name for fname in sm.file_names)
 
 
 class SourceLocation(NamedTuple):
-    source_name: str       # the file name (or path or uri) of the source code
-    source_offset: int     # the offset of this file within the complete source text
-    pos: int               # a position within this file
+    source_name: str          # the file name (or path or uri) of the source code
+    lbreaks: List[int]        # positions of the line-breaks in the source file
+    pos: int                  # a position within this file
 
 
 SourceMapFunc = Union[Callable[[int], SourceLocation],
@@ -96,23 +106,7 @@ class Preprocessed(NamedTuple):
     back_mapping: SourceMapFunc
 
 
-@dataclasses.dataclass
-class IncludeMap(SourceMap):
-    file_names: List[str]  # list of file_names to which the source locations relate
-
-    def has_includes(self) -> bool:
-        return any(fname != self.source_name for fname in self.file_names)
-
-
-class IncludeInfo(NamedTuple):
-    begin: int
-    length: int
-    file_name: str
-
-
 PreprocessorResult = Union[str, Preprocessed]
-
-
 FindIncludeFunc = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                         functools.partial]
 PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
@@ -130,7 +124,8 @@ def nil_preprocessor(source_text: str, source_name: str) -> Preprocessed:
     """
     A preprocessor that does nothing, i.e. just returns the input.
     """
-    return Preprocessed(source_text, lambda i: SourceLocation(source_name, 0, i))
+    lbreaks = linebreaks(source_text)
+    return Preprocessed(source_text, lambda i: SourceLocation(source_name, lbreaks, i))
 
 
 def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
@@ -140,10 +135,10 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocat
     position within a preprocessed source text and mappings should therefore
     be a list of reverse-mappings in reversed order.
     """
-    filename = ''
+    filename, lbreaks = '', []
     for mapping in mappings:
-        filename, offset, position = mapping(position)
-    return SourceLocation(filename, offset, position)
+        filename, lbreaks, position = mapping(position)
+    return SourceLocation(filename, lbreaks, position)
 
 
 def _apply_preprocessors(source_text: str, source_name: str,
@@ -228,12 +223,6 @@ def strip_tokens(tokenized: str) -> str:
 #######################################################################
 
 
-def neutral_mapping(pos: int) -> SourceLocation:
-    '''Maps source locations on itself and sets the source file name
-    to the empty string.'''
-    return SourceLocation('', 0, pos)
-
-
 def tokenized_to_original_mapping(tokenized_text: str, source_name: str='UNKNOWN_FILE') -> SourceMap:
     """
     Generates a source map for mapping positions in a text that has
@@ -271,7 +260,9 @@ def tokenized_to_original_mapping(tokenized_text: str, source_name: str='UNKNOWN
     # specific condition for preprocessor tokens
     assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 2))
 
-    return SourceMap(source_name, positions, offsets)
+    lbreaks = linebreaks(tokenized_text)
+    L = len(positions)
+    return SourceMap(source_name, positions, offsets, [source_name] * L, { source_name: lbreaks})
 
 
 def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
@@ -281,13 +272,15 @@ def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
 
     :param  position: the position in the processed text
     :param  srcmap:  the source map, i.e. a mapping of locations to offset values
+        and source texts.
     :returns:  the mapped position
     """
     i = bisect.bisect_right(srcmap.positions, position)
     if i:
+        source_name = srcmap.file_names[i - 1]
         return SourceLocation(
-            srcmap.source_name,
-            0,
+            source_name,
+            srcmap.lbreaks_dict[source_name],
             min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
     raise ValueError
 
@@ -366,12 +359,12 @@ def gen_find_include_func(rx: Union[str, Any],
 
 def generate_include_map(source_name: str,
                          source_text: str,
-                         find_next_include: FindIncludeFunc) -> Tuple[IncludeMap, str]:
+                         find_next_include: FindIncludeFunc) -> Tuple[SourceMap, str]:
     file_names: set = set()
 
-    def generate_map(source_name, source_text, find_next) -> Tuple[IncludeMap, str]:
+    def generate_map(source_name, source_text, find_next) -> Tuple[SourceMap, str]:
         nonlocal file_names
-        map = IncludeMap(source_name, [0], [0], [source_name])
+        map = SourceMap(source_name, [0], [0], [source_name], {source_name: linebreaks(source_text)})
         result = []
 
         if source_name in file_names:
@@ -393,19 +386,21 @@ def generate_include_map(source_name: str,
             with open(include_name, 'r', encoding='utf-8') as f:
                 included_text = f.read()
             inner_map, inner_text = generate_map(include_name, included_text, find_next)
-            inner_map.positions = [pos + result_pointer for pos in inner_map.positions]
-            inner_map.offsets = [offset - result_pointer for offset in inner_map.offsets]
+            assert len(inner_map.positions) == len(inner_map.offsets) == len(inner_map.file_names)
+            for i in range(len(inner_map.positions)):
+                inner_map.positions[i] += result_pointer
+                inner_map.offsets[i] -= result_pointer
             if source_delta == 0:
-                map.file_names = map.file_names[:-1] + inner_map.file_names[:-1]
-                map.positions = map.positions[:-1] + inner_map.positions[:-1]
-                map.offsets = map.offsets[:-1] + inner_map.offsets[:-1]
-                result.append(inner_text)
+                map.file_names.pop()
+                map.positions.pop()
+                map.offsets.pop()
             else:
                 result.append(source_text[source_pointer - source_delta: source_pointer])
-                map.file_names += inner_map.file_names[:-1]
-                map.positions += inner_map.positions[:-1]
-                map.offsets += inner_map.offsets[:-1]
-                result.append(inner_text)
+            map.file_names.extend(inner_map.file_names[:-1])
+            map.positions.extend(inner_map.positions[:-1])
+            map.offsets.extend(inner_map.offsets[:-1])
+            map.lbreaks_dict.update(inner_map.lbreaks_dict)
+            result.append(inner_text)
             inner_length = len(inner_text)
             result_pointer += inner_length
             map.file_names.append(source_name)
@@ -422,19 +417,20 @@ def generate_include_map(source_name: str,
             map.offsets.append(source_offset)
             map.file_names.append(source_name)
         file_names.remove(source_name)
+        # map.file_offsets = [-offset for offset in map.offsets]  # only for debugging!
         return map, ''.join(result)
 
     return generate_map(source_name, source_text, find_next_include)
 
 
-def srcmap_includes(position: int, inclmap: IncludeMap) -> SourceLocation:
+def srcmap_includes(position: int, inclmap: SourceMap) -> SourceLocation:
     i = bisect.bisect_right(inclmap.positions, position)
     if i:
-        offset = inclmap.offsets[i - 1]
+        source_name = inclmap.file_names[i - 1]
         return SourceLocation(
-            inclmap.file_names[i - 1],
-            -offset,
-            position + offset)
+            source_name,
+            inclmap.lbreaks_dict[source_name],
+            position + inclmap.offsets[i - 1])
     raise ValueError
 
 

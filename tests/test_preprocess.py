@@ -130,7 +130,7 @@ def preprocess_comments(src: str, src_name: str) -> Tuple[str, SourceMapFunc]:
     positions.append(pos)
     offsets.append(offsets[-1])
     return '\n'.join(lines), \
-           partial(source_map, srcmap=SourceMap('FILE_NAME_DUMMY', positions, offsets))
+           partial(source_map, srcmap=SourceMap('DUMMY', positions, offsets, ['DUMMY']*len(positions), {'DUMMY': []}))
 
 
 class TestTokenParsing:
@@ -284,7 +284,7 @@ class TestIncludes:
                 name, offset, k = mapping(i)
                 # print(i, k, name)
                 txt = main if name == 'main.txt' else sub
-                assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
+                assert text[i] == txt[k], f'{i},{k}: {text[i]} != {txt[k]} in {name}'
 
         perform('include(sub.txt)xyz', 'abc')
         perform('012include(sub.txt)xyz', 'abc')
@@ -310,8 +310,10 @@ class TestIncludes:
             assert text == substrings['main']
             # print(text)
             for i in range(len(text)):
-                name, offset, k = mapping(i)
+                name, lbreaks, k = mapping(i)
                 txt = ensemble[name]
+                # print(name, substrings[name], text[offset:offset + len(substrings[name])])
+                # assert text[offset:offset + len(substrings[name])] == substrings[name]
                 # print(name, txt, i, k)
                 assert text[i] == txt[k], f'{i}: {text[i]} != {txt[k]} in {name}'
 

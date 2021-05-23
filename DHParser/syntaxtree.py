@@ -592,7 +592,7 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     adjust_error_locations
-from DHParser.preprocess import SourceMapFunc, neutral_mapping
+from DHParser.preprocess import SourceMapFunc, SourceLocation
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
@@ -2688,7 +2688,7 @@ class RootNode(Node):
 
     def __init__(self, node: Optional[Node] = None,
                  source: Union[str, StringView] = '',
-                 source_mapping: SourceMapFunc = neutral_mapping):
+                 source_mapping: Optional[SourceMapFunc] = None):
         super().__init__('__not_yet_ready__', '')
         self.errors = []               # type: List[Error]
         self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
@@ -2696,7 +2696,11 @@ class RootNode(Node):
         self.error_flag = 0
         # info on source code (to be carried along all stages of tree-processing)
         self.source = source           # type: str
-        self.source_mapping = source_mapping  # type: SourceMapFunc
+        if source_mapping is None:
+            line_breaks = linebreaks(source)
+            self.source_mapping = lambda pos: SourceLocation('', line_breaks, pos)
+        else:
+            self.source_mapping = source_mapping  # type: SourceMapFunc
         self.lbreaks = linebreaks(source)  # List[int]
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]
