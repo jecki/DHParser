@@ -6,7 +6,8 @@
 @ comment    = /%.*/                                # note: trailing linefeed is not part of the comment proper
 @ reduction  = merge_treetops
 @ disposable = _WSPC, _GAP, _LB, _PARSEP, _LETTERS, _NAME, INTEGER, FRAC,
-               _QUALIFIED, TEXT_NOPAR, TEXT, _block_content,
+               _QUALIFIED, TEXT_NOPAR, TEXT, _block_content, PATH, PATHSEP,
+               HASH, COLON, TAG,
                block_environment, known_environment, text_element,
                line_element, inline_environment, known_inline_env, info_block,
                begin_inline_env, end_inline_env, command, known_command
@@ -25,7 +26,7 @@ document       = [_WSPC] "\begin{document}"
                  §frontpages
                  (Chapters | Sections)
                  [Bibliography] [Index] [_WSPC]
-                 "\end{document}" [_WSPC] §EOF
+                 "\end{document}" [_WSPC] EOF
 frontpages     = sequence
 
 
@@ -76,8 +77,8 @@ generic_block       = begin_generic_block sequence §end_generic_block
 begin_generic_block = <-&_LB begin_environment LFF
 end_generic_block   = <-&_LB  end_environment LFF
 
-itemize             = "\begin{itemize}" [_WSPC] { item } §"\end{itemize}"
-enumerate           = "\begin{enumerate}" [_WSPC] {item } §"\end{enumerate}"
+itemize             = "\begin{itemize}" [_WSPC] { command | item } §"\end{itemize}"
+enumerate           = "\begin{enumerate}" [_WSPC] { command | item } §"\end{enumerate}"
 item                = "\item" sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
@@ -86,15 +87,23 @@ quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
 verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
 tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
-                      "\\" ( hline | { cline } )
-tabular_cell        = {line_element [S] }
-tabular_config      = "{" TBCFG_VALUE §"}"
+                      ("\\" ( hline | { cline } ) [_PARSEP] | &`\end{tabular}`)
+tabular_cell        = raisebox [S|_PARSEP] | { line_element [S|_PARSEP] }
+raisebox            = "\raisebox" rb_offset [rb_up] [rb_down] block
+  rb_offset         = "{" number UNIT ~ "}"
+  rb_up             = "[" number UNIT ~ "]"
+  rb_down           = "[" number UNIT ~ "]"
+tabular_config      = "{" { cfg_celltype [cfg_unit] | cfg_separator }+ §"}"
+  cfg_celltype      = /[lcrp]/
+  cfg_unit          = `{` number UNIT `}`
+  cfg_separator     = `|`
+
 TBCFG_VALUE         = /[lcr|]+/~
 
 #### paragraphs and sequences of paragraphs ####
 
 block_of_paragraphs = "{" [sequence] §"}"
-sequence            = [_WSPC] { (paragraph | block_environment ) [_PARSEP] }+
+sequence            = [_WSPC] { (paragraph | block_environment) [_PARSEP|S] }+
 paragraph           = { !blockcmd text_element [S] }+
 text_element        = line_element | LINEFEED
 line_element        = text | inline_environment | command | block
@@ -120,7 +129,7 @@ command             = known_command | text_command | generic_command
 
 known_command       = citet | citep | footnote | includegraphics | caption
                     | multicolumn | hline | cline | documentclass | pdfinfo
-                    | hypersetup
+                    | hypersetup | label | ref | href | url
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 generic_command     = !no_command CMDNAME [[ ~ config ] { ~ block }+ ]
                     | `{` CMDNAME _block_content §`}`
@@ -136,6 +145,14 @@ cline               = "\cline{" INTEGER "-" INTEGER "}"
 documentclass       = "\documentclass" [ config ] block
 pdfinfo             = "\pdfinfo" info_block
 hypersetup          = "\hypersetup" param_block
+label               = "\label{" CHARS "}"
+ref                 = ( "\ref{" | "\pageref{" ) CHARS "}"
+url                 = "\url{" urlstring "}"
+href                = "\href{" urlstring "}" block
+  urlstring         = [protocol] { path } [target]
+  protocol          = /\w+:\/\/(?!\*)/
+  path              = PATH PATHSEP
+  target            = PATH { <-!/s?ptth/ COLON PATH } [ (HASH| <-!/s?ptth/ COLON) TAG ]
 
 
 #######################################################################
@@ -145,7 +162,7 @@ hypersetup          = "\hypersetup" param_block
 #######################################################################
 
 block          = "{" _block_content §`}`
-_block_content =  { !blockcmd text_element [S] }
+_block_content = { (block_environment | text_element | paragraph) [_PARSEP|S] }
 info_block     = "{" §{ info_assoc } "}"
 info_assoc     = info_key ~ [ "(" §info_value ")" ]
 info_key       = `/` _NAME
@@ -172,7 +189,6 @@ structural     = "subsection" | "section" | "chapter" | "subsubsection"
 #######################################################################
 
 config       = "[" § (parameters &"]" | cfg_text) "]"
-param_config = "[" § [parameters] "]"
 param_block  = "{" [parameters] "}"
 parameters   = (association | flag) { "," (association | flag) }  [ WARN_Komma ]
 association  = key~ "=" value~
@@ -209,10 +225,16 @@ LINEFEED   = /[\\][\\]/
 _QUALIFIED = IDENTIFIER { /[:.-]/ IDENTIFIER }
 IDENTIFIER = _NAME
 NAME       = _NAME                          # captured! don't use without retrival
-_NAME      = /(?!\d)\w+/
+_NAME      = /(?!\d)\w+\*?/
 INTEGER    = /-?(?:(?:[1-9][0-9]+)|[0-9])/
 FRAC       = /\.[0-9]+/
 UNIT       = /(?!\d)\w+/
+
+PATH       = /[\w=~?.,%&\[\]-]+/
+PATHSEP    = /\/(?!\*)/
+HASH       = `#`
+COLON      = `:`
+TAG        = /[\w=?.:\-%&\[\] \/]+/
 
 TEXT       = /(?:[^\\%$&\{\}\[\]\n]+(?:\n(?![ \t]*\n))?)+/
 TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parnetheses
