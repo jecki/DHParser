@@ -118,10 +118,10 @@ class TestTestfiles:
             f.write(CFG_FILE_4)
 
     def teardown(self):
-        os.remove(self.cfg1)
-        os.remove(self.cfg2)
-        os.remove(self.cfg3)
-        os.remove(self.cfg4)
+        if os.path.exists(self.cfg1):  os.remove(self.cfg1)
+        if os.path.exists(self.cfg2):  os.remove(self.cfg2)
+        if os.path.exists(self.cfg3):  os.remove(self.cfg3)
+        if os.path.exists(self.cfg4):  os.remove(self.cfg4)
         os.chdir(self.save_dir)
 
     def test_unit_from_config_file(self):
