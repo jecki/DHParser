@@ -1057,7 +1057,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \\
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
-    get_config_value, node_maker, access_thread_locals, access_presets, \\
+    get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
@@ -2262,9 +2262,12 @@ class EBNFCompiler(Compiler):
         the previously compiled formal language.
         """
         name = self.grammar_name + "Preprocessor"
-        return "def nop(pos, source_name):\n    return SourceLocation(source_name, pos)\n\n\n" \
+        return "def nop(pos, source_name, source_text):\n"\
+               "    return SourceLocation(source_name, source_text, pos)\n\n\n" \
                "def %s(source_text, source_name):\n"\
-               "    return source_text, partial(nop, source_name)\n" % name \
+               "    return PreprocessorResult(\n"\
+               "        source_text, source_text,\n"\
+               "        partial(nop, source_name=source_name, source_text=source_text))\n" % name \
                + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 

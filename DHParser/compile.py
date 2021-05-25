@@ -41,8 +41,7 @@ import traceback
 from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
-from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc, \
-    SourceLocation
+from DHParser.preprocess import PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
@@ -361,7 +360,7 @@ def compile_source(source: str,
         source_mapping = gen_neutral_srcmap_func(source_text, source_name)
             # lambda i: SourceLocation(source_name, 0, i)    # type: SourceMapFunc
     else:
-        source_text, source_mapping = with_source_mapping(preprocessor(original_text, source_name))
+        _, source_text, source_mapping = preprocessor(original_text, source_name)
 
     # parsing
 

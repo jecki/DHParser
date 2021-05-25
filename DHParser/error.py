@@ -388,9 +388,11 @@ def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
         source_mapping:  A function that maps error positions to their
             positions in the original source file.
     """
+    lb_dict = {}
     for err in errors:
         assert err.pos >= 0
-        err.orig_doc, lbreaks, err.orig_pos = source_mapping(err.pos)
+        err.orig_doc, orig_text, err.orig_pos = source_mapping(err.pos)
+        lbreaks = lb_dict.setdefault(orig_text, linebreaks(orig_text))
         err.line, err.column = line_col(lbreaks, err.orig_pos)
         if err.orig_pos + err.length > lbreaks[-1]:
             err.length = lbreaks[-1] - err.orig_pos  # err.length should not exceed text length

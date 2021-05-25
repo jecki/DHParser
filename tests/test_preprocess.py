@@ -35,8 +35,8 @@ from DHParser.configuration import set_config_value
 from DHParser.dsl import grammar_provider
 from DHParser import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
-    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, SourceMapFunc, SourceMap, chain_preprocessors, \
-    strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo
+    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, SourceMap, chain_preprocessors, \
+    strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor
 from DHParser.toolkit import lstrip_docstring, typing, re
 from DHParser.testing import unique_name
 from typing import Tuple, Dict
@@ -69,7 +69,7 @@ class TestSourceMapping:
 
 
     def test_tokenized_to_original_mapping(self):
-        srcmap = tokenized_to_original_mapping(self.tokenized)
+        srcmap = tokenized_to_original_mapping(self.tokenized, self.code)
         positions, offsets = srcmap.positions, srcmap.offsets
         assert len(positions) == len(offsets)
         assert positions[0] == 0
@@ -81,15 +81,15 @@ class TestSourceMapping:
     def test_bondary_cases(self):
         # position at the end of the file
         source = " "
-        srcmap = tokenized_to_original_mapping(source)
+        srcmap = tokenized_to_original_mapping(source, source)
         pos = source_map(1, srcmap)
         # empty file
         source =""
-        srcmap = tokenized_to_original_mapping(source)
+        srcmap = tokenized_to_original_mapping(source, source)
         pos = source_map(0, srcmap)
 
 
-def preprocess_indentation(src: str, src_name: str) -> str:
+def tokenize_indentation(src: str) -> str:
     transformed = []
     indent_level = 0
     for line in src.split('\n'):
@@ -115,7 +115,10 @@ def preprocess_indentation(src: str, src_name: str) -> str:
     return tokenized
 
 
-def preprocess_comments(src: str, src_name: str) -> Tuple[str, SourceMapFunc]:
+preprocess_indentation = make_preprocessor(tokenize_indentation)
+
+
+def preprocess_comments(src: str, src_name: str) -> PreprocessorResult:
     lines = src.split('\n')
     positions, offsets = [0], [0]
     pos = 0
@@ -129,9 +132,12 @@ def preprocess_comments(src: str, src_name: str) -> Tuple[str, SourceMapFunc]:
         pos += len(lines[i])
     positions.append(pos)
     offsets.append(offsets[-1])
-    return '\n'.join(lines), \
-           partial(source_map, srcmap=SourceMap(src_name, positions, offsets, [src_name]*len(positions),
-                                                {src_name: [-1, len(src)]}))
+    return PreprocessorResult(src, '\n'.join(lines),
+                              partial(source_map, srcmap=SourceMap(src_name,
+                                                                   positions,
+                                                                   offsets,
+                                                                   [src_name] * len(positions),
+                                                                   {src_name: src})))
 
 
 class TestTokenParsing:
@@ -151,13 +157,13 @@ class TestTokenParsing:
                     print(x)  # another comment
                     print(y)
         """)
-    tokenized = preprocess_indentation(code, 'no_uri')
-    srcmap = tokenized_to_original_mapping(tokenized)
+    tokenized = tokenize_indentation(code)
+    srcmap = tokenized_to_original_mapping(tokenized, code)
 
     def verify_mapping(self, teststr, orig_text, preprocessed_text, mapping):
         mapped_pos = preprocessed_text.find(teststr)
         assert mapped_pos >= 0
-        file_name, file_offset, original_pos = mapping(mapped_pos)
+        file_name, file_content, original_pos = mapping(mapped_pos)
         # original_pos = source_map(mapped_pos, self.srcmap)
         assert orig_text[original_pos:original_pos + len(teststr)] == teststr, \
             '"%s" (%i) wrongly mapped onto "%s" (%i)' % \
@@ -188,7 +194,7 @@ class TestTokenParsing:
             previous_index = index
 
     def test_non_token_preprocessor(self):
-        tokenized, mapping = preprocess_comments(self.code, 'no_uri')
+        _, tokenized, mapping = preprocess_comments(self.code, 'no_uri')
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
@@ -197,7 +203,7 @@ class TestTokenParsing:
 
     def test_chained_preprocessors(self):
         pchain = chain_preprocessors(preprocess_comments, preprocess_indentation)
-        tokenized, mapping = pchain(self.code, 'no_uri')
+        _, tokenized, mapping = pchain(self.code, 'no_uri')
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
@@ -277,7 +283,7 @@ class TestIncludes:
         def perform(main, sub):
             self.create_files({'main.txt': main, 'sub.txt': sub})
             find_func = gen_find_include_func(r'include\((?P<name>[^)\n]*)\)')
-            text, mapping = preprocess_includes(None, 'main.txt', find_func)
+            _, text, mapping = preprocess_includes(None, 'main.txt', find_func)
             # print(mapping)
             assert text == main.replace('include(sub.txt)', 'abc'), text
             for i in range(len(text)):
@@ -300,7 +306,7 @@ class TestIncludes:
         def perform(**ensemble):
             self.create_files(ensemble)
             find_func = gen_find_include_func(r'#include\((?P<name>[^)\n]*)\)')
-            text, mapping = preprocess_includes(None, 'main', find_func)
+            _, text, mapping = preprocess_includes(None, 'main', find_func)
             substrings = {}
             for k, v in reversed(list(ensemble.items())):
                 for name, content in substrings.items():
