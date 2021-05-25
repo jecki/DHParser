@@ -33,12 +33,24 @@ the string representations of the error objects. For example::
             sys.exit(1)
         else:
             print("There have been warnings, but no errors.")
+
+The central class of module DHParser's ``error``  is the ``Error``-class.
+The easiest way to create an error object is by instantiating
+the Error class with an error message and a source position::
+
+    >>> error = Error('Something went wrong', 123)
+    >>> print(error)
+    Error (1000): Something went wrong
+
+However, in order to report errors, usually at least a line and
+column-number
+
 """
 
 import os
-from typing import Iterable, Iterator, Union, List, Any, Sequence, Tuple
+from typing import Iterable, Iterator, Union, List, Optional, Sequence, Tuple
 
-from DHParser.preprocess import SourceMapFunc
+from DHParser.preprocess import SourceMapFunc, SourceLocation
 from DHParser.stringview import StringView
 from DHParser.toolkit import linebreaks, line_col, is_filename
 
@@ -50,7 +62,7 @@ __all__ = ('ErrorCode',
            'is_warning',
            'has_errors',
            'only_errors',
-           'adjust_error_locations',
+           'add_source_locations',
            'canonical_error_strings',
            'NO_ERROR',
            'NOTICE',
@@ -166,13 +178,42 @@ RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
 
 
 class Error:
+    """The Error class encapsulates the all information for a single
+    error.
+
+    :ivar message:  the error message as text string
+    :ivar pos:  the position where the error occurred in the preprocessed text
+    :ivar code:  the error-code, which also indicates the severity of the
+        error. 0:        no error
+               < 100:    notice
+               < 1000:   warning
+               < 10000:  error
+               >= 10000: fatal error. syntax tree will not be passed on to
+                         the next compilation stage!
+    :ivar orig_pos:  the position of the error in the original source file,
+        not in the preprocessed document.
+    :ivar orig_doc:  the name or path or url of the original source file to
+        which ``orig_pos`` is related. This is relevant, if the preprocessed
+        document has been plugged together from several source files.
+    :ivar line:  the line number where the error occurred in the original text.
+        Lines are counted from 1 onward.
+    :ivar column:  the column where the error occurred in the original text.
+        Columns are counted from 1 onward.
+    :ivar length:  the length in characters of the faulty passage (default is 1)
+    :ivar end_line:  the line number of the position after the last character
+        covered by the error in the original source.
+    :ivar end_column:  the column number of the position after the last character
+        covered by the error in the original source.
+    :ivar related: a sequence of related errors.
+    """
+
     __slots__ = ['message', 'code', '_pos', 'line', 'column', 'length',
                  'end_line', 'end_column', 'related', 'orig_pos', 'orig_doc',
                  'relatedUri']
 
     def __init__(self, message: str, pos: int, code: ErrorCode = ERROR,
                  line: int = -1, column: int = -1, length: int = 1,
-                 related: Sequence[Tuple['Error', str]] = [],
+                 related: Sequence['Error'] = [],
                  orig_pos: int = -1, orig_doc: str = '') -> None:
         assert isinstance(code, ErrorCode)
         assert not isinstance(pos, ErrorCode)
@@ -193,7 +234,7 @@ class Error:
         self.length = length      # type: int
         self.end_line = -1        # type: int
         self.end_column = -1      # type: int
-        self.related = tuple(related)   # type: Sequence[Tuple['Error', str]]
+        self.related = tuple(related)   # type: Sequence['Error']
 
     def __str__(self):
         prefix = ''
@@ -251,11 +292,11 @@ class Error:
         """Returns the Error as as Language Server Protocol Diagnostic object.
         https://microsoft.github.io/language-server-protocol/specifications/specification-current/#diagnostic
         """
-        def relatedObj(relatedError: Sequence[Tuple['Error', str]]) -> dict:
-            err, uri = relatedError
+        def relatedObj(relatedError: 'Error') -> dict:
+            uri = relatedError.orig_doc
             return {
-                'location': {'uri': uri, 'range': err.rangeObj()},
-                'message': err.message
+                'location': {'uri': uri, 'range': relatedError.rangeObj()},
+                'message': relatedError.message
             }
 
         if self.code < WARNING:
@@ -336,47 +377,45 @@ def only_errors(messages: Iterable[Error], level: int = ERROR) -> Iterator[Error
 #######################################################################
 
 
-def adjust_error_locations(errors: List[Error],
-                           original_text: Union[StringView, str],
-                           source_mapping: SourceMapFunc = lambda i: i):
+def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
     """Adds (or adjusts) line and column numbers of error messages inplace.
 
     Args:
         errors:  The list of errors as returned by the method
             ``errors()`` of a Node object
-        original_text:  The source text on which the errors occurred.
+        original_text:  The source text in which the errors occurred.
             (Needed in order to determine the line and column numbers.)
         source_mapping:  A function that maps error positions to their
             positions in the original source file.
     """
-    line_breaks = linebreaks(original_text)
+    lb_dict = {}
     for err in errors:
         assert err.pos >= 0
-        err.orig_pos = source_mapping(err.pos)
-        err.line, err.column = line_col(line_breaks, err.orig_pos)
-        # adjust length in case it exceeds the text size. As this is non-fatal
-        # it should be adjusted rather than an error raised to avoid
-        # unnecessary special-case treatments in other places
-        if err.orig_pos + err.length > len(original_text):
-            err.length = len(original_text) - err.orig_pos
-        err.end_line, err.end_column = line_col(line_breaks, err.orig_pos + err.length)
+        err.orig_doc, orig_text, err.orig_pos = source_mapping(err.pos)
+        lbreaks = lb_dict.setdefault(orig_text, linebreaks(orig_text))
+        err.line, err.column = line_col(lbreaks, err.orig_pos)
+        if err.orig_pos + err.length > lbreaks[-1]:
+            err.length = lbreaks[-1] - err.orig_pos  # err.length should not exceed text length
+        err.end_line, err.end_column = line_col(lbreaks, err.orig_pos + err.length)
 
 
-def canonical_error_strings(errors: List[Error], source_file_name: str = '') -> List[str]:
+def canonical_error_strings(errors: List[Error]) -> List[str]:
     """Returns the list of error strings in canonical form that can be parsed by most
     editors, i.e. "relative filepath : line : column : severity (code) : error string"
     """
     if errors:
-        if is_filename(source_file_name):
-            cwd = os.getcwd()
-            if source_file_name.startswith(cwd):
-                rel_path = source_file_name[len(cwd)]
+        error_strings = []
+        for err in errors:
+            source_file_name = err.orig_doc
+            if is_filename(source_file_name):
+                cwd = os.getcwd()
+                if source_file_name.startswith(cwd):
+                    rel_path = source_file_name[len(cwd)]
+                else:
+                    rel_path = source_file_name
+                error_strings.append(rel_path + ':' + str(err))
             else:
-                rel_path = source_file_name
-            error_strings = [rel_path + ':' + str(err) for err in errors]
-        else:
-            error_strings = [str(err) for err in errors]
+                error_strings.append(str(err))
     else:
         error_strings = []
     return error_strings
-

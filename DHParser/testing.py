@@ -40,10 +40,11 @@ import time
 from typing import Dict, List, Union, Deque, cast
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, is_error, adjust_error_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
+from DHParser.error import Error, is_error, add_source_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
+from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
@@ -59,7 +60,7 @@ __all__ = ('unit_from_config',
            'TEST_ARTIFACT',
            'POSSIBLE_ARTIFACTS',
            'grammar_unit',
-           'TFFN',
+           'unique_name',
            'grammar_suite',
            'SymbolsDictType',
            'extract_symbols',
@@ -435,10 +436,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
             tests.setdefault('__cst__', {})[test_name] = cst
+            source_mapper = gen_neutral_srcmap_func(test_code)
             errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errors = [e for e in cst.errors_sorted if e.code not in POSSIBLE_ARTIFACTS]
-                adjust_error_locations(errors, test_code)
+                add_source_locations(errors, source_mapper)
                 errata.append('Match test "%s" for parser "%s" failed:'
                               '\nExpr.:  %s\n\n%s\n\n' %
                               (test_name, parser_name, md_codeblock(test_code),
@@ -457,7 +459,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 ast_errors = [e for e in ast.errors if e not in old_errors]
                 ast_errors.sort(key=lambda e: e.pos)
                 if is_error(max(e.code for e in ast_errors) if ast_errors else 0):
-                    adjust_error_locations(ast_errors, test_code)
+                    add_source_locations(ast_errors, source_mapper)
                     if ast_errors:
                         if errata:  errata[-1] = errata[-1].rstrip('\n')
                         ast_errors.append('\n')
@@ -517,6 +519,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         # run fail tests
 
         for test_name, test_code in tests.get('fail', dict()).items():
+            source_mapper = gen_neutral_srcmap_func(test_code)
             errflag = len(errata)
             try:
                 cst = parser(test_code, parser_name)
@@ -538,7 +541,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     with local_log_dir('./LOGS'):
                         log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
-                adjust_error_locations(cst.errors, test_code)
+                add_source_locations(cst.errors, source_mapper)
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors_sorted)
             if verbose:
@@ -577,18 +580,16 @@ def reset_unit(test_unit):
                 del tests[key]
 
 
-def TFFN(file_name: str) -> str:
-    """Thread Safe File Name: Returns a thread safe-version of a file
-    name by adding a unique process and thread identificator.
-
-    Thread-Safe filenames are needed when running test that use the same
-    tempory file names in parralel or when running the same test-suite
-    under different constellations, say different Python-interpreters,
-    in parallel. Otherwise it can happen that one thread cleans up a
-    temporary file that an other thread has created.
+def unique_name(file_name: str) -> str:
+    """Turns the file or dirname into a unique name by adding a time stamp.
+    This helps to avoid race conditions when running tests in parallel
+    that create and delete files on the disk.
     """
-    return concurrent_ident() + '_' + file_name
-
+    # return concurrent_ident() + '_' + file_name
+    resolution = 100000
+    name = 'unique_' + str(int(time.time() * resolution)) + '_' + file_name
+    time.sleep(1.0 / resolution)
+    return name
 
 def grammar_suite(directory, parser_factory, transformer_factory,
                   fn_patterns=('*test*',),
@@ -782,30 +783,26 @@ def run_tests_in_class(cls_name, namespace, methods=()):
         exec("instance = " + cls + "()", nspace)
         instance = nspace["instance"]
         setup = instance.setup if "setup" in dir(instance) else lambda : 0
-        teardown = instance.teardown if "teardown" in dir(obj) else lambda : 0
+        teardown = instance.teardown if "teardown" in dir(instance) else lambda : 0
         return instance, setup, teardown
 
     obj = None
-    try:
-        if methods:
-            obj, setup, teardown = instantiate(cls_name, namespace)
-            for name in methods:
+    if methods:
+        obj, setup, teardown = instantiate(cls_name, namespace)
+        for name in methods:
+            func = obj.__getattribute__(name)
+            if callable(func):
+                print("Running " + cls_name + "." + name)
+                setup();  func();  teardown()
+                # exec('obj.' + name + '()')
+    else:
+        obj, setup, teardown = instantiate(cls_name, namespace)
+        for name in dir(obj):
+            if name.lower().startswith("test"):
                 func = obj.__getattribute__(name)
                 if callable(func):
                     print("Running " + cls_name + "." + name)
                     setup();  func();  teardown()
-                    # exec('obj.' + name + '()')
-        else:
-            obj, setup, teardown = instantiate(cls_name, namespace)
-            for name in dir(obj):
-                if name.lower().startswith("test"):
-                    func = obj.__getattribute__(name)
-                    if callable(func):
-                        print("Running " + cls_name + "." + name)
-                        setup();  func();  teardown()
-    finally:
-        if "teardown" in dir(obj):
-            obj.teardown()
 
 
 def run_test_function(func_name, namespace):

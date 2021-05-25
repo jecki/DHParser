@@ -40,7 +40,7 @@ try:
 except ImportError:
     # import DHParser.Shadow as cython
     cython_optimized = False
-    import DHParser.shadow_cython as cython
+    import DHParser.externallibs.shadow_cython as cython
 
 
 __all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW', 'TextBuffer')

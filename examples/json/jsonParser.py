@@ -446,7 +446,7 @@ if __name__ == "__main__":
         result, errors = compile_src(file_names[0])
 
         if errors:
-            for err_str in canonical_error_strings(errors, file_names[0]):
+            for err_str in canonical_error_strings(errors):
                 print(err_str)
             if has_errors(errors, ERROR):
                 sys.exit(1)

@@ -208,6 +208,22 @@ class TestParseJSON:
         assert tree.pos == 46
         assert not 'pos' in tree.attr
 
+    def test_attr_error_reporting_and_fixing(self):
+        n = Node('tag', 'content').with_attr(faulty='<&"')
+        set_config_value('xml_attribute_error_handling', 'fail')
+        try:
+            s = n.as_xml()
+            assert False, "ValueError expected"
+        except ValueError:
+            pass
+        set_config_value('xml_attribute_error_handling', 'fix')
+        assert n.as_xml() == '''<tag faulty='&lt;&amp;"'>content</tag>''', n.as_xml()
+        set_config_value('xml_attribute_error_handling', 'ignore')
+        assert n.as_xml() == '''<tag faulty='<&"'>content</tag>'''
+        n.attr['nonascii'] = 'ἱεραρχικωτάτου'
+        set_config_value('xml_attribute_error_handling', 'lxml')
+        assert n.as_xml() == '''<tag faulty='&lt;&amp;"' nonascii="??????????????">content</tag>'''
+
 
 class TestNode:
     """

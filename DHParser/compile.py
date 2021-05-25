@@ -41,14 +41,15 @@ import traceback
 from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
-from DHParser.preprocess import with_source_mapping, PreprocessorFunc, SourceMapFunc
+from DHParser.preprocess import PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
-from DHParser.error import adjust_error_locations, is_error, is_fatal, Error, \
+from DHParser.preprocess import gen_neutral_srcmap_func
+from DHParser.error import is_error, is_fatal, Error, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename, identity
+from DHParser.toolkit import load_if_file, is_filename
 
 
 __all__ = ('CompilerError',
@@ -343,6 +344,7 @@ def compile_source(source: str,
     """
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
+    source_name = source if is_filename(source) else 'source'
     compiler.source = original_text
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
@@ -355,9 +357,10 @@ def compile_source(source: str,
 
     if preprocessor is None:
         source_text = original_text  # type: str
-        source_mapping = identity    # type: SourceMapFunc
+        source_mapping = gen_neutral_srcmap_func(source_text, source_name)
+            # lambda i: SourceLocation(source_name, 0, i)    # type: SourceMapFunc
     else:
-        source_text, source_mapping = with_source_mapping(preprocessor(original_text))
+        _, source_text, source_mapping = preprocessor(original_text, source_name)
 
     # parsing
 

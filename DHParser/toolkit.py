@@ -43,6 +43,11 @@ try:
 except ImportError:
     import re
 
+try:
+    import dataclasses
+except ImportError:
+    from DHParser.externallibs import dataclasses36 as dataclasses
+
 import typing
 from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
     Optional, Type
@@ -56,16 +61,18 @@ try:
     import cython
     cython_optimized = cython.compiled  # type: bool
     if cython_optimized:  # not ?
-        import DHParser.shadow_cython as cython
+        import DHParser.externallibs.shadow_cython as cython
 except ImportError:
     cython_optimized = False
-    import DHParser.shadow_cython as cython
+    import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.configuration import access_thread_locals, get_config_value, NEVER_MATCH_PATTERN
 from DHParser.stringview import StringView
 
 
 __all__ = ('typing',
+           're',
+           'dataclasses',
            'Protocol',
            'cython',
            'cython_optimized',
@@ -75,8 +82,10 @@ __all__ = ('typing',
            'ThreadLocalSingletonFactory',
            'RX_NEVER_MATCH',
            'RX_ENTITY',
+           'RX_NON_ASCII',
            'validate_XML_attribute_value',
            'fix_XML_attribute_value',
+           'lxml_XML_attribute_value',
            'RxPatternType',
            're_find',
            'escape_re',
@@ -198,6 +207,7 @@ class ThreadLocalSingletonFactory:
         return singleton
 
 
+@functools.lru_cache()
 def is_filename(strg: str) -> bool:
     """
     Tries to guess whether string ``strg`` is a file name.
@@ -574,11 +584,12 @@ def validate_XML_attribute_value(value: Any) -> str:
 
 
 def fix_XML_attribute_value(value: Any) -> str:
-    """Returns the quotes XML-attribute value. In case the values
+    """Returns the quoted XML-attribute value. In case the values
     contains illegal characters, like '<', these will be replaced by
     XML-entities."""
     value = str(value)
     value = value.replace('<', '&lt;')
+    # value = value.replace('>', '&gt;')
     i = value.find('&')
     while i >= 0:
         if not RX_ENTITY.match(value, i):
@@ -591,6 +602,22 @@ def fix_XML_attribute_value(value: Any) -> str:
     else:
         value = '"%s"' % value
     return value
+
+
+RX_NON_ASCII = re.compile(r'[^\U00000000-\U000000FF]')
+
+
+def lxml_XML_attribute_value(value: Any) -> str:
+    """Makes sure that the attribute value works with the lxml-library,
+    at the cost of replacing all characters with a code > 256 by
+    a quesiton mark.
+
+    :param value: the original attribute value
+    :return: the quoted and lxml-compatible attribute value.
+    """
+    value = str(value)
+    value = RX_NON_ASCII.sub('?', value)
+    return fix_XML_attribute_value(value)
 
 
 #######################################################################

@@ -35,7 +35,7 @@ from DHParser import grammar_provider, all_descendants, \
     set_config_value, resume_notices_on, Error
 from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     MANDATORY_CONTINUATION_AT_EOF, WARNING
-from DHParser.testing import TFFN
+from DHParser.testing import unique_name
 
 
 def get_history(name, show: bool = REVEAL) -> str:
@@ -210,7 +210,7 @@ class TestErrorReporting:
     gr = grammar_provider(lang)()
 
     def setup(self):
-        start_logging(TFFN("LOGS"))
+        start_logging(unique_name("LOGS"))
 
     def teardown(self):
         LOG_DIR = log_dir()

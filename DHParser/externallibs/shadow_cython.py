@@ -1,5 +1,6 @@
 # cython.* namespace for pure mode.
-# copied from: https:/cython.org
+# by Stefan Behnel
+# copied from: https://cython.org
 # License: Apache 2
 
 from __future__ import absolute_import

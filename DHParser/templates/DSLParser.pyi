@@ -39,7 +39,7 @@ def process_file(source: str, result_filename: str = '') -> str:
         err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
         err_filename = os.path.splitext(result_filename)[0] + err_ext
         with open(err_filename, 'w') as f:
-            f.write('\n'.join(canonical_error_strings(errors, source_filename)))
+            f.write('\n'.join(canonical_error_strings(errors)))
         return err_filename
     return ''
 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
         result, errors = compile_src(file_names[0])
 
         if errors:
-            for err_str in canonical_error_strings(errors, file_names[0]):
+            for err_str in canonical_error_strings(errors):
                 print(err_str)
             if has_errors(errors, ERROR):
                 sys.exit(1)

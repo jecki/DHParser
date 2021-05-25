@@ -50,13 +50,13 @@ class TestLoggingAndLoading:
         self.LOGDIR = os.path.abspath(os.path.join(scriptpath, "TESTLOGS" + str(os.getpid())))
 
     def teardown(self):
-        os.remove(self.filename)
+        if os.path.exists(self.filename):  os.remove(self.filename)
         pycachedir = os.path.join(self.dirname,'__pycache__')
         if os.path.exists(pycachedir):
             for fname in os.listdir(pycachedir):
                 os.remove(os.path.join(pycachedir, fname))
             os.rmdir(pycachedir)
-        os.rmdir(self.dirname)
+        if os.path.exists(self.dirname):  os.rmdir(self.dirname)
         if os.path.exists(self.LOGDIR):
             # for fname in os.listdir(self.LOGDIR):
             #     os.remove(os.path.join(self.LOGDIR, fname))

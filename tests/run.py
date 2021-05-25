@@ -50,6 +50,12 @@ def run_unittests(command):
 if __name__ == "__main__":
     lock = threading.Lock()
     found = []
+    if run_cmd(['pypy3', '-V']):
+        found.append('pypy3 ')
+    elif run_cmd(['pypy36', '-V']):
+        found.append('pypy36 ')
+    elif run_cmd(['pypy', '-V']):
+        found.append('pypy ')
     if run_cmd(['python', '-V']):
         output = subprocess.run(['python', '-V'], capture_output=True).stdout
         if output.find(b'Python 3') >= 0:
@@ -58,10 +64,10 @@ if __name__ == "__main__":
             found.append('python3')
     elif run_cmd(['python3', '-V']):
         found.append('python3')
-    if run_cmd(['python3.5', '-V']):
-        found.append('python3.5 ')
-    elif run_cmd(['~/.local/bin/python3.5', '-V']):
-        found.append('~/.local/bin/python3.5 ')
+    # if run_cmd(['python3.5', '-V']):
+    #     found.append('python3.5 ')
+    # elif run_cmd(['~/.local/bin/python3.5', '-V']):
+    #     found.append('~/.local/bin/python3.5 ')
     if run_cmd(['python3.6', '-V']):
         found.append('python3.6 ')
     elif run_cmd(['~/.local/bin/python3.6', '-V']):
@@ -74,12 +80,6 @@ if __name__ == "__main__":
         found.append('python3.8 ')
     elif run_cmd(['~/.local/bin/python3.8', '-V']):
         found.append('~/.local/bin/python3.8 ')
-    if run_cmd(['pypy3', '-V']):
-        found.append('pypy3 ')
-    elif run_cmd(['pypy36', '-V']):
-        found.append('pypy36 ')
-    elif run_cmd(['pypy', '-V']):
-        found.append('pypy ')
     print('Interpreters found: ' + ''.join(found))
 
     arguments = [arg for arg in sys.argv[1:] if arg[:1] != '-']

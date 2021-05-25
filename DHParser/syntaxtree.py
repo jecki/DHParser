@@ -591,11 +591,12 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
-    adjust_error_locations
-from DHParser.preprocess import SourceMapFunc
+    add_source_locations
+from DHParser.preprocess import SourceMapFunc, SourceLocation, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
-    validate_XML_attribute_value, fix_XML_attribute_value, identity, Protocol
+    validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
+    identity, Protocol
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -1379,8 +1380,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             items = tuple(child for child in self._children if mf(child))
             if items:
                 return items if len(items) >= 2 else items[0]
-            raise IndexError('index out of range') if isinstance(key, int) \
-                else KeyError(str(key))
+            raise IndexError('index out of range') if isinstance(key, int) else KeyError(str(key))
 
     def __delitem__(self, key: Union[int, slice, CriteriaType]):
         """
@@ -1991,6 +1991,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             attr_filter = validate_XML_attribute_value
         elif attr_err_handling == 'fix':
             attr_filter = fix_XML_attribute_value
+        elif attr_err_handling == 'lxml':
+            attr_filter = lxml_XML_attribute_value
         else:
             assert attr_err_handling == 'ignore', 'Illegal value for configuration ' +\
                 'variable "xml_attribute_error_handling": ' + attr_err_handling
@@ -2009,9 +2011,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
                 txt.append(' _pos="%i"' % node._pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(' err="%s"' % (
-                    ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
-                            for err in root.node_errors(node))))
+                # txt.append(' err="%s"' % (
+                #     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
+                #             for err in root.node_errors(node))))
+                txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
             if node.tag_name in empty_tags:
                 assert not node.result, ("Node %s with content %s is not an empty element!" %
                                          (node.tag_name, str(node)))
@@ -2685,7 +2688,7 @@ class RootNode(Node):
 
     def __init__(self, node: Optional[Node] = None,
                  source: Union[str, StringView] = '',
-                 source_mapping: SourceMapFunc = identity):
+                 source_mapping: Optional[SourceMapFunc] = None):
         super().__init__('__not_yet_ready__', '')
         self.errors = []               # type: List[Error]
         self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
@@ -2693,7 +2696,10 @@ class RootNode(Node):
         self.error_flag = 0
         # info on source code (to be carried along all stages of tree-processing)
         self.source = source           # type: str
-        self.source_mapping = source_mapping  # type: SourceMapFunc
+        if source_mapping is None:
+            self.source_mapping = gen_neutral_srcmap_func(source)
+        else:
+            self.source_mapping = source_mapping  # type: SourceMapFunc
         self.lbreaks = linebreaks(source)  # List[int]
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]
@@ -2751,7 +2757,7 @@ class RootNode(Node):
 
     def swallow(self, node: Optional[Node],
                 source: Union[str, StringView] = '',
-                source_mapping: SourceMapFunc = identity) \
+                source_mapping: Optional[SourceMapFunc] = None) \
             -> 'RootNode':
         """
         Put `self` in the place of `node` by copying all its data.
@@ -2767,7 +2773,10 @@ class RootNode(Node):
         if source and source != self.source:
             self.source = source
             self.lbreaks = linebreaks(source)
-        if source_mapping != identity:  self.source_mapping = source_mapping
+        if source_mapping is None:
+            self.source_mapping = gen_neutral_srcmap_func(source)
+        else:
+            self.source_mapping = source_mapping  # type: SourceMapFunc
         if self.tag_name != '__not_yet_ready__':
             raise AssertionError('RootNode.swallow() has already been called!')
         if node is None:
@@ -2785,7 +2794,7 @@ class RootNode(Node):
         if id(node) in self.error_nodes:
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
         if self.source:
-            adjust_error_locations(self.errors, self.source, self.source_mapping)
+            add_source_locations(self.errors, self.source_mapping)
         return self
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
@@ -2823,7 +2832,7 @@ class RootNode(Node):
         if node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
         if self.source:
-            adjust_error_locations([error], self.source, self.source_mapping)
+            add_source_locations([error], self.source_mapping)
         self.errors.append(error)
         self.error_flag = max(self.error_flag, error.code)
         return self

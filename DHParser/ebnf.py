@@ -930,14 +930,15 @@ Lookahead and Lookbehind
 
 Lookahead and lookbehind operators are a convenient way to resolve or rather
 avoid ambiguities while at the same time keeping the DSL lean. Assume for
-example a simple DSL for writing definitions like:
+example a simple DSL for writing definitions like::
 
     >>> definitions = '''
     ...     dog   := carnivorous quadrupel that barks
     ...     human := featherless biped'''
 
+Now, let's try to draw up a grammar for definitions::
 
-    >>> definition_DSL = '''
+    >>> def_DSL_first_try = ''' # WARNING: This grammar doesn't work, yet!
     ...     @literalws = right
     ...     definitions = ~ definition { definition } EOF
     ...     definition  = definiendum ":=" definiens
@@ -945,6 +946,7 @@ example a simple DSL for writing definitions like:
     ...     definiens   = word { word }
     ...     word        = /[A-Z]?[a-z]*/
     ...     EOF         = /$/ '''
+    >>> def_parser = create_parser(def_DSL_first_try, "defDSL")
 
 
 
@@ -1055,7 +1057,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \\
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
-    get_config_value, node_maker, access_thread_locals, access_presets, \\
+    get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
@@ -2260,8 +2262,12 @@ class EBNFCompiler(Compiler):
         the previously compiled formal language.
         """
         name = self.grammar_name + "Preprocessor"
-        return "def nop(arg):\n    return arg\n\n\n" \
-               "def %s(text):\n    return text, nop\n" % name \
+        return "def nop(pos, source_name, source_text):\n"\
+               "    return SourceLocation(source_name, source_text, pos)\n\n\n" \
+               "def %s(source_text, source_name):\n"\
+               "    return PreprocessorResult(\n"\
+               "        source_text, source_text,\n"\
+               "        partial(nop, source_name=source_name, source_text=source_text))\n" % name \
                + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 
