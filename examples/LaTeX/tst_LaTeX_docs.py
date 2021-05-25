@@ -83,7 +83,7 @@ def tst_func():
                 doc = f.read()
 
             print(f'\n\nPreprocessing document: "{file}"')
-            preprocessed, source_mapper = preprocessor(doc, file)
+            preprocessed, _, source_mapper = preprocessor(doc, file)
             print(f'\n\nParsing document: "{file}"')
             result = parser(preprocessed)
             print("Number of CST-nodes: " + str(tree_size(result)))

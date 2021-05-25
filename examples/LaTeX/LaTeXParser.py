@@ -49,7 +49,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser, \
-    PreprocesserResult, preprocess_includes, gen_find_include_func, flatten_sxpr, \
+    PreprocessorResult, preprocess_includes, gen_find_include_func, flatten_sxpr, \
     replace_content_with
 
 
@@ -63,7 +63,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 RX_TEX_INPUT = r'\\input{(?P<name>.*)}'
 
 
-def LaTeXPreprocessor(text: str, file_name: str) -> PreprocesserResult:
+def LaTeXPreprocessor(text: str, file_name: str) -> PreprocessorResult:
     find_includes = gen_find_include_func(RX_TEX_INPUT, LaTeXGrammar.comment_rx__)
     return preprocess_includes(text, file_name, find_includes)
 
