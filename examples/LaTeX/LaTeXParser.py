@@ -86,7 +86,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "4a60dc317415b6953ba8665a77571119"
+    source_hash__ = "c73ecd46ffeee31f3ed6a42cd981c3b0"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -135,6 +135,10 @@ class LaTeXGrammar(Grammar):
     trennung = Text("\\-")
     number = Series(INTEGER, Option(FRAC))
     magnitude = Series(number, Option(UNIT))
+    info_value = Series(TEXT_NOPAR, ZeroOrMore(Series(S, TEXT_NOPAR)))
+    info_key = Series(Drop(Text("/")), _NAME)
+    info_assoc = Series(info_key, dwsp__, Option(Series(Series(Drop(Text("(")), dwsp__), info_value, Series(Drop(Text(")")), dwsp__), mandatory=1)))
+    info_block = Series(Series(Drop(Text("{")), dwsp__), ZeroOrMore(info_assoc), Series(Drop(Text("}")), dwsp__), mandatory=1)
     value = Alternative(magnitude, _LETTERS, CMDNAME, param_block, block)
     key = Synonym(_QUALIFIED)
     flag = Alternative(_QUALIFIED, magnitude)
@@ -148,10 +152,6 @@ class LaTeXGrammar(Grammar):
     no_command = Alternative(Series(Drop(Text("\\begin{")), dwsp__), Series(Drop(Text("\\end")), dwsp__), Series(BACKSLASH, structural))
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
-    info_value = Series(TEXT_NOPAR, ZeroOrMore(Series(S, TEXT_NOPAR)))
-    info_key = Series(Drop(Text("/")), _NAME)
-    info_assoc = Series(info_key, dwsp__, Option(Series(Series(Drop(Text("(")), dwsp__), info_value, Series(Drop(Text(")")), dwsp__), mandatory=1)))
-    info_block = Series(Series(Drop(Text("{")), dwsp__), ZeroOrMore(info_assoc), Series(Drop(Text("}")), dwsp__), mandatory=1)
     _block_content = ZeroOrMore(Series(Alternative(block_environment, text_element, paragraph), Option(Alternative(_PARSEP, S))))
     hide_from_toc = Series(Text("*"), dwsp__)
     target = Series(PATH, ZeroOrMore(Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON, PATH)), Option(Series(Alternative(HASH, Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON)), TAG)))
@@ -174,6 +174,7 @@ class LaTeXGrammar(Grammar):
     citep = Series(Alternative(Series(Drop(Text("\\citep")), dwsp__), Series(Drop(Text("\\cite")), dwsp__)), Option(config), block)
     citet = Series(Series(Drop(Text("\\citet")), dwsp__), Option(config), block)
     generic_command = Alternative(Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), OneOrMore(Series(dwsp__, block))))), Series(Drop(Text("{")), CMDNAME, _block_content, Drop(Text("}")), mandatory=3))
+    assignment = Series(NegativeLookahead(no_command), CMDNAME, Series(Drop(Text("=")), dwsp__), Alternative(Series(number, Option(UNIT)), block, CHARS))
     text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
     cfg_unit = Series(Drop(Text("{")), number, UNIT, Drop(Text("}")))
     cfg_separator = Text("|")
@@ -193,7 +194,7 @@ class LaTeXGrammar(Grammar):
     TBCFG_VALUE = Series(RegExp('[lcr|]+'), dwsp__)
     multicolumn = Series(Series(Drop(Text("\\multicolumn")), dwsp__), Series(Drop(Text("{")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__), tabular_config, block_of_paragraphs)
     known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo, hypersetup, label, ref, href, url)
-    command = Alternative(known_command, text_command, generic_command)
+    command = Alternative(known_command, text_command, assignment, generic_command)
     line_element = Alternative(text, inline_environment, command, block)
     rb_down = Series(Series(Drop(Text("[")), dwsp__), number, UNIT, dwsp__, Series(Drop(Text("]")), dwsp__))
     rb_up = Series(Series(Drop(Text("[")), dwsp__), number, UNIT, dwsp__, Series(Drop(Text("]")), dwsp__))
