@@ -164,10 +164,11 @@ href                = "\href{" urlstring "}" block
 
 block          = "{" _block_content §`}`
 _block_content = { (block_environment | text_element | paragraph) [_PARSEP|S] }
-# text           = CHARS { (S | trennung) CHARS }
-# text           = LINE { (S | trennung) LINE }
-text           = TEXT { (S | trennung) TEXT }
-trennung       = `\-`
+# text           = CHARS { (S | special) CHARS }
+# text           = LINE { (S | special) LINE }
+text           = TEXT { (S | special) TEXT }
+  special      = `\-` | /\\/ esc_char
+  esc_char     = `,`
 
 no_command     = "\begin{" | "\end" | BACKSLASH structural
 blockcmd       = BACKSLASH ( ( "begin{" | "end{" )
