@@ -50,7 +50,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser, \
     PreprocessorResult, preprocess_includes, gen_find_include_func, flatten_sxpr, \
-    replace_content_with
+    gen_neutral_srcmap_func, make_preprocessor, chain_preprocessors
 
 
 #######################################################################
@@ -60,16 +60,25 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #######################################################################
 
 
-RX_TEX_INPUT = r'\\input{(?P<name>.*)}'
+RE_INCLUDE = r'\\input{(?P<name>.*)}'
 
 
-def LaTeXPreprocessor(text: str, file_name: str) -> PreprocessorResult:
-    find_includes = gen_find_include_func(RX_TEX_INPUT, LaTeXGrammar.comment_rx__)
-    return preprocess_includes(text, file_name, find_includes)
+def LaTeXTokenizer(original_text) -> str:
+    return original_text
+
+
+def preprocessor_factory() -> PreprocessorFunc:
+    find_next_include = gen_find_include_func(RE_INCLUDE, LaTeXGrammar.comment_rx__)
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    LaTeXPreprocessor = make_preprocessor(LaTeXTokenizer)
+    return chain_preprocessors(include_prep, LaTeXPreprocessor)
+
+
+_raw_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 
 
 def get_preprocessor() -> PreprocessorFunc:
-    return LaTeXPreprocessor
+    return _raw_preprocessor()
 
 
 #######################################################################
@@ -238,6 +247,7 @@ class LaTeXGrammar(Grammar):
 
 _raw_grammar = ThreadLocalSingletonFactory(LaTeXGrammar, ident=1)
 
+
 def get_grammar() -> LaTeXGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
@@ -245,7 +255,8 @@ def get_grammar() -> LaTeXGrammar:
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
-    
+
+
 def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
