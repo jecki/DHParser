@@ -1,4 +1,8 @@
-DHParser Version 0.9.5
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',DHParser Version 0.9.5
 ......................
 
 - Python 3.5 compatibility dropped! DHParser now requires at least Python 3.6.
