@@ -1062,7 +1062,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
-    has_errors, ERROR, FATAL, set_preset_value, get_preset_value
+    has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \\
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 '''
 
 
@@ -1875,8 +1876,26 @@ CompilerFactoryFunc = Callable[[], Compiler]
 
 PREPROCESSOR_FACTORY = '''
 
-def get_preprocessor() -> PreprocessorFunc:
-    return {NAME}Preprocessor
+RE_INCLUDE = NEVER_MATCH_PATTERN
+# To capture includes, replace the NEVER_MATCH_PATTERN 
+# by a pattern with group "name" here, e.g. r'\\input{{(?P<name>.*)}}'
+
+
+def {NAME}Tokenizer(original_text) -> str:
+    # Here, a function body can be filled in that adds preprocessor tokens
+    # to the source code and returns the modified source.
+    return original_text
+
+
+def preprocessor_factory() -> PreprocessorFunc:
+    # below, the second parameter must always be the same as {NAME}Grammar.COMMENT__!
+    find_next_include = gen_find_include_func(RE_INCLUDE, {COMMENT__})
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    tokenizing_prep = make_preprocessor({NAME}Tokenizer)
+    return chain_preprocessors(include_prep, tokenizing_prep)
+
+
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 '''
 
 
@@ -2020,7 +2039,7 @@ class EBNFDirectives:
 
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['linefeed']  # type: str
-        self.comment = ''      # type: str
+        self.comment = ''         # type: str
         self.literalws = {get_config_value('default_literalws')}  # type: Set[str]
         self.tokens = set()       # type: Set[str]
         self.filter = dict()      # type: Dict[str, str]
@@ -2261,14 +2280,17 @@ class EBNFCompiler(Compiler):
         Returns Python-skeleton-code for a preprocessor-function for
         the previously compiled formal language.
         """
-        name = self.grammar_name + "Preprocessor"
-        return "def nop(pos, source_name, source_text):\n"\
-               "    return SourceLocation(source_name, source_text, pos)\n\n\n" \
-               "def %s(source_text, source_name):\n"\
-               "    return PreprocessorResult(\n"\
-               "        source_text, source_text,\n"\
-               "        partial(nop, source_name=source_name, source_text=source_text))\n" % name \
-               + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
+        comment_re = self.directives.comment
+        rs = repr(comment_re) if comment_re else 'NEVER_MATCH_PATTERN'
+        return PREPROCESSOR_FACTORY.format(NAME=self.grammar_name, COMMENT__=rs)
+        # name = self.grammar_name + "Preprocessor"
+        # return "def nop(pos, source_name, source_text):\n"\
+        #        "    return SourceLocation(source_name, source_text, pos)\n\n\n" \
+        #        "def %s(source_text, source_name):\n"\
+        #        "    return PreprocessorResult(\n"\
+        #        "        source_text, source_text,\n"\
+        #        "        partial(nop, source_name=source_name, source_text=source_text))\n" % name \
+        #        + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 
     def gen_transformer_skeleton(self) -> str:

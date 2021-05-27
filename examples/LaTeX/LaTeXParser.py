@@ -74,11 +74,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, LaTeXPreprocessor)
 
 
-_raw_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
-
-
-def get_preprocessor() -> PreprocessorFunc:
-    return _raw_preprocessor()
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 
 
 #######################################################################
