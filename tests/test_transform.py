@@ -32,7 +32,7 @@ from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, PLACEHOLD
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
-    merge_adjacent, is_one_of, swap_attributes, delimit_children, merge_treetops, \
+    merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES
 from typing import AbstractSet, List, Sequence, Tuple
@@ -307,6 +307,13 @@ class TestWhitespaceTransformations:
         sentence = parse_sxpr('(SENTENCE "Hallo Welt")')
         traverse(sentence, transformations)
         assert sentence.content == "Hallo Welt", sentence.content
+
+    # def test_merge_adjacent2(self):
+    #     expr = parse_sxpr('(Autor (:Whitespace " ") (DEU_GEMISCHT "K. ") (DEU_GEMISCHT "Figala"))')
+    #     transformations = {'Autor': merge_adjacent(not_one_of('Anker'), 'TEXT')}
+    #     traverse(expr, transformations)
+    #     print(expr.as_sxpr())
+
 
     def test_merge_adjacent_with_attributes(self):
         tree = parse_sxpr('(A (L " ") (L `(spatium "3+1") " "))')

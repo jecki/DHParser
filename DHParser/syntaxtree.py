@@ -1526,7 +1526,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param reverse: If True, the tree will be walked in reverse
                 order, i.e. last children first.
         :param skip_subtree: A criterion to identify sub-trees, the returned
-                iterator shall not dive into.
+                iterator shall not dive into. Note that the root-node of the
+                subtree will still be yielded by the iterator.
         :returns: An iterator over all descendant nodes which fulfill the
            given criterion. Traversal is pre-order.
 
