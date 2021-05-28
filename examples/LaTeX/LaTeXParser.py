@@ -74,11 +74,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, LaTeXPreprocessor)
 
 
-_raw_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
-
-
-def get_preprocessor() -> PreprocessorFunc:
-    return _raw_preprocessor()
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 
 
 #######################################################################
@@ -95,7 +91,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "4a60dc317415b6953ba8665a77571119"
+    source_hash__ = "d553c458ce956b89cbccdbe24495dac8"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -141,9 +137,13 @@ class LaTeXGrammar(Grammar):
     TXTCOMMAND = RegExp('\\\\text\\w+')
     CMDNAME = Series(RegExp('\\\\(?:(?![\\d_])\\w)+'), dwsp__)
     WARN_Komma = Series(Text(","), dwsp__)
-    trennung = Text("\\-")
+    esc_char = Text(",")
     number = Series(INTEGER, Option(FRAC))
     magnitude = Series(number, Option(UNIT))
+    info_value = Series(TEXT_NOPAR, ZeroOrMore(Series(S, TEXT_NOPAR)))
+    info_key = Series(Drop(Text("/")), _NAME)
+    info_assoc = Series(info_key, dwsp__, Option(Series(Series(Drop(Text("(")), dwsp__), info_value, Series(Drop(Text(")")), dwsp__), mandatory=1)))
+    info_block = Series(Series(Drop(Text("{")), dwsp__), ZeroOrMore(info_assoc), Series(Drop(Text("}")), dwsp__), mandatory=1)
     value = Alternative(magnitude, _LETTERS, CMDNAME, param_block, block)
     key = Synonym(_QUALIFIED)
     flag = Alternative(_QUALIFIED, magnitude)
@@ -151,16 +151,13 @@ class LaTeXGrammar(Grammar):
     parameters = Series(Alternative(association, flag), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(association, flag))), Option(WARN_Komma))
     sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(Alternative(_PARSEP, S)))))
     block_of_paragraphs = Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2)
-    text = Series(TEXT, ZeroOrMore(Series(Alternative(S, trennung), TEXT)))
+    special = Alternative(Drop(Text("\\-")), Series(Drop(RegExp('\\\\')), esc_char))
     structural = Alternative(Series(Drop(Text("subsection")), dwsp__), Series(Drop(Text("section")), dwsp__), Series(Drop(Text("chapter")), dwsp__), Series(Drop(Text("subsubsection")), dwsp__), Series(Drop(Text("paragraph")), dwsp__), Series(Drop(Text("subparagraph")), dwsp__), Series(Drop(Text("item")), dwsp__))
     begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
     no_command = Alternative(Series(Drop(Text("\\begin{")), dwsp__), Series(Drop(Text("\\end")), dwsp__), Series(BACKSLASH, structural))
+    text = Series(TEXT, ZeroOrMore(Series(Alternative(S, special), TEXT)))
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
-    info_value = Series(TEXT_NOPAR, ZeroOrMore(Series(S, TEXT_NOPAR)))
-    info_key = Series(Drop(Text("/")), _NAME)
-    info_assoc = Series(info_key, dwsp__, Option(Series(Series(Drop(Text("(")), dwsp__), info_value, Series(Drop(Text(")")), dwsp__), mandatory=1)))
-    info_block = Series(Series(Drop(Text("{")), dwsp__), ZeroOrMore(info_assoc), Series(Drop(Text("}")), dwsp__), mandatory=1)
     _block_content = ZeroOrMore(Series(Alternative(block_environment, text_element, paragraph), Option(Alternative(_PARSEP, S))))
     hide_from_toc = Series(Text("*"), dwsp__)
     target = Series(PATH, ZeroOrMore(Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON, PATH)), Option(Series(Alternative(HASH, Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON)), TAG)))
@@ -183,6 +180,7 @@ class LaTeXGrammar(Grammar):
     citep = Series(Alternative(Series(Drop(Text("\\citep")), dwsp__), Series(Drop(Text("\\cite")), dwsp__)), Option(config), block)
     citet = Series(Series(Drop(Text("\\citet")), dwsp__), Option(config), block)
     generic_command = Alternative(Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), OneOrMore(Series(dwsp__, block))))), Series(Drop(Text("{")), CMDNAME, _block_content, Drop(Text("}")), mandatory=3))
+    assignment = Series(NegativeLookahead(no_command), CMDNAME, Series(Drop(Text("=")), dwsp__), Alternative(Series(number, Option(UNIT)), block, CHARS))
     text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
     cfg_unit = Series(Drop(Text("{")), number, UNIT, Drop(Text("}")))
     cfg_separator = Text("|")
@@ -202,7 +200,7 @@ class LaTeXGrammar(Grammar):
     TBCFG_VALUE = Series(RegExp('[lcr|]+'), dwsp__)
     multicolumn = Series(Series(Drop(Text("\\multicolumn")), dwsp__), Series(Drop(Text("{")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__), tabular_config, block_of_paragraphs)
     known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo, hypersetup, label, ref, href, url)
-    command = Alternative(known_command, text_command, generic_command)
+    command = Alternative(known_command, text_command, assignment, generic_command)
     line_element = Alternative(text, inline_environment, command, block)
     rb_down = Series(Series(Drop(Text("[")), dwsp__), number, UNIT, dwsp__, Series(Drop(Text("]")), dwsp__))
     rb_up = Series(Series(Drop(Text("[")), dwsp__), number, UNIT, dwsp__, Series(Drop(Text("]")), dwsp__))
@@ -246,7 +244,6 @@ class LaTeXGrammar(Grammar):
 
 _raw_grammar = ThreadLocalSingletonFactory(LaTeXGrammar, ident=1)
 
-
 def get_grammar() -> LaTeXGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
@@ -254,8 +251,7 @@ def get_grammar() -> LaTeXGrammar:
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
-
-
+    
 def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
@@ -381,7 +377,6 @@ LaTeX_AST_transformation_table = {
     "block": [flatten, reduce_single_child],
     "flag": [reduce_single_child],
     "text": collapse,
-    "trennung": replace_content_with(''),
     "no_command, blockcmd": [],
     "structural": [],
     "CMDNAME": [remove_whitespace, reduce_single_child],

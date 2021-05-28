@@ -38,6 +38,7 @@ def system(s: str) -> int:
     # return os.system(s)
     return subprocess.call(s, shell=True)
 
+
 # TODO: make this code multiprocessing safe!
 class TestDHParserCommandLineTool:
     def setup(self):

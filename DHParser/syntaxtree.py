@@ -361,15 +361,15 @@ and out of a particular part of text (pointed to by a context) or to
 move forward and backward from a particular location (again represented
 by a context).
 
-The `next_context()` and `prev_context()`-functions allow to move
+The ``next_context()`` and ``prev_context()``-functions allow to move
 one step forward or backward from a given context::
 
     >>> pointer = prev_context(last_context)
     >>> serialize_context(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- blank: '
 
-`prev_context()` and `next_context()` automatically zoom out by one step, if they move past
-the first or last child of the last but one node in the list::
+``prev_context()`` and ``next_context()`` automatically zoom out by one step,
+if they move past the first or last child of the last but one node in the list::
 
     >>> pointer = prev_context(pointer)
     >>> serialize_context(pointer, with_content=-1)
@@ -385,11 +385,11 @@ Thus::
     >>> serialize_context(next_context(pointer), with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace'
 
-The reason for this beaviour is that `prev_context()` and
-`next_context()` try to move to the context which contains the string
+The reason for this beaviour is that ``prev_context()`` and
+``next_context()`` try to move to the context which contains the string
 content preeceding or succeeding that of the given context. Therefore,
 these functions move to the next sibling on the same branch, rather
-traversing the complete tree like the `select()` and `select_context()-
+traversing the complete tree like the ``select()`` and ``select_context()``-
 methods of the Node-class. However, when moving past the first or last
 sibling, it is not clear what the next node on the same level should
 be. To keep it easy, the function "zooms out" and returns the next
@@ -401,8 +401,8 @@ It is, of course, possible to zoom back into a context::
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
 
 Often it is preferable to move through the leaf-nodes and their
-contexts right away. Functions like `next_leaf_context()` and
-`prev_leaf_context()` provide syntactic sugar for this case::
+contexts right away. Functions like ``next_leaf_context()`` and
+``prev_leaf_context()`` provide syntactic sugar for this case::
 
     >>> pointer = next_leaf_context(pointer)
     >>> serialize_context(pointer, with_content=-1)

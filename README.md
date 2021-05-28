@@ -109,8 +109,17 @@ However, as the software is still in an early beta stage, it is
 recommended that you pull it directly from gitlab (see below).
 
 
-Post-Installaton
-----------------
+Getting Started
+---------------
+
+See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md) for the
+motivation and an overview how DHParser works or jump right into the
+[Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
+learn how to setup and use DHParser.
+
+
+Optional Post-Installaton
+-------------------------
 
 It is recommended that you install the `regex`-module
 (https://bitbucket.org/mrabarnett/mrab-regex). If present, DHParser
@@ -245,17 +254,8 @@ abstract syntax tree as well as a full and abbreviated log of the
 parsing process will be stored in a sub-directory named "LOG".
 
 
-Introduction
-------------
-
-See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md) for the
-motivation and an overview how DHParser works or jump right into the
-[Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
-learn how to setup and use DHParser.
-
-
-References and Acknowledment
-----------
+References and Acknowledgement
+------------------------------
 
 Juancarlo Añez: grako, a PEG parser generator in Python, 2017. URL:
 [bitbucket.org/apalala/grako][Añez_2017]

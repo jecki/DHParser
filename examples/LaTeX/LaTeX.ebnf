@@ -125,12 +125,13 @@ inline_math         = /\$/ /[^$]*/ §/\$/
 
 #### commands ####
 
-command             = known_command | text_command | generic_command
+command             = known_command | text_command | assignment | generic_command
 
 known_command       = citet | citep | footnote | includegraphics | caption
                     | multicolumn | hline | cline | documentclass | pdfinfo
                     | hypersetup | label | ref | href | url
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
+assignment          = !no_command CMDNAME "=" (number [UNIT] | block | CHARS)
 generic_command     = !no_command CMDNAME [[ ~ config ] { ~ block }+ ]
                     | `{` CMDNAME _block_content §`}`
 
@@ -163,14 +164,11 @@ href                = "\href{" urlstring "}" block
 
 block          = "{" _block_content §`}`
 _block_content = { (block_environment | text_element | paragraph) [_PARSEP|S] }
-info_block     = "{" §{ info_assoc } "}"
-info_assoc     = info_key ~ [ "(" §info_value ")" ]
-info_key       = `/` _NAME
-info_value     = TEXT_NOPAR { S TEXT_NOPAR }  # text without parentheses
-# text           = CHARS { (S | trennung) CHARS }
-# text           = LINE { (S | trennung) LINE }
-text           = TEXT { (S | trennung) TEXT }
-trennung       = `\-`
+# text           = CHARS { (S | special) CHARS }
+# text           = LINE { (S | special) LINE }
+text           = TEXT { (S | special) TEXT }
+  special      = `\-` | /\\/ esc_char
+  esc_char     = `,`
 
 no_command     = "\begin{" | "\end" | BACKSLASH structural
 blockcmd       = BACKSLASH ( ( "begin{" | "end{" )
@@ -189,12 +187,19 @@ structural     = "subsection" | "section" | "chapter" | "subsubsection"
 #######################################################################
 
 config       = "[" § (parameters &"]" | cfg_text) "]"
+
 param_block  = "{" [parameters] "}"
 parameters   = (association | flag) { "," (association | flag) }  [ WARN_Komma ]
 association  = key~ "=" value~
 flag         = _QUALIFIED | magnitude
 key          = _QUALIFIED
 value        = magnitude | _LETTERS | CMDNAME | param_block | block
+
+info_block     = "{" §{ info_assoc } "}"
+info_assoc     = info_key ~ [ "(" §info_value ")" ]
+info_key       = `/` _NAME
+info_value     = TEXT_NOPAR { S TEXT_NOPAR }  # text without parentheses
+
 magnitude    = number [UNIT]
 number       = INTEGER [FRAC]
 cfg_text     = { (~ text) | CMDNAME | SPECIAL }

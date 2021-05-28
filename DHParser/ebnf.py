@@ -1062,7 +1062,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
-    has_errors, ERROR, FATAL, set_preset_value, get_preset_value
+    has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \\
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 '''
 
 
@@ -1455,7 +1456,7 @@ class FixedEBNFGrammar(Grammar):
     definition or in the Grammar-object changing the `text`-field of the
     respective parser objects.
 
-    EBNF-Definition of the Grammar:
+    EBNF-Definition of the Grammar::
 
         @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
             # comments can be either C-Style: /* ... */
@@ -1875,8 +1876,26 @@ CompilerFactoryFunc = Callable[[], Compiler]
 
 PREPROCESSOR_FACTORY = '''
 
-def get_preprocessor() -> PreprocessorFunc:
-    return {NAME}Preprocessor
+RE_INCLUDE = NEVER_MATCH_PATTERN
+# To capture includes, replace the NEVER_MATCH_PATTERN 
+# by a pattern with group "name" here, e.g. r'\\input{{(?P<name>.*)}}'
+
+
+def {NAME}Tokenizer(original_text) -> str:
+    # Here, a function body can be filled in that adds preprocessor tokens
+    # to the source code and returns the modified source.
+    return original_text
+
+
+def preprocessor_factory() -> PreprocessorFunc:
+    # below, the second parameter must always be the same as {NAME}Grammar.COMMENT__!
+    find_next_include = gen_find_include_func(RE_INCLUDE, {COMMENT__})
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    tokenizing_prep = make_preprocessor({NAME}Tokenizer)
+    return chain_preprocessors(include_prep, tokenizing_prep)
+
+
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 '''
 
 
@@ -1955,63 +1974,50 @@ class EBNFDirectives:
     A Record that keeps information about compiler directives
     during the compilation process.
 
-    Attributes:
-        whitespace:  the regular expression string for (insignificant)
-                whitespace
-
-        comment:  the regular expression string for comments
-
-        literalws:  automatic whitespace eating next to literals. Can
-                be either 'left', 'right', 'none', 'both'
-
-        tokens:  set of the names of preprocessor tokens
-
-        filter:  mapping of symbols to python match functions that
-                will be called on any retrieve / pop - operations on
-                these symbols
-
-        error:  mapping of symbols to tuples of match conditions and
-                customized error messages. A match condition can be
-                either a string or a regular expression. The first
-                error message where the search condition matches will
-                be displayed. An empty string '' as search condition
-                always matches, so in case of multiple error messages,
-                this condition should be placed at the end.
-
-        skip:  mapping of symbols to a list of search expressions. A
-                search expressions can be either a string ot a regular
-                expression. The closest match is the point of reentry
-                for the series- or interleave-parser when a mandatory item
-                failed to match the following text.
-
-        resume:  mapping of symbols to a list of search expressions. A
-                search expressions can be either a string ot a regular
-                expression. The closest match is the point of reentry
-                for after a parsing error has error occurred. Other
-                than the skip field, this configures resuming after
-                the failing parser (`parser.Series` or `parser.Interleave`)
-                has returned.
-
-        disposable: A regular expression to identify "disposable" symbols,
-                i.e. symbols that will not appear as tag-names. Instead
-                the nodes produced by the parsers associated with these
-                symbols will yield anonymous nodes just like "inner"
-                parsers that are not directly assigned to a symbol.
-
-        drop:   A set that may contain the elements `DROP_STRINGS` and
-                `DROP_WSP', 'DROP_REGEXP' or any name of a symbol
-                of a disposable parser (e.g. '_linefeed') the results
-                of which will be dropped during the parsing process,
-                already.
-
-        reduction: The reduction level (0-3) for early tree-reduction
-                during the parsing stage.
-
-        super_ws(property): Cache for the "super whitespace" which
-                is a regular expression that merges whitespace and
-                comments. This property should only be accessed after
-                the `whitespace` and `comment` field have been filled
-                with the values parsed from the EBNF source.
+    :ivar whitespace:  the regular expression string for (insignificant)
+            whitespace
+    :ivar comment:  the regular expression string for comments
+    :ivar literalws:  automatic whitespace eating next to literals. Can
+            be either 'left', 'right', 'none', 'both'
+    :ivar tokens:  set of the names of preprocessor tokens
+    :ivar filter:  mapping of symbols to python match functions that
+            will be called on any retrieve / pop - operations on
+            these symbols
+    :ivar error:  mapping of symbols to tuples of match conditions and
+            customized error messages. A match condition can be
+            either a string or a regular expression. The first
+            error message where the search condition matches will
+            be displayed. An empty string '' as search condition
+            always matches, so in case of multiple error messages,
+            this condition should be placed at the end.
+    :ivar skip:  mapping of symbols to a list of search expressions. A
+            search expressions can be either a string ot a regular
+            expression. The closest match is the point of reentry
+            for the series- or interleave-parser when a mandatory item
+            failed to match the following text.
+    :ivar resume:  mapping of symbols to a list of search expressions. A
+            search expressions can be either a string ot a regular
+            expression. The closest match is the point of reentry
+            for after a parsing error has error occurred. Other
+            than the skip field, this configures resuming after
+            the failing parser (`parser.Series` or `parser.Interleave`)
+            has returned.
+    :ivar disposable: A regular expression to identify "disposable" symbols,
+            i.e. symbols that will not appear as tag-names. Instead
+            the nodes produced by the parsers associated with these
+            symbols will yield anonymous nodes just like "inner"
+            parsers that are not directly assigned to a symbol.
+    :ivar drop:   A set that may contain the elements ``DROP_STRINGS`` and
+            ``DROP_WSP``, ``DROP_REGEXP`` or any name of a symbol of a
+            disposable parser (e.g. '_linefeed') the results of which will
+            be dropped during the parsing process, already.
+    :ivar reduction: The reduction level (0-3) for early tree-reduction
+            during the parsing stage.
+    :ivar super_ws: Cache for the "super whitespace" which
+            is a regular expression that merges whitespace and
+            comments. This property should only be accessed after
+            the `whitespace` and `comment` field have been filled
+            with the values parsed from the EBNF source.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
                  'resume', 'disposable', 'drop', 'reduction', '_super_ws']
@@ -2020,7 +2026,7 @@ class EBNFDirectives:
 
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['linefeed']  # type: str
-        self.comment = ''      # type: str
+        self.comment = ''         # type: str
         self.literalws = {get_config_value('default_literalws')}  # type: Set[str]
         self.tokens = set()       # type: Set[str]
         self.filter = dict()      # type: Dict[str, str]
@@ -2071,104 +2077,102 @@ class EBNFCompiler(Compiler):
     compilation of the formal language. These method's names start with
     the prefix `gen_`.
 
-    Attributes:
-        current_symbols:  During compilation, a list containing the root
-                node of the currently compiled definition as first element
-                and then the nodes of the symbols that are referred to in
-                the currently compiled definition.
+    :ivar current_symbols:  During compilation, a list containing the root
+            node of the currently compiled definition as first element
+            and then the nodes of the symbols that are referred to in
+            the currently compiled definition.
 
-        cache_literal_symbols: A cache for all symbols that are defined
-                by literals, e.g. head = "<head>". This is used by the
-                on_expression()-method.
+    :ivar cache_literal_symbols: A cache for all symbols that are defined
+            by literals, e.g. ``head = "<head>"``. This is used by the
+            on_expression()-method.
 
-        rules:  Dictionary that maps rule names to a list of Nodes that
-                contain symbol-references in the definition of the rule.
-                The first item in the list is the node of the rule-
-                definition itself. Example:
+    :ivar rules:  Dictionary that maps rule names to a list of Nodes that
+            contain symbol-references in the definition of the rule.
+            The first item in the list is the node of the rule-
+            definition itself. Example::
 
-                           `alternative = a | b`
+                alternative = a | b
 
-                Now `[node.content for node in self.rules['alternative']]`
-                yields `['alternative = a | b', 'a', 'b']`
+            Now ``[node.content for node in self.rules['alternative']]``
+            yields ``['alternative = a | b', 'a', 'b']``
 
-        referred_symbols_cache: A dictionary that caches the results of
-                method `referred_symbols()`. `referred_symbols()` maps a
-                to the set of symbols that are directly or indirectly
-                referred to in the definition of the symbol.
+    :ivar referred_symbols_cache: A dictionary that caches the results of
+            method ``referred_symbols()``. ``referred_symbols()`` maps a
+            to the set of symbols that are directly or indirectly
+            referred to in the definition of the symbol.
 
-        directly_referred_cache: A dictionary that caches the the results
-                of method `directly_referred_symbols()`, which yields
-                the set of symbols that are referred to in the definition
-                of a particular symbol.
+    :ivar directly_referred_cache: A dictionary that caches the the results
+            of method `directly_referred_symbols()`, which yields
+            the set of symbols that are referred to in the definition
+            of a particular symbol.
 
-        symbols:  A mapping of symbol names to their first usage (not
-                their definition!) in the EBNF source.
+    :ivar symbols:  A mapping of symbol names to their first usage (not
+            their definition!) in the EBNF source.
 
-        variables:  A set of symbols names that are used with the
-                Pop or Retrieve operator. Because the values of these
-                symbols need to be captured they are called variables.
-                See `test_parser.TestPopRetrieve` for an example.
+    :ivar variables:  A set of symbols names that are used with the
+            Pop or Retrieve operator. Because the values of these
+            symbols need to be captured they are called variables.
+            See `test_parser.TestPopRetrieve` for an example.
 
-        forward:  A set of symbols that require a forward operator.
+    :ivar forward:  A set of symbols that require a forward operator.
 
-        definitions:  A dictionary of definitions. Other than `rules`
-                this maps the symbols to their compiled definienda.
+    :ivar definitions:  A dictionary of definitions. Other than `rules`
+            this maps the symbols to their compiled definienda.
 
-        required_keywords: A list of keywords (like `comment__` or
-                `whitespace__`) that need to be defined at the beginning
-                of the grammar class because they are referred to later.
+    :ivar required_keywords: A list of keywords (like ``comment__`` or
+            ``whitespace__``) that need to be defined at the beginning
+            of the grammar class because they are referred to later.
 
-        deferred_tasks:  A list of callables that is filled during
-                compilation, but that will be executed only after
-                compilation has finished. Typically, it contains
-                semantic checks that require information that
-                is only available upon completion of compilation.
+    :ivar deferred_tasks:  A list of callables that is filled during
+            compilation, but that will be executed only after
+            compilation has finished. Typically, it contains
+            semantic checks that require information that
+            is only available upon completion of compilation.
 
-        root_symbol: The name of the root symbol.
+    :ivar root_symbol: The name of the root symbol.
 
-        drop_flag: This flag is set temporarily when compiling the definition
-                of a parser that shall drop its content. If this flag is
-                set all contained parser will also drop their content as an
-                optimization.
+    :ivar drop_flag: This flag is set temporarily when compiling the definition
+            of a parser that shall drop its content. If this flag is set all
+            contained parser will also drop their content as an optimization.
 
-        directives:  A record of all directives and their default values.
+    :ivar directives:  A record of all directives and their default values.
 
-        defined_directives:  A dictionary of all directives that have already
-                been defined, mapped onto the list of nodes where they have
-                been (re-)defined. With the exception of those directives
-                contained in EBNFDirectives.REPEATABLE_DIRECTIVES, directives
-                must only be defined once.
+    :ivar defined_directives:  A dictionary of all directives that have already
+            been defined, mapped onto the list of nodes where they have
+            been (re-)defined. With the exception of those directives
+            contained in EBNFDirectives.REPEATABLE_DIRECTIVES, directives
+            must only be defined once.
 
-        consumed_custom_errors:  A set of symbols for which a custom error
-                has been defined and(!) consumed during compilation. This
-                allows to add a compiler error in those cases where (i) an
-                error message has been defined but will never used or (ii)
-                an error message is accidently used twice. For examples, see
-                `test_ebnf.TestErrorCustomization`.
+    :ivar consumed_custom_errors:  A set of symbols for which a custom error
+            has been defined and(!) consumed during compilation. This
+            allows to add a compiler error in those cases where (i) an
+            error message has been defined but will never used or (ii)
+            an error message is accidently used twice. For examples, see
+            `test_ebnf.TestErrorCustomization`.
 
-        consumed_skip_rules: The same as `consumed_custom_errors` only for
-                in-series-resume-rules (aka 'skip-rules') for Series-parsers.
+    :ivar consumed_skip_rules: The same as `consumed_custom_errors` only for
+            in-series-resume-rules (aka 'skip-rules') for Series-parsers.
 
-        re_flags:  A set of regular expression flags to be added to all
-                regular expressions found in the current parsing process
+    :ivar re_flags:  A set of regular expression flags to be added to all
+            regular expressions found in the current parsing process
 
-        disposable_regexp: A regular expression to identify symbols that stand
-                for parsers that shall yield anonymous nodes. The pattern of
-                the regular expression is configured in configuration.py but
-                can also be set by a directive. The default value is a regular
-                expression that catches names with a leading underscore.
-                See also `parser.Grammar.disposable__`
+    :ivar disposable_regexp: A regular expression to identify symbols that stand
+            for parsers that shall yield anonymous nodes. The pattern of
+            the regular expression is configured in configuration.py but
+            can also be set by a directive. The default value is a regular
+            expression that catches names with a leading underscore.
+            See also `parser.Grammar.disposable__`
 
-        python_src:  A string that contains the python source code that was
-                the outcome of the last EBNF-compilation.
+    :ivar python_src:  A string that contains the python source code that was
+            the outcome of the last EBNF-compilation.
 
-        grammar_name:  The name of the grammar to be compiled
+    :ivar grammar_name:  The name of the grammar to be compiled
 
-        grammar_source:  The source code of the grammar to be compiled.
+    :ivar grammar_source:  The source code of the grammar to be compiled.
 
-        grammar_id: a unique id for every compiled grammar. (Required for
-                disambiguation of of thread local variables storing
-                compiled texts.)
+    :ivar grammar_id: a unique id for every compiled grammar. (Required for
+            disambiguation of of thread local variables storing
+            compiled texts.)
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -2261,14 +2265,17 @@ class EBNFCompiler(Compiler):
         Returns Python-skeleton-code for a preprocessor-function for
         the previously compiled formal language.
         """
-        name = self.grammar_name + "Preprocessor"
-        return "def nop(pos, source_name, source_text):\n"\
-               "    return SourceLocation(source_name, source_text, pos)\n\n\n" \
-               "def %s(source_text, source_name):\n"\
-               "    return PreprocessorResult(\n"\
-               "        source_text, source_text,\n"\
-               "        partial(nop, source_name=source_name, source_text=source_text))\n" % name \
-               + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
+        comment_re = self.directives.comment
+        rs = repr(comment_re) if comment_re else 'NEVER_MATCH_PATTERN'
+        return PREPROCESSOR_FACTORY.format(NAME=self.grammar_name, COMMENT__=rs)
+        # name = self.grammar_name + "Preprocessor"
+        # return "def nop(pos, source_name, source_text):\n"\
+        #        "    return SourceLocation(source_name, source_text, pos)\n\n\n" \
+        #        "def %s(source_text, source_name):\n"\
+        #        "    return PreprocessorResult(\n"\
+        #        "        source_text, source_text,\n"\
+        #        "        partial(nop, source_name=source_name, source_text=source_text))\n" % name \
+        #        + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 
     def gen_transformer_skeleton(self) -> str:
