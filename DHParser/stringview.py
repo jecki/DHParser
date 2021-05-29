@@ -62,7 +62,7 @@ def first_char(text: str, begin: int, end: int, chars: str) -> int:
 @cython.returns(cython.int)
 @cython.locals(begin=cython.int, end=cython.int)
 def last_char(text: str, begin: int, end: int, chars: str) -> int:
-    """Returns the index of the first non-whitespace character in string
+    """Returns the index of the last non-whitespace character in string
     `text` within the bounds [begin, end].
     """
     while end > begin and text[end - 1] in chars:
