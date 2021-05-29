@@ -92,8 +92,8 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "d1935873eaba308ba0a72f573da8c8fe"
-    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
+    source_hash__ = "03a2499c26ef354d451e7c1fe9fb1c02"
+    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'%.*'
@@ -185,7 +185,8 @@ class LaTeXGrammar(Grammar):
     text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
     cfg_unit = Series(Drop(Text("{")), number, UNIT, Drop(Text("}")))
     cfg_separator = Text("|")
-    inline_math = Series(Drop(RegExp('\\$')), Drop(RegExp('[^$]*')), Drop(RegExp('\\$')), mandatory=2)
+    _inline_math_text = RegExp('[^$]*')
+    inline_math = Series(Drop(RegExp('\\$')), _inline_math_text, Drop(RegExp('\\$')), mandatory=2)
     end_environment = Series(Drop(RegExp('\\\\end{')), Pop(NAME), Drop(RegExp('}')), mandatory=1)
     begin_generic_block = Series(Lookbehind(_LB), begin_environment, LFF)
     end_inline_env = Synonym(end_environment)
@@ -211,7 +212,8 @@ class LaTeXGrammar(Grammar):
     tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(Drop(Text("&")), dwsp__), Alternative(multicolumn, tabular_cell))), Alternative(Series(Series(Drop(Text("\\\\")), dwsp__), Alternative(hline, ZeroOrMore(cline)), Option(_PARSEP)), Lookahead(Drop(Text("\\end{tabular}")))))
     tabular = Series(Series(Drop(Text("\\begin{tabular}")), dwsp__), tabular_config, ZeroOrMore(tabular_row), Series(Drop(Text("\\end{tabular}")), dwsp__), mandatory=3)
     no_numbering = Text("*")
-    eqnarray = Series(Drop(Text("\\begin{eqnarray")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), Drop(RegExp('(?:[^\\\\]*(?!\\\\end\\{eqnarray\\*?\\})[\\\\]+)*')), Drop(Text("\\end{eqnarray")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__))
+    _equation_text = RegExp('(?:[^\\\\]*(?!\\\\end\\{(?:eqnarray|equation)\\*?\\})[\\\\]*\\s*)*')
+    eqnarray = Series(Drop(Text("\\begin{eqnarray")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), _equation_text, Drop(Text("\\end{eqnarray")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__))
     verbatim = Series(Series(Drop(Text("\\begin{verbatim}")), dwsp__), sequence, Series(Drop(Text("\\end{verbatim}")), dwsp__), mandatory=2)
     quotation = Alternative(Series(Series(Drop(Text("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Text("\\begin{quote}")), dwsp__), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
     figure = Series(Series(Drop(Text("\\begin{figure}")), dwsp__), sequence, Series(Drop(Text("\\end{figure}")), dwsp__), mandatory=2)
