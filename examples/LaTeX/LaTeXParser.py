@@ -92,8 +92,8 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "03a2499c26ef354d451e7c1fe9fb1c02"
-    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$')
+    source_hash__ = "baf91e1f69a37879c2527d8a42cc2ca7"
+    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|_has_block_start$|block_environment$|known_environment$|text_element$|_block_math$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$|_dmath_long_form$|_dmath_short_form$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'%.*'
@@ -186,7 +186,9 @@ class LaTeXGrammar(Grammar):
     cfg_unit = Series(Drop(Text("{")), number, UNIT, Drop(Text("}")))
     cfg_separator = Text("|")
     _inline_math_text = RegExp('[^$]*')
-    inline_math = Series(Drop(RegExp('\\$')), _inline_math_text, Drop(RegExp('\\$')), mandatory=2)
+    _im_bracket = Series(Drop(Text("\\(")), _inline_math_text, Drop(Text("\\)")), mandatory=1)
+    _im_dollar = Series(Drop(Text("$")), _inline_math_text, Drop(Text("$")), mandatory=1)
+    inline_math = Alternative(_im_dollar, _im_bracket)
     end_environment = Series(Drop(RegExp('\\\\end{')), Pop(NAME), Drop(RegExp('}')), mandatory=1)
     begin_generic_block = Series(Lookbehind(_LB), begin_environment, LFF)
     end_inline_env = Synonym(end_environment)
@@ -212,8 +214,12 @@ class LaTeXGrammar(Grammar):
     tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(Drop(Text("&")), dwsp__), Alternative(multicolumn, tabular_cell))), Alternative(Series(Series(Drop(Text("\\\\")), dwsp__), Alternative(hline, ZeroOrMore(cline)), Option(_PARSEP)), Lookahead(Drop(Text("\\end{tabular}")))))
     tabular = Series(Series(Drop(Text("\\begin{tabular}")), dwsp__), tabular_config, ZeroOrMore(tabular_row), Series(Drop(Text("\\end{tabular}")), dwsp__), mandatory=3)
     no_numbering = Text("*")
-    _equation_text = RegExp('(?:[^\\\\]*(?!\\\\end\\{(?:eqnarray|equation)\\*?\\})[\\\\]*\\s*)*')
-    eqnarray = Series(Drop(Text("\\begin{eqnarray")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), _equation_text, Drop(Text("\\end{eqnarray")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__))
+    _block_math = RegExp('(?:[^\\\\]*(?!\\\\end\\{(?:eqnarray|equation|displaymath)\\*?\\})[\\\\]*\\s*)*')
+    eqnarray = Series(Drop(Text("\\begin{eqnarray")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), _block_math, Drop(Text("\\end{eqnarray")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__), mandatory=3)
+    equation = Series(Drop(Text("\\begin{equation")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), _block_math, Drop(Text("\\end{equation")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__), mandatory=3)
+    _dmath_short_form = Series(Series(Drop(Text("\\[")), dwsp__), _block_math, Series(Drop(Text("\\]")), dwsp__), mandatory=1)
+    _dmath_long_form = Series(Drop(Text("\\begin{displaymath")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), _block_math, Drop(Text("\\end{displaymath")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__), mandatory=3)
+    displaymath = Alternative(_dmath_long_form, _dmath_short_form)
     verbatim = Series(Series(Drop(Text("\\begin{verbatim}")), dwsp__), sequence, Series(Drop(Text("\\end{verbatim}")), dwsp__), mandatory=2)
     quotation = Alternative(Series(Series(Drop(Text("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Text("\\begin{quote}")), dwsp__), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
     figure = Series(Series(Drop(Text("\\begin{figure}")), dwsp__), sequence, Series(Drop(Text("\\end{figure}")), dwsp__), mandatory=2)
@@ -223,7 +229,9 @@ class LaTeXGrammar(Grammar):
     end_generic_block = Series(Lookbehind(_LB), end_environment, LFF)
     blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Text("begin{")), dwsp__), Series(Drop(Text("end{")), dwsp__)), Alternative(Series(Drop(Text("enumerate")), dwsp__), Series(Drop(Text("itemize")), dwsp__), Series(Drop(Text("figure")), dwsp__), Series(Drop(Text("quote")), dwsp__), Series(Drop(Text("quotation")), dwsp__), Series(Drop(Text("tabular")), dwsp__)), Series(Drop(Text("}")), dwsp__)), structural, begin_generic_block, end_generic_block))
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
-    known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim, eqnarray)
+    math_block = Alternative(equation, eqnarray, displaymath)
+    known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim, math_block)
+    _has_block_start = Drop(Text("\\begin{"))
     preamble = OneOrMore(Series(Option(_WSPC), command))
     Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
     Index = Series(Option(_WSPC), Series(Drop(Text("\\printindex")), dwsp__))
@@ -242,7 +250,7 @@ class LaTeXGrammar(Grammar):
     text_element.set(Alternative(line_element, LINEFEED))
     paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))))
     block_of_paragraphs.set(Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2))
-    block_environment.set(Alternative(known_environment, generic_block))
+    block_environment.set(Alternative(Series(Lookahead(_has_block_start), known_environment), generic_block))
     latexdoc = Series(preamble, document, mandatory=1)
     root__ = TreeReduction(latexdoc, CombinedParser.MERGE_TREETOPS)
     
