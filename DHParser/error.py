@@ -433,15 +433,13 @@ def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
     for err in errors:
         if err.pos < 0:
             raise ValueError(f'Illegal error position: {err.pos} Must be >= 0!')
-        if err.orig_pos >= 0:
-            raise ValueError('Source location must not be assigned more than once! '
-                             'This can be circumvented by re-assigning "error.pos" first!')
-        err.orig_doc, orig_text, err.orig_pos = source_mapping(err.pos)
-        lbreaks = lb_dict.setdefault(orig_text, linebreaks(orig_text))
-        err.line, err.column = line_col(lbreaks, err.orig_pos)
-        if err.orig_pos + err.length > lbreaks[-1]:
-            err.length = lbreaks[-1] - err.orig_pos  # err.length should not exceed text length
-        err.end_line, err.end_column = line_col(lbreaks, err.orig_pos + err.length)
+        if err.orig_pos < 0:  # do not overwriter oirg_pos if already set
+            err.orig_doc, orig_text, err.orig_pos = source_mapping(err.pos)
+            lbreaks = lb_dict.setdefault(orig_text, linebreaks(orig_text))
+            err.line, err.column = line_col(lbreaks, err.orig_pos)
+            if err.orig_pos + err.length > lbreaks[-1]:
+                err.length = lbreaks[-1] - err.orig_pos  # err.length should not exceed text length
+            err.end_line, err.end_column = line_col(lbreaks, err.orig_pos + err.length)
 
 
 def canonical_error_strings(errors: List[Error]) -> List[str]:

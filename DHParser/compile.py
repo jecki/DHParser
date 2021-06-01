@@ -46,8 +46,8 @@ from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
 from DHParser.transform import TransformationFunc
 from DHParser.parse import Grammar
 from DHParser.preprocess import gen_neutral_srcmap_func
-from DHParser.error import is_error, is_fatal, Error, \
-    TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH
+from DHParser.error import is_error, is_fatal, Error, FATAL, \
+    TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
 from DHParser.toolkit import load_if_file, is_filename
 
@@ -355,7 +355,7 @@ def compile_source(source: str,
 
     # preprocessing
 
-    errors =[]
+    errors = []
     if preprocessor is None:
         source_text = original_text  # type: str
         source_mapping = gen_neutral_srcmap_func(source_text, source_name)
@@ -363,11 +363,13 @@ def compile_source(source: str,
     else:
         _, source_text, source_mapping, errors = preprocessor(original_text, source_name)
 
-    # TODO: Preprocessor-Fehler verarbeiten.
+    if has_errors(errors, FATAL):
+        return None, errors, None
 
     # parsing
 
     syntax_tree = parser(source_text, source_mapping=source_mapping)  # type: RootNode
+    for e in errors:  syntax_tree.add_error(None, e)
     syntax_tree.source = original_text
     syntax_tree.source_mapping = source_mapping
     if 'cst' in log_syntax_trees:
