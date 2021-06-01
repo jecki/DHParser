@@ -46,16 +46,18 @@ However, in order to report errors, usually at least a line and
 column-number
 
 """
-
+import functools
 import os
-from typing import Iterable, Iterator, Union, List, Optional, Sequence, Tuple
+from typing import Iterable, Iterator, Union, List, Sequence, NamedTuple, Dict, Callable
 
-from DHParser.preprocess import SourceMapFunc, SourceLocation
 from DHParser.stringview import StringView
 from DHParser.toolkit import linebreaks, line_col, is_filename
 
 
-__all__ = ('ErrorCode',
+__all__ = ('SourceMap',
+           'SourceLocation',
+           'SourceMapFunc',
+           'ErrorCode',
            'Error',
            'is_fatal',
            'is_error',
@@ -107,6 +109,37 @@ __all__ = ('ErrorCode',
            'COMPILER_CRASH',
            'AST_TRANSFORM_CRASH',
            'RECURSION_DEPTH_LIMIT_HIT')
+
+
+#######################################################################
+#
+#  source mapping
+#
+#######################################################################
+
+
+class SourceMap(NamedTuple):
+    original_name: str           # nome or path or uri of the original source file
+    positions: List[int]        # a list of locations
+    offsets: List[int]          # the corresponding offsets to be added from these locations onward
+    file_names: List[str]       # list of file_names to which the source locations relate
+    originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
+
+
+class SourceLocation(NamedTuple):
+    original_name: str          # the file name (or path or uri) of the source code
+    original_text: Union[str, StringView]  # the source code itself
+    pos: int                  # a position within the code
+
+
+SourceMapFunc = Union[Callable[[int], SourceLocation],
+                      functools.partial]
+
+#######################################################################
+#
+#  error codes
+#
+#######################################################################
 
 
 class ErrorCode(int):
@@ -175,6 +208,13 @@ TREE_PROCESSING_CRASH                    = ErrorCode(10100)
 COMPILER_CRASH                           = ErrorCode(10200)
 AST_TRANSFORM_CRASH                      = ErrorCode(10300)
 RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
+
+
+#######################################################################
+#
+#  class Error
+#
+#######################################################################
 
 
 class Error:
@@ -394,7 +434,8 @@ def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
         if err.pos < 0:
             raise ValueError(f'Illegal error position: {err.pos} Must be >= 0!')
         if err.orig_pos >= 0:
-            raise ValueError('Source location must not be assigned more than once!')
+            raise ValueError('Source location must not be assigned more than once! '
+                             'This can be circumvented by re-assigning "error.pos" first!')
         err.orig_doc, orig_text, err.orig_pos = source_mapping(err.pos)
         lbreaks = lb_dict.setdefault(orig_text, linebreaks(orig_text))
         err.line, err.column = line_col(lbreaks, err.orig_pos)
@@ -423,3 +464,4 @@ def canonical_error_strings(errors: List[Error]) -> List[str]:
     else:
         error_strings = []
     return error_strings
+

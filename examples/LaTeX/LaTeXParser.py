@@ -63,8 +63,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 RE_INCLUDE = r'\\input{(?P<name>.*)}'
 
 
-def LaTeXTokenizer(original_text) -> str:
-    return original_text
+def LaTeXTokenizer(original_text) -> Tuple[str, List[Error]]:
+    return original_text, []
 
 
 def preprocessor_factory() -> PreprocessorFunc:

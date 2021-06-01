@@ -1881,10 +1881,10 @@ RE_INCLUDE = NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\\input{{(?P<name>.*)}}'
 
 
-def {NAME}Tokenizer(original_text) -> str:
+def {NAME}Tokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
-    return original_text
+    return original_text, []
 
 
 def preprocessor_factory() -> PreprocessorFunc:

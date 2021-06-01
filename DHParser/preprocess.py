@@ -31,8 +31,9 @@ cannot completely be described entirely with context-free grammars.
 import bisect
 import functools
 import os
-from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Dict, Any
+from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Any
 
+from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc
 from DHParser.stringview import StringView
 from DHParser.toolkit import re
 
@@ -41,8 +42,6 @@ __all__ = ('RX_TOKEN_NAME',
            'BEGIN_TOKEN',
            'TOKEN_DELIMITER',
            'END_TOKEN',
-           'SourceMap',
-           'SourceMapFunc',
            'PreprocessorFunc',
            'PreprocessorResult',
            'Tokenizer',
@@ -80,39 +79,22 @@ class IncludeInfo(NamedTuple):
     file_name: str
 
 
-class SourceMap(NamedTuple):
-    original_name: str           # nome or path or uri of the original source file
-    positions: List[int]        # a list of locations
-    offsets: List[int]          # the corresponding offsets to be added from these locations onward
-    file_names: List[str]       # list of file_names to which the source locations relate
-    originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
-
-
 def has_includes(sm: SourceMap) -> bool:
     return any(fname != sm.original_name for fname in sm.file_names)
-
-
-class SourceLocation(NamedTuple):
-    original_name: str          # the file name (or path or uri) of the source code
-    original_text: Union[str, StringView]  # the source code itself
-    pos: int                  # a position within the code
-
-
-SourceMapFunc = Union[Callable[[int], SourceLocation],
-                      functools.partial]
 
 
 class PreprocessorResult(NamedTuple):
     original_text: Union[str, StringView]
     preprocessed_text: Union[str, StringView]
     back_mapping: SourceMapFunc
+    errors: List[Error]
 
 
 FindIncludeFunc = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                         functools.partial]
 PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
                          functools.partial]
-Tokenizer = Union[Callable[[str], str], functools.partial]
+Tokenizer = Union[Callable[[str], Tuple[str, List[Error]]], functools.partial]
 # a functions that merely adds preprocessor tokens to a source text
 
 
@@ -129,7 +111,8 @@ def nil_preprocessor(original_text: str, original_name: str) -> PreprocessorResu
     """
     return PreprocessorResult(original_text,
                               original_text,
-                              lambda i: SourceLocation(original_name, original_text, i))
+                              lambda i: SourceLocation(original_name, original_text, i),
+                              [])
 
 
 def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
@@ -157,12 +140,13 @@ def _apply_preprocessors(original_text: str, original_name: str,
     processed = original_text
     mapping_chain = []
     for prep in preprocessors:
-        _, processed, mapping_func = prep(processed, original_name)
+        _, processed, mapping_func, _ = prep(processed, original_name)
         mapping_chain.append(mapping_func)
     mapping_chain.reverse()
     return PreprocessorResult(original_text,
                               processed,
-                              functools.partial(_apply_mappings, mappings=mapping_chain))
+                              functools.partial(_apply_mappings, mappings=mapping_chain),
+                              [])
 
 
 def chain_preprocessors(*preprocessors) -> PreprocessorFunc:
@@ -305,11 +289,12 @@ def make_preprocessor(tokenizer: Tokenizer) -> PreprocessorFunc:
     a function that merely adds preprocessor tokens to a source text and
     returns the modified source.
     """
-    def preprocessor(original_text: str, original_name: str, *args) -> PreprocessorResult:
-        tokenized_text = tokenizer(original_text)
+    def preprocessor(original_text: str, original_name: str, *args) \
+            -> PreprocessorResult:
+        tokenized_text, errors = tokenizer(original_text)
         srcmap = tokenized_to_original_mapping(tokenized_text, original_text, original_name)
         mapping = functools.partial(source_map, srcmap=srcmap)
-        return PreprocessorResult(original_text, tokenized_text, mapping)
+        return PreprocessorResult(original_text, tokenized_text, mapping, errors)
     return preprocessor
 
 
@@ -439,6 +424,6 @@ def preprocess_includes(original_text: Optional[str],
             original_text = f.read()
     include_map, result = generate_include_map(original_name, original_text, find_next_include)
     mapping_func = functools.partial(srcmap_includes, inclmap=include_map)
-    return PreprocessorResult(original_text, result, mapping_func)
+    return PreprocessorResult(original_text, result, mapping_func, [])
 
 

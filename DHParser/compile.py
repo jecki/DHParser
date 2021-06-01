@@ -355,12 +355,15 @@ def compile_source(source: str,
 
     # preprocessing
 
+    errors =[]
     if preprocessor is None:
         source_text = original_text  # type: str
         source_mapping = gen_neutral_srcmap_func(source_text, source_name)
             # lambda i: SourceLocation(source_name, 0, i)    # type: SourceMapFunc
     else:
-        _, source_text, source_mapping = preprocessor(original_text, source_name)
+        _, source_text, source_mapping, errors = preprocessor(original_text, source_name)
+
+    # TODO: Preprocessor-Fehler verarbeiten.
 
     # parsing
 

@@ -35,11 +35,12 @@ from DHParser.configuration import set_config_value
 from DHParser.dsl import grammar_provider
 from DHParser import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
-    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, SourceMap, chain_preprocessors, \
+    BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, chain_preprocessors, \
     strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor
+from DHParser.error import SourceMap, Error
 from DHParser.toolkit import lstrip_docstring, typing, re
 from DHParser.testing import unique_name
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 
 
 class TestMakeToken:
@@ -89,7 +90,7 @@ class TestSourceMapping:
         pos = source_map(0, srcmap)
 
 
-def tokenize_indentation(src: str) -> str:
+def tokenize_indentation(src: str) -> Tuple[str, List[Error]]:
     transformed = []
     indent_level = 0
     for line in src.split('\n'):
@@ -112,7 +113,7 @@ def tokenize_indentation(src: str) -> str:
         indent_level -= 1
     tokenized = '\n'.join(transformed)
     # print(prettyprint_tokenized(tokenized))
-    return tokenized
+    return tokenized, []
 
 
 preprocess_indentation = make_preprocessor(tokenize_indentation)
@@ -137,7 +138,8 @@ def preprocess_comments(src: str, src_name: str) -> PreprocessorResult:
                                                                    positions,
                                                                    offsets,
                                                                    [src_name] * len(positions),
-                                                                   {src_name: src})))
+                                                                   {src_name: src})),
+                              [])
 
 
 class TestTokenParsing:
@@ -157,7 +159,7 @@ class TestTokenParsing:
                     print(x)  # another comment
                     print(y)
         """)
-    tokenized = tokenize_indentation(code)
+    tokenized, _ = tokenize_indentation(code)
     srcmap = tokenized_to_original_mapping(tokenized, code)
 
     def verify_mapping(self, teststr, orig_text, preprocessed_text, mapping):
@@ -194,7 +196,7 @@ class TestTokenParsing:
             previous_index = index
 
     def test_non_token_preprocessor(self):
-        _, tokenized, mapping = preprocess_comments(self.code, 'no_uri')
+        _, tokenized, mapping, _ = preprocess_comments(self.code, 'no_uri')
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
@@ -203,7 +205,7 @@ class TestTokenParsing:
 
     def test_chained_preprocessors(self):
         pchain = chain_preprocessors(preprocess_comments, preprocess_indentation)
-        _, tokenized, mapping = pchain(self.code, 'no_uri')
+        _, tokenized, mapping, _ = pchain(self.code, 'no_uri')
         self.verify_mapping("def func", self.code, tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, tokenized, mapping)
@@ -283,7 +285,7 @@ class TestIncludes:
         def perform(main, sub):
             self.create_files({'main.txt': main, 'sub.txt': sub})
             find_func = gen_find_include_func(r'include\((?P<name>[^)\n]*)\)')
-            _, text, mapping = preprocess_includes(None, 'main.txt', find_func)
+            _, text, mapping, _ = preprocess_includes(None, 'main.txt', find_func)
             # print(mapping)
             assert text == main.replace('include(sub.txt)', 'abc'), text
             for i in range(len(text)):
@@ -306,7 +308,7 @@ class TestIncludes:
         def perform(**ensemble):
             self.create_files(ensemble)
             find_func = gen_find_include_func(r'#include\((?P<name>[^)\n]*)\)')
-            _, text, mapping = preprocess_includes(None, 'main', find_func)
+            _, text, mapping, _ = preprocess_includes(None, 'main', find_func)
             substrings = {}
             for k, v in reversed(list(ensemble.items())):
                 for name, content in substrings.items():
