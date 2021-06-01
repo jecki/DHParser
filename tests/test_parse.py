@@ -1375,7 +1375,6 @@ def next_valid_letter(text, start, end):
         gr = copy.deepcopy(get_ebnf_grammar())
         resume_notices_on(gr)
         cst = gr(EBNF_with_Errors)
-        add_source_locations(cst.errors, gen_neutral_srcmap_func(EBNF_with_Errors))
         locations = []
         for error in cst.errors_sorted:
             locations.append((error.line, error.column))

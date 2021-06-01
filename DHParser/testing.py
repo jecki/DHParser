@@ -436,11 +436,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
             tests.setdefault('__cst__', {})[test_name] = cst
-            source_mapper = gen_neutral_srcmap_func(test_code)
             errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errors = [e for e in cst.errors_sorted if e.code not in POSSIBLE_ARTIFACTS]
-                add_source_locations(errors, source_mapper)
                 errata.append('Match test "%s" for parser "%s" failed:'
                               '\nExpr.:  %s\n\n%s\n\n' %
                               (test_name, parser_name, md_codeblock(test_code),
@@ -459,7 +457,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 ast_errors = [e for e in ast.errors if e not in old_errors]
                 ast_errors.sort(key=lambda e: e.pos)
                 if is_error(max(e.code for e in ast_errors) if ast_errors else 0):
-                    add_source_locations(ast_errors, source_mapper)
                     if ast_errors:
                         if errata:  errata[-1] = errata[-1].rstrip('\n')
                         ast_errors.append('\n')
@@ -519,7 +516,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         # run fail tests
 
         for test_name, test_code in tests.get('fail', dict()).items():
-            source_mapper = gen_neutral_srcmap_func(test_code)
             errflag = len(errata)
             try:
                 cst = parser(test_code, parser_name)
@@ -541,7 +537,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     with local_log_dir('./LOGS'):
                         log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
-                add_source_locations(cst.errors, source_mapper)
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors_sorted)
             if verbose:

@@ -191,7 +191,7 @@ class Error:
                >= 10000: fatal error. syntax tree will not be passed on to
                          the next compilation stage!
     :ivar orig_pos:  the position of the error in the original source file,
-        not in the preprocessed document.
+        not in the preprocessed document. This is a write once value!
     :ivar orig_doc:  the name or path or url of the original source file to
         which ``orig_pos`` is related. This is relevant, if the preprocessed
         document has been plugged together from several source files.
@@ -254,6 +254,7 @@ class Error:
     def pos(self, value: int):
         self._pos = value
         # reset line and column values, because they might now not be valid any more
+        self.orig_pos = -1
         self.line, self.column = -1, -1
         self.end_line, self.end_column = -1, -1
 
@@ -390,7 +391,10 @@ def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
     """
     lb_dict = {}
     for err in errors:
-        assert err.pos >= 0
+        if err.pos < 0:
+            raise ValueError(f'Illegal error position: {err.pos} Must be >= 0!')
+        if err.orig_pos >= 0:
+            raise ValueError('Source location must not be assigned more than once!')
         err.orig_doc, orig_text, err.orig_pos = source_mapping(err.pos)
         lbreaks = lb_dict.setdefault(orig_text, linebreaks(orig_text))
         err.line, err.column = line_col(lbreaks, err.orig_pos)
