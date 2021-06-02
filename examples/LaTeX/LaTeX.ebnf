@@ -95,7 +95,7 @@ displaymath         = _dmath_long_form | _dmath_short_form
   _dmath_short_form = "\[" § _block_math "\]"
 equation            = `\begin{equation` [no_numbering] "}" §_block_math `\end{equation` [`*`] "}"
 eqnarray            = `\begin{eqnarray` [no_numbering] "}" §_block_math `\end{eqnarray` [`*`] "}"
-  _block_math       = /(?:[^\\]*(?!\\end\{(?:eqnarray|equation|displaymath)\*?\})[\\]*\s*)*/
+  _block_math       = /(?:[^\\]*(?!\\end\{(?:eqnarray|equation|displaymath)\*?\}|[\\]\])[\\]*\s*)*/
 no_numbering        = `*`
 
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"

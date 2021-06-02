@@ -390,8 +390,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         return is_artifact
 
     for parser_name, tests in test_unit.items():
-        if not get_config_value('test_parallelization'):
-            print('  Testing parser: ' + parser_name)
+        # if not get_config_value('test_parallelization'):
+        #     print('  Testing parser: ' + parser_name)
 
         track_history = get_config_value('history_tracking')
         try:
@@ -425,8 +425,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         # run match tests
 
         for test_name, test_code in tests.get('match', dict()).items():
-            if not get_config_value('test_parallelization'):
-                print('    Test: ' + str(test_name))
+            # if not get_config_value('test_parallelization'):
+            #     print('    Test: ' + str(test_name))
 
             errflag = len(errata)
             try:
