@@ -2107,8 +2107,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """
             vsize = 0
             for nd in node.select_if(lambda _: True, include_root=True):
-                if nd._children:
-                    vsize += 1
+                vsize += 1
                 if vsize > threshold:
                     return True
             return False
