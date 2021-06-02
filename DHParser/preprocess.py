@@ -31,9 +31,10 @@ cannot completely be described entirely with context-free grammars.
 import bisect
 import functools
 import os
-from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Any
+from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Any, Iterator
 
-from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc
+from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
+    add_source_locations
 from DHParser.stringview import StringView
 from DHParser.toolkit import re
 
@@ -122,6 +123,7 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocat
     position within a preprocessed source text and mappings should therefore
     be a list of reverse-mappings in reversed order.
     """
+    assert len(mappings) > 0
     filename, text = '', ''
     for mapping in mappings:
         filename, text, position = mapping(position)
@@ -139,14 +141,20 @@ def _apply_preprocessors(original_text: str, original_name: str,
     """
     processed = original_text
     mapping_chain = []
+    error_list = []
     for prep in preprocessors:
-        _, processed, mapping_func, _ = prep(processed, original_name)
+        _, processed, mapping_func, errors = prep(processed, original_name)
         mapping_chain.append(mapping_func)
-    mapping_chain.reverse()
-    return PreprocessorResult(original_text,
-                              processed,
-                              functools.partial(_apply_mappings, mappings=mapping_chain),
-                              [])
+        if errors:
+            chain = mapping_chain.copy()
+            chain.reverse()
+            add_source_locations(errors, functools.partial(_apply_mappings, mappings=chain))
+        error_list.extend(errors)
+        mapping_chain.reverse()
+    return PreprocessorResult(
+        original_text, processed,
+        functools.partial(_apply_mappings, mappings=mapping_chain.reverse()),
+        error_list)
 
 
 def chain_preprocessors(*preprocessors) -> PreprocessorFunc:
