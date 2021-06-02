@@ -123,7 +123,7 @@ def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocat
     position within a preprocessed source text and mappings should therefore
     be a list of reverse-mappings in reversed order.
     """
-    assert len(mappings) > 0
+    assert mappings
     filename, text = '', ''
     for mapping in mappings:
         filename, text, position = mapping(position)
@@ -153,7 +153,7 @@ def _apply_preprocessors(original_text: str, original_name: str,
         mapping_chain.reverse()
     return PreprocessorResult(
         original_text, processed,
-        functools.partial(_apply_mappings, mappings=mapping_chain.reverse()),
+        functools.partial(_apply_mappings, mappings=mapping_chain),
         error_list)
 
 
