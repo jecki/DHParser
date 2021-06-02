@@ -73,7 +73,7 @@ heading        = block
 #### block environments ####
 
 block_environment   = &_has_block_start known_environment | generic_block
-  _has_block_start  = `\begin{`
+  _has_block_start  = `\begin{` | `\[`
 known_environment   = itemize | enumerate | figure | tabular | quotation
                     | verbatim | math_block
 math_block          = equation | eqnarray | displaymath
@@ -189,7 +189,8 @@ no_command     = "\begin{" | "\end" | BACKSLASH structural
 blockcmd       = BACKSLASH ( ( "begin{" | "end{" )
                              ( "enumerate" | "itemize" | "figure" | "quote"
                              | "quotation" | "tabular") "}"
-                           | structural | begin_generic_block | end_generic_block )
+                           | structural | begin_generic_block | end_generic_block
+                           | `[` | `]`)
 
 structural     = "subsection" | "section" | "chapter" | "subsubsection"
                | "paragraph" | "subparagraph" | "item"
