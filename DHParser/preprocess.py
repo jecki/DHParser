@@ -144,13 +144,16 @@ def _apply_preprocessors(original_text: str, original_name: str,
     error_list = []
     for prep in preprocessors:
         _, processed, mapping_func, errors = prep(processed, original_name)
-        mapping_chain.append(mapping_func)
         if errors:
-            chain = mapping_chain.copy()
-            chain.reverse()
+            if mapping_chain:
+                chain = mapping_chain.copy()
+                chain.reverse()
+            else:
+                chain = [gen_neutral_srcmap_func(original_text, original_name)]
             add_source_locations(errors, functools.partial(_apply_mappings, mappings=chain))
+        mapping_chain.append(mapping_func)
         error_list.extend(errors)
-        mapping_chain.reverse()
+    mapping_chain.reverse()
     return PreprocessorResult(
         original_text, processed,
         functools.partial(_apply_mappings, mappings=mapping_chain),
