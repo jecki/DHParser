@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "70018a136d3bf709bb910b5f582c0c0a"
+    source_hash__ = "275dbadc65a7305df9d8dbec9752b95b"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|_has_block_start$|block_environment$|known_environment$|text_element$|_block_math$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$|_dmath_long_form$|_dmath_short_form$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -224,8 +224,8 @@ class LaTeXGrammar(Grammar):
     quotation = Alternative(Series(Series(Drop(Text("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Text("\\begin{quote}")), dwsp__), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
     figure = Series(Series(Drop(Text("\\begin{figure}")), dwsp__), sequence, Series(Drop(Text("\\end{figure}")), dwsp__), mandatory=2)
     hide_from_toc = Series(Text("*"), dwsp__)
-    enumerate = Series(Series(Drop(Text("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, command)), Series(Drop(Text("\\end{enumerate}")), dwsp__), mandatory=3)
-    itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, command)), Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=3)
+    enumerate = Series(Series(Drop(Text("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{enumerate}")), dwsp__), mandatory=3)
+    itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=3)
     end_generic_block = Series(Lookbehind(_LB), end_environment, LFF)
     blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Text("begin{")), dwsp__), Series(Drop(Text("end{")), dwsp__)), Alternative(Series(Drop(Text("enumerate")), dwsp__), Series(Drop(Text("itemize")), dwsp__), Series(Drop(Text("figure")), dwsp__), Series(Drop(Text("quote")), dwsp__), Series(Drop(Text("quotation")), dwsp__), Series(Drop(Text("tabular")), dwsp__)), Series(Drop(Text("}")), dwsp__)), structural, begin_generic_block, end_generic_block, Drop(Text("[")), Drop(Text("]"))))
     generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)

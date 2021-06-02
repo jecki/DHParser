@@ -81,8 +81,8 @@ generic_block       = begin_generic_block sequence §end_generic_block
 begin_generic_block = <-&_LB begin_environment LFF
 end_generic_block   = <-&_LB  end_environment LFF
 
-itemize             = "\begin{itemize}" [_WSPC] { item | command } §"\end{itemize}"
-enumerate           = "\begin{enumerate}" [_WSPC] { item | command } §"\end{enumerate}"
+itemize             = "\begin{itemize}" [_WSPC] { item | command ~ } §"\end{itemize}"
+enumerate           = "\begin{enumerate}" [_WSPC] { item | command ~ } §"\end{enumerate}"
 item                = "\item" sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
