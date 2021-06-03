@@ -11,9 +11,10 @@
                block_environment, known_environment, text_element, _block_math,
                line_element, inline_environment, known_inline_env, info_block,
                begin_inline_env, end_inline_env, command, known_command,
-               _dmath_long_form, _dmath_short_form, BACKSLASH
+               _dmath_long_form, _dmath_short_form, BACKSLASH, _structure_name,
+               _env_name
 @ drop       = strings, backticked, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB,
-               _has_block_start, BACKSLASH
+               _has_block_start, BACKSLASH, _structure_name, _env_name
 
 ########################################################################
 #
@@ -187,15 +188,16 @@ text           = TEXT { (S | special) TEXT }
   special      = `\-` | /\\/ esc_char
   esc_char     = `,`
 
-no_command     = "\begin{" | "\end" | BACKSLASH structural
-blockcmd       = BACKSLASH ( ( "begin{" | "end{" )
-                             ( "enumerate" | "itemize" | "figure" | "quote"
-                             | "quotation" | "tabular") "}"
-                           | structural | begin_generic_block | end_generic_block
-                           | `[` | `]`)
+no_command     = "\begin{" | "\end" | BACKSLASH _structure_name
+blockcmd       = BACKSLASH ( ( "begin{" | "end{" ) _env_name "}"
+                           | _structure_name | `[` | `]`)
+               # | generic_block
 
-structural     = "subsection" | "section" | "chapter" | "subsubsection"
-               | "paragraph" | "subparagraph" | "item"
+_env_name      = `enumerate` | `itemize` | `description` | `figure` | `quote`
+               | `quotation` | `tabular` | `displaymath` [`*`]
+               | `equation` [`*`] | `eqnarray` [`*`]
+_structure_name = `subsection` | `section` | `chapter` | `subsubsection`
+               | `paragraph` | `subparagraph` | `item`
 
 
 #######################################################################

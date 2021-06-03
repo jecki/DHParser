@@ -3354,8 +3354,11 @@ MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
 def last_value(text: Union[StringView, str], stack: List[str]) -> Optional[str]:
     """Matches `text` with the most recent value on the capture stack.
     This is the default case when retrieving captured substrings."""
-    value = stack[-1]
-    return value if text.startswith(value) else None
+    try:
+        value = stack[-1]
+        return value if text.startswith(value) else None
+    except IndexError:
+        return None
 
 
 def optional_last_value(text: Union[StringView, str], stack: List[str]) -> Optional[str]:

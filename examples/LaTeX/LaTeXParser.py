@@ -92,8 +92,8 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "ce945c3f15b38ca1fe73e3afa6dc162c"
-    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|_has_block_start$|block_environment$|known_environment$|text_element$|_block_math$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$|_dmath_long_form$|_dmath_short_form$|BACKSLASH$')
+    source_hash__ = "71f9dd5fe95f46e6eba71eb0b04367db"
+    disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|_has_block_start$|block_environment$|known_environment$|text_element$|_block_math$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$|_dmath_long_form$|_dmath_short_form$|BACKSLASH$|_structure_name$|_env_name$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'document': [(re.compile(r'\s*[\\]'), "Command not expected at this place: {1}")]}
@@ -153,9 +153,10 @@ class LaTeXGrammar(Grammar):
     parameters = Series(Alternative(association, flag), ZeroOrMore(Series(NegativeLookbehind(BACKSLASH), Series(Drop(Text(",")), dwsp__), Alternative(association, flag))), Option(WARN_Komma))
     sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(Alternative(_PARSEP, S)))))
     special = Alternative(Drop(Text("\\-")), Series(Drop(RegExp('\\\\')), esc_char))
-    structural = Alternative(Series(Drop(Text("subsection")), dwsp__), Series(Drop(Text("section")), dwsp__), Series(Drop(Text("chapter")), dwsp__), Series(Drop(Text("subsubsection")), dwsp__), Series(Drop(Text("paragraph")), dwsp__), Series(Drop(Text("subparagraph")), dwsp__), Series(Drop(Text("item")), dwsp__))
-    begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
-    no_command = Alternative(Series(Drop(Text("\\begin{")), dwsp__), Series(Drop(Text("\\end")), dwsp__), Series(BACKSLASH, structural))
+    _structure_name = Drop(Alternative(Drop(Text("subsection")), Drop(Text("section")), Drop(Text("chapter")), Drop(Text("subsubsection")), Drop(Text("paragraph")), Drop(Text("subparagraph")), Drop(Text("item"))))
+    _env_name = Drop(Alternative(Drop(Text("enumerate")), Drop(Text("itemize")), Drop(Text("description")), Drop(Text("figure")), Drop(Text("quote")), Drop(Text("quotation")), Drop(Text("tabular")), Drop(Series(Drop(Text("displaymath")), Drop(Option(Drop(Text("*")))))), Drop(Series(Drop(Text("equation")), Drop(Option(Drop(Text("*")))))), Drop(Series(Drop(Text("eqnarray")), Drop(Option(Drop(Text("*"))))))))
+    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Text("begin{")), dwsp__), Series(Drop(Text("end{")), dwsp__)), _env_name, Series(Drop(Text("}")), dwsp__)), _structure_name, Drop(Text("[")), Drop(Text("]"))))
+    no_command = Alternative(Series(Drop(Text("\\begin{")), dwsp__), Series(Drop(Text("\\end")), dwsp__), Series(BACKSLASH, _structure_name))
     text = Series(TEXT, ZeroOrMore(Series(Alternative(S, special), TEXT)))
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
@@ -191,7 +192,7 @@ class LaTeXGrammar(Grammar):
     _im_dollar = Series(Drop(Text("$")), _inline_math_text, Drop(Text("$")), mandatory=1)
     inline_math = Alternative(_im_dollar, _im_bracket)
     end_environment = Series(Drop(RegExp('\\\\end{')), Pop(NAME), Drop(RegExp('}')), mandatory=1)
-    begin_generic_block = Series(Lookbehind(_LB), begin_environment, LFF)
+    begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
     end_inline_env = Synonym(end_environment)
     begin_inline_env = Alternative(Series(NegativeLookbehind(_LB), begin_environment), Series(begin_environment, NegativeLookahead(LFF)))
     generic_inline_env = Series(begin_inline_env, dwsp__, paragraph, end_inline_env, mandatory=3)
@@ -229,7 +230,7 @@ class LaTeXGrammar(Grammar):
     enumerate = Series(Series(Drop(Text("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{enumerate}")), dwsp__), mandatory=3)
     itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=3)
     end_generic_block = Series(Lookbehind(_LB), end_environment, LFF)
-    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Text("begin{")), dwsp__), Series(Drop(Text("end{")), dwsp__)), Alternative(Series(Drop(Text("enumerate")), dwsp__), Series(Drop(Text("itemize")), dwsp__), Series(Drop(Text("figure")), dwsp__), Series(Drop(Text("quote")), dwsp__), Series(Drop(Text("quotation")), dwsp__), Series(Drop(Text("tabular")), dwsp__)), Series(Drop(Text("}")), dwsp__)), structural, begin_generic_block, end_generic_block, Drop(Text("[")), Drop(Text("]"))))
+    begin_generic_block = Series(Lookbehind(_LB), begin_environment, LFF)
     generic_block = Series(begin_generic_block, ZeroOrMore(Alternative(sequence, item)), end_generic_block, mandatory=2)
     math_block = Alternative(equation, eqnarray, displaymath)
     known_environment = Alternative(itemize, enumerate, description, figure, tabular, quotation, verbatim, math_block)
