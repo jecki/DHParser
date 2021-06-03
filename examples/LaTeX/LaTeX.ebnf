@@ -80,8 +80,8 @@ known_environment   = itemize | enumerate | description | figure | tabular | quo
                     | verbatim | math_block
 math_block          = equation | eqnarray | displaymath
 generic_block       = begin_generic_block { sequence | item } §end_generic_block
-begin_generic_block = <-&_LB begin_environment LFF
-end_generic_block   = <-&_LB  end_environment LFF
+begin_generic_block = <-&_LB begin_environment
+end_generic_block   = end_environment LFF
 
 itemize             = "\begin{itemize}" [_WSPC] { item | command~ } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [_WSPC] { item | command~ } §"\end{enumerate}"
@@ -129,7 +129,7 @@ line_element        = text | inline_environment | command | block
 
 inline_environment  = known_inline_env | generic_inline_env
 known_inline_env    = inline_math
-generic_inline_env  = begin_inline_env ~ paragraph §end_inline_env
+generic_inline_env  = begin_inline_env ~ paragraph !_PARSEP §end_inline_env
 begin_inline_env    = (<-!_LB begin_environment) | (begin_environment !LFF)
 end_inline_env      = end_environment
                       ## (<-!_LB end_environment)   | (end_environment !LFF)  # ambiguity with generic_block when EOF
@@ -188,10 +188,9 @@ text           = TEXT { (S | special) TEXT }
   special      = `\-` | /\\/ esc_char
   esc_char     = `,`
 
-no_command     = "\begin{" | "\end" | BACKSLASH _structure_name
+no_command     = "\begin{" | "\end{" | BACKSLASH _structure_name
 blockcmd       = BACKSLASH ( ( "begin{" | "end{" ) _env_name "}"
                            | _structure_name | `[` | `]`)
-               # | generic_block
 
 _env_name      = `enumerate` | `itemize` | `description` | `figure` | `quote`
                | `quotation` | `tabular` | `displaymath` [`*`]
