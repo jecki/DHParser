@@ -40,13 +40,13 @@ frontpages     = sequence
 #######################################################################
 
 Chapters       = { [_WSPC] Chapter }+
-Chapter        = `\chapter` [hide_from_toc] heading { sequence | Sections }
+Chapter        = `\chapter` [hide_from_toc] heading { sequence | Sections | Paragraphs }
 
 Sections       = { [_WSPC] Section }+
-Section        = `\section` [hide_from_toc] heading { sequence | SubSections }
+Section        = `\section` [hide_from_toc] heading { sequence | SubSections | Paragraphs }
 
 SubSections    = { [_WSPC] SubSection }+
-SubSection     = `\subsection` [hide_from_toc] heading { sequence | SubSubSections }
+SubSection     = `\subsection` [hide_from_toc] heading { sequence | SubSubSections | Paragraphs }
 
 SubSubSections = { [_WSPC] SubSubSection }+
 SubSubSection  = `\subsubsection` [hide_from_toc] heading { sequence | Paragraphs }
