@@ -11,9 +11,9 @@
                block_environment, known_environment, text_element, _block_math,
                line_element, inline_environment, known_inline_env, info_block,
                begin_inline_env, end_inline_env, command, known_command,
-               _dmath_long_form, _dmath_short_form
+               _dmath_long_form, _dmath_short_form, BACKSLASH
 @ drop       = strings, backticked, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB,
-               _has_block_start
+               _has_block_start, BACKSLASH
 
 ########################################################################
 #
@@ -24,6 +24,7 @@
 latexdoc       = preamble §document
 preamble       = { [_WSPC] command }+
 
+@ document_error = /\s*[\\]/, "Command not expected at this place: {1}"
 document       = [_WSPC] "\begin{document}"
                  §frontpages
                  (Chapters | Sections)
@@ -74,7 +75,7 @@ heading        = block
 
 block_environment   = &_has_block_start known_environment | generic_block
   _has_block_start  = `\begin{` | `\[`
-known_environment   = itemize | enumerate | figure | tabular | quotation
+known_environment   = itemize | enumerate | description | figure | tabular | quotation
                     | verbatim | math_block
 math_block          = equation | eqnarray | displaymath
 generic_block       = begin_generic_block { sequence | item } §end_generic_block
@@ -83,6 +84,7 @@ end_generic_block   = <-&_LB  end_environment LFF
 
 itemize             = "\begin{itemize}" [_WSPC] { item | command~ } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [_WSPC] { item | command~ } §"\end{enumerate}"
+description         = "\begin{description}" [_WSPC] {item | command~ } §"\end{description}"
 item                = "\item" [config] sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
@@ -95,7 +97,7 @@ displaymath         = _dmath_long_form | _dmath_short_form
   _dmath_short_form = "\[" § _block_math "\]"
 equation            = `\begin{equation` [no_numbering] "}" §_block_math `\end{equation` [`*`] "}"
 eqnarray            = `\begin{eqnarray` [no_numbering] "}" §_block_math `\end{eqnarray` [`*`] "}"
-  _block_math       = /(?:[^\\]*(?!\\end\{(?:eqnarray|equation|displaymath)\*?\}|[\\]\])[\\]*\s*)*/
+  _block_math       = /(?:[^\\]*[\\]?(?!end\{(?:eqnarray|equation|displaymath)\*?\}|\])\s*)*/
 no_numbering        = `*`
 
 tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
@@ -168,7 +170,7 @@ href                = "\href{" urlstring "}" block
   urlstring         = [protocol] { path } [target]
   protocol          = /\w+:\/\/(?!\*)/
   path              = PATH PATHSEP
-  target            = PATH { <-!/s?ptth/ COLON PATH } [ (HASH| <-!/s?ptth/ COLON) TAG ]
+  target            = PATH { <-!/s?ptth/ COLON PATH } [ ([BACKSLASH] HASH| <-!/s?ptth/ COLON) TAG ]
 
 
 #######################################################################
@@ -263,8 +265,8 @@ LINE       = /[^\\%$&\{\}\[\]\n]+/          # a line of text
 CHARS      = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 _LETTERS   = /\w+/
-LF         = NEW_LINE { COMMENT__ WHITESPACE__ }  # linefeed but not an empty line
-LFF        = NEW_LINE [ _WSPC ]             # at least one linefeed
+LF         = NEW_LINE { COMMENT__ WHITESPACE__ } | EOF # linefeed but not an empty line
+LFF        = NEW_LINE [ _WSPC ] | EOF       # at least one linefeed
 S          = &/[% \t\n]/ !_GAP WSP_RE__     # significant whitespace
 _PARSEP    = { WHITESPACE__ COMMENT__ } _GAP [_WSPC] # paragraph separator
 _WSPC      = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
