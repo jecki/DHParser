@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "275dbadc65a7305df9d8dbec9752b95b"
+    source_hash__ = "fb75ff80bf76bbf2190db323a27e6c9a"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|_has_block_start$|block_environment$|known_environment$|text_element$|_block_math$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$|_dmath_long_form$|_dmath_short_form$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -130,7 +130,7 @@ class LaTeXGrammar(Grammar):
     _NAME = RegExp('(?!\\d)\\w+\\*?')
     NAME = Capture(Synonym(_NAME))
     IDENTIFIER = Synonym(_NAME)
-    _QUALIFIED = Series(IDENTIFIER, ZeroOrMore(Series(Drop(RegExp('[:.-]')), IDENTIFIER)))
+    _QUALIFIED = Series(IDENTIFIER, ZeroOrMore(Series(NegativeLookbehind(BACKSLASH), Drop(RegExp('[:.-]')), IDENTIFIER)))
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
@@ -149,9 +149,8 @@ class LaTeXGrammar(Grammar):
     key = Synonym(_QUALIFIED)
     flag = Alternative(_QUALIFIED, magnitude)
     association = Series(key, dwsp__, Series(Drop(Text("=")), dwsp__), value, dwsp__)
-    parameters = Series(Alternative(association, flag), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(association, flag))), Option(WARN_Komma))
+    parameters = Series(Alternative(association, flag), ZeroOrMore(Series(NegativeLookbehind(BACKSLASH), Series(Drop(Text(",")), dwsp__), Alternative(association, flag))), Option(WARN_Komma))
     sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(Alternative(_PARSEP, S)))))
-    item = Series(Series(Drop(Text("\\item")), dwsp__), sequence)
     special = Alternative(Drop(Text("\\-")), Series(Drop(RegExp('\\\\')), esc_char))
     structural = Alternative(Series(Drop(Text("subsection")), dwsp__), Series(Drop(Text("section")), dwsp__), Series(Drop(Text("chapter")), dwsp__), Series(Drop(Text("subsubsection")), dwsp__), Series(Drop(Text("paragraph")), dwsp__), Series(Drop(Text("subparagraph")), dwsp__), Series(Drop(Text("item")), dwsp__))
     begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
@@ -159,6 +158,7 @@ class LaTeXGrammar(Grammar):
     text = Series(TEXT, ZeroOrMore(Series(Alternative(S, special), TEXT)))
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
+    item = Series(Series(Drop(Text("\\item")), dwsp__), Option(config), sequence)
     _block_content = ZeroOrMore(Series(Alternative(block_environment, text_element, paragraph), Option(Alternative(_PARSEP, S))))
     heading = Synonym(block)
     target = Series(PATH, ZeroOrMore(Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON, PATH)), Option(Series(Alternative(HASH, Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON)), TAG)))
@@ -228,7 +228,7 @@ class LaTeXGrammar(Grammar):
     itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=3)
     end_generic_block = Series(Lookbehind(_LB), end_environment, LFF)
     blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Text("begin{")), dwsp__), Series(Drop(Text("end{")), dwsp__)), Alternative(Series(Drop(Text("enumerate")), dwsp__), Series(Drop(Text("itemize")), dwsp__), Series(Drop(Text("figure")), dwsp__), Series(Drop(Text("quote")), dwsp__), Series(Drop(Text("quotation")), dwsp__), Series(Drop(Text("tabular")), dwsp__)), Series(Drop(Text("}")), dwsp__)), structural, begin_generic_block, end_generic_block, Drop(Text("[")), Drop(Text("]"))))
-    generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
+    generic_block = Series(begin_generic_block, ZeroOrMore(Alternative(sequence, item)), end_generic_block, mandatory=2)
     math_block = Alternative(equation, eqnarray, displaymath)
     known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim, math_block)
     _has_block_start = Drop(Alternative(Drop(Text("\\begin{")), Drop(Text("\\["))))
