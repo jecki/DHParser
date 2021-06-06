@@ -81,12 +81,13 @@ known_environment   = itemize | enumerate | description | figure | tabular | quo
 math_block          = equation | eqnarray | displaymath
 generic_block       = begin_generic_block { sequence | item } §end_generic_block
 begin_generic_block = <-&_LB begin_environment
-end_generic_block   = end_environment LFF
+@ end_generic_block_error = '', "A block environment must be followed by a linefeed, not by: {1}"
+end_generic_block   = end_environment § LFF
 
 itemize             = "\begin{itemize}" [_WSPC] { item | command~ } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [_WSPC] { item | command~ } §"\end{enumerate}"
 description         = "\begin{description}" [_WSPC] {item | command~ } §"\end{description}"
-item                = "\item" [config] sequence
+item                = "\item" [config] § sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
 quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
@@ -101,7 +102,7 @@ eqnarray            = `\begin{eqnarray` [no_numbering] "}" §_block_math `\end{e
   _block_math       = /(?:[^\\]*[\\]?(?!end\{(?:eqnarray|equation|displaymath)\*?\}|\])\s*)*/
 no_numbering        = `*`
 
-tabular             = "\begin{tabular}" tabular_config { tabular_row } §"\end{tabular}"
+tabular             = "\begin{tabular}" tabular_config { tabular_row | _WSPC } §"\end{tabular}"
 tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
                       ("\\" ( hline | { cline } ) [_PARSEP] | &`\end{tabular}`)
 tabular_cell        = raisebox [S|_PARSEP] | { line_element [S|_PARSEP] }
@@ -109,7 +110,7 @@ raisebox            = "\raisebox" rb_offset [rb_up] [rb_down] block
   rb_offset         = "{" number UNIT ~ "}"
   rb_up             = "[" number UNIT ~ "]"
   rb_down           = "[" number UNIT ~ "]"
-tabular_config      = "{" { cfg_celltype [cfg_unit] | cfg_separator }+ §"}"
+tabular_config      = "{" { cfg_celltype [cfg_unit] | cfg_separator | / +/ }+ §"}"
   cfg_celltype      = /[lcrp]/
   cfg_unit          = `{` number UNIT `}`
   cfg_separator     = `|`

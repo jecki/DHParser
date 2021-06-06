@@ -92,11 +92,12 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "3391c74854429fe6f2cd432495c1b375"
+    source_hash__ = "aac7265843f5ff50f9b4da7eed980233"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|_has_block_start$|block_environment$|known_environment$|text_element$|_block_math$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$|_dmath_long_form$|_dmath_short_form$|BACKSLASH$|_structure_name$|_env_name$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'document': [(re.compile(r'\s*[\\]'), "Command not expected at this place: {1}")]}
+    error_messages__ = {'document': [(re.compile(r'\s*[\\]'), "Command not expected at this place: {1}")],
+                        'end_generic_block': [(re.compile(r'(?=)'), "A block environment must be followed by a linefeed, not by: {1}")]}
     COMMENT__ = r'%.*'
     comment_rx__ = re.compile(COMMENT__)
     comment__ = RegExp(comment_rx__)
@@ -160,7 +161,7 @@ class LaTeXGrammar(Grammar):
     text = Series(TEXT, ZeroOrMore(Series(Alternative(S, special), TEXT)))
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
-    item = Series(Series(Drop(Text("\\item")), dwsp__), Option(config), sequence)
+    item = Series(Series(Drop(Text("\\item")), dwsp__), Option(config), sequence, mandatory=2)
     _block_content = ZeroOrMore(Series(Alternative(block_environment, text_element, paragraph), Option(Alternative(_PARSEP, S))))
     heading = Synonym(block)
     target = Series(PATH, ZeroOrMore(Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON, PATH)), Option(Series(Alternative(Series(Option(BACKSLASH), HASH), Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), COLON)), TAG)))
@@ -198,7 +199,7 @@ class LaTeXGrammar(Grammar):
     generic_inline_env = Series(begin_inline_env, dwsp__, paragraph, NegativeLookahead(_PARSEP), end_inline_env, mandatory=4)
     known_inline_env = Synonym(inline_math)
     inline_environment = Alternative(known_inline_env, generic_inline_env)
-    tabular_config = Series(Series(Drop(Text("{")), dwsp__), OneOrMore(Alternative(Series(cfg_celltype, Option(cfg_unit)), cfg_separator)), Series(Drop(Text("}")), dwsp__), mandatory=2)
+    tabular_config = Series(Series(Drop(Text("{")), dwsp__), OneOrMore(Alternative(Series(cfg_celltype, Option(cfg_unit)), cfg_separator, Drop(RegExp(' +')))), Series(Drop(Text("}")), dwsp__), mandatory=2)
     SubParagraph = Series(Series(Drop(Text("\\subparagraph")), dwsp__), heading, Option(sequence))
     SubParagraphs = OneOrMore(Series(Option(_WSPC), SubParagraph))
     Paragraph = Series(Series(Drop(Text("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
@@ -214,7 +215,7 @@ class LaTeXGrammar(Grammar):
     raisebox = Series(Series(Drop(Text("\\raisebox")), dwsp__), rb_offset, Option(rb_up), Option(rb_down), block)
     tabular_cell = Alternative(Series(raisebox, Option(Alternative(S, _PARSEP))), ZeroOrMore(Series(line_element, Option(Alternative(S, _PARSEP)))))
     tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(Drop(Text("&")), dwsp__), Alternative(multicolumn, tabular_cell))), Alternative(Series(Series(Drop(Text("\\\\")), dwsp__), Alternative(hline, ZeroOrMore(cline)), Option(_PARSEP)), Lookahead(Drop(Text("\\end{tabular}")))))
-    tabular = Series(Series(Drop(Text("\\begin{tabular}")), dwsp__), tabular_config, ZeroOrMore(tabular_row), Series(Drop(Text("\\end{tabular}")), dwsp__), mandatory=3)
+    tabular = Series(Series(Drop(Text("\\begin{tabular}")), dwsp__), tabular_config, ZeroOrMore(Alternative(tabular_row, _WSPC)), Series(Drop(Text("\\end{tabular}")), dwsp__), mandatory=3)
     no_numbering = Text("*")
     _block_math = RegExp('(?:[^\\\\]*[\\\\]?(?!end\\{(?:eqnarray|equation|displaymath)\\*?\\}|\\])\\s*)*')
     eqnarray = Series(Drop(Text("\\begin{eqnarray")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), _block_math, Drop(Text("\\end{eqnarray")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__), mandatory=3)
@@ -229,7 +230,7 @@ class LaTeXGrammar(Grammar):
     description = Series(Series(Drop(Text("\\begin{description}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{description}")), dwsp__), mandatory=3)
     enumerate = Series(Series(Drop(Text("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{enumerate}")), dwsp__), mandatory=3)
     itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(command, dwsp__))), Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=3)
-    end_generic_block = Series(end_environment, LFF)
+    end_generic_block = Series(end_environment, LFF, mandatory=1)
     begin_generic_block = Series(Lookbehind(_LB), begin_environment)
     generic_block = Series(begin_generic_block, ZeroOrMore(Alternative(sequence, item)), end_generic_block, mandatory=2)
     math_block = Alternative(equation, eqnarray, displaymath)
