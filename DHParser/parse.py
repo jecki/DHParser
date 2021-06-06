@@ -496,7 +496,7 @@ class Parser:
             memoization_state = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
 
-            grammar.farthest_fail__ = 0
+            grammar.farthest_failure__ = 0
 
             # now, the actual parser call!
             try:
