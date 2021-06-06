@@ -92,12 +92,13 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     text_element = Forward()
-    source_hash__ = "aac7265843f5ff50f9b4da7eed980233"
+    source_hash__ = "b9c7ffd6c8441b545f0a7b324eaf1583"
     disposable__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|_LETTERS$|_NAME$|INTEGER$|FRAC$|_QUALIFIED$|TEXT_NOPAR$|TEXT$|_block_content$|PATH$|PATHSEP$|HASH$|COLON$|TAG$|_inline_math_text$|_has_block_start$|block_environment$|known_environment$|text_element$|_block_math$|line_element$|inline_environment$|known_inline_env$|info_block$|begin_inline_env$|end_inline_env$|command$|known_command$|_dmath_long_form$|_dmath_short_form$|BACKSLASH$|_structure_name$|_env_name$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'document': [(re.compile(r'\s*[\\]'), "Command not expected at this place: {1}")],
-                        'end_generic_block': [(re.compile(r'(?=)'), "A block environment must be followed by a linefeed, not by: {1}")]}
+                        'end_generic_block': [(re.compile(r'(?=)'), "A block environment must be followed by a linefeed, not by: {1}")],
+                        'item': [(re.compile(r'(?=)'), '\\item without proper content, found: {1}')]}
     COMMENT__ = r'%.*'
     comment_rx__ = re.compile(COMMENT__)
     comment__ = RegExp(comment_rx__)
@@ -175,7 +176,8 @@ class LaTeXGrammar(Grammar):
     hypersetup = Series(Series(Drop(Text("\\hypersetup")), dwsp__), param_block)
     pdfinfo = Series(Series(Drop(Text("\\pdfinfo")), dwsp__), info_block)
     documentclass = Series(Series(Drop(Text("\\documentclass")), dwsp__), Option(config), block)
-    cline = Series(Series(Drop(Text("\\cline{")), dwsp__), INTEGER, Series(Drop(Text("-")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__))
+    column_nr = Synonym(INTEGER)
+    cline = Series(Series(Drop(Text("\\cline{")), dwsp__), column_nr, Series(Drop(Text("-")), dwsp__), column_nr, Series(Drop(Text("}")), dwsp__))
     hline = Series(Text("\\hline"), dwsp__)
     cfg_celltype = RegExp('[lcrp]')
     caption = Series(Series(Drop(Text("\\caption")), dwsp__), block)
@@ -205,7 +207,7 @@ class LaTeXGrammar(Grammar):
     Paragraph = Series(Series(Drop(Text("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
     frontpages = Synonym(sequence)
     TBCFG_VALUE = Series(RegExp('[lcr|]+'), dwsp__)
-    multicolumn = Series(Series(Drop(Text("\\multicolumn")), dwsp__), Series(Drop(Text("{")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__), tabular_config, block_of_paragraphs)
+    multicolumn = Series(Series(Drop(Text("\\multicolumn")), dwsp__), Series(Drop(Text("{")), dwsp__), column_nr, Series(Drop(Text("}")), dwsp__), tabular_config, block_of_paragraphs)
     known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo, hypersetup, label, ref, href, url, item)
     command = Alternative(known_command, text_command, assignment, generic_command)
     line_element = Alternative(text, inline_environment, command, block)
