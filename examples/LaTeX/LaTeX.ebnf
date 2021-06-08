@@ -84,9 +84,10 @@ begin_generic_block = <-&_LB begin_environment
 @ end_generic_block_error = '', "A block environment must be followed by a linefeed, not by: {1}"
 end_generic_block   = end_environment § (LFF | ~ &`}`)
 
-itemize             = "\begin{itemize}" [_WSPC] { item | _command~ } §"\end{itemize}"
-enumerate           = "\begin{enumerate}" [_WSPC] { item | _command~ } §"\end{enumerate}"
-description         = "\begin{description}" [_WSPC] {item | _command~ } §"\end{description}"
+itemize             = "\begin{itemize}" _itemsequence §"\end{itemize}"
+enumerate           = "\begin{enumerate}" _itemsequence §"\end{enumerate}"
+description         = "\begin{description}" _itemsequence §"\end{description}"
+  _itemsequence     = [_WSPC] { (item | _command) [_WSPC] }
 @item_error         = '', '\item without proper content, found: {1}'
 item                = "\item" [config] § sequence
 
@@ -171,9 +172,9 @@ url                 = "\url{" urlstring "}"
 href                = "\href{" urlstring "}" block
   urlstring         = [protocol] { path } [target]
   protocol          = /\w+:\/\/(?!\*)/
-  path              = _PATH _PATHSEP
-  target            = _PATH { <-!/s?ptth/ _COLON _PATH } [ ([_BACKSLASH] _HASH| <-!/s?ptth/ _COLON) _TAG ]
-
+  path              = _pth _PATHSEP
+  target            = _pth { <-!/s?ptth/ _COLON _pth } [ ([_BACKSLASH] _HASH| <-!/s?ptth/ _COLON) _TAG ]
+  _pth              = { _PATH | ESCAPED }+
 
 #######################################################################
 #
@@ -243,8 +244,8 @@ WARN_Komma = ","
 
 CMDNAME    = /\\@?(?:(?![\d_])\w)+/~
 TXTCOMMAND = /\\text\w+/
-ESCAPED    = /\\[%$&_\/{} \n]/
-UMLAUT     = /\\"[AOUaou]/
+ESCAPED    = /\\(?:(?:[%$&_\/{} \n])|(?:~\{\s*\}))/
+UMLAUT     = /\\(?:(?:"[AOUaou])|(?:'[aeiou])|(?:[\^][aeiou]))/
 QUOTEMARK  = /``?|''?/
 SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
