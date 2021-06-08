@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "aec3fcc083e8846c3fd9a7a4d7e500dd"
+    source_hash__ = "ddedf368f51da04183f8af7023e51cd6"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -163,7 +163,7 @@ class LaTeXGrammar(Grammar):
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL, block))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
     item = Series(Series(Drop(Text("\\item")), dwsp__), Option(config), sequence, mandatory=2)
-    _block_content = ZeroOrMore(Series(Alternative(_block_environment, _text_element, paragraph), Option(Alternative(_PARSEP, S))))
+    _block_content = Series(Option(Alternative(_PARSEP, S)), ZeroOrMore(Series(Alternative(_block_environment, _text_element, paragraph), Option(Alternative(_PARSEP, S)))))
     heading = Synonym(block)
     _pth = OneOrMore(Alternative(_PATH, ESCAPED))
     target = Series(_pth, ZeroOrMore(Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), _COLON, _pth)), Option(Series(Alternative(Series(Option(_BACKSLASH), _HASH), Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), _COLON)), _TAG)))

@@ -183,7 +183,7 @@ href                = "\href{" urlstring "}" block
 #######################################################################
 
 block          = "{" _block_content §`}`
-_block_content = { (_block_environment | _text_element | paragraph) [_PARSEP|S] }
+_block_content = [_PARSEP|S] { (_block_environment | _text_element | paragraph) [_PARSEP|S] }
 # text           = {CHARS|special}+ { (S {CHARS|special}+ }
 # text           = {LINE|special}+ { (S {LINE|special}+ }
 text           = {_TEXT|special}+ { S  {_TEXT|special}+ }
