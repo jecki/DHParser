@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "b2f38757fb6b6700dc316fb5d4a1284d"
+    source_hash__ = "aec3fcc083e8846c3fd9a7a4d7e500dd"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -116,9 +116,9 @@ class LaTeXGrammar(Grammar):
     S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), NegativeLookahead(_GAP), wsp__)
     LFF = Alternative(Series(NEW_LINE, Option(_WSPC)), EOF)
     _LETTERS = RegExp('\\w+')
-    CHARS = RegExp("[^\\\\%$&\\{\\}\\[\\]\\s\\n'`]+")
+    CHARS = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n\'`"]+')
     _TEXT_NOPAR = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\(\\)\\n]+(?:\\n(?![ \\t]*\\n))?)+')
-    _TEXT = RegExp("(?:[^\\\\%$&\\{\\}\\[\\]\\n'`]+(?:\\n(?![ \\t]*\\n))?)+")
+    _TEXT = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\n\'`"]+(?:\\n(?![ \\t]*\\n))?)+')
     _TAG = RegExp('[\\w=?.:\\-%&\\[\\] /]+')
     _COLON = Text(":")
     _HASH = Text("#")
@@ -134,7 +134,7 @@ class LaTeXGrammar(Grammar):
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
-    QUOTEMARK = RegExp("``?|''?")
+    QUOTEMARK = RegExp('``?|\'\'?|"`?|"\'?')
     UMLAUT = RegExp('\\\\(?:(?:"[AOUaou])|(?:\'[aeiou])|(?:[\\^][aeiou]))')
     ESCAPED = RegExp('\\\\(?:(?:[%$&_/{} \\n])|(?:~\\{\\s*\\}))')
     TXTCOMMAND = RegExp('\\\\text\\w+')
@@ -336,7 +336,7 @@ def replace_Umlaut(context: List[Node]):
     node.result = umlaute[node.content]
 
 def replace_quotationmark(context: List[Node]):
-    quotationmarks = { '``': '“', "''": '”'}
+    quotationmarks = { '``': '“', "''": '”', '"`': '„', '"' + "'": '”' }
     node = context[-1]
     content = node.content
     node.result = quotationmarks.get(content, content)
@@ -419,7 +419,7 @@ LaTeX_AST_transformation_table = {
     "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
     "ESCAPED": [apply_ifelse(transform_content(lambda result: result[1:]),
                              replace_content_with('~'),
-                             lambda ctx: '~' in ctx[-1].content)],
+                             lambda ctx: '~' not in ctx[-1].content)],
     "UMLAUT": replace_Umlaut,
     "QUOTEMARK": replace_quotationmark,
     "BRACKETS": [],

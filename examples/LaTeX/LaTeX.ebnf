@@ -246,7 +246,7 @@ CMDNAME    = /\\@?(?:(?![\d_])\w)+/~
 TXTCOMMAND = /\\text\w+/
 ESCAPED    = /\\(?:(?:[%$&_\/{} \n])|(?:~\{\s*\}))/
 UMLAUT     = /\\(?:(?:"[AOUaou])|(?:'[aeiou])|(?:[\^][aeiou]))/
-QUOTEMARK  = /``?|''?/
+QUOTEMARK  = /``?|''?|"`?|"'?/
 SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 LINEFEED   = /[\\][\\]/
@@ -265,10 +265,10 @@ _HASH      = `#`
 _COLON     = `:`
 _TAG       = /[\w=?.:\-%&\[\] \/]+/
 
-_TEXT      = /(?:[^\\%$&\{\}\[\]\n'`]+(?:\n(?![ \t]*\n))?)+/
+_TEXT      = /(?:[^\\%$&\{\}\[\]\n'`"]+(?:\n(?![ \t]*\n))?)+/
 _TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parnetheses
-# LINE       = /[^\\%$&\{\}\[\]\n'`]+/          # a line of text
-CHARS      = /[^\\%$&\{\}\[\]\s\n'`]+/        # some piece of text excluding whitespace,
+# LINE       = /[^\\%$&\{\}\[\]\n'`"]+/          # a line of text
+CHARS      = /[^\\%$&\{\}\[\]\s\n'`"]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 _LETTERS   = /\w+/
 # LF         = NEW_LINE { COMMENT__ WHITESPACE__ } | EOF # linefeed but not an empty line
