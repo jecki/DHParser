@@ -1472,12 +1472,15 @@ class Grammar:
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
-                        error_msg = "Parser stopped before end" \
-                            + (("! trying to recover"
+                        i = self.farthest_failure__ or tail_pos(stitches)
+                        fs = self.document__[i:i + 10]
+                        if i + 10 < len(self.document__) - 1:  fs += ' ...'
+                        error_msg = "Parser stopped before end, at:  " + fs  \
+                            + (("  Trying to recover"
                                 + (" but stopping history recording at this point."
                                    if self.history_tracking__ else "..."))
                                 if len(stitches) < self.max_parser_dropouts__
-                                else " too often!" if self.max_parser_dropouts__ > 1 else "!"
+                                else " too often!" if self.max_parser_dropouts__ > 1 else " "
                                      + " Terminating parser.")
                         error_code = PARSER_STOPPED_BEFORE_END
                 stitch = Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches))

@@ -161,31 +161,6 @@ def gen_id() -> int:
     return next_id
 
 
-# def thread_local_singleton_factory(a_class,
-#                                    name: str = "", *,
-#                                    id: int = -1) -> Callable[[], Callable]:
-#     """
-#     Generates a singleton-factory that returns one and
-#     the same instance of `class_or_factory` for one and the
-#     same thread, but dfferent instances for different threads.
-#     TO BAD: closures cannot be pickled :-(
-#     """
-#
-#     singleton_name = "{NAME}_{ID:08d}_singleton".format(
-#         NAME =name or a_class.__name__, ID = id if id >= 0 else gen_id())
-#
-#     def factory() -> Any:
-#         THREAD_LOCALS = access_thread_locals()
-#         try:
-#             singleton = getattr(THREAD_LOCALS, singleton_name)
-#         except AttributeError:
-#             setattr(THREAD_LOCALS, singleton_name, a_class())
-#             singleton = getattr(THREAD_LOCALS, singleton_name)
-#         return singleton
-#
-#     return factory
-
-
 class ThreadLocalSingletonFactory:
     """
     Generates a singleton-factory that returns one and

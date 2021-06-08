@@ -82,7 +82,7 @@ math_block          = equation | eqnarray | displaymath
 generic_block       = begin_generic_block { sequence | item } §end_generic_block
 begin_generic_block = <-&_LB begin_environment
 @ end_generic_block_error = '', "A block environment must be followed by a linefeed, not by: {1}"
-end_generic_block   = end_environment § LFF
+end_generic_block   = end_environment § (LFF | ~ &`}`)
 
 itemize             = "\begin{itemize}" [_WSPC] { item | _command~ } §"\end{itemize}"
 enumerate           = "\begin{enumerate}" [_WSPC] { item | _command~ } §"\end{enumerate}"
@@ -114,7 +114,7 @@ raisebox            = "\raisebox" rb_offset [rb_up] [rb_down] block
 tabular_config      = "{" { cfg_celltype [cfg_unit] | cfg_separator | / +/ }+ §"}"
   cfg_celltype      = /[lcrp]/
   cfg_unit          = `{` number UNIT `}`
-  cfg_separator     = `|`
+  cfg_separator     = `|` | `!` block
 
 #### paragraphs and sequences of paragraphs ####
 
@@ -150,7 +150,7 @@ _known_command      = citet | citep | footnote | includegraphics | caption
                     | hypersetup | label | ref | href | url | item
 text_command        = TXTCOMMAND | ESCAPED | BRACKETS
 assignment          = !no_command CMDNAME "=" (number [UNIT] | block | CHARS)
-generic_command     = !no_command CMDNAME [[ ~ config ] { ~ block }+ ]
+generic_command     = !no_command CMDNAME { ~ (config | block) }
                     | `{` CMDNAME _block_content §`}`
 
 citet               = "\citet" [config] block
@@ -187,7 +187,8 @@ _block_content = { (_block_environment | _text_element | paragraph) [_PARSEP|S] 
 # text           = {LINE|special}+ { (S {LINE|special}+ }
 text           = {_TEXT|special}+ { S  {_TEXT|special}+ }
   special      = `\-` | /\\/ esc_char   # reserved for characters that may appear in
-  esc_char     = `,`                    # in the middle of a word but to not delimit words
+               | UMLAUT | QUOTEMARK
+  esc_char     = `,`                    # in the middle of a word but do not delimit words
 
 no_command     = "\begin{" | "\end{" | _BACKSLASH _structure_name &`{`
 blockcmd       = _BACKSLASH ( ( "begin{" | "end{" ) _env_name "}"
@@ -243,6 +244,8 @@ WARN_Komma = ","
 CMDNAME    = /\\@?(?:(?![\d_])\w)+/~
 TXTCOMMAND = /\\text\w+/
 ESCAPED    = /\\[%$&_\/{} \n]/
+UMLAUT     = /\\"[AOUaou]/
+QUOTEMARK  = /``?|''?/
 SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
 LINEFEED   = /[\\][\\]/
@@ -261,10 +264,10 @@ _HASH      = `#`
 _COLON     = `:`
 _TAG       = /[\w=?.:\-%&\[\] \/]+/
 
-_TEXT      = /(?:[^\\%$&\{\}\[\]\n]+(?:\n(?![ \t]*\n))?)+/
+_TEXT      = /(?:[^\\%$&\{\}\[\]\n'`]+(?:\n(?![ \t]*\n))?)+/
 _TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parnetheses
-# LINE       = /[^\\%$&\{\}\[\]\n]+/          # a line of text
-CHARS      = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
+# LINE       = /[^\\%$&\{\}\[\]\n'`]+/          # a line of text
+CHARS      = /[^\\%$&\{\}\[\]\s\n'`]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 _LETTERS   = /\w+/
 # LF         = NEW_LINE { COMMENT__ WHITESPACE__ } | EOF # linefeed but not an empty line
