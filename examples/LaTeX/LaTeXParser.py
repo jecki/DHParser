@@ -50,7 +50,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser, \
     PreprocessorResult, preprocess_includes, gen_find_include_func, flatten_sxpr, \
-    gen_neutral_srcmap_func, make_preprocessor, chain_preprocessors
+    gen_neutral_srcmap_func, make_preprocessor, chain_preprocessors, apply_ifelse
 
 
 #######################################################################
@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "c92a6c6c381d676c5c1d70bf3030a28b"
+    source_hash__ = "eece732fc6ff8bbbb864ad104c91627d"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -116,9 +116,9 @@ class LaTeXGrammar(Grammar):
     S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), NegativeLookahead(_GAP), wsp__)
     LFF = Alternative(Series(NEW_LINE, Option(_WSPC)), EOF)
     _LETTERS = RegExp('\\w+')
-    CHARS = RegExp("[^\\\\%$&\\{\\}\\[\\]\\s\\n'`]+")
+    CHARS = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n\'`"]+')
     _TEXT_NOPAR = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\(\\)\\n]+(?:\\n(?![ \\t]*\\n))?)+')
-    _TEXT = RegExp("(?:[^\\\\%$&\\{\\}\\[\\]\\n'`]+(?:\\n(?![ \\t]*\\n))?)+")
+    _TEXT = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\n\'`"]+(?:\\n(?![ \\t]*\\n))?)+')
     _TAG = RegExp('[\\w=?.:\\-%&\\[\\] /]+')
     _COLON = Text(":")
     _HASH = Text("#")
@@ -134,9 +134,9 @@ class LaTeXGrammar(Grammar):
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
-    QUOTEMARK = RegExp("``?|''?")
-    UMLAUT = RegExp('\\\\"[AOUaou]')
-    ESCAPED = RegExp('\\\\[%$&_/{} \\n]')
+    QUOTEMARK = RegExp('"[`\']?|``?|\'\'?')
+    UMLAUT = RegExp('\\\\(?:(?:"[AOUaou])|(?:\'[aeiou])|(?:[\\^][aeiou]))')
+    ESCAPED = RegExp('\\\\(?:(?:[%$&_/{} \\n])|(?:~\\{\\s*\\}))')
     TXTCOMMAND = RegExp('\\\\text\\w+')
     CMDNAME = Series(RegExp('\\\\@?(?:(?![\\d_])\\w)+'), dwsp__)
     WARN_Komma = Series(Text(","), dwsp__)
@@ -163,10 +163,11 @@ class LaTeXGrammar(Grammar):
     cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL, block))
     config = Series(Series(Drop(Text("[")), dwsp__), Alternative(Series(parameters, Lookahead(Series(Drop(Text("]")), dwsp__))), cfg_text), Series(Drop(Text("]")), dwsp__), mandatory=1)
     item = Series(Series(Drop(Text("\\item")), dwsp__), Option(config), sequence, mandatory=2)
-    _block_content = ZeroOrMore(Series(Alternative(_block_environment, _text_element, paragraph), Option(Alternative(_PARSEP, S))))
+    _block_content = Series(Option(Alternative(_PARSEP, S)), ZeroOrMore(Series(Alternative(_block_environment, _text_element, paragraph), Option(Alternative(_PARSEP, S)))))
     heading = Synonym(block)
-    target = Series(_PATH, ZeroOrMore(Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), _COLON, _PATH)), Option(Series(Alternative(Series(Option(_BACKSLASH), _HASH), Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), _COLON)), _TAG)))
-    path = Series(_PATH, _PATHSEP)
+    _pth = OneOrMore(Alternative(_PATH, ESCAPED))
+    target = Series(_pth, ZeroOrMore(Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), _COLON, _pth)), Option(Series(Alternative(Series(Option(_BACKSLASH), _HASH), Series(NegativeLookbehind(Drop(RegExp('s?ptth'))), _COLON)), _TAG)))
+    path = Series(_pth, _PATHSEP)
     protocol = RegExp('\\w+://(?!\\*)')
     urlstring = Series(Option(protocol), ZeroOrMore(path), Option(target))
     href = Series(Series(Drop(Text("\\href{")), dwsp__), urlstring, Series(Drop(Text("}")), dwsp__), block)
@@ -228,9 +229,10 @@ class LaTeXGrammar(Grammar):
     quotation = Alternative(Series(Series(Drop(Text("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Text("\\begin{quote}")), dwsp__), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
     figure = Series(Series(Drop(Text("\\begin{figure}")), dwsp__), sequence, Series(Drop(Text("\\end{figure}")), dwsp__), mandatory=2)
     Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
-    description = Series(Series(Drop(Text("\\begin{description}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(_command, dwsp__))), Series(Drop(Text("\\end{description}")), dwsp__), mandatory=3)
-    enumerate = Series(Series(Drop(Text("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(_command, dwsp__))), Series(Drop(Text("\\end{enumerate}")), dwsp__), mandatory=3)
-    itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(Alternative(item, Series(_command, dwsp__))), Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=3)
+    _itemsequence = Series(Option(_WSPC), ZeroOrMore(Series(Alternative(item, _command), Option(_WSPC))))
+    description = Series(Series(Drop(Text("\\begin{description}")), dwsp__), _itemsequence, Series(Drop(Text("\\end{description}")), dwsp__), mandatory=2)
+    enumerate = Series(Series(Drop(Text("\\begin{enumerate}")), dwsp__), _itemsequence, Series(Drop(Text("\\end{enumerate}")), dwsp__), mandatory=2)
+    itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), _itemsequence, Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=2)
     end_generic_block = Series(end_environment, Alternative(LFF, Series(dwsp__, Lookahead(Drop(Text("}"))))), mandatory=1)
     begin_generic_block = Series(Lookbehind(_LB), begin_environment)
     generic_block = Series(begin_generic_block, ZeroOrMore(Alternative(sequence, item)), end_generic_block, mandatory=2)
@@ -327,12 +329,14 @@ def transform_generic_block(context: List[Node]):
 
 def replace_Umlaut(context: List[Node]):
     umlaute = { '\\"a': 'ä', '\\"o': 'ö', '\\"u': 'ü',
-                '\\"A': 'Ä', '\\"Ö': 'Ö', '\\"U': 'Ü' }
+                '\\"A': 'Ä', '\\"Ö': 'Ö', '\\"U': 'Ü',
+                "\\'a": 'á', "\\'e": 'é', "\\'i": 'í', "\\'o": 'ó', "\\'u": 'ú',
+                "\\^a": 'â', "\\^e": 'ê', "\\^i": 'î', "\\^o": 'ô', "\\^u": 'û'}
     node = context[-1]
     node.result = umlaute[node.content]
 
 def replace_quotationmark(context: List[Node]):
-    quotationmarks = { '``': '“', "''": '”'}
+    quotationmarks = { '``': '“', "''": '”', '"`': '„', '"' + "'": '”' }
     node = context[-1]
     content = node.content
     node.result = quotationmarks.get(content, content)
@@ -407,12 +411,15 @@ LaTeX_AST_transformation_table = {
     "block": [flatten, reduce_single_child],
     "flag": [reduce_single_child],
     "text": collapse,
+    "path": collapse,
     "no_command, blockcmd": [],
     "_structure_name": [],
     "CMDNAME": [remove_whitespace, reduce_single_child],
     "TXTCOMMAND": [remove_whitespace, reduce_single_child],
     "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
-    "ESCAPED": [transform_content(lambda node: str(node)[1:])],
+    "ESCAPED": [apply_ifelse(transform_content(lambda result: result[1:]),
+                             replace_content_with('~'),
+                             lambda ctx: '~' not in ctx[-1].content)],
     "UMLAUT": replace_Umlaut,
     "QUOTEMARK": replace_quotationmark,
     "BRACKETS": [],
