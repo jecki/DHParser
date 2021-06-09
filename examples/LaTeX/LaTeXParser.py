@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "ddedf368f51da04183f8af7023e51cd6"
+    source_hash__ = "eece732fc6ff8bbbb864ad104c91627d"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -134,7 +134,7 @@ class LaTeXGrammar(Grammar):
     LINEFEED = RegExp('[\\\\][\\\\]')
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
-    QUOTEMARK = RegExp('``?|\'\'?|"`?|"\'?')
+    QUOTEMARK = RegExp('"[`\']?|``?|\'\'?')
     UMLAUT = RegExp('\\\\(?:(?:"[AOUaou])|(?:\'[aeiou])|(?:[\\^][aeiou]))')
     ESCAPED = RegExp('\\\\(?:(?:[%$&_/{} \\n])|(?:~\\{\\s*\\}))')
     TXTCOMMAND = RegExp('\\\\text\\w+')
