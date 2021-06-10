@@ -94,7 +94,8 @@ item                = "\item" [config] § sequence
 figure              = "\begin{figure}" sequence §"\end{figure}"
 quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
                     | ("\begin{quote}" sequence §"\end{quote}")
-verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
+verbatim            = "\begin{verbatim}" verbatim_text §"\end{verbatim}"
+  verbatim_text     = /(?:(?!\\end{verbatim})[\\]?[^\\]*)*/
 
 displaymath         = _dmath_long_form | _dmath_short_form
   _dmath_long_form  = `\begin{displaymath` [no_numbering] "}" § _block_math `\end{displaymath` [`*`] "}"
@@ -244,8 +245,8 @@ WARN_Komma = ","
 
 CMDNAME    = /\\@?(?:(?![\d_])\w)+/~
 TXTCOMMAND = /\\text\w+/
-ESCAPED    = /\\(?:(?:[%$&_\/{} \n])|(?:~\{\s*\}))/
-UMLAUT     = /\\(?:(?:"[AOUaou])|(?:'[aeiou])|(?:[\^][aeiou]))/
+ESCAPED    = /\\(?:(?:[#%$&_\/{} \n])|(?:~\{\s*\}))/
+UMLAUT     = /\\(?:(?:"[AOUaou])|(?:'[aeiou])|(?:`[aeiou])|(?:[\^][aeiou]))/
 QUOTEMARK  = /"[`']?|``?|''?/
 SPECIAL    = /[$&_\/\\\\]/
 BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
