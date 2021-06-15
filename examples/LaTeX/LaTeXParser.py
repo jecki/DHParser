@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "eece732fc6ff8bbbb864ad104c91627d"
+    source_hash__ = "cc0e3104f5aa10387b05d19de9edde41"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -135,8 +135,8 @@ class LaTeXGrammar(Grammar):
     BRACKETS = RegExp('[\\[\\]]')
     SPECIAL = RegExp('[$&_/\\\\\\\\]')
     QUOTEMARK = RegExp('"[`\']?|``?|\'\'?')
-    UMLAUT = RegExp('\\\\(?:(?:"[AOUaou])|(?:\'[aeiou])|(?:[\\^][aeiou]))')
-    ESCAPED = RegExp('\\\\(?:(?:[%$&_/{} \\n])|(?:~\\{\\s*\\}))')
+    UMLAUT = RegExp('\\\\(?:(?:"[AOUaou])|(?:\'[aeiou])|(?:`[aeiou])|(?:[\\^][aeiou]))')
+    ESCAPED = RegExp('\\\\(?:(?:[#%$&_/{} \\n])|(?:~\\{\\s*\\}))')
     TXTCOMMAND = RegExp('\\\\text\\w+')
     CMDNAME = Series(RegExp('\\\\@?(?:(?![\\d_])\\w)+'), dwsp__)
     WARN_Komma = Series(Text(","), dwsp__)
@@ -225,7 +225,8 @@ class LaTeXGrammar(Grammar):
     _dmath_short_form = Series(Series(Drop(Text("\\[")), dwsp__), _block_math, Series(Drop(Text("\\]")), dwsp__), mandatory=1)
     _dmath_long_form = Series(Drop(Text("\\begin{displaymath")), Option(no_numbering), Series(Drop(Text("}")), dwsp__), _block_math, Drop(Text("\\end{displaymath")), Option(Drop(Text("*"))), Series(Drop(Text("}")), dwsp__), mandatory=3)
     displaymath = Alternative(_dmath_long_form, _dmath_short_form)
-    verbatim = Series(Series(Drop(Text("\\begin{verbatim}")), dwsp__), sequence, Series(Drop(Text("\\end{verbatim}")), dwsp__), mandatory=2)
+    verbatim_text = RegExp('(?:(?!\\\\end{verbatim})[\\\\]?[^\\\\]*)*')
+    verbatim = Series(Series(Drop(Text("\\begin{verbatim}")), dwsp__), verbatim_text, Series(Drop(Text("\\end{verbatim}")), dwsp__), mandatory=2)
     quotation = Alternative(Series(Series(Drop(Text("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Text("\\begin{quote}")), dwsp__), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
     figure = Series(Series(Drop(Text("\\begin{figure}")), dwsp__), sequence, Series(Drop(Text("\\end{figure}")), dwsp__), mandatory=2)
     Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
@@ -331,6 +332,7 @@ def replace_Umlaut(context: List[Node]):
     umlaute = { '\\"a': 'ä', '\\"o': 'ö', '\\"u': 'ü',
                 '\\"A': 'Ä', '\\"Ö': 'Ö', '\\"U': 'Ü',
                 "\\'a": 'á', "\\'e": 'é', "\\'i": 'í', "\\'o": 'ó', "\\'u": 'ú',
+                "\\`a": 'à', "\\`e": 'è', "\\`i": 'ì', "\\`o": 'ò', "\\`u": 'ù',
                 "\\^a": 'â', "\\^e": 'ê', "\\^i": 'î', "\\^o": 'ô', "\\^u": 'û'}
     node = context[-1]
     node.result = umlaute[node.content]
