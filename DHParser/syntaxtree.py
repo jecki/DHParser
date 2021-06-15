@@ -620,6 +620,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'NO_CONTEXTS',
            'LEAF_CONTEXTS',
            'Node',
+           'content',
            'validate_token_sequence',
            'has_token',
            'add_token',
@@ -2182,6 +2183,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             node = Node(restore_tag_name(et.tag), et.text or '').with_attr(et.attrib)
         return node
+
+
+def content(segment: Union[Node, Tuple[Node]]) -> str:
+    """Returns the string content from a single node or a tuple of Nodes.
+    """
+    if isinstance(segment, Node):
+        return segment.content
+    else:
+        return ''.join(nd.content for nd in segment)
 
 
 #######################################################################
