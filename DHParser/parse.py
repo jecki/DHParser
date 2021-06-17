@@ -765,7 +765,7 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.pname = ''
         PARSER_PLACEHOLDER.disposable = False
         PARSER_PLACEHOLDER.drop_content = False
-        PARSER_PLACEHOLDER.tag_name = ':Parser'
+        PARSER_PLACEHOLDER.tag_name = ':PLACEHOLDER__'
     return cast(Parser, PARSER_PLACEHOLDER)
 
 
@@ -1265,6 +1265,7 @@ class Grammar:
         self.root_parser__.apply(self._add_parser__)
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
+        self.ff_parser__ = self.root_parser__
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1326,7 +1327,10 @@ class Grammar:
         self.moving_forward__ = False         # type: bool
         self.most_recent_error__ = None       # type: Optional[ParserError]
         self.ff_pos__ = 0                     # type: int
-        self.ff_parser__ = PARSER_PLACEHOLDER # type: Parser
+        try:
+            self.ff_parser__ = self.root_parser__ # type: Parser
+        except AttributeError:
+            self.ff_parser__ = PARSER_PLACEHOLDER
 
     @property
     def reversed__(self) -> StringView:
@@ -1454,26 +1458,27 @@ class Grammar:
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
+                err_pos = 0
                 if result is None:
-                    if self.history_tracking__:
-                        err_info = '\n    Most advanced fail: %s\n    Last match:    %s;' % \
-                                   (str(HistoryRecord.most_advanced_fail(self.history__)),
-                                    str(HistoryRecord.last_match(self.history__)))
-                    else:
-                        i = self.ff_pos__
-                        fs = self.document__[i:i + 10]
-                        if i + 10 < len(self.document__) - 1:  fs += ' ...'
-                        # l, c = line_col(linebreaks(self.document__), i)
-                        err_info = f'\n    Farthest fail {l}:{c}: {fs}'
+                    err_pos = self.ff_pos__
+                    err_pname = self.ff_parser__.pname \
+                                or self.associated_symbol__(self.ff_parser__).pname \
+                                   + '->' + self.ff_parser__.tag_name
+                    err_text = self.document__[err_pos:err_pos + 20]
+                    if err_pos + 20 < len(self.document__) - 1:  err_text += ' ...'
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
                     if lookahead_failure_only(parser):
-                        error_msg = 'Parser "%s" only did not match because of lookahead! ' \
-                                    % str(parser) + err_info
+                        error_msg = f'Parser "{err_pname}" did not match: »{err_text}« ' \
+                                    f'- but only because of lookahead.'
                         error_code = PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
-                        error_msg = 'Parser "%s" did not match!' % str(parser) + err_info
+                        error_msg = f'Parser "{err_pname}" did not match: »{err_text}«'
                         error_code = PARSER_STOPPED_BEFORE_END
+                    if self.history_tracking__:
+                        error_msg += '\n    Most advanced fail: %s\n    Last match:    %s;' % \
+                                     (str(HistoryRecord.most_advanced_fail(self.history__)),
+                                     str(HistoryRecord.last_match(self.history__)))
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
@@ -1491,17 +1496,27 @@ class Grammar:
                         i = self.ff_pos__ or tail_pos(stitches)
                         fs = self.document__[i:i + 10]
                         if i + 10 < len(self.document__) - 1:  fs += ' ...'
-                        error_msg = "Parser stopped before end, at:  " + fs  \
-                            + (("  Trying to recover"
-                                + (" but stopping history recording at this point."
-                                   if self.history_tracking__ else "..."))
-                                if len(stitches) < self.max_parser_dropouts__
-                                else " too often!" if self.max_parser_dropouts__ > 1 else " "
-                                     + " Terminating parser.")
+                        root_name = self.root_parser__.pname \
+                                    or self.associated_symbol__(self.root_parser__).pname
+                        error_msg = f"Parser {root_name} " \
+                            "stopped before end, at:  " + fs + \
+                            (("  Trying to recover" +
+                              (" but stopping history recording at this point."
+                               if self.history_tracking__ else "..."))
+                             if len(stitches) < self.max_parser_dropouts__
+                             else " too often!" if self.max_parser_dropouts__ > 1 else " " +
+                             " Terminating parser.")
                         error_code = PARSER_STOPPED_BEFORE_END
                 stitch = Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches))
                 stitches.append(stitch)
-                error = Error(error_msg, stitch.pos, error_code)
+                if stitch.pos > 0:
+                    if err_pos > 0:
+                        l, c = line_col(linebreaks(self.document__), err_pos)
+                        error_msg = f'Farthest Fail at {l}:{c}, ' + error_msg
+                    err_pos = stitch.pos
+                if len(stitches) > 2:
+                    error_msg = f'Error after {len(stitches) - 2}. reentry: ' + error_msg
+                error = Error(error_msg, err_pos, error_code)
                 self.tree__.add_error(stitch, error)
                 if self.history_tracking__:
                     lc = line_col(self.document_lbreaks__, error.pos)
@@ -3689,6 +3704,7 @@ class Forward(UnaryParser):
                     self.recursion_counter[location] = depth
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
+                    # TODO: Should grammar.ff_pos__ be saved here? and restored, below?
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match

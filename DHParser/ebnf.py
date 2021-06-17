@@ -677,8 +677,7 @@ comments work as expected::
     word S word S word
     >>> syntax_tree = extended_parser('What{check this again!}is work?')
     >>> print(syntax_tree.errors[0])
-    1:1: Error (1040): Parser "document = {PBR} [S] paragraph {PBR paragraph} {PBR} [S] _EOF" did not match!
-        Farthest fail 1:5: {check thi ...
+    1:5: Error (1040): Parser "EXCLAMATION_MARK" did not match: »{check this again!}i ...«
 
 The last error was to be expected, because we did not allow comments
 to serve a substitutes for whitespace. The error message might not be
@@ -953,9 +952,7 @@ Parsing our example with the generated parser yields an error, however::
 
     >>> syntax_tree = def_parser(definitions)
     >>> for e in syntax_tree.errors_sorted:  print(e)
-    1:1: Error (1040): Parser "definitions = ~ definition {definition} EOF" did not match!
-        Farthest fail 2:8:    := carn ...
-
+    2:8: Error (1040): Parser "definition->:Text" did not match: »   := carnivorous qu ...«
 
 
 Fail-tolerant Parsing
