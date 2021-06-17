@@ -17,8 +17,8 @@ for path in (os.path.join('..', '..'), '.'):
 try:
     from DHParser import dsl
     import DHParser.log
-    from DHParser import testing, create_test_templates, access_presets, finalize_presets, \
-        set_preset_value
+    from DHParser import testing, access_presets, finalize_presets, set_preset_value
+    from DHParser.testing import create_test_templates
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)

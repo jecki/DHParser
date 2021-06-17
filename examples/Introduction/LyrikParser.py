@@ -7,10 +7,11 @@
 #######################################################################
 
 
-import collections
 from functools import partial
 import os
 import sys
+from typing import Tuple, List
+
 sys.path.extend([os.path.join('..', '..'), '..', '.'])
 
 
@@ -48,7 +49,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory
+    has_attr, has_parent, ThreadLocalSingletonFactory, NEVER_MATCH_PATTERN, gen_find_include_func, \
+    preprocess_includes, make_preprocessor, chain_preprocessors, Error
 
 
 #######################################################################
@@ -57,12 +59,26 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def LyrikPreprocessor(text):
-    return text, lambda i: i
+RE_INCLUDE = NEVER_MATCH_PATTERN
+# To capture includes, replace the NEVER_MATCH_PATTERN
+# by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 
 
-def get_preprocessor() -> PreprocessorFunc:
-    return LyrikPreprocessor
+def LyrikTokenizer(original_text) -> Tuple[str, List[Error]]:
+    # Here, a function body can be filled in that adds preprocessor tokens
+    # to the source code and returns the modified source.
+    return original_text, []
+
+
+def preprocessor_factory() -> PreprocessorFunc:
+    # below, the second parameter must always be the same as LyrikGrammar.COMMENT__!
+    find_next_include = gen_find_include_func(RE_INCLUDE, '#.*')
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    tokenizing_prep = make_preprocessor(LyrikTokenizer)
+    return chain_preprocessors(include_prep, tokenizing_prep)
+
+
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 
 
 #######################################################################
@@ -74,7 +90,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "673a4495cbfd5cfbb4c3541f59d2b35f"
+    source_hash__ = "26385fa0fbbe6e28b8b15d563a5407c9"
     disposable__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|LEERRAUM$|ziel$|wortfolge$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

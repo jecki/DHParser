@@ -496,7 +496,7 @@ class Parser:
             memoization_state = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
 
-            grammar.farthest_failure__ = 0
+            grammar.ff_pos__ = 0
 
             # now, the actual parser call!
             try:
@@ -551,8 +551,9 @@ class Parser:
                                     rest=text, first_throw=False)
 
             if node is None:
-                if location > grammar.farthest_failure__:
-                    grammar.farthest_failure__ = location
+                if location > grammar.ff_pos__:
+                    grammar.ff_pos__ = location
+                    grammar.ff_parser__ = self
             else:
                 node._pos = location
             if not grammar.suspend_memoization__:
@@ -1046,6 +1047,14 @@ class Grammar:
                 location to which the parser backtracks. This is done by
                 calling method :func:`rollback_to__(location)`.
 
+        :ivar ff_pos__: The "farthest fail", i.e. the highest location in the
+                document where a parser failed. This gives a good indication
+                where and why parsing failed, if the grammar did not match
+                a text.
+
+        :ivar ff_parser__: The parser that failed at the "farthest fail"-location
+                `ff_pos__`
+
         suspend_memoization__: A flag that if set suspends memoization of
                 results from returning parsers. This flag is needed by the
                 left-recursion handling algorithm (see `Parser.__call__`
@@ -1316,7 +1325,8 @@ class Grammar:
         # also needed for call stack tracing
         self.moving_forward__ = False         # type: bool
         self.most_recent_error__ = None       # type: Optional[ParserError]
-        self.farthest_failure__ = 0           # type: int
+        self.ff_pos__ = 0                     # type: int
+        self.ff_parser__ = PARSER_PLACEHOLDER # type: Parser
 
     @property
     def reversed__(self) -> StringView:
@@ -1445,10 +1455,16 @@ class Grammar:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
                 if result is None:
-                    err_info = '' if not self.history_tracking__ else \
-                               '\n    Most advanced fail: %s\n    Last match:    %s;' % \
-                               (str(HistoryRecord.most_advanced_fail(self.history__)),
-                                str(HistoryRecord.last_match(self.history__)))
+                    if self.history_tracking__:
+                        err_info = '\n    Most advanced fail: %s\n    Last match:    %s;' % \
+                                   (str(HistoryRecord.most_advanced_fail(self.history__)),
+                                    str(HistoryRecord.last_match(self.history__)))
+                    else:
+                        i = self.ff_pos__
+                        fs = self.document__[i:i + 10]
+                        if i + 10 < len(self.document__) - 1:  fs += ' ...'
+                        # l, c = line_col(linebreaks(self.document__), i)
+                        err_info = f'\n    Farthest fail {l}:{c}: {fs}'
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
                     if lookahead_failure_only(parser):
@@ -1472,7 +1488,7 @@ class Grammar:
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
-                        i = self.farthest_failure__ or tail_pos(stitches)
+                        i = self.ff_pos__ or tail_pos(stitches)
                         fs = self.document__[i:i + 10]
                         if i + 10 < len(self.document__) - 1:  fs += ' ...'
                         error_msg = "Parser stopped before end, at:  " + fs  \
@@ -2668,7 +2684,7 @@ class MandatoryNary(NaryParser):
         error = Error(msg, location,
                       MANDATORY_CONTINUATION_AT_EOF if (failed_on_lookahead and not text_)
                       else MANDATORY_CONTINUATION,
-                      length = max(self.grammar.farthest_failure__ - location, 1))
+                      length = max(self.grammar.ff_pos__ - location, 1))
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
@@ -3163,7 +3179,7 @@ def _negative_match(grammar, bool_value) -> bool:
     else:
         # invert farthest failure, because, due to negation, it's not
         # a failure any more and should be overwritten by any other failure
-        grammar.farthest_failure__ = - grammar.farthest_failure__
+        grammar.ff_pos__ = - grammar.ff_pos__
         return True
 
 

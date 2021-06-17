@@ -75,7 +75,7 @@ class LameArithmeticGrammar(Grammar):
     """
     expr = Forward()
     term = Forward()
-    source_hash__ = "69ae2dadf5f31fee7d8ec0d09b3a8659"
+    source_hash__ = "d68d04adb34c7294d6508a62e1c269d9"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -91,21 +91,18 @@ class LameArithmeticGrammar(Grammar):
     root__ = formula
     
 
+_raw_grammar = ThreadLocalSingletonFactory(LameArithmeticGrammar, ident=1)
+
 def get_grammar() -> LameArithmeticGrammar:
-    """Returns a thread/process-exclusive LameArithmeticGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.LameArithmetic_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.LameArithmetic_00000001_grammar_singleton = LameArithmeticGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.LameArithmetic_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.LameArithmetic_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
     return grammar
+    
+def parse_LameArithmetic(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################

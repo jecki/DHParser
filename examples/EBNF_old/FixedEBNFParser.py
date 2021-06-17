@@ -76,7 +76,7 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "52c3a9b478e562f05a8838b06d47da79"
+    source_hash__ = "0c9d87738d12d9501bf90b9a88560efb"
     disposable__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

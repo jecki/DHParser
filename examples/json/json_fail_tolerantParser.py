@@ -74,7 +74,7 @@ class json_fail_tolerantGrammar(Grammar):
     r"""Parser for a json_fail_tolerant source file.
     """
     _element = Forward()
-    source_hash__ = "d958a85b4f3c116848d2648ca5c1febd"
+    source_hash__ = "42cb00a4f8192986733859d4709c5b37"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -95,14 +95,14 @@ class json_fail_tolerantGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    _ARRAY_SEPARATOR = Series(NegativeLookahead(Drop(Text("]"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1)
-    _OBJECT_SEPARATOR = Series(NegativeLookahead(Drop(Text("}"))), Lookahead(Drop(Text(","))), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1)
+    _ARRAY_SEPARATOR = Series(NegativeLookahead(Text("]")), Lookahead(Text(",")), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1)
+    _OBJECT_SEPARATOR = Series(NegativeLookahead(Text("}")), Lookahead(Text(",")), Option(Series(Drop(Text(",")), dwsp__)), mandatory=1)
     _EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(Drop(Text("E")), Drop(Text("e"))), Option(Alternative(Drop(Text("+")), Drop(Text("-")))), RegExp('[0-9]+')))
+    EXP = Option(Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+')))
     DOT = Text(".")
     FRAC = Option(Series(DOT, RegExp('[0-9]+')))
     NEG = Text("-")
-    INT = Alternative(Series(Option(NEG), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    INT = Series(Option(NEG), Alternative(RegExp('[0-9]'), RegExp('[1-9][0-9]+')))
     HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
     UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
     ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
@@ -111,7 +111,7 @@ class json_fail_tolerantGrammar(Grammar):
     null = Series(Text("null"), dwsp__)
     bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Drop(Text('"')), _CHARACTERS, Drop(Text('"')), dwsp__, mandatory=1)
+    string = Series(Text('"'), _CHARACTERS, Text('"'), dwsp__, mandatory=1)
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(_ARRAY_SEPARATOR, _element, mandatory=1)))), Series(Drop(Text("]")), dwsp__))
     member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
     object = Series(Series(Drop(Text("{")), dwsp__), member, ZeroOrMore(Series(_OBJECT_SEPARATOR, member, mandatory=1)), Series(Drop(Text("}")), dwsp__), mandatory=3)

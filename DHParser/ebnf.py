@@ -678,6 +678,7 @@ comments work as expected::
     >>> syntax_tree = extended_parser('What{check this again!}is work?')
     >>> print(syntax_tree.errors[0])
     1:1: Error (1040): Parser "document = {PBR} [S] paragraph {PBR paragraph} {PBR} [S] _EOF" did not match!
+        Farthest fail 1:5: {check thi ...
 
 The last error was to be expected, because we did not allow comments
 to serve a substitutes for whitespace. The error message might not be
@@ -936,7 +937,7 @@ example a simple DSL for writing definitions like::
     ...     dog   := carnivorous quadrupel that barks
     ...     human := featherless biped'''
 
-Now, let's try to draw up a grammar for definitions::
+Now, let's try to draw up a grammar for "definitions"::
 
     >>> def_DSL_first_try = ''' # WARNING: This grammar doesn't work, yet!
     ...     @literalws = right
@@ -947,6 +948,13 @@ Now, let's try to draw up a grammar for definitions::
     ...     word        = /[A-Z]?[a-z]*/
     ...     EOF         = /$/ '''
     >>> def_parser = create_parser(def_DSL_first_try, "defDSL")
+
+Parsing our example with the generated parser yields an error, however::
+
+    >>> syntax_tree = def_parser(definitions)
+    >>> for e in syntax_tree.errors_sorted:  print(e)
+    1:1: Error (1040): Parser "definitions = ~ definition {definition} EOF" did not match!
+        Farthest fail 2:8:    := carn ...
 
 
 
