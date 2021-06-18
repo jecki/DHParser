@@ -1498,7 +1498,7 @@ class Grammar:
                         if i + 10 < len(self.document__) - 1:  fs += ' ...'
                         root_name = self.root_parser__.pname \
                                     or self.associated_symbol__(self.root_parser__).pname
-                        error_msg = f"Parser {root_name} " \
+                        error_msg = f'Parser "{root_name}" ' \
                             "stopped before end, at:  " + fs + \
                             (("  Trying to recover" +
                               (" but stopping history recording at this point."
@@ -2459,7 +2459,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "root = {/\\\\w+,?/ ~}+ `.` ~" did not match! >>> '
+        ' <<< Error on "." | Parser "root" did not match: ».« >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
@@ -2759,7 +2759,7 @@ class Series(MandatoryNary):
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser "root = /(?!\\\\d)\\\\w/ /\\\\w*/ ~" did not match! >>> '
+        ' <<< Error on "1_variable" | Parser "root" did not match: »1_variable« >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
 
@@ -2881,7 +2881,7 @@ class Alternative(NaryParser):
         # the order of the sub-expression matters!
         >>> number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         >>> str(Grammar(number)("3.1416"))
-        '3 <<< Error on ".1416" | Parser stopped before end! Terminating parser. >>> '
+        '3 <<< Error on ".1416" | Parser "root" stopped before end, at:  .1416  Terminating parser. >>> '
 
         # the most selective expression should be put first:
         >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')

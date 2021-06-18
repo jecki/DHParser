@@ -20,8 +20,8 @@ cdef int pack_index(int index, int length)
 cdef (cython.int, cython.int) fast_real_indices(begin, end, int length)
 
 cdef class StringView:
-    cdef str _text
-    cdef int _begin, _end
+    cdef public str _text
+    cdef public int _begin, _end
     cdef readonly int _len
     cdef str _fullstring
 
