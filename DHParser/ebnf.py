@@ -955,6 +955,55 @@ Parsing our example with the generated parser yields an error, however::
     2:8: Error (1040): Parser "definition->:Text" did not match: »   := carnivorous qu ...«
 
 
+Locating errors and customizing error messages
+----------------------------------------------
+
+Providing users with proper error information is one of the most tenacious
+problem when implementing the parser for a domain specific language.
+There are three different challenges:
+
+1. Locating the error at the correct position in the source code.
+2. Providing proper error messages that explain the reason for the error.
+3. Resuming the parsing progress after an error has occured at the nearest
+   possible place without producing artificial follow-up errors.
+
+If the following, DHParser's techniques for the first two challenges,
+locating errors and customizing error messages will be described.
+Techniques for resuming the parsing process after an error occurred
+or for passing by erreneous passages in the source code will be
+explained below, unter the heading "Fail-tolerant Parsing".
+
+Without adding any hints to the grammar, DHParser applies only a
+very basic technique for locating the error if the grammar does
+not match a text which is known as "farthest  failure" and locates
+the error at the "farthest" position where a parser failed,
+reporting the last named parser in the call chain (that first reached
+this location) as the cause of the failure. This approach often works
+surprisingly well for locating errors, unless the grammar relies to
+heavy on regular exrpessions capturing large chunks of text, because
+the error location works only on the level of the parsing expression
+grammar not at that of the atomic regular expressions. It is not quite
+a suitable for explaining the error or pinpointing which parser
+really was the culprit.
+
+As a remedy, DHParser allows to annotate a point in a sequence from
+which onward any failure to match raises a parsing error instead of
+just reporting a non-match. Cosinder a parser for simple arithmetic
+expressions, for example:
+
+    >>> arithmetic_grammar = '''@ literalws = right
+    ... arithmetic = expression EOF
+    ... expression = ~ term { ("+" | "-") term }
+    ... term       = factor { ("*" | "/") factor }
+    ... factor     = number | group
+    ... group      = "(" §expression ")"
+    ... number     = /\\\\d+/~
+    ... EOF        = /$/'''
+    >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
+    >>> terms = arithmetic('(2 - 3) * (4 + 5)')
+    >>> print(terms.errors[0])
+
+
 Fail-tolerant Parsing
 ---------------------
 

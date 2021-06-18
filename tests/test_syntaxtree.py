@@ -540,7 +540,7 @@ class TestRootNode:
             str(result)
 
     def test_get_errors(self):
-        # TODO: extend this test to the more compilcated case of removed nodes
+        # TODO: extend this test to the more complicated case of removed nodes
         number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
         result = Grammar(number)("3.1416")
         assert not result.node_errors(result.children[1])
