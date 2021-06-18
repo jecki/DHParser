@@ -784,7 +784,7 @@ def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: RootNode):
 def swap_attributes(node: Node, other: Node):
     """
     Exchanges the attributes between node and other. This might be
-    needed when rearangeing trees.
+    needed when rearanging trees.
     """
     NA = node.has_attr()
     OA = other.has_attr()
