@@ -33,7 +33,7 @@ for an example.
 from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, AbstractSet, Dict, \
-    DefaultDict, Sequence, Union, Optional, Iterator
+    DefaultDict, Sequence, Union, Optional, Iterator, Hashable, NamedTuple
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -384,6 +384,13 @@ class Parser:
                 `pname`, otherwise it is the name of the parser's type
                 prefixed with a colon ":".
 
+        eq_class: A unique number for the class of functionally
+                equivalent parsers that this parser belongs to.
+                (This serves the purpose of optimizing memoization,
+                by tying memoization dictionaries to the classes
+                of functionally equivalent parsers, rather than to
+                the individual parsers themselves.)
+
         visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
@@ -410,9 +417,10 @@ class Parser:
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
         self.pname = ''               # type: str
-        self.disposable = True         # type: bool
+        self.disposable = True        # type: bool
         self.drop_content = False     # type: bool
         self.tag_name = self.ptype    # type: str
+        self.eq_class = id(self)      # type: int
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
@@ -726,8 +734,50 @@ class Parser:
         else:
             return self._apply(func, [], positive_flip)
 
+    def _signature(self) -> Hashable:
+        """This method should be implemented by any non-abstract descendant
+        parser class. The implementation must make sure that all instances
+        that have the same signature always yield the same parsing result
+        for the same piece of text.
+
+        It does not hurt, but only wastes an opportunity for optimization,
+        if two functionally equivalent parsers provide different signatures.
+        It is a serious mistake, though, if two functionally non-equivalent
+        parsers have the same signature.
+
+        By returning `id(self)` this mistake will become impossible, but
+        it will turn signature-based memoization-optimizatiopn off for
+        this parser.
+        """
+        return id(self)
+
+    def signature(self) -> Hashable:
+        """Returns a value that is identical for two different
+        parser objects if they are functionally equivalent, i.e.
+        yield the same return value for the same call parameters:
+
+        >>> a = Text('[')
+        >>> b = Text('[')
+        >>> c = Text(']')
+        >>> a is b
+        False
+        >>> a.signature() == b.signature()
+        True
+        >>> a.signature() == c.signature()
+        False
+
+        The purpose of parser-signatures is to optimize better
+        memoization in cases of code repetition in the grammar.
+
+        DO NOT OVERRIDE THIS METHOD. In order to implement a
+        signature function, the protected method `_signature`
+        should be overridden instead.
+        """
+        return self.pname if self.pname else self._signature()
+
+
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
-        return self.symbol, self, Error(msg, 0, code)
+        return AnalysisError(self.symbol, self, Error(msg, 0, code))
 
     def static_analysis(self) -> List['AnalysisError']:
         """Analyses the parser for logical errors after the grammar has been
@@ -741,7 +791,23 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser):
     duplicate.disposable = src.disposable
     duplicate.drop_content = src.drop_content
     duplicate.tag_name = src.tag_name
+    duplicate.eq_class = src.eq_class
 
+
+def determine_eq_classes(root: Parser):
+    """Sorts the parsers originating in root (imperfectly) into equivalence
+    classes and assigns respective the class identifier to the `eq_class`-field
+    of each parser."""
+    eq_classes: Dict[Hashable, int] = {}
+
+    def assign_eq_class(parser_stack: List[Parser]) -> bool:
+        nonlocal eq_classes
+        p = parser_stack[-1]
+        signature = p.signature()
+        p.eq_class = eq_classes.set_default(signature, id(p))
+        return False
+
+    root.apply(assign_eq_class)
 
 
 def Drop(parser: Parser) -> Parser:
@@ -764,6 +830,7 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.disposable = False
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.tag_name = ':PLACEHOLDER__'
+        PARSER_PLACEHOLDER.eq_class = id(PARSER_PLACEHOLDER)
     return cast(Parser, PARSER_PLACEHOLDER)
 
 
@@ -846,8 +913,11 @@ def mixin_nonempty(whitespace: str) -> str:
     return whitespace
 
 
-AnalysisError = Tuple[str, Parser, Error]      # pname, parser, error
-# TODO: replace with a named tuple?
+# AnalysisError = Tuple[str, Parser, Error]      # pname, parser, error
+class AnalysisError(NamedTuple):
+    symbol: str
+    parser: Parser
+    error: Error
 
 
 class GrammarError(Exception):
@@ -1191,12 +1261,6 @@ class Grammar:
 
 
     def __deepcopy__(self, memo):
-        """Deepcopy method of the parser. Upon instantiation of a Grammar-
-        object, parsers will be deep-copied to the Grammar object. If a
-        derived parser-class changes the signature of the `__init__`-constructor,
-        `__deepcopy__`-method must be replaced (i.e. overridden without
-        calling the same method from the superclass) by the derived class.
-        """
         duplicate = self.__class__(self.root_parser__)
         duplicate.history_tracking__ = self.history_tracking__
         duplicate.resume_notices__ = self.resume_notices__
@@ -1732,19 +1796,28 @@ def is_grammar_placeholder(grammar: Optional[Grammar]) -> bool:
 #
 ########################################################################
 
-class Always(Parser):
+class Unparameterized(Parser):
+    """Unparameterized parsers do not receive any parameters on instantian.
+    As a consequence, different instances of the same unparameterized
+    parser are always functionally equivalent."""
+
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__,
+
+
+class Always(Unparameterized):
     """A parser that always matches, but does not capture anything."""
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         return EMPTY_NODE, text
 
 
-class Never(Parser):
+class Never(Unparameterized):
     """A parser that never matches."""
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
         return None, text
 
 
-class AnyChar(Parser):
+class AnyChar(Unparameterized):
     """A parser that returns the next unicode character of the document
     whatever that is. The parser fails only at the very end of the text."""
     def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
@@ -1853,6 +1926,9 @@ class Text(Parser):
         return '`%s`' % abbreviate_middle(self.text, 80)
         # return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
 
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.text
+
 
 class RegExp(Parser):
     r"""
@@ -1913,6 +1989,9 @@ class RegExp(Parser):
             pass
         return '/' + escape_ctrl_chars('%s' % abbreviate_middle(pattern, 118))\
             .replace('/', '\\/') + '/'
+
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.regexp.pattern
 
 
 def DropText(text: str) -> Text:
@@ -2312,12 +2391,9 @@ class UnaryParser(CombinedParser):
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return (self.parser,)
-    #
-    # def location_info(self) -> str:
-    #     """Returns a description of the location of the parser within the grammar
-    #     for the purpose of transparent error reporting."""
-    #     return "%s: %s%s(%s%s)" % (self.symbol, self.pname or '_', self.ptype,
-    #                                self.parser.pname or '_', self.parser.ptype)
+
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.parser.signature()
 
 
 class NaryParser(CombinedParser):
@@ -2347,6 +2423,9 @@ class NaryParser(CombinedParser):
 
     def sub_parsers(self) -> Tuple['Parser', ...]:
         return self.parsers
+
+    def _signature(self) -> Hashable:
+        return (self.__class__.__name__,) + tuple(p.signature() for p in self.parsers)
 
 
 class Option(UnaryParser):
@@ -2593,6 +2672,9 @@ class Counted(UnaryParser):
                 '0 <= a <= b <= infinity = 2^30' % (a, b, str(self)),
                 BAD_REPETITION_COUNT))
         return errors
+
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.parser.signature(), self.repetitions
 
 
 NO_MANDATORY = 2**30
@@ -3140,6 +3222,10 @@ class Interleave(MandatoryNary):
                     BAD_REPETITION_COUNT))
         return errors
 
+    def _signature(self) -> Hashable:
+        return (self.__class__.__name__,) \
+               + tuple(p.signature() for p in self.parsers) \
+               + tuple(self.repetitions)
 
 ########################################################################
 #
@@ -3178,7 +3264,7 @@ class Lookahead(FlowParser):
     def static_analysis(self) -> List[AnalysisError]:
         errors = super().static_analysis()
         if self.parser.is_optional():
-            errors.append((self.pname, self, Error(
+            errors.append(AnalysisError(self.pname, self, Error(
                 'Lookahead %s does not make sense with optional parser "%s"!'
                 % (self.pname, str(self.parser)),
                 0, LOOKAHEAD_WITH_OPTIONAL_PARSER)))
@@ -3324,6 +3410,9 @@ class ContextSensitive(UnaryParser):
             rb_loc -= 1
         return rb_loc
 
+    def _signature(self) -> Hashable:
+        return id(self)
+
 
 class Capture(ContextSensitive):
     """
@@ -3357,12 +3446,12 @@ class Capture(ContextSensitive):
     def static_analysis(self) -> List[AnalysisError]:
         errors = super().static_analysis()
         if not self.pname:
-            errors.append((self.pname, self, Error(
+            errors.append(AnalysisError(self.pname, self, Error(
                 'Capture only works as named parser! Error in parser: ' + str(self),
                 0, CAPTURE_WITHOUT_PARSERNAME
             )))
         if self.parser.apply(lambda plist: plist[-1].drop_content):
-            errors.append((self.pname, self, Error(
+            errors.append(AnalysisError(self.pname, self, Error(
                 'Captured symbol "%s" contains parsers that drop content, '
                 'which can lead to unintended results!' % (self.pname or str(self)),
                 0, CAPTURE_DROPPED_CONTENT_WARNING
@@ -3776,3 +3865,9 @@ class Forward(UnaryParser):
         if is_parser_placeholder(self.parser):
             return tuple()
         return self.parser,
+
+    def _signature(self) -> Hashable:
+        # This code should theoretically never be reached, except when debugging
+        signature = self.pname or self.parser.pname
+        assert signature
+        return signature

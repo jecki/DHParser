@@ -996,7 +996,7 @@ expressions, for example:
     ... expression = ~ term { ("+" | "-") term }
     ... term       = factor { ("*" | "/") factor }
     ... factor     = number | group
-    ... group      = "(" §expression ")"
+    ... group      = "(" expression ")"
     ... number     = /\\\\d+/~
     ... EOF        = /$/'''
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
