@@ -317,10 +317,13 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
+ParsingResult = Tuple[Optional[Node], StringView]
+MemoizationDict = Dict[int, ParsingResult]
+
 ApplyFunc = Callable[[List['Parser']], Optional[bool]]
 # The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
-ParseFunc = Callable[[StringView], Tuple[Optional[Node], StringView]]
+ParseFunc = Callable[[StringView], ParsingResult]
 
 
 class Parser:
@@ -477,10 +480,15 @@ class Parser:
         """Initializes or resets any parser variables. If overwritten,
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
-        self.visited = dict()  # type: Dict[int, Tuple[Optional[Node], StringView]]
+        global _GRAMMAR_PLACEHOLDER
+        grammar = self._grammar
+        if is_grammar_placeholder(grammar):
+            self.visited: MemoizationDict = dict()
+        else:
+            self.visited = grammar.get_memoization_dict__(self)
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
-    def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringView]:
+    def __call__(self: 'Parser', text: StringView) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
         done in the overridden method `_parse()`. This wrapper-method can be thought of
@@ -601,7 +609,7 @@ class Parser:
             return cast(Interleave, other).__rmul__(self)
         return Interleave(self, other)
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
@@ -804,7 +812,7 @@ def determine_eq_classes(root: Parser):
         nonlocal eq_classes
         p = parser_stack[-1]
         signature = p.signature()
-        p.eq_class = eq_classes.set_default(signature, id(p))
+        p.eq_class = eq_classes.setdefault(signature, id(p))
         return False
 
     root.apply(assign_eq_class)
@@ -820,6 +828,8 @@ def Drop(parser: Parser) -> Parser:
 
 
 PARSER_PLACEHOLDER = None  # type: Optional[Parser]
+# Don't access PARSER_PLACEHOLDER directly, use get_parser_placeholder() instead
+
 
 
 def get_parser_placeholder() -> Parser:
@@ -1254,6 +1264,8 @@ class Grammar:
                     else:
                         parser.pname = entry
                         parser.disposable = anonymous
+            if not is_parser_placeholder(cls.root__):
+                determine_eq_classes(cls.root__)
             if cls != Grammar:
                 cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
                 # cls.parser_initialization__[0] = "done"
@@ -1310,6 +1322,7 @@ class Grammar:
         # (Usually, all parsers should be connected to the root object. But
         # during testing and development this does not need to be the case.)
         if root:
+            determine_eq_classes(root)
             self.root_parser__ = copy.deepcopy(root)
             if not self.root_parser__.pname:
                 self.root_parser__.pname = "root"
@@ -1328,6 +1341,7 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
+        self.root_parser__.apply(lambda ctx: ctx[-1].reset())
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1371,28 +1385,31 @@ class Grammar:
 
 
     def _reset__(self):
-        self.tree__ = RootNode()              # type: RootNode
-        self.document__ = EMPTY_STRING_VIEW   # type: StringView
-        self._reversed__ = EMPTY_STRING_VIEW  # type: StringView
-        self.document_length__ = 0            # type: int
-        self._document_lbreaks__ = []         # type: List[int]
+        self.tree__: RootNode = RootNode()
+        self.document__: StringView = EMPTY_STRING_VIEW
+        self._reversed__: StringView = EMPTY_STRING_VIEW
+        self.document_length__: int = 0
+        self._document_lbreaks__: List[int] = []
         # variables stored and recalled by Capture and Retrieve parsers
-        self.variables__ = defaultdict(lambda: [])  # type: DefaultDict[str, List[str]]
-        self.rollback__ = []                  # type: List[Tuple[int, Callable]]
-        self.last_rb__loc__ = -2              # type: int
-        self.suspend_memoization__ = False    # type: bool
+        self.variables__: DefaultDict[str, List[str]] = defaultdict(lambda: [])
+        self.rollback__: List[Tuple[int, Callable]] = []
+        self.last_rb__loc__: int = -2
+        self.suspend_memoization__: bool = False
+        # memoization dictionaries, one per parser equivalence class
+        self.memoization__: Dict[int, MemoizationDict] = {}
         # support for call stack tracing
-        self.call_stack__ = []                # type: List[CallItem]  # tag_name, location
+        self.call_stack__: List[CallItem] = []  # tag_name, location
         # snapshots of call stacks
-        self.history__ = []                   # type: List[HistoryRecord]
+        self.history__: List[HistoryRecord] = []
         # also needed for call stack tracing
-        self.moving_forward__ = False         # type: bool
-        self.most_recent_error__ = None       # type: Optional[ParserError]
-        self.ff_pos__ = 0                     # type: int
+        self.moving_forward__: bool = False
+        self.most_recent_error__: Optional[ParserError] = None
+        # farthest fail error reporting
+        self.ff_pos__: int = 0
         try:
-            self.ff_parser__ = self.root_parser__ # type: Parser
+            self.ff_parser__: Parser = self.root_parser__
         except AttributeError:
-            self.ff_parser__ = PARSER_PLACEHOLDER
+            self.ff_parser__: Parser = get_parser_placeholder()
 
     @property
     def reversed__(self) -> StringView:
@@ -1432,6 +1449,12 @@ class Grammar:
             parser.tag_name = parser.pname
         self.all_parsers__.add(parser)
         parser.grammar = self
+
+
+    def get_memoization_dict__(self, parser: Parser):
+        """Returns the memoization dictionary for the parser's equivalence class.
+        """
+        return self.memoization__.setdefault(parser.eq_class, {})
 
 
     def __call__(self,
@@ -1747,7 +1770,7 @@ class Grammar:
         for parser in self.all_parsers__:
             error_list.extend(parser.static_analysis())
             if parser.pname and not has_leaf_parsers(parser):
-                error_list.append((parser.symbol, parser, Error(
+                error_list.append(AnalysisError(parser.symbol, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even touch '
                     'the parsed document' % cast('CombinedParser', parser).location_info(),
                     0, PARSER_NEVER_TOUCHES_DOCUMENT)))
@@ -1807,20 +1830,20 @@ class Unparameterized(Parser):
 
 class Always(Unparameterized):
     """A parser that always matches, but does not capture anything."""
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         return EMPTY_NODE, text
 
 
 class Never(Unparameterized):
     """A parser that never matches."""
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         return None, text
 
 
 class AnyChar(Unparameterized):
     """A parser that returns the next unicode character of the document
     whatever that is. The parser fails only at the very end of the text."""
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         if len(text) >= 1:
             return Node(self.tag_name, text[:1], True), text[1:]
         else:
@@ -1851,7 +1874,7 @@ class PreprocessorToken(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
@@ -1911,7 +1934,7 @@ class Text(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         self_len = self.len    # use local variables for optimization
         self_text = self.text
         if text[:self_len] == self_text:  # text.startswith(self.text):
@@ -1964,7 +1987,7 @@ class RegExp(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         match = text.match(self.regexp)
         if match:
             capture = match.group(0)
@@ -2459,7 +2482,7 @@ class Option(UnaryParser):
     def __init__(self, parser: Parser) -> None:
         super(Option, self).__init__(parser)
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         node, text = self.parser(text)
         return self._return_value(node), text
 
@@ -2502,7 +2525,7 @@ class ZeroOrMore(Option):
     """
 
     @cython.locals(n=cython.int, length=cython.int)
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         results = ()  # type: Tuple[Node, ...]
         length = text.__len__()
         n = length + 1  # type: int
@@ -2545,7 +2568,7 @@ class OneOrMore(UnaryParser):
 
     EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         results = ()  # type: Tuple[Node, ...]
         text_ = text  # type: StringView
         match_flag = False
@@ -2848,7 +2871,7 @@ class Series(MandatoryNary):
     RX_ARGUMENT = re.compile(r'\s(\S)')
 
     @cython.locals(pos=cython.int, reloc=cython.int, mandatory=cython.int)
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         results = []  # type: List[Node]
         text_ = text  # type: StringView
         error = None  # type: Optional[Error]
@@ -2972,7 +2995,7 @@ class Alternative(NaryParser):
 
     EBNF-Example:  ``number = /\d+\.\d+/ | /\d+/``
     """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         for parser in self.parsers:
             node, text_ = parser(text)
             if node is not None:
@@ -3251,7 +3274,7 @@ class Lookahead(FlowParser):
     Matches, if the contained parser would match for the following text,
     but does not consume any text.
     """
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         node, _ = self.parser(text)
         if self.match(node is not None):
             return (EMPTY_NODE if self.disposable else Node(self.tag_name, '', True)), text
@@ -3315,7 +3338,7 @@ class Lookbehind(FlowParser):
             self.text = cast(Text, p).text
         super(Lookbehind, self).__init__(parser)
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         backwards_text = self.grammar.reversed__[text.__len__():]
         if self.regexp is None:  # assert self.text is not None
             does_match = backwards_text[:text.__len__()] == self.text
@@ -3426,7 +3449,7 @@ class Capture(ContextSensitive):
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         node, text_ = self.parser(text)
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
@@ -3549,7 +3572,7 @@ class Retrieve(ContextSensitive):
             return cast(Forward, self.parser).parser.tag_name
         return self.tag_name
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         # auto-capture on first use if symbol was not captured before
         # ("or"-clause needed, because Forward parsers do not have a pname)
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
@@ -3566,7 +3589,7 @@ class Retrieve(ContextSensitive):
     def __repr__(self):
         return ':' + self.parser.repr
 
-    def retrieve_and_match(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def retrieve_and_match(self, text: StringView) -> ParsingResult:
         """
         Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
@@ -3623,7 +3646,7 @@ class Pop(Retrieve):
     def _rollback(self):
         self.grammar.variables__[self.symbol_pname].append(self.values.pop())
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         node, text_ = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
@@ -3665,7 +3688,7 @@ class Synonym(UnaryParser):
         assert not parser.drop_content
         super(Synonym, self).__init__(parser)
 
-    def _parse(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def _parse(self, text: StringView) -> ParsingResult:
         node, text = self.parser(text)
         if node is not None:
             if self.drop_content:
@@ -3736,7 +3759,7 @@ class Forward(UnaryParser):
         return duplicate
 
     @cython.locals(location=cython.int, depth=cython.int, rb_stack_size=cython.int)
-    def __call__(self, text: StringView) -> Tuple[Optional[Node], StringView]:
+    def __call__(self, text: StringView) -> ParsingResult:
         """
         Overrides `Parser.__call__`, because Forward is not an independent parser
         but merely a redirects the call to another parser. Other then parser

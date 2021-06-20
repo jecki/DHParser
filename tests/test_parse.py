@@ -1591,6 +1591,36 @@ class TestStaticAnalysis:
         #     print(e)
 
 
+class TestMemoization:
+    def test_memoization(self):
+        words = r'''@literalws = right
+        list = word { ',' word } §EOF
+        word = wordA | wordB | wordC
+        wordA = `"` /[Aa]\w+/ '"'
+        wordB = `"` /[Bb]\w+/ '"'
+        wordC = `"` /[Cc]\w+/ '"'
+        EOF = /$/'''
+        grammar = create_parser(words, 'words')
+
+        # print(grammar.python_src__)
+        p1 = grammar.wordC.parsers[0]
+        p2 = grammar.wordB.parsers[0]
+        p3 = grammar.wordA.parsers[0]
+
+        ps1 = grammar.wordC.parsers[-1]
+        ps2 = grammar.wordB.parsers[-1]
+        ps3 = grammar.wordA.parsers[-1]
+
+        p4 = ps1.parsers[0]
+        p5 = ps1.parsers[0]
+        p6 = ps1.parsers[0]
+
+        assert (p.eq_class == p1.eq_class for p in (p2, p3, p4, p5, p6))
+        assert (p.eq_class == ps1.eq_class for p in (ps2, ps3))
+
+        cst = grammar('"camma", "beta", "alpha"')
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

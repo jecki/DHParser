@@ -219,7 +219,6 @@ class TestTokenParsing:
         result, messages, syntaxtree = compile_source(orig_src, prepr, self.grammar,
                                                       lambda i: i, lambda i: i)
         for err in messages:
-            print(err)
             if self.code[err.orig_pos] == "#":
                 break
         else:
@@ -287,11 +286,9 @@ class TestIncludes:
             self.create_files({'main.txt': main, 'sub.txt': sub})
             find_func = gen_find_include_func(r'include\((?P<name>[^)\n]*)\)')
             _, text, mapping, _ = preprocess_includes(None, 'main.txt', find_func)
-            # print(mapping)
             assert text == main.replace('include(sub.txt)', 'abc'), text
             for i in range(len(text)):
                 name, offset, k = mapping(i)
-                # print(i, k, name)
                 txt = main if name == 'main.txt' else sub
                 assert text[i] == txt[k], f'{i},{k}: {text[i]} != {txt[k]} in {name}'
 
