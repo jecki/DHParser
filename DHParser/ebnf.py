@@ -677,7 +677,7 @@ comments work as expected::
     word S word S word
     >>> syntax_tree = extended_parser('What{check this again!}is work?')
     >>> print(syntax_tree.errors[0])
-    1:5: Error (1040): Parser "EXCLAMATION_MARK" did not match: »{check this again!}i ...«
+    1:24: Error (1040): Parser "pure_S" did not match: »is work?«
 
 The last error was to be expected, because we did not allow comments
 to serve a substitutes for whitespace. The error message might not be
@@ -982,14 +982,9 @@ this location) as the cause of the failure. This approach often works
 surprisingly well for locating errors, unless the grammar relies to
 heavy on regular exrpessions capturing large chunks of text, because
 the error location works only on the level of the parsing expression
-grammar not at that of the atomic regular expressions. It is not quite
-a suitable for explaining the error or pinpointing which parser
-really was the culprit.
-
-As a remedy, DHParser allows to annotate a point in a sequence from
-which onward any failure to match raises a parsing error instead of
-just reporting a non-match. Cosinder a parser for simple arithmetic
-expressions, for example:
+grammar not at that of the atomic regular expressions. To see how
+farthest fail word, consider a parser for simple arithmetic
+expressions::
 
     >>> arithmetic_grammar = '''@ literalws = right
     ... arithmetic = expression EOF
@@ -1000,8 +995,21 @@ expressions, for example:
     ... number     = /\\\\d+/~
     ... EOF        = /$/'''
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
-    >>> terms = arithmetic('(2 - 3) * (4 + 5)')
+    >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
+    1:17: Error (1040): Parser "term->:Text" did not match: »«
+    >>> terms = arithmetic('(2 - 3) * ( )')
+    >>> print(terms.errors[0])
+    1:13: Error (1040): Parser "number->:RegExp" did not match: »)«
+
+
+The "farthest fail"-method is not quite as suitable for explaining
+the error or pinpointing which parser really was the culprit.
+As a remedy, DHParser allows to annotate a point in a sequence from
+which onward any failure to match raises a parsing error instead of
+just reporting a non-match::
+
+
 
 
 Fail-tolerant Parsing
