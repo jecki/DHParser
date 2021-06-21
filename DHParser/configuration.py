@@ -329,7 +329,7 @@ CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 # Defines the maximum number of LINES before the "S-expression" serialization
 # will switch to a compact output where the closing brackets are placed on
 # the same line as the last line of the content.
-CONFIG_PRESET['compact_sxpr_threshold'] = 20
+CONFIG_PRESET['compact_sxpr_threshold'] = 10
 
 
 # How to treat illegal attribute values when serializing as XML,
