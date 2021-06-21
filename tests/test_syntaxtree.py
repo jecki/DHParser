@@ -465,6 +465,7 @@ class TestNode:
 
     def test_as_etree(self):
         import xml.etree.ElementTree as ET
+        # import lxml.etree as ET
         sxpr = '(R (A "1") (S (B `(class "bold") "2")) (C "3"))'
         xml = '<R><A>1</A><S><B class="bold">2</B></S><C>3</C></R>'
         node = parse_sxpr(sxpr)
@@ -480,6 +481,13 @@ class TestNode:
         et = ET.XML(ET.tostring(et, encoding="unicode"))
         node = Node.from_etree(et)
         assert node.as_sxpr() == expected_sxpr
+        empty_tags = set()
+        tree = parse_xml('<a><b>1<c>2<d />3</c></b>4</a>', out_empty_tags=empty_tags)
+        etree = tree.as_etree(empty_tags=empty_tags)
+        assert ET.tostring(etree).replace(b' /', b'/') == b'<a><b>1<c>2<d/>3</c></b>4</a>'
+        tree = Node.from_etree(etree)
+        assert flatten_sxpr(tree.as_sxpr()) == \
+               '(a (b (:Text "1") (c (:Text "2") (d) (:Text "3"))) (:Text "4"))'
 
     def test_delete_item(self):
         sxpr = '(root (A "0") (B "1") (C "2") (D "3"))'

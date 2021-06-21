@@ -1323,8 +1323,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             assert len(attr_dict) == 1, "Node.with_attr() must not be called with more than one " \
                 "non-keyword parameter."
             dictionary = attr_dict[0]
-            assert isinstance(dictionary, dict), "The non-keyword parameter passed to " \
-                "Node.with_attr() must be of type dict, not %s." % str(type(dictionary))
+            # # commented out, because otherwise lxml fails
+            # assert isinstance(dictionary, dict), "The non-keyword parameter passed to " \
+            #     "Node.with_attr() must be of type dict, not %s." % str(type(dictionary))
             # assert all(isinstance(a, str) and isinstance(v, str) for a, v in attr_dict.items())
             if dictionary:  # do not update with an empty dictionary
                 self.attr.update(dictionary)
@@ -2051,6 +2052,25 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
             allow_ommissions=bool(omit_tags)))
 
+    def as_tree(self) -> str:
+        """Serialize as a simple indented text-tree."""
+        sxpr = self.as_sxpr(flatten_threshold=0)
+        if sxpr.find('\n') >= 0:
+            sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
+            sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
+            # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
+            sl = sxpr.split('\n')
+            for i in range(len(sl)):
+                if '`' in sl[i]:
+                    sl[i] = sl[i].replace('))', ')')
+                elif sl[i][-1:] != '"':
+                    sl[i] = sl[i].replace(')', '')
+            sxpr = '\n'.join(sl)
+            sxpr = re.sub(r'^\(', r'', sxpr)
+        sxpr = re.sub(r'\n\s*"(?=.*?(?:$|\n\s*\w))', r' "', sxpr)
+        return sxpr
+
+
     # JSON serialization ###
 
     def to_json_obj(self) -> list:
@@ -2132,22 +2152,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.as_xml()
         elif switch == 'json':
             return self.as_json()
-        elif switch == 'indented':
-            sxpr = self.as_sxpr(flatten_threshold=0)
-            if sxpr.find('\n') >= 0:
-                sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
-                sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
-                # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
-                sl = sxpr.split('\n')
-                for i in range(len(sl)):
-                    if '`' in sl[i]:
-                        sl[i] = sl[i].replace('))', ')')
-                    elif sl[i][-1:] != '"':
-                        sl[i] = sl[i].replace(')', '')
-                sxpr = '\n'.join(sl)
-                sxpr = re.sub(r'^\(', r'', sxpr)
-            sxpr = re.sub(r'\n\s*"(?=.*?(?:$|\n\s*\w))', r' "', sxpr)
-            return sxpr
+        elif switch in ('indented', 'tree'):
+            return self.as_tree()
         else:
             s = how if how == switch else (how + '/' + switch)
             raise ValueError('Unknown serialization "%s". Allowed values are either: %s or : %s'
@@ -2156,27 +2162,67 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, text_tags: Set[str] = {":Text"}):
-        """Returns the tree as standard-library XML-ElementTree."""
-        import xml.etree.ElementTree as ET
+    def as_etree(self, ET=None, text_tags: Set[str] = {":Text"}, empty_tags: Set[str] = set()):
+        """Returns the tree as standard-library- or lxml-ElementTree.
+
+        :param ET: The ElementTree-library to be used. If None, the STL ElemtentTree
+            will be used.
+        :param text_tags: A set of tags the content of which will be written without
+            tag-name into the mixed content of the parent.
+        :param empty_tags: A set of tags that will be considered empty tags like "<br/>".
+            No Node with any of these tags must contain any content.
+
+        :returns: The tree of Nodes as an ElementTree
+        """
+        if ET is None:
+            import xml.etree.ElementTree as ET
+        # import lxml.etree as ET
         attributes = self.attr if self.has_attr() else {}
         tag_name = xml_tag_name(self.tag_name) if self.tag_name[:1] == ':' else self.tag_name
         if self.children:
             element = ET.Element(tag_name, attrib=attributes)
-            element.extend([child.as_etree() for child in self.children])
+            # element.extend([child.as_etree(text_tags, empty_tags) for child in self.children])
+            children = self.children
+            i = 0;  L = len(children);  text = []
+            while i < L and children[i].tag_name in text_tags:
+                assert not children[i].children
+                text.append(children[i].content)
+                i += 1
+            if text:  element.text = ''.join(text)
+            lest_element = None
+            while i < L:
+                while i < L and children[i].tag_name not in text_tags:
+                    last_element = children[i].as_etree(ET, text_tags, empty_tags)
+                    element.append(last_element)
+                    i += 1
+                text = []
+                while i < L and children[i].tag_name in text_tags:
+                    assert not children[i].children
+                    text.append(children[i].content)
+                    i += 1
+                if text:  last_element.tail = ''.join(text)
         else:
             element = ET.Element(tag_name, attrib=attributes)
-            element.text = self.content
+            if tag_name in empty_tags:
+                assert not self.content
+                # element.text = None
+            else:
+                element.text = self.content
         return element
 
     @staticmethod
     def from_etree(et, text_tag: str = ':Text') -> 'Node':
-        """Converts a standard-library XML-ElementTree to a tree of nodes."""
+        """Converts a standard-library- or lxml-ElementTree to a tree of nodes.
+        :param et:  the root element-object of the ElementTree
+        :param text_tag: A tag-name that will be used for the strings
+            occuring in mixed content.
+        :returns: a tree of nodes.
+        """
         sub_elements = et.findall('*')
         if sub_elements:
             children = [Node(text_tag, et.text)] if et.text else []
             for el in sub_elements:
-                children.append(Node.from_etree(el))
+                children.append(Node.from_etree(el, text_tag))
                 if el.tail:
                     children.append(Node(text_tag, el.tail))
             node = Node(restore_tag_name(et.tag), tuple(children))
@@ -3093,14 +3139,19 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
 
 
-def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
+def parse_xml(xml: Union[str, StringView],
+              ignore_pos: bool = False,
+              out_empty_tags: Set[str] = set()) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
 
-    If the flag `ignore_pos` is True, '_pos'-attributes will be understood as
-    normal XML-attributes. Otherwise '_pos' will be understood as special
-    attribute, i.e. its value will be written to `node._pos` and not
-    transferred to the `node.attr`-dictionary.
+    :param xml: The XML-string to be parsed into a tree of Nodes
+    :param ignore_pos: if True, '_pos'-attributes will be understood as
+        normal XML-attributes. Otherwise '_pos' will be understood as a
+        special attribute, the value of which will be written to `node._pos`
+        and not transferred to the `node.attr`-dictionary.
+    :param out_empty_tags: A set that is filled with the names of those
+        tags that are empty tags, e.g. "<br/>"
     """
 
     xml = StringView(str(xml))
@@ -3177,7 +3228,10 @@ def parse_xml(xml: Union[str, StringView], ignore_pos: bool = False) -> Node:
         res = []  # type: List[Node]
         s, tagname, attrs, solitary = parse_opening_tag(s)
         name, class_name = (tagname.split(":") + [''])[:2]
-        if not solitary:
+        if solitary:
+            out_empty_tags.add(tagname)
+        else:
+            assert tagname not in out_empty_tags
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
