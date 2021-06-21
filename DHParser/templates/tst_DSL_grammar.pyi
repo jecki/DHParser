@@ -6,8 +6,8 @@
 import os
 import sys
 
-LOGGING = ''
-
+LOGGING = 'LOGS'
+DEBUG = False
 TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)
@@ -18,6 +18,8 @@ if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)
 
 try:
+    from DHParser.configuration import access_presets, set_preset_value, \
+        finalize_presets
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
@@ -42,24 +44,25 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
-    DHParser.log.start_logging(os.path.join(TEST_DIRNAME, LOGGING))
+    testdir = os.path.join(scriptpath, TEST_DIRNAME)
+    DHParser.log.start_logging(os.path.join(testdir, LOGGING))
     error_report = testing.grammar_suite(
-        os.path.join(scriptpath, TEST_DIRNAME),
-        get_grammar, get_transformer,
+        testdir, get_grammar, get_transformer,
         fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 
 if __name__ == '__main__':
-    # from DHParser.configuration import access_presets, set_preset_value, finalize_presets
-    # access_presets()
-    # set_preset_value('test_parallelization', True)
-    # finalize_presets()
-
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
-        LOGGING = "LOGS"
+        DEBUG = True
         del argv[1]
+
+    access_presets()
+    # set_preset_value('test_parallelization', True)
+    if DEBUG:  set_preset_value('history_tracking', True)
+    finalize_presets()
+
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
         os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
         # if called with a single filename that is either an EBNF file or a known

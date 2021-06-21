@@ -1548,7 +1548,7 @@ class Grammar:
                     err_pos = self.ff_pos__
                     err_pname = self.ff_parser__.pname \
                                 or self.associated_symbol__(self.ff_parser__).pname \
-                                   + '->' + self.ff_parser__.tag_name
+                                   + '->' + str(self.ff_parser__)
                     err_text = self.document__[err_pos:err_pos + 20]
                     if err_pos + 20 < len(self.document__) - 1:  err_text += ' ...'
                     # Check if a Lookahead-Parser did match. Needed for testing, because
@@ -3814,7 +3814,6 @@ class Forward(UnaryParser):
                     self.recursion_counter[location] = depth
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
-                    # TODO: Should grammar.ff_pos__ be saved here? and restored, below?
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match

@@ -680,10 +680,8 @@ comments work as expected::
     1:24: Error (1040): Parser "pure_S" did not match: »is work?«
 
 The last error was to be expected, because we did not allow comments
-to serve a substitutes for whitespace. The error message might not be
-as clear about the actual error as we might wish, though, but this is a topic
-for later. Let's check whether putting comments near paragraph breaks
-works as well::
+to serve a substitutes for whitespace. Let's check whether putting comments
+near paragraph breaks works as well::
 
     >>> test_text = '''Happiness lies in the diminuniation of work.
     ...
@@ -939,12 +937,12 @@ example a simple DSL for writing definitions like::
 Now, let's try to draw up a grammar for "definitions"::
 
     >>> def_DSL_first_try = ''' # WARNING: This grammar doesn't work, yet!
-    ...     @literalws = right
+    ...     @literalws  = right
     ...     definitions = ~ definition { definition } EOF
     ...     definition  = definiendum ":=" definiens
     ...     definiendum = word
     ...     definiens   = word { word }
-    ...     word        = /[A-Z]?[a-z]*/
+    ...     word        = /[a-z]+|[A-Z][a-z]*/~
     ...     EOF         = /$/ '''
     >>> def_parser = create_parser(def_DSL_first_try, "defDSL")
 
@@ -952,7 +950,127 @@ Parsing our example with the generated parser yields an error, however::
 
     >>> syntax_tree = def_parser(definitions)
     >>> for e in syntax_tree.errors_sorted:  print(e)
-    2:8: Error (1040): Parser "definition->:Text" did not match: »   := carnivorous qu ...«
+    3:11: Error (1040): Parser "word->/[a-z]+|[A-Z][a-z]*/" did not match: »:= featherless biped«
+
+The reason for this error is that the parser `definiens` captures as many
+words as occur in a sequence, including the definiendum of the next definition
+which is the word "human". But then the next definition does not find it
+definiendum, any more, because it has already been captured. (All this may not
+easily become clear from the error message itself, but can easily be found
+out by using the post-mortem debugger of module :py:mode`trace`.)
+
+An common tequnique to avoid this problem would be to introduce an
+end-of-statemenet, for example, a semicolon ";". A more elegant way to solve
+the problem in this case is to make use of the fact that if a word is
+followed by the definition sign ":=" it cannot be part of the definiens
+any more, but must be a definiendum. This can be encoded by using the
+negative look-ahead operator "!":
+
+    >>> def_DSL = def_DSL_first_try.replace('definiens   = word { word }',
+    ...                                     'definiens   = word { word !":=" }')
+    >>> def_parser = create_parser(def_DSL, "defDSL")
+    >>> syntax_tree = def_parser(definitions)
+    >>> for d in syntax_tree.select('definition'):
+    ...    print(f'A {d["definiendum"]} is a {str(d["definiens"]).strip()}')
+    A dog    is a carnivorous quadrupel that barks
+    A human  is a featherless biped
+
+The statement `word !":="` is a squence of a `word` and a negative lookahead.
+This whole sequence only matches, if `word` matches and the negative looakahead
+matches, which is only the case of the following text cannot be matched by ":=".
+
+We could have achieved the same effect with a positive lookahead by checking
+whether any of the possible follow-up-sqeuences of parser `definines` ensues::
+
+    >>> def_DSL = def_DSL_first_try.replace('definiens   = word { word }',
+    ...                                     'definiens   = word { word &(word|EOF) }')
+    >>> def_parser = create_parser(def_DSL, "defDSL")
+    >>> syntax_tree = def_parser(definitions)
+    >>> for d in syntax_tree.select('definition'):
+    ...    print(f'A {d["definiendum"]} is a {str(d["definiens"]).strip()}')
+    A dog    is a carnivorous quadrupel that barks
+    A human  is a featherless biped
+
+Generally, lookahead operators, whether positive or negative, never capture any
+text. They merely match or fail depending on whether the following parser would
+match or would fail to match the next piece of text. The positive lookahead
+matches, if the parser would match. The negative operator matches, if it would
+fail. Lookahead operators can also be though of as a boolean condition on the
+following text, where the positive lookahead operator "&" resembles an and,
+"and" the negative lookahead operator an "and not". As in our example, these
+operators are very helpful for "exploring" the surroundings of a piece of text
+to be captured by a parser. They allow parsers to match or fail depending on
+the ensuing text.
+
+A negative lookahead expresseion can also serve to encode the meaning of
+"without" if placed in front of another expression. Let's rewrite our
+grammar of a definitions-DSL so as to exclude certain bad words::
+
+    >>> def_DSL = def_DSL[:def_DSL.find('word        =')] + '''
+    ...     word        = !forbidden /[a-z]+|[A-Z][a-z]*/~
+    ...     forbidden   = /[sf][a-z][a-z][a-z]/~
+    ...     EOF         = /$/ '''
+    >>> def_parser = create_parser(def_DSL, "defDSL")
+    >>> syntax_tree = def_parser('nice := nice word')
+    >>> print(syntax_tree)
+    nice := nice word
+    >>> syntax_tree = def_parser('sxxx := bad word')
+    >>> print(str(syntax_tree).strip())
+    <<< Error on "sxxx := bad word" | Parser "definitions" did not match: »sxxx := bad word« >>>
+
+The same effect can be achieved by using the subtraction operator "-". This
+is just syntactic sugar make the use of the negative lookahead operator
+in the sense of "without" more intuitive::
+
+    >>> def_DSL = def_DSL[:def_DSL.find('word        =')] + '''
+    ...     word        = all_words - forbidden
+    ...     all_words   = /[a-z]+|[A-Z][a-z]*/~
+    ...     forbidden   = /[sf][a-z][a-z][a-z]/~
+    ...     EOF         = /$/ '''
+    >>> def_parser = create_parser(def_DSL, "defDSL")
+    >>> syntax_tree = def_parser('sxxx := bad word')
+    >>> print(str(syntax_tree).strip())
+    <<< Error on "sxxx := bad word" | Parser "definitions" did not match: »sxxx := bad word« >>>
+
+Next to the lookahead operators, there also exist lookback operators. Be warned,
+though, that look back operators are an **experimental** feature in DHParser
+and that their implementation is highly idiosyncratic, that is, it is most
+lilely not compatible with any other parser-generator-toolkit based on EBNF-grammers.
+Also, lookback operators in DHParser are more restricted than lookahead-operators.
+They can only be used in combination with simple text or regular expression parsers
+and - here comes the idiosyncratic part - they work in the opposite direction.
+This means that if you want to check whether a parser is preceeded, say, by the
+keyword "BEGIN", the text phrase that you have to check for with the lookback
+parser is actually "NIGEB". If that still does not put you off, here is how
+lookback-operators are used: Let's assume that our definition should not only
+allow for a definiens but, alternatively for enumerations and that the difference
+is indicated by using a simple equal sign "=" instead of the definition symbol
+":=". Then using lookback-operators to distinguish the case, we can rewrite our
+grammar as follows::
+
+    >>> def_DSL_extended = '''
+    ...     @literalws  = right
+    ...     definitions = ~ definition { definition } EOF
+    ...     definition  = definiendum (":=" | "=") (definiens | enumeration)
+    ...     definiendum = word
+    ...     definiens   = <-& /\s*=:/ word { word &(word|EOF) }
+    ...     enumeration = <-& /\s*=[^:]/ word { word &(word|EOF) }
+    ...     word        = /[a-z]+|[A-Z][a-z]*/~
+    ...     EOF         = /$/ '''
+    >>> def_parser = create_parser(def_DSL_extended, "defDSL")
+    >>> definitions = '''
+    ...     dog   := carnivorous quadrupel that barks
+    ...     drinks = water beer juice
+    ...     human := featherless biped'''
+    >>> def_parser = create_parser(def_DSL_extended, "defDSL")
+    >>> syntax_tree = def_parser(definitions)
+    >>> print(str(syntax_tree.pick('enumeration')).strip())
+    water beer juice
+
+The lookback operators are `<-&` for the positive lookback and `<-!` for the
+negative lookback, each of which must be followed by a regular expression or a string.
+Of course, this example is rather wanton and the grammar can easily be rewritten
+without the lookback-operators.
 
 
 Locating errors and customizing error messages
@@ -972,6 +1090,9 @@ locating errors and customizing error messages will be described.
 Techniques for resuming the parsing process after an error occurred
 or for passing by erreneous passages in the source code will be
 explained below, unter the heading "Fail-tolerant Parsing".
+
+Farthest-Fail-Heuristics
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Without adding any hints to the grammar, DHParser applies only a
 very basic technique for locating the error if the grammar does
@@ -997,19 +1118,91 @@ expressions::
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
     >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
-    1:17: Error (1040): Parser "term->:Text" did not match: »«
+    1:17: Error (1040): Parser "term->`*`" did not match: »«
     >>> terms = arithmetic('(2 - 3) * ( )')
     >>> print(terms.errors[0])
-    1:13: Error (1040): Parser "number->:RegExp" did not match: »)«
+    1:13: Error (1040): Parser "number->/\\\\d+/" did not match: »)«
 
+As can be seen the location of the error is captured well enough,
+at least when we keep in mind that the computer cannot guess where
+we would have placed the forgotton closing bracket. It can only
+report the point where the mistake becomes apparant.
 
-The "farthest fail"-method is not quite as suitable for explaining
-the error or pinpointing which parser really was the culprit.
-As a remedy, DHParser allows to annotate a point in a sequence from
-which onward any failure to match raises a parsing error instead of
-just reporting a non-match::
+However, the reported fact that it was the sub-parser `*` of
+parser term that failed at this location does little to enlighten
+us with respect to the cause of the failure. The "farthest fail"-method
+as implemented by DHParser yields the
+first parser (of possibly several) that has been tried at the
+position where the farthest fail occured. Thus, in this case,
+a failure of the parser capturing `*` is reporeted rather than
+of the parser expression->`+`. Changing this by reporting the
+last parser or all parsers that failed at this location would
+do little to remedy this situaiton, however. In this example,
+it would just be as confusing to learn that expression->´+` failed
+at the end of the parsed string.
 
+Marking mandatory items with "§"
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Thus, "farthest fail"-method is not very suitable for explaining
+the failure or pinpointing which parser really was the culprit.
+Therefore, DHParser provides a simple annotation that allows to
+raise a parsing error deliberately, if a ceratin point in the
+chain of parsers has not been reached: By placind the "§"-sign
+as a "mandatory-marker" in front of a parser, the parser as well
+as all subsequent parsers in the same sequence, will not simply
+return a non-match when failing, but it will cause the entire
+parsing process to stop and report an error at the location
+of failure::
+
+    >>> arithmetic_grammar = arithmetic_grammar.replace(
+    ...    'group      = "(" expression ")"',
+    ...    'group      = "(" § expression ")"')
+    >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
+    >>> terms = arithmetic('(2 - 3 * (4 + 5)')
+    >>> print(terms.errors[0])
+    1:17: Error (1010): `)` ~ expected by parser 'group', »...« found!
+    >>> terms = arithmetic('(2 - 3) * ( )')
+    >>> print(terms.errors[0])
+    1:13: Error (1010): expression expected by parser 'group', »)...« found!
+
+The error messages give a much better indication of the cause of the
+error. What is reported as cause is either the name of the parser that was
+expected to match, as in the second case, or the rule of the parser in case
+of unnamed parsers, as in the first case. This usually, though unfortunately not
+always, yields a much better indication of the location and cause of an
+error than the farthest failure.
+
+However, a little care has to be taken, not
+to place the mandatory marker in front of a parser that might fail at a location
+that could still be reached and matched by another branch of the grammar.
+(In our example it is clear that round brackets enclose only groups. Thus,
+if the opening round bracket has matched, we can be sure that what follows
+must be an expression fllowed by a closing round bracket, or, if not it is
+a mistake.) Luckily, although this may sound complicated, in practice it
+never is. Unless you grammar is very badly structured, you will hardly
+ever make this mistake, an if you do, you will notice soon enough.
+
+The §-marker has proven to be a very simple means of pinpointing errors
+the DSL-code, and I recommend to use it from early on in the process of
+developing a new grammar. Plus, the §-marker offers two further benefits,
+namely customizing error messages and resuming the parsing process after
+a failure. That latter is particularly helpful if the DSL is to be
+used in with an integrated development environment, which benefits greatly
+from fail-tolerant parsing. However I only recommend to start using these,
+only after the grammar has reached a certain amount of maturity, because
+changing the grammer ofter requires re-adjusting customized error messages
+and resume-clauses as well, which can become tedious.
+
+Customized error message
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+While the error messages produced by the use of the §-marker are often
+quite understandable for the engineer designing the grammar of a DSL,
+they might not be so for the user the DSL, who might not know the names
+of the parsers of the grammar, let alone the expressions of the unnamed
+parsers und will therefore not be able to make much sense of a
+error-messages that report just these.
 
 
 Fail-tolerant Parsing
