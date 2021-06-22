@@ -1242,7 +1242,7 @@ deliver understandable error-messages::
     ... @ string_error  = '', 'Illegal character(s) »{1}« in string.'
     ... string          = `"` §characters `"` ~
     ... characters      = { plain | escape }
-    ... plain           = /[^"\\\\\\]+/
+    ... plain           = /[^"\\\\\\]*/
     ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
     >>> json_string = create_parser(grammar, 'json_string')
     >>> print(json_string('"alpha"'))
@@ -1261,12 +1261,46 @@ of the first matching condition is picked. Therefore, the more
 specfic conditions should always be placed first and the more
 general or fallback conditions should be placed below these::
 
+    >>> grammar = ("@ string_error  = /\\\\\\/, 'Illegal escape sequence »{1}« "
+    ...            "Allowed values are b,n,r,t,u'") + grammar
+    >>> json_string = create_parser(grammar, 'json_string')
+    >>> for e in json_string('"al\\pha"').errors:  print(e)
+    1:4: Error (1010): Illegal escape sequence »\pha"...« Allowed values are b,n,r,t,u
+    1:4: Error (1040): Parser "string" stopped before end, at:  \pha"  Terminating parser.
 
+Here, the more specific and more understandable error message
+has been selectec. Careful readers might notice that the the
+more general customized error message "Illegal character(s)
+... found in string" will now only be selected, if the
+string contains a character that not even regular expression
+engine recognizes, because the only other character that
+is not allowed within the string are the closing quotation
+marks that terminate the string and which do not cause the
+parser to fail (but only to terminate to early).
+
+Also, it might be noticed that the errors are alwayes caused
+by a failure to match the second `"`-sign, because the
+characters-parser also matches the empty string and thus
+never fails or raises any error. Nonetheless, the error
+can occur in the interior of the string and can - with
+the help of customized error messages - be described as such
+and properly be located.
+
+However, emitting the right error messages based on a regular-
+expression-condition is not quite easy and sometimes customized
+error messages can even be more confusion for the users of the
+DSL. My recommendation is to wait for user feedback or to monitor
+the errors that users typically make and then to customize the
+error messages to the actual needs of the users to help them
+understand why the computer refuses to parse a certain construct.
 
 
 Fail-tolerant Parsing
 ---------------------
 
+A serious limitation of all previously described error-handling
+mechanisms that that they stop the parsing process on the very
+first error.
 
 
 Semantic Actions and Storing Variables
