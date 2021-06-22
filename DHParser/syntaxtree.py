@@ -2247,6 +2247,30 @@ def content(segment: Union[Node, Tuple[Node]]) -> str:
 #######################################################################
 
 
+# Query contexts as paths #############################################
+
+### EXPERIMENTAL
+
+def as_path(context: TreeContext) -> str:
+    """Returns the context a pseudo filepath of tag-names."""
+    tag_list = ['']
+    for node in context:
+        assert not node.tag_name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
+        tag_list.append(node.tag_name)
+    if ctx.children:
+        tag_list.append('')
+    return '/'.join(tag_list)
+
+
+def match_path(path: str, glob_pattern: str) -> bool:
+    """Matches a context as path against a glob-pattern."""
+    from fnmatch import fnmatchcase
+    if glob_pattern[0:1] not in ("/", "*"):
+        glob_pattern = "*/" + glob_pattern
+    return fnmatchcase(path, pattern)
+
+
+
 # Navigate contexts ###################################################
 
 @cython.locals(i=cython.int, k=cython.int)
@@ -2463,7 +2487,6 @@ def context_sanity_check(context: TreeContext) -> bool:
 
 
 # Context-mapping (allowing a "string-view" on syntax-trees) ##########
-
 
 ContextMapping = Tuple[List[int], List[TreeContext]]  # A mapping of character positions to contexts
 
@@ -2763,18 +2786,6 @@ class RootNode(Node):
         self.empty_tags = set()   # type: Set[str]
         if node is not None:
             self.swallow(node, source, source_mapping)
-
-    # def clear_errors(self):
-    #     """
-    #     DEPRECATED: Should not be ued any more!
-    #     Removes all error messages. This can be used to keep the error messages
-    #     of different subsequent phases of tree-processing separate.
-    #     """
-    #     raise NotImplementedError
-    #     # self.errors = []               # type: List[Error]
-    #     # self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
-    #     # self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
-    #     # self.error_flag = 0
 
     def __str__(self):
         errors = self.errors_sorted
