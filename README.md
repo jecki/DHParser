@@ -8,11 +8,14 @@ construction kit for the Digital Humanities
 Features
 --------
 
-* *Fail-tolerant parsing*
+* *Based on parsings expression grammars; handles all context-free
+  grammers including left-recursive grammars*
+
+* *Unit testing framework and post-mortem debugger for grammars*
 
 * *Customizable error reporting*
 
-* *Unit testing and debugging of grammars*
+* *supports for fail-tolerant parsing*
 
 * *Language-server-support* (https://microsoft.github.io/language-server-protocol/)
 
