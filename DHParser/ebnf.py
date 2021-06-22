@@ -1299,8 +1299,91 @@ Fail-tolerant Parsing
 ---------------------
 
 A serious limitation of all previously described error-handling
-mechanisms that that they stop the parsing process on the very
-first error.
+mechanisms that the parsing process still stops on the very
+first error. This is particularly annoying for beginners learning
+to code data or program code with a new DSL, because the compiler
+must be run at least as many times as there errors in the code to
+find all of them. It would be much better to receive a list of
+all or at least most errors on the first run. And, finally,
+modern development environments can make the most of incremental
+compilation make possible by fail-tolerant parsers.
+
+A generic method for fail-tolerant parsing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are a number of techniques for fail-tolerant parsing. One
+technique that is not specific to DHParser but can be used with
+any parser-generator is to add junctions for possibly erroneous
+code to the grammar::
+
+    >>> grammar = '''
+    ... string          = `"` ([characters] `"` | string_error [`"`]) ~
+    ...   string_error  = /[^"]*/
+    ... characters      = { plain | escape }+
+    ... plain           = /[^"\\\\\\]+/
+    ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
+    >>> json_string = create_parser(grammar, 'json_string')
+    >>> tree = json_string('"al\\pha"')
+    >>> print(tree.as_sxpr(compact=True))
+    (string
+      (:Text '"')
+      (string_error "al\pha")
+      (:Text '"'))
+
+This time the parser did not need to stop at the erroneous part. The erroneaus
+part itself has been caught within a node that betrays only by its name
+that there was an error. To produce error messages we have to add them
+explicitly to such nodes, afterwards:
+
+    >>> for string_error in tree.select('string_error'):
+    ...     _ = tree.new_error(string_error, 'Fehler im String: ' + str(string_error))
+    >>> for e in tree.errors:  print(e)
+    1:2: Error (1000): Fehler im String: al\pha
+
+Unfortunetely, the error location is not very precise. This can be remedied
+by refining our error junction code::
+
+    >>> grammar = '''
+    ... string          = `"` ([characters] `"` | string_error [`"`]) ~
+    ...   string_error    = [characters] { ups [characters] }+
+    ...   ups             = /[^"]/
+    ... characters      = { plain | escape }+
+    ... plain           = /[^"\\\\\\]+/
+    ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
+    >>> json_string = create_parser(grammar, 'json_string')
+    >>> tree = json_string('"al\\pha"')
+    >>> print(tree.as_sxpr(compact=True))
+    (string
+      (:Text '"')
+      (string_error
+        (characters
+          (plain "al"))
+        (ups "\\")
+        (characters
+          (plain "pha")))
+      (:Text '"'))
+
+Here, the node named "ups" pinpoints the precise error location.
+
+Like most techniques for fail-tolerant parsing, this one is not quite
+as easy to master in practice as it might look. Generally, adding
+a junction for erroneous code works best, when the passage that shall
+be by-passed is delineated by a easily recongnizable follow-up strings.
+In this example the follow-up string would be the '"'. The method fails,
+of course if the follow-up text is erroneous, too, or has even been
+forgotten. So, to be absolutely sure, one would have to consider
+different follow-up sequences, say empty lines, keywords that mark
+new parts of the document and the like.
+
+DHParser's support for fail-tolerant parsing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+DHParser offers two constructs for fail-tolerant parsing which are
+quite similar to the just described technique. However, they do not
+require rewriting the grammar and reuse the error-locating ability
+of the §-marker. A disadvatage is that the DHParser-specific support
+for fail-tolerant parsing presently relies entirely on regular
+expressions for finden the right re-entry points.
 
 
 Semantic Actions and Storing Variables
