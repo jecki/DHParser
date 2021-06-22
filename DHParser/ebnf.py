@@ -1183,6 +1183,14 @@ a mistake.) Luckily, although this may sound complicated, in practice it
 never is. Unless you grammar is very badly structured, you will hardly
 ever make this mistake, an if you do, you will notice soon enough.
 
+Also, there is an important restriction: There is only one §-marker
+allowed per named parser. In case you have a long EBFN-expression on the
+right hand side of a symbol-definition, where you'd like to use the
+§-marker at more than one place, you can, however, always split it into
+several expression by introducing new symbols. These symbols, if they
+serve no other purpose, can be marked as disposable with the
+`@ dispose`-directive (see the description above).
+
 The §-marker has proven to be a very simple means of pinpointing errors
 the DSL-code, and I recommend to use it from early on in the process of
 developing a new grammar. Plus, the §-marker offers two further benefits,
@@ -1194,15 +1202,66 @@ only after the grammar has reached a certain amount of maturity, because
 changing the grammer ofter requires re-adjusting customized error messages
 and resume-clauses as well, which can become tedious.
 
-Customized error message
-^^^^^^^^^^^^^^^^^^^^^^^^
+Customizing error messages
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While the error messages produced by the use of the §-marker are often
 quite understandable for the engineer designing the grammar of a DSL,
 they might not be so for the user the DSL, who might not know the names
 of the parsers of the grammar, let alone the expressions of the unnamed
-parsers und will therefore not be able to make much sense of a
-error-messages that report just these.
+parsers und will therefore not always be able to make much sense of
+an error-messages that report just these.
+
+In order to customize error messages, the symbol-related directive
+`@ SYMBOLNAME_error = CONDITION, ERROR_STRING` is used. The directive's
+name consists of the name of a symbol that contains a §-marker and the
+appendix `_error`. The directive always takes two arguments, separated
+as usual by a comma, of which the first is condition-expression and
+the second an error message. The condition can be used to make
+the choice of an error-message dependenant on the text following the
+point of failure. It can either be
+a regular expression or a simple string which must match (or be equal
+to in the case of the string) the first part of the text at the
+position where the parser defined by the symbol failed to match and
+raised an error. Only if the condition matches, the error message
+given as the second argument will be emitted. Otherwise, the fallback
+error-expression described above ("... expected by parser ...") will
+be shown. The empty string `''` can be used as a fallback if the
+customized message shall always be emitted, no matter what the
+following text looks like.
+
+The error string is a format string that may include any of the
+two arguments `{0}` or `{1}` where `{0}` will be replaced by
+the name or string representation of the parser that was expected
+to match but didn't and `{1}` will be replaced by the first twenty
+or so letters of the unmatched rest of the text. Here is a simple
+example that could be part of a JSON-parser that is intended to
+deliver understandable error-messages::
+
+    >>> grammar = '''
+    ... @ string_error  = '', 'Illegal character(s) »{1}« in string.'
+    ... string          = `"` §characters `"` ~
+    ... characters      = { plain | escape }
+    ... plain           = /[^"\\\\\\]+/
+    ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
+    >>> json_string = create_parser(grammar, 'json_string')
+    >>> print(json_string('"alpha"'))
+    "alpha"
+    >>> for e in json_string('"al\\pha"').errors:  print(e)
+    1:4: Error (1010): Illegal character(s) »\pha"...« in string.
+    1:4: Error (1040): Parser "string" stopped before end, at:  \pha"  Terminating parser.
+
+Customized error-messages must always be specified in the grammar
+before definition of the symbol, they are related to and they can
+be stacked. That is, several different error-directives with
+different conditions and messages but related to the same symbol
+can be specified. The conditions are evaluated in the order the
+error-directives appear in the grammar and the error message
+of the first matching condition is picked. Therefore, the more
+specfic conditions should always be placed first and the more
+general or fallback conditions should be placed below these::
+
+
 
 
 Fail-tolerant Parsing
