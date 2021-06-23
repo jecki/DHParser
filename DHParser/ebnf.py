@@ -1242,7 +1242,7 @@ deliver understandable error-messages::
     ... @ string_error  = '', 'Illegal character(s) »{1}« in string.'
     ... string          = `"` §characters `"` ~
     ... characters      = { plain | escape }
-    ... plain           = /[^"\\\\\\]*/
+    ... plain           = /[^"\\\\\\]+/
     ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
     >>> json_string = create_parser(grammar, 'json_string')
     >>> print(json_string('"alpha"'))
@@ -1381,11 +1381,71 @@ DHParser's support for fail-tolerant parsing
 DHParser offers two constructs for fail-tolerant parsing which are
 quite similar to the just described technique. However, they do not
 require rewriting the grammar and reuse the error-locating ability
-of the §-marker. A disadvatage is that the DHParser-specific support
+of the §-marker. A disadvantage is that the DHParser-specific support
 for fail-tolerant parsing presently relies entirely on regular
-expressions for finden the right re-entry points.
+expressions for finding the right re-entry points.
 
+DHParser allows to resume parsing after an error at a later point
+in the text. When trying to resume parsing two questions must be
+answered:
 
+  1. At what location should the parsing process be resumed?
+
+  2. Which parser in the parser call-chain should resume parsing?
+     E.g. the parser that failed, the parser that called the parser
+     that failed, ... ?
+
+The location where parsing should be resumed must be specified by
+a regular expression or a list of regular expressions. The resumption
+location is the nearest match of any of these expressions that does
+not fall into a comment (as specified by the `@comment`-directive
+described above). More precisely it is the location directly after
+the match, because this allows to search for the reentry-location
+both by the text preceding this location and the text following
+this location by using a lookahead operator inside the regular
+expression.
+
+The parser that resumes parsing depends on the directive that guides
+the search for the reentry-point. DHParser offers two different
+directives for this purpose, the `@..._skip`-directive and the
+`@..._resume`-directive. The placeholder ... stands for the name
+of a parser that contains a §-marker.
+
+The skip-directive resumes parsing with the sequence-parser that
+contains the item(s) marked by the §-marker. In the following
+example, the skip-directive picks up parsing with the string-
+parser when an error was raised by the string-parser::
+
+    >>> grammar = '''
+    ... @ string_error  = /\\\\\\/, 'Illegal escape sequence »{1}«'
+    ... @ string_error  = '', 'Illegal character "{1}" in string.'
+    ... @ string_skip   = /(?=")/
+    ... string          = `"` §characters `"` ~
+    ... characters      = { plain | escape }
+    ... plain           = /[^"\\\\\\]+/
+    ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
+    >>> json_string = create_parser(grammar, 'json_string')
+    >>> tree = json_string('"al\\pha"')
+    >>> print(tree.content)
+    "al\pha"
+    >>> print(tree.errors[0])
+    1:4: Error (1010): Illegal escape sequence »\pha"...«
+    >>> print(tree.as_sxpr(compact=True))
+    (string
+      (:Text '"')
+      (characters
+        (plain "al"))
+      (ZOMBIE__ `(1:4: Error (1010): Illegal escape sequence »\pha"...«) "\pha")
+      (:Text '"'))
+
+After the error has occured at the illegal escape-sequence, the
+skip-directive catches the error and skips to the location where the
+"-character lies just ahead and continues parsing with the string-parser.
+The skipped passage is stored in a ZOMBIE__-Node within the syntax-tree
+and parsing can continue through to the end of the text.
+
+In contrast to the skip-directive the resume-directive leaves the parser
+that raised the error and resumes one level higer up in the call chain.
 
 
 Semantic Actions and Storing Variables

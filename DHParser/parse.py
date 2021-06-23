@@ -2713,13 +2713,6 @@ class MandatoryNary(NaryParser):
                 no elements are mandatory. NOTE: The semantics of the mandatory-
                 parameter might change depending on the sub-class implementing
                 it.
-        err_msgs:  A list of pairs of regular expressions (or simple
-                strings or boolean valued functions) and error messages
-                that are chosen if the regular expression matches the text
-                where the error occurred.
-        skip: A list of regular expressions. The rest of the text is searched for
-                each of these. The closest match is the point where parsing will be
-                resumed.
     """
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY) -> None:
