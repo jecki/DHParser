@@ -1,0 +1,41 @@
+# fill in the right values and run latex2html.py again!
+
+PROJECT_TITLE = 'Religiöses Bewusstsein und Politische Ordnung. Eine Kritik von Eric  Voegelins Bewusstseinsphilosophie'
+TOC_TITLE = 'Inhalt'
+BIBLIOGERAPHY_TITLE = 'Literaturverzeichnis'
+AUTHOR = 'Eckhart Arnold'
+AUTHOR_STR = 'Autor'
+REFERENCE = '<a href="https://eckhartarnold.de">Eckhart Arnold</a>'
+PDFURL = '' # 'https://eckhartarnold.de/papers/2007_Voegelins_Bewusstseinsphilosophie/Voegelins_Bewusstseinsphilosophie.pdf'
+DESCRIPTION = 'Eine Untersuchung zum Verhältnis von Religion und Politk in der Philosophie Eric Voegelins und ein Plädoyer für die Trennung von Religion und Politik im liberalen Staat.'
+KEYWORDS = 'Politische Theologie, Eric Voegelin, Religion und Politik'
+LANG = 'de'
+DATE_STR = 'Datum'
+BIB_STR = "Bibliographischer Hinweis"
+CITE_STR = "Zitierweise:"
+BIBTEX_STR = "BibTeX Datensatz:"
+
+CITATION_INFO = """Eckhart Arnold: Religiöses Bewusstsein und Politische Ordnung - Eine Kritik von Eric Voegelins Bewusstseinsphilosophie, GRIN Verlag München 2007."""
+
+BIBTEX_INFO = """
+@Book{Arnold2007,
+  Title                    = {Religiöses Bewusstsein und Politische Ordnung -
+                              Eine Kritik von Eric Voegelins Bewusstseinsphilosophie},
+  Author                   = {Eckhart Arnold},
+  Publisher                = {GRIN Verlag},
+  Year                     = {2007},
+  ISBN                     = {978-3638822275},
+  Address                  = {München}
+}
+"""
+
+METADATA_BLOB = """
+<meta name="citation_bibtexkey" content="Arnold2007"/>
+<meta name="citation_publisher" content="GRIN Verlag" />
+<meta name="citation_address" content="München" />
+<meta name="citation_year" content="2007" />
+<meta name="citation_author" content="Eckhart Arnold" />
+<meta name="citation_isbn" content="978-3638822275" />
+<meta name="citation_title" content="Religiöses Bewusstsein und Politische Ordnung - Eine Kritik von Eric Voegelins Bewusstseinsphilosophie" />
+<meta name="citation_type" content="Book" />
+"""

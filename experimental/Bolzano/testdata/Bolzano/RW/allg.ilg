@@ -1,0 +1,65 @@
+This is makeindex.exe, version 2.15 [MiKTeX 2.9] (kpathsea + Thai support).
+Scanning input file allg.idx....
+!! Input index error (file = allg.idx, line = 118):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 120):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 124):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 146):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 534):
+   -- Illegal null field.
+!! Input index error (file = allg.idx, line = 535):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 566):
+   -- Illegal null field.
+!! Input index error (file = allg.idx, line = 567):
+   -- Illegal null field.
+!! Input index error (file = allg.idx, line = 568):
+   -- Illegal null field.
+!! Input index error (file = allg.idx, line = 569):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 574):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 576):
+   -- Illegal null field.
+.
+!! Input index error (file = allg.idx, line = 1705):
+   -- Illegal null field.
+!! Input index error (file = allg.idx, line = 1706):
+   -- Illegal null field.
+!! Input index error (file = allg.idx, line = 1707):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 1762):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 1766):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 1849):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 1973):
+   -- Illegal null field.
+!! Input index error (file = allg.idx, line = 1974):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 1989):
+   -- Illegal null field.
+
+!! Input index error (file = allg.idx, line = 2003):
+   -- Illegal null field.
+.done (2008 entries accepted, 22 rejected).
+Sorting entries...................done (23262 comparisons).
+Generating output file allg.ind.....done (1624 lines written, 0 warnings).
+Output written in allg.ind.
+Transcript written in allg.ilg.

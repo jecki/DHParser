@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+
+<!--Converted with LaTeX2HTML 2002-2-1 (1.70)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>5.1 Starting a predefined simulation</TITLE>
+<META NAME="description" CONTENT="5.1 Starting a predefined simulation">
+<META NAME="keywords" CONTENT="CoopSim_Doc">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META NAME="Generator" CONTENT="LaTeX2HTML v2002-2-1">
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+
+<LINK REL="STYLESHEET" HREF="CoopSim_Doc.css">
+
+<LINK REL="next" HREF="node11.html">
+<LINK REL="previous" HREF="node9.html">
+<LINK REL="up" HREF="node9.html">
+<LINK REL="next" HREF="node11.html">
+</HEAD>
+
+<BODY >
+<!--Navigation Panel-->
+<A NAME="tex2html185"
+  HREF="node11.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html181"
+  HREF="node9.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html175"
+  HREF="node9.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html183"
+  HREF="node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A>  
+<BR>
+<B> Next:</B> <A NAME="tex2html186"
+  HREF="node11.html">5.2 Defining a new</A>
+<B> Up:</B> <A NAME="tex2html182"
+  HREF="node9.html">5 First Steps -</A>
+<B> Previous:</B> <A NAME="tex2html176"
+  HREF="node9.html">5 First Steps -</A>
+ &nbsp; <B>  <A NAME="tex2html184"
+  HREF="node1.html">Contents</A></B> 
+<BR>
+<BR>
+<!--End of Navigation Panel-->
+
+<H2><A NAME="SECTION00061000000000000000">
+5.1 Starting a predefined simulation</A>
+</H2>
+
+<P>
+After successfully starting CoopSim you should see an application
+Window like this:
+
+<P>
+<DIV ALIGN="CENTER">
+<IMG
+  WIDTH="400" HEIGHT="310" ALIGN="BOTTOM" BORDER="0"
+ SRC="./app_start.png"
+ ALT="Image app_start">
+</DIV>
+
+<P>
+In the beginning the screen is empty, of course. You will notice four notebook
+pages named: <I>Tournament</I>, <I>Ecological Simulation</I>, <I>Simplex
+  Diagram</I> and <I>User Defined Strategies</I>. The purpose of these pages will
+be explained later. First, we will just start the simulation <I>Simple
+  Example</I>. This simulation is preselected when the program starts up (you can
+see which simulation is active and which simulations are available in the
+<I>Simulation</I> menu), so it is just enough to click the <I>Continue
+  Simulation</I> button to start the simulation. This is the button with the
+blue arrow pointing to the right. It is the second button from the left
+in the button row under the menu. After a short time of calculating the result
+of the tournament should appear on the <I>Tournament</I> page:
+
+<P>
+<DIV ALIGN="CENTER">
+<IMG
+  WIDTH="400" HEIGHT="310" ALIGN="BOTTOM" BORDER="0"
+ SRC="./tournament_page.png"
+ ALT="Image tournament_page">
+</DIV>
+
+<P>
+The tournament page displays the following information:
+
+<P>
+
+<OL>
+<LI>The strategies that took part in the tournament.
+</LI>
+<LI>Then ranking of the strategies.
+</LI>
+<LI>The outcome of each single match of a pair of strategies as well as
+the first and last 50 moves of the players, where <B>0</B> indicates a defection
+and a <B>1</B> a cooperative move.
+</LI>
+<LI>The ranking of the strategies in the ecological simulation after a
+certain number of generations.
+</LI>
+</OL>
+
+<P>
+You can scroll the contents of the text window using the slider on the
+right side in order to see all the information. As you can see from the
+tournament log, the simulation <I>Simple Example</I> is a tournament
+of three strategies only: GRIM, TITFORTAT and RANDOM. Among these
+three strategies GRIM emerges as the clear winner.
+
+<P>
+Now, let us have a look at the other notebook pages. Select the page
+<I>Ecological Simulation</I> in order to view the graph of the ecological
+simulation. The graph shows the population dynamics of the strategies
+in the tournament, assuming that the fitness of a strategy is
+determined by its score in the tournament. It should look like this:
+
+<P>
+<DIV ALIGN="CENTER">
+<IMG
+  WIDTH="400" HEIGHT="310" ALIGN="BOTTOM" BORDER="0"
+ SRC="./eco_page.png"
+ ALT="Image eco_page">
+</DIV>
+
+<P>
+If you wonder how the development is going to continue after the 50th
+generation (you probably don't when the graph is as simple as in this case, but
+sometimes it takes more generations until a clear result crystalizes out), you
+can click on the blue arrow button again to let the simulation continue. You
+can do this as often as you like. (To go back to the first 50 generations,
+just restart the simulation from the <EM>Simulation</EM> menu.)
+
+<P>
+Now suppose you would like to save the graph (maybe, because you are
+just about to write a paper on cooperation in the reiterated prisoner's
+dilemma, for which some graphical illustrations might be useful).
+You can do so by selecting <I>Save Page As</I> from the <I>Edit</I>
+menu or by clicking the <I>Save Page</I> button in the toolbar (somewhere
+in the middle, not to be confused with the <I>Save</I> button which
+saves the whole setup of simulations!). A dialog box will appear where
+you can the select a directory and enter a filename for the graph:
+
+<P>
+<DIV ALIGN="CENTER">
+<IMG
+  WIDTH="284" HEIGHT="192" ALIGN="BOTTOM" BORDER="0"
+ SRC="./save_page_dialog.png"
+ ALT="Image save_page_dialog">
+</DIV>
+
+<P>
+This does not only work with the <I>Ecological Simulation</I> page
+but with all other pages as well. So, whenever you want to save some
+content you are seeing on the screen, just select <I>Save Page As</I>
+in the <I>Edit</I> menu and you will be prompted to save the content
+of the currently selected page. Alternatively, you can select <I>Copy
+Page</I> in the <I>Edit</I> menu (or click the <I>Copy Page</I> button
+in the toolbar) to copy the content of the selected page to the clipboard.
+You can then easily insert the content into another application, say
+a word processor, by pressing <I>Crtl-V</I> within this application.
+
+<P>
+Apart from the graph of the ecological simulation, which usually starts with a
+uniformly distributed population, you may also want to know how the three
+strategies fare in the ecological simulation when they are given different
+population shares in the beginning.  For three strategies the population
+dynamics can be visualized as a simplex diagram. (If there are more than three
+strategies in the simulation then the three strongest strategies are depicted.)
+On a simplex diagram each point within the simplex represents a certain
+population distribution. The visualization of the population dynamics looks
+very similar to a vector field in physics. But, bear in mind that population
+dynamics is a discrete process, while vector fields in physics are usually
+continuous. (For a more comprehensive explanation of simplex diagrams, look
+into the literature on evolutionary game theory, as for example
+Maynard-Smith's ``Evolution and the Theory of Games''). If you select the
+<I>Simplex Diagram</I> page you should see a picture like this:
+
+<P>
+<DIV ALIGN="CENTER">
+<IMG
+  WIDTH="400" HEIGHT="310" ALIGN="BOTTOM" BORDER="0"
+ SRC="./simplex_page.png"
+ ALT="Image simplex_page">
+</DIV>
+
+<P>
+The arrows indicate the direction of the ``field'' (i.e. the direction
+the population drifts to at a certain point). The length of the arrows
+indicates the strength of the drift. Big arrows mean a strong drift
+while small arrows indicate an only slow population drift.
+
+<P>
+<HR>
+<!--Navigation Panel-->
+<A NAME="tex2html185"
+  HREF="node11.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html181"
+  HREF="node9.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html175"
+  HREF="node9.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html183"
+  HREF="node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A>  
+<BR>
+<B> Next:</B> <A NAME="tex2html186"
+  HREF="node11.html">5.2 Defining a new</A>
+<B> Up:</B> <A NAME="tex2html182"
+  HREF="node9.html">5 First Steps -</A>
+<B> Previous:</B> <A NAME="tex2html176"
+  HREF="node9.html">5 First Steps -</A>
+ &nbsp; <B>  <A NAME="tex2html184"
+  HREF="node1.html">Contents</A></B> 
+<!--End of Navigation Panel-->
+<ADDRESS>
+Eckhart Arnold
+2006-10-14
+</ADDRESS>
+</BODY>
+</HTML>

@@ -1,0 +1,9 @@
+include PyPlotter/*.py
+include PyPlotter/*.tex
+include PyPlotter/*.txt
+include PyPlotter/LICENSE.*
+include PyPlotter/MANIFEST.*
+include PyPlotter/*.sh
+include PyPlotter/*.cfg
+include PyPlotter/*.pdf
+include PyPlotter/html_docs/*

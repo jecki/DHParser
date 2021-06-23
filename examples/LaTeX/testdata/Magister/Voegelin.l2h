@@ -1,0 +1,19 @@
+# fill in the right values and run latex2html.py again!
+
+PROJECT_TITLE = 'Die Bewußtseinsphilosophie Eric Voegelins (als Grundlage politischer  Ordnung)'
+TOC_TITLE = 'Inhalt'
+BIBLIOGERAPHY_TITLE = 'Bibliographie'
+AUTHOR = 'Eckhart Arnold'
+AUTHOR_STR = 'Author'
+REFERENCE = 'Eckhart Arnold'
+PDFURL = 'Voegelin.pdf'
+DESCRIPTION = 'Eine Studie zu Eric Voegelins Bewußtseinsphilosophie'
+KEYWORDS = 'Eric Voegelin'
+LANG = 'de'
+DATE_STR = 'Datum'
+BIB_STR = "Bibliographischer Hinweis"
+CITE_STR = "Zitierweise:"
+BIBTEX_STR = "BibTeX Datensatz:"
+CITATION_INFO = """"""
+BIBTEX_INFO = """"""
+METADATA_BLOB = """"""

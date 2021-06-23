@@ -1,0 +1,523 @@
+\section{Die Neumann-Morgensternsche Nutzentheorie}
+\label{NeumannMorgenstern}
+Schon zuvor (Kapitel \ref{Risiko} wurde gezeigt, wie man mit Hilfe des
+Erwartungsnutzens Entscheidungen unter Risiko treffen kann. In diesem Kapitel
+werden wir auf die theoretischen Grundlagen des Erwartungsnutzens und besonders
+des sogenannten "`Neumann-Morgensternschen"' Nutzenbegriffs eingehen, der schon
+früher als "`kardinale Nutzenfunktion"' eingeführt wurde (siehe Kapitel
+\ref{KardinalerNutzen}).
+
+Die Grundidee der Neumann-Morgensternschen Nutzentheorie besteht darin, neben
+den bestehenden Gütern (bzw. den Ergebnissen von Ent\-schei\-dungs\-pro\-zessen)
+"`Lotterien"' als gedachte Güter einzuführen und durch den Vergleich (hinsichtlich
+der Präferenzrelation) von Lotterien und Gütern bzw. Lotterien untereinander
+sowie mit Hilfe von als selbst-evident angesehenen Konsistenzbedingungen eine
+kardinale Nutzenfunktion und das Prinzip des
+Erwartungsnutzen abzuleiten.  Die folgende Darstellung lehnt sich vor allem
+an Resnik an \cite[S. 88-98]{resnik:1987}. Wie sehen diese "`Lotterien"'
+aus und wie kommen sie zu Stande?
+
+\marginline{Begriff der "`Lotterie"'}
+Grundsätzlich ist eine Lotterie immer eine Wahrscheinlichkeitsverteilung über
+einer disjunkten, aber zugleich erschöpfenden Menge von Ereignissen.
+Kompliziert und, wenn es sich nicht gerade um Geldwerte handelt,
+zugegebenermaßen etwas unplausibel wird die Theorie dadurch, dass diese
+Lotterien als mögliche Güter bzw. erzielbare Ergebnisse eines
+Entscheidungsprozesses in die Präferenzrelation eigeordnet werden können
+müssen. Das stellt sich dann etwa wie folgt dar:
+
+Angenommen jemand ordnet seine Präferenzen bezüglich der drei Güter "`Eiscreme"',
+"`Joghurt"' und "`Trockenes Brot"' auf diese Weise:
+\marginline{Problematik der Präferenzbestimmung bei Lotterien}
+\begin{center}
+Eiscreme $\succ$ Joghurt $\succ$ Trockenes Brot
+\end{center}
+Dann postuliert die Theorie,\footnote{Siehe die "`Kontinuitätsbedingung"'
+weiter unten auf Seite \pageref{Kontinuitaet}.}, dass es eine Lotterie mit zwei
+möglichen Preisen, nämlich "`Eiscreme"' als Hauptgewinn und
+"`Trockenes Brot"' als Niete gibt (wobei man den Hauptgewinn mit einer
+bestimmten Wahrscheinlichkeit $a$ erhält und die Niete dementsprechend mit der
+inversen Wahrscheinlichkeit $1-a$), so dass zwischen dieser Lotterie und dem in
+der Mitte eingeordneten Gut "`Joghurt"' Indifferenz herrscht. Angenommen eine
+Person speist gerne Jogurt, so dass dieser Indifferenzpunkt bei einer
+Gewinnwahrscheinlichkeit von $a=80\% $ erreicht wird. Dann gilt, wenn wir
+unsere gedachte Lotterie mit "`Lotterie (a=0.8, Eiscreme, Trockenes Brot)"'
+bezeichnen:
+\begin{center}
+Lotterie (a=0.8, Eiscreme, Trockenes Brot) $\sim$ Joghurt
+\end{center}
+Wozu in aller Welt soll das gut sein? Und woher soll nun einer wissen, ob
+er zwischen Jogurt und einer 80\%-igen Gewinnchance auf Eiscreme (bei Strafe von
+trockenem Brot) indifferent ist und nicht etwa einer 70\%-igen oder 60\%-igen
+etc.? Die Antwort auf die erste Frage ist, dass sich damit eine raffinierte,
+und unter einer großen Gruppe von Ökonomen und einer kleinen Gruppe von
+Philosophen überaus populäre Nutzentheorie aufbauen lässt, die wir gleich
+kennen lernen werden. Die Antwort auf die zweite Frage stellt eine etwas
+schwierige Angelegenheit dar, die man lange diskutieren müsste. So recht
+überzeugend lässt sie sich, wenn es sich nicht gerade mal wieder um Geldwerte
+handelt, offen gestanden nicht beantworten, so dass wir an dieser Stelle schon
+eine gehörige Portion guten Willen mitbringen müssen, um die Theorie zu
+akzeptieren. Zugleich wird an dieser Stelle deutlich, warum es mit dem 
+Hilfsmittel der Lotterien immer möglich ist, aus beliebigen wohlgeformten
+Präferenzen eine kardinale Nutzenfunktion zu erzeugen: Indem wir unserem Akteur 
+nämlich eine definitive Wahrscheinlichkeitsangabe abnötigen, zwingen wir ihn zu
+genau der Zahlenangabe, die wir brauchen, um eine Intervallskala zu konstruieren, 
+und die uns beim bloß ordinalen Nutzen fehlt. 
+
+Ist man dazu bereit, sich die Theorie trotz ihrer m.E. zweifelhaften
+Voraussetzungen anzuhören, so wird man Lotterien der Einfachheit halber in der
+Form darstellen:
+\marginline{Formale Darstellung von Lotterien}
+\[ L(a, x, y) \] 
+Dabei sind $x$ und $y$ zwei beliebige Güter (bzw. Ergebnisse).
+$a$ ist die Wahrscheinlichkeit, mit der der Gewinn $x$ herauskommt, und $1-a$ ist
+dementsprechend die Wahrscheinlichkeit mit der die "`Niete"' $y$ gezogen wird. In
+allgemeiner Form, d.h. bei mehr als zwei Gütern, werden Lotterien so dargestellt:
+\[L((p_1,\ldots,p_n), (x_1,\ldots,x_n)) \qquad p_1 + \ldots + p_n = 1\] 
+wobei
+$x_1,\ldots, x_n$ ein Tupel von $n$ Gütern (oder Ergebniss) ist und $p_1,\ldots,
+p_n$ die Wahrscheinlichkeiten mit der das jeweilige Gut "`gewonnen"' wird.
+Im Folgenden werden wir uns aber auf zwei-stellige Lotterien beschränken, da
+man mehrstellige Lotterien immer als verschachtelte zweistellige Lotterien
+darstellen kann.
+
+Wenn man schon zulässt, dass Güter mit dieser Art von Lotterien darauf hin
+verglichen werden können, ob irgendein Akteur indifferent zwischen ihnen ist,
+dann ist es nur ein kleiner Schritt, auch noch Lotterien mit Lotterien zu
+vergleichen. D.h. wenn $L_1(a_1, x_1, y_1)$ eine Lotterie ist und 
+$L(a_2, x_2, y_2)$ eine weitere, dann kann man für jedes Gut oder jede
+Lotterie die bezüglich der Präferenzen des Akteurs zwischen $L_1$ und $L_2$
+eingeordnet ist eine Lotterie $L(b, L_1, L_2)$ konstruieren, so dass der Akteur
+zwischen dieser Lotterie und dem mittleren Gut (oder der mittleren Lotterie)
+indifferent ist. 
+
+Auf diese Weise kann man nach folgenden drei Regeln eine "`vollständige Menge"'
+\label{MengeVonLotterien}
+\footnote{Dieses Verfahren, aus einer Grundmenge mit Hilfe bestimmter
+"`Produktionsregeln"' einen "`Abschluss"' zu erzeugen (wobei ein {\em Abschluss}
+allgemein als die Menge aller derjenigen Objekte verstanden werden kann, die aus
+einer Menge von Grundobjekten mit Hilfe gegebener Produktionsregeln erzeugt
+werden können), ist uns schon bei dem {\em De Finetti-Abschluss} in der letzten
+Vorlesung begegnet (siehe Seite \pageref{DeFinettiAbschluss}).} von Lotterien
+konstruieren \cite[S. 91]{resnik:1987}:
+\marginline{Definition der Menge aller Lotterien}
+\begin{enumerate}
+  \item Jedes {\em Grundgut} ("`basic prize"') ist eine Lotterie. (Im
+  Zweifelsfall kann man für ein Gut $x$ ja immer die Lotterie $L(1, x, x)$
+  nehmen.) \label{bestesSchlechtestesGut} Es wird
+  weiterhin angenommen, dass es ein oder mehrere beste bzw. schlechteste
+  Grundgüter gibt (was immer gegeben ist, wenn die Menge der Grundgüter endlich
+  ist).
+  \item Wenn $L_1$ und $L_2$ Lotterien sind, dann auch $L(a, L_1, L_2)$ für
+  jedes beliebige $a$ mit $0 \leq a \leq 1$.
+  \item Es gibt keine Lotterien außer den nach den ersten beiden Regeln
+  konstruierten.
+\end{enumerate}
+ 
+Weiterhin wird verlangt, dass für die Lotterien folgende Bedingungen gelten
+\cite[S. 90-92]{resnik:1987} \label{LotterienBedingungen}:
+\marginline{"`Konsistenz"'-bedingungen von Lotterien}
+\begin{enumerate}
+  \item {\em Ordnungsbedingung}: Auf der vollständigen Menge der Lotterien ist
+  eine Präferenzrelation definiert, (die bezüglich der ursprünglichen Güter 
+  mit der auf der Menge dieser Güter definierten Präferenzrelation
+  übereinstimmen sollte.)
+  \item {\em Kontinuitätsbedingung}:\label{Kontinuitaet}
+  \marginline{Kontinuitäts\-bedingung} 
+  Für beliebige Lotterien $x$,$y$ und $z$
+  gilt: Wenn $x \succ y \succ z$, dann gibt es eine Lotterie 
+  $L(a, x, z)$, so dass $y \sim L(a, x, z)$.  
+  \item {\em Bedingung der höheren Gewinne}:\label{BedHoehereGewinne}
+  Für beliebige Lotterien $x$,$y$
+  und $z$ und jede beliebige Wahrscheinlichkeit $a > 0$ gilt: $x \succ y$ genau
+  dann wenn $L(a, x, z) \succ L(a, y, z)$.
+  (Einfach gesagt: Eine Lotterie wir dann vorgezogen, wenn man "`höhere Preise"'
+  gewinnen kann.)
+  \item {\em Bedingung der besseren Chancen}: Für jedes Paar von Lotterien $x$
+  und $y$ und beliebige Wahrscheinlichkeiten $a$ und $b$ gilt: 
+  Wenn $x \succ y$ dann ist $L(a, x, y) \succ L(b, x, y)$ genau dann wenn $a > b$.
+  (Einfach gesagt: Bei gleichen Preisen wird die Lotterie mit den besseren
+  Chancen bevorzugt.)
+  \item {\em Reduzierbarkeit zusammengesetzter Lotterien}:
+  \label{Reduzierbarkeit}\marginline{Reduzier\-barkeit von Lotterien} 
+  Für jede zusammengesetzte Lotterie der Form $L(a, L(b,x,y), L(c,x,y))$ gilt:
+  \[L(a, L(b,x,y), L(c,x,y)) \sim L(ab+(1-a)\cdot c, x, y) \] 
+  (Einfach ausgedrückt: Zusammengesetzte Lotterien, deren innere Lotterien
+  dieselben Güter enthalten (!), können ent\-sprech\-end den Gesetzen der
+  Wahrscheinlichkeitsrechnung auf einfachere reduziert werden.)
+\end{enumerate}
+
+Wenigstens die zweite und dritte dieser Bedingungen kann man als selbstevident
+betrachten. Die anderen Bedingungen sind zumindest plausibel, wenn man sich
+überhaupt auf das Gedankenexperiment mit den "`Lotterien"' einlässt.
+Nun lässt sich beweisen, dass man, wenn diese
+Bedingungen gegeben sind, eine Nutzenfunktion konstruieren kann, die die
+Erwartungsnutzeneigenschaft hat, und die zugleich eine kardinale Nutzenfunktion
+ist. Insgesamt muss die so konstruierte Nutzenfunktion $u$ also die folgenden
+Eigenschaften haben:
+\marginline{Bed. f. kardinale Nutzenfunktionen mit
+Erwartungsnutzeneigenschaft}
+\begin{enumerate}
+  \item $u(x) > u(y)$ genau dann wenn $x \succ y$
+  \item $u(x) = u(y)$ genau dann wenn $x \sim y$
+  \item $u(L(a,x,y)) = au(x) + (1-a)u(y)$ ({\em Erwartungsnutzeneigenschaft})
+  \item Jede Nutzenfunktion $u'$, welche die ersten drei Bedingungen erfüllt,
+  kann durch positiv lineare Transformation in die Nutzenfunktion $u$ überführt
+  werden.
+\end{enumerate}
+Wie kann man das beweisen? Resnik folgend kann der Beweis in zwei Schritten
+geführt werden, indem zuerst die {\em Existenz} einer Nutzenfunktion bewiesen
+wird, die die ersten drei Eigenschaften erfüllt, und dann die {\em
+Eindeutigkeit} dieser Nutzenfunktion bis auf positive lineare Transformation.
+
+\subsection{Vorbereitung des Beweises}
+\label{Corrolarien}
+Bevor wir diesen Beweis führen, sollen einige unmittelbare Corrolarien der
+Bedingung der höheren Gewinne und der Bedingung der besseren Chancen vorgestellt
+werden, die uns helfen, den folgenden Beweis leichter zu führen. Für den Beweis
+dieser Corrolarien verwenden wir die Tatsache, dass die Lotterie $L(a,x,y)$
+identisch ist mit der Lotterie $L(1-a,y,x)$ und daher entsprechnd ersetzt werden
+kann.
+
+\begin{enumerate}
+  \item {\em Corrolar zur Bedingung der besseren Chancen}: 
+  \[\forall_{x,y}\forall_{a,b} \qquad x \prec y \Rightarrow 
+    L(a,x,y) \prec L(b,x,y) \quad \Leftrightarrow \quad a > b
+  \]
+  {\em Beweis}: Sei $x \prec y$, dann ist $y \succ x$, dann gilt aber nach der
+  Bedingung der besseren Chancen:
+  \begin{eqnarray*}
+  L(1-b,y,x) \succ L(1-a,y,x) & \Leftrightarrow & 1-b > 1-a \\
+  L(b,x,y) \succ L(a,x,y) & \Leftrightarrow & b < a \\
+  L(a,x,y) \prec L(b,x,y) & \Leftrightarrow & a > b \\
+  \end{eqnarray*}
+  
+  \item {\em Corrolar zur Bedingung der besseren Chancen}:
+  \[\forall_{x,y}\forall_{a,b} \qquad x \not\sim y \Rightarrow
+    L(a,x,y) \not\sim L(b,x,y) \quad \Leftrightarrow \quad a \not= b
+  \] 
+  {\em Beweis}: Wenn $x \not\sim y$, dann ist entweder $x \succ y$ oder
+  $x \prec y$. Wenn $x \succ y$, dann ist nach der Bedingung der besseren
+  Chancen entweder $L(a, x, y) \succ L(b, x, y) \Leftrightarrow a > b$
+  oder $L(b, x, y) \succ L(a, x, y) \Leftrightarrow b > a$, also in jedem Fall
+  $ L(a,x,y) \not\sim L(b,x,y) \Leftrightarrow a \not= b$. Wenn aber $x \prec
+  y$, dann folgt aus dem vorherigen Korrolar auf dieselbe Weise, dass
+  $ L(a,x,y) \not\sim L(b,x,y) \Leftrightarrow a \not= b$. Da dieser Ausdruck
+  sowohl für $x \succ y$ als auch für $x \prec y$ folgt, folgt er in jedem Fall
+  für $x \not\sim y$.
+ 
+  \item {\em Corrolar zur Bedingung der höheren Gewinne}:
+  \[\forall_{x,y,z}\forall_{a<1} \qquad 
+  x \succ y \Leftrightarrow L(a, z, x) \succ L(a, z, y) \]
+  Inhaltlich bedeutet dies, dass die Bedinung der höheren Gewinne auf der
+  zweiten Stelle der Lotterie ebenso gilt wie auf der ersten.
+  Beweis: Da nach der Bedingung der höhren Gewinne $x \succ y
+  \Leftrightarrow L(b, x, z) \succ L(b, y, z)$ für alle $b>0$, gilt für alle 
+  $(1-b) < 1$ auch $x \succ y \Leftrightarrow L(1-b,z,x) \succ L(1-b,z,y)$. 
+  Mit $a := 1-b$ gilt dann aber auch ("`ohne Beschränknung der Allgemeinheit"'
+  wie die Mathematiker sagen, da man für jedes $1-b$ ein entsprechendes
+  $a := 1-b$ definieren kann) die Behauptung.  
+  
+  \item {\em Corrolar zur Bedingung der höheren Gewinne}:\\
+  Für alle Lotterien $x,y,z$ und alle $a$ mit $0<a<1$ gilt:
+  \[x \not\sim y \quad \Leftrightarrow \qquad L(a,z,x) \not\sim L(a,z,y)
+  \quad \wedge \quad L(a,x,z) \not\sim L(a,y,z)
+  \]
+  Beweisskizze: Wenn $x \not\sim y$, dann ist entweder $x \succ y$ oder $x \prec
+  y$. In beiden Fällen ergibt sich die Implikation, dass 
+  $(L(a,z,x) \not\sim L(a,z,y)) \wedge (L(a,x,z) \not\sim L(a,y,z))$ unmittelbar
+  aus der Bedingung selbst. Zu zeigen ist nun noch, dass auch die
+  umgekehrte Implikation gilt: Wenn $(L(a,z,x) \not\sim
+  L(a,z,y)) \wedge (L(a,x,z) \not\sim L(a,y,z))$ dann $x \not\sim y$. Wiederum
+  sind zwei Fälle von $\not\sim$ zu unterscheiden, nämlich $\succ$ und $\prec$. 
+  Die Implikation ergibt sich dann wiederum
+  unmittelbar aus der Bedingung selbst.
+
+  \item {\em Corrolar: Subsitutionsgesetz}:
+  \label{Substitutionsgesetz}\marginline{Sub\-sti\-tu\-ier\-bar\-keit von
+  Lotterien} \[\forall_{L^*}\forall_{b} \qquad L^* \sim L(a,x,y)
+  \quad \Rightarrow \quad L(b,L^*,z) \sim L(b, L(a,x,y), z) \] 
+  Beweis: Aus dem vorhergehenden Corrolar ergibt sich (bis auf die Sonderfälle
+  $b=0$ und $b=1$), dass 
+  \[L(b, L^*, z) \not\sim L(b,L(a,x,y), z) \quad \Rightarrow \quad L^*
+  \not\sim L(a,x,y)\] Im Umkehrschluss muss daher gelten:
+  \[ L^* \sim L(a,x,y) \quad \Rightarrow \quad L(b,L^*,z) \sim L(b, L(a,x,y), z)
+  \] Für die Sonderfälle $b=0$ und $b=1$ gilt die Formel unmittelbar, wie man sich
+  leicht überlegen kann. 
+\end{enumerate}
+
+\subsection{Existenz der Nutzenfunktion}
+
+Um den Beweis der {\em Existenz} einer Nutzenfunktion mit der
+Erwartungsnutzeneigenschaft zu führen, konstruieren wir eine solche Funktion $u$
+und zeigen, dass sie eine Nutzenfunktion ist (Eigenschaften 1 und 2) und dass sie
+die Erwartungsnutzeneigenschaft besitzt (Eigenschaft 3). Dazu bezeichnen wir
+zunächst entsprechend Resniks Darstellung \cite[S. 94]{resnik:1987} das beste Gut
+als $B$ ("`best"') und das schlechteste Gut als $W$ ("`worst"'). (In dem Fall,
+dass es mehrere beste oder schlechteste Güter gibt, bezeichnet $B$ ein beliebiges
+bestes Gut und $S$ ein beliebiges schlechtestes Gut.) Dann setzen wir
+fest:\marginline{Obere und untere Begrenzung der Nutzenskala} \[ u(B) := 1
+\qquad\mbox{und}\qquad u(x) := 1 \qquad
+ \mbox{für jede Lotterie $x$ mit} \qquad x \sim B \] \[ u(W) := 0
+\qquad\mbox{und}\qquad u(x) := 0 \qquad \mbox{für jede Lotterie $x$ mit} \qquad x
+\sim W \] Nun betrachten wir eine beliebige Lotterie $x$, die hinsichtlich der
+Präferenzrelation zwischen $B$ und $W$ eingeordnet ist (also: $B \succ x \succ
+W$). Nach der {\em Kontinuitätsbedingung} gibt es dann auch eine Lotterie $L(a,
+B, W) \sim x$ mit einer Wahrscheinlichkeit $a$, $0 \leq a \leq 1$. Wir können
+nun\marginline{Definition einer Nutzen\-funktion~$u$} \[u(x) := a\] setzen, falls
+die Wahrscheinlichkeit $a$ eindeutig bestimmt ist. Das ist aber der Fall, weil
+für jedes $a' \neq a$ auf Grund der {\em Bedingung der besseren Chancen} gilt:
+$L(a', B, W) \not\sim L(a, B, W)$ Da die Indifferenzrelation $\sim$ transitiv ist
+("`wohlgeformte Präferenzen"'), muss dann auch gelten: $L(a', B, W) \not\sim x$.
+
+Man beachte, dass aus der Definition $u(x) := a$ für alle Lotterien $x$
+unmittelbar folgt:
+\[x \sim L(u(x), B, W) \]
+Genau dasselbe ist es zu sagen, dass für jede bliebige Lotterie $L(a,
+x, y)$ gilt: \[L(a, x, y) \sim L(u(L(a,x,y)), B, W) \]
+Von diesem Zusammenhang werden wir weiter unten noch Gebrauch machen.
+
+Mit $u(x) = a$ haben wir dann aber bereits eine Funktion definiert, die jeder
+Lotterie $x$ einen eindeutigen Wahrscheinlichkeitswert $a$ zuordnet. Zu zeigen
+ist noch, dass es sich dabei um eine Nutzenfunktion mit der
+Erwartungsnutzeneigenschaft handelt. Dazu müssen wir zunächst nachweisen, dass
+die ersten drei der oben aufegführten Eigenschaften für die so definierte
+Funktion $u$ gegeben sind. 
+
+{\em Teilbeweis} der Eigenschaft $u(x) > u(y)$ genau dann wenn $x \succ y$:
+\marginline{Monotonie\\von $u$}
+Wenn $u(x) = a$ für dasjenige $a$, für welches gilt $L(a, B, W) \sim x$, dann
+ergibt sich durch Einsetzen unmittelbar $x \sim L(u(x), B, W)$. Aufgrund der
+{\em Bedingung der besseren Chancen} wissen wir, dass 
+\[ L(u(x), B, W) \succ L(u(y), B, W) \qquad \Leftrightarrow \qquad u(x) > u(y)
+\] 
+Da jeweils gilt $x \sim L(u(x), B, W)$ und $y \sim L(u(y), B, W)$ können wir
+die Lotterien in der vorkommenden Äquivalenzaussage durch $x$ und $y$ ersetzen
+und erhalten das Gesuchte.
+
+{\em Teilbeweis} der Eigenschaft $u(x) = u(y)$ genau dann wenn $x \sim y$:
+Aus der {\em Bedingung der besseren Chancen} ergibt sich, dass 
+\[ L(u(x), B, W) \sim L(u(y), B, W) \qquad \Leftrightarrow \qquad u(x) = u(y)
+\] 
+denn wäre $u(x) \neq u(y)$, dann wäre entweder $u(x) > u(y)$ oder $u(x) < u(y)$,
+und in beiden Fällen besagt die Bedingung der besseren Chancen, dass dann auch
+für die entsprechenden Lotterien $\succ$ oder $\prec$ gelten muss, so dass
+$\sim$ nur noch gelten kann, wenn $u(x) = u(y)$. Durch Ersetzen analog zum
+Vorigen erhalten wir wiederum das Gesuchte.
+
+{\em Teilbeweis} der Eigenschaft $u(L(a,x,y)) = au(x) + (1-a)u(y)$.
+\marginline{Erwartungs\-nutzen\-eigenschaft\\ von $u$}
+Um den Beweis zu führen bedienen wir uns des zuvor als
+Corollar bewiesenen Substitutionsgesetzes (siehe Seite
+\pageref{Substitutionsgesetz}). Der Einfachheit halber soll dabei $L^*$ für die
+Lotterie $L(a, x, y)$ stehen. Nach der Definition der Nutzenfunktion ($u(x) :=
+b$ für dasjenige $b$, für welches $x \sim L(b, B, W)$), gilt: \[ x \sim L(u(x),
+B, W) \] \[ y \sim L(u(y), B, W) \]
+Durch Substitution von $x$ und $y$ in der Lotterie $L^*$ erhalten wir:
+\[ L^* \sim L(a, L(u(x),B,W), L(u(y),B,W)) \]
+Nach der {\em Reduzierbarkeitsbedingung} ergibt sich daraus:
+\[ L^* \sim L(a, L(u(x),B,W), L(u(y),B,W)) \sim L(d, B, W) \]
+mit $d = au(x) + (1-a)u(y)$. Da aber (nach unserer Definition von $u$) gilt:
+$L^* \sim L(u(L^*), B, W)$, so erhalten wir daraus: 
+\[ L(u(L^*),B,W) \sim L(d,B,W) \]
+Da auf Grund der Bedingung der besseren Chancen, wie zuvor bewiesen, in diesem
+Falle $u(L^*) = d$ sein muss, folgt das Gesuchte. 
+Damit ist der Beweis der Existenz einer Nutzenfunktion, der die
+Erwartungsnutzeneigenschaft zukommt, abgeschlossen.
+
+\subsection{Eindeutigkeit der Nutzenfunktion}
+\label{EindeutigkeitNMU}
+Die {\em Eindeutigkeit} der eben definierten 
+Nutzenfunktion ist so zu verstehen, dass wir keine Nutzenfunktion mit der
+Erwartungsnutzeneigenschaft aus den Bedingungen für Lotterien herleiten können,
+die sich nicht positiv linear in alle
+anderen daraus ableitbaren Nutzenfunktionen mit
+Erwartungsnutzeneigenschaft transformieren lässt.
+
+Wir müssen also zeigen, dass jede beliebige Nutzenfunktion mit
+Erwatungsnutzeneigenschft $u'$, die die auf der vollständigen Menge der
+Lotterien definierte Präferenzrelation wiedergibt, 
+eine positiv linear transformierte der eben
+konstruierten Nutzenfunktion $u$ ist, dass also gilt: 
+\[ u'(x) = au(x) + b \qquad \mbox{mit} \qquad a > 0\] 
+Der Beweis nach Resnik geht wie folgt \cite[S.97/98]{resnik:1987}:
+
+Angenommen, wir verfügen neben der oben konstruierten Nutzenfunktionen $u$ noch
+über eine weitere Nutzenfunktion mit Erwartungsnutzeneigenschaft $u'$, die die
+vollständige Menge der Lotterien auf eine andere Nutzenskala abbildet. Aus dem
+Erwartungsnutzenprinzip ergibt
+sich, dass beide Abbildungen {\em surjektiv}
+\marginline{Surjetivität von $u$} sind (d.h. dass jeder Wert der
+Nutzenskala innerhalb des Intervalls zwischen dem größten und dem kleinsten
+Nutzenwert ein Nutzenwert irgendeiner Lotterie ist), denn (Beweisskizze) sei $x$
+eine Lotterie, die den höchsten möglichen Nutzenwert hat, und $y$ eine Lotterie,
+die den kleinsten möglichen Nutzenwert hat, und sei $j$ irgendein Nutzenwert
+dazwischen, dann hat mit $a := (j-u(y))/(u(x)-u(y))$ die Lotterie $L(a, x, y)$
+genau den Nutzenwert $j$. Da dies für jedes beliebige $j$ gilt, gehören alle
+reellen Zahlen auf der Skala innerhalb des Bereiches vom kleinsten bis zum
+größten Nutzenwert zum Wertebereich der Nutzenfunktion.
+
+\marginline{Transformation der $u$-Skala in die $u'$-Skala durch die Abbildung
+$I$} Wenn jede Zahl auf der Nutzenskala vom kleinsten bis zum größten
+Nutzenwert der Nutzenwert einer Lotterie ist, dann können wir eine Abbildung
+ $I$ definieren, die die Nutzenwerte der einen Skala auf die der anderen
+abbildet. Dazu definieren wir zunächst $u^{-1}(e)$ als eine Funktion,
+\footnote{Bei $u^{-1}$ handelt es sich nicht um eine Umkehrfunktion im strengen
+Sinne, da die Funktion $u$ nicht umkehrbar ist, weil sie unterschiedlichen
+Argumenten, nämlich verschiedenen Lotterien zwischen denen Indifferenz
+herrscht, den gleichen Funktionswert zuordnet.} die jedem Wert $e$ der $u$-Skala 
+eine (von möglicherweise mehreren) Lotterien $x$ zuordnet, für die gilt:
+$u(x)=e$. Für jede Zahl $e$ auf der $u$-Skala gilt dann:
+
+\[ I(e) := u'(u^{-1}(e)) \]
+
+% Da wir davon ausgegangen sind, dass es ein bestes und ein schlechtestes Gut
+% gibt (\label{BSGVerwendet} siehe Seite \pageref{bestesSchlechtestesGut}), so
+% muss auch die Nutzenskala $u'$ eine obere und eine untere Schranke haben, 
+% die wir mit $d$ und
+% $c+d$ bezeichnen können. (Natürlich könnte man sie auch einfach mit zwei
+% Variablen $c$ und $d$ bezeichnen statt durch eine Variable und die Summe
+% derselben mit einer anderen Variablen, aber diese zunächst
+% komplizierter erscheinende Bezeichnungsweise vereinfacht ein wenig das
+% Folgende.) 
+
+Im folgenden zeigen wir zunächst, dass für die Funktion $I$ eine der
+Erwartungsnutzeneigenschaft von $u$ und $u'$ analoge Eigenschaft gilt, nämlich:
+$I(ak+(1-a)m) = aI(k) + (1-a)I(m)$ für jedes $k$ und $m$ auf der
+$u$-Skala. Daraus leiten wir dann das Gewünschte ab.
+
+{\em Nachweis der erwartungsnutzenanalogen Eigenschaft von $I$}:
+\marginline{Erwartungs\-nutzen\-anloge Eigenschaft von $I$}
+ Zunächst
+einmal gilt nach der Definition von $I$ und der Erwartungsnutzeneigenschaft von
+$u$, dass:
+\[u'(L(a,x,y)) = I(u(L(a,x,y))) = I(au(x) + (1-a)u(y)) \]
+Nun gilt aber ebenso nach der Erwartungsnutzeneigenschaft von $u'$ und wiederum
+nach der Definition von $I$, dass:
+\[u'(L(a,x,y)) = au'(x) + (1-a)u'(y) = aI(u(x)) + (1-a)I(u(y))) \]
+In beiden Gleichungen steht der Term $u'(L(a,x,y))$. Also kann man die
+Gleichungen zusammensetzen, und erhält:
+\[I(au(x) + (1-a)u(y)) = u'(L(a,x,y)) = aI(u(x)) + (1-a)I(u(y))) \]
+Nun muss man sich nur noch folgendes klar machen: Aufgrund der zurvor
+bewiesenen Surjetivität von $u$ gibt es zu jedem $k$ und $m$ auf der 
+$u$-Skala mindestens je eine Lotterie $x$ und eine Lotterie $y$, so dass $u(x)
+= k$ und $u(y) = m$. Dann gilt aber ohne Beschränkung der Allgemeinheit für
+jedes $k$ und $m$ auf der $u$-Skala, dass
+\begin{eqnarray*}
+I(ak + (1-a)m) & =  & I(au(x) + (1-a)u(y))  \\ 
+{ } & = & aI(u(x)) + (1-a)I(u(y))) \\
+{ } & = & aI(k) + (1-a)I(m)
+\end{eqnarray*}
+was die erwartungsnutzenanaloge Eigenschaft von $I$ ist, die nachgewiesen werden
+sollte.
+
+% Für jedes beliebige Paar von Werten $k$ und $m$ auf der $u$-Skala gilt, dass
+% sie erstens die Nutzenwerte irgendwelcher Lotterien sind, 
+% d.h. $\exists_{x,y} u(x)=k \wedge u(y) =
+% m$, und dass zweitens für $0 \leq a \leq 1$ der Wert $ak + (1-a)m$ ebenfalls auf der
+% Nutzenskala liegt. Weiterhin ergibt sich aus $u(x)=k$ und $u(y)=m$, dass
+% $I(k) = u'(x)$ und $I(m) = u'(y)$. 
+% Schließlich folgt aus der Erwartungsnutzeneigenschaft für den
+% Nutzen der Lotterie $L(a,x,y)$:
+% \begin{eqnarray*}
+% u(L(a,x,y)) & = & au(x) + (1-a)u(y) = ak+(1-a)m
+% \end{eqnarray*}
+% Auf beiden Seiten der Gleichung steht ein Nutzenwert der $u$-Skala. Daher können
+% wir nun auf beiden Seiten der Gleichung die Funktion $I$ anwenden und erhalten:
+% \begin{eqnarray*}
+% I(u(L(a,x,y))) & = & I(ak+(1-a)m) \qquad \Leftrightarrow \\
+% u'(L(a,x,y)) & = & I(ak+(1-a)m)
+% \end{eqnarray*}
+% Indem wir uns die Erwartungsnutzeneigenschaft von $u'$ zu Nutze machen und
+% außerdem $I(k) = u'(x)$ und $I(m) = u'(y)$ (siehe oben) verwenden, erhalten
+% wir:
+% \[ I(ak+(1-a)m) = u'(L(a,x,y)) = au'(x) + (1-a)u'(y) = aI(k) + (1-a)I(m) \]
+
+Mit diesem Wissen können wir folgende Rechnung aufstellen:
+\marginline{positiv lineare Transformierbarkeit von $u$ in $u'$}
+\begin{eqnarray*}
+u'(x) & = & I(u(x)) \qquad \qquad \qquad \qquad \qquad \mbox{nach Definition von
+$I$} \\ { }   & = & I(u(x)\cdot 1 + (1-u(x)) \cdot 0) \qquad \mbox{etwas
+Algebra ;)} \\ { }   & = & u(x)I(1) + (1-u(x))I(0) \qquad \mbox{{\scriptsize
+                     erwartungsnutzenanaloge Eigenschaft von $I$}} \\
+{ }   & = & u(x)(I(1)-I(0)) + I(0)
+\end{eqnarray*}
+Wenn wir nun $a := I(1)-I(0)$ und $b := I(0)$ setzen, dann haben wir gezeigt,
+dass $u'$ eine linear transformierte von $u$ ist:
+\[ u'(x) = au(x)+b \]
+Da $I(1) > I(0)$ sein muss (wg. der Monotonieeigenschaft von $u$ (und
+damit auch von $u^{-1}$) und $u'$), ist $a > 0$, so dass es sich tatsächlich um
+eine {\em positive} lineare Transformation handelt. {\em q.e.d.}
+
+\subsection{Die Bedeutung der Neumann-Morgensternschen Nutzentheorie}
+
+Was ist damit gezeigt? Wir haben gezeigt, dass sich das Erwartungsnutzenprinzip
+(Seite \pageref{Erwartungsnutzen}) und die entsprechende Entscheidungsregel für
+Entscheidungen unter Risiko (siehe Seite \pageref{Erwartungsnutzenregel}) aus
+plausiblen Voraussetzungen von der Sorte "`Bevorzuge eine Lotterie mit höheren
+Gewinnchancen gegenüber einer mit geringeren Gewinnchancen"' logisch ableiten
+lässt. Oft werden diese Voraussetzungen als selbstevident angesehen, so dass eine
+Person, die Entscheidungen rational trifft, immer von dem
+Erwartungsnutzen ausgehen müsste. Ein anderes Entscheidungsverhalten müsste
+dementsprechend als irrational eingestuft werden.
+
+Interessanterweise verhalten sich die meisten Menschen in diesem Sinne aber
+\label{RisikoaversionGrenznutzen}
+irrational, indem sie je nach Situation, ihren Nutzen bei unsicheren Ereignissen
+entweder oberhalb des rechnerischen Erwartungsnutzens ansetzen ("`Riskofreude"')
+oder unterhalb ("`Risikoscheu"' bzw. "`Risikoaversion"'). Dieser Punkt kann
+leicht missverstanden werden, da in der ökonomischen Literatur oft behauptet
+wird, dass risikoscheues oder -freudiges Verhalten sehr wohl mit dem
+Erwartungsnutzenprinzip vereinbar ist \cite[S. 103]{osborne:2004}, indem es sich
+darin niederschlägt, dass riskante Ereignisse einfach entsprechend höhere oder
+niedrigere Nutzenwerte zugewiesen bekommen. So würde eine risikoaverse Person den
+Nutzen von 1000 Euro gleich hoch veranschlagen wie den Nutzen von einer 50\%
+Chance auf 3000 Euro. Und umgekehrt würde eine risikofreudige Person vielleicht
+den Nutzen von 1000 Euro so hoch veranschlagen wie den von einer 25\% Chance auf
+3000 Euro.\footnote{Das Beispiel stammt von Matthias Brinkmann. Auf das Problem
+hat mich außer Matthias Brinkmann auch Johannes Hemker hingewiesen
+(Dankeschön!).} (Rechnerisch ist das weniger Geld, aber sie liebt das Risiko, so
+dass der Nutzen derselbe bleibt. Und es wäre ja auch eine fragwürdige Theorie,
+die vorschreiben wollte, welche Präferenzen jemand bezüglich eines Risikos haben
+darf.) Diese Art der Risikobewertung ist jedoch nur dann mit dem
+Erwartungsnutzenprinzip vereinbar, wenn für die risikoaverse Person Geldmengen
+einen ihrer Risikoscheu entsprechenden abnehmenden Grenznutzen haben (konkave
+Nutzenfunktion), und für die risikofreudige einen ensprechenden zunehmenden
+Grenznutzen (konvexe Nutzenfunktion). Das bedeutet, wenn die risikoaverse Person
+den Nutzen von 1000 Euro mit zwei Nutzeneinheiten bewertet und den Nutzen von
+einer Lotterie, bei der sie mit einer 50\% Chance 3000 Euro gewinnen kann,
+ebenfalls mit zwei Nutzeneinheiten, dann ist das nur dann mit dem
+Erwartungsnutzenprinzip vereinbar, wenn sie 3000 Euro auch ohne Lotterie bloß
+mit vier Nutzeneinheiten bewertet.
+
+\marginline{Unterschied zwischen Risikoaversion und abnehmendem Grenznutzen}
+Nun sind aber die Präferenzen hinsichtlich eines Risikos (Risikoaversion oder
+Risikofreude oder Risikoneutralität) und die Präferenzen hinsichtlich einer mehr
+oder weniger großen Menge von irgendetwas (abnehmender, zunehmender oder
+gleichbleibender Grenznutzen) empirisch betrachtet zunächst einmal
+unterschiedliche Dinge, und es wäre sehr riskant von vornherein eine Harmonie
+zwischen beiden anzunehmen.\footnote{Beiläufig bemerkt führt dies eins der
+Risiken abstrakter mathematischer Theoriebildung vor Augen, die oft mit einem
+Verlust an empirischer Information einhergeht, denn mathematisch stellt sich die
+Risikoaversion genauso dar wie der abnehmende Grenznutzen, nämlich durch eine
+konkave Nutzenkurve.} Das einzige, was man sagen kann, ist dass risikofreudiges
+oder risikoaverses Verhalten bezüglich irgendwelcher Güter oder Geldwerte noch
+nicht zwangsläufig Ausdruck von Irrationalität (im Sinne einer Verletzung des
+Erwartungsnutzenprinzips) sein muss. Es ist aber stets mit der Möglichkeit zu
+rechnen, dass es das ist. Bezüglich von Nutzenwerten (im Unterschied zu Gütern
+oder Geldwerten, die erst auf Nutzenwerte abgebildet werden müssen) ist eine
+Verletzung des Erwartungsnutzenprinzip aber immer irrational.
+
+
+Es ist daher Vorsicht geboten, wenn man die
+Theorie rationaler Entscheidungen zur Erklärung von empirisch beobachtbarem
+Entscheidungsverhalten heranziehen will. Das allein widerspäche aber noch nicht
+ihrer normativen Anwendung z.B., wenn es darum geht, betriebswirtschaftliche
+Entscheidungen an ihr zu orientieren. Doch auch in dieser Hinsicht gibt es eine
+Reihe von Einwänden, die gegen die Theorie erhoben worden sind. Oft werden diese
+Einwände in die Form (vermeintlicher) Paradoxien gekleidet, die sich aus der
+Neumann-Morgensternschen Nutzentheorie ableiten lassen. Mit diesen Einwänden
+werden wir uns im folgenden Kapitel beschäftigen.
+
+
+

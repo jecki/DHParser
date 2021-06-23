@@ -1,0 +1,723 @@
+\section{Entscheidungen unter Unwissenheit I}
+
+In dieser und der folgenden Woche werden wir uns mit Entscheidungen unter
+Unwissen beschäftigen. Entscheidungen unter Unwissen sind
+Entscheidungen, bei denen wir nicht wissen mit welcher Wahrscheinlichkeit
+bestimmte Ereignisse (bzw. "`Welt-Zustände"') eintreten können, bei denen wir
+aber immer noch eine klare Vorstellung davon haben, mit welchen Ereignissen
+als Bedingungen unserer Entscheidungen und mit welchen Ergebnissen als
+Resultaten der Entscheidungen überhaupt zu rechnen ist. Entscheidungen unter
+Unwissen sind zu unterscheiden von Entscheidungen unter "`vollständiger
+Unwissenheit"' einerseits, bei denen wir nicht einmal mehr mit Sicherheit
+angeben können, zu welchen möglichen Resultaten unsere Handlungen führen
+können, und von "`Entscheidungen unter Risiko"' andererseits, bei denen wir
+zusätzlich Aussagen über Wahrscheinlichkeit der in Betracht zu ziehenden
+Ereignisse machen können. 
+
+Naturgemäß bieten Entscheidungen unter Risiko, bei denen wir
+Wahr\-schein\-lich\-keiten angeben können, die besten Angriffspunkte für eine
+formale Theorie des Entscheidens. Aber auch Entscheidungen unter Unwissenheit
+sind bis zu einem gewissen Grade einer formalen Behandlung zugänglich, und weil
+dabei die Wahrscheinlichkeitstheorie nicht erforderlich ist, handelt es sich
+technisch gesehen sogar um den einfacheren Teil der Entscheidungstheorie, weshalb
+wir diesen Teil auch zuerst besprechen.
+
+\subsection{Die einfachste Entscheidungsregel: Das Prinzip der Dominanz}
+\label{DominanzPrinzip}
+Bisher haben wir nur über die Darstellung von Entscheidungsproblemen in Form von
+Entscheidungsbäumen und -tabellen gesprochen. Wie kann man aber nun (mit Hilfe
+von Bäumen oder Tabellen) Entscheidungsprobleme lösen? Ein besonders
+offensichtliches Prinzip, das bei der Lösung von Entscheidungsproblemen eine
+Rolle spielt, ist das {\em Prinzip der Dominanz}. Betrachten wir dazu noch
+einmal die eingangs vorgestellte Entscheidungstabelle:
+
+\begin{center}
+\begin{tabular}{cc|c|c|}
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{{\bf Zustand}} \\
+&           & schwere Klausur   & leichte Klausur    \\ \cline{2-4}
+& lernen    & {\em bestehen}    &  {\em bestehen}    \\ \cline{2-4}
+\raisebox{1.5ex}[-1.5ex]{{\bf Handlung}} 
+& faulenzen & {\em durchfallen} &  {\em bestehen} \\
+\cline{2-4}
+\end{tabular}
+\end{center}
+
+Man sieht anhand der Tabelle sofort, dass es auf jeden Fall besser wäre zu
+lernen als zu faulenzen, denn in dem Fall, dass die Klausur schwer ist,
+erzielt man durch Lernen ein besseres Ergebnis und in dem Fall, dass sie leicht
+wird, ist das Ergebnis wenigstens nicht schlechter als wenn man nicht lernt.
+Das bei dieser Überlegung implizit zu Grunde gelegte Entscheidungsprinzip kann
+man folgendermaßen formulieren.
+
+\begin{quotation}
+\marginline{schwache Dominanz}
+{\em Prinzip der schwachen Dominanz}: Wenn eine Handlung unter
+allen Umständen zu einem mindestens gleichguten Ergebnis führt wie alle anderen
+Alternativen und in mindestens einem möglichen Fall zu einem besseren Ergebnis,
+dann wähle diese Handlung.
+\end{quotation}
+
+\marginline{starke Dominanz}
+Analog zu dem Prinzip der schwachen Dominanz kann man auch ein Prinzip der
+starken Dominanz aufstellen, bei dem gefordert wird, dass die zu wählende
+Handlung unter allen Umständen zu einem eindeutig besseren Ergebnis führt als
+sämtliche verfügbaren Alternativen. An dieser Stelle ist die Unterscheidung
+zwischen schwacher Dominanz und starker Dominanz noch nicht besonders
+wichtig. Der Begriff der starken Dominanz könnte sogar verzichtbar
+erscheinen. Allerdings spielt diese Unterscheidung spätestens bei der Suche nach
+geeigneten Lösungsstrategien in der Spieltheorie wieder eine wichtige Rolle und
+wird uns dort noch beschäftigen.
+
+\marginline{Mögliche Fehlschlüsse}
+Das Prinzip der schwachen Dominanz erscheint so einfach und eindeutig, dass man
+nicht vermuten sollte, dass es bei seiner Anwendung irgendwelche
+Schwierigkeiten auftreten könnten. Dass das nicht unbedingt stimmen muss, kann
+das folgende Beispiel verdeutlichen: Angenommen, Sie betreten ein Wettbüro, in
+dem Sportwetten für die Sportarten Fussball und Tennis angeboten werden. Der
+Einsatz beträgt in jedem Fall 2 Euro, aber da sehr viel weniger Leute an
+Tennis interessiert sind als an Fussball, können Sie bei einer Tenniswette
+höchstens € 10.000 gewinnen, während bei einer Fußballwette satte 
+€ 50.000 drin sind. Ihre Entscheidungstabelle würde als folgendermaßen
+aussehen:
+
+\begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{Wette gewinnt} &
+\multicolumn{1}{c}{Wette verliert} \\ \cline{2-3}
+Tenniswette   & €  9.998    & € -2         \\ \cline{2-3}
+Fussballwette & € 49.998    & € -2         \\ \cline{2-3}
+\end{tabular}
+\end{center}
+
+Wollte man in dieser Situation auf das Prinzip der Dominanz zurückgreifen, dann
+müsste man sich eigentlich ganz klar für die Fussballwette entscheiden. Warum
+könnte das aber ein Trugschluss sein? Der Grund ist folgender: Es ist höchst
+wahrscheinlich, dass die Gewinnchancen bei beiden Wetten sehr unterschiedlich
+verteilt sind. Werden einem zwei solche Wetten angeboten, dann ist davon
+auszugehen, dass die Gewinnchancen bei der Fussballwette sehr viel geringer
+sind als bei der Tenniswette. Je nachdem, um wieviel sie geringer sind, könnte
+es sein, dass die Tenniswette sogar aussichtsreicher ist als die Fussballwette.
+(Was "`aussichtsreicher"' dabei exakt heisst, werden wir noch genau definieren,
+wenn wir Entscheidungen unter Risiko besprechen.) Wenn man so will, besteht der
+"`Denkfehler"' bei diesem Beispiel also darin, dass die Problemspezifikation
+unvollkommen war, indem wichtige Hintergrundinformationen über die Natur dieses
+speziellen Entscheidungsproblem, \marginline{Handlungs\-ab\-hängige
+Wahr\-schein\-lich\-keiten} nämlich die Handlungs\-abhängigkeit der
+Eintrittswahrscheinlichkeiten der Ereignisse, bei der Formalisierung in
+Tabellenform "`vergessen"' wurden.
+
+% An diesem Beispiel wird zugleich deutlich, dass das Prinzip der Dominanz nur
+% dann sinnvoll angewandt werden kann, wenn die Chancen für das Eintreten der
+% Zufallsereignisse entweder gleichverteilt sind, oder wenn wir zumindest
+% keinerlei Wissen darüber haben, wie sie verteilt sein könnten.\footnote{Die
+% Anwendung des Dominanzprinzips im letzteren Fall ist aber umstritten. Siehe dazu auch,
+% was weiter unten zum "`Prinzip der Indifferenz"' (Abschnitt
+% \ref{Indifferenzprinzip}) gesagt wird.}
+
+Daneben gibt es aber noch ein weiteres denkbares Problem, wie das folgende, mit
+leichten Abwandlungen aus Resniks Buch \cite[S.9 ]{resnik:1987} übernommene
+Beispiel verdeutlicht. Das Beispiel gibt stark vereinfacht die strategische
+Problematik der Aufrüstung im kalten Krieg wieder:
+
+\begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{Krieg}   & 
+\multicolumn{1}{c}{Frieden}  \\ \cline{2-3} 
+Aufrüsten & "`Tot"' & hohe Militärausgaben  \\ \cline{2-3} 
+Abrüsten  & "`Rot"' & "`Friedensdividende"' \\ \cline{2-3}
+\end{tabular}
+\end{center}
+
+Nimmt man einmal an, dass es besser ist, sich zum Kommunismus bekehren zu lassen
+als zu sterben, dann müsste man nach dem Prinzip der Dominanz eigentlich
+Handlungsalternative "`Abrüsten"' eindeutig vorziehen, denn unabhängig davon, ob
+es Krieg oder Frieden gibt, erzielt man mit der Entscheidung zugunsten der
+Abrüstung in beiden Fällen das jeweils bessere Ergebnis. Wo ist der Haken an
+dieser Argumentation? Der "`Haken"' besteht darin, dass das Eintreten der
+Zustände "`Krieg"' oder "`Frieden"' nicht unabhängig davon ist, welche Handlung
+gewählt wird.\marginline{Strategische Interaktion} Zumindest nach Ansicht von
+Aufrüstungsbefürwortern hätte damals eine zu weit gehende Abrüstung die Gefahr
+eines Überfalls durch die Ostblockstaaten drastisch erhöht. Stimmt man dem zu,
+dann ist es keineswegs mehr so eindeutig, dass Abrüsten die bessere Wahl ist.
+
+Dieses Beispiel zeigt, dass es noch eine weitere stillschweigende Voraussetzungen
+für die Anwendung des Prinzips der Dominanz (wie sowie übrigens auch anderer
+Entscheidungsregeln) gibt, nämlich die Unabhängigkeit der "`Zufallsereignisse"'
+bzw. der Weltzustände von den getroffenen Entscheidungen. In dem angeführten
+Beispiel ist eine solche Unabhängigkeit nicht gegeben, da wir es mit einem
+Gegenspieler zu tun haben, der auf unsere Entscheidungen reagiert. Strengenommen
+haben wir es daher gar nicht mehr mit einem reinen Entscheidungsproblem zu tun,
+sondern mit einem Problem strategischer Interaktion, das bereits in das Gebiet
+der Spieltheorie fällt.
+
+\subsection{Präferenzen}
+\label{Praeferenzen}
+In der letzten Vorlesungsstunde wurde als Beispiel für ein mögliches
+Entscheidungsproblem, bei dem uns die Entscheidungstheorie {\em nicht}
+weiterhelfen kann, die Frage angeführt, ob der nächste Urlaub lieber in den
+Bergen oder an der See gebucht werden sollte. Der Grund, weshalb uns die
+Entscheidungstheorie hier nicht weiterhelfen kann, besteht darin, dass es bei
+diesem Entscheidungsproblem noch darum geht, wie die verschiedenen Ergebnisse
+der Entscheidung zu bewerten sind. Grundsätzlich setzt die Entscheidungstheorie
+voraus, dass wir uns über die Bewertung der möglichen Ergebnisse, sprich über
+unsere {\em Präferenzen} schon im Klaren sind. Im Folgenden ist daher zunächst
+einiges über Präferenzen zu sagen, insbesondere welche Anforderungen an die
+Präferenzen gestellt werden müssen, damit sie im Sinne der Entscheidungstheorie
+wohlgeformt sind. 
+
+Unter {\em Präferenz} ist im Zusammenhang der Entscheidungstheorie eine Relation
+zu verstehen, die festlegt, wann ein mögliches Resultat\footnote{Die {\em
+Resultate} eines Entscheidungsprzesses sind nicht zu verwechseln mit der
+Entscheidung selbst. Das Resultat ist vielmehr das, was bei einer Entscheidung
+heraus kommt, die Entscheidung selbst ist die Wahl, die man trifft, um dann ggf.
+ein bestimmtes Resultat zu erzielen. Die Präferenzen, von denen hier die Rede ist
+beziehen sich zunächst auf die Resultate, auch wenn man im übertragenen Sinne
+ebenfalls davon sprechen könnten, dass eine Entscheidung einer anderen {\em
+vorgezogen} wird, weil man sich von ihr ein besseres Resultat erhofft.} eines
+Entscheidungsprozesses einem anderen vorgezogen wird. (Da wir es mit
+Entscheidungsproblemen zu tun haben, bezieht sich unsere Präferenzrelation auf
+die möglichen Resultate von Entscheidungsprozessen. In der Ökonomie würde man die
+Präferenzrelation dagegen eher auf der Menge möglicher "`Güterbündel"' oder
+dergleichen definieren. Der Einfachtheit halber wird daher im Folgenden auch oft
+von "`Gütern"' anstelle von "`Resultaten"' oder "`Ergebnissen"' die Rede sein.)
+Wenn $x$ und $y$ zwei mögliche Resultate eines Entscheidungsprozesses sind, dann
+schreiben wir $x \succ y$, um auszudrücken, dass $x$ gegenüber $y$ vorgezogen
+wird. Und wir schreiben $x \sim y$, wenn $x$ und $y$ gleich gut bewertet werden
+bzw. wenn diejenige Person, die die Entscheidung trifft, zwischen $x$ und $y$
+{\em indifferent} ist. Eine wohlgeformte Präferenzrelation muss folgende
+fundamentale Eigenschaften erfüllen:
+
+\marginline{Eigenschaften der Präferenzrelation}
+\begin{enumerate}
+\label{Ordnungsaxiome}
+\item {\em Antisymmetrie:} Wenn $x \succ y$, dann nicht $y \succ x$ und auch
+nicht $x \sim y$
+\item {\em Zusammenhang:} Für jedes Paar $x, y$ aus der
+Menge der möglichen Resultate gilt entweder $x \succ y$ oder $y \succ x$ 
+oder $x \sim y$
+\item {\em Transitivität:} Wenn $x \succ y$ und $y \succ z$, dann auch $x
+\succ z$. (In analoger Weise gilt: $x \sim y \wedge y \sim z \Rightarrow x
+\sim z$, sowie weiterhin: $x \sim y \wedge y \succ z \Rightarrow x \succ z$ und:
+$x \succ y \wedge y \sim z \Rightarrow x \succ z$)
+\end{enumerate}
+
+\marginline{Recht\-fertigungs\-problem des Präferenz\-konzepts}
+Mit welchem Recht können wir fordern, dass eine Präferenzrelation diese
+Eigenschaften erfüllen muss? Man kann diese Frage von zwei Seiten aus betrachten:
+1) von der Seite des entscheidungstheoretischen Formalismus aus und 2) von der
+empirischen und normativen Seite aus. Von der Seite des
+entscheidungstheoretischen Formalismus stellt sich die Situation so dar, dass
+z.B. bestimmte Lösungsverfahren nur dann tatsächlich richtige (d.h. die
+Präferenzen optimal erfüllende) Entscheidungen liefern, wenn die
+Präferenzrelation in dem oben beschriebenen Sinne wohlgeformt ist; und zwar schon
+deshalb, weil die entsprechenden Lösungsverfahren unter genau dieser
+Voraussetzung entwickelt worden sind. Anderseits gilt aber auch, dass die
+Entscheidungstheorie beansprucht unser Handeln beschreiben (empirische Anwendung
+der Entscheidungstheorie) und richtig anleiten (normative Anwendung der
+Entscheidungstheorie) zu können. Dann sollten diese Eigenschaften auch den
+Eigenschaften von Präferenzen von Menschen in empirischen
+Entscheidungssituationen mehr oder weniger entsprechen.\footnote{Insgesamt haben
+wir es hier mit drei Perspektiven auf die Entscheidungstheorie zu tun: 1. der
+logischen; 2. der empirischen; 3. der normativen. Häufig wird nur zwischen den
+letzteren beiden unterschieden. Dabei wird dann in der Regel eingeräumt, dass die
+Entscheidungstheorie zwar das empirisch beobachtbare Verhalten von Menschen nicht
+richtig beschreibt. Aber meistens wird dennoch darauf bestanden, dass sie in
+normativer Hinsicht dennoch zu richtigen Entscheidungen anleitet. Das stimmt
+insofern, als die normative Anwendung vergelichsweise schwächere
+erkenntnistheoretische Rechtfertigungsprobleme aufwirft als die empirische, aber
+auch die normative Anwendung beruht immer noch auf bestimmten empirischen
+Voraussetzungen, wie z.B. der, dass wohlgeformte Präferenzrelationen die
+empirischen Phänomene der Präferenz (d.i. des Vorziehens, des Beabsichtigens, des
+Wertschätzens etc.) halbwegs richtig erfassen. Vgl. dazu die klassische
+Darstellung von Savage \cite[S. 7ff.]{savage:1954}, der hinsichtlich solcher
+subtiler Unterscheidungen im Übrigen sehr umsichtig und genau verfährt.} Kann
+man das ungeprüft voraussetzen? Wenigstens bei den Eigenschaften der {\em
+Transitivität} und des {\em Zusammenhangs} sind in dieser Hinsicht erhebliche
+Abstriche zu machen.
+
+Zur {\em Tansitivität}: Wie könnte man zunächst einmal die Eigenschaft der
+Transitivität rechtfertigen?
+\marginline{Geldpumpen\-argument}\label{Geldpumpenargument} Ein beliebtes
+Argument zur Rechtfertigung dieser Eigenschaft ist das sogenannte {\em
+Geldpumpenargument}. Angenommen, es gibt jemanden, dessen Präferenzen nicht
+transitiv sind. Dann gibt es drei Weltzustände (bzw. "`Resultate"' oder
+"`Güterbündel"') $a, b, c$, für die für diese Person gilt: $a \prec b \prec c
+\prec a$. Wenn diese Person aber b gegen über a vorzieht, so bedeutet dass (wie
+die Ökonomen glauben), dass sie gegebenenfalls bereit wäre, für den Übergang von
+a zu b einen bestimmten Geldbetrag zu zahlen. Dann wäre sie aber wiederum bereit
+einen Geldbetrag für den Übergang von b zu c bezahlen. Ist sie aber erst einmal
+bei c angekommen, dann würde sie wegen $c \prec a$ nochmals bereit sein für den
+Übergang zu a in die Tasche zu greifen, und das ganze Spiel fängt von vorne an
+und könnte beliebig oft wiederholt werden. Die Überlegung zeigt, dass
+intransitive Präferenzen in gewisser Weise unplausibel bzw. inkonsequent sind.
+
+\marginline{Beispiel für sinnvolle intransitive Präferenzen}
+\label{intransitivePraeferenzen}
+Allerdings gibt es ebenso Beispiele dafür, dass Präferenzen auf ganz natürliche
+Wese transitiv sein können, z.B. das folgende \cite[S. 20]{delong:1991}: Frau
+Schmidt möchte einen Schachcomputer kaufen. Es gibt drei Modelle, A, B und C.
+Einem Testbericht kann sie entnehmen, dass Modell A in einem Probespiel Modell B
+geschlagen hat. Modell B hat wiederum Modell C geschlagen, aber Modell C hat
+Modell A geschlagen. (Man kann sich überlegen, dass diese Situation sehr wohl
+möglich ist, denn es ist denkbar, dass der Algorithmus von Modell A mit dem von
+Modell B sehr gut "`klarkommt"', aber nicht mit dem von Modell C, auch wenn
+Modell C schlechter als Modell B ist.) Die einzig sinnvollen Präferenzen, die
+Frau Schmidt in Bezug auf die Schachcomputer haben kann, sind in diesem Fall
+intransitiv, nämlich $A \succ B \succ C \succ A$. Man kann leicht andere
+Beispiele dieser Art konstruieren. Der Grund für die, in diesem Fall, sinnvolle
+Intransitivität von Präferenzen liegt darin, dass sich unsere Präferenzen
+häufig an objektive Beziehungen wie "`stärker als"', "`besser als"',
+"`Sieger über"' etc. knüpfen, die ihrerseits oftmals nicht transitiv sind. (So
+ist ja auch z.B. von der Fussballmanschaft an der Spitze der Liga keineswegs
+gesagt, dass sie alle anderen Mannschaften besiegt oder mindestens
+unentschieden gespielt hat.) 
+
+Wenn es aber sinnvolle transitive Präferen gibt, was wird dann aus dem
+Geldpumpenargument, könnte man nun fragen. Die Antwort darauf ist, dass man dann,
+wenn intransitive Präferenzen auftreten, verschiedene Mechanismus anwenden kann,
+um mit den möglicherweise daraus resultierenden Problemen fertig zu werden. In
+dem Beispiel von eben könnte Frau Schmidt sich einfach beliebig für irgendeinen
+der Schachcomputer entscheiden oder ein Los werfen. (Dass es einem raffinierten
+Verkäufer tatsächlich gelingen könnte, eine Geldpumpe aus ihr zu machen, ist
+wohl eher unrealistisch\ldots\footnote{Rabin und Thaler formulieren es sehr treffend:
+"`It does not seem to us obvious that if you can take some of a fool’s money from
+him some of the time then you can take all of his money all of the
+time"'.\cite[S. 227]{rabin-thaler:2001} Den Hinweis auf den Artikel von Rabin und
+Thaler verdanke ich Matthias Brinkmann.})
+
+\marginline{Inkonsistenz bei kollektiven Präferenzen}
+Ganz besonders stellt sich das Problem intransitiver oder, ganz allgemein
+gesprochen, inkonsistenter Präferenzn im Zusammenhang von Kollektivpräferenzen
+(d.h. den gemeinsamen Präferenzen eines Kollektivs von Menschen). Wie wir gesehen
+haben, sind schon die Präferenzen einzelner Menschen nicht immer transitiv
+geordnet (und zwar nicht bloß auf Grund von Inkonsequenz oder menschlicher
+Unvollkommenheit, sondern weil es manchmal durchaus Sinn hat, wenn Präferenzen
+nicht transitiv sind!). Diese Situation tritt nocht viel leichter auf, wenn wir
+vor dem Problem stehen, aus den Einzelpräferenzen einer Vielzahl von Individuuen
+eine sinnvolle kollektive Präferenz abzuleiten. Denn dazu müsste irgendein
+geeigneter Abstimmungsmechanismus vorhanden sein, der es erlaubt aus den
+vielfältigen und möglicherweise höchst disparaten Interessen der Einzelnen eine
+gemeinsame Zielvorstellung zu bilden. Es gehört nun aber zu den interessantesten
+Theoremen der Social-Choice Theory, die unter Stichworten wie "`Paradox des
+Liberalismus"' und "`Satz von Arrow"' bekannt geworden sind, dass einen solchen
+Abstimmungsmechanismus zu finden nicht immer leicht und manchmal sogar unmöglich
+ist, sofern bestimmte Anforderungen an die Fairness und die Vernunft eines
+solchen Abstimmungsmechanismus gestellt werden. (Inwiefern diese Anforderungen
+notwendig sind oder variiert werden können, so dass die "`Probleme"' nicht mehr
+auftreten, ist dann Gegenstand der Diskussion.) Wir werden auf diese Theoreme im
+Laufe dieses Semesters noch ausführlich eingehen (Kapitel
+\ref{LiberalismusParadox} und \ref{SatzVonArrow} dieses Skripts).
+ 
+Eine weitere Einschränkung der Gültigkeit der Annahme transitiver Präferenzen
+ergibt sich aus folgender Überlegung \cite[p. 23/24]{resnik:1987}:
+\marginline{Grenzen der Transitivität bei marginalen Präferenzunterschieden}
+ Man stelle sich zwei Tassen Kaffe vor, eine ohne Zucker und eine, die eine sehr
+ kleine Menge Zucker enthält, gerade so viel, dass man den Zucker beim Trinken
+ noch nicht
+bemerkt. Jemand, der entscheiden sollte, welche Tasse Kaffee er vorzieht, würde
+also indifferent zwischen diesen beiden Kaffeetassen sein, auch wenn er
+vielleicht gezuckerten Kaffee bevorzugt. Nun denken wir uns eine dritte
+Kaffeetasse, die wiederum ein klein wenig mehr Zucker enthält als die zweite,
+aber nicht so viel mehr, als dass man den Unterschied bemerken könnte. Dann, eine
+vierte Kaffeetasse, die sich wiederum von der dritten durch einen nur marginal
+größeren Zuckergehalt unterscheidet usw. Irgendwann haben wir dann eine
+Kaffeetasse, die soviel Zucker enthält, dass sich der Geschmack von dem der
+allerersten Kaffeetasse deutlich unterscheidet. Dann würde jemand, der
+gezuckerten Kaffee bevorzugt, diese letzte Tasse unseres Gedankenexperiments der
+ersten Tasse sicherlich vorziehen, was aber im Widerspruch zur Transitivität der
+Indifferenzbeziehung steht. Das Gedankenexperiment ist zudem so konstruiert, dass
+es sich in diesem Fall nicht um ein Beispiel von Inkonsequenz oder Irrationalität
+handelt, sondern dass sich die Transitivität der Präferenzrelation "`beim besten
+Willen"' nicht aufrecht erhalten lässt. Wenn wir das Gedankenexperiment als
+glaubhaft ansehen, dann bleibt uns nichts weiter übrig als zuzugestehen, dass wir
+in der Wirklichkeit nicht immer von transitiven Präferenzen ausgehen können, und
+dass die Präferenzrelation, so wie sie hier definiert ist, lediglich eine bessere
+oder manchmal auch schlechtere Annhährung an die Wirklichkeit darstellt. Man kann
+bereits an dieser Stelle antizipieren, dass unsere Modelle und Theorien
+spätestens dann in Schwierigkeiten geraten, wenn sie irgendwann einmal, und
+möglicherweise völlig unbemerkt (!), innerhalb einer komplizierten mathematischen
+Beweisführung allzu starke Anforderungen an die Gültigkeit von
+Indifferenzbeziehungen stellen.\footnote{An diesem Problem leidet ganz wesentlich
+die mathematische Rückführung kardinaler auf ordinale Präferenzen, die in Kapitel
+\ref{NeumannMorgenstern} und
+\ref{DiskussionNeumannMorgenstern} vorgestellt und diskutiert wird.}
+ 
+Der tiefere Grund für das eben beschriebene Problem besteht darin, dass
+Relationen vom Typ "`{\em ungefähr} gleich wie"' im Gegensatz zu Relationen vom
+Typ "`gleich wie"' nicht (vollkommen) transitiv sind. Da wir es in der Empirie
+aber schon auf Grund von Messungenauigkeiten fast immer mit dem ersteren Typ zu
+tun haben, kann das zu Problemen führen, wenn man vollständige (d.h. über eine
+beliebig große Anzahl von Zwischengliedern erhalten bleibende) Transitivität
+voraussetzt.
+
+\marginline{Grenzen des Zusammenhangs von Präferenzen}
+Neben der Transitivität, lässt sich aber auch in Zweifel ziehen, ob man stets
+davon ausgehen kann, dass unsere Präferenzen {\em zusammenhängend} sind.
+Zumindest wenn wir eine größere und nicht mehr ohne Weiteres überschaubare Menge
+von Gütern (oder möglichen Entscheidungsresultaten) betrachten, kann man sich
+leicht vorstellen, dass es nicht mehr so ohne Weiteres möglich ist, von jedem
+Paar aus dieser Menge eindeutig zu sagen, welche der Relationen $\succ$, $\prec$
+oder $\sim$ zwischen den beiden Gliedern des Paars besteht. Einige Autoren wie
+z.B. \cite{kaplan:1996}, die die Voraussetzung durchgehend zusammenhängender
+Präferenzen für allzu artifiziell halten, führen deshalb neben der Beziehung der
+{\em Indifferenz}, die besteht, wenn wir zwei Güter gleich hoch schätzen,
+eine davon deutlich zu unterscheidende Beziehung der {\em Unentschiedenheit} oder
+auch "`Unentschlossenheit"' ein, die dann besteht, wenn wir nicht sicher sind, ob
+wir eine Sache einer anderen vorziehen oder nicht, was ja etwas anderes ist, als
+wenn wir eine Sache als genauso gut bewerten wie eine andere.
+\marginline{Unterschied von Indifferenz und Unentschiedenheit}
+ Dieser Unterschied
+ist recht subtil, denn man kann sowohl hinsichtlich der Indifferenz als auch
+hinsichtlich der Unentschiedenheit mit Recht sagen, dass wir {\em weder} den
+einen {\em noch} den anderen der beiden Gegenstände, zwischen denen wir
+indifferent bzw. unentschieden sind, dem anderen vorziehen. Trotzdem ist es noch
+etwas anderes, wenn wir es deshalb nicht tun, weil sie uns beide gleich lieb
+sind, oder deshalb, weil wir unentschieden zwischen beiden sind.
+
+Die Annahme, dass es so etwas wie Unentscheidenheit gibt, erscheint besonders bei
+unüberschaubar großen Gegenstandsmengen oder bei solchen Gegenstandsmengen, die
+Güter von sehr unterschiedlicher Art enthalten, sehr viel realistischer, denn
+anderenfalls würde man voraussetzen, dass die Frage, welches von zwei Gütern man
+vorzieht, oder ob man sie beide als gleichwertig beurteilt, immer schon
+entschieden ist, selbst wenn wir sie uns im konkreten Fall noch gar nicht
+vorgelegt haben. Aber es ist immerhin möglich, eine Entscheidungstheorie auch auf
+der Grundlage zu konstruieren, dass es neben Bevorzugung und Indifferenz auch so
+etwas wie Untschlossenheit gibt. In diesem Fall muss man die Forderung, dass die
+Präferenzen "`zusammenhängend"' sind, zu der Eigenschaft des {\em beschränkten
+Zusammenhangs} abschwächen \cite[S. 13, 24]{kaplan:1996}. Noch weiter geht der
+Ansatz, die Entscheidungstheorie nicht "`präferenzbasiert"', sondern
+"`wahlbasiert"' aufzubauen \cite[SEITE???]{mascolell-whinston-green:1995}.
+\marginline{Präferenz\-basierter und wahlbasierter Ansatz}
+Dabei wird statt einer Präferenzrelation über einer Menge
+von Alternativen ({\em präferenzbasierter Ansatz}) eine Wahlfunktion definiert,
+die aus Teilmengen einer Menge von Alternative die bevorzugte Alternative
+innerhalb dieser Teilmenge auswählt ({\em wahlbasierter Ansatz}). Die
+Formulierung der Entscheidungstheorie gestaltet sich dadurch technisch etwas
+komplizierter. Wir werden im Folgenden daher nur den präferenzzentrierten Ansatz
+zu Grunde legen und der Einfachheit halber davon ausgehen, dass es keine
+Unentschiedenheit gibt bzw. dass alle denkbaren Unentscheidenheiten im Vorfeld
+der Entscheidungsfindung geklärt worden sind. Rechtfertigen lässt sich das auf
+jeden Fall solange, wie wir uns auf Anwendungsfälle nur mit sehr begrenzten und
+überschaubaren Zielmengen beschränken. Zudem setzen wir eine gültige
+Präferenzrelation nur jeweils {\em lokal} für das in Frage stehende
+Entscheidungsproblem voraus. Wir unterstellen nicht, dass irgendjemand "`global"'
+(d.h. bezüglich aller Ziele und Wünsche, die man im Leben haben kann) über
+wohlgeordnete (d.h. transitive und durchgängig zusammenhängende) Präferenzen
+verfügt.
+
+\subsection{Ordinale Nutzenfunktionen}
+
+Mit Hilfe einer Präferenzrelation kann man die Gütermenge, auf die sich die
+Relation bezieht, in eine Menge von Indifferenzklassen {\em partionieren}, indem
+man jeder Indifferenzklasse alle diejenigen Güter zuordnet, zwischen denen
+Indifferenz herrscht. \marginline{Indifferenz\-klassen} Ist die
+Präferenzlrelation wohlgeformt, dann schöpfen die Indifferenzklassen die gesamte
+Gütermenge aus, und jedes Gut ist Element genau einer
+Indifferenzklasse.\footnote{Ökonomen sprechen statt "`Indifferenzklassen"' auch
+gerne von "`Indifferenzkurven"'. Die Indifferenzkurven erhält man, wenn man die
+Indifferenzklassen grafisch darstellt.} Weiterhin induziert die Ordnung der Güter
+durch die Präferenzrelation eine Ordnung auf der Menge der Indifferenzklassen.
+Wir können schreiben, $I_x \succ I_y$ genau dann wenn $x \succ y$ für $x \in I_x,
+y \in I_y$, wobei mit $I_x$ bzw. $I_y$ jeweils die Indifferenzklasse gemeint sein
+soll, der $x$ bzw. $y$ angehört.\footnote{Man beachte, dass, wenn man die
+Indifferenzklassen in dieser Weise durch die in ihnen enthaltenen Güter
+identifiziert, unterschiedlich idizierte Indifferenzklassen, z.B. $I_a$,$I_b$
+durchaus ein- und diesselbe Indifferenzklasse darstellen können, nämlich dann,
+wenn zwischen den Gütern im Index Indifferenz herrscht, also wenn $a \sim b$.}
+Aus der Konstruktion der Indifferenzklassen ergibt sich dabei, dass wenn $x \succ
+y$ für ein irgend ein beliebiges $x \in I_x$ und ein beliebieges $y \in I_y$ dann
+gilt $x' \succ y'$ für jedes $x' \in I_{x'}$ und jedes $y' \in I_{y'}$. Wir
+können nun den Indifferenzklassen bzw. ihren Elementen Zahlen zuordnen, deren
+Ordnung der Ordnung der Indifferenzklassen entspricht.
+\marginline{Nutzen\-funktionen und Nutzenskalen}
+Diese Zuordnung bezeichnen wir als {\em Nutzenfunktion} oder auch als {\em
+Nutzenskala}, wobei die Nutzenskala jedoch strenggenommen die Zielmenge der
+Nutzenfunktion ist. Eine Nutzenfunktion $u: G \mapsto \mathbb{R}$ ist also eine
+Abbildung der Gütermenge $G$ auf die reellen Zahlen, für die Folgendes gelten
+muss:
+\begin{eqnarray}
+u(x) > u(y)  \quad\mbox{genau dann wenn}\quad  x \succ y \\
+u(x) = u(y)  \quad\mbox{genau dann wenn}\quad  x \sim y
+\end{eqnarray}
+Wichtig ist dabei, dass bei dieser Art von Nutzenfunktionen, den zugeordneten
+Zahlenwerten keine andere Bedeutung zukommt als diejenige, das
+Ordnungsverhältnis zwischen den Gütern auszudrücken. Man kann also z.B. sagen,
+dass ein Gut x, dem eine Nutzenfunktion den Wert 4 zuordnet, nützlicher ist als
+ein Gut y, dem sie den Wert 1 zuordnet. Aber es wäre falsch zu sagen, dass das
+Gut x viermal so nützlich ist, wie das Gut y. Die beiden folgenden
+Nutzenfunktionen drücken dementsprechend denselben Nutzen aus:
+
+\begin{center}
+\begin{tabular}{c|c|c|ccc|c|c|c}
+G & x & y & z & & G & x  & y & z \\ \cline{1-4} \cline{6-9}
+u & 1 & 2 & 3 & & v & -1 & 2 & 7 \\
+\end{tabular}
+\end{center}
+
+Man nennt die so interpretierten Nutzenfunktionen auch {\em ordinale
+Nutzenfunktionen}. Zwei ordinale Nutzenfunktionen beschreiben genau dann
+denselben Nutzen, wenn sie sich durch "`ordnungserhaltende Transformationen"'
+ineinander überführen lassen. Eine ordnungserhaltende oder auch "`{\em ordinale
+Transformation}"' ist eine Transformation, die die Bedingung erfüllt:
+\marginline{ordinale Transformationen}
+\begin{eqnarray}
+t(a) > t(b) \quad\mbox{genau dann wenn}\quad a > b \quad\mbox{für alle}\quad a,
+c \in \mathbb{R}
+\end{eqnarray}
+wobei $G$ die Gütermenge und $t: \{ u(x) | x \in G\} \mapsto \mathbb{R}$ die
+Transformation der Nutzenskala $u$ in eine andere Nutzenskala ist.
+
+Mit Hilfe ordinaler Nutzenskalen lassen sich unsere Entscheidungstabellen (oder
+unsere Entscheidungsbäume) in einer noch einfacheren und übersichlicheren Form
+darstellen, indem wir die möglichen Resultate des Entscheidungsprozesse durch
+ihre Zahlenwerte auf einer (beliebigen) Nutzenskala widergeben. Die
+Entscheidungstabellen sehen dann noch einmal etwas schematischer aus, z.B. so:
+
+\begin{center}
+\begin{tabular}{c|c|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$} & 
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5} 
+$A_1$ &    3  &    7  &    2  &    0 \\ \cline{2-5} 
+$A_2$ &    2  &    1  &    2  &   -1  \\ \cline{2-5}
+$A_3$ &    4  &    6  &    5  &    0  \\ \cline{2-5}
+\end{tabular}
+\end{center}
+
+Ein Vorteil dieser Darstellung besteht darin, dass sich Entscheidungs\-regeln
+besonders leicht anwenden lassen, da sich die Präferenzordnung unmittelbar an
+der Größe der Zahlen ablesen lässt. In diesem Beispiel kann man beinahe
+sofort "`sehen"', dass die Entscheidung $A_2$ durch beide anderen
+Handlungsalternativen dominiert wird und damit sicherlich ausscheidet. Welche
+der verbleibenden Alternativen gewählt werden solte, lässt sich anhand der
+Dominanz allein nicht mehr entscheiden. Dafür benötigt man weitergehende
+Entscheidungsregeln, denen wir uns nun zuwenden.
+
+\subsection{Entscheidungs\-regeln auf Basis des ordinalen\\Nutzens}
+
+Mit dem {\em ordinalen Nutzen} haben wir das Rüstzeug um einige einfache
+Entscheidungsregeln zu formulieren. Für kompliziertere Entscheidungsregeln
+benötigen wir stärkere Nutzenkonzepte, wie das des kardinalen Nutzens bzw. der
+"`Neumann-Morgensternschen Nutzenfunktion"', die weiter unten besprochen wird
+(Kapitel \ref{NeumannMorgenstern}). Im folgenden werden wir mehrere
+unterschiedliche Entscheidungsregeln besprechen, die alle auf ihre Weise sinnvoll
+sind, deren Anwendung aber interessanterweise zu jeweils anderen
+Entscheidungsempfehlungen führt. Wenn diese Regeln aber jeweils unterschiedliche
+Entscheidungsempfehlungen nahelegen, dann wirft das die Frage auf, welche dieser
+Regeln denn nun eigentlich die "`richtige"' Entscheidung empfiehlt. Dazu ist zu
+sagen, dass es im Bereich der "`Entscheidungen unter Unwissen"' keine unter allen
+Umständen beste Regel gibt. Alle der in dieser und der nächsten Woche
+besprochenen Regeln haben ihre relative Berechtigung, je nach der Situation in
+der sich das Entscheidungsproblem stellt. Anders sieht die Sache erst aus, wenn
+wir Entscheidungen unter Risiko betrachten. Denn dort kann man zeigen, dass mit
+der {\em Erwartungsnutzenhypothese} unter wenigen Einschränkungen in der Tat so
+etwas wie eine eindeutig beste Entscheidungregel vorhanden ist.
+
+Bei den Entscheidungen unter Unwissenheit gibt es aber keine solche beste oder
+einzig richtige Regel. Daher stellt sich bei jeder der folgenden
+Regeln die Frage: Wann sollte man sie anwenden? Oder auch:
+Warum sollte man gerade diese Regel anwenden? Die Antwort auf diese Fragen muss
+zwangsläufig von der Situation und/oder von subjektiven Voraussetzungen
+wie Vorlieben oder Abneigungen abhängig sein. Denn gäbe es eine generelle
+Antwort, dann hätte man damit auch eine beste Regel.
+
+\subsubsection{Die Maximin-Regel}
+\label{maximinRegel}
+Die erste Entscheidungsregel, die wir besprechen wollen, ist die sogenannte {\em
+Maximin-Regel}, die besagt, dass man die Verluste minimieren soll, oder, was
+dasselbe ist, dass man das minimale Ergebnis maximieren soll. (Eben deshalb heißt
+sie "`Maximin-Regel"'.) Mit Hilfe von Entscheidungstabellen kann man die Regel
+folgendermaßen anwenden: \marginline{einfache Maximinregel}
+Zunächst markiert man in jeder Zeile (also für jede
+Handlungsalternative) den kleinsten Nutzenwert. Und anschließend wählt man
+diejenige Handlung aus, bei der markierte Wert von allen am größten ist. Das
+sieht dann folgendermaßen aus:
+
+\begin{center}
+\begin{tabular}{l|c|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$} & 
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5}
+$A_1$   &    3  &    4  &    7  &   1*  \\ \cline{2-5}
+$A_2$   &   -6* &   12  &    2  &    2  \\ \cline{2-5}
+$A_3$   &    5  &    0* &    3  &    1  \\ \cline{2-5}
+$A_4$** &    2* &    4  &    3  &    2* \\ \cline{2-5}
+$A_5$   &    3  &    5  &    5  &    1*  \\ \cline{2-5}
+\end{tabular}
+\end{center}
+
+Die nach der Maximin-Regel beste Entscheidung ist in diesem Fall also die
+Entscheidung $A_4$, weil das schlechteste mögliche Ergebnis bei dieser
+Entscheidung mit einer 2 bewertet ist, während es bei allen anderen
+Entscheidungen einen noch niedrigeren Wert hat. (Dass der Wert 2 dabei bei
+dieser Entscheidung zweimal vorkommt, schadet nicht.)
+
+Führt diese Entscheidungsregel immer zu einem eindeutigen Ergebnis? Nicht
+unbedingt, denn es ist ja möglich dass das schlechteste mögliche Ergebnis
+mehrerer Handlungsalternativen den gleichen Nutzenwert hat. Wie sollte man nun
+vorgehen? Eine naheliegende Erweiterung der Maximin-Regel besagt, dass man in
+diesem Fall unter den verbleibenden Handlungsalternativen nach dem
+zweitschlechtesten Ergebnis auswählen soll, dann nach dem drittschlechtesten
+usf. \marginline{lexikalische Maximinregel} 
+Diese Erweiterung der Maximin-Regel nennt man auch die {\em lexikalische
+Maximin-Regel}. Auf ein Beispiel angewandt, funktioniert das folgendermaßen:
+
+\begin{center}
+\begin{tabular}{l|c|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$} & 
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5}
+$A_1$   &    2  &    4  &    1* &   6   \\ \cline{2-5}
+$A_2$   &    0* &    3  &    12 &   7   \\ \cline{2-5}
+$A_3$*  &    5  &    2* &    3  &   4   \\ \cline{2-5}
+$A_4$   &    2  &   -1* &    7  &   1   \\ \cline{2-5}
+$A_5$*  &    2* &    6  &    4  &   5   \\ \cline{2-5}
+\end{tabular}
+\end{center}
+ 
+Nach dem ersten Schritt bleiben also nur noch die Entscheidungen $A_3$ und
+$A_5$ übrig. Im zweiten Schritt reduzieren wir die Tabelle auf diese beiden
+Strategien und ignorieren das jeweils schlechteste Ergebnis, um uns nun nach dem
+zweitschlechtesten zu richten:
+
+\begin{center}
+\begin{tabular}{l|c|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$} & 
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5}
+$A_3$   &    5  &    x &    3*  &   4   \\ \cline{2-5}
+$A_5$** &    x  &   6  &    4*  &   5   \\ \cline{2-5}
+\end{tabular}
+\end{center}
+
+Die beste Entscheidung nach der lexikalischen Minimax-Regel besteht
+also in der Wahl der Handlung $A_5$. (Und wenn selbst die lexikalische
+Minimax-Regel kein eindeutiges Ergebnis zu Tage fördert, dann ist es wirklich
+egal, welche der verbleibenden Handlungen man wählt, oder?)
+
+Sollte der kleineste Wert, wie in der folgenden Tabelle, mehrmals vorkommen,
+dann darf er nur einmal gestrichen werden, wobei es beliebig ist, an welcher
+Stelle er gestrichen wird:
+
+\begin{center}
+\begin{tabular}{l|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$}
+\\ \cline{2-4}
+$A_1$   &    -1  &   2 &  100  \\ \cline{2-4}
+$A_2$   &    -1  &  -1 &   3   \\ \cline{2-4}
+\end{tabular}
+\end{center}
+
+Beispielsweise könnte man im ersten Schritt den Wert -1 in der zweiten Zeile
+in der zweiten Spalte streichen:
+
+\begin{center}
+\begin{tabular}{l|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$}
+\\ \cline{2-4}
+$A_1$   &    x  &  2  &  100  \\ \cline{2-4}
+$A_2$   &    -1 &  x  &   3   \\ \cline{2-4}
+\end{tabular}
+\end{center}
+
+Damit ist klar, dass die Handlung $A_1$ gewählt werden sollte, denn in der
+reduzierten Tabelle ist der minimale Gewinn bei Handlung $A_1$ mit 2 größer als
+bei Handlung $A_1$ mit -1.
+
+In welchen Situationen bietet sich die Verwendung der Minimax-Regel an?
+Sicherlich wird man dann auf diese Regel zurückgreifen, wenn es bei irgendeiner
+Entscheidungssituation vor allem darum geht, Schäden zu vermeiden, also z.B. wenn
+Leib und Leben in Gefahr geraten könnten.
+\marginline{Anwendung der lexikalischen Maximin-Regel}
+ Ein sehr berühmtes Beispiel für
+die Anwendung der Maximin-Regel in der Philosophie hat John Rawls geliefert, der
+in seiner "`Theorie der Gerechtigkeit"' fordert, dass man die Gerechtigkeit der
+Gesellschaftordnung nach dem Maximin-Prinzip beurteilen soll: Diejenige
+Gesellschaftsordnung ist die Gerechteste, in der es den am schlechtesten
+Gestellten im Vergleich zu allen anderen möglichen und, so eine weitere
+Forderung von Rawls, {\em freien} Gesellschaftsordnungen am Besten geht
+\cite[S. 96ff.]{rawls:1971}. Damit setzt sich Rawls bewusst vom Utilitarismus ab, der
+bekanntlich fordert, den Gesamtnutzen aller zu maximieren. Wir werden in der
+nächsten Vorlesungsstunde auf diese Diskussion noch ausführlicher eingehen
+(Kapitel \ref{RawlsHarsanyiDebatte}).
+
+\subsubsection{Die Maximax-Regel}
+
+Analog zur Maximin-Regel könnte man, wenn man wollte, auch eine {\em
+Max\-imax}-\-Regel formulieren. Nach der Maximax-Regel müsste dann diejenige
+Handlung gewählt werden, bei der der maximale Erfolg am größten ist. Diese Regel
+ist eher etwas für ausgeprägte Optimisten oder sehr risikobereite Menschen oder
+für Situationen, in denen es mehr darauf ankommt, Kühnheit und Sportsgeist zu
+zeigen als Vorsicht und Besonnenheit. Genauso wie sich zur
+Maximin-Regel eine lexikalischen Maximin-Regel bilden lässt, ließe sich
+ebenfalls eine lexikalische Maximax-Regel zur Maximax-Regel formulieren.
+ 
+\subsubsection{Die Rangordnungsregel}
+\label{Rangordnungsregel}
+
+Wie würde man die Lösung zu beurteilen haben, die die Maximin-Regel für
+folgendes Beispiel liefert:
+
+\begin{center}
+\begin{tabular}{c|c|c|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$} & 
+\multicolumn{1}{c}{\ldots} & \multicolumn{1}{c}{$S_{100}$} \\ \cline{2-6}
+$A_1$ & 0 & 2 & 2 & $\cdots$ & 2 \\ \cline{2-6}
+$A_2$ & 1 & 1 & 1 & $\cdots$ & 1 \\ \cline{2-6}
+\end{tabular}
+\end{center}
+
+Nach der Maximin-Regel müsste man $A_2$ wählen. Das bedeutet aber, man zieht
+$A_2$ der Handlung $A_1$ vor, obwohl von 100 Fällen $A_2$ nur in einem einzigen
+nicht schlechter ist als $A_1$. Das könnte -- je nach Situation -- wenig 
+sinvoll erscheinen und verdeutlicht, dass die Eigenschaft der Maximin-Regel
+jeweils nur ein einzelnes Spaltenelement in die Prüfung einzubeziehen unter
+Umständen eine Schwäche sein kann. Könnte man eine Regel formulieren, die
+dieser Schwierigkeit entgeht? 
+
+Denkbar wäre z.B. folgende Regel:\marginline{Rang\-ord\-nungs\-regel} Man
+bestimme für jedes Element innerhalb jeder Zeile, welchen Rang es innerhalb
+seiner Spalte hat. Dann summiere man die gefundenen Werte zeilenweise auf und
+wähle die Handlung, deren Zeile die kleinste Summe hat. (Bei dieser Regel
+bestimmen wir erst den Rang statt unmittelbar mit den Zahlen in der Tabelle zu
+rechnen, weil es wenig Sinn hat, mit ordinalen Nutzenwerten zu rechnen, die ja
+nur dazu dienen sollen, eine Rangfolge wiederzugeben.) Nach diesem Verfahren
+würde die Handlung $A_1$ eine Rangzahl von 101 erhalten, da ihr Ergebnis in 99
+von hundert möglichen Fällen auf den ersten Rang kommt und in einem Fall auf den
+zweiten ($99 \cdot 1 + 2 = 101$). Die Handlung $A_2$ würde eine Rangzahl von 199
+erhalten ($1 \cdot 1 + 99 \cdot 2 = 199$). Damit müsste nach dieser Regel $A_1$
+gewählt werden.
+
+Natürlich ist auch die Rangordnungsregel nicht vollkommen. So kann es Fälle
+geben, in denen die Rangzahlen mehrerer oder gar aller
+Handlungsalternativen genau gleich sind. Aber in diesen Fällen kann man dann
+immer noch unbedenklich auf die Maximin-Regel zurückgreifen, da dann praktisch
+ausgeschlossen ist, dass es sich um eine für die Maximin-Regel problematische
+Situation wie die in der Tabelle weiter oben dargestellte handelt.
+
+Mit der Maximin-, der Maximax- und der Rangordnungsregel haben wir drei
+Entscheidungsregeln vorgestellt, die sich bei Entscheidungen unter Unwissen und
+bei bloß ordinalen Nutzenwerten anwenden lassen, wobei die wichtigste dieser
+Regeln die Maximin-Regel ist. Stellt sich die Frage:\marginline{weitere
+Entscheidungsregeln?} Könnte es noch weitere Regeln für diese Art von
+Entscheidungsproblemen geben? Das ist allerdings anzunehmen. Vielleicht fällt
+Ihnen selbst eine weitere Regel ein. Dabei ist zu beachten, dass eine gute
+Entscheidungsregel folgenden Bedingungen genügen muss:
+
+\begin{enumerate}
+  \item Sie muss stabil bezüglich ordinaler Transformationen der Nutzenwerte
+  sein, d.h. wenn man die Nutzenwerte in der Entscheidungstabelle durch ordinal
+  transformierte ersetzt, sollte die Entscheidungsregel immer noch dieselbe
+  Entscheidung empfehlen.
+  \item Es sollte irgendwelche plausiblen Gründe geben, die für diese
+  Entscheidungsregel sprechen, z.B. besondere Entscheidungssituationen, in
+  denen sie intuitiv sinnvoll erscheint.
+  \item Es sollte möglichst wenig Gegenbeispiele in Form von denkbaren
+  Entscheidungsproblemen geben, bei denen die Anwendung der Regel abwegig
+  erscheint.
+\end{enumerate}
+
+

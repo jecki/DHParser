@@ -1,0 +1,1038 @@
+\section{Entscheidungen unter Unwissenheit II}
+
+In dieser Woche werden wir den Begriff des kardinalen Nutzen (bzw. des
+"`Neumann-Morgensternschen"' Nutzens) einführen und einige weitere
+Entscheidungsregeln kennen lernen, die auf diesem Nutzenkonzept beruhen. Aus
+didaktischen Gründen wird erst ein Beispiel besprochen, in dem bereits der
+kardinale Nutzen\footnote{Genaugenommen handelt es sich bei dem folgenden
+Beispiel um einen kardinalen Wert, nämlich der Geldwert} vorausgesetzt wird und
+erst danach der kardinale Nutzenbegriff selbst eingeführt.
+
+\subsection{Die Minimax-Bedauerns-Regel}
+\label{MinimaxRegret}
+
+Von den bisher besprochenen Entscheidungsregeln ist die Maximin-Regel
+wahrscheinlich die einleuchtendste und sinnvollste, aber wir haben auch schon
+ein Beispiel kennen gelernt, bei dem ihre Anwendung möglicherweise nicht
+sinnvoll wäre, und man kann weitere Beispiele konstruieren, bei denen das noch
+deutlicher der Fall ist, z.B. das folgende:
+
+\begin{center}
+\label{MinimaxBedauernsRegel}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{$S_1$} & \multicolumn{1}{c}{$S_2$} \\
+\cline{2-3}
+$A_1$ & € 1,25 & € 1,50 \\ \cline{2-3}
+$A_2$ & € 1,00 & € 50.000 \\ \cline{2-3}
+\end{tabular}
+\end{center}
+
+Nach der Maximin-Regel müsste die Entscheidung zugunsten der Handlung $A_1$
+ausfallen. Aber ist es sinnvoll, sich die Chance auf € 50.000 entgehen zu lassen,
+nur um einen möglichen Verlust von 25 Cent zu vermeiden? Wenn man nicht gerade
+eine Geschichte erfindet, bei der von diesen 25 Cent Leben und Tod abhängen,
+erscheint das mehr als zweifelhaft.\marginline{Minimax-Bedauerns-Regel}  Um
+Situationen wie dieser gerecht zu werden, gibt es eine Regel, die darauf zielt,
+"`verpasste Chancen"' zu vermeiden. Diese Regel ist die {\em
+Minimax-Bedauerns-Regel} (wohlbemerkt: diesmal heißt es "`Minimax"' nicht
+"`Maximin"'!). Bei dieser Regel leitet man von der ursprünglichen Tabelle
+zunächst eine Bedauernstabelle ab, die für jede Entscheidung und jedes
+möglicherweise eintretende Ereignis (bzw. jeden möglichen Weltzustand) die Größe
+der verpassten Chance beziffert. Dann wählt man diejenige Entscheidung aus, bei
+der die größtmögliche verpasste Chance am kleinsten ist. Die Einträge in der
+Bedauernstabelle erhält man, indem man jeden Wert in der Tabelle vom Maximalwert
+derselben Spalte abzieht. Für das Beispiel von eben würde die Bedauernstabelle
+dann so aussehen:
+
+\begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{$S_1$} & \multicolumn{1}{c}{$S_2$} \\
+\cline{2-3}
+$A_1$ & € 0    & € 49.998,50 \\ \cline{2-3}
+$A_2$ & € 0,25 & € 0 \\ \cline{2-3}
+\end{tabular}
+\end{center}
+
+Das maximale Bedauern für die Handlung $A_1$ würde also mit € 49.998,50 zu
+beziffern sein, während bei der Wahl von $A_2$ schlimmstenfalls ein Verlust
+von 25 Cent verschmerzt werden müsste. Um das maximale Bedauern zu minimieren,
+muss nach der Minimax-Bedauernsregel also die Handlung $A_2$ gewählt werden.
+
+Ähnlich wie die die Maximin-Regel kann man die Minimax-Be\-dauerns\-regel auch
+{\em lexikalisch} mehr\-fach hintereinander anwenden, wenn nicht gleich bei der
+ersten Anwendung eine eindeutige Entscheidung getroffen werden kann.
+
+An dieser Stelle könnte jedoch ein Einwand erhoben werden: Beim Übergang von der
+Entscheidungstabelle zur Bedauernstabelle haben wir bestimmte Einträge in der
+Tabelle voneinander subtrahiert. \marginline{Rechnen mit Nutzenwerten?}
+Da es sich um Geldbeträge handelte, war das
+denkbar unproblematisch, denn jeder wird zugeben, dass man mit Geldbeträgen
+rechnen kann, und dass man sinnvollerweise davon sprechen kann dass € 3 dreimal
+so viel Wert sind wie € 1. Aber was ist, wenn wir es nicht mit Geldbeträgen,
+sondern wie zuvor mit ordinalen Nutzenwerten zu tun? Den vergleichsweise
+voraussetzungsarmen Begriff des ordinalen Nutzens haben wir ja gerade deshalb
+eingeführt, weil man mit anderen Werten als Geldbeträgen nicht unbedingt
+Rechnungen durchführen kann, selbst wenn sich die Größe des Wertes noch
+unterscheiden lässt. (Beispiel: Die meisten Menschen würden wohl zustimmen, dass
+Bier und Würstchen leckerer sind als Brot und Wasser, aber es wäre Unsinn zu
+sagen, sie sind genau dreimal so lecker.) Wenn wir eine Bedauernstabelle mit
+ordinalen Nutzenwerten berechnen würden, dann würde sich das Ergebnis, das bei
+der Anwendung der Minimax-Bedauerns-Regel herauskäme ändern, wenn wir die
+Nutzenwerte durch ordinal transformierte Nutzenwerte ersetzen, was bei einer
+robusten Entscheidungsregel nicht vorkommen sollte. Daher müssen wir entweder auf
+die Anwendung der Minimax-Bedauerns-Regel verzichten, oder wir dürfen sie nur
+dort anwenden, wo wir einen stärkeren Nutzenbegriff vorausetzen dürfen, wie er
+z.B. implizit den in den vorhergehenden Beispielen verwendeten Geldwerten zu
+Grunde liegt. Der schwächstmögliche stärkere Nutzenbegriff (stärker im Vergleich
+zum ordinalen Nutzen), der es uns erlaubt die Minimax-Bedauerns-Regel anzuwenden,
+ist der Begriff des kardinalen Nutzens. 
+
+Bevor wir jedoch auf den Begriff des kardinalen Nutzens eingehen, soll aber
+noch auf eine besondere Eigenschaft der Minimax-Bedauerns-Regel hingewiesen
+werden, die unter Umständen auch als ein Einwand gegen diese Regel begriffen
+werden kann: Die Minimax-Bedauerns-Regel verletzt nämlich -- ebenso wie übrigens auf die
+Rangordnungsregel aus Kapitel \ref{Rangordnungsregel} -- das Prinzip der {\em
+paarweisen Unabhängigkeit} oder auch "`Unabhängigkeit von dritten
+Alternativen"'.\footnote{Die dafür häufig auch verwendete Bezeichnung
+"`Unabhängigkeit von irrelevanten Alternativen"' ist wegen ihrer Suggestivität
+irreführend. Es ist nämlich keineswegs immer so, dass dritte Alternativen
+grundsätzlich irrelevant sind.}
+\marginline{Un\-ab\-häng\-ig\-keit von dritten Alternativen}
+Fügt man den bestehenden Handlungsalternativen eine Handlungsalternative hinzu,
+so kann das selbst dann zu einer Änderung der Entscheidung führen, wenn die neu
+hinzugefügte Alternative nach der Minimax-Bedauerns-Regel sowieso nicht gewählt
+werden würde. Beispiel:
+
+\begin{center}
+
+\setlength{\parskip}{0.5cm}
+
+\begin{tabular}{c|p{1cm}|p{1cm}|p{1cm}|cc|p{1cm}|p{1cm}|p{1cm}|}
+\multicolumn{1}{c}{} & \multicolumn{3}{c}{Entscheidungstabelle} &
+\multicolumn{2}{c}{} & \multicolumn{3}{c}{"`Bedauerns"'-tabelle}
+\\ \cline{2-4} \cline{7-9}
+$A_1$ & 0 & 10 & 4    & & $A_1$ & 5 & 0 & 6  \\ 
+\cline{2-4} \cline{7-9} 
+$A_2$ & 5 &  2 & 10   & & $A_2$ & 0 & 8 & 0  \\ 
+\cline{2-4} \cline{7-9}
+\end{tabular}
+
+\begin{tabular}{c|p{1cm}|p{1cm}|p{1cm}|cc|p{1cm}|p{1cm}|p{1cm}|}
+\cline{2-4} \cline{7-9}
+$A_1$ & 0 & 10 & 4  & & $A_1$ & 10 & 0 & 6  \\ 
+\cline{2-4} \cline{7-9} 
+$A_2$ & 5 &  2 & 10 & & $A_2$ & 5 &  8 & 0  \\ 
+\cline{2-4} \cline{7-9}
+$A_3$ & 10 &  5 & 1 & & $A_3$ & 0 &  5 & 9 \\ 
+\cline{2-4} \cline{7-9}
+\end{tabular}
+
+{\tiny Quelle: Michael D. Resnik: Choices. An Introduction to Decision Theory,
+Minnesota 2000, S. 31.}
+\end{center}
+
+Die Alternative A3 hat nach der Minimax-Be\-dau\-erns-Re\-gel keine Chance
+ge\-wählt zu werden. Dennoch übt ihre Präsenz Einfluss darauf aus, welche der beiden
+anderen Handlungsalternativen nach der Minimax-Bedauerns-Regel gewählt wird. Ist
+die Alternative A3 abwesend, so ist die Handlung A1 nach der
+Minimax-Bedauerns-Regel die beste Handlung. Fügt man die Alternative A3 hinzu, so
+ist A2 die beste Handlung.
+
+Sollte man die Abhängigkeit von dritten Alternativen als eine Schwäche der
+Minimax-Bedauerns-Regel ansehen? Das hängt wiederum sehr davon ab, in welchem
+Zusammenhang die Entscheidungsregel angewandt wird. Da das Prinzip besonders in
+der Sozialwahltheorie eine große Rolle spielt, dazu einige Beispiele:
+
+\begin{enumerate}
+\label{dritteAlternativen}
+  \item Resnik erzählt dazu in etwa die folgende Geschichte \cite[S. 40]{resnik:1987}:
+\marginline{Beispiele für die mögliche Relevanz von dritten Alternativen}
+Stellen Sie sich vor, Sie sitzen in einem Restaurant und überlegen, ob Sie lieber
+ein Steak oder ein vegetarisches Gericht bestellen wollen. Eigentlich mögen Sie
+lieber Steak, aber da das Restaurant einen etwas heruntergekommenen Eindruck
+macht, haben Sie wegen der Fleischzubereitung so ihre Bedenken und tendieren eher
+zu einer vegetarischen Speise. Nun erzählt Ihnen die Dame vom Nebentisch, dass
+sie gerade ein vorzügliches Schnitzel gegessen hat. Sie selbst -- nehmen wir an
+-- mögen zwar kein Schnitzel, aber obwohl diese Alternative für Sie
+"`irrelevant"' ist, wissen Sie nun, dass Sie der Fleischzubereitung in diesem
+Restaurant vertrauen können, und bestellen doch das Steak.
+
+  \item Frau Schmidt möchte ein Auto kaufen. Sie legt Wert darauf, dass es das
+  teuerste und, wenn nicht das teuerste, dann doch wenigstens dass schnellste
+  Auto von der ganzen Stadt ist. Also entscheidet sie sich gegen einen Porsche
+  und für einen S-Klasse Mercedes, weil der teurer ist. Jetzt efährt sie aber,
+  dass ihre Nachbarin Frau Klein sich kürzlich einen Rolls-Royce zugelegt hat. 
+  Einen Rolls-Royce kann sich Frau Schmitt aber sowieso nicht leisten. Da sie
+  dann aber statt des teuersten wenigstens das schnellste Auto haben will,
+  kauft sie sich nun doch nicht den Mercedes, sondern lieber den Porsche.
+
+  Ihre Wahl zwischen Porsche und Mercedes ist also nicht unabhängig von dritten
+  Alternativen, auch diese für Frau Schmitt sowieso nicht in Frage kommen, wie in
+  diesem Fall der Rolls Royce.
+  
+  \item {\em Machinas Paradox}:
+\label{machinasParadox}
+Angenommen, eine Person habe die Wahl zwischen zwei Lotterien:
+\begin{enumerate}
+  \item Lotterie: 99\% Chance eine Reise nach Venedig zu gewinnen, 1\%
+  Chance eine Filmvorführung über Venedig zu gewinnen.
+  \item Lotterie: 99\% Chance eine Reise nach Venedig zu gewinnen, 1\%
+  Chance zu Hause zu bleiben.
+\end{enumerate}
+Im Sinne der Theorie müsste die erste Lotterie eindeutig bevorzugt werden, wenn
+man annimmt, dass einen Film über Venedig anzuschauen allemal interessanter
+ist, als zu Hause zu sitzen. Andererseits ist es durchaus plausibel sich
+vorzustellen, dass angesichts der sehr großen Chance eine Reise nach Venedig zu
+gewinnen, es doch noch erträglicher ist zu Hause zu bleiben, wenn man
+die Chance verpasst, als sich dann auch noch einen herrlichen Film über Venedig
+anschauen zu müssen. 
+
+Wenn man diese Argumentation akzeptiert, dann zeigt das Beispiel einmal mehr,
+dass die Annahme der Unabhängigkeit von dritten Alternativen, z.B. auf Grund
+solcher psychologischen Faktoren wie des Bedauerns, nicht immer zwingend oder
+auch nur glaubwürdig ist. Oder gäbe es vielleicht eine Möglichkeit, das Beispiel
+durch eine entsprechende Problemspezifikation, z.B. durch Einbeziehen des Bedauernsfaktors
+in die Konsequenz der Entscheidung, doch noch mit der Theorie zu vereinbaren?
+(Aufgabe \ref{AufgabeDritteAlternative}!)
+
+\item {\em Mögliche Bedeutung der Rangordnung} \cite[S. 81]{mackie:2003}: Wie
+bereits erwähnt ist auch die Rangordnungsregel nicht mit dem Prinzip der
+paarweisen Unabhängigkeit vereinbar. Hält man Entscheidungsregeln wie die
+Minimax-Bedauernsregel oder die Rangordnugnsregel für sinnvoll, so kann man diese
+Unvereinbarkeit statt gegen bestimmte Entscheidungsregeln umgekehrt auch gegen
+das Prinzip der paarweisen Unabhängigkeit ausspielen. 
+
+Vorgreifend auf die Sozialwahltheorie sei zur Illustration der möglichen Relevanz
+der Rangordnung von Präferenzen und damit auch der Relevanz von dritten
+Alternativen folgendes Beispiel diskutiert: Angenommen Napoleon habe die
+Präferenzen $b \succ a \succ c \succ d \succ e$ und Josephine $a \succ b \succ c
+\succ d \succ e$. Es sei weiterhin angenommen, dass Napoleon und Josephine sich
+darauf einigen müssten, ob sie gemeinsam $a$ oder $b$ wählen wollen, und dass
+Napoleon sich nach langwierigen Diskussionen schließlich durchgestezt habe sie
+gemeinasm $b$ wählen.
+
+Nun erhält Josephine eine Nachricht, die dazu führt, dass sie ihre Präferenzen
+dergestalt abändert, dass die Alternative $b$ nun für sie an die letzte Stelle
+rückt, so dass sie nun die Präferenzen $a \succ c \succ d \succ e \succ b$ hat. 
+
+Josephine teilt dies Napoleon mit, und bittet darum, auf Grund der geänderten
+Umstände die gemeinsame Entscheidung noch einmal zu überdenken. Napoleon
+antwortet ihr jedoch mit dem Hinweis auf das Prinzip der Unabhängikeit von
+"`irrelevanten"' Alternativen, dass dies nicht erforderlich sei, da sich
+Josephines Präferenzen bezüglich $a$ und $b$ duch die neu eingetretenen Umstände nicht
+geändert hätten, so dass sie die Entscheidung zwischen $a$ und $b$ gar nicht
+beeinflussen dürften.
+
+Sofern man Napoleons Antwort als unverschämt empfindet, ist dieses Beispiel ein
+Gegenbeispiel gegen die generelle Gültigkeit des "`Prinzips des Unabhängigkeit
+von dritten Alternativen"'. Das Beispiel zeigt, dass das Prinzip der
+Unabhängkeit von dritten Alternativen uns zwingt, von der Information über die
+Rangordnung der beiden zur Entscheidung anstehenden Alternativen innerhalb einer
+größeren Menge von Alternativen zu abstrahieren. Aber unter Umständen könnte
+diese Information wichtig sein, z.B. indem sie die Intensität einer Präferenz
+ausdrückt und sofern man der Ansicht ist, dass die Intensität der
+individuellen Präferenzen bei der Diskussion über gemeinsame Entscheidungen wie
+der von Napoleon und Josephine mitberücksichtigt werden sollte.
+
+Man kann es auch so formulieren: Eine dogmatische Festlegung auf das Prinzip
+der Unabhängikeit von dritten Alternativen würde Entscheidungsprobleme wie das
+von Napoleon und Josephine aus dem Anwendungsbereich der Entscheidungstheorie
+ausschließen.
+
+
+\end{enumerate}
+ 
+Wie man sieht können dritte Alternativen sehr wohl relevant für die relative
+Bewertung der anderen Alternativen sein. Insofern muss die Abhängigkeit von
+dritten ("`irrelevanten"') Alternativen nicht unbedingt als eine Schwäche der
+Entscheidungsregel aufgefasst werden. Aber es gibt andere Situationen, wo das
+durchaus der Fall sein kann, etwa bei Wahlen oder Abstimmungen, deren Ergebnis
+unter Umständen dadurch manipuliert werden könnte, dass man weitere, scheinbar
+irrelevante Alternativen zur Abstimmung stellt.\footnote{Theoretische Beispiele
+findet man in der entsprechenden Fachliteratur unter den Stichworten "`Paradox of
+Voting"' und "`Agenda Setting"' in Fülle \cite[S. 112ff.]{mueller:2003}. Die
+empirische Relevanz des vermeintlichen Problems zyklischer Mehrheiten wird jedoch
+inzwischen sehr stark in Zweifel gezogen \cite[S. 147ff.]{green-shapiro:1994}.
+Praktisch spielen die Formen der Abstimmungsmanipulation, die in der Public
+Choice Literatur so ausführlich erörtert werden, keine Rolle, während andere, die
+womöglich viel wichtiger sind, von den Autoren der Public Choice Literatur nicht
+beachtet werden.} Insgesamt kann man sagen, dass das Prinzip der
+Unabhängigkeit von dritten Alternativen bzw. der paarweisen Unabhängigkeit nur
+dann aufgestellt werden sollte, wenn man zuvor sichergestellt hat, dass für die
+Entscheidung zwischen jedem Paar von Alternativen (bzw. für die relative
+Bewertung von jedem Paar von Alternativen) die Verfügbarkeit der anderen
+Alternativen tatsächlich irrelevant ist. In einer Entscheidungssituation, wo
+dies nicht der Fall ist, kann eine Theorie, die dieses Prinzip als Axiom
+einführt, nicht ohne Einschränkungen angewendet werden.
+
+
+\subsection{Kardinaler Nutzen}
+\label{KardinalerNutzen}
+Der Grundgedanke der "`Minimax-Bedauerns-Regel"' besteht darin, eine Entscheidung
+zu finden, bei der der maximal mögliche Verlust (je nach eintretenden
+Zufallsereignissen) minimiert wird. Da wir diese Regel auf ein Beispiel mit
+Geldwerten angewendet haben, konnten wir die Verluste relativ bedenkenlos als die
+Differenz zwischen entgangenem Gewinn und erhaltenem Gewinn bestimmen. Aber wie
+sollen wir eine solche Regel wie die "`Minimax-Bedauerns-Regel"' anwenden, wenn
+die (möglichen) Ergebnisse eines Entscheidungsproblems keine Geldwerte sind? Die
+Ihnen zugeordneten Nutzenwerte spiegeln dann -- nach dem Konzept des {\em
+ordinalen Nutzens} -- nur eine Rangordnung zwischen den möglichen Ergebnissen des
+Entscheidungsprozesses entsprechend den Präferenzen wieder.\marginline{Grenzen
+des ordinalen Nutzens} Das Ergebnis der Anwendung einer Entscheidungsregel sollte
+also auch nur von der Rangordnung der Nutzenwerte nicht aber von den -- solange
+die Ordnung erhalten bleibt -- willkürlich wählbaren Zahlenwerten abhängen, die
+diese Ordnung auf einer Nutzenskala wiedergeben. Betrachten wir als Beispiel
+einmal folgende beiden Nutzenskalen, die den Ergebnissen $x, y, z$ jeweils einen
+bestimmten Nutzen zuordnen. ({\em x}, {\em y} und {\em z} sollen dabei
+irgendwelche möglichen Resultate irgendeines Entscheidungsprozesses sein, z.B.
+könnten sie für die Resultate {\em frustriert}, {\em gelangweilt}, {\em erfreut}
+aus dem Beispiel auf Seite \pageref{AngelnBeispiel} stehen.)
+
+\begin{center}
+\begin{tabular}{cc|c|cccc|c|c}
+& x  &  y  &  z  &  &  &  x  &  y  &  z  \\ \cline{2-4} \cline{7-9}
+\raisebox{1.5ex}[-1.5ex]{Nutzenskala {\bf u()}} 
+& 1  &  2  &  3  &  &  
+\raisebox{1.5ex}[-1.5ex]{Nutzenskala {\bf v()}}
+&  1  &  4  &  9 
+\end{tabular}
+\end{center}
+
+Beide Skalen geben offenbar denselben ordinalen Nutzen wieder, da $u(z) > u(y) >
+u(x)$ und ebenso $v(z) > v(y) > v(x)$. Betrachtet man allerdings die Differenzen, so
+fällt auf, dass $u(z) - u(y) = u(y) - u(x)$, während $v(z) - v(y) > v(y) -
+v(x)$. Würden diese Nutzenwerte bei einem Entscheidungsproblem auftauchen, so
+könnte es geschehen, dass man bei Anwendung der Minimax-Bedauernsregel je
+nachdem, ob man die Nutzenfunktion {\em u} oder die Nutzenfunktion {\em v} zur
+Darstellung der Präferenzen heranzieht, zu einer anderen
+Entscheidungsempfehlung kommt. Genau das dürfte aber nicht geschehen, da {\em
+u} und {\em v} nur unterschiedliche Darstellungen desselben {\em ordinalen}
+Nutzens sind. Welche Auswege könnte man sich aus dieser misslichen Situation
+denken:
+
+\begin{enumerate}
+  \item Angesichts des Beispiels (Seite \pageref{MinimaxBedauernsRegel}), mit
+  dem wir die Mini\-max-\-Bedauernsregel eingeführt haben, könnte man auf die
+  naheliegende Idee verfallen, dass man diese Regel nur in solchen Fällen
+  anwenden kann, in denen die Ergebnisse des Entscheidungsprozesses monetäre
+  Auszahlungen sind. Das hätte allerdings zwei Nachteile: 1) Die Anwendbarkeit
+  der Regel würde dabei auf eine vergleichsweise kleine Menge von
+  Entscheidungsproblemen eingeschränkt. 2) In vielen Situationen, in denen in
+  irgendeiner Form monetäre Auszahlungen vorkommen, geben die monetären
+  Auszahlungen nicht unmittelbar den damit assoziierten Nutzen wieder.
+  Hanldungsleitend und damit entscheidungsrelevant ist jedoch
+  der Nutzen und nicht der Geldwert.\marginline{Unterschied von Nutzen und
+  Geldwert} Ein Beispiel daür, dass Nutzen und Geldwert sich nicht decken müssen
+  ist das folgende: 2.000 Euro sind doppelt so viel Geld wie 1.000 Euro. Aber der
+  zusätzliche Nutzen, den man von  2.000 Euro Monatsgehalt 
+  gegenüber 1.000 Euro Monatsgehalt gewinnt, ist sicherlich geringer 
+  als der zusätzliche Nutzen 
+  von 1.000 Euro gegenüber 0 Euro Gehalt.
+  
+  \item Eine andere denkbare Alternative wäre die Aufstellung einer {\em
+  qualitativen Bedauernstabelle}. Dazu müsste man zunächst einmal die
+  {\em Differenzergebnisse} bestimmen, worunter man zusammengesetzte Ergebnisse
+  aus einem nicht eingetretenen und einem statt dessen eingetretenen
+  Ergebnis verstehen kann. (In dem Beispiel des Küstenbesuchers aus der ersten
+  Vorlesung (Seite \pageref{AngelnBeispiel}), in dem die möglichen Resultate 
+  {\em frustriert}, {\em gelangweilt}, {\em erfreut}
+  waren, würden sich daraus die Differenzereignisse {\em frustriert statt
+  bloß gelangweilt}, {\em gelangweilt statt erfreut} und {\em frustriert statt
+  erfreut} ergeben.) Weiterhin müsste man ein neutrales Differenzereignis
+  definieren, welches die Stelle der 0 in der aus Nutzenwerten gewonnen
+  Bedauernstabelle einnimmt. Dieses neutrale Differenzergebnis könnte man z.B.
+  als "`Unter gegebenen Umständen so gut wie möglich"' bezeichnen oder ähnlich.
+  Schließlich müsste man die Präferenzen bezüglich der Differenzergebnisse
+  bestimmten, denen man dann eine neue ordinale Nutzenfunktion zuweisen könnte.
+  Die Bestimmung des minimalen größten Bedauerns erfolgt wie zuvor beschrieben
+  (Siehe Abschnitt \ref{MinimaxRegret}). Der Nachteil dieses Vorgehens besteht
+  erstens darin, dass die Präferenzordnung für eine weitere Ergebnismenge,
+  nämlich die Menge der Differenzergebnisse, bestimmt werden muss, und zweitens
+  darin, dass sich dieses Verfahren tatsächlich nur auf die
+  Minimax-Bedauerns-Regel anwenden lässt, nicht mehr aber auf
+  die meisten weiteren Entscheidungsregeln,
+  die wir gleich noch kennen lernen werden. In den Fällen aber, in denen wir
+  nicht die gleich zu besprechende Neuman-Morgensternsche Nutzenfunktion bilden
+  können (d.h. in den Fällen, in denen wir aus empirisch-sachlichen
+  Gründen höchstens einen {\em ordinalen} Nutzen voraussetzen dürfen) bleibt die
+  Bildung einer qualitativen Bedauernstabelle die einzige Alternative.
+    
+  \item Schließlich kann man versuchen, ein "`stärkeres"' Nutzenkonzept als das
+  des ordinalen Nutzens zu Grunde zu legen.\marginline{kardinaler Nutzen}
+  Bei einem solchen Nutzenkonzept
+  müsste nicht nur die Ordnung der Nutzenwerte unter einer Transformation
+  erhalten bleiben sondern mindestens auch die Ordnung beliebiger Differenzen
+  von Nutzenwerten. Stärker ist ein solches Nutzenkonzept in dem Sinne,
+  dass die Nutzenwerte dann mehr Informationen enthalten als nur die
+  Information über die Ordnung der Präferenzen. Das bedeutet aber auch, dass
+  ein solches Nutzenkonzept empirisch schwerer zu rechtfertigen ist, und dass
+  der empirische Anwendungsbereich eines solches Nutzenkonzepts
+  kleiner sein wird als der des ordinalen Nutzens. Um
+  die Ordnung der Differenzen zu erhalten, ist es aber andererseits noch längst
+  nicht erforderlich, den konkreten Zahlenwerten der Nutzenfunktion eine
+  eindeutige Interpretation zu geben, wie dies bei der Zuweisung von Geldwerten
+  der Fall wäre. Gesucht ist also ein möglichst schwaches (und damit 
+  empirisch immer noch möglichst breit anwendbares) Nutzenkonzept, das
+  aber stärker ist als das des Ordinalen Nutzens. 
+  Ein solches Nutzenkonzept ist das des {\em
+  kardinalen} bzw. des {\em Neumann-Morgensternschen Nutzens}.
+\end{enumerate}
+
+Das, was wir eben eher intuitiv die "`Stärke"' eines Nutzenkonzepts genannt
+haben, ist dadurch bestimmt, unter welcher Art von Transformationen man zwei
+Nutzenfunktionen als {\em äquivalent}, d.h. denselben Nutzen ausdrückend,
+betrachtet. (Man kann es also nicht den Nutzenfunktionen also solchen ansehen, ob
+sie einen ordinalen oder kardinalen Nutzen ausdrücken. Sondern erst durch den
+Vergleich von Nutzenfunktionen und der Festlegung der Bedingungen ihrer
+Äquivalenz oder Nicht-Äquivalenz wird dies bestimmt.) Beim {\em ordinalen Nutzen}
+wurden alle Nutzenfunktionen als äquivalent betrachtet, die durch
+"`ordnungserhaltende"' Transformationen ineinander überführt werden können.
+"`Ordnungserhaltend"' sind alle streng monoton steigenden Abbildungen. Der {\em
+kardinale Nutzen} ist nun dadurch definiert, dass zwei Nutzenfunktionen als
+äquivalent betrachtet werden, wenn man sie durch {\em positive lineare
+Transformationen} ineinander überführen kann. Positive lineare Transformationen
+sind alle Transformationen der Form:
+
+\begin{displaymath}
+u(x) = ax + b, \qquad a > 0
+\end{displaymath}
+
+Man betrachte unter diesem Gesichtspunkt einmal die folgenden, in
+Tabellen dargestellten Nutzenfunktionen:
+
+\begin{center}
+\begin{tabular}{cc|c|cccc|c|cccc|c|c|}
+& x  &  y  &  z  &  &  &  x  &  y  &  z & & & x & y & z \\ 
+\cline{2-4} \cline{7-9} \cline{12-14}
+\raisebox{1.5ex}[-1.5ex]{{\bf u()}} 
+&  1  &  2  &  3  &  &  
+\raisebox{1.5ex}[-1.5ex]{{\bf v()}}
+&  1  &  4  &  9 &  &
+\raisebox{1.5ex}[-1.5ex]{{\bf w()}}
+&  1  &  3  &  5
+\end{tabular}
+\end{center}
+
+Alle drei Nutzenfunktionen geben denselben ordinalen Nutzen wieder, aber nur die
+Funktionen {\em u} und {\em w} geben denselben kardinalen Nutzen wieder, da $w(x)
+= 2u(x)-1$. Weiterhin kann man sich leicht überlegen, dass zwei Nutzenfunktionen,
+die denselben kardinalen Nutzen darstellen, immer auch denselben ordinalen Nutzen
+repräsentieren, denn positive lineare Transformationen sind immer auch
+ordnungserhaltende Transformationen. Umgekehrt gilt dasselbe aber nicht, wie die
+Tabelle oben zeigt. Kardinale Nutzenskalen sind "`feinkörniger"' als ordinale
+Nutzenskalen.
+\marginline{Erhalt der Ordnung von Nutzendifferenzen}
+Und sie erhalten, wie erwünscht nicht nur die Ordnung der Nutzenwerte sondern
+auch die Ordnung der Differenzen von Nutzenwerten, denn seien $x,y,z,w \in
+\mathbb{R}$ beliebige Nutzenwerte und sei $u(x) = ax + b$ mit $a,b \in
+\mathbb{R}, a > 0$ eine positive lineare Transformation, dann:
+\begin{eqnarray*}
+  x - y & > & z - w  \\
+  a(x-y) & > & a(z-w)  \\
+  a(x-y) + b - b & > & a(z-w) + b - b \\
+  (ax + b) - (ay + b) & > & (az + b) - (aw + b) \\
+  u(x) - u(y) & > & u(z) - u(w) 
+\end{eqnarray*}
+Dasselbe gilt, wenn man statt des Ungleichheitszeichens ein Gleichheitszeichen
+einsetzt, womit der Erhalt der Ordnung von Nutzendifferenzen unter positiv
+linearer Transformation bewiesen ist. Positive lineare Transformationen haben 
+darüber hinaus die Eigenschaft, dass sie nicht bloß die
+Ordnung der Differenzen von Nutzenwerten erhalten, sondern auch die Quotienten
+der Differenzen:\marginline{Erhalt der Quotienten von Nutzendifferenzen}
+\[ \frac{u(x) - u(y)}{u(z) - u(w)} = 
+   \frac{(ax + b) - (ay + b)}{(az + b) - (aw + b)} = 
+   \frac{a(x - y) + b-b}{a(z - w) + b-b} = 
+   \frac{x - y}{z - w} \]
+Diese Eigenschaft wird später noch für uns wichtig werden wird. Erfüllt eine
+Skala, wie in diesem Fall die kardinale Nutzenskala, diese Eigenschaft, so nennt
+man sie auch eine {\em Intervallskala}. Zur besseren Übersicht sollen im
+folgenden kurz einige der wichtigsten Skalentypen aufgelistet werden, die in
+der Wissenschaft von Bedeutung sind.
+
+\subsubsection{Exkurs: Skalentypen}
+
+Skalen dienen dazu abgestufte Größen darzustellen. Nun gibt es unterschiedliche
+Grade, in denen irgendwelche Größen abgestuft sein können. (Mit dem ordinalen
+und dem kardinalen Nutzen haben wir schon zwei unterschiedliche Abstufungsgrade
+kennen gelernt.) Diese unterschiedlichen Abstufungsgrade spiegeln sich in
+den verschiedenen Skalentypen wieder. Die Skalentypen sind dabei von gröberen zu
+immer feineren Skalentypen geordnet. (Vgl. zum folgenden \cite[S.
+73ff.]{schurz:2006}) 
+
+Das gröbste bzw. "`niedrigste"' Skalenniveau, das man sich vorstellen kann, ist
+das einer {\bf Nominalskala}\marginline{Nominalskala}. Bei einer Nominalskala
+wird die gegebene Größe lediglich in eine von mehreren begrifflichen Kategorien 
+eingordnet, ohne dass
+zwischen diesen Kategorien eine Ordnung des Mehr- und Weniger besteht. Man
+spricht deshalb auch von "`Kategorienskalen"' oder von
+"`qualitativ-klassifikatorischen Begriffen"'. Ein Beispiel wäre etwa die
+Zuordnung von Wirtschaftsunternehmen zu unterschiedlichen Wirtschaftssektoren wie
+a) Landwirtschaft, b) Handel und Industrie, c) Dienstleistung. Die einzigen
+Bedinungen, denen eine Nominalskala genügen muss, bestehen darin, dass die
+Kategorien 1. {\em disjunkt} (kein Gegenstand kann unter mehr als eine Kategorie
+gleichzeitig fallen) und 2. {\em exhaustativ} (jeder Gegenstand kann in
+mindestens eine Kategorie eingeordnet werden) sein müssen. Eine wie auch immer
+geartete Ordnungsbeziehung muss zwischen den Kategorien aber nicht bestehen. (Man
+kann ja auch z.B. kaum sinnvollerweise sagen, dass Dienstleistung "`mehr"' oder
+"`größer"' ist als Landwirtschaft. Allenfalls könnte man das von der Anzahl der
+Beschäftigten oder dem erwirtschafteten Umsatz in dem entsprechenden Sektor
+sagen.)
+
+Das nächsthöhere Skalenniveau stellt die {\bf
+Ordinalskala}\marginline{Ordinalskala/ Rangskala} (auch "`Rangskala"') dar. Im
+Gegensatz zur Nominalskala werden hier die Merkmale bzw. die Objekte des
+Gegenstandsbereichs in "`Ranggruppen"' eingeteilt, zwischen denen eine Höher- und
+Niedriger-Beziehung besteht. (Für die präzise Definition einer solchen {\em
+Quasi-Ordnungs}-Beziehung siehe Seite \pageref{Ordnungsaxiome}) Außer dem nun
+schon bekannten ordinalen Nutzen, wäre ein weiteres Beispiel die Mohs-Skala aus
+der Mineralogie, bei der die Härte von Mineralien danach geordnet wird, welches
+Mineral welche anderen "`ritzt"' \cite[S. 75]{schurz:2006}.
+
+Auf die Ordinalskala folgt in der Rangfolge die {\bf
+Intervallskala}\marginline{Intervallskala}. Intervallskalen verfügen über eine
+mehr oder weniger willkürlich gewählte Maßeinheit. Weder die Maßeinheit selbst
+noch der Nullpunkt einer Intervallskala sind in irgendeiner Weise durch den
+Gegenstandsbereich festgelegt. Voraussetzung ist jedoch, dass die auf einer
+Intervallskala abgebildete Größe zahlenmäßig empirisch messbar ist. Die
+Maßeinheit erlaubt es dann, Differenzen und Quotienten von Differenzen der
+gemessenen Größe zu vergleichen. Beispiele sind denn auch Orts- und
+Zeitmessungen, denn ob man das Jahr 0 auf Christi Geburt oder auf den Zeitpunkt
+der Auswanderung Mohammeds nach Medina verlegt, ist eine Sache bloßer Konvention,
+genauso wie es eine Konvention ist, dass der Nullmeridian in Greenwich liegt.
+Trotzdem kann man Zeit- und Ortsdifferenzen sowie Quotienten von Differenzen
+vergleichen (eine Stunde ist solange wie jede andere und drei Stunden sind
+dreimal solange wie eine Stunde).
+
+Die {\bf Verhältnisskala}\marginline{Verhältnisskala} schießlich unterscheidet
+sich von der Intervallskala dadurch, dass nur noch die Maßeinheit willkürlich
+festgelegt ist, der Nullpunkt aber durch die Wirklichkeit vorgegeben ist.
+Beispiele dafür sind etwa Gewichtsskalen oder auch die Temperaturskala nach
+Kelvin, die den Nullpunkt auf den "`absoluten Nullpunkt"' bei 273,15 Grad Celsius
+verlegt. Auch Geldwerten liegt eine Verhältnisskala zu Grunde, denn der Nullpunkt
+(d.h. wenn jemand gar kein Geld hat) ist ja in naheliegender Weise vorgegeben.
+
+Schließlich kann man von allen vorhergehenden Skalen noch die {\bf
+Absolutskala}\marginline{Absolutskala} unterscheiden, bei der man verlangen
+müsste, dass auch die Maßeinheit selbst noch eine zwingende empirische
+Interpretation hat. Dergleichen ist aber im Grunde nur bei einfachen Zählskalen
+der Fall. Wenn man also z.B. von "`drei Äpfeln"' spricht, dann hat die Zahl drei
+dabei einen ganz bestimmten empirischen Sinn und es ist nicht eine Frage der
+Konvention ob man drei oder zwei sagt, wie es eine Frage der Konvention ist, ob
+man eine Länge in Meter oder Fuß angibt.
+
+Insgesamt ergibt sich also eine Abfolge von fünf Skalentypen: 
+
+\begin{center}
+{\small Nominalskala < Ordinalskala < Intervallskala < Verhältnisskala <
+Absolutskala}
+\end{center}
+
+Im Anschluss an diese Auflistung von Skalentypen stellen sich zwei naheliegende
+Fragen: Erstens: Sind das alle Skalentypen, die es gibt? Und zweitens: Wonach
+richtet sich, welchen Skalentyp man verwenden kann oder soll?
+
+Was die erste Frage betrifft, so sind die aufgeführten Skalentypen natürlich
+längst nicht alle denkbaren Skalentypen. Einmal könnte man die Abfolge von
+Skalentypen sehr wohl noch weiter verfeinern.\marginline{Mehr\-dim\-en\-sion\-ale
+Skalen} Dann gibt es, was noch wichtiger ist, neben den hier aufgeführten
+eindimensionalen Skalen auch mehrdimensionale Skalen. Zu diesen zählen
+beispielsweise Farbskalen bzw. Farbräume. Im RGB-Farbraum etwa wird jede Farbe
+durch ein 3-tupel des Rot-, Grün- und Blauwertes angegeben, aus denen die Farbe
+nach dem Prinzip der additiven Mischung zusammengesetzt ist.
+
+Was die zweite Frage betrifft,\marginline{Auswahl des Skalentyps} so richtet sich
+die Verwendung eines bestimmten Skalentyps nach den {\em empirischen
+Eigenschaften} der auf der Skala abgebildeten Größe und nach den {\em vorhandenen
+Messmethoden}. So kann man die Länge deshalb auf einer Intervallskala messen,
+weil wir mit dem "`Urmeter"' über einen entsprechenden Vergleichsmaßstab
+verfügen. Bei der Härtemessung von Materialen nach der Mohs-Skala gibt es keinen
+solchen Vergleichsmaßstab, so dass sie auch nicht auf einer Intervallskala,
+sondern nur auf einer Ordinalskala angegeben werden kann.
+
+Besonders schwierig gestaltet sich die Suche nach geeigneten Messmethoden und
+damit die "`Metrisierung"'\marginline{Schwierigkeiten der Metrisierung in den
+Sozialwissenschaften} (d.h. die Überführung von komparativen Begriffe in
+quantitative mittels geeigneter Messmethoden) in den Sozialwissenschaften. Denn
+während die verschiedenen Zahlenmengen von den natürlichen Zahlen bis hin zu den
+komplexen Zahlen geradezu dafür geschaffen scheinen, die Zusammenhänge
+auszudrücken, die die Naturwissenschaften untersuchen (dazu sehr eindrucksvoll
+Penrose \cite[S. 51ff.]{penrose:2004}), weshalb man in diesem Bereich recht
+eigentlich sagen darf, dass die Mathematik die Sprache der Natur ist, lassen sich
+mathematische Gesetze für die Sozialwissenschaften vielfach nur unter erheblicher
+Strapazierung der Begriffe einspannen. Diese Schwierigkeiten begegnen uns auch
+beim Präferenzbegriff, denn während man die Annahme, dass es ordinale Präferenzen
+(soll heißen: Präferenzen, die durch ordinale Nutzenfunktionen beschrieben
+werden können) gibt, noch einigermaßen glaubwürdig rechtfertigen kann, und es zumindest
+vorstellbar erscheint, die Ordnung von Präferenzen durch Befragung oder
+Verhaltensbeobachtung halbwegs zuverlässig festzustellen, so ist dies bei der
+Annahme kardinaler Präferenzen nur unter Schwierigkeiten möglich. Wenn man aber
+annimmt, dass bei solchen Gegenständen, deren Wert sich durch Geld ausdrücken
+lässt (also bei "`Waren"') der kardinale Nutzen einigermaßen mit dem Geldwert
+korreliert, dann erscheint die Annahme nicht ganz abwegig, dass es so etwas wie
+kardinale Präferenzen geben könnte.
+
+Eine weitere Schwierigkeit, die mit der Beantwortung der Frage, welche Art von
+Skala man zur Nutzenmessung verwenden darf, noch gar nicht berührt ist, ist die
+ob Nutzenbewertungen immer nur jeweils für eine Person gültig sind, 
+\marginline{Problem intersubjektiver Nutzenvergleiche} oder ob man
+auch die Nutzenwerte unterschiedlicher Personen untereinander vergleichen darf
+({\em intersubjektiver Nutzen}). In Bezug
+auf solche Güter, deren Wert von den meisten Menschen gleich hoch geachtet wird
+(z.B. Gesundheit, Leben, Wohlstand, Jugend etc.) erscheint ein intersubjektiver
+Nutzenvergleich nicht abwegig. Ebenso erscheint ein intersubjektiver
+Nutzenvergleich bei Gütern möglich, für die soziale Institutionen existieren, die
+solche Nutzenvergleiche hervorbringen, wie das z.B. Märkte für Waren tun. Bei
+anderen Gütern mag das nicht immer möglich sein. Mit den beiden Unterscheidungen
+kardinaler Nutzen - ordinaler Nutzen und subjektiver Nutzen - intersubjektiver
+Nutzen ergeben sich insgesamt vier Arten von Nutzenkonzepten:
+\begin{center}
+\begin{tabular}{cc|p{3.2cm}|p{3.2cm}|}
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{Skalentyp} \\
+&                  & \multicolumn{1}{c|}{\em ordinal}
+                   & \multicolumn{1}{c}{\em kardinal}
+\\ \cline{2-4}
+& \raisebox{-1.5ex}[1.5ex]{\em subjektiv}  & subjektiver \mbox{ordinaler
+Nutzen} & subjektiver \mbox{kardinaler Nuzen}   \\
+\cline{2-4}
+\raisebox{1.5ex}[-1.5ex]{Vergleichbarkeit}
+& \raisebox{-1.5ex}[1.5ex]{\em intersubjektiv}
+& intersubjektiver \mbox{ordinaler Nutzen} &
+intersubjektiver \mbox{kardinaler Nutzen} \\
+\cline{2-4}
+\\
+\end{tabular}
+\end{center}
+Spiel- und entscheidungstheoretische Modelle kann man danach einteilen, welche
+Art von Nutzen sie voraussetzen. Die empirische Anwendbarkeit solcher Modelle
+hängt dann immer davon ab, ob man in einer gegebenen Anwendungssituation das
+vorausgesetzte Nutzenkonzept rechtfertigen kann oder nicht (was in der Regel
+wiederum eine Frage des Vorhandenseins zuverlässiger Bestimmungsmethoden der
+Nutzenwerte des vorausgesetzten Nutzenkonzepts in der gegebenen Anwendungssituation 
+ist).
+
+\subsection{Weitere Entscheidungsregeln auf Basis des kardinalen Nutzens}
+\subsubsection{Die Optimismus-Pessimismus Regel}
+
+Für die Theorie- und Modellbildung ist der kardinale Nutzen deshalb so
+vorteilhaft, weil er es erlaubt, in einem gewissen Rahmen mit Nutzenwerten zu
+rechnen. Mit Hilfe des kardinalen Nutzenbegriffs können wir daher nicht nur
+endlich guten Gewissens die Minimax-Bedauerns-Regel anwenden, sondern gleich
+auch eine ganze Reihe weiterer Entscheidungsregeln erfinden. Eine davon ist die
+"`Optimismus-Pessimismus"'-Regel. Diese Regel funktioniert folgendermaßen:
+Zunächst legen wir einen Optimismusindex $a$ fest, der zwischen 0 und 1
+liegen muss. Dann wählen für jede Handlung (also aus jeder {\em Zeile} der
+Entscheidungstabelle) das beste und das schlechteste mögliche Ergebnis
+aus. Das beste Ergebnis können wir der Einfachheit halber mit $MAX$
+bezeichnen, das schlechteste nennen wir $min$. Nun berechnen wir für jede
+Handlung eine Bewertung $R_a$ ("`R"' wie "`rating"') nach folgender Formel:
+\marginline{Bewertung mit Hilfe des Optimismusindex}
+\begin{displaymath}
+R_a = aMAX + (1-a)min
+\end{displaymath}
+Schließlich wählen wir diejenige Handlung aus, für die $R_a$ am größten ist.
+Welche Handlung gewählt wird hängt dabei ganz wesentlich von der Wahl des
+Optimismusindex $a$ ab. Aber das ist auch gewollt, denn bei dieser
+Entscheidungsregel geht es darum zuerst festzulegen, wie "`optimistisch"' man
+sein möchte, und dann auf dieser Grundlage die eigentliche Entscheidung zu
+treffen. Die beiden Grenzfälle $a=0$ und $a=1$ entsprechen übrigens
+haargenau der letzte Woche besprochenen Maximin ($a=0$) und Maximax-Regel
+($a=1$). Die Anwendung der Regel kann an folgendem Beispiel verdeutlicht werden:
+\begin{center}
+\begin{tabular}{c|c|c|c|}
+\multicolumn{1}{c}{}  & \multicolumn{1}{c}{S1}  & \multicolumn{1}{c}{S2}  & 
+\multicolumn{1}{c}{S3} 
+\\ \cline{2-4}
+ A1 & 9 & 1 & 2 \\ \cline{2-4}
+ A2 & 5 & 6 & 3 \\ \cline{2-4}
+\end{tabular}
+\end{center}
+Für a = 0.5 ergibt sich:
+\begin{eqnarray*}
+& R_{A1} = 0.5 \cdot 9 + 0.5 \cdot 1 = 5.0 & \\
+& R_{A2} = 0.5 \cdot 6 + 0.5 \cdot 3 = 4.5 & \\
+\end{eqnarray*}
+Bei einem Optimismus-Index von 0.5 sollte also die Handlung A1 gewählt werden.
+
+Für a = 0.2 ergibt sich dagegen:
+\begin{eqnarray*}
+& R_{A1} = 0.2 \cdot 9 + 0.8 \cdot 1 = 2.6 & \\
+& R_{A2} = 0.2 \cdot 6 + 0.8 \cdot 3 = 3.6 & \\
+\end{eqnarray*}
+In diesem Fall sollte die Handlung A2 gewählt werden.
+
+Die Handlungsempfehlung, die sich aus der Anwendung
+der Optimismus-Pessimismus-Regel ergibt, hängt wie zu erwarten von der Wahl des
+Optimismusindex ab. Auch wenn diese Wahl willkürlich ist, stellt sich doch die
+Frage, ob es ein Verfahren gibt, um die Wahl wenigstens sinnvoll zu treffen,
+oder anders formuliert: Woher weiss ich eigentlich wie optimistisch ich sein
+will? Ein Verfahren, das zu Bestimmung des Index vorgeschlagen worden ist, ist
+dieses (vgl. \cite[S. 33]{resnik:1987}): 
+\marginline{Bestimmung des Optimismusindex} Man nehme die folgende 
+einfache Entscheidungstabelle, in welcher in der ersten Zeile die Nutzenwerte 0
+und 1 (einer beliebigen kardinalen Nutzenskala) und in der zweiten Zeile in beiden
+Spalten ein unbekanntes Ergebnis {\em x} eingetragen worden ist:
+\begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{}  & \multicolumn{1}{c}{S1}  & \multicolumn{1}{c}{S2} 
+\\ \cline{2-3}
+ A1 & 0 & 1 \\ \cline{2-3}
+ A2 & x & x \\ \cline{2-3}
+\end{tabular}
+\end{center}
+Dabei soll diesmal die Frage nicht lauten, welche Handlung gewählt werden soll
+(um ein möglichst gutes Ergebnis zu erzielen), sondern es soll vielmehr schon
+vorgegeben sein, dass wir zwischen den Handlungen A1 und A2 indifferent sind.
+Nun müssen wir x genau so groß wählen, dass wir zwischen A1 und A2 tatsächlich
+indifferent sind. Haben wir x entsprechend gewählt, dann können wir daraus den
+Optimismus-Pessimismusindex ableiten, denn auf Grund der Indifferenz gilt:
+\begin{eqnarray*}
+R_{A1} & = & R_{A2} \\
+a \cdot 1 + (1-a) \cdot 0 & = & a \cdot x + (1-a) \cdot x \\
+a & = & x
+\end{eqnarray*}
+Was ist damit gewonnen? Wir haben auf diese Weise die Wahl des Optimismusindex
+aus der Wahl (bzw. Entscheidung im {\em dezisionistischen} Sinne) über die
+Indifferenz zwischen zwei Handlungsalternativen abgeleitet. Wenn man annimmt,
+dass es leichter ist, anzugeben, ob man zwischen zwei Alternativen indifferent
+ist, als die Frage zu beantworten, wie hoch man den eigenen Optimismus auf
+einer Skala zwischen 0 und 1 einschätzt, dann vereinfacht das die Wahl des
+Optimusmusindex. Wir hätten dann eine Willkürentscheidung auf eine andere
+zurückgeführt, die zu treffen uns möglicherweise leichter fällt.
+
+\marginline{Einwände:}
+Allerdings wirkt dieses Verfahren etwas gezwungen. Vor allem gibt es einen
+gravierenden Einwand:\marginline{1.Risiko\-be\-reit\-schaft ist
+situationsspezifisch} Die Frage wie optimistisch oder pessimistisch man
+entscheiden sollte, oder, was auf dasselbe hinausläuft, wie risikofreudig oder
+risikoavers man sich verhält, dürfte von den meisten Menschen hochgradig
+situationsspezifisch beantwortet werden. Insofern erscheint es äußerst
+fragwürdig, einen Optimismusindex, den man durch ein abstraktes
+Gedankenexperiment bestimmt hat, auf irgendeine konkrete Entscheidungssituation
+zu übertragen, der man möglicherweise ein ganz anderes Risikoverhalten zu Grunde
+legen möchte. Dann kann man sich das Gedankenexperiment besser gleich sparen und
+willkürlich bleibt die Entscheidung über den Optimismusindex ohnehin.
+
+Dieses Willkürelement ist noch aus einem anderen Grund als dem der Schwierigkeit
+der Festlegung des Optimismusindex problematisch:
+\marginline{2.Nachträgliche "`Rationalisierung"' von Entscheidungen}
+Wenn eine Entscheidungsregel derartige Willkürelemente enthält, dann lädt sie
+geradezu dazu ein, zuerst die Entscheidung vollkommen intuitiv zu treffen, und
+sie erst im Nachhinein durch die Wahl eines geeigneten Index zu
+"`rationalisieren"'. Das könnte besonders dann problematisch werden, wenn die
+entscheidungtreffenden Personen anderen für ihre Entscheidung
+rechenschaftspflichtig sind, denn es lässt sich dann nicht mehr nachvollziehen,
+ob die Entscheidung tatsächlich "`verantwortlich"' getroffen wurde.
+
+Daneben ist die Optimismus-Pessimismus-Regel mit ähnlichen Schwierigkeiten
+behaftet, wie die Maximin und die Minimax-Bedauerns-Regel. 
+\marginline{3.Ver\-nach\-läs\-si\-gung mittlerer Optionen}
+Da sie jeweils nur
+zwei Werte jeder Zeile in das Kalkül einbezieht, lassen sich leicht Fälle
+konstruieren, in denen sie unplausibel erscheint:
+\begin{center}
+\begin{tabular}{c|c|c|c|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$} & 
+\multicolumn{1}{c}{\ldots} & 
+\multicolumn{1}{c}{$S_{99}$} & \multicolumn{1}{c}{$S_{100}$} \\ \cline{2-7}
+$A_1$ & 2 & 1 & 1 & $\cdots$ & 1 & 0 \\ \cline{2-7}
+$A_2$ & 2 & 0 & 0 & $\cdots$ & 0 & 0 \\ \cline{2-7}
+\end{tabular}
+\end{center}
+
+In diesem Fall würde die Optimismus-Pessimismus-Regel immer zur Indifferenz
+zwischen beiden Handlungen führen, obwohl intuitiv die Handlung A1 sicherlich
+als die bessere beurteilt werden müsste. 
+
+Schließlich existiert noch ein weiterer Einwand, der auf einer etwas
+raffinierteren Konstruktion beruht, nämlich auf der sogenannten
+"`Mischungsbedingung"' ({\em mixture-condition}),
+\marginline{Mischungs\-be\-ding\-ung}
+ die -- leicht vereinfacht --
+besagt: Wenn eine Person indifferent zwischen zwei Handlungsalternativen ist,
+dann ist sie auch indifferent zwischen diesen beiden Handlungen und einer dritten
+Handlung, die darin besteht, eine Münze zu werfen und bei "`Kopf"' die erste
+Handlung und bei "`Zahl"' die zweite Handlung zu wählen. Betrachten wir die
+folgende Tabelle:
+
+\begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{}  & \multicolumn{1}{c}{S1}  & \multicolumn{1}{c}{S2} 
+\\ \cline{2-3}
+ A1 & 0 & 1 \\ \cline{2-3}
+ A2 & 1 & 0 \\ \cline{2-3}
+\end{tabular}
+\end{center}
+
+Nach der Optimismus-Pessimismus-Regel herrscht zwischen beiden
+Handlunsalternativen völlige Indifferenz, und zwar unabhängig von der Wahl des
+Optimismusindex {\em a}. Fügt man nun die Münzwurfalternative hinzu, dann
+ergibt sich folgende Entscheidungstabelle:\footnote{Bei der Nutzenbewertung der
+Ergebnisse der Münzwurfhandlung wurde implizit bereits die {\em
+Erwartungsnutzenhpyothese} zugrunde gelegt, die besagt, dass der
+Erwartungsnutzen gleich dem erwarteten Nutzen multipliziert mit der
+Eintrittswahrscheinlichkeit ist. Strenggenommen kann auch das Ergebnis der
+Münzwurfhandlung nur 0 oder 1 sein.}
+
+\begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{}  & \multicolumn{1}{c}{S1}  & \multicolumn{1}{c}{S2} 
+\\ \cline{2-3}
+ A1 & 0 & 1 \\ \cline{2-3}
+ A2 & 1 & 0 \\ \cline{2-3}
+ A3 & $\frac{1}{2}$ & $\frac{1}{2}$ \\ \cline{2-3}
+\end{tabular}
+\end{center}
+
+Angenommen der Optimismus-Pessimismus-Index wäre $a = \frac{2}{3}$. Dann ergibt
+sich daraus:
+\marginline{4.Verletzung der "`Mischungs\-bedingung"'}
+\begin{eqnarray*}
+R_{A1} & = \frac{1}{3} \cdot 0 + \frac{2}{3} \cdot 1 = & 2/3 \\
+R_{A2} & = \frac{2}{3} \cdot 1 + \frac{1}{3} \cdot 0 = & 2/3 \\
+R_{A3} & = \frac{2}{3} \cdot \frac{1}{2} + \frac{1}{3} \cdot \frac{1}{2} =
+\frac{1}{2}
+\end{eqnarray*}
+Nach der Optimismus-Pessimismus-Regel müssten die Handlungen A1 und A2 der
+"`Münzwurfalternative"' vorgezogen werden, unter Verletzung der
+Mischungsbedingung. Die Mischungsbedingung lässt sich nur erfüllen, wenn das
+beste und das schlechteste mögliche Ergebnis genau gleich gewichtet
+werden, d.h. bei einem Optimismusindex von $a=\frac{1}{2}$. 
+
+\marginline{Einwände gegen die Mischungsbedingung}
+Wie auch bei den denkbaren Einwänden gegen die anderen Entscheidungsregeln, lässt
+sich darüber streiten, ob die Verletzung der "`Mischungsbedingung"' ein Nachteil
+oder, eher im Gegenteil, eine besondere Eigenschaft der
+Optimismus-Pessimismus-Regel ist. ("`It's not a bug, it's a feature!"') Wenn
+jemand optimistisch ist, dann besagt das ja gerade, dass die Person eher geneigt
+ist, an den Erfolg zu glauben als an eine 50:50 Chance von Erfolg und Misserfolg,
+so dass es nicht verwunderlich ist, dass sie eine Handlung, an deren Erfolg sie
+glaubt, einem Münzwurf vorzieht, von dem sie weiß, dass die Chancen
+gleichverteilt sind. Widersprüchlich wäre das optimistische (oder pessimistische)
+Verhalten bei der gegebenen Entscheidungstabelle aber immer noch insofern, als
+die Person eigentlich nur {\em entweder} an den mehr als 50\%-igen Erfolg von S1
+{\em oder} von S2 glauben dürfte, aber -- sofern die Zustände S1 und S2 von den
+Handlungen unabhängig sind -- nicht daran, dass sie in jedem Fall die höheren
+Erfolgschancen hat.
+
+\subsubsection{Das Prinzip der Indifferenz}
+\label{Indifferenzprinzip}
+Wenn wir die Nutzenwerte als kardinale Nutzenwerte interpretieren und daher mit
+ihnen rechnen dürfen, wie das bei der Optimismus-Pessimismus-Regel der Fall
+ist, dann besteht eine der naheliegendsten Arten, die unterschiedlichen
+Handlungsalternativen in eine Rangordnung zu überführen, darin, einfach alle
+Zahlen in jeder Zeile aufzusummieren und die Handlungsalternative mit der
+höchsten Zeilensumme zu wählen. An einem Beispiel betrachtet sieht das
+Verfahren folgendermaßen aus:
+
+\begin{center}
+\begin{tabular}{c|c|c|c|c|c|cc}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$} & 
+\multicolumn{1}{c}{$S_4$} & 
+\multicolumn{1}{c}{$S_5$} & \multicolumn{1}{c}{ $\sum$ } \\ \cline{2-6}
+$A_1$ & 8  & 2  & -7 & 3  & 3 &  9 \\ \cline{2-6}
+$A_2$ & -5 & -3 & 5  & 12 & 4 & 13  \\ \cline{2-6}
+\end{tabular}
+\end{center}
+
+In diesem Fall würde also die Handlung A2 gewählt werden, weil die Summe der
+erzielbaren Nutzenwerte größer ist als bei der Handlung A1. Werden die
+Nutzenwerte einer Zeile einfach aufsummiert, dann bedeutet das, dass sie alle
+gleich gewichtet werden. Dem Summierungsverfahren liegt damit implizit ein
+Prinzip zu Grunde, das man auch als das {\em Prinzip der Indifferenz} bezeichnet.
+\marginline{Prinzip der Indifferenz} Es besagt, dass wir alle Ereignisse als
+gleichwahrscheinlich betrachten sollten, solange wir nicht wissen, mit welcher
+Wahrscheinlichkeit eines von mehreren Ereignissen eintreten wird.\footnote{In
+der Fachliteratur wird statt vom "`Prinzip der Indifferenz"' zuweilen auch vom
+"`Prinzip des (un-)zureichenden Grundes"' gesprochen \cite[S. 35ff]{resnik:1987}.
+Beim "`Prinzip des (un-)zureichenden Grundes"' handelt es sich aber um einen
+allgemeineren philosophischen Gedanken, der in der Philosophiegeschichte immer
+wieder in unterschiedlichen Ausprägungen und Formulierungen aufgetreten ist. In
+der einfachsten Form besagt es, dass nichts ohne Ursache geschieht. Man kann es
+auch so auffassen, dass in einer Reihe von gleichartigen Ereignissen keine
+Ausnahmen auftreten können, ohne dass es dafür einen zureichenden Grund gibt,
+d.h. der Ausnahmefall muss sich in irgendeiner qualitativen Hinsicht von den
+anderen Fällen unterscheiden. Das Prinzip des unzureichenden Grundes ist ein {\em
+heuristischer Grundsatz} (ein Hilfsmittel unserer Erkenntnis). Ontologische, d.h.
+die Natur der Gegenstände selbst bzw. das Wesen des Seins betreffende Bedeutung
+kommt ihm wenn überhaupt nur in einem deterministischen Universum zu (Vgl.
+\cite[S. 130]{schurz:2006}). Das hier besprochene "`Prinzip der Indifferenz"'
+kann man vage auf das Prinzip des (un-)zureichenden Grundes zurückführen.}
+
+
+In diesem Zusammenhang ist noch einmal darauf hinzuweisen, dass ein subtiler
+Unterschied zwischen dem vom "`Prinzip der Indifferenz"' erfassten Fall besteht,
+in dem wir nicht wissen, mit welcher Wahrscheinlichkeit ein bestimmtes Ereignis
+eintritt ("`{\em Unwissen}"'), und dem vergleichsweise "`harmloseren"' Fall, in
+dem wir bloß nicht wissen, welches Ereignis eintritt, aber über die
+Wahrscheinlichkeiten der Ereignisse auf Grund unserer Kenntnis des empirischen
+Vorgangs, um den es geht, genaue Aussagen machen können ("`{\em Risiko}"'). Beim
+Würfeln oder bei einem Münzwurf etwa wissen wir auf Grund unser Kenntnis von
+Würfeln und Münzen, dass die verschiedenen möglichen Ereignisse gleichverteilt
+sind. Die Rechtfertigung dafür, dass wir beim Würfeln oder auch beim Werfen einer
+Münze von einer Gleichverteilung ausgehen, ergibt sich aus dieser Kenntnis. Dem
+Prinzip der Indifferenz liegt keine vergleichbare Rechtfertigung zu Grunde. Es
+handelt sich um ein philosophisches oder, wenn man so will, sogar {\em
+metaphysisches Postulat}, dessen Annahme keinesfalls zwingend ist (wohingegen die
+Annahme der Gleichverteilung von Würfelergebnissen oder Münzwürfen genauso
+zwingend ist, wie andere Aspekte der alltäglichen physischen Wirklichkeit, wie
+etwa, dass "`morgens die Sonne aufgeht"', dass "`dort eine Wand steht"' etc.).
+
+Die auf dem Prinzip der Indifferenz beruhende Entscheidungsregel hat die
+Eigenschaft (wenn man so will: den Vorzug), dass sie sowohl die {\em
+Mischungsbedingung} erfüllt als auch {\em Unabhängigkeit von irrelevanten
+Alternativen} garantiert und selbstverständlich weiterhin {\em dominierte
+Alternativen} ausschließt. Trotzdem wird man in bestimmten Situation, z.B. in
+Situationen, in denen es vor allem darum geht, Schaden zu begrenzen, auf andere
+Entscheidungsregeln wie die Maximin-Regel zurückgreifen. Unter "`Unwissen"' gibt
+es viele je nach Situation mehr oder weniger gute Entscheidungsregeln, aber keine
+eindeutig beste Regel.
+
+\subsubsection{Paradoxien des Indifferenzprinzips}
+\label{IndifferenzPrinzipParadoxien}
+
+Einwände gegen das Indifferenzprinzip werden häufig daraus abgeleitet, dass sich
+bei der Anwendung des Prinzips unter bestimmten Bedingungen Paradoxien ergeben.
+Was es damit auf sich hat, und ob diese Paradoxien ein Problem bei der Anwendung
+des Indifferenzprinzips bei den hier besprochenen Entscheidungen unter
+Unwissenheit darstellen, soll nun kurz erörtert werden.\footnote{Neuerlich hat
+Rudolfo Cristofaro den Anspruch erhoben, das Indifferenzprinzip in einer Form
+gefasst zu haben, in der keine Paradoxien mehr entstehen
+\cite[]{cristofaro:2008}. Er geht nicht unmittelbar darauf ein, wie mit seiner
+Neuformulierung des Prinzips die Paradoxien umgangen werden. Seine Ausführungen
+legen die Vermutung nahe, dass dies nur dadurch ermöglicht wird, dass er
+verlangt, dass die Informationen über das "`experimentelle Design"' mit in die
+Situationsbeschreibung einfließen müssen. Eine rein logische Rechtfertigung des
+Indifferenzprinzips wäre damit nicht gegeben. Seine Lösung ginge dann -- bis
+evtl. auf die allgemeinere Formulierung -- nicht fundamental über bestehende
+Lösungen hinaus.} Um diese Paradoxien zu erläutern, muss schon ein wenig auf die
+Wahrscheinlichkeitsrechnung vorgegriffen werden (Kapitel
+\ref{Wahrscheinlichkeitsrechnung}). Es genügt allerdings zu wissen, dass die
+Wahrscheinlichkeit eines Ereignisses immer eine reelle Zahl von 0 bis 1 ist, und
+dass sich die Wahrscheinlichkeiten einer Reihe von Alternativen, die einander
+ausschließen, von denen aber irgendeine auf jeden Fall eintreten muss, zu 1
+aufaddieren, und dass man die Wahrscheinlichkeit eines Ereignisses üblicherweise
+mit $P(Ereignis)$ darstellt.
+
+{\em Buch-Paradox:}\marginline{Buch-\-Paradox}\label{BuchParadox} Das erste
+Paradoxon entsteht folgendermaßen: In der Uni-Bibliothek steht eine Ausgabe von
+Schopenhauers "`Die Welt als Wille und Vorstellung"'. Wenn jemand noch nicht in
+der Bibliothek war, dann weiß sie oder er nicht, ob das Buch einen blauen oder
+keinen blauen Umschlag hat. Nach dem Indifferenzprinzip müsste die
+Wahrscheinlichkeit dafür, dass das Buch einen blauen Umschlag hat $P(blau)$ also
+1/2 betragen. Aber mit genau demselben Argument kann gefolgert werden, dass
+$P(rot)$, $P(gelb)$, $P(lila)$ etc. alle den Wert 1/2 haben. Damit haben wir eine
+Reihe von sich wechselseitig ausschließenden Alternativen, deren
+Wahrscheinlichkeiten sich auf eine Zahl größer 1 aufaddieren, was wiederum der
+Definition der Wahrscheinlichkeit widerspricht \cite[S. 37f.]{gillies:2000}.
+
+Wie könnte man das Paradox lösen? Denkbar wäre folgender Lösungsansatz:
+Wahrscheinlichkeiten dürfen nur unteilbaren {\em Elementar-}ereignissen
+zugewiesen werden. Soll heißen: Bevor man das Prinzip der Indifferenz anwendet
+ist zunächst sicherzustellen, dass sämtliche Ereignisse, auf die man es anwendet
+(vorbehaltlich unseres Wissens darüber) unteilbare Elementarereignisse sind. Im
+Fall des Buch-Paradoxons ist das Ereignis "`nicht blau"' offenbar kein
+Elementarereignis, da wir wissen, dass noch andere Farben in Frage kommen. Nun
+stellt sich aber das weitere Problem, dass wir gar nicht wissen, wie viele andere
+Farben in Frage kommen. Der Lösungsansatz beinhaltet also, dass wir das
+Indifferenzprinzip überhaupt nur dann anwenden können, wenn wir zumindest die
+Menge der Elementarereignisse kennen. Ist das aber der Fall, so hilft uns das
+Indifferenzprinzip immerhin noch dabei, diesen Elementarereignissen in sinnvoller
+Weise Wahrscheinlichkeiten zuzuweisen, wenn uns deren objektive
+Wahrscheinlichkeiten unbekannt sind.
+
+{\em Wasser-Wein-Paradox:}\marginline{Wasser-Wein-Paradox}
+\label{WasserWeinParadox} Leider funktioniert dieser Lösungsansatz nicht mehr bei
+den sogennanten "`geometrischen Wahrscheinlichkeiten"', bei denen wir es statt
+mit diskreten (d.h. zählbaren) mit kontinuierlichen Größen zu tun haben, wie uns
+das Wasser-Wein-Paradox vor Augen führt. Bei diesem Paradox geht es um Folgendes
+\cite[p. 84]{howson:2000}: Angenommen wir haben eine Mischung von Wasser und
+Wein, von der wir wissen, dass das Verhältnis von Wasser zu Wein bei dieser
+Mischung irgendwo zwischen "`halbe-halbe"' und "`doppelt soviel Wasser wie Wein"'
+liegt. Die unbekannte Menge des Wassers $x$ liegt bezogen auf die gegebene Menge
+von Wein also irgendwo zwischen $1$ und $2$ (die Grenzen eingeschlossen). Und
+umgekehrt liegt der Mengenanteil des Weins $w$ im Verhältnis zum Wasser irgendwo
+zwischen $\frac{1}{2}$ und $1$. Nach dem Indifferenzprinzip sollte die
+Wahrscheinlichkeit, dass die Wassermenge $x$ zwischen $1$ und $\frac{3}{2}$
+liegt, sicherlich genauso groß sein, wie die Wahrscheinlichekit, dass sie
+zwischen $\frac{3}{2}$ und $2$ liegt, also jeweils $1/2$. Da der Weinanteil genau
+im umgekehrten Verhältnis zum Wasseranteil steht, also $w = 1/x$, so ergibt sich
+daraus, dass die Wahrscheinlichkeit, dass $w$ zwischen $\frac{1}{2}$ und
+$\frac{2}{3}$ bzw. zwischen $\frac{2}{3}$ und $1$ liegt, ebenfalls jeweils $1/2$
+betragen muss. Das ist aber mit dem Prinzip der Indifferenz unvereinbar, das ja
+fordert, dass die Wahrscheinlichkeit für gleich große Intervalle gleich groß sein
+muss.
+
+Die Lösung dieses Paradoxons ist deshalb schwieriger als die des
+Buch-Paradoxons, weil die beiden Größen, die hier involviert sind, die relative
+Menge des Wassers $x$ und die relative Menge des Weins $w$ sich anders als
+"`blau"' und "`nicht blau"' vollkommen symmetrisch verhalten. Trotzdem ist
+eine Lösung denkbar, indem man die relativen Mengenangaben durch absolute
+Mengenangaben ersetzt. Beziehen wir die Wein- und die Wassermenge auf eine
+konstante Grundmenge von 6 Mengeneinheiten, dann liegt die Weinmenge zwischen 2
+und 3 Mengeneinheiten und die Wassermenge zwischen 3 und 4 Mengeneinheiten. Die
+Schwankungsbreite betrifft dann sowohl für Wein als auch für Wasser ein
+Intervall von genau einer Mengeneinheit, so dass die Anwendung des
+Indifferenzprinzips wahlweise auf Wein oder auf Wasser zu keinen Widersprüchen
+mehr führen kann. 
+
+Diese Lösung des Paradoxons setzt allerdings ebenso wie die vorhergehende ein
+ontologisches Wissen über die Situation voraus, in der wir das Indifferenzprinzip
+anwenden. Dieses Wissen geht über die bloße Kenntnis der Anzahl der involvierten
+Parameter (zwei, nämlich $x$ und $w$), ihres möglichen Wertebereichs ($[1, 2]$,
+$[\frac{1}{2}, 1]$) und ihrer wechselseitigen Beziehung $w = 1/x$ hinaus.
+Insofern ist die gefundene Lösung nicht mathematisch verallgemeinerbar. Wenn wir
+nur die rein mathematischen Beziehungen zwischen den beteiligten Größen
+betrachten, dann stehen wir -- etwas vereinfacht betrachtet -- vor dem Problem,
+dass wir das Prinzip der Indifferenz nicht gleichzeitig auf das Intervall $[a,b]$
+anwenden können (indem wir gleichgroßen Teilintervallen gleichgroße
+Wahrscheinlichkeiten zuweisen) und auf das Intervall $[\frac{1}{a},
+\frac{1}{b}]$. Haben wir das Prinzip der Indifferenz schon auf das erste
+Intervall angewendet, dann haben wir automatisch eine Entscheidung damit
+getroffen, es nicht auf das zweite Intervall anzuwenden und umgekehrt. Rein
+mathematisch betrachtet, können wir aber gar nicht unterscheiden, ob $a$ und $b$
+oder ob $\frac{1}{a}$ und $\frac{1}{b}$ die Basisgrößen sind, von denen wir
+auszugehen haben.\footnote{Man kann das Problem nicht durch dern Vorschlag lösen,
+dass man die Entscheidung zwischen den beiden Alternativen $[a,b]$ und
+$[1/a,1/b]$ mangels besserem Wissen nach belieben treffen darf, denn da statt
+$1/x$ jede beliebige mathematische Transformation stehen könnte, hieße dies, dass
+man bezüglich der Wahrscheinlichkeitsverteilung von $[a,b]$ jede beliebige Wahl
+treffen darf, was aber gerade das Gegenteil dessen ist, was mit dem Prinzip der
+Indifferenz beabsichtigt wird!} Und auch empirische Größen bieten dafür nicht
+zwangsläufig hinreichende Anhaltspunkte. Man denke etwa an Lichtwellen, die wir
+durch ihre Wellenlänge $\lambda$ oder ihre Frequenz $f$ angeben können, wobei
+beide in dem Verhältnis $\lambda = 1/f$ zueinander stehen, ohne dass man eine der
+beiden Angaben in irgendeiner Weise als privilegiert auszeichnen könnte. Das
+bedeutet aber, dass wir das Indifferenzprinzip ohne die Gefahr eines Paradoxons
+nur heranziehen können, wenn die Anwendungssituation das zulässt und wir über ein
+ausreichendes Hintergrundwissen darüber verfügen. Bei völligem Unwissen hilft es
+nicht weiter.
+
+Inwiefern sind die hier besprochenen Paradoxien ein Problem für die Anwendung des
+Indifferenzprinzips auf Entscheidungen unter Unwissenheit?
+\marginline{Anwendbarkeit des Indifferenzprinzips} Hier sind zwei Situationen zu
+unterscheiden:
+
+\begin{enumerate}
+ 
+  \item Wir verfügen über ein hinreichendes Hintergrundwissen der Situation,
+  dass es uns erlaubt, das Indifferenzprinzip eindeutig auf die Situation
+  anzuwenden. (Z.B. müssten wir beim Buch-Paradoxon die Menge der in Frage
+  kommenden Farben kennen.) Dann dürfen wir das Indifferenzprinzip anwenden,
+  sollten uns aber bewusst sein, dass die Annahme jeder anderen
+  Wahrscheinlichkeitsverteilung als der Gleichverteilung genauso legitim wäre.
+  Aber wir könnten wenigstens sicher sein, dass die Anwendung dieses Prinzips
+  nicht zu Entscheidungsempfehlungen führt, die sich in kontingenter
+  Weise wandeln, wenn
+  wir die Zustandsbeschreibungen durch äquivalente andere
+  Zustandsbeschreibungen austauschen.
+
+  \item Wir verfügen nicht über ein entsprechendes Hintergrundwissen. Dann
+  können wir das Prinzip nicht anwenden, denn es liefert für dieselbe
+  Entscheidungssituation widersprechende Empfehlungen. 
+ 
+\end{enumerate}
+
+
+

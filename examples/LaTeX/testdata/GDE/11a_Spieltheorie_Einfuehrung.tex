@@ -1,0 +1,679 @@
+\section{Spieltheorie I: Einführung}
+
+In dieser und der folgenden Woche werden wir uns mit der Spieltheorie
+beschäftigen. Die Spieltheorie kann man als Erweiterung der
+Entscheidungstheorie auffassen, indem in der Spieltheorie teils sehr ähnliche
+Techniken angewendet werden wie in der Entscheidungstheorie. So kann man
+"`Spiele"' als Spielbäume oder Tabellen analog zu den Entscheidungsbäumen und
+-tabellen der Entscheidungstheorie darstellen. Umgekehrt kann man die
+Entscheidungstheorie als Spezialfall der Spieltheorie verstehen. Ein
+Entscheidungsproblem ist dann einfach ein Spiel, bei dem einer der Spieler die
+Natur ist.
+
+Das wesentliche unterscheidende Merkmal der Spieltheorie gegenüber der
+Entscheidungstheorie besteht darin, dass sich in der Spieltheorie die Spieler
+strategisch aufeinander beziehen, d.h. die Spieler machen die Wahl der
+Strategie, die sie spielen, davon abhängig, welche Strategien die Mitspieler
+wählen bzw. von welchen Strategien sie erwarten, dass sie von ihren Mitspielern
+gewählt werden. Eine ansatzweise ähnlich Situation gibt es in der
+Entscheidungstheorie nur bei der "`kausalen Entscheidungstheorie"', wenn die
+Wahrscheinlichkeit des Eintretens der Zufallsereignisse von der gewählten
+Handlungsalternative abhängt.
+
+\subsection{Was "`Spiele"' im Sinne der Spieltheorie sind}
+
+Spiele im Sinne der Spieltheorie ähneln im wirklichen Leben am ehesten
+einfachen Brett- oder Kartenspielen, wie Mühle oder Schach oder Skat. Einer oder
+mehrere Spieler spielen dabei gegeneinander, wobei sie in einer Folge von
+Runden aus einer wohldefinierten Menge von möglichen Spielzügen entsprechend
+ihrer Strategie jeweils einen Zug wählen. Das Ergebnis des Spiels (Gewinn oder
+Verlust bzw. die Höhe des Gewinns oder des Verlusts) hängt dabei von den Zügen
+aller Spieler und bei manchen Spielen zusätzlich vom Zufall (z.B. der Würfel
+oder Kartenverteilung) ab.
+
+Ein Spiel im Sinne der
+Spieltheorie besteht dabei immer mindestens aus folgenden Komponenten: 
+
+\begin{enumerate}
+  \item Zwei oder mehrere {\em Spieler}. Je nachdem wie groß die Anzahl der
+  Spieler ist, spricht mann von einem 2-Personen, 3-Personen oder $N$-Personen
+  Spiel. 
+  \item Mengen möglicher Spiel-{\em Züge}. Für jeden Spieler gibt es dabei eine
+  eigene Menge möglicher Züge.
+  \item Die Menge der möglichen {\em Ergebnisse} bzw. "`Auszahlungen"'. Das
+  Ergebnis eines jeden Spielers hängt dabei von den Zügen des Spielers selbst
+  und von den Zügen des Gegenübers ab.
+\end{enumerate}
+
+Bei bestimmten Arten von Spielen kommen noch weitere Komponenten hinzu:
+
+\begin{enumerate}
+  \setcounter{enumi}{3}
+  \item Eine endliche oder unendliche Anzahl von Spiel-{\em Runden}. 
+  
+  \begin{footnotesize}
+  Hat ein
+  Spiel mehrere Runden und stehen jedem Spieler in jeder Runde dieselben
+  möglichen Züge offen, dann spricht man auch von einem {\em wiederholten
+  Spiel}. Grundsätzlich kann man jedes wiederholte Spiel auch als ein komplexes
+  einfaches Spiel auffassen. Es ist eher eine Frage der Konvenienz, ob man
+  solche Spiele als wiederholte Spiele analysiert.
+  \end{footnotesize}
+
+  \item Eine Menge von {\em Strategien}. Die Strategie eines Spielers
+  spezifiziert für jede Runde und jede Spielsituation (i.e. jede Folge
+  vorhergehender Züge), welcher Zug gespielt werden soll. Ggf. kann dabei auch
+  zwischen mehreren möglichen Zügen zufällig ausgewählt ("`randomisiert"')
+  werden. 
+
+  \begin{footnotesize}  
+  Bei einfachen Spielen bestehen die Strategien nur aus einem Zug, so
+  dass Züge und Strategien zusammenfallen. Man kann in diesen Fällen die
+  Ausdrücke "`Zug"' und "`Strategie"' auch Synonym gebrauchen.
+  \end{footnotesize}
+
+  \item Eine Menge von {\em Zufallsereignissen}, die neben den gewählten Zügen
+  bzw. Strategien der Spieler die Ergebnisse des Spiels für die Spieler beeinflussen.
+ 
+  \begin{footnotesize}
+  Zufallsereignisse können dabei so modelliert werden, dass ein zusätzlicher
+  Spieler "`Natur"' eingeführt wird, dessen Züge die zufälligen Ereignisse
+  repräsentieren und der über seine Züge mit den Wahrscheinlichkeiten der
+  Zufallsereignisse randomisiert. Es ist zu berücksichtigen, dass für die
+  Spielerin "`Natur"' keine Rationalität vorausgesetzt werden kann. Eine
+  alternative Art der Modellierung des Einflusses von Zufallsereignissen besteht 
+  darin, die Ergebnisse der Spieler durch Lotterien über Ergebnisse 
+  entsprechend den Wahrscheinlichkeiten der Zufallsereignisse zu ersetzen.
+  \end{footnotesize}
+\end{enumerate}
+
+Es könnte an dieser Stelle die Frage auftreten, wo die für
+Spiele im Alltagsleben (z.B. Brettspiele oder Kartenspiele) konstitutiven
+{\em Regelwerke} in die Theorie eingehen. Solche Regelwerke werden implizit bei
+der Angabe der möglichen Züge und bei der Angabe der Ergebnisse berücksichtigt.
+Die möglichen Züge beim Sachspiel sind eben alle diejenigen Züge, 
+die nach den Regeln für das Schachspiel erlaubt sind. Die Ergebnisse (Gewinn,
+Verlust, Remis) sind ebenfalls durch das Regelwerk festgelegt, d.h.
+umgekehrt: Indem man festlegt, wann welcher Spieler welches Ergebnis erhält,
+hat man automatisch die entsprechenden Regeln bezüglich Gewinn und Verlust
+des Spiels in der Spielspezifikation berücksichtigt. Daher bildet das Regelwerk
+in der Spieltheorie keine eigene Komponente der Spielspezifikation.
+
+Ähnlich wie schon bei der Entscheidungstheorie bildet das Problem der richtigen
+Problemspezifikation eine keinesfalls triviale Schwierigkeit bei der Anwendung
+der Spieltheorie auf empirisch auftretende Beispiele von strategischer
+Interaktion. So wie man etwa bei der Entscheidungstheorie {\em alle} in Frage
+kommenden Handlungsalternativen {\em und alle} für das Ergebnis kausal
+relevanten Zufallsereignisse angeben muss, ist es bei der Anwendung der Spieltheorie
+in der Regel erforderlich alle strategischen Optionen zu kennen und anzugeben.
+Will man die Spieltheorie etwa auf die strategische Interaktion zwischen
+verfeindeten Armeen im Krieg anwenden, dann kann die Erfindung neuer Taktiken
+und Strategien der spieltheoretischen Kalkulation einen Strich durch die
+Rechnung machen. Auf derartige Probleme sei hier jedoch nur hingewiesen. Im
+Folgenden beschäftigen wir uns zunächst mit der "`reinen"' Spieltheorie als
+solcher. Anwendungsbeispiele werden wir in der nächsten und in der letzten
+Vorlesung besprechen.
+
+Was die Spieltheorie leisten kann, sofern es uns gelingt einen empirischen
+Fall strategischer Interaktion angemessen zu spezifizieren ist zweierlei:
+
+\begin{enumerate}
+  \item Die Spieltheorie stellt eine Art standardisierte Sprache zur
+  {\em Beschreibung strategischer Interaktion bereit.} Dies erleichtert die
+  Darstellung und den Vergleich unterschiedlicher Interaktionssituationen und
+  kann selbst in solchen Fällen von Nutzen sein, in denen sich die
+  spieltheoretischen Lösungsverfahren als inadäquat erweisen. 
+  
+  \begin{footnotesize}
+  Es ist jedoch zu
+  beachten, dass die spieltheoretische Beschreibung strategischer Interaktion
+  nicht immer möglich ist, z.B. wenn keine Klarheit über die verfügbaren
+  strategischen Optionen besteht. Und auch wenn sie möglich ist, besteht die
+  Gefahr, dass die spieltheoretische Beschreibung die wesentlichen Aspekte des
+  empirischen Problems eher verdeckt, z.B. indem die außerhalb der
+  Wirtschaftswissenschaften oft schwierigen Probleme der Bewertung von
+  Ergebnissen in den Auszahlungsparametern (bzw. den Nuzenwerten)
+  "`versteckt"' werden.
+  \end{footnotesize}
+
+  \item Die Spieltheorie stellt {\em Lösungsverfahren} für Spiele bereit. Eine
+  Lösung im Sinne der Spieltheorie ist die Menge derjenigen Strategien, die
+  die Spieler wählen werden bzw. wählen sollten, wenn sie ihren Nutzen
+  maximieren wollen.
+  
+  \begin{footnotesize}
+  In der Empirie zeigt sich jedoch, dass das beobachtbare
+  Spielerverhalten von der spieltheoretischen Lösung häufig stark abweicht.  
+  \end{footnotesize}
+\end{enumerate}
+
+\subsubsection{Beispiele}
+
+Am besten lässt sich das, was man in der Spieltheorie unter einem Spiel
+versteht, anhand von einigen Beispielen darstellen.
+
+\paragraph{Beispiel 1: Das Knobelspiel}
+
+Beim Knobeln wählen zwei Spieler gleichzeitig eines der drei Symbole {\em
+Stein}, {\em Schere}, {\em Papier}. Dabei gelten die Regeln: 1.Stein schleift
+Schere. 2.Schere schneidet Papier und 3.Papier wickelt Stein. Mit jeder Option
+kann man also ebenso gut gewinnen wie verlieren. Das Spiel sieht als Tabelle
+dargestellt folgendermaßen aus:
+
+\begin{center}
+\begin{tabular}{cc|c|c|c|}
+& \multicolumn{1}{c}{} & \multicolumn{3}{c}{{\bf Spaltenspieler}} \\
+& \multicolumn{1}{c}{} & \multicolumn{1}{c}{Stein} 
+& \multicolumn{1}{c}{Schere} &  \multicolumn{1}{c}{Papier}  \\
+\cline{3-5} 
+& Stein              & 0,0     & 1,-1   &  -1,1 \\
+\cline{3-5} {\bf Zeilenspieler}  
+& Schere             & -1,1    & 0,0    & 1,-1 \\ \cline{3-5}
+& Papier             & 1,-1    & -1,1   & 0,0 \\ \cline{3-5}
+\end{tabular}
+\end{center}
+
+Dabei repräsentiert die erste der beiden Zahlen in jeder Zelle im inneren der
+Tablle das Ergebnis des "`Zeilenspielers"'. Die zweite Zahl ist das Ergebnis des
+"`Spaltenspielers"'. Bei dieser Repräsentation des Spiels steht eine 1 für den
+Gewinn des Spiels eine -1 für den Verlust und 0 für Unentschieden.
+
+Eine etwas einfachere Variante desselben Spiels ist das sogenannte
+"`Passende Münzen"'-Spiel ("`Matching Pennies"'). Beim "`Passende Münzen"'-Spiel
+legen beide Spieler verdeckt eine Münze auf den Tisch. Der erste Spieler gewinnt,
+wenn beide Münzen Kopf oder beide Münzen Zahl zeigen. 
+Der zweite Spieler gewinnt dagegen, wenn
+beide Münzen dasselbe zeigen. In Tabellenform dargestellt, sieht das Spiel
+folgendermaßen aus:
+
+\begin{center}
+\begin{tabular}{cc|c|c|}
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{\bf Spieler 2} \\
+& \multicolumn{1}{c}{} & \multicolumn{1}{c}{Kopf} & \multicolumn{1}{c}{Zahl}
+\\ \cline{3-4} 
+& Kopf                 & 1,-1                      & -1,1  \\ \cline{3-4}
+\raisebox{1.5ex}[-1.5ex]{{\bf Spieler 1}} 
+& Zahl                 & -1,1                      & 1,-1 \\ \cline{3-4}
+\end{tabular}
+\end{center}
+
+Beide Spiele (Knobeln und Passende Münzen) fallen übrigens in die Kategorie der
+{\em Nullsummenspiele}, weil der Gewinn des einen der Verlust des anderen ist.
+
+\paragraph{Beispiel 2: Vertrauensspiel}
+
+Genauso wie in der Entscheidungstheorie gibt es in der Spieltheorie
+neben der Tabellenform auch andere Darstellungsformen von Spielen. Besonders
+wenn die Spielzüge sukzessive aufeinander folgen, bietet sich oft die
+anschaulichere Baumdarstellung an. Ein Beispiel ist das sogennante
+Vertrauensspiel, bei dem ein Spieler zunächst entscheidet, ob er einem anderen
+"`Vertrauen"' schenkt und der andere Spieler, sofern ihm Vertrauen geschenkt
+wurde, entscheidet, ob er das Vertrauen belohnt oder den Vertrauenden betrügt.
+Das Vertrauensspiel gibt die typische Situation bei Internet-Auktionen wieder,
+bei denen zunächst der Käufer das Geld für den ersteigerten Gegenstand
+überweist und der Vekäufer anschließend den Gegenstand verschickt. Das
+Vertrauensspiel lässt sich sehr einfach und anschaulich als Baum darstellen:
+
+\setlength{\unitlength}{1cm}
+\begin{picture}(10,8)(-1,0)
+\put(2,7){\makebox(6,1){Spieler 1}}
+\put(5,7){\line(-1,-1){5}}
+\put(5,7){\line(1,-1){2}}
+\put(4,4){\makebox(6,1){Spieler 2}}
+\put(7,4){\line(-1,-1){2}}
+\put(7,4){\line(1,-1){2}}
+
+\put(2,5.5){\makebox(1,1){{\small vertraue nicht}}}
+\put(6.5,5.5){\makebox(1,1){{\small vertraue}}}
+
+\put(4.5,2.5){\makebox(1,1){{\small belohne}}}
+\put(8.5,2.5){\makebox(1,1){{\small betrüge}}}
+
+\put(-0.5,1){\makebox(1,1){3, 3}}
+\put(4.5,1){\makebox(1,1){4, 4}}
+\put(8.5,1){\makebox(1,1){0, 5}}
+\end{picture}
+
+Die erste Zahl am unteren Ende des Spielbaums gibt hier wiederum das Ergebnis
+für den ersten Spieler an, und die zweite Zahl das Ergebnis für den zweiten
+Spieler. Damit es sich um ein "`Vertrauensspiel"' handelt, muss die Belohnung
+größer sein als das Ergebnis in dem Fall, dass kein Vertrauen geschenkt wird.
+Zugleich muss für den zweiten Spieler die Alternative Betrügen einen höheren
+Ertrag liefern als Belohnen. 
+Nur dann nämlich ist von Spieler 1 tatsächlich Vertrauen gefragt, wenn er in
+Interaktion mit Spieler 2 tritt.
+
+Das Vertrauensspiel ist ebenso wie die folgenden Spiele ein
+Nicht-Nullsummen-Spiel, d.h. beide Spieler können bei dem Spiel gewinnen (oder
+verlieren). In diesem Fall liefert belohntes Vertrauen beiden ein besseres
+Ergebnis als wenn gar kein Vertrauen geschenkt wird.
+
+\paragraph{Beispiel 3: Das Hirschjagd-Spiel}
+\label{Hirschjagdspiel}
+
+Beim Hirschjagd-Spiel geht es um folgende Geschichte: Drei Jäger (es können auch
+zwei oder mehr als drei Jäger sein) gehen gemeinsam auf die Jagd, um einen Hirsch zu jagen. 
+Den Hirsch können sie nur erlegen, wenn sie alle drei zusammenarbeiten. In dem
+Wald, wo sie den Hirsch jagen möchten, gibt es aber auch jede Menge Hasen. Einen Hasen
+könnte notfalls jeder alleine fangen. Nur gibt ein Hase eben einen kleineren
+Braten ab als ein Drittel Hirsch. Jeder Jäger steht also vor der Wahl, ob er
+lieber einen Hasen fängt, den er sicher hat, oder ob er, auf die anderen 
+Jäger vertrauend, seinen Teil dazu
+leistest, den Hirsch zur Strecke zu bringen. 
+
+Bei drei Spielern handelt es sich bereits um ein $N$-Personen Spiel. Um ein
+solches Spiel in Tabellenform darzustellen benötigt man eigentlich eine
+$N$-Dimensionale Matrix. Man kann das Spiel aber auch durch mehrere
+$N-1$-dimensionale Matrizen darstellen, wie im Folgenden. Jede der Matrizen
+stellt dabei die möglichen Ergebnisse für jeweils eine bestimmte Handlung (bzw.
+einen bestimmten "`Zug"') von Jäger drei dar.
+
+\begin{center}
+\begin{tabular}{cc|c|c| c|c|c|}
+
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{\bf Jäger 2} 
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{\bf Jäger 2} \\
+& \multicolumn{1}{c}{} 
+& \multicolumn{1}{c}{Hirsch} & \multicolumn{1}{c}{Hase} 
+& \multicolumn{1}{c}{} 
+& \multicolumn{1}{c}{Hirsch} & \multicolumn{1}{c}{Hase} 
+\\ \cline{3-4} \cline{6-7}
+ 
+& Hirsch   & 5, 5, 5 & 0, 2, 0 & &  0, 0, 2 & 0, 2, 2 \\
+\cline{3-4} \cline{6-7}
+\raisebox{1.5ex}[-1.5ex]{{\bf Jäger 1}} 
+& Hase     & 2, 0, 0 & 2, 2, 0 & &  2, 0, 2 & 2, 2, 2 \\
+\cline{3-4} \cline{6-7}
+\multicolumn{7}{c}{} \\
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{{\small {\bf Jäger 3}: Hirsch}}
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{{\small {\bf Jäger 3}: Hase}} \\
+
+
+\end{tabular}
+\end{center}
+
+Da ein Hirschbraten, auch wenn man ihn sich zu dritt teilen muss, wesentlich
+besser ist als ein Hasenbraten wurde dafür der Nutzenwert 5 veranschlagt. Den
+Wert 2 bekommt, wer einen Hasen fängt. Und 0 erhält, wer gar nichts fängt, also
+ein Jäger, der versucht einen Hirsch zu fangen, während sich einer oder alle
+anderen davon machen, um Hasen zu jagen, so dass der Hirsch entwischt\ldots
+
+
+\paragraph{Beispiel 4: Gefangenendilemma}
+\label{Gefangenendilemma}
+
+Es musste ja kommen: Das Gefangenendilemma. Zum Gefangenendilemma gibt es
+folgende Geschichte: Zwei Bankräuber werden von der Polizei aufgegriffen. 
+Die Polizei kann ihnen
+jedoch nichts nachweisen. Daher stellt sie jeden der Bankräuber vor folgende
+Wahl: Entweder Du verrätst Deinen Komplizen, oder wir sperren Dich für vier
+Wochen wegen Landstreicherei ein. Wenn Du Deinen Komplizen verrätst und er Dich
+nicht verrät, dann kommst Du sofort frei und Dein Komplize bekommt 10 Jahre
+aufgebrummt. Verrät Dich Dein Komplize ebenfalls, dann kommst Du immerhin mit 5
+Jahren davon, weil Du ausgesagt hast. 
+
+\begin{center}
+\begin{tabular}{cc|c|c|}
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{\bf Gefangener 2} \\
+& \multicolumn{1}{c}{} & \multicolumn{1}{c}{Schweigen} &
+\multicolumn{1}{c}{Aussagen} \\ \cline{3-4} 
+& Schweigen                 & 4 Wochen, 4 Wochen     & 10 Jahre, frei \\
+\cline{3-4}
+\raisebox{1.5ex}[-1.5ex]{{\bf Gefangener 1}} 
+& Aussagen                  & frei, 10 Jahre         & 5 Jahre, 5 Jahre \\
+\cline{3-4}
+\end{tabular}
+\end{center}
+
+Wenn man solche Faktoren wir die Ganovenehre außer Acht lässt, dann werden
+beide Gefangenen aussagen, weil diese Strategie ihnen das relativ bessere
+Ergebnis liefert sowohl, wenn der andere aussagt, als auch, wenn er schweigt.
+Die Strategie "'Schweigen"' wird von der Strategie "`Aussagen"' strikt
+dominiert.
+
+Das Beispiel des Gefangenendilemmas führt zugleich eine erste offensichtliche
+Lösungsstrategie für Spiele vor Augen, nämlich die Lösung durch {\em Dominanz}. 
+Wenn man annimmt,
+dass die Spieler ihren Nutzen maximieren wollen, dann sollten sie auf keinen Fall
+eine Strategie wählen, die dominiert wird. Dominiert wird eine Strategie dann,
+wenn es eine Alternativ-Strategie gibt, die in mindestens einem Fall ein
+besseres Ergebnis liefert und in allen anderen Fällen wenigstens ein genauso
+gutes. Wie schon bei der Entscheidungstheorie
+kann man von der eben beschriebenen {\em schwachen} Dominanz
+noch die {\em starke} bzw. {\em strikte} Dominanz unterscheiden. Eine Strategie
+wird durch eine andere stark dominiert, wenn die andere Stratwegie in jedem
+Fall ein besseres Ergebnis liefert. 
+
+Außer davon, dass eine Strategie dominiert wird (wenn es eine eindeutig bessere
+gibt), kann man auch davon sprechen, dass eine Strategie dominant ist, nämlich
+dann, wenn sie eindeutig besser ist als aller anderen Strategien. Bei schwacher
+Dominanz bedeutet "`eindeutig besser"' sein, dass sie im paarweisen Vergleich
+mit jeder anderen Strategie wenigstens in einem Fall ein besseres Ergebnis
+liefert als die anderen Strategien und in allen anderen Fällen ein mindestens
+gleich Gutes. Bei starker Dominanz ist "`eindeutig besser"' so zu interpretieren,
+dass sie in allen Fällen besser sein muss als alle anderen Strategien. 
+
+Dabei ist zu beachten: Wenn eine Strategie durch eine andere dominiert wird, so
+bedeutet dies noch längst nicht, dass die andere Strategie eine dominante
+Strategie ist. Denn dazu müsste sie auch alle übrigen Strategien dominieren.
+Dazu ein Beispiel:
+
+\begin{center}
+\begin{tabular}{c|c|c|c|c|}
+\multicolumn{1}{c}{} & 
+\multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} &
+\multicolumn{1}{c}{$S_3$} &
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5}
+
+$Z_1$ & 4 & 4 & 2 & 6  \\ \cline{2-5}
+$Z_2$ & 2 & 4 & 0 & 5 \\ \cline{2-5}
+$Z_3$ & 3 & 2 & 1 & 2 \\ \cline{2-5}
+$Z_4$ & 0 & 2 & 1 & 2 \\ \cline{2-5}
+
+\end{tabular}
+\end{center}
+
+Bei diesem Spiel wird die Strategie $Z_4$ durch die Strategie $Z_3$ schwach
+dominiert. Trotzdem ist die Strategie $Z_3$ keine dominante Strategie, da sie
+die Strategie $Z_2$ nicht dominiert, und zudem ihrerseits durch die Strategie
+$Z_1$ stark dominiert wird. Die Strategie $Z_1$ ist eine schwach dominante
+Strategie, das sie alle anderen Strategien dominiert, aber die Strategie $Z_2$
+nur schwach dominiert.
+
+Im Gefangenendilemma ist Nicht-Kooperation mit dem Mitspieler in jedem Fall
+eindeutig besser als Kooperation. Also ist Nicht-Kooperation im
+Gefangendilemma eine strikt dominante Strategie.
+
+\subsection{Nullsummenspiele}
+
+Nullsummenspiele sind Spiele, bei denen die Summe der Gewinne und Verluste aller
+Spieler immer gleich 0 ist. Das Schachspiel ist ein Nullsummenspiel, das
+Knobelspiel ist ebenfalls ein Nullsummenspiel. Die Tatsache, dass bei
+Nullsummenspielen der Gewinn des einen immer der Verlust des anderen ist,
+erlaubt bei 2-Personen Nullsummenspielen eine nochmals vereinfachte
+Darstellung: Man gibt in der Spieltabelle nicht mehr die Gewinne und Verluste
+der beiden Spieler durch Kommata getrennt nebeneinander an, sondern man trägt
+nur noch die Gewinne des Zeilenspielers ein. Die Gewinne des Spaltenspielers
+sind dann der entsprechende negative Wert. Man kann die Situation auch so
+auffassen, dass der Zeilenspieler die Werte innerhalb der Tabelle immer
+maximieren will, der Spaltenspieler sie aber immer minimieren will.
+Eine Spieltabelle könnte dann folgendermaßen aussehen:
+
+\begin{center}
+\setlength{\parskip}{0.5cm}
+\begin{tabular}{c|c|c|c|c|}
+\multicolumn{1}{c}{} & 
+\multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} &
+\multicolumn{1}{c}{$S_3$} &
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5}
+
+$Z_1$ & 0 & 1 & 7 & 7  \\ \cline{2-5}
+$Z_2$ & 4 & 1 & 2 & 10 \\ \cline{2-5}
+$Z_3$ & 3 & 1 & 0 & 25 \\ \cline{2-5}
+$Z_4$ & 0 & 0 & 7 & 10 \\ \cline{2-5}
+
+\end{tabular}
+
+{\footnotesize Quelle: Resnik, Choices, S.128 \cite[]{resnik:1987}}
+\end{center}
+
+Dieses Spiel lässt sich nicht unmittelbar durch Dominanzüberlegungen lösen.
+Allerdings kann man es ebenso wie schon in der Entscheidungstheorie durch
+{\em sukzessive} Dominanz lösen. So wird die Strategie $S_4$ des Spaltenspielers
+offensichtlich von allen anderen Alternativen dominiert, denn er möchte die
+Auszahlungen für den Zeilenspieler, die seine Verluste sind, ja möglichist
+minimieren. Da die Strategie $C_4$ also nicht in Frage kommt können wir sie
+streichen. Ist die Strategie $C_4$ aber erst einmal gestrichen, dann wird
+bezüglich der verbleibenden Möglichkeiten die Strategie $Z_3$ dominiert
+(nämlich von $Z_2$) und kann ebenfalls gestrichen werden usf. Als Ergebnis
+bleibt das Strategiepaar ($R_2$, $S_2$) übrig (Übungsaufgabe). 
+Dieses Strategiepaar bildet die {\em Lösung}
+des Spiels nach Dominanz. Die Auszahlung, die ein Spieler erhält, wenn beide
+Spieler die Lösungsstrategie spielen, wird auch der {\em Wert des Spiels} für den
+entsprechenden Spieler genannt. In diesem Beispiel ist der Wert des Spiels für
+den Zeilenspieler 1 und für den Spaltenspieler -1.
+
+Allgemein hat {\em eine} Lösung eines Spiels immer die Form
+eines Tupels von Strategien, das für jeden Spieler eine Strategie erhält. Je
+nach Lösungsverfahren kann keine, eine oder mehrere Lösungen geben. Der Wert
+des Spiels kann bei mehreren Lösungen von Lösung zu Lösung variieren. In diesem
+Fall kann man sinnvollerweise von dem "`maximalen"' oder auch "`optimalen"' Wert
+eines Spiels für einen Spieler sprechen.
+
+\subsubsection{Das Nash-Gleichgewicht}
+
+Die (sukzessive) Dominanz ist ein ebenso einfaches wie einleuchtendes
+Lösungsverfahren. Nur lässt es sich nicht immer anwenden. Das folgende Spiel
+weist keine dominierten Strategien auf, die man streichen könnte:
+
+\begin{center}
+\setlength{\parskip}{0.5cm}
+\begin{tabular}{c|c|c|c|}
+\multicolumn{1}{c}{} & 
+\multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} &
+\multicolumn{1}{c}{$S_3$} \\ \cline{2-4}
+
+$Z_1$ & 8,-8 & 8,-8   & 7,-7 \\ \cline{2-4}
+$Z_2$ & 0,0  & 10,-10 & 4,-4 \\ \cline{2-4}
+$Z_3$ & 9,-9 & 0,0    & 1,-1 \\ \cline{2-4}
+
+\end{tabular}
+
+{\footnotesize Quelle: Resnik, Choices, S.129 \cite[]{resnik:1987}. Aus Gründen
+der Anschaulichkeit wurden die entsprechenden negativen Auszahlungen für den
+Spaltenspieler explizit eingetragen.}
+\end{center}
+
+Trotzdem existiert ein Strategiepaar, dass man durch eine naheliegende
+Überlegung in besonderer Weise auszeichnen kann. Dieses Strategiepaar ist das
+Paar ($Z_1$, $S_3$). Die Überlegung, die zur Auszeichnung dieses
+Strategiepaares führt ist die folgende: Angenommen der Zeilenspieler hätte sich
+(aus irgendwelchen Gründen) auf die Strategie $Z_1$ festgelegt. Dann ist das
+beste, was der Spaltenspieler tun kann, die Strategie $S_3$ zu wählen, weil er
+so noch am meisten bekommt (-7 anstelle von -8 bei den Alternativen $S_1$ und
+$S_2$). Man sagt auch, dass die Strategie $S_3$ die {\em beste Antwort} auf die
+Strategie $Z_1$ ist. Umgekehrt gilt: Hat der Spaltenspieler die Strategie $S_3$
+gewählt, so ist die Strategie $Z_1$ die beste Antwort, die der Zeilenspieler
+wählen kann, um sein Ergebnis zu maximieren. Die Strategien $Z_1$ und $S_3$
+sind also wechselseitig beste Antworten aufeinander. Keiner der Spieler hätte
+eine Motivation, im Alleingang von seiner Strategie abzuweichen. Das
+Strategiepaar ($Z_1, S_3$) bildet in diesem Sinne ein {\em Gleichgewicht}. Die
+mit diesem Gleichgewicht assoziierten Auszahlungen sind die "`Gleichgewichtswerte"'
+des Spiels.
+
+Diese Art von Gleichgewicht nennt bezeichnet man auch nach ihrem Erfinder als
+{\em Nash-Gleichgewicht}. Das Konzept des Nash-Gleichgewicht kann folgendermaßen
+motiviert werden: Wir nehmen an, dass die Spieler frei und unabhängig
+voneinander sind, d.h. jeder Spieler kann seine eigene Strategie wählen aber
+niemand kann seinen Gegenüber verpflichten eine bestimmte Strategie zu wählen.
+Dann werden die Spieler, wenn sie sich nutzenmaximierend verhalten, immer
+diejenige Strategie wählen, die eine beste Antwort auf die Strategie ihres
+Gegenübers bzw. auf die Strategie, die sie bei ihrem Gegenüber vermuten, ist. 
+
+Man könnte nun die Frage aufwerfen, ob sich die Spieler nicht gegebenenfalls
+dazu verabreden könnten, ihre Strategien gleichzeitig zu wechseln. Aber
+einerseits würden sie das vermutlich nur tun, wenn mindestens einer der Spieler
+einen Vorteil davon hat und der andere nach dem Wechsel wenigstens nicht
+schlechter da steht. Da im Nullsummenspiel der Vorteil des einen immer der Nachteil 
+des anderen ist, wird ein Spieler immer gegen den solchen Wechsel sein.
+Bei einem Nicht-Nullsummenspiel ist ein solcher Wechsel immerhin vorstellbar,
+sofern es den Spielern gelingt, sich in irgendeiner Weise zu koordinieren.
+
+Um alle Nashgleichgewichte in reinen Strategien zu bestimmen, gibt es bei
+endlichen Spielen eine zugegebenermaßen krude aber zugleich todsicher Methode:
+Man probiert einfach jedes mögliche Strategietupel durch.
+
+Dass es auch im Nullsummenspiel mehrere Gleichgewichte geben kann, zeigt das
+folgende Beispiel:
+
+\begin{center}
+\setlength{\parskip}{0.5cm}
+\begin{tabular}{c|c|c|c|c|}
+\multicolumn{1}{c}{} & 
+\multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} &
+\multicolumn{1}{c}{$S_3$} &
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5}
+
+$Z_1$ & 1,-1 & 2,-2 & 3,-3 & 1,-1  \\ \cline{2-5}
+$Z_2$ & 0,0  & 5,-5 & 0,0  & 0,0 \\ \cline{2-5}
+$Z_3$ & 1,-1 & 6,-6 & 4,-4 & 1,-1 \\ \cline{2-5}
+
+\end{tabular}
+
+{\footnotesize Quelle: Resnik, Choices, S.131 \cite[]{resnik:1987}, leicht
+abgewandelt}
+\end{center}
+
+Man kann sich leicht davon überzeugen, dass $(S_1,Z_1)$, $(S_4,Z_1)$,
+$(S_1,Z_3), $$(S_4,Z_3)$ Gleichgewichte sind. 
+Auffällig ist, dass alle Gleichgewichte
+denselben Gleichgewichtswert haben. Dass es sich dabei nicht nur um eine
+Zufälligkeit handelt, sondern dass ein Gesetz dahinter steckt, beweist der
+folgende Satz (Vgl. Resnik \cite[S. 131]{resnik:1987}):
+
+\begin{quote}
+{\em Koordinationstheorem für Nullsummenspiele}: Seien $(S_i, Z_m)$ und $(S_j,
+Z_n)$ zwei Gleichgewichte eines Nullsummenspiels. Dann sind auch $(S_i, Z_n)$
+und $(S_j, Z_m)$ Gleichgewichte und alle vier Gleichgewichte haben denselben
+Wert.
+\end{quote}
+
+{\em Beweis} (nach Resnik \cite[S. 131]{resnik:1987}): Seien $v_{im}, v_{jn},
+v_{in}, v_{jm}$ die den entsprechenden Strategiepaaren zugeordneten Werte des
+Spiels für den Zeilenspieler. Da $(S_i, Z_m)$ und $(S_j, Z_n)$ Gleichgewichte
+sind, müssen $v_{im}, v_{jn}$ jeweils minimale Werte ihrer Zeile und maximale
+Werte ihrer Spalte sein. Dann gilt aber auch:
+\begin{enumerate}
+  \item $v_{im} \leq v_{in}$, da beide Werte in derselben Zeile stehen und
+  $v_{im}$ als Gleichgewichtswert ein minimaler Wert der Zeile sein muss.
+  \item $v_{in} \leq v_{jn}$, da beide Werte in derselben Spalte stehen und
+  $v_{jn}$ als Gleichgewichtswert ein maximaler Wert der Spalte sein muss.
+  \item $v_{jn} \leq v_{jm}$, da beide Werte in derselben Zeile stehen und
+  $v_{jn}$ als Gleichgewichtswert ein minimaler Wert der Zeile sein muss. 
+  \item $v_{jm} \leq v_{im}$, da beide Werte in derselben Spalte stehen und
+  $v_{in}$ als Gleichgewichtswert ein maximaler Wert der Spalte sein muss. 
+\end{enumerate}
+
+Zusammengefasst ergibt sich daraus die Ungleichung:
+\[ v_{im} \leq v_{in} \leq v_{jn} \leq v_{jm} \leq v_{im} \]
+Da am Ende der Ungleichungskette dieselbe Variable steht wie am Anfang gilt die
+Gleichheit:
+\[ v_{im} = v_{in} = v_{jn} = v_{jm} = v_{im} \]
+Daraus lässt sich unmittelbar ableiten, dass in Nullsummenspielen alle reinen
+Gleichgewichte denselben Wert haben müssen.
+
+\subsubsection{Gemischte Strategien und gemischte Gleichgewichte}
+
+Als reine Strategien bezeichnet man Strategien, bei denen die Auswahl der Züge
+eindeutig durch die Strategie festgelegt ist und nicht zufällig vorgenommen
+wird. Umgekehrt bezeichnet man als gemischte Strategien solche Strategien bei
+denen zwischen reinen Strategien randomisiert wird. (Was dasselbe ist, als wenn
+man sagen würde, dass innerhalb der Strategie zwischen alternativen Zügen
+randomisiert wird.) Ein gemischtes Gleichgewicht ist dementsprechend ein
+Gleichgewicht, in dem mindestens zwei gemischte Strategien vorkommen. (Bei
+einem 2-Personen Spiel heißt dies, dass das Gleichgewicht nur aus gemischten
+Strategien bestehen darf.)
+ 
+Ein einfaches Beispiel für ein gemischtes Gleichgewicht liefert das 
+"`Passende Münzen"'-Spiel:
+
+\begin{center}
+\begin{tabular}{cc|c|c|}
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{\bf Spieler 2} \\
+& \multicolumn{1}{c}{} & \multicolumn{1}{c}{Kopf} & \multicolumn{1}{c}{Zahl}
+\\ \cline{3-4} 
+& Kopf                 & 1,-1                     & -1,1   \\ \cline{3-4}
+\raisebox{1.5ex}[-1.5ex]{{\bf Spieler 1}} 
+& Zahl                 & -1,1                     & 1,-1  \\ \cline{3-4}
+\end{tabular}
+\end{center}
+
+Bei diesem Spiel hat jede reine Strategie, die ein Spieler spielt, den
+Erwartungswert -1. Der {\em Erwartungswert} einer Strategie ist diejenige
+Auszahlung, die ein Spieler erhält, wenn der Gegenspieler seine beste Antwort auf die
+Strategie spielt. (Der Erwartungswert von Strategien in der Spieltheorie ist
+also nicht zu verwechseln mit dem Erwartungswert in der Entscheidungstheorie!)
+
+Wenn Spieler 1 aber mit einer 50\% Wahrscheinlichkeit über beide reinen
+Strategien randomisiert, dann hat seine gemischte Strategie (50\% Kopf, 50\%
+Zahl) einen Erwartungswert von 0, da er -- ganz gleich, welche reine oder
+gemischte Strategie der andere Spieler spielt -- immer in der Hälfte der
+möglichen Fälle eine Auszahlung von 1 und in der anderen Hälfte der Fälle eine
+Auszahlung von -1 bekommt. Den Erwartungswert von 0 erhält Spieler 1 aber
+tatsächlich nur, wenn er mit einer Wahrscheinlichkeit von 0.5 zwischen seinen Strategien 
+wählt. Würde er eine andere Wahrscheinlichkeit wählen, so würde sein Mitspieler
+diejenige Strategie wählen, die die beste Antwort auf die von Spieler 1 häufiger gewählte
+reine Strategie wäre. Wenn Spieler 1 also z.B. (60\% Kopf, 40\% Zahl) spielt,
+dann würde Spieler 2 am erfolgreichsten sein, wenn er immer Zahl spielte.
+
+Wie kann man aber generell das gemischte Gleichgewicht berechnen, sofern eins
+vorhanden ist? Im einfachsten Fall, d.h. bei 2-Personen Spielen mit jeweils zwei
+Handlungsoptionen, sieht die Tabelle folgendermaßen aus:
+
+\begin{center}
+\begin{tabular}{cc|c|c|}
+& \multicolumn{1}{c}{} & \multicolumn{2}{c}{\bf Spaltenspieler} \\
+& \multicolumn{1}{c}{} & \multicolumn{1}{c}{$S_1$} & \multicolumn{1}{c}{$S_2$}
+\\ \cline{3-4} 
+& $Z_1$                 & $A_z, A_s$          &  $B_z, B_s$   \\
+\cline{3-4}
+\raisebox{1.5ex}[-1.5ex]{{\bf Zeilenspieler}} 
+& $Z_2$                 & $C_z, C_s$          &  $D_z, D_s$  \\
+\cline{3-4}
+\end{tabular}
+\end{center}
+
+Bei Nullsummenspielen gilt natürlich immer: $A_z = A_s$,$B_z = B_s$,$C_z = C_s$,
+$D_z = D_s$. Aber darauf werden wir bei der Bestimmung des gemischten
+Gleichgewichts nicht zurückgreifen, so dass der folgende Ansatz für alle
+einfachen 2-Personen Spiele mit zwei Handlungsoptionen tauglich ist. 
+
+Wie aus den Überlegungen zum "`Passende Münzen"'-Spiel bereits deutlich
+geworden ist, kann eine gemischte Strategie nur dann eine
+Gleichgewichtsstrategie sein, wenn der Gegenspieler indifferent ist, mit
+welcher seiner beiden reinen Strategien er die gemischte Strategie
+"`beantworten"' soll. Wäre er nämlich nicht indifferent, dann würde er
+diejenige reine Strategie wählen, die die bessere Antwort ist. Darauf würde der
+erste Spieler wiederum mit einer reinen Strategie antworten können, die
+mindestens so gut ist wie seine gemischte Strategie. Ein gemischtes
+Gleichgewicht könnte dann nur noch in dem Sonderfall vorliegen, in dem er
+indifferent zwischen seinen reinen und gemischten Strategien ist. (Siehe dazu
+die entsprechende Übungsaufgabe zur nächsten Vorlesung auf Seite
+\pageref{gemischteStrategienAufgabe}) Im Normallfall kommt ein gemischtes
+Gleichgewicht im 2-Personen Spiel mit zwei Handlungsoptionen also nur in der
+Form vor, in der beide Spieler eine gemischte Strategie spielen.
+
+Wenn wir also bestimmen wollen, mit welcher Wahrscheinlichkeit der
+Zeilenspieler im gemischten Gleichgewicht über seine reinen Strategien
+randomisieren muss, dann müssen wir die Rechnung für Erwartungswerte des {\em
+Spalten}spielers aufstellen. Die Erwartungswerte des Spaltenspielers hängen
+nämlich von der Wahrscheinlichkeit ab, mit der der Zeilenspieler randomisiert.
+
+Die Erwartungswerte des Spaltenspielers bezüglich der gemischten Strategie
+des Zeilenspielers berechnen sich nach:
+\[ EW_{S1} = p \cdot A_s + (1-p) \cdot C_s \]
+\[ EW_{S2} = p \cdot B_s + (1-p) \cdot D_s \]
+Da beide Werte gleich sein müssen, können wir die Gleichung aufstellen:
+\[ p \cdot A_s + (1-p) \cdot C_s = p \cdot B_s + (1-p) \cdot D_s \]
+Die Lösung dieser Gleichung liefert uns das gesuchte Randomisierungsgewicht $p$.
+
+Um das Randomisierungsgewicht des Spaltenspielers $q$ zu berechnen, müssen wir
+umgekehrt die Erwartungswerte der reinen Strategien des Zeilenspielers
+bestimmem:
+\[ EW_{Z1} = q \cdot A_z + (1-q) \cdot B_z \]
+\[ EW_{Z2} = q \cdot C_z + (1-q) \cdot D_z \]
+Daraus ergibt sich die Gleichung:
+\[ q \cdot A_z + (1-q) \cdot B_z = q \cdot C_z + (1-q) \cdot D_z \]
+
+Sofern die beiden Gleichungen lösbar sind und für $p$ und $q$ bestimmte Werte
+zwischen 0 und 1 liefern, lautet das gemischte Gleichgewicht: 
+\[ ( (p,Z_1; 1-p,Z_2), (q,S_1; 1-q,S_2) ) \]
+Da bei 2-Personen Spielen mit zwei Handlungsoptionen aber klar ist, zwischen
+welchen Strategien randomisiert wird, würde es bereits genügen, die beiden
+Wahrscheinlichkeiten für den Zeilen- und Spaltenspieler $p$ und $q$ anzugeben,
+um das gemischte Gleichgewicht genau zu spezifizieren.
+

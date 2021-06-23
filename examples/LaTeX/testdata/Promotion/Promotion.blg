@@ -1,0 +1,53 @@
+This is BibTeX, Version 0.99c (Web2C 7.5.6)
+The top-level auxiliary file: Promotion.aux
+The style file: dinatus.bst
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Database file #1: literature.bib
+Warning--empty pages in arnold:2002
+Warning--empty pages in arnold:2005b
+Warning--empty booktitle in axelrod-dambrosio:1994
+Warning--empty pages in axelrod-dambrosio:1994
+Warning--empty booktitle in gehlen:1942
+Warning--empty pages in heath:2005
+You've used 84 entries,
+            3552 wiz_defined-function locations,
+            1242 strings with 17094 characters,
+and the built_in function-call counts, 58245 in all, are:
+= -- 6595
+> -- 735
+< -- 1344
++ -- 1601
+- -- 427
+* -- 5128
+:= -- 9382
+add.period$ -- 113
+call.type$ -- 84
+change.case$ -- 369
+chr.to.int$ -- 82
+cite$ -- 90
+duplicate$ -- 1546
+empty$ -- 4961
+format.name$ -- 794
+if$ -- 11926
+int.to.chr$ -- 2
+int.to.str$ -- 1
+missing$ -- 198
+newline$ -- 490
+num.names$ -- 355
+pop$ -- 688
+preamble$ -- 1
+purify$ -- 369
+quote$ -- 0
+skip$ -- 2424
+stack$ -- 0
+substring$ -- 5903
+swap$ -- 311
+text.length$ -- 157
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 721
+warning$ -- 6
+while$ -- 627
+width$ -- 0
+write$ -- 815
+(There were 6 warnings)

@@ -1,0 +1,1026 @@
+
+\section{Wahrscheinlichkeiten II: Interpretationsfragen {\bf nicht klausurrelevant!})}
+\label{philosophischeWahrscheinlichkeitstheorien}
+
+{\em Diese Vorlesung setzt zwar keine besonders tiefgehenden Mathekenntnisse
+voraus, dürfte für mathematisch Ungeübte aber trotzdem streckenweise schwer zu
+verstehen sein! Wer sie nicht oder nicht ganz versteht, sollte darüber hinweg
+lesen. Die folgenden Vorlesungen setzen zwar die Kenntnisse der elementaren
+Wahrscheinlichkeitsrechnung aus der letzten Vorlseung voraus, aber nicht
+unbedingt das Verständnis der diese Woche besprochenen philosophischen
+Interpretationen des Wahrscheinlichkeitsbegriffs.}
+{ }\\
+
+In der letzten Vorlesungsstunde haben wir uns mit dem mathematischen
+Wahrscheinlichkeitskalkül und den grundlegenden Rechentechniken der
+Wahrscheinlichkeitsrechnung vertraut gemacht. Wie man mit Wahrscheinlichkeiten
+rechnet wissen wir also nun. Eine ganz andere Frage ist die, was
+Wahrscheinlichkeiten eigentlich sind. Während die mathematische Theorie der der
+Wahrscheinlichkeiten spätestens seit der Axiomatisierung durch Kolmogorow in
+ihren Grundlagen feststeht, ist die philosophische Interpretation des
+Wahrscheinlichkeitsbegriffs, wie zu erwarten, ein äußerst umstrittenes Feld. In
+der letzten Stunde wurde bereits erwähnt, dass es grundsätzlich drei
+unterschiedliche Interpretationen des Wahrscheinlichkeitsbegriffs gibt:
+\begin{enumerate}
+  \item {\em Häufigkeitstheorie}: Die Wahrscheinlichkeit bezeichnet die
+  Häufigkeit des Vorkommens eines Merkmals in einer Gesamtheit.
+  \item {\em Glaubensgrad} (subjektive Wahrscheinlichkeit): Die
+  Wahrscheinlichkeit bezeichnet den Grad des Glaubens an das Eintreten eines
+  Ereignisses, z.B. wenn man eine Wette abschließt.
+  \item {\em Propensitäten} (objektive Wahrscheinlichkeit): Die
+  Wahrscheinlichkeit bezeichnet die "`Neigung"' mit der Ereignisse in der
+  äußeren Welt eintreten, z.B. die Neigung, mit der bei starkem Neuschnee in
+  einem bestimmten Gebiet Lawinen ausgelöst werden.
+\end{enumerate}
+Andere Einteilungen sind wie immer möglich (Schurz beispielsweise
+unterscheidet lediglich die "`statistische (objektive) Wahrscheinlichkeit"'
+von der "`subjektive[n] (epistemischen) Wahrscheinlichkeit"'
+\cite[S.99]{schurz:2006}]). 
+
+Diese unterschiedlichen
+Interpretationen der Warscheinlichkeitstheorie wollen wir in dieser 
+Vorlesungsstunde genauer betrachten. Am wichtigsten sind dabei
+die subjektiven Wahrscheinlichkeiten, weil sich die Nutzen- und
+Entscheidungstheorie sehr wesentlich auf subjektive Wahrscheinlichkeiten stützt.
+Wir werden sie daher ausführlich zum Schluss der Vorlesung besprechen. Zunächst
+soll kurz auf die Häufigkeitstheorie und die objektiven Wahrscheinlichkeiten
+eingegangen werden.
+
+Bevor wir die unterschiedlichen Wahrscheinlichkeitsbegriffe im Einzelnen
+untersuchen, kann man wiederum die Frage stellen, was ein gültiger
+Wahrscheinlichkeitsbegriff ist, d.h. welche Bedingungen ein
+Wahrscheinlichkeitsbegriff überhaupt erfüllen muss, damit wir ihn als Begriff
+von Wahrscheinlichkeit anerkennen. Da die mathematischen Grundlagen der
+Wahrscheinlichkeitstheorie einigermaßen feststehen, können wir vereinbaren
+solche Interpretationen des Wahrscheinlichkeitsbegriffs als gültig zu erachten,
+von denen wir zeigen können, dass sie die kolmogorwschen Axiome erfüllen.
+Im Folgenden werden wir daher bei allen
+Interpretationen des Wahrscheinlichkeitsbegriffs zeigen, dass für
+das entsprechende Wahrscheinlichkeitskonzept die kolmogorwschen Axiome gelten.
+
+Man kann natürlich weiterhin die Frage stellen, was passiert, wenn wir eine
+Interpretation des Wahrscheinlichkeitsbegiffs finden, die uns zwar nach dem
+Maßstab unseres Sprachgefühls als Ausdruck von "`Wahrscheinlichkeit"'
+erscheint, die aber nicht die kolmogorowschen Axiome erfüllt. In diesem Fall
+hätten wir die Wahl, sie entweder doch nicht als Wahrscheinlichkeitsbegriff
+gelten zu lassen, oder so etwas wie "`nicht-komogorowsche
+Wahrscheinlichkeiten"' zuzulassen. Aber das eher theoretische
+Überlegungen, die nur die innere Logik von Definitionen und Begriffsbildungen
+vor Augen führen sollen und außerdem als Hinweis dienen können, dass die hier
+besprochenen Wahrscheinlichkeitsbegriffe selbstverständlich nicht für alle
+Zukunft fest stehen müssen. Für die im Folgenden zu untersuchenden
+Interpretationen des Wahrscheinlichkeitsbegriffs lässt sich jeweils zeigen,
+dass sie die Kolmogorowschen Axiome erfüllen.
+
+\subsection{Objektive Wahrscheinlichkeit}
+
+\subsubsection{Klassische Wahrscheinlichkeit}
+\label{LaplacescheWahrscheinlichkeit}
+Den Begriff der "`klassischen"' oder auch "`Laplaceschen"' Wahrscheinlichkeit kann
+man als eine Art Vorläufer der Häufigkeitstheorie betrachten. Der klassischen
+Wahrscheinlichkeit merkt man die Herkunft der
+Wahrscheinlichkeitstheorie aus dem Glücksspiel am deutlichsten an, denn sie
+definiert die Wahrscheinlichkeit als:
+\[Wahrscheinlichkeit = \frac{\mbox{{\em Anzahl der g"unstigen
+F"alle}}}{\mbox{{\em Anzahl der m"oglichen F"alle}}}\]
+Wobei unter "`günstigen"' Fällen diejenigen Fälle aus einer nicht-leeren
+Grundgesamtheit von {\em gleichartigen} möglichen Fällen zu verstehen sind, 
+die -- aus welchem Grund auch immer -- von Interesse sind. Typische Fälle sind z.B. die
+Wahrscheinlichkeit aus einem Stapel von 52 Spielkarten (mögliche Fälle) ein As
+zu ziehen (günstige Fälle), oder im Roulette unter allen möglichen Zahlen
+(einschließlich der Null 37 mögliche Fälle) eine gerade Zahl zu bekommen (18
+günstige Fälle). Zu den wesentlichen Eigenschaften der klassischen
+Wahrscheinlichkeit gehört, dass sie ähnlich wie die etwas weiter unten
+besprochenen Propensitäten eine Wahrscheinlichkeit für den {\em Einzelfall}
+beschreibt. Auch wenn der Begriff der Wahrscheinlichkeit auf eine Gesamtheit
+von mehreren möglichen Fällen bezogen ist, ist es keineswegs erforderlich, dass
+der Vorgang, um den es geht (also z.B. das Ziehen einer Karte), mehrfach
+wiederholt wird oder wiederholbar ist, damit der klassische Begriff der
+Wahrscheinlichkeit Sinn hat. Denn auch, wenn man nur ein einziges Mal Roulette
+spielt, hat es Sinn zu sagen, dass es 37 mögliche und, wenn man z.B. auf Zahl
+setzt, einen günstigen Fall gibt.
+
+Die möglichen Fälle, aus denen sich die Grundgesamtheit zusammensetzt, müssen
+sich wechselseitig ausschließen, wobei aber sicher ist, dass irgendeiner der
+Fälle eintritt, und sie müssen in einem gewissen Sinne "`gleichartig"' sein.
+Diese "`Gleichartigkeit"' lässt sich zwar im Einzelfall näher beschreiben 
+(etwa bei einem Würfel die gleichmäßige Form und Masseverteilung), 
+aber nicht leicht allgemein charakterisieren, denn die
+naheliegende Charakterisierung, dass die Fälle der Grundgesamtheit gleichartig
+sind, wenn sie alle gleichwahrscheinlich sind, fällt aus, weil sonst die
+Definition der (klassischen) Wahrscheinlichkeit zirkulär werden würde. 
+
+Ereignisse kann man in der klassischen Wahrscheinlichkeit in naheliegender
+Weise als Mengen möglichen Fäller und damit Teilmengen der Grundgesamtheit
+auffassen. Das Ereignis, aus einem Kartenspiel ein As zu ziehen umfasst
+beispielsweise die vier möglichen Fälle: Kreuz-As, Pik-As, Herz-As, Karo-As.
+(Daher bietet sich für die klassische Wahrscheinlichkeit auch in besonderer
+Weise die mengentheoretische Darstellung der mathematischen Wahrscheinlichkeit
+an, aber man kann ebensogut -- der aussagenbasierten Darstellung in der letzten
+Vorlesung folgend -- davon sprechen, dass das Ereignis, dass ein As gezogen
+wird, eingetreten, wenn die Aussage, "`es wurde ein As gezogen"', wahr ist.
+Aussagen über Ereignisse kann man dabei immer mittels und-Verknüpfung aus
+Aussagen über Fälle der Grundgesamtheit zusammensetzen.)
+
+Eine weitere Frage wäre die, ob man die klassische Definition eher als
+logisch-theoretische oder als empirische Definition auffassen will. Grundsätzlich
+ist die Definition eher logisch-theoretischer Natur und nur in dem weitläufigen
+Sinn empirisch als die Begriffe "`günstige Fälle"', "`mögliche Fälle"' und
+"`Anzahl"' in einer unbestimmt großen (und nicht einmal zwangsläufig
+nicht-leeren) Menge von empirischen Anwendungskontexten einen konkreten Sinn
+haben. Bezieht man diesen Wahrscheinlichkeitsbegriff auf einen bestimmten
+Anwendungskontext, so geht man davon aus, dass die Eigenschaften der
+Gleichartigkeit und der wechselseitigen Ausschließlichkeit in diesem Kontext
+gegeben sind, was sich aber immer auch als empirisch falsch herausstellen kann.
+
+Zu zeigen ist nun, dass die so definierte Wahrscheinlichkeit die
+kolmogorowschen Axiome erfüllt. Wir gehen dazu die Axiom einzeln durch:
+
+\begin{enumerate}
+\item {\em Axiom} ($0 \leq P(p)$): Da die Anzahlen von günstigen oder möglichen
+Fällen niemals kleiner 0 sind, ist diese Bedingung offensichtliche gegeben
+\item {\em Axiom} ($P(p)=1$ wenn $p$ sicher ist): Da ein Ereignis genau dann
+sicher ist, wenn es alle möglichen Fälle der Grundgesamtheit enthält, und
+schon aufgrund der Definition keine Fälle enthalten kann, die nicht in der
+Grundgesamtheit enthalten sind, ergibt der definierende Qutient der klassischen
+Wahrscheinlichkeit für das\footnote{Da "`jedes"' sichere Ereignis alle Fälle
+der Grundgesamtheit enthalten muss, gibt es nur noch ein sicheres Ereignis.}
+sichere Ereignis einen Wert von 1. 
+\item {\em Axiom} ($P(p \vee q) = P(p) + P(q)$ wenn $p$ und $q$ sich
+ausschließen): Zwei Ereignisse schließen sich dann aus, wenn jeder möglich Fall
+(der Grundgesamtheit), durch den das eine Ereignis eintritt, kein Fall ist, in
+dem das andere Ereignis eintritt. (Fassen wir Ereignisse als Mengen von
+möglichen Fällen auf, dann kann man auch sagen: Zwei Ereignisse schließen sich
+aus, wenn ihre Schnittmenge leer ist.) Dann tritt dasjenige Ereignis, das
+eintritt, wenn das eine Ereignis oder das andere Ereignis eintritt ($p \vee
+q$), aber in genauso vielen Fällen ein wie beide Ereignisse zusammen.
+\end{enumerate}
+
+Die kolmogorowschen Axiome werden also durch den Begriff der klassischen
+Wahrscheinlichkeit erfüllt. Aber wie verhält es sich mit der bedingten
+Wahrscheinlichkeit? Da es für die bedingte Wahrscheinlichkeit eine
+mathematische Definition gibt ($P(p|q) := P(p \wedge q)/P(q)$), könnten wir uns
+eigentlich dabei beruhigen. Allerdings bliebe die klassische Definition der
+Wahrscheinlichkeit sehr unbefriedigend, wenn man nicht auch die bedingte
+Wahrscheinlichkeit in Bezug mögliche und günstige Fälle (also in Bezug auf das
+"`Modell"' der klassischen Wahrscheinlichkeit) definieren würde. Tut man das
+aber, dann muss man zeigen, dass diese Definition mit dem mathematischen
+Begriff der bedingten Wahrscheinlichkeit übereinstimmt. 
+
+Für die klassische Wahrscheinlichkeit lässt sich die bedingte
+Wahrscheinlichkeit in naheliegender Weise folgendermaßen definieren:
+Die bedingte Wahrscheinlichkeit $P(p|q)$ ist die Anzahl der Fälle, in denen
+sowohl das Ereignis $p$ als auch das Ereignis $q$ eintritt, geteilt durch die
+Anzahl der Fälle, in denen nur $q$ eintritt. Wenn $q$ unmöglich ist, dann
+setzen wir die bedingte Wahrscheinlichkeit auf 0 fest. Für $P(q)=0$ entspricht
+die Definition dann bereits unmittelbar der Standarddefinition von $P(p|q) := 0
+\Leftarrow P(q) = 0$. Andernfalls gilt: 
+\begin{eqnarray*}
+P(p|q) & = & \frac{\mbox{Anzahl } p \wedge q\mbox{-Fälle}}
+                  {\mbox{Anzahl } q\mbox{-Fälle}} \\
+{ }    & = & \frac{\mbox{Anzahl } p \wedge q\mbox{-Fälle}}
+                  {\mbox{Anzahl möglicher Fälle}} \qquad / \qquad
+                  \frac{\mbox{Anzahl }q\mbox{-Fälle}}
+                  {\mbox{Anzahl mögliche Fälle}} \\ { }    
+{ }    & = & \frac{P(p \wedge q)}{P(q)} \\
+\end{eqnarray*}
+Die Definition der bedingten Wahrscheinlichkeit in Bezug auf mögliche und
+günstige Fälle entspricht also genau der mathematischen Definition der bedingten
+Wahrscheinlichkeit.
+
+Die Laplace'sche Wahrscheinlichkeit ist sicherlich die verständlichste und
+naheliegendste Interpretation des Wahrscheinlichkeitsbegriffs. Sie wirft aber
+auch eine Reihe von mehr oder minder gravierenden Problemen auf:
+\begin{enumerate}
+  \item Sie lässt sich nur dort anwenden, wo wir die Anzahl der möglichen Fälle
+  feststellen können, d.h. wo eine endliche und wohlumrissene Grundgesamtheit
+  vorliegt. Die Wahrscheinlichkeit etwa, mit der es zu einem Börsencrash kommt,
+  ließe sich mit der Laplaceschen Wahrscheinlichkeit nicht mehr ohne Weiteres
+  ausdrücken.
+  \item Die Fälle zu bestimmten, aus denen sich die Grundgesamtheit
+  zusammensetzt, kann unter Umständen ein nicht-triviales Problem darstellen.
+  Will man z.B. die Frage beantworten, wie groß die Wahrscheinlichkeit ist, bei
+  zwei Münzwürfen zweimal Kopf zu erhalten, dann besteht die Grundgesamtheit
+  aus den {\em vier} möglichen Kombinationen: Kopf-Kopf, Kopf-Zahl,
+  Zahl-Kopf, Zahl-Zahl. Aber warum besteht sie nicht aus den {\em drei}
+  möglichen Kombinationen: Beidemale Kopf, Beidemale Zahl, Einmal Kopf und
+  einmal Zahl? Die Frage ist gar nicht so leicht zu beantworten, vor allem wenn
+  man sich Situationen vorstellt, in denen die richtige Lösung nicht so
+  offensichtlich ist.
+  \item Schließlich stellt sich das Problem, was zu tun ist, wenn die Fälle der
+  Grundgesamtheit nicht gleichartig sind. Wenn wir uns beispielsweise einen
+  Holzwürfel vorstellen, in dessen Innerem ein Stück Blei direkt unter der Eins
+  angebracht ist, wie sollten wir die nun nicht mehr gleichverteilten Fälle von
+  Würfen von eins bis sechs auf eine Grundgesamtheit gleichverteilter Fälle
+  herunterbrechen? Was wären die Fälle der Grundgesamtheit, wenn es nicht mehr
+  die möglichen Würfelergebnisse sein können?
+\end{enumerate} 
+
+Eine Antwort auf die letzte Frage gibt insbesondere die Häufigkeitstheorie der
+Wahrscheinlichkeit, der wir uns nun zuwenden.
+
+\subsubsection{Häufigkeitstheorie}
+\label{Haeufigkeitstheorie}
+Das Problem, das die Fälle der Grundgesamtheit nicht "`gleichartig"' sind, und
+ebenso die Frage, wie man ggf. feststellen kann, ob sie es sind, wird in sehr
+naheliegender Weise durch die Häufigkeitstheorie der
+Wahrscheinlichkeit beantwortet. Nach der Häufigkeitstheorie besteht die
+Wahrscheinlichkeit eines Ereignisses darin, wie häufig es innerhalb einer Menge
+oder Folge von möglichen Ereignissen vorkommt. Präziser müsste man von der
+Häufigkeit eines Ereignistyps in einer Menge von Möglichkeiten, dem
+"`Individuenbereich"' sprechen, denn bei der Häufigkeitstheorie bezieht sich
+die Wahrscheinlichkeit nicht mehr auf ein einzelnes Ereignis sondern auf
+mehrfach vorkommende bzw. wiederkehrende Ereignisse derselben Art.
+Nach der Häufigkeitstheorie würde man unter der Wahrscheinlichkeit, mit der es
+zu einem Flugzeugunglück auf der Strecke von Frankfurt nach New York kommt, die
+Häufigkeit verstehen, mit der dieses Ereignis bezogen auf alle Flüge von
+Frankfurt nach New York eintritt. Die bedingte Wahrscheinlichkeit wäre dann die
+beispielsweise Häufigkeit, mit der Flugzeuge auf dem Flug von Frankfurt nach New
+York bei schlechtem Wetter abstürzen, wenn man in diesem Beispiel das schlechte
+Wetter einmal als Bedingung nimmt.
+
+Entscheidend im Unterschied zur klassischen Wahrscheinlichkeitstheorie ist, dass
+die Häufigkeitstheorie keine Grundgesamtheit gleichartiger im Sinne von
+"`gleichmöglicher"' Fälle mehr voraussetzt, und daher auch auf einen wesentlichen
+breiteren Bereich von Phänomenen passt. Eine zweite wichtige Eigenschaft der
+Häufigkeitstheorie besteht darin, dass sie sich auf Ereignisfolgen unbestimmter
+Größe beziehen lässt. Wenn wir die Wahrscheinlichkeit von "`Kopf- oder Zahl"' bei
+einem Münzerwurf im Sinne der Häufigkeitstheorie verstehen, dann ist die Menge der
+Eriegnisse, auf die sich die Häufigkeit bezieht, d.h. die Menge der Münzwürfe
+überhaupt, unbestimmt groß. Wenn von Häufigkeit die Rede ist, so muss die
+relative Häufigkeit von der absoluten Häufigkeit unterschieden werden. Unter der
+absoluten Häufigkeit ist zu verstehen, wie oft ein bestimmtes Merkmal (z.B. Kopf
+beim Münzwurf) in einer Folge von Ereignissen (Münzwürfe überhaupt) auftritt. Die
+relative Häufigkeit ist dann durch den Quotienten definiert: \[\mbox{relative
+Häufigkeit} := \frac{\mbox{absolute Häufigkeit}}{\mbox{Größe der Ereignisfolge}}
+\] Eine Schwierigkeit entsteht nun, wenn die Ereignisfolge unbestimmt groß ist:
+Wie soll man die relative Häufigkeit in diesem Fall bestimmen. Greift man nur
+eine bestimmte Teilfolge heraus, dann besteht die Gefahr, dass die relative
+Häufigkeit des Merkmals in dieser Teilfolge eine andere ist als die einer
+größeren Folge. Die relative Häufigkeit bezogen auf die Gesamtfolge lässt sich
+wegen der Unbestimmtheit ihrer Größe ja nicht feststellen. (Es ist praktisch
+unmöglich alle Münzwürfe, die jemals auf der Welt durchgeführt werden, zu
+registrieren.) Häufigkeitstheoretiker antworten darauf mit einer empirischen
+Hypothese, dem
+\begin{quote}
+{\em Gesetz der Stabilität der statistischen Häufigkeiten}: Bei
+Massenphänomenen (Münzwürfe, Würfel u.a.) stabilisiert sich die relative
+Häufigkeit bestimmter Merkmale mit zunehmender Zahl der
+Beobachtungen.\cite[S. 92]{gillies:2000}
+\end{quote}
+Wenn man etwas vorsichtiger ist, wird man das Gesetz nicht auf alle
+Massenphänomene schlechthin, sondern nur auf jeweils bestimmte Massenphänomene
+beziehen und damit die Möglichkeit zulassen, dass es Massenphänomene gibt, die
+nicht statistisch erfassbar sind. Akzeptiert man das Gesetz der Stabilität der 
+statistischen Häufigkeiten aber erst einmal, dann lässt sich die
+Wahrscheinlichkeit im Sinne der Häufigkeitstheorie im Prinzip sehr einfach messen, 
+indem man empirische Beobachtungen oder Experimente anstellt. Ab welcher
+Zahl von Beobachtungen die relative Häufigkeit bei einem Massenphänomen
+hinreichend stabil ist, damit wir zuverlässige statistische Aussagen darüber
+treffen können, ist keine Frage mehr, die die philosophischen 
+Grundlagen der Häufigkeitstheorie betrifft,
+sondern die der Kunstlehre der Statistik überlassen bleibt. Für die
+Rechtfertigung der Häufigkeitstheorie muss diese Frage nicht entschieden
+werden. 
+
+Das empirische Gesetz der Stabilität der statistischen Häufigkeiten motiviert
+eine bestimmte Art der Axiomatisierung speziell des {\em
+häufigkeitstheoretischen Wahrscheinlichkeitsbegriffs}. Da der
+häufigkeitstheoretische Wahrscheinlichkeitsbegriff sich auf das Auftreten von
+Merkmalen in einer Ereignisfolge bezieht, wird dafür zunächst der Begriff eines
+{\em Kollektivs} definiert. Unter einem Kollektiv ${\cal C} =
+\{\omega_1,\omega_2,\ldots\}$ versteht man unendliche Folgen von Merkmalen
+$\omega_n$ eines Merkmalsraumes $\Omega$. Dass man in der mathematischen
+Darstellung der {\em unbestimmt großen} empirischen Ereignisfolgen {\em
+unendliche} Merkmalsfolgen verwendet, kann dabei -- vergleichbar den
+"`ausdehnungslosen Punkten"' in der Geometrie -- als eine der Idealisierungen
+gerechtfertigt werden, deren man sich bei der mathematischen Repräsentation
+empirischer Sachverhalte stets bedient. Die Wahrscheinlichkeit des Auftretens
+eines Merkmals wird dabei immer auf ein solches Kollektiv bezogen. Die
+Häufigkeitstheorie definiert die Wahrscheinlichkeiten also von vornherein als
+bedingte Wahrscheinlichkeiten. Von diesen "`Kollektive"' genannten
+Merkmalsfolgen wird nun verlangt, dass sie die folgenden beiden Axiome erfüllen 
+(Vgl. \cite[S.97, 105]{gillies:2000}):
+
+\begin{enumerate}
+  \item Axiom ({\em Axiom der Konvergenz}): Sei A eine beliebige Menge
+  von Merkmalen des Kollektivs ${\cal C}$ und $m(A)$ die Häufigkeit, mit der
+  Merkmale dieser Menge unter den ersten $n$ Folgegliedern des Kollektivs
+  auftreten, dann {\em existiert} der Grenzwert $\lim_{n\to\infty} m(A)/n$ und
+  es gilt per Definition $P(A|{\cal C}) := \lim_{n\to\infty} m(A)/n$
+  \item Axiom ({\em Axiom der Zufälligkeit}): Für jedes {\em zufällig}
+  ausgewählte Teilkollektiv ${\cal C'}$ von ${\cal C}$ gilt: 
+  $ P(A|{\cal C'}) = P(A|{\cal C}) $, d.h. der Grenzwert der relativen
+  Häufigkeit des Teilkollektivs ${\cal C'}$ muss derselbe sein wie der Grenzwert des relativen
+  Häufigkeit des Kollektivs ${\cal C}$ selbst.
+\end{enumerate}
+
+Bezüglich dieser Axiome stellen sich nun drei Fragen: 1. Ist die
+Axiomatisierung sinnvoll, d.h. was sagen die beiden Axiome eigentlich aus und
+warum werden beide gebraucht? 2. Ist mit diesen Axiomen {\em eine}
+Wahrscheinlichkeit im Kolmogorowschen Sinne definiert? 3. Gibt es Einwände
+gegen die Axiome und insbesondere, gibt es Wahrscheinlichkeiten, die von diesen
+Axiomen nicht erfasst werden?
+
+\paragraph{1. Erläuterung.} Zunächst zur Erläuterung dieser Axiome. Das erste
+Axiom verlangt, dass in jedem Kollektiv der Grenzwert der relativen Häufigkeit 
+jeden darin vorkommenden
+Merkmals existiert. Kann man dergleichen überhaupt per Axiom fordern? Was ist
+mit Folgen (weiter unten werden wir eine kennen lernen), bei denen dies nicht der Fall ist? 
+Die Antwort ist: Da die Axiome {\em implizite Definitionen} der darin
+vorkommenden Begriffe sind, sind Merkmalsfolgen, bei denen für mindestens ein
+Merkmal der Grenzwert der relativen Häufigkeit nicht definiert ist, keine
+Kollektive im Sinne der Haufigkeitstheorie. Für solche Folgen sind
+dementsprechend auch keine Wahrscheinlichkeiten im Sinne der Häufigkeitstheorie
+definiert.
+
+Das zweite Axiom fordert, dass auch jede {\em zufällig}(!) ausgewählte
+Teilfolge für alle Merkmale denselben Grenzwert der relativen Häufigkeit
+aufweist. Das zweite Axiom ist deshalb notwendig, weil nur so sichergestellt
+ist, dass sich Stichproben aus dem Kollektiv im Sinne des {\em Gesetzes der
+Stabilität der statistischen Häufigkeiten} auf Lange Sicht auf denselben
+Grenzwert stabilisieren. Natürlich kann ein Axiom niemals sicherstellen, dass
+das empirisch tatsächlich der Fall ist, aber wenn man schon annimmt, dass das 
+ {\em Gesetzes der Stabilität der statistischen Häufigkeiten} empirisch gilt,
+ dann muss man es im Rahmen einer axiomatischen Theorie, die empirisch
+ angewendet werden soll, in irgendeiner Form erfassen, entweder als Axiom oder
+ als abgeleitetes Theorem.
+ 
+ Die Schwierigkeit von Axiom 2, die den Erfindern der Häufigkeitstheorie über
+ viele Jahre Kopfzerbrechen bereitet hat \cite[S. 105ff.]{gillies:2000}, liegt
+ in dem Ausdruck {\em zufällig} verborgen. Man kann sich leicht überlegen,
+ dass, wenn die Auswahl der Teilfolge nicht zufällig getroffen wird, die
+ Wahrscheinlichkeit im Sinne der Häufigkeitstheorie nur noch für triviale
+ Kollektionen definiert wäre, in denen die Wahrscheinlichkeit jedes Merkmals
+ entweder 0 oder 1 ist. Denn wenn die nach Axiom 1 definierte
+ Wahrscheinlichkeit des Auftretens eines Merkmals A (oder präziser einer Menge
+ von Merkmalen A) in einem Kollektiv ${\cal C}$ nicht 1 ist, dann müsste man nur
+ diejenige Teilfolge ${\cal C'}$ auswählen, die aus genau den Folgegliedern 
+ des Kollektivs besteht, bei denen das Merkmal
+ auftritt ($\omega_i \in A$). In dem Teilkollektiv ${\cal C'}$ beträgt der
+ Grenzwert der relativen Häufigkeit des Merkmals dann 1. 
+ 
+ Die mathematisch genaue Definition von {\em Zufälligkeit} in diesem
+ Zusammenhang erfordert etwas mehr Hintergrundwissen in der Mathematik und
+ Informatik als an dieser Stelle vermittelt werden kann. In Kürze nur soviel:
+ Zufällig im Sinne des Axioms ist eine Auswahl, wenn sie durch eine {\em
+ rekursive Funktion} im Sinne von Alonso Church beschrieben werden kann. 
+ Eine {\em rekursive Funktion}
+ ist eine Abildung der natürlichen Zahlen auf die natürlichen Zahlen, deren
+ Funktionswerte in {\em endlich vielen Rechenschritten} ermittelt werden können.
+ Es lässt sich zeigen, dass dann noch überabzählbar und damit sicherlich
+ hinreichend viele nicht-triviale Kollektive beide Axiome erfüllen. Näheres
+ dazu bei Donald Gillies \cite[S. 108]{gillies:2000}.
+ 
+ \paragraph{2. Nachweis der Erfüllung der Kolmogorowschen Axiome.} Dass mit den
+ beiden Axiomen der Häufigkeitstheorie eine Wahrscheinlichkeit im Sinne 
+ Kolmogorows definiert ist lässt sich leicht nachweisen:
+ \begin{enumerate}
+   \item Das erste Kolmogorowsche Axiom $0 \leq P(p)$ gilt (wenn man unter p
+   die Aussage versteht, dass ein Merkmal aus der Menge von Merkmalen A auftritt) 
+   offensichtlich, da sowohl $m(A) \geq 0$ als auch $n \geq 0$ und damit auch
+   $\lim_{n\to\infty} m(A)/n \geq 0$. 
+   \item Das zweite Axiom $P(\Omega) = 1$ gilt ebenfalls offensichtlich, da
+   jedes Glied der Kollektion $\omega_i \in \Omega$ und damit $m(A) = n$, so
+   dass $\lim_{n\to\infty} m(A)/n = 1$
+   \item Das dritte Axiom, die Additivität der Wahrscheinlichkeit, die wir
+   bezogen auf die Häufigkeitstheorie leicht umformulieren können als:
+   \[P(A \cup B) = P(A) + P(A) \qquad A \cap B = \emptyset\] ergibt sich, wenn
+   man sich klar macht, dass mit $ A \cap B = \emptyset $ gilt:
+   \[\frac{m(A)}{n} + \frac{m(B)}{n} = \frac{m(A \cup B)}{n}\]
+   woraus sich mit
+   dem Axiom der Konvergenz und den bekannten Rechenregeln für Grenzwerte
+   ergibt:
+   \begin{eqnarray*} 
+   P(A) + P(B) & = & \lim_{n\to\infty} \frac{m(A)}{n} + 
+                   \lim_{n\to\infty} \frac{m(B)}{n} \\
+   { }         & = & \lim_{n\to\infty} (\frac{m(A)}{n} + \frac{m(B)}{n}) \\ 
+   { }         & = & \lim_{n\to\infty} \frac{m(A \cup B)}{n} \\
+   { }         & = & P(A \cup B)
+   \end{eqnarray*}
+ \end{enumerate}
+ 
+ Etwas aufwendiger ist wieder die Behandlung der bedingten
+ Wahrscheinlichkeiten. Zunächst muss die bedingte Wahrscheinlichkeit $P(A|B)$ in
+ Bezug auf den Häufigkeitsbegriff der Wahrscheinlichkeit erklärt werden. Da die
+ Häufigkeitstheorie die Wahrscheinlichkeit des Auftretens eines Merkmals immer
+ schon bedingt auf ein Kollektiv versteht ($P(A|{\cal C})$), stellt sich die
+ Frage, wie die Wahrscheinlichkeit eines Merkmals unter der Bedingung, dass ein anderes
+ Merkmal aufgetreten ist, zu verstehen ist. Dies ist aber leicht möglich: Wir
+ schreiben für $P(A|B)$ einfach $P(A|B \& {\cal C})$, wobei unter $B \& {\cal
+ C}$ diejenige Teilfolge von ${\cal C}$ zu verstehen ist, die durch die Auswahl
+ derjenigen Folgeglieder von ${\cal C}$ zustande kommt, bei denen das Merkmal
+ (bzw. die Merkmalsmenge) B auftritt. (Sollte B nur endlich oft in ${\cal C}$
+ auftauchen, also gar keine echte Teilfolge bilden können, dann gilt
+ $P(B|{\cal C})=0$ und wir setzen $P(A|B \& {\cal C}):=0$. Im folgenden nehmen
+ wir weiterhin $P(B|{\cal C})=0$ an.\footnote{Aus Gründen der Einfachheit
+ wird hier auf die Behandlung dieses Sonderfalls verzichtet. Andernfalls
+ müsste diese Möglichkeit im folgenden Beweis mit Hilfe einer Fallunterscheidung
+ berücksichtigt werden!}) Nun muss allerdings noch gezeigt werden, dass $B \&
+ {\cal C}$ auch ein Kollektiv ist, d.h. das $B \& {\cal C}$ ebenfalls 
+ das Axiome der Konvergenz und das Axiom der 
+ Zufälligkeit erfüllt. 
+ 
+ Dass $B \& {\cal C}$ ebenfalls ein Kollektiv ist, kann bewiesen
+ werden,\footnote{Da $B \& {\cal C}$ nicht unbedingt eine zufällige Auswahl
+ aus {\cal C} darstellt, kann man sich den Beweis {\em nicht} durch Anwendung
+ des Axioms der Zufälligkeit ersparen!} indem man zeigt, dass für jedes beliebige
+ Merkmal $A$ (bzw. jede beliebige Merkmalsmenge $A$) der Grenzwert der relativen
+ Häufigkeit von $A$ in $B \& {\cal C}$ existiert. Dass ist aber der Fall, denn:
+ \begin{enumerate}
+   \item Für jedes beliebige $n$ gilt, dass $B$ in ${\cal C}$ mit einer
+   bestimmten Häufigkeit, nennen wir sie $n(B)$, vorkommt.
+   \item Da der Fall $P(B|C)=0$ bereits behandelt und somit ausgeschlossen
+   wurde, gilt weiterhin, dass mit $n\to\infty$ auch $n(B)\to\infty$.
+   \item Sei die absolute Häufigkeit, mit der $A$ unter den ersten $n(B)$
+   Gliedern der Folge $B \& {\cal C}$ auftritt, mit $m(A)$ bezeichnet. Und sei
+   weiterhin die Häufigkeit der Fälle, in denen $A$ und gleichzeitig $B$ unter
+   den ersten $n$ Folgegliedern von ${\cal C}$ auftreten, mit $n(A \& B)$
+   bezeichnet. Dann gilt offensichtlich: $m(A)$ = $n(A \& B)$.
+   \item Dann lässt sich folgende Rechnung aufstellen:
+   \[ \lim_{n(B)\to\infty}\frac{m(A)}{n(B)} =
+      \lim_{n(B)\to\infty}\frac{n(A \& B)}{n(B)} =
+      \lim_{n\to\infty}\frac{n(A \& B)/n}{n(B)/n} \]
+   Sowohl $A \& B$\footnote{Anmerkung zur Nomenklatur: In streng
+   mengentheoretischer Schreibweise müsste man $A \cap B$ schreiben. Bezieht
+   man die Wahrscheinlichkeiten, wie in der letzten Vorlesung auf die
+   Richtigkeit von Aussagen, dann müsste man für die Aussage, dass das Merkmal
+   A und das Merkmal B eingetreten sind entsprechend den Gepflogenheiten der
+   formalen Logik $A \wedge B$ schreiben.} als auch $B$ sind Merkmale, die in
+   dem Kollektiv ${\cal C}$ auftreten können. Nach dem Axiom der Konvergenz ist
+   damit der Grenzwert sowohl für den Zähler als auch für den Nenner definiert.
+   Aufgrund der Voraussetzung, dass $P(B|{\cal C}) \neq 0$ und damit nach der
+   häufigkeitstheoretischen Definition von $P(B|{\cal C})$ auch
+   $\lim_{n\to\infty}m(B)/n \neq 0$ gilt daher, dass der Grenzert
+   \[ \lim_{n(B)\to\infty}\frac{m(A)}{n(B)} \qquad \mbox{existiert!}\]
+   Damit und da der Quotient $m(A)/n(B) = m(A)/n'$ mit $n' := n(B)$ nach
+   der Definition von $m(A)$ auch die relative Häufigkeit von $A$ in der Folge
+   $B \& {\cal C}$ beschreibt, ist implizit gezeigt, dass $B \& {\cal C}$
+   ebenfalls eine Kollektion ist und das Axiom der Konvergenz auch für bedingte
+   Wahrscheinlichkeiten erfüllt ist. 
+ \end{enumerate} 
+  
+Nach der Rechnung oben und der Definition der
+Wahrscheinlichkeit als Grenzwert der relativen Häufigkeiten, gilt nun:
+\[ P(A|B) = \lim_{n(B)\to\infty}\frac{m(A)}{n(B)} = 
+            \frac{P(A\&B)}{P(B)} \]
+was genau der Definition der bedingten Wahrscheinlichkeit für Kolmogorowsche
+Wahrscheinlichkeiten entspricht. (Beweis nach D. Gillies
+\cite[S. 111/112]{gillies:2000}.)  
+
+Zu zeigen bleibt noch, dass bedingte Wahrscheinlichkeiten nach der
+Häufigkeitstheorie auch das zweite Axiom, das der Zufälligkeit, erfüllen. Es
+muss also gezeigt werden, dass der Grenzwert der relativen Häufigkeit jedes
+bliebigen Merkmals $A$ in der Folge $B \& {\cal C}$ der gleiche ist wie in der
+zufällig ausgewählten Teilfolge $(B \& {\cal C})'$. Da wir den Begriff der {\em
+zufälligen Auswahl} im Rahmen dieser Vorlesung nicht mathematisch präzise
+eingeführt haben, kann der Beweis hier nur angedeutet werden:
+
+Sei $(B \& {\cal C})'$ ein zufällig ausgewähltes Teilkollektiv von $B \& {\cal
+C}$. Dann kann man mit Hilfe dieser Zufallswauswahl eine Zufallsauswahl ${\cal C'}$
+des Kollektivs ${\cal C}$ bilden, die sich bei allen Folgegliedern von ${\cal
+C}$, die in der Teilfolge $B \& {\cal C}$ auftauchen, mit der Auswahl $(B \&
+{\cal C})'$ deckt. Ist das aber der Fall, dann entspricht die Zufallsauswahl $(B \& {\cal
+C})'$ der Auswahl $B \& {\cal C}'$. Aus dem ersten Teil des Beweises wissen
+wir, dass $B \& {\cal C}$ und $B \& {\cal C'}$ ebenfalls Kollektive sind.
+Auf Grund des Axioms der Zufälligkeit wissen wir, dass der Grenzwert:
+$\lim_{n\to\infty}n(B)/n$ für ${\cal C}$ und für ${\cal C'}$ ein- und derselbe
+ist. Dass heisst aber auch, dass für jedes beliebige $A$ der Grenzwert
+\[ \lim_{n\to\infty}\frac{n(A \& B)/n}{n(B)/n} \]
+ein- und derselbe ist, ganz gleich welches der beiden Kollektive ${\cal C}$ und
+${\cal C'}$ man zugrunde legt. Damit ist aber gezeigt, dass die bedingte
+häufigkeitstheoretische Wahrscheinlichkeit ein- und dieselbe bleibt, unabhängig
+davon, welches Teilkollektiv man auswählt -- ganz so, wie es das Axiom der
+Zufälligkeit fordert. (Vgl. \cite[S. 112]{gillies:2000})
+
+Die Häufigkeitstheorie erfüllt also die Axiome Kolmogorows und definiert damit,
+wie man sagen könnte, mathematisch korrekte Wahrscheinlichkeiten. Wenn es nur
+darum gegangen wäre, die Kolmogorowschen Axiome zu erfüllen, so hätte das erste
+Axiom der Häufigkeitstheorie (Konvergenzaxiom) bereits ausgereicht. Das zweite
+Axiom ist für die Erfüllung der kolmogorowschen Axiome nicht notwendig. Es
+bildet aus anderen Gründen einen wesentlichen Bestandteil der
+Häufigkeitstheorie. Das zweite Axiom bildet das {\em Gesetz der Stabilität der
+statistischen Häufigkeiten} auf die mathematische Häufigkeitstheorie ab, und
+stellt daher die für eine anwendungstaugliche Theorie notwendige Beziehung zur
+Empirie her. Ohne das Axiom der Zufälligkeit würde es Wahrscheinlichkeiten im
+häufigkeitstheoretischen Sinne geben können, für die man sich nicht auf das 
+{\em Gesetz der Stabilität der statistischen Häufigkeiten} verlassen kann. 
+
+\paragraph{3. Einwände und Diskussion} Welche Einwände gibt es gegen die
+Häufigkeitstheorie? Die Häufigkeitstheorie ist wie alle
+Wahrscheinlichkeitstheorien, die "`unterhalb"' der Kolmogorwschen Axiome ansetzen, 
+keineswegs unumstritten. Manche Autoren lehnen sie sogar
+grundsätzlich ab \cite[]{bosch:1976}. Welche Argumente könnte man dafür
+anführen? 
+
+Denjenigen, die sich bereits etwas mit der Statistik auskennen, düfte
+vielleicht schon aufgefallen sein, dass das Konvergenzaxiom in einem
+eigentümlichen Gegensatz zu dem sogenannten "`Gesetz der großen Zahlen"' steht.
+Das Gesetz der großen Zahlen besagt sinngemäß, dass wenn irgendein Merkmal $A$
+eine bestimmte Wahrscheinlichkeit $r$ hat, dass dann die Wahrscheinlichkeit,
+dass die relative Häufigkeit vom Wahrscheinlichkeitswert $r$ abweicht, gegen 0
+geht. Das Konvergenzaxiom fordert aber, dass die relative Häufigkeit gegen $r$
+geht. Widerspricht das nicht dem Gesetz der großen Zahlen, da es nach dem Gesetz
+der großen Zahlen doch Fälle geben kann, in denen der Häufigkeitsgrenzwert nicht
+erreicht wird? Die Antwort ist Folgende: Die Häufigkeitstheorie definiert einen
+engeren Wahrscheinlichkeitsbegriff als das Gesetz der großen Zahlen. Jede
+Wahrscheinlichkeit im Sinne der Häufigkeitstheorie erfüllt selbstverständlich
+das Gesetz der großen Zahlen, aber nicht umgekehrt. (Das Gesetz der großen
+Zahlen könnte im Rahmen der Häufigkeitstheorie sogar überflüssig erscheinen, da
+mit dem Konvergenzaxiom ja bereits ein "`strengeres"' Gesetz existiert.)
+Anders als das Konvergenzaxiom taugt das Gesetz der großen Zahlen nicht, wie
+die naive statistische Theorie manchmal annimt, zur Definition des
+Wahrscheinlichkeitsbegriffs, da das Definiendum dann im Definiens auftreten
+würde, womit die Definition zirkulär wäre \cite[S. 113]{schurz:2006}. Der
+Einwand verweist aber darauf, dass der Wahrscheinlichkeitsbegriff der
+Häufigkeitstheorie nicht als erschöpfend angesehen werden kann. Die
+Häufigkeitstheorie kann aus diesem Grund unnötig restriktiv erscheinen.
+
+% , zumindest dann
+% nicht, wenn wir sinnvolle Beispiele für Wahrscheinlichkeiten finden können, die
+% nach den Kriterien der Häufigkeitstheorie keine Wahrscheinlichkeiten wären. Ein
+% Beispiel ist das Folgende: Man betrachte die Folge aus Nullen und Einsen, bei
+% der das erste Folgeglied und 0, das folgende eine 1, die nächsten beiden 0, die
+% folgenden beiden 1, die nächsten sechs Glieder 0, die folgenden sechs Glieder 1
+% sind. Die Folge hätte etwa diese Gestalt:
+% \[ 01 0011 000000 111111 000000000000000000 111111111111111111 \ldots \]
+% Offenbar enthält die Folge genausoviele Nullen wie Einsen und die
+% Wahrscheinlichkeit, eine 0 oder eine 1 anzutreffen, müsste so gesehen genau
+% 50\% betragen. Trotzdem ossziliert die relative Häufigkeit, mit der eine 1
+% auftritt zwischen 1/2 und 1/4. 
+
+Andere Einwände gegen die Häufigkeitstheorie sind eher empirischer Natur, etwa
+dergestalt, dass es ohnehin keine beliebig großen Folgen völlig gleichartiger
+Ereignisse gäbe (etwa: "`Jeder Würfel nützt sich irgendwann ab! Zwei
+unterschiedliche Münzen sind niemals ganz gleich!"' etc.) und schon gar keine
+unendlich großen. Die entscheidende Frage besteht darin, ob man bereit ist, die
+Axiome der Häufigkeitstheorie als idealisierende Abstraktion eines empirischen
+Sachverhalts bzw. einer Vielzahl empirischer Sachverhalte (nämlich, dass wir
+die Wahrscheinlichkeiten statistischer Vorgänge mit zunehmend größeren
+Stichproben zunehmend zuverlässig messen können) zu akzeptieren. Anlässlich der
+vielfältigen Einsatzmöglichkeiten statistischer Methoden enthält die
+Häufigkeitstheorie in empirischer Hinsicht weit weniger starke Zumutungen als
+die im Folgenden zu besprechende Theorie der subjektiven Wahrscheinlichkeiten.
+
+\subsubsection{Ein Wort zu Propensitäten}
+
+Wenn der Wahrscheinlichkeitsbegriff der Häufigkeitstheorie nicht
+erschöpfend ist, dann ist zumindest Raum für weitere
+Wahrscheinlichkeitsbegriffe. Eine weitere wichtige Klasse von {\em objektiven}
+Wahrscheinlichkeiten wird durch die verschiedenen Propensitätstheorien
+definiert. Da die entsprechenden Wahrscheinlichkeitsbegriffe aber für die
+Spiel- und Entscheidungstheorie keine zentrale Rolle spielen, und die
+Propensitätstheorien zudem noch wenig kanonisiert sind, werden sie hier nur
+erwähnt. Für Interessierte sei auf die Fachliteratur, insbesondere auf die
+sehr lesbare Darstellung von Donald Gillies \cite[]{gillies:2000} verwiesen. 
+Wir werden uns statt dessen gleich den subjektiven Wahrscheinlichkeiten
+zuwenden, die die Grundlage der modernen Nutzentheorie bilden.
+
+\subsection{Subjektive Wahrscheinlichkeiten}
+\label{SubjektiveWahrscheinlichkeiten}
+Die im Zusammenhang mit der Entscheidungs- und Spieltheorie wichtigste Theorie
+der Wahrscheinlichkeit ist die Theorie der subjektiven Wahrscheinlichkeit, wie
+sie ursprünglich von Ramsey und De Finetti entwickelt wurde \cite[p.
+68ff.]{resnik:1987}. Subjektive Wahrscheinlichkeiten kommen im täglichen Leben u.a. dann vor, wenn
+wir Wetten abschließen. Daran knüpft die subjektive Wahrscheinlichkeitstheorie
+an. Natürlich kann die Theorie nicht vorschreiben, wie hoch wir auf etwas
+wetten sollen, oder mit welcher Wahrscheinlichkeit wir davon ausgehen sollen,
+dass diese oder jene Fussballmanschaft gewinnt, oder dieses oder jenes Pferd
+ein Rennen gewinnt etc., denn diese Einschätzungen sind ja gerade subjektiv.
+Was uns die Theorie subjektiver Wahrscheinlichkeiten aber zeigen kann,
+das ist, ob unsere Wahrscheinlichkeitseinschätzungen in sich konsistent sind,
+wenn sie sich auf mehrere, mit einander verbundene Sachverhalte beziehen.
+
+Dazu ein einfaches Beispiel: Jemand behauptet, dass die Chancen,
+dass beim Bundesligaspiel Nürnberg gegen Bayern München die Chancen für einen
+Sieg von Nürnberg 90\% betragen. Dann muss er, um konsequent zu sein, auch
+zugleich der Ansicht sein, dass ein Sieg für Bayern München zu 10\%
+wahrscheinlich ist. Was wäre, wenn das nicht der Fall ist? Wenn z.B. jemand der
+Ansicht ist, dass ein Sieg Nürnbergs zu 90\% wahrscheinlich ist, eine
+Sieg Bayerns aber zugleich zu 50\% für wahrscheinlich hält. Dann könnte ein
+Buchmacher mit diesem mathematisch unkundigen Fussballfan eine sehr vorteilhafte
+Wette abschließen. Er würde z.B. vorschlagen: "`Lass uns auf beides 100 € wetten,
+d.h. da Du den Sieg von Nürnberg zu 90\% für wahrscheinlich hälst, zahlst Du 90
+€ ein und ich 10 €. Und für die Wette auf Bayern zahlen wir beide 50 € ein. Wer
+die Wette gewinnt, bekommt in dem einen, wie in dem anderen Fall die gesamten
+Einzahlungen."' Geht der Fussballfan auf dieses Wettverfahren ein, dann hat der
+Buchmacher in jedem Fall einen Gewinn von 40 € sicher. Denn, wenn Nürnberg
+gewinnt, hat er in der ersten Wette 10 € verloren und in der zweiten 50 €
+gewonnen und, wenn Bayern gewinnt, hat er bei der zweiten Wette 50 € verloren
+aber bei der der ersten 90 € gewonnen. Man sagt auch (in der
+englischen Fachliteratur), er habe ein "`{\em Dutch Book}"' gegen den
+unachtsamen Wettfreund gemacht.
+
+Vor allem zeigt das Beispiel, dass unsere subjektiven
+Wahrscheinlichkeitseinschätzungen, sollen sie konsistent sein, nicht vollkommen
+willkürlich sein dürfen. Sobald wir nämlich der Richtigkeit
+irgendwelcher Aussagen (oder dem Eintreten irgendwelcher Ereignisse) bestimmte
+Wahrscheinlichkeiten zuweisen, ergeben sich daraus implizit die
+Wahrscheinlichkeiten, die wir den logischen Verknüpfungen dieser Aussagen
+mit {\em und}, {\em oder} und {\em nicht} und den bedingten
+Aussagen zuweisen müssen, wenn wir vermeiden wollen, das jemand ein "`Dutch
+Book"', d.h. eine "`todsichere Wette"' gegen uns abschließen kann.
+
+Die Menge aller Aussagen, die man durch logische Verknüpfung oder
+Bedingungsbildung aus einer Grundmenge von Aussagen bilden kann, nennt man auch
+den {\em De Finetti-Abschluss}\label{DeFinettiAbschluss} dieser Grundmenge von
+Aussagen. Die Frage ist nun, welche Wahrscheinlichkeiten wir den verküpften und
+bedingten Aussagen zuweisen müssen, damit sie konsistent in dem Sinne sind, dass
+man keine "`todsichere Wette"' gegen sie abschließen kann? Das zentrale Theorem der
+subjektiven Wahrscheinlichkeitstheorie besagt, dass dies {\em genau dann} der
+Fall ist, wenn die dem System dieser Aussagen (i.e. dem {\em De
+Finetti-Abschluss}) zugewiesenen Wahrscheinlichkeitswerte den Gesetzen der
+Wahrscheinlichkeitsrechnung gehorchen, d.h. wenn sie die kolmogorowschen Axiome
+erfüllen. 
+
+\begin{quote}
+{\em Ramsey-De Finetti Theorem:} Die einer Menge von Aussagen zugewiesenen
+subjektiven Wahrscheinlichkeiten sind genau dann in sich konsistent (in dem
+Sinne, dass keine "`todsicheren Wetten"' möglich sind), wenn sie den
+kolmogorowschen Axiomen gehorchen.
+\end{quote}
+
+Dieses Theorem stellt eine Beziehung her zwischen einer grob an den empirischen
+Phänomenen des Wettens orientierten Konsistenzbedingung und den Gesetzen der
+Wahrscheinlichkeitsrechnung. Wir werden zunächst den Beweis des Theorems führen
+und dann, wie schon bei den anderen Interpretationen des
+Wahrscheinlichkeitsbegriffs auch, die Argumente untersuchen, die für oder
+gegen die Annahme subjektiver Wahrscheinlichkeiten sprechen. 
+
+\paragraph{Beweis des Ramsey-De Finetti Theorems} Für den Beweis müssen wir
+präzisieren, was wir unter einer Wette verstehen. Dazu sind zunächst die 
+Rollen des Wettenden und des Buchmachers zu unterscheiden. Der
+Wettende darf festlegen welche Wahrscheinlichkeiten er allen Aussagen bzw.
+Ereignissen zuweist. Der Buchmacher darf anschließend entscheiden, ob er dafür
+oder dagegen wettet, d.h. er legt einen positiven oder negativen Wettbetrag $S$
+("`S"' wie "`stakes"') für die Wette fest. Die Wette spielt sicht dann immer
+folgendermaßen ab, zunächst muss der Wettende den Betrag $qS$ (bei einem
+Treuhänder) einzahlen. Gewinnt er die Wette, d.h. tritt das Ereignis ein, dann
+bekommt er den Betrag $S$ zurück. Verliert er die Wette, so verliert er seine Einzahlung. 
+Legt der Buchmacher den
+Wettbetrag auf einen negativen Wert $S$ fest, dann sind auch die Ein- und
+Auszahlungen entsprechend negiert. Dann muss zunächst der Buchmacher einen
+Betrag von $q \cdot |S|$ einzahlen, und bekommt $|S|$ ausgezahlt, wenn das
+Ereignis eintritt. Es mag etwas sonderbar erscheinen,
+dass der Buchmacher entscheiden darf, ob er "`dafür"' oder "`dagegen"' wettet, 
+aber andernfalls hätte die Zuweisung eines
+Wettquotienten durch den Wettenden wenig Sinn, da er ihn schon aus taktischen
+Gründen entweder möglichst hoch oder möglichst niedrig ansetzen würde, je
+nachdem, ob der Buchmacher gezwungen ist, dafür oder dagegen zu wetten. Nur
+wenn der Wettende nicht weiß, ob der Buchmacher dafür oder dagegen wettet, wird
+er seinen Wettquotienten exakt so wählen, wie es seiner
+Wahrscheinlichkeitseinschätzung entspricht. 
+
+Um den Beweis zu führen, zeigen wir zunächst, dass aus der Konsistenzannahme die
+kolmogorowschen Axiome folgen, und dann in einem zweiten Schritt, dass aus den
+Komogorwschen Axiomen die Konsistenz der Wahrscheinlichkeitszuweisungen folgt.
+Wir nehmen also an, dass wir
+eine Menge von Aussagen oder Ereignissen haben, denen konsistente Wahrscheinlichkeiten 
+in dem oben beschriebenen Sinne zugewiesen
+worden sind. Dann gilt (Beweis nach Gillies \cite[S. 60ff.]{gillies:2000}):
+\begin{enumerate}
+  \item {\em kolmogorowsches Axiom} (indirekter Beweis): Angenommen jemand
+  weist irgendeinem Ereignis $e$ eine Wahrscheinlichkeit $q < 0$ zu, dann 
+  wird der Buchmacher immer gewinnen, wenn er S < 0 wählt. (Da der Buchmacher
+  S < 0 gewählt hat, muss er $q\cdot |S|$ "`einzahlen"'. Da aber $q < 0$ heisst
+  das in Wirklichkeit, dass er $|q|\cdot |S|$ bekommt. Den Betrag hat der
+  Buchmacher auf jeden Fall sicher. Gewinnt er dann noch die Wette, dann bekommt er sogar noch $|S|$
+  oben drauf. Der Buchmacher hat also eine "`todsichere Wette"' abgeschlossen.)
+  
+  Wenn also das 1. kolmogorowsche Axiom verletzt wird, dann war die
+  Wahrscheinlichkeitszuweisung auch inkonsistent im Sinne des Wettkriteriums.
+  Da wir die Konsistenz aber voraussetzen, muss das 1. kolmogorowsche Axiom
+  erfüllt sein.
+ 
+  \item {\em kolmogorowsches Axiom} (indirekter Beweis): Angenommen einem
+  beliebigen Ereignis $e$ wurde eine Wahrscheinlichkeit $q > 1$
+  zugewiesen, dann gewinnt der Buchmacher immer, wenn er S > 0 wählt. (Der
+  Wettende zahlt $q\cdot S > S$ ein bekommt aber höchstens $S$ zurück.)
+  Um konsistent zu sein, darf also keinem Ereignis eine Wahrscheinlichkeit
+  größer 1 zugewiesen werden. Insbesondere gilt dies auch für ein Ereignis,
+  dessen Eintreten sicher ist.
+  
+  Angenommen der Wettende weist einem {\em sicheren} Ereignis $\Omega$ eine
+  Wahrscheinlichkeit $q < 1$ zu, dann gewinnt der Buchmacher immer, wenn er
+  S < 0 wählt. (Dadurch wettet der Buchmacher für das Ereignis $\Omega$. Da das
+  Ereignis sicher ist, bekommt der Buchmacher mit Sicherheit $|S|$ für seine
+  Einzahlung von $q|S| < |S|$ zurück.) Um konsistent im Sinne des
+  Wettkriteriums zu bleiben, darf also einem sicheren Ereignis auch niemals eine
+  Wahrscheinlichkeit kleiner 1 zugewiesen werden.
+  
+  \item {\em kolmogorowsches Axiom} (indirekter Beweis): Wir führen
+  den Beweis in zwei Schritten. Zunächst wird gezeigt, dass aus den Konsistenz
+  der Wahrscheinlichkeitszuweisungen folgt, dass für Wahrscheinlichkeiten einer
+  beliebigen Menge sich (paarweise) wechselseitg ausschließender Ereignisse
+  $e_1,\ldots, e_n$, die zugleich ausschöpfend sind (d.h. eins davon tritt auf
+  jeden Fall ein), gilt, dass $P(e_1) + \ldots + P(e_n) = 1$. Dann wird
+  gezeigt, dass daraus das 3. kolmogorowsche Axiom folgt.
+  
+  Angenommen jemand weist einer Menge sich wechselseitg ausschließender, aber
+  ausschöpfender Ereignisse $e_1,\ldots, e_n$ die Wahrscheinlichkeiten
+  $q_1,\ldots,q_n$ zu. und der Buchmacher setzt für alle Wetten denselben
+  Wettbetrag $S$ an. Dann beträgt der Gewinn des Buchmachers, wenn das Ereignis
+  $E_i$ eintritt:
+  \[ G = q_1S + \ldots + q_nS - S = S(q_1 + \ldots + q_n -1) \]
+  Wählt der Wettende die Wahrscheinlichkeiten so, dass $q_1 + \ldots + q_n > 1$,
+  dann gewinnt der Buchmacher immer, wenn er $S > 0$ ansetzt. Wählt der
+  Wettende die Wahrscheinlichkeiten so, dass $q_1 + \ldots + q_n < 1$, so
+  gewinnt der Buchmacher immer, wenn er $S < 0$ wählt.
+  
+  
+  Also muss der Wettende, um konsistent zu bleiben $q_1 + \ldots + q_n = 1$
+  wählen. Hat er das aber (für jede Menge paarweise unvereinbarer und
+  vollständig ausschöpfender Ereignisse) getan, dann erfüllen seine
+  Wahrscheinlichkeitszuweisungen auch das 3. kolmogorowsche Axiom, denn:
+  Seien $e$ und $f$ zwei beliebige, sich wechselseitig ausschließende
+  Ereignisse, dann gilt nach Voraussetzung für die Wahrscheinlichkeitszuweisung
+  des Wettenden: 
+  \[ P(e) + P(f) + P(\neg (e \vee f)) = 1 \]
+  Da $e \vee f$ und $\neg (e \vee f)$ sich aber ebenfalls ausschließen,
+  eins von beiden Ereignissen aber eintreten muss, gilt ebenfalls: 
+  \[\ P(e \vee f) + P(\neg (e \vee f)) = 1 \]
+  Subtrahieren wir die zweite von der ersten Gleichung, so folgt das
+  3. kolmogorowsche Axiom:
+  \begin{eqnarray*} 
+  P(e) + P(f) - P(e \vee f) & = & 0 \qquad \Leftrightarrow \\
+  P(e) + P(f) & = & P(e \vee f) 
+  \end{eqnarray*}
+
+  \item {\em Bedingte Wahrscheinlichkeit}. Zunächst ist zu erklären, was unter
+  einer bedingten Wahrscheinlichkeit zu verstehen ist, wenn wir die
+  Wahrscheinlichkeiten als Wettquotienten verstehen. $P(e|f)$ ist zu verstehen
+  als der Wettquotient, mit dem auf das Ereignis e gewettet wird, sofern $f$
+  eintritt. Tritt $f$ nicht ein, so findet keine Wette statt. Es handelt sich
+  also um eine Art "`Optionswette"'. Zu zeigen ist nun, dass bei
+  einer konsistenten Festlegung aller bedingten Wettquotienten, die bedingte
+  Wahrscheinlichkeit im Sinne der Theorie subjektivier Wahrscheinlichkeiten der
+  bedingten Wahrscheinlichkeit wie sie im Zusammenhang mit den kolmogorowschen
+  Axiomen definiert wurde (\pageref{bedingteWahrscheinlichkeit}) entspricht. 
+  Dazu beweisen wir, dass bei konsistenter Zuweisung von Wettquotienten das
+  Multiplikationsgesetz für bedingte Wahrscheinlichkeiten $P(e \wedge f) =
+  P(e|f)\cdot P(f)$ erfüllt ist. Es sei zunächst für zwei beliebige Ereignisse
+  $e$ und $f$: 
+  \begin{enumerate}
+     \item $a$ der Wettquotient des Ereignisses $e \wedge f$.
+     \item $b$ der Wettquotient des Ereignisses $e|f$.
+     \item $c$ der Wettquotient des Ereignisses $f$.
+  \end{enumerate}
+  Seien weiterhin $S_1,S_2,S_3$ die den entsprechenden Ereignissen vom
+  Buchmacher zugewiesenen Wettbeträge, dann ergeben sich folgende Gewinnrechnungen für
+  jeden der drei möglichen Fälle 1. e und f treten ein, 2. f tritt ein, aber
+  nicht e, 3. f tritt nicht ein.\footnote{Zwischen den Fällen $\neg f \wedge e$ und
+  $\neg f \wedge \neg e$ braucht nicht unterschieden werden, da die
+  Gewinnrechnung in beiden Fällen dieselbe ist: $G_3 = a\cdot S_2 + c\cdot
+  S_3$}:
+  \begin{enumerate}
+    \item $G_1 = (a-1)\cdot S_1 + (b-1)\cdot S_2 + (c-1)\cdot S_3$
+    \item $G_2 = a\cdot S_1 + b\cdot S_2 + (c-1)\cdot S_3$
+    \item $G_3 = a\cdot S_1 + c\cdot S_3$
+  \end{enumerate}
+  (Was hier vorliegt ist ein Gleichungssystem mit drei unbekannten ($S_1, S_2,
+  S_3$). Zu zeigen ist also, dass die einzige Bedingung unter der dieses
+  Gleichungssystem keine Lösung für $G_1, G_2, G_3 > 0$\footnote{$G_1, G_2,
+  G_3$ decken alle drei möglichen Fälle ab, also müssen alle größer Null sein.
+  Sonst wäre der Gewinn nicht mehr sicher, da ein Fall eintreten könnte, indem $G
+  \leq 0$} hat, die ist, dass $a=bc$. Gäbe es nämlich eine solche Lösung, dann
+  hätte der Buchmacher für die entsprechenden Werte von $S_1, S_2, S_3$ seinen sicheren Gewinn.) Wenn der Buchmacher nun $S_1 := 1$, $S_2 := -1$ und $S_3 := -b$ wählt, dann ergibt sich daraus für den Buchmacher folgende Gewinnrechnung:
+  \begin{enumerate}
+    \item $G_1 = (a-1) + (1-b) + b-b\cdot c = a - b\cdot c$
+    \item $G_2 = a - b - b \cdot c + b = a - b\cdot c$
+    \item $G_3 = a - b \cdot c$
+  \end{enumerate}
+  D.h. der Buchmacher hat einen sicheren Gewinn, sofern für die
+  Wahrscheinlichkeitszuweisungen nicht gilt $a \leq b\cdot c$. 
+  Wählt er aber $S_1 := -1$, $S_2 := 1$ und $S_3 := b$, dann hat er einen
+  sicheren Gewinnt, sofern für die Wahrscheinlichkeitszuweisungen nicht gilt $a \geq b
+  \cdot c$. Das bedeutet aber, dass die Wettquotienten, um konstitent zu sein
+  sowohl $a \leq b\cdot c$ als auch $a \geq b \cdot c$ erfüllen müssen. Das
+  ist aber nur möglich, wenn:
+  \[ a = b\cdot c \qquad \Leftrightarrow \qquad 
+  P(e \wedge f) = P(e|f)\cdot P(f) \]
+  Also muss für die in dem oben erklärten Sinne bedingten Wettquotienten das
+  Multiplikationsgesetz gelten, wenn sie konstistent sein sollen.
+\end{enumerate}
+
+Damit wäre die eine Richtung des Äquivalenzbeweises zwischen der Wettkonsistenz
+und der kolmogorowschen Wahrscheinlichkeit abgeschlossen. Was noch aussteht,
+ist die andere Richtung des Beweises, d.h. dass aus der Erfüllung der
+kolmogorowschen Axiome durch eine Zuweisung von Wettquotienten zu Ereignissen
+auch die Konsistenz der Wettquotienten in dem Sinne folgt, dass ein gedachter
+Gegenspieler keine "`todsicheren Wetten"' abschließen kann. Was wir zeigen
+müssen ist, dass der De Finetti Abschluss einer beliebigen Menge von Aussagen
+(bzw. Ereignissen) konsistent ist, sofern die kolmogorowschen Axiome erfüllt
+sind.
+ 
+Wir betrachten zunächst die im De Finetti-Abschluss vorkommenden Aussagen
+als jeweils einzelne Aussagen. Erfüllen die Aussagen die Kolmogorowschen
+Axiome, dann gilt für jede Aussage, dass ihre Wahrscheinlichkeit zwischen 0 und 1 liegt. 
+Dann ist es aber unmöglich für die
+Wette auf eine einzelne Aussage den Wettbetrag so zu festzulegen, dass der
+Buchhalter zwangsläufig gewinnt. (Auch wenn er in den Extremfällen, dass der
+Wettquotient $q$ auf 0 oder 1 festgelegt worden ist, den Wettbetrag $S$ so
+wählen kann, dass er nicht mehr verlieren kann, bedeutet dies noch nicht, dass
+ihm der Gewinn sicher ist. Insofern ist dann auch die Wette nicht
+"`todsicher"'.)
+
+Als nächstes zeigen wir, dass auch die Wahrscheinlichkeiten von beliebigen
+oder-verknüpften Aussagen, soweit sie einander paarweise ausschließen und
+erschöpfend sind, konsistent sein müssen. Dazu leiten wir zunächst aus dem 3.
+kolmogorowschen Axiom ab, dass sich die Wahrscheinlichkeiten einer Menge von
+Aussagen (bzw. Ereignissen) $e_1,\ldots,e_n$, die sich paarweise ausschließen
+und ausschöpfend sind zu eins aufsummieren müssen. Durch entsprechende
+Klammerung kann man das, was im 3. kolmogorowschen Axiom für zwei unvereinbare
+Aussagen ausgesagt wird, leicht auf $n$ paarweise unvereinbare Aussagen
+übertragen, d.h. es gilt:
+\[ P(e_1\vee \ldots \vee e_n) = P(e_1) + \ldots + P(e_n) \]
+Wenn die Ereignisse $e_1,\ldots,e_n$ aber ausschöpfend sind, dann gilt, dass
+$e_1\vee \ldots \vee e_n$ sicher ist und damit $P(e_1\vee \ldots \vee e_n) =
+1$. Dann gilt aber auch:
+\[ P(e_1) + \ldots + P(e_n) = P(e_1\vee \ldots \vee e_n) = 1 \] 
+Zur Vereinfachung schreiben wir für die Wahrscheinlichkeiten
+$P(e_1),\ldots,P(e_n)$ im folgenden $q_1,\ldots,q_n$. Aus der Gleichung ergibt
+sich, dass mindestens ein $q_i \geq 0$. Wenn der Buchmacher den Wetten auf die
+Ereignisse $e_1,\ldots,e_n$ die Wettbeträge $S_1,\ldots,S_n$ zuweist, 
+dann berechnet sich der Gewinn, den er
+erhält, falls das $i$-te Ereignis eintritt nach:
+\[G_i = q_1S_1 + \ldots + q_nS_n - S_i \]
+Da wir für jedes $i$ (im Bereich $1 \leq i \leq n$) eine solche Gleichung
+aufstellen, verfügen wir über $n$ derartige Gleichungen. Jede
+dieser Gleichungen können wir auf beiden Seiten mit dem entsprechenden $q_i$
+noch einmal multiplizieren. Wir erhalten dann eine Schar von Gleichungen der
+Form:
+\begin{eqnarray*}
+q_1G_1 & = & q_1(q_1S_1 + \ldots + q_nS_n) - q_1S_1 \\
+{ }    & \vdots & { } \\
+q_nG_n & = & q_n(q_1S_1 + \ldots + q_nS_n) - q_nS_n \\ 
+\end{eqnarray*}
+Wenn wir diese Gleichungen aufaddieren, dann erhalten wir folgende
+Bedingung für die Gewinne, die der Buchmacher erzielen kann:
+\[ q_1G_1 + q_2G_2 + \ldots + q_nG_n = 0 \]
+Inhaltlich entspricht die rechte Seite der Gleichung übrigens dem
+Erwartungsnutzen des Buchmachers unter Zugrundelegung der subjektiven
+Wahrscheinlichkeiten des Wettenden, d.h. die Bedingung besagt, dass der
+Erwartungsnutzen des Buchmachers 0 sein muss. 
+Wenn der Erwartungsnutzen\label{bmErwartungsnutzen} des Buchmachers 0 ist, dann
+kann er aber keine "`todsichere Wette"' mehr abschließen, denn: Für ihn ist
+nur dann ein sicherer Gewinn möglich, wenn {\em alle} $G_i$ positiv, d.h. echt größer 0
+sind. (Andernfalls hätte er, wenn irgend ein $G_k \leq 0$, dann keinen Gewinn, 
+wenn das $k$-te Ereignis eintritt,
+damit wäre seine Wette aber nicht mehr "`todsicher"'.) 
+Es können aber nicht alle $G_i$ positiv sein, da wegen $q_i \geq
+0 \forall_i$ (1. kolmogorowsches Axiom) und $\exists_ki q_k > 0$ (wg. $\sum
+q_i = 1$) die Summe auf der linken Seite der Gleichung sonst nicht 0 werden
+könnte.
+
+Damit ist gezeigt, dass auch die oder-Verknüpfung von paarweise unvereinbaren
+aber den Ereignisraum ausschöpfenden Aussagen konsistent ist, sofern die
+zugewiesenen Wettquotienten den kolmogorowschen Axiomen gehorchen. So wie der
+Beweis geführt wurde, war es dem Buchmacher dabei sogar gestattet, den
+Wettbetrag nicht nur für die Gesamtaussage sondern für jedes Teilglied
+festzulegen. Dennoch ist keine "`todsichere Wette"' möglich. Daraus folgt aber
+unmittelbar, dass wenn für jede oder-Verknüpfte Gesamtaussage (bestehend aus
+wechselweise unvereinbaren und ausschöpfenden Teilaussagen) schon keine
+"`todsichere Wette"' möglich ist, dann auch für keine der Teilaussagen, denn
+sonst bräuchte der Buchmacher nur für die Teilaussage, für die eine
+"`todsichere Wette"' möglich ist, den Wettbetrag entsprechend festzulegen und
+für alle weiteren Teilaussagen den Wettbetrag auf Null zu setzen, um eine
+todsichere Wette auf die Gesamtaussage abzuschließen.
+
+Daraus ergibt sich wiederum unmittelbar, dass der Buchmacher auch auf
+wechselseitig unvereinbare aber nicht ausschöpfende oder-verknüpfte Aussagen
+keine "`todsichere Wette"' abschließen kann. Denn angenommen $a$ sei eine
+solche Aussage, dann kann er auf $a \vee \neg a$ keine "`todsichere Wette"'
+abschließen, dann nach dem eben gesagten aber auch nicht auf $a$. 
+In einem letzten Schritt kann nun gezeigt werden, dass der Buchmacher in der
+Tat auf überhaupt keine oder-verknüpfte Aussage eine todsichere Wette
+abschließen kann (also auch ohne die Voraussetzung paarweiser
+Ausschließlichkeit). Denn seien $a$ und $b$ zwei nicht ausschließliche
+Aussagen, dann ist die Aussage $a \vee b$ äquivalent zu der Aussage $(a \wedge
+\neg b) \vee (b \wedge \neg a) \vee (a \wedge b)$. Diese drei Aussagen sind
+wechselweise unvereinbar. Da auf sie keine "`todsichere Wette"' abgeschlossen
+werden kann, kann auch auf die äquivalente Aussage $a \vee b$ keine
+"`todsichere Wette"' abgeschlossen werden.
+
+Schließlich ist zu zeigen, dass auch bei und-verknüpften Aussagen keine
+"`todsichere Wette"' möglich ist, sofern die kolmogorowschen Axiome erfüllt
+sind. Seien $e$ und $f$ zwei mögliche Ereignisse. Aus den kolmogorowschen
+Axiomen und der Definition der bedingten Wahrscheinlichkeit ergitb sich
+bekanntlich das Multiplikationsgesetz $P(e \wedge f) = P(e|f)\cdot P(f)$. Wie
+schon zuvor legen wir zur Vereinfachung folgende abkürzende Bezeichnungen fest.
+\begin{enumerate}
+   \item $a = P(e \wedge f)$
+   \item $b = P(e|f)$
+   \item $c = P(f)$
+\end{enumerate}
+Seien weiterhin $S_1,S_2,S_3$ die den enstprechenden Ereignissen vom
+Buchmacher zugewiesenen Wettbeträge. Wiederum sind dann vier Fälle zu
+unterscheiden, von allerdings zwei zusammen fallen, so dass sich hinsichtlich
+des Gewinns des Buchmachers drei Fälle ergeben:
+\begin{enumerate}
+  \item $e \wedge f$: 
+        $G_1 = (a-1)\cdot S_1 + (b-1)\cdot S_2 + (c-1)\cdot S_3$
+  \item $\neg e \wedge f$ :
+        $G_2 = a\cdot S_1 + b\cdot S_2 + (c-1)\cdot S_3$
+  \item $\neg f$:
+        $G_3 = a\cdot S_2 + c\cdot S_3$
+\end{enumerate}
+Zu zeigen ist, dass, wenn wir gemäß dem Multiplikationsgesetz $a=b\cdot c$
+voraussetzen, die Gewinne nicht alle positiv sein können. Es genügt zu zeigen,
+dass der Erwartungsnutzen des Buchmachers (bezüglich der Wahrscheinlichkeiten
+des Wettenden) gleich 0 ist (siehe Seite \pageref{bmErwartungsnutzen}). 
+Der Erwartungsnutzen des
+Buchmachers berechnet sich nach: \[ \lambda_1G_1 + \lambda_2G_2 + \lambda_3G_3 \]
+mit:
+\[ \lambda_1 = b\cdot c, \qquad \lambda_2 = (1-b)\cdot c, \qquad \lambda_3 =
+1-c \]
+(wovon man sich überzeugen kann, wenn man sich überlegt, in welchen Fällen
+welches $\lambda$ herangezogen werden muss).
+
+Durch Einsetzen der obigen Gleichungen und Ausklammern von $S_1$, $S_2$ und
+$S_3$ erhält man:
+\[ \lambda_1G_1 + \lambda_2G_2 + \lambda_3G_3 = 
+   \alpha S_1 + \beta S_2 + \gamma S_3  \]
+wobei:
+\[ \alpha = bc(a-1) + (1-b)ca + (1-c)a \]
+\[ \beta  = bc(b-1) + (1-b)cb  \]
+\[ \gamma = bc(c-1) + (1-b)c(c-1) + (1-c)c \]
+Durch Ausrechnen und Subsitution mit Hilfe der Voraussetzung $a=b\cdot c$ lässt
+sich zeigen, dass $\alpha = \beta = \gamma = 0$
+Da wenigstens ein $\lambda > 0$ ist (die durch $\lambda_1,\lambda_2,\lambda_3$
+angegebenen Wahrscheinlichkeiten decken alle möglichen Fälle ab, summieren sich
+also zu 1) folgt, dass keine "`todsichere Wette"' für den Buchmacher möglich
+ist. Das betrifft sowohl und-verknüpfte Aussagen als auch bedingte
+Wahrscheinlichkeiten. 
+
+Dass aus der Erfüllung der kolmogorowschen Axiome wiederum die Konsistenz der
+Wahrscheinlichkeiten (im Sinne des Wettkriteriumgs) folgt, hat eine wichtige
+Konsequenz in Fällen, in denen neue Informationen bekannt werden, die geeignet
+sind, die Wahrscheinlichkeiten, die wir bestimmten Ereignissen zuweisen, zu
+ändern. Da wir wissen, dass Wahrscheinlichkeiten, die wir durch
+"`Bedingungsbildung"' ({\em conditionalization}) erhalten, wiederum die
+kolmogorowschen Axiome erfüllen, können wir auch davon ausgehen, dass wir durch
+die Ersetzung sämtlicher Wahrscheinlichkeiten mit den durch die Information
+"`bedingten"' Wahrscheinlichkeiten, wieder ein System (genauer einen "`De
+Finetti-Abschluss"') konsistenter subjektiver Wahrscheinlichkeiten erhalten.
+Die Bedingungsbildung geht dabei immer so vor sich, dass wir $P(a)$ durch
+$P(a|I)$ ersetzen und $P(a|b)$ durch $P(a|(b \wedge I))$, wobei $a$ eine
+beliebige Aussage bzw. ein beliebiges Ereignis unseres Systems ist, und $I$ die
+neu hinzugekommene Information. (Da bei Aussagen, die unabhängig von $I$ sind,
+sowieso $P(a|I) = P(a)$ gilt, können wir die Bedingungsbildung unbedenklich
+auf alle Aussagen des Systems anwenden.)
+
+\paragraph{Diskussion}
+
+Der zuvor geführte Beweis hat gezeigt, dass die Konsistenz subjektiver
+Wahrscheinlichkeiten im Sinne der Absicherung gegen "`todsichere Wetten"' und die Erfüllung der
+kolmogorwschen Axiome ein- und dasselbe sind. Anders als bei der
+Häufigkeitstheorie handelt es sich dabei um einen Äquivalenzbeweis, der in
+beide Richtungen funktioniert. Dies verleiht der Theorie der subjektiven
+Wahrscheinlichkeiten von einem mathematischen Blickwinkel aus gesehen von vorn
+herein eine größere Plausibilität. Ein solches Problem, wie dasjenige, dass das
+"`Gesetz der großen Zahlen"' durch den eingeführten konkreten
+Wahrscheinlichkeitsbegriff unterboten wird, wie im Falle der
+Häufigkeitstheorie geschehen, kann also nicht auftreten.
+
+Eine andere Frage ist allerdings die, inwieweit die subjektive
+Wahrscheinlichkeitstheorie an empirische Wahrscheinlichkeitsphänomene anknüpfen
+kann. Hier konnte die Häufigkeitstheorie, die sich ziemlich nahtlos an die
+Statistik anknüpfen lässt punkten. Befürworter der subjektiven
+Wahrscheinlichkeiten können ihren Wahrscheinlichkeitsbegriff freilich 
+auch in diesem Zusammenhang verteidigen. Denn sofern die subjektiven
+Wahrscheinlichkeiten durch neue Informationen über statistische Stichproben
+erneuert ("`updated"') werden, so konvergieren die subjektiven
+Wahrscheinlichkeiten auf lange Sicht gegen den statistischen Häufigkeitswert.
+Die entsprechenden Konvergenztheoreme bilden einen wichtigen Teil der
+subjektiven Wahrscheinlichkeitstheorie und eine Stütze des sogenannten
+Baysianismus, d.i. -- vereinfacht ausgedrückt -- die Meinung, dass der
+subjektive Wahrscheinlichkeitsbegriff der einzige ist, den wir benötigen.
+Im Einzelnen darauf einzugehen, würde an dieser Stelle zu weit führen. Näheres
+dazu bei Gillies \cite[]{gillies:2000}. Zur Veranschaulichung hilft es sich an
+das Beispiel medizinischer Tests aus der letzten Vorlesung zu erinnern. Je mehr
+Tests durchgeführt werden, um so mehr nährt sich das Resultat dem tatsächlichen
+Wert (in diesem Fall entweder krank oder nicht krank) an. Ähnlich funktioniert
+das "`updating"', wie es der Baysianismus versteht. Es sollte jedoch erwähnt
+werden, dass es sich dabei um eine durchaus umstrittene Auffassung handelt.
+Ein möglicher Einwand läuft darauf hinaus, dass auch die Theorie subjektiver
+Wahrscheinlichkeiten, sofern ihre Anwendbarkeit auf statistische Phänomene behauptet wird, 
+implizizt objektive Wahrscheinlichkeiten voraussetzt, nur dass sie diese nicht
+mehr erklärt -- anders als die Häufigkeitstheorie.
+
+In diesem Zusammenhang ist auch darauf hinzuweisen, dass das
+Messbarkeitsproblem bei subjektiven Wahrscheinlichkeiten kein zu
+unterschätzendes Problem darstellt. Der subjektive Wahrscheinlichkeitsbegriff
+ist, anders als zumeist behauptet bzw. naiv vorausgesetzt wird \cite[p.
+69]{gillies:2000}, meist nicht ohne Weiteres operationalisierbar. ({\em
+Operationalisierbar} ist ein Begriff dann, wenn man ihn auf messbare Größen
+zurückführen kann.) Denn das durch die Theorie suggerierte Messverfahren zur
+Bestimmung von Wettquotienten ist alles andere als zuverlässig. Es genügt
+nicht, irgendein (gewaltsames) Bestimmungsverfahren für eine Größe zu haben,
+sondern die damit gemessene Größe muss auch einigermaßen genau und stabil sein.
+Die damit verbundenen Schwierigkeit schränken die empirische Anwendbarkeit
+dieses Konzepts ein, sie schließen aber nicht aus, dass man das
+Konsistenzkriterium in normativer Absicht anwendet. Denn dass man sich beim
+Treffen von Entscheidungen konsequent verhalten {\em soll} erscheint nur
+plausibel. Das Konsistenzkriterium und die Theorie subjektiver
+Wahrscheinlichkeiten liefert die Mittel dazu.
+

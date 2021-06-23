@@ -1,0 +1,115 @@
+\subsection{Aufgaben}
+
+\begin{enumerate}
+  \item Stellen Sie das Vertrauensspiel als Tabelle dar.
+  
+  \item Zeige: Im 2-Personen Hirschjagdspiel gibt es kein gemischtes
+  Gleichgewicht:
+
+\begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{Hirsch} & \multicolumn{1}{c}{Hase} 
+\\ \cline{2-3} 
+Hirsch               & 5, 5                    & 0,2  \\ \cline{2-3}
+Hase                 & 2,0                     & 2,2 \\ \cline{2-3}
+\end{tabular}
+\end{center}
+  
+  \item Zeige, dass im 2-Personen Spiel mit zwei Handlungsoptionen gilt:
+  \label{gemischteStrategienAufgabe}
+  \begin{enumerate} 
+    \item Die beste
+    Antwort auf eine reine Strategie ist immer eine reine Strategie, sofern
+    zwischen den möglichen Antworten in reinen Strategien nicht Indifferenz herrscht.
+    \item Sei $(Z; S)$ ein Gleichgewicht der Strategien $Z$ und $S$, und sei
+    $Z$ eine gemischte Strategie, dann muss auch $S$ eine gemischte Strategie sein, es sei denn
+    Spieler 1 () ist indifferent zwischen seinen möglichen reinen
+    Antwortstrategien.
+    \item Sei $(Z; S)$ ein Gleichgewicht und $Z$ eine gemischte Strategie, aber
+     $S$ eine reine Strategie, dann ist auch $(x; S)$ ein Gleichgewicht für
+     jede beliebige reine oder gemischte Strategie $x$.
+    \item Gib ein Beispiel in Form einer Spielmatrix für den vorhergehenden
+    Fall an.
+  \end{enumerate}
+
+  \item \label{chickenGameAufgabe} Berechne das gemischte Gleichgewicht im
+  Angsthasenspiel:
+  
+  \begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{Ausweichen} &
+                               \multicolumn{1}{c}{Gas geben } \\ \cline{2-3} 
+Ausweichen               & 0, 0           & -5,5      
+\\ \cline{2-3} 
+Gas geben                & 5,-5           & -100,-100
+\\ \cline{2-3}
+\end{tabular}
+\end{center}  
+
+  Zusatzfrage: Wie wirkt es sich auf die Gleichgewichte aus, wenn man das
+  Angsthasenspiel folgendermaßen abändert?
+  
+  \begin{center}
+\begin{tabular}{c|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{Ausweichen} &
+                               \multicolumn{1}{c}{Gas geben } \\ \cline{2-3} 
+Ausweichen               & 0, 0           & -5,5      
+\\ \cline{2-3} 
+Gas geben                & 5,-5           & $-\infty$,$-\infty$
+\\ \cline{2-3}
+\end{tabular}
+\end{center}   
+
+\item Zeige: Im wiederholten Gefangenendilemma mit den Parametern T,R,P,S =
+5,3,1,0 beträgt die zu erwartende Auszahlung von {\em TitForTat} gegen die
+Strategie {\em Random} 2.25.
+
+\item Welche Strategie ist im wiederholten Gefangenendilemma die beste Antwort
+auf {\em Random}?
+
+\item Gib zwei Strategien $A$ und $B$ an, für die gilt:
+  \begin{enumerate}
+     \item Die direkte Begegnung von $A$ und $B$ geht immer zugunsten von $B$
+     aus, d.h. $V(B/A) > V(A/B)$
+     \item $B$ kann trotzdem nicht in eine Population von $A$ eindringen.
+  \end{enumerate}
+
+\item Zeige: Die Strategie {\em Tit For Two Tats} (Bestrafe erst bei zwei
+Defektionen) ist nicht kollektiv stabil. Es genügt dafür eine Strategie
+anzugeben, die in eine Population von {\em Tit For Two Tat}-Spielern eindringen
+kann.
+
+\item Zeige: Die Strategie {\em Grim} (siehe Seite \pageref{Strategien}) ist
+kollektiv stabil aber nicht evolutionär stabil.
+
+\item In welchem Verhältnis stehen die Begriffe der {\em kollektiven
+Stabilität} und der {\em evolutionären Stabilität} zu dem des
+Nash-Gleichgewichts?
+
+\item Mit welcher Wahrscheinlichkeit muss der Verkäufer mindestens ehrlich
+sein, damit sich das Geschäft für den Käufer in dem folgenden Vertrauensspiel
+lohnt?
+
+\setlength{\unitlength}{1cm}
+\begin{picture}(10,8)(-1,0)
+\put(2,7){\makebox(6,1){Käufer}}
+\put(5,7){\line(-1,-1){5}}
+\put(5,7){\line(1,-1){2}}
+\put(4,4){\makebox(6,1){Verkäufer}}
+\put(7,4){\line(-1,-1){2}}
+\put(7,4){\line(1,-1){2}}
+
+\put(2,5.5){\makebox(1,1){{\small kaufe nicht}}}
+\put(6.5,5.5){\makebox(1,1){{\small kaufe}}}
+
+\put(4.5,2.5){\makebox(1,1){{\small verschicke}}}
+\put(9.0,2.5){\makebox(1,1){{\small schicke nicht}}}
+
+\put(-0.5,1){\makebox(1,1){35, 35}}
+\put(4.5,1){\makebox(1,1){50, 50}}
+\put(8.5,1){\makebox(1,1){0, 70}}
+\end{picture}
+\begin{center} {\small Quelle: Bolton, Katok, Ockenfels
+\cite[]{bolton-katok-ockenfels:2004}} \end{center}
+
+\end{enumerate}

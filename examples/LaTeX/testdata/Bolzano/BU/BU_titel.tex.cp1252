@@ -1,0 +1,28 @@
+\pagestyle{completelyempty}%
+\cleardoublepage
+\begin{center}
+\newlength{\titeldehnung}\setlength{\titeldehnung}{0.8ex}
+\def\sperrfaktor{1.2}
+%\MakeUppercase{Bernard Bolzano}\par\vspace{12mm}
+\gesperrt{\MakeUppercase{Bernard Bolzano}}\\
+\LARGE Bolzano's Wissenschaftslehre und Religionswissenschaft in einer beurtheilenden Übersicht \par\vspace{12mm}
+\normalsize Mit einer Einleitung und Anmerkungen \\[\titeldehnung]
+herausgegeben von \\[\titeldehnung]
+\gesperrt{\MakeUppercase{Christian Tapp}}\par\vfill
+%\fbox{\parbox{\linewidth-7pt}{Version: \Textart}}\par\vfill
+\gesperrt{\MakeUppercase{Eigenverlag}}\\[\titeldehnung]
+\gesperrt{\MakeUppercase{Nur zum internen Gebrauch!}}\par
+\end{center}
+\newpage
+\begin{center}
+\gesperrt{\MakeUppercase{Ex motu proprio}}\par\vfill
+\end{center}
+\footnotesize\mbox{}\par
+\begin{minipage}{77mm}
+\noindent Diese Publikation wird nicht in der Deutschen Nationalbibliographie geführt; detaillierte bibliographische Daten sind im Internet nicht über <http://dnb.d-nb.de> abrufbar.\par
+ISBN 978-3-xxxx-xxxx-x\par
+E-Book: ISBN 978-3-xxxx-xxxx-x\par\vspace{12mm}
+\copyright\ Christian Tapp, Innsbruck \texttt{2017}. Alle Rechte, auch die des aus"-zugsweisen Nachdrucks, der fotomechanischen Wiedergabe und der Übersetzung, vorbehalten. Dies betrifft auch die Vervielfältigung und Übertragung einzelner Textabschnitte durch alle Verfahren wie Speicherung und Übertragung auf Papier, Film, Bänder, Platten und andere Medien, soweit es nicht §§ 53 und 54 URG ausdrücklich gestatten. Satz: Christian Tapp. Druck und Bindung: ad libitum. \hfill \textit{www.christian-tapp.de}\par
+\end{minipage}
+\newpage
+\endinput

@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{soul}
+\sodef\Gesperr{}{.15ex}{1ex plus .1ex}{2ex plus .1ex minus .1ex}
+\newif\ifinnen
+\innenfalse
+\def\gesperrt#1{\innentrue\Gesperr{#1}\innenfalse}
+\def\zeichen{\mbox{\normalfont innen}}
+\def\fett#1{\textbf{#1}}
+\def\kursiv#1{\textit{#1}}
+\begin{document}
+asdf \zeichen\ olkj \par
+\Gesperr{asdf \zeichen~olkj}
+\end{document}

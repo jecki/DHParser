@@ -1,0 +1,129 @@
+\documentclass[12pt, english, a4paper]{article}
+\usepackage[natbib=true]{biblatex}
+\bibliography{testdoc1.bib}
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{LaTeX Test-Document}
+
+\date{May 2016}
+ 
+\maketitle
+
+\begin{abstract}
+Here comes the Abstract \ldots. This part is {\em emphasized}.
+\end{abstract}
+
+\newpage
+
+\tableofcontents
+
+\section{Simple text components}
+
+This is the first section. It [contains] a reference to
+Willibald \citet[32]{Willibald2015}. Plus, it also refers to
+Kunigunde's completed works \citep{Kunigunde2010}.
+
+% this is a comment
+This is line that ends with a LaTeX-comment. % this is another comment
+% this is a comment line within(!) a paragraph
+This line continues the paragraph!
+
+These are several \\
+lines \\
+of text.
+
+One paragraph
+
+Another paragraph
+
+% This is {\em an environment that {is \bf spanning} two paragraphs
+
+% In LaTeX it is allowed that environments continue} over several
+% paragraphs.
+  % multiline
+  % comment
+Continuation of paragraph.
+
+This is {\em emphasized} Text. This is \emph{emphasized}, too.
+
+\subsection{Quotations}
+
+This is a subsection about quotations. And here is the quote:
+
+\begin{quote}
+    Gerade hierauf beruht jene Glückseligkeit des ersten Viertels unseres Lebens,
+    in Folge welcher es nachher wie ein verolorenes Paradis hinter uns liegt.
+    Wir haben in der Kindheit nur wenige Beziehungen und geringe Bedürfnisse, also wenig
+    Anregung des Willens: der größere Theil unseres Wesens geht demnach im Erkennen auf.
+    \cite[199]{Schopenhauer1851}
+\end{quote}
+
+
+\subsection{Bullet Lists}
+
+Here comes a bullet list:
+\begin{itemize}
+\item one item
+\item another item
+\item An item with several paragraphs
+
+      This ist the second paragraph of the item. It should be visible that a new
+      paragraph has started, but it should also be obvious that the second
+      paragraph belongs to the same item as the first paragraph.
+\end{itemize}
+After the list the text condinues.\footnote{This is a footnote.} Although there is no extra newline in the source,
+it should be clear that this is a new paragraph.
+
+\begin{enumerate}
+\item This is the first item of an enumeration.
+\item no the second item
+\item now the third
+      \begin{enumerate}
+      \item first item of the nested enumeration
+      \item second nested item
+      \end{enumerate}
+\item fourth item of the enumeration
+\end{enumerate}
+
+
+\section{Complex document components}
+
+\subsection{Images}
+
+ This is, how images can be embedded in a document.
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=\textwidth]{Graph.eps}
+\caption{\label{Graph} Evolutionary simulation of the reiterated Prisoner's Dilemma.}
+\end{center}
+\end{figure}
+
+\subsection{Tables}
+
+Following comes a complex figure with a table.
+\begin{figure}
+
+\begin{center}
+\begin{scriptsize}
+\begin{tabular}{l|c|c|c|}
+\multicolumn{1}{c}{ } & \multicolumn{1}{c}{ }     & \multicolumn{2}{c}{$\overbrace{\hspace{7cm}}^{Experiments}$} \\ \cline{2-4}
+                      & {\bf computer simulation} & {\bf analog simulation} & {\bf plain experiment} \\ \hline
+materiality of object
+                      & semantic                  & \multicolumn{2}{c|}{material} \\ \hline
+relation to target
+                      & \multicolumn{2}{c|}{representation}                 & representative \\ \hline
+\multicolumn{1}{c}{ } & \multicolumn{2}{c}{$\underbrace{\hspace{7cm}}_{Simulations}$} & \multicolumn{1}{c}{ } \\
+\end{tabular}
+\end{scriptsize}
+\end{center}
+\caption{Conceptual relation of simulations and experiments \citep[page needed]{Arnold2013}}\label{SimulationExperimentsScheme}
+
+\end{figure}
+
+
+\subsection{Mathematical Formulae}
+
+\end{document}

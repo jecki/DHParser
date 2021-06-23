@@ -1,0 +1,322 @@
+\chapter{The riddle of altruism}
+\label{altruismRiddle}
+
+In this chapter it will be explained why the existence of altruism poses a
+philosophical (and scientific) problem. I try to give a precise
+definition of altruism that (1) matches our intuitions about altruism and is
+-- save for its greater precision -- more or less equivalent to the common
+sense meaning of the word ``altruism'', (2) is wide enough to be applied to
+both biological and social contexts, (3) can be used in the context of a
+Darwinian theory of evolution. In the following chapter
+(\ref{generalizedEvolution}), I discuss the generalized theory of
+evolution, which is the theoretical framework into which later the computer
+models of the evolution of altruism are to be embedded.
+
+\section{Altruism in a hostile world}
+
+It is commonplace that altruism is a highly desirable attitude. Christianity
+even declares charity, which is altruism in its highest form, the prime virtue
+of man. At the same time moralists of all epochs and cultures could never help
+noticing the deplorable lack of altruism, charity and virtuous observance of
+the others needs among humans.  It would not need the constant admonitions of
+teachears, priests, prophets and philosophers if altruism was so common and
+natural a gift as becomes a creature that -- according to the book of genesis
+-- is the very image of a benevolent god. The book of genesis has an
+explanation for this unpleasant state of affairs for sure: It was primordial
+sin that brought evil into this world.
+
+But when we turn from mythology to science we are apt to get the impression
+that it is not at all the existence of sin that poses a riddle because the
+sciences almost univocally assume a human nature that is thoroughly egoistic,
+if not worse. For economists human beings are pure egoists that, given their
+preferences, employ their gift of reason solely to the end and purpose of
+maximizing utility for themselves.  The same concept of human nature is shared
+by many sociologists, especially those that endorse the principle of
+methodological individualism.\footnote{{\em Methodological individualism} is
+  the doctrine that social phenomena should be explained as the result of the
+  actions of individuals \cite[]{heath:2005}. In order to explain the actions
+  of the individuals in turn, it is convenient to resort to the assumption of
+  utility maximization, i.e.  rational egoism.}  And if political scientists
+do not strictly adhere to the picture of humans as rational egoists then only
+because they allow deviations to the worse.  As Machiavelli put it (when
+giving the reason for his warning that the duke should reign in blood but not
+touch his subjects wives or fortunes): ``For people sooner forget the death of
+their own father than the loss of their father's heritage'' \cite[p. 69 (my
+translation from German, E.A.)]{machiavelli:1532}.  By saying so, Machiavelli
+merely put into words a premise that most of the more prudent political
+thinkers do at least tacitly presume. Among the human sciences ({\em
+  Humanwissenschaften}) it is -- as can be expected -- at best pedagogics that
+offers a more optimistic view of human nature and, possibly, also psychology
+to some degree. The presupposition that man is by nature an egoistic creature
+becomes even more credible when we turn to biology.  For, the theory of
+evolution is virtually based on the idea that can -- albeit coarsely -- be
+described as the ``survival of the fittest'', a principle that seems to rule
+out any non egoistic behavioral traits other than those which are directed
+towards the closest relatives right from the start. It is this (supposed)
+consequence of evolution that induced T.H. Huxley to coin the equally popular
+phrase about ``nature, red in tooth and claw''.\footnote{For the sake of
+  fairness it should be noted that neither Herbart Spencer nor Thomas Huxley
+  fully endorsed the view that evolution rules out altruism.  However, they
+  both thought of ethics and evolution as being antagonistic, so that if
+  ethics (that is the Christian ethics of altruism, benevolence and
+  compassion) is to prevail then only because the civilizational process of
+  society can (in the long run) somehow overcome the iron laws of evolution
+  \cite[]{spencer:1907, huxley:1893}. It is the opposite view that is
+  advocated here: Evolution can by itself produce altruistic ethics.}  Thus,
+from a scientific point of view the question is not how sin came to this
+world, but, quite the contrary, how altruism could come into this world and
+how it had any chance to survive therein.
+
+Of course the picture of man as a dyed-in-the-wool egoist (if not worse) is
+far too bleak and it may justly be objected that this picture is cynical and
+contrary to everday experience.  But still the question remains if people
+(sometimes) really are altruistic, how can they afford to be so and, if
+altruism is desirable, how can people be induced to behave altruistically? It
+is no answer to this question that altruism provides so much benefit ``to all
+of us''. For, altruism is good for anybody but not for the altruist himself or
+herself. And altruism is best for the egoist that benefits from the altruism
+of the others but does not give anything in return. So, once again, how can
+altruism survive in the long run? To answer the question in this general form
+an evolutionary approach seems quite suited. There is a strong similarity
+between the question of when and how altruistic behavioral traits can evolve
+in animals and the question of how altruistic norms can emerge and be
+sustained in human society. But before any explanation can be given, a
+clarification of the concept of altruism is necessary. So, what exactly is
+altruism?
+
+\section{The definition of altruism}
+\label{altruismDefinition}
+
+As has to be expected when using words from everyday language, the terms
+``altruism'' and ``cooperation'' turn out to be somewhat ambiguous upon closer
+inspection. For example, is any behavior that turns out to be beneficial to
+somebody else to be called ``altruistic'' or only when it is done with the
+intention to benefit the other person? And what if something is done with the
+honest intention to serve somebody else but only on the premise that the other
+person will be grateful and eventually return the favor. Is this kind of
+mutual exchange of benefits to be called altruism? And, if yes, must we then
+count every instance of a successful business transaction as ``altruistic''
+because, if carried through freely, it is to the mutual benefit of the
+business partners? Part of these ambiguities of the term ``altruism'' stem
+from the fact that the common notion of ``altruism'' is closely connected with
+moral questions and certain ideals of moral virtue. To avoid confounding the
+different meanings and aspects of altruism, an explicit definition of the term
+``altruism'' is needed.
+
+In this section ``altruism'' will be defined in view of the general theory of
+evolution that will constitute the framework of this examination. In order to
+assure that the definition of altruism meets our research interests, the
+consequences of this definition will be discussed at some length, thereby
+comparing it with the ordinary language understanding of altruism. The
+definition of altruism must not only be clear enough to allow the examination
+of the problem within an evolutionary approach, it is also important that the
+kind of altruism captured by the following definition is the very altruism for
+which the ``riddle'' of how and why it came into this world and whether and
+under what conditions it has a chance to survive is to be solved.
+
+For the rest of this study the following definition of altruism will be used:
+A trait or a type of behavior of an individual is called {\em altruistic} if
+it benefits another individual at a cost for the individual itself without
+immediate or equal return. Some behavior is thus {\em altruistic},
+
+\begin{enumerate}
+
+\item if it is {\em beneficial} for another individual
+\item and if it is {\em costly} for oneself
+\item and if an equal {\em return is not guaranteed}
+\item and if the {\em altruist chooses} (or, in case of non-intentional animal
+behavior, simply if it depends on the altruist) whether the transfer of
+benefits takes place
+
+\end{enumerate}
+
+The definition is abstract enough to be applied both to sociological and
+biological settings, for it is not required to assume that the individuals can
+think or even have a consciousness at all. In a biological setting the costs
+of the individuals would be interpreted as {\em fitness costs} in the sense of
+adverse effects on the reproduction rate.  Also, the definition is designed to
+be wide enough to cover both reciprocal altruism and genuine altruism. {\em
+  Reciprocal altruism} is altruism on the premise that the bestowed benefits
+will be returned, but with a certain risk that this might not happen. (Only
+when the latter is excluded, it is, according to the definition, not called
+``altruism'', any more. This would be the case if the return was immediate.)
+Thus, even when favors are reciprocated we speak of altruism, but we only
+speak of altruism when there exists an opportunity for cheating.
+
+{\em Genuine altruism} on the other hand means that it is sure that the costs
+for benefiting other individuals will never be returned. In a biological
+setting a certain behavioral trait of an individual is genuinely altruistic if
+it helps increasing the reproduction rate of some other individual and at the
+same time decreases the reproduction rate of itself. That this is indeed possible
+and that therefore genuine altruism can survive in nature despite the fact
+that the survival of some phenotypic trait crucially depends on its increasing
+the reproduction rate of its bearer over his or her competitors, is one of the
+most astonishing results of group selection that will be discussed in chapter
+\ref{groupSelection}.
+
+But does the above definition match our common understanding of altruism? The
+definition is in some respects rather wide so that it might be disputed that
+all of the possible types of behavior that match the definition can
+legitimately be called altruism. For example, a carpetbagger investing a high
+amount of money into some risky business with the hope of getting a multiple
+of his investment back would -- according to the above definition -- have to
+be classified as an altruist, although we probably would not call his
+financial speculation ``altruism'' in everydays life. We might even hesitate
+to speak of ``cooperation'' in this case. The above definition is indeed
+counter-intuitive in cases like this one. The problem is not specific to this
+definition but it is already apparent in the notion of ``reciprocal altruism''
+which for this reason could equally well be called ``reciprocal
+egoism''.\footnote{This was suggested by Gerhard Schurz.} The main reason that
+-- in spite of these objections -- speaks for a wide definition of altruism is
+that it captures all behavioral traits that lead in some form or another to
+cooperation. If the less genuine forms of altruism were named ``reciprocal
+egoism'' or similar, there would still be the need for a distinction between types
+of egoism that encourage cooperation and others that do not. Since we want to
+find out what chances of survival altruism and cooperation have in a competitive world, it is therefore advantageous to draw the line between altruism
+and egoism in such a way that the realm of altruism more or less matches that
+of cooperation. In order to avoid too great a confusion with the common usage
+of words, it might help to think of ``reciprocal altruism'' as of a diminutive
+of altruism. ``Reciprocal altruism'' is then a kind of altruism that is merely
+reciprocal but not more.
+% \footnote{Another reason -- albeit less important -- in favor of a wide
+%   definition of altruism is the fact that in the branch of science that is
+%   studying the evolution of altruism it has become a common standard to
+%   bracket altruism with cooperation.}
+
+There are also a few other points that have to be noted about the above
+definition of altruism. Although the questions discussed in this study have a
+moral connotation as well, the definition above is purely descriptive. The
+difference this makes can be explained as follows: When speaking of
+``cooperation'' or ``altruism'' the moral connotation usually suggests that
+cooperation and altruism are generally good and laudable. But this is not
+necessarily the case: The (illegal) pre-arrangement of prices by competitors
+on a market, for example, is certainly not a laudable case of cooperation and
+it could hardly be labeled ``altruism'' because -- since altruism is commonly
+considered laudable -- the word would not be used in cases of cooperation that
+seem ethically doubtful in the broader context. The problem that this example
+exposes is, however, not a problem specific of the above definition of
+altruism, but a fundamental problem of moral philosophy: Moral philosophy
+tries to classify human actions and attitudes into categories of good and bad.
+But even actions that are generally thought of as being morally laudable can,
+when appropriate circumstances are given, turn out to be morally deplorable.
+Killing people is generally considered bad and saving lives is good, but for a
+soldier in war killing people is a virtue. The problem has to do with the
+contextuality of moral attributes. To avoid false conclusions this kind of
+contextuality should be borne in mind.
+
+In addition to the fact that altruism is typically considered to be morally
+laudable, there exists a more specific reason, why the descriptive definition
+of ``altruism'' given above is important for the discussion of ethical
+questions. Even if ``altruism'' in a descriptive sense can also be applied to
+cases of illegal or antimoral conspiracy, it is hardly imaginable (except may
+be for extreme ethical standpoints like Nietzsche's ``Herrenmoral'' or Ayn Rand's ``Objectivism'') that
+there can be such a thing as moral conduct that does not involve altruism in
+any form. Altruism in a descriptive sense thus seems to be a necessary though
+not sufficient condition for morality. Moral conduct typically demands from
+the individual to follow certain norms even though this may be costly and even
+when no reward is assured. Thus the questions of whether and to what extent
+morality has a chance to flourish in a competitive world crucially depends on
+the question of whether altruism in the descriptive sense is possible in a
+competitive world.
+
+The above definition of altruism does not contain any psychological or
+teleological elements such as intention (if humans are meant) or functional
+design (if organisms are concerned) directed towards benefiting the other.
+This might appear odd at first sight because cases of involuntarily
+benefiting others or of benefits which are mere side effects do not seem to be
+excluded (as they should). As an example a tree that casts a shadow during a
+hot summer day might be taken. The tree's shade is most welcome for humans
+resting under it. But is the tree's casting a shadow therefore to be called an
+example of biological altruism? The obvious objection would be that the tree
+is not designed to provide needful humans or animals with a pleasant shade on
+a hot summer day. It is designed to catch sunlight for photosynthesis, the
+shade being an unintended side effect. To call this ``altruism'' would surely
+overstretch the meaning of the word. This objection would be valid, but
+luckily cases like this one are covered by the requirement that altruism
+should be costly. There are no extra costs for the tree to cast a shadow. Thus
+casting shadows does not count as altruistic according to our
+definition.\footnote{\label{byproduct_mutualism} Some authors include
+  phenomena like these under the heading of ``byproduct mutualism'' \cite[p.
+  42]{dugatkin:1997}. From an empirical point of view it is not unreasonable
+  to classify byproduct mutualism as another, albeit degenerate case of
+  altruism because empirically it is often very hard to distinguish whether
+  some kind of behavior is an instance of, say, reciprocal altruism or merely
+  byproduct mutualism. (See chapter \ref{biology} for the empirical examples
+  in biology, where this question can often be raised.)} But if the tree were
+an apple tree then its growing fruits would legitimately be called altruistic
+because growing fruits involves a cost for the tree. It does not matter here
+that the tree is a plant and therefore cannot have intentions.  Presumably,
+the tree's growing fruits is a case of reciprocal altruism, as the humans or
+animals eating the apples might help the tree to spread its seeds in return.
+
+One might even take this question a step further by arguing that while merely
+accidental benefits for others are excluded by the criterion of cost, this
+leaves open the possibility for altruistic acts that are not bestowed from a
+benefactor on a beneficiary but reaped from the benefactor by force. An
+example would be a rabbit that is eaten by a fox. It would not help to
+reintroduce the notion of functional design into the definition because a
+rabbit is -- in a way -- perfectly well designed to serve as fox food.  Absurd
+cases like that of the rabbit that altruistically lends itself to be eaten by
+a fox or -- to take an example from social life -- of crime victims that serve
+as altruistic benefactors to robbers, thieves and burglars are ruled out by
+the fourth criterion, according to which it must depend on the altruist
+whether the transfer of benefits takes place.  The criterion is wide enough to
+capture altruistic actions by humans as well as animals.  Even though it may
+not be apparent at first sight, the criterion can also be applied to inborn
+(or genetically determined) altruistic traits as they occur in
+mutualisms.\footnote{A {\em mutualism} is an interspecific association of
+  different species to their mutual benefit.  An example would be the
+  association of hermit crabs and sea anemones.} In this case "`to depend"'
+means two things: 1) that it is a genetically determined trait of the altruist
+that makes the transfer of benefits possible and 2) the altruist could also
+exist without this trait.
+
+The choice of costs rather than intentions as a criterion for altruism has the
+advantage that it is more objective and that it can be applied equally in
+biological and sociological settings without the need for differentiating
+between human intentions, animal intentions, mere functional design of
+primitive organisms that do not have intentions etc. Furthermore, in a
+sociological setting the assumption is certainly
+unproblematic that whenever some altruistic act needs a certain effort, it
+will not be performed without the intention to perform it.
+
+There is, however, also a downside to neglecting intentions in the definition
+of altruism. In everday life, especially when human relations like friendship
+and love are concerned, there exists a distinction which is closely connected
+to the psychological aspects of altruism and which is at the same time crucial
+for the valuation of altruism: The distinction between real or true altruism
+on the one hand and false or merely pretended altruism on the other hand.
+Altruism is commonly regarded as true only if the benefits one person bestows
+unto another are done for the sake of the other person and not merely out of
+egoistic motives like prestige or the hope for a reward. In the latter case
+the kind of altruism displayed would be regarded as just pretended and not as
+honest. Such psychological subtleties are not covered by the above definition
+of altruism, which is designed to be operational in the first place. Still,
+should the question arise, the definition of altruism can easily be rendered
+more precise, especially so, since the distinction between altruism out of
+friendship and opportunistic altruism also leaves its mark in the outer world:
+As the psychological findings indicate, the kind of altruism that friendship
+evokes is reciprocal only on a long term basis and even defies short term
+reciprocity \cite[]{silk:2003}.
+
+As a final remark, it should be noted that there exists a very specifically
+philosophical question about altruism, which will only be discussed here
+briefly and in the following be left out completely. It is the question
+whether true altruism is possible at all. It could be argued that whenever a
+person behaves altruistically, he or she does so only because he or she
+derives at least an emotional reward of some kind such as, say, personal
+satisfaction. But then -- as the argument runs -- the action would not be
+truly altruistic any more because it is done for one's own satisfaction.
+Indeed it seems hardly believable that anybody can do anything without at
+least some kind of inner reward.  Only a perfect saint might be able to commit
+the most gracious acts of altruism and charity and at the same time be wholly
+disgusted by what he is doing. If one insists on speaking of true altruism
+only where it reaches a level of perfect saintliness then there is no altruism
+in this world.  But as long as it is not deliverance that is sought and the
+problem of altruism is confined to how and to what extent altruism has a
+chance to emerge in natural and cultural evolution, it is safe to assume that
+already levels of altruism below perfect saintliness can be morally
+satisfactory.
+%  The restrictions that the evolutionary process puts onto the
+% genesis and survival of altruistic traits (as in fact on any behavioral
+% traits) will be discussed in the next section.

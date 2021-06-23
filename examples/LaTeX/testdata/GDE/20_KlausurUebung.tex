@@ -1,0 +1,219 @@
+\subsection{Aufgaben zur Klausurvorbereitung}
+
+Hier sind ein par Aufgaben von der Art, wie sie in der Klausur vorkommen werden.
+
+\subsubsection{Entscheidungen unter Unwissenheit}
+
+\begin{enumerate}
+  \item Betrachte folgende Entscheidungstabellen:
+\begin{center}
+\begin{tabular}{c|c|c|c|c|cc|c|c|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{4}{c}{Tabelle 1:} &
+\multicolumn{2}{c}{} & \multicolumn{4}{c}{Tabelle 2:}
+\\
+\cline{2-5} \cline{8-11}
+$A_1$ & 4 &  8 & 12  & 0 & & $A_1$ & 0 & -1& 2 & 5 \\ 
+\cline{2-5} \cline{8-11} 
+$A_2$ & 3 &  2 & 3   & 3 & & $A_2$ & -3& 12& 2 & 4 \\ 
+\cline{2-5} \cline{8-11}
+$A_3$ & 1 &  5 & 14  & 6 & & $A_3$ & 1 & 8 & -2& 6 \\ 
+\cline{2-5} \cline{8-11}
+$A_4$ & 2 &  3 & 1   & 7 & & $A_4$ & 2 & 5 & 1 & 0 \\ 
+\cline{2-5} \cline{8-11}
+\end{tabular}
+\end{center}
+Löse beide Entscheidungstabellen:
+\begin{enumerate}
+  \item nach der (lexikalischen) Maximin-Regel
+  \item nach der (lexikalischen) Minimax-Bedauerns-Regel
+  \item nach dem Indifferenzprinzip
+  \item nach der Optimismus-Pessimismus-Regel mit einem Optimismus-Index von 3/4
+\end{enumerate}
+
+\item Welche der folgenden Nutzenfunktionen beschreiben jeweils denselben
+{\em ordinalen} Nutzen und welche denselben {\em kardinalen} Nutzen:
+\begin{enumerate}
+  \item \begin{tabular}{l|c|c|c|c|c|c|}
+\cline{2-7}
+Gut:                      & A & B & C & D & E & F \\
+\cline{2-7}
+ $u_1$:     & 3 & 2 & 5 & 8 & 1 & 4 \\
+\cline{2-7}
+ $u_2$:     & 6 & 4 & 8 & 16 & 2 & 7 \\
+\cline{2-7}
+ $u_3$:     & 7 & 4 & 13 & 22 & 1 & 10 \\
+\cline{2-7}
+\end{tabular}
+ 
+  \item $u_1(x) = 2x \qquad u_2(x) = -x \qquad u_3(x)=x^2 \qquad 
+  u_4(x) = 5x^2-3$
+\end{enumerate}
+
+\end{enumerate}
+
+\subsubsection{Wahrscheinlichkeitsrechnung}
+
+\begin{enumerate}
+  \item Ein Patient, der kürzlich einen Urlaub in Zentralafrika verbracht hat,
+  wird mit Verdacht auf Malaria in die Klinik eingeliefert. Es ist bekannt, dass etwa
+  bei 0.5\% derartiger Verdachtsfälle tatsächlich eine Malariaerkrankung
+  auftritt. Die behandelnde Ärztin führt zunächst einen Antigen-Schnelltest
+  durch. Dieser Schnelltest hat eine
+  positiv-positiv Rate von 80\% und eine positiv-negativ Rate von 0.01\%.
+  Der Test fällt {\em negativ} aus.
+  
+  Da der Schnelltest nicht besonders sensitiv ist (wie man an der niedrigen
+  positiv-positiv Rate sieht), führt die Ärztin noch einen zweiten Test auf
+  Basis einer Polymerase-Kettenreaktion durch. Dieser Test, der mit einer 
+  positiv-positiv Rate von 99,5\% und einer positiv-negativ Rate
+  von 0.3\% sehr viel zuverlässiger ist, fällt positiv aus.
+  
+  Mit welcher Wahrscheinlichkeit muss die Ärztin davon ausgehen, dass der
+  Patient an Malaria erkrankt ist?
+
+  \item Die Laplace'sche Wahrscheinlichkeit wird wie folgt definiert:
+  \begin{enumerate}
+    \item Es gibt eine endliche Menge von Elementarereignissen: $\Omega$.
+    (Beispiel: Beim Würfeln $\Omega = \{1,2,3,4,5,6\}$)
+    \item Jedes Ereignis ist durch eine Menge $E$ charakterisiert, die
+    Teilmenge von $\Omega$ ist: $E \subseteq \Omega$. (Beispiel: Das Ereignis,
+    eine gerade Zahl zu würfeln, wird durch die Menge
+    $E=\{2,4,6\}$ beschrieben.)
+    \item Die Wahrscheinlichkeit eines Ereignisses ist definiert als die Anzahl
+    der Elemente der Ereignismenge ("`günstige Fälle"') geteilt
+    durch die Anzahl der Elementarereignisse ("`mögliche Fälle"'). Wenn $|M|$
+    die Anzahl der Elemente der Menge $M$ beschreibt, dann ist die
+    Wahrscheinlichkeit $p$ also definiert durch: $p(E) := \frac{|E|}{|\Omega|}$.
+  \end{enumerate}
+  {\em Beweise}, dass die Laplac'sche Wahrscheinlichkeit die kolmogorowschen
+  Axiome erfüllt:
+  \begin{enumerate}
+    \item Axiom: $\forall_{E \subset \Omega} \qquad p(E) \in \mathbb{R} \qquad
+    \mbox{und} \qquad p(E) \geq 0$
+    \item Axiom: $p(\Omega) = 1$
+    \item Axiom: $\forall_{E,F \subset \Omega} \qquad E \cap F \neq
+    \emptyset \Rightarrow p(E \cup F) = p(E) + p(F)$
+  \end{enumerate}   
+  
+  \item Zeige, dass aus den drei kolmogorwschen Axiomen, die {\em Monotonie}
+  von Wahrscheinlichkeiten folgt: 
+  \[\forall_{E,F \subset \Omega} \qquad E \subset F \Rightarrow p(E)
+ \leq p(F) \]
+\end{enumerate}
+
+\subsubsection{Entscheidungen unter Risiko}
+
+\begin{enumerate}
+  \item In Amerika ist eine Grippewelle ausgebrochen. Experten rechnen damit,
+  dass die Grippewelle mit einer Wahrscheinlichkeit von 60\% auch Deutschland
+  erreicht. Wenn sie Deutschland erreicht, dann erkrankt ein Anteil von 15\%
+  der Bevölkerung. Wird die Grippe nicht behandelt, so sterben 3\% der
+  Erkrankten.
+ 
+  Die Gesundheitsministerin erwägt nun, ein breit angelegtes Impfprogramm für
+  die gesamte Bevölkerung durchführen zu lassen. Wird die Impfung frühzeitig
+  verabreicht, so senkt sie das Erkrankungsrisiko auf 2\%. Allerdings ist die
+  Impfung nicht ganz ohne Risiko, denn es kommt -- geheim gehaltenen Zahlen
+  zufolge -- bei 0.2\% der geimpften Personen zu schweren Komplikationen, die
+  zum Tod führen.
+  
+  Wenn die Grippe bereits ausgebrochen ist, kann die Gesundheitsministerin
+  immer noch die Entscheidung treffen, eine Impfung durchführen zu lassen,
+  falls das nicht schon vorher geschehen ist. Allerdings ist die Impfung zu
+  diesem späteren Zeitpunkt nicht mehr so effektiv. Sie senkt das
+  Erkrankungsrisiko dann nur noch auf 10\% bei gleichem Risiko von
+  Komplikationen.
+
+  Aufgaben:
+  \begin{enumerate}
+  \item Stelle das Entscheidungsproblem als Entscheidungsbaum dar.
+  \item Sollte die Gesundheitsministerin eine frühzeitige Durchführung des
+  Impfprogramms anstreben?
+  \item Angenommen es hätte im Vorfeld eine öffentliche Diskussion über die
+  Risiken des Impfprogramms gegeben, so dass die Durchführung des Impfprogramms
+  zu einem frühen Zeitpunkt, als noch nicht klar war, ob sie Deutschland
+  überhaupt erreicht, politisch nicht durchsetzbar war. Angenommen weiterhin,
+  die Grippewelle hat Deutschland schließlich dennoch erreicht und der Ruf nach
+  einer schleunigen Massenimpfung wird laut. Sollte die Gesundheitsministerin jetzt 
+  doch noch das Impfprogramm durchführen?
+  \end{enumerate}
+  
+  \item Für eine auf einer Menge von Lotterien definierte Präferenzrelation
+  gilt neben den üblichen Ordnungsgesetzen von Präferenzrelationen u.a.:
+  \begin{enumerate}
+    \item {\em Bedingung der höheren Gewinne}: Für beliebige Lotterien $x$,$y$
+  und $L^*$ und jede beliebige Wahrscheinlichkeit $a$ gilt: 
+  \begin{enumerate}
+     \item $L^* \succ x$ genau dann wenn $L(a, L^*, y) \succ L(a, x, y)$.
+     \item $L^* \succ y$ genau dann wenn $L(a, x, L^*) \succ L(a, x, y)$.
+  \end{enumerate}
+  \item {\em Reduzierbarkeit zusammengesetzter Lotterien}:
+  Für jede zusammengesetzte Lotterie der Form
+  $L(a, L(b,x,y), L(c,x,y))$ gilt $L(a, L(b,x,y), L(c,x,y)) \sim L(d,x,y)$ mit $d:=ab+(1-a)c$. 
+  \end{enumerate}
+  {\em Zeige} allein mit Hilfe dieser beiden Bedingungen (und der
+  Ordnungsgesetze für Präferenzrelationen):
+  \begin{enumerate}
+    \item Es kann {\em nicht} gelten: $L(a,x,x) \succ x$
+    \item Es kann {\em nicht} gelten: $x \succ L(a,x,x)$ 
+  \end{enumerate}  
+
+  \item Nimm weiterhin folgende Bedingungen als gegeben an (ergibt sich aus
+  der vorhergehenden Aufgabe): Für alle Wahrscheinlichkeiten $a$ und alle
+  Lotterien $x$ gilt: $L(a,x,x) \sim x$
+
+  {\em Zeige} allein mit dieser und den Bedingungen aus der vorhergehenden
+  Aufgabe: Wenn $B$ ein bestes Grundgut ist, dann kann es keine Lotterie $L(a, x, y)$ geben
+  für die gilt: $L(a, x, y) \succ B$
+\end{enumerate}
+
+
+
+\subsubsection{Spieltheorie}
+
+\begin{enumerate}
+  \item Löse das folgende Spiel durch sukkzessive Dominanz (Gib dazu in der
+  richtigen Reihenfolge die zu streichenden Zeilen- bzw. Spaltenstrategien an):
+\begin{center}
+\begin{tabular}{c|c|c|c|c|}
+\multicolumn{1}{c}{} & 
+\multicolumn{1}{c}{$S_1$} &
+\multicolumn{1}{c}{$S_2$} &
+\multicolumn{1}{c}{$S_3$} &
+\multicolumn{1}{c}{$S_4$} \\ \cline{2-5}
+$Z_1$ & 4 & 2 & 0 & 14 \\ \cline{2-5}
+$Z_2$ & 11& 7 & 1 & 12 \\ \cline{2-5}
+$Z_3$ & 9 & 6 & 4 & 5  \\ \cline{2-5}
+$Z_4$ & 3 & 4 & 2 & 8  \\ \cline{2-5}
+\end{tabular}
+\end{center}
+
+  \item Gegeben seien diese beiden Spiele:
+
+\begin{center}
+\begin{tabular}{c|c|c|cc|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{2}{c}{{\bf Spiel A}} & 
+\multicolumn{2}{c}{} & \multicolumn{2}{c}{{\bf Spiel B}}
+\\ 
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{$S_1$} & \multicolumn{1}{c}{$S_2$} 
+& &
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{$S_1$} & \multicolumn{1}{c}{$S_2$} 
+\\ \cline{2-3} \cline{6-7}
+$Z_1$ &  2, 1  & 0,0 &  &  $Z_1$ & 0,0  & -1,1  \\ \cline{2-3} \cline{6-7}
+$Z_2$ & -1,-2  & 1,3 &  &  $Z_2$ & 1,-1 & -2,-2 \\  \cline{2-3} \cline{6-7}
+\end{tabular}
+\end{center}
+
+  Aufgaben:
+  \begin{enumerate}
+    \item Bestimmte zu jedem Spiel:
+      \begin{enumerate}
+        \item die {\em reinen} Nash-Gleichgewichte (sofern vorhanden).
+        \item die {\em gemischten} Nash-Gleichgewichte (sofern vorhanden).
+      \end{enumerate} 
+    \item Bestimme den Erwatungswert der Spiele für jeden Spieler in den
+    gemischten Gleichgewichten.
+  \end{enumerate} 
+
+\end{enumerate}
+

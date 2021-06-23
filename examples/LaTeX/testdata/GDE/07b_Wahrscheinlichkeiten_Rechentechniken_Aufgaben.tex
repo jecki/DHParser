@@ -1,0 +1,131 @@
+\subsection{Aufgaben}
+\begin{enumerate}
+ 
+\item\label{beweis1} Ca. 3\% aller 70-jährigen haben Alzheimer. Auch
+wenn Alzheimer bisher nicht geheilt werden kann, ist die
+Früherkennung eine wichtige Voraussetzung für vorbeugende, den
+Krankheitsverlauf evtl. mildernde Maßnahmen. Leider lässt sich
+Alzheimer nur schwer präzise diagnostizieren. (Erst durch
+Gewebeuntersuchungen am verstorbenen Patienten lässt sich mit
+Sicherheit feststellen, ob eine Alzheimererkrankung vorlag.)
+Angenommen einmal, die Forschung hätte einen Gedächtnistest
+entwickelt, durch den eine vorliegende Alzheimererkrankung
+mit 95\%-iger Sicherheit diagnostizierbar ist, an dem im
+Durchschnitt aber auch 2\% der älteren Menschen scheitern, selbst wenn sie
+nicht an Alzheimer erkrankt sind.
+
+Durch einen zweiten Test, der etwas weniger zuverlässig ist als der erste, wird
+eine Vorliegende Krankheit in 90\% aller Fälle richtig erkannt und mit 10\%
+Wahrscheinlichkeit wird Fehlalarm gegeben, obwohl gar keine Erkrankung vorliegt.
+ 
+{\em Aufgabe}: Angenommen beide Tests fallen positiv aus. Zeigen Sie durch
+Rechnung: Es spielt keine Rolle, in welcher Reihenfolge die Tests durchgeführt werden.
+
+\item Angenommen bei der vorhergehenden Aufgabe würde mindestens einer der
+Tests negativ ausfallen, können Sie dann auch eine präzise Aussage über die
+Wahrscheinlichkeit einer Erkrankung machen? 
+
+\item\label{beweis2} Zeigen Sie, dass die Bayes'sche Formel für das inverse
+Ereignis, dass der Patient nicht krank ist, obwohl der Test positiv ausgefallen ist (nicht zu
+verwechseln mit dem Ereignis, dass er nicht krank ist, wenn der Test negativ
+ausgefallen ist!) wie wir es erwarten würden gleich 1 minus dem ursprünglichen
+Ereignis ist, also $P(\neg p|q) = 1 - P(p|q)$. Zeigen Sie dies durch
+eine Rechnung für das gegebene Beispiel.
+
+\item Eine Menge von Ereignissen $\{p_1, p_2, \ldots, p_n\}$ heisst paarweise
+unvereinbar, wenn für jedes Paar $p_i,p_k$ gilt, dass $p_i$ und $p_k$
+miteinander unvereinbar sind. Dagegen nennt man eine Menge $\{p_1, p_2, \ldots,
+p_n\}$ von Ereignissen vollständig unvereinbar, wenn niemals alle Ereignisse aus
+der Menge eintreten können. Zeigen Sie: Paarweise Unvereinbarkeit ist {\em stärker} als
+vollständige Unvereinbarkeit, indem eine Menge paarweise unvereinbarer
+Ereignisse immer auch vollständig unvereinbar ist, aber nicht umgekehrt.
+
+\item a) Zeigen Sie, aus dem 3. kolmogorowschen Axiom (wenn p und q unvereinbar,
+dann $P(p \vee q) = P(p) + P(q)$) folgt: Für jede endliche Menge von paarweise
+unvereinbaren Ereignissen $p_i$ mit $0 \leq i < n, n \in \mathbb{N}$ gilt:
+\[P(\bigvee_{0 \leq i < n} p_i) = 
+P(p_1 \vee p_2 \vee \ldots) = 
+P(p_1) + P(p_2) + \ldots = 
+\sum_{0 \leq i < n} P(p_i)\]
+Warum kann man nicht in gleicher Weise das Axiom 3' ($P(\sum_{i=0}^{\infty} p_i)
+= \sum_{i=0}^{\infty} P(p_i)$) aus Axiom 3 ableiten? (Bemerkung: Wäre eine
+solche Ableitung möglich, dann müsste man Axiom 3' auch nicht als Axiom einführen.)
+
+\item\label{beweis3} Leiten Sie eine Formel für $P(q_1 \vee q_2 \vee q_3)$
+analog zum Corollar 5 aus der Vorlesung her.
+
+\item Bonferroni's Ungleichung besagt:
+\[P(p \wedge q) \geq P(p) + P(q) - 1\]
+Beweisen Sie Bonferroni's Ungleichung.
+
+\item In der Vorlesung wurde für die Berechnung von
+Wahrscheinlichkeiten und-verknüpfter Ereignisse das Beispiel eines
+Aktienunternehmens U angeführt, das eine Gewinnwarnung ausgibt. Dabei war:
+\begin{itemize}
+  \item q die Aussage "`U gibt eine Gewinnwarnung aus"'
+  \item p die Aussage "`Der Aktienkurs von U"' steigt  
+\end{itemize}
+Die Wahrscheinlichkeit, dass U eine Gewinnwarnung ausgibt {\em und} der
+Aktienkurs von U steigt, wurde berechnet nach:
+\[ P(p \wedge q) = P(q) \cdot P(p|q) \]
+Wegen der Kommutativität des und-Operators $\wedge$ hätte man, rein
+mathematisch betrachtet, aber auch
+\[ P(p \wedge q) = p(p) \cdot P(q|p) \]
+rechnen dürfen. Wie müsste man die zweite Formel in Worten wiedergeben? Führt
+dies zu einer sinnvollen Interpretation? Wonach richtet sich, welche der
+beiden Formeln man verwenden wird?
+
+\item Zeigen Sie: a) Die Wahrscheinlichkeit, dass mindestens eines von
+einer Menge von paarweise unvereinbaren Ereignissen eintritt, ist gleich der
+Summe der Wahrscheinlichkeiten der einzelnen Ereignisse. 
+
+b) Die Wahrscheinlichkeit, dass alle Ereignisse einer Menge von paarweise
+unabhängigen Ereignissen eintreten, ist gleich dem Produkt der
+Wahrscheinlichkeiten der einzelnen Ereignisse.
+
+c) Wenn die Ereignisse nicht paarweise unvereinbar bzw. unabhängig sind, wird
+die entsprechende Wahrscheinlichkeit dann größer oder kleiner?
+
+\item Sei $p_1, p_2, \ldots, p_n$ eine Menge von Ereignissen, die paarweise
+unvereinbar sind, von denen aber ein Ereignis auf jeden Fall eintreten muss.
+Sei q weiterhin ein Ereignis dessen Wahrscheinlichkeit nicht 0 ist. a) Zeige,
+dass dann folgende erweiterte Form des Bayes'schen Lehrsatzes gilt:
+
+\[ P(p_i|q) = \frac{P(q|p_i)P(p_i)}{\sum_{i=1}^{n}P(q|p_i)P(p_i)}
+\]
+ 
+({\em Hinweis:} Der Beweis kann ganz analog zu dem Beweis des Bayes'schen
+Lehrsatzes aus der Vorlesung geführt werden.)
+
+ 
+\item Welche Bedingung muss für $P(q|p)$ (positiv-positiv Rate) und $P(q|\neg
+p)$ gelten, damit: \begin{enumerate}
+                     \item $P(p|q) > P(p)$
+                     \item $P(p|q) < P(p)$
+                     \item $P(p|q) = P(p)$
+\end{enumerate}
+Mit anderen Worten: Unter welcher Bedingung unterstützt ein positiver
+Testausgang $q$ die Wahrscheinlichkeit dafür, das $p$ stimmt, und unter welcher
+Bedingung verringert er sie?
+
+Ansatz: Zeige, unter welcher Bedingung diese Ungleichung gilt (bzw. die
+umgekehrte Ungleichung bzw. die entsprechende Gleichung): 
+\[ \frac{P(q|p)\cdot P(p)}{P(q|p)P(p) + P(q|\neg p)P(\neg p)} > P(p) \]
+
+Zusatz: Zeige, dass im letzten Fall, d.h. wenn $P(p|q) = P(p)$, auch gilt, dass
+$p$ und $q$ statistisch unabhängig sind. 
+
+
+~\\{\bf schwierigere Aufgaben}\\
+
+\item Beweisen Sie den Zusammenhang, der in
+Aufgabe \ref{beweis1} durch eine Beispiel-Rechnung illustriert wurde,
+mathematisch.
+
+\item Führen Sie den vollständigen mathematischen Beweis für den in Aufgabe
+\ref{beweis2} behaupteten Zusammenhang.
+
+\item Ergänzung zu Aufgabe \ref{beweis3}: Können Sie auch eine entsprechende
+Vor\-schrift für $P(\bigvee\limits_{i = 1}^{n} q_i)$ formulieren?
+  
+\end{enumerate}

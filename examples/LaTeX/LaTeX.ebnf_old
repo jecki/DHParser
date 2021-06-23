@@ -1,0 +1,283 @@
+# LaTeX-Grammar for DHParser
+
+# preamble
+@ literalws  = right
+@ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # insignificant whitespace, including at most one linefeed
+@ comment    = /%.*/                                # note: trailing linefeed is not part of the comment proper
+@ reduction  = merge_treetops
+@ disposable = _WSPC, _GAP, _LB, _PARSEP, _LETTERS, _NAME, INTEGER, FRAC,
+               _QUALIFIED, TEXT_NOPAR, TEXT, _block_content, PATH, PATHSEP,
+               HASH, COLON, TAG, _inline_math_text, _has_block_start,
+               block_environment, known_environment, text_element, _block_math,
+               line_element, inline_environment, known_inline_env, info_block,
+               begin_inline_env, end_inline_env, command, known_command,
+               _dmath_long_form, _dmath_short_form, BACKSLASH, _structure_name,
+               _env_name
+@ drop       = strings, backticked, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB,
+               _has_block_start, BACKSLASH, _structure_name, _env_name
+
+########################################################################
+#
+#: outer document structure
+#
+########################################################################
+
+latexdoc       = preamble §document
+preamble       = { [_WSPC] command }+
+
+document       = [_WSPC] "\begin{document}"
+                 §frontpages
+                 (Chapters | Sections)
+                 [Bibliography] [Index] [_WSPC]
+                 "\end{document}" [_WSPC] EOF
+frontpages     = sequence
+
+
+#######################################################################
+#
+#: document structure
+#
+#######################################################################
+
+Chapters       = { [_WSPC] Chapter }+
+Chapter        = `\chapter` [hide_from_toc] heading { sequence | Sections | Paragraphs }
+
+Sections       = { [_WSPC] Section }+
+Section        = `\section` [hide_from_toc] heading { sequence | SubSections | Paragraphs }
+
+SubSections    = { [_WSPC] SubSection }+
+SubSection     = `\subsection` [hide_from_toc] heading { sequence | SubSubSections | Paragraphs }
+
+SubSubSections = { [_WSPC] SubSubSection }+
+SubSubSection  = `\subsubsection` [hide_from_toc] heading { sequence | Paragraphs }
+
+hide_from_toc  = "*"
+
+Paragraphs     = { [_WSPC] Paragraph  }+
+Paragraph      = "\paragraph" heading { sequence | SubParagraphs }
+
+SubParagraphs  = { [_WSPC] SubParagraph }+
+SubParagraph   = "\subparagraph" heading [ sequence ]
+
+Bibliography   = [_WSPC] "\bibliography" heading
+Index          = [_WSPC] "\printindex"
+
+heading        = block
+
+#######################################################################
+#
+#: document content
+#
+#######################################################################
+
+
+#### block environments ####
+
+block_environment   = &_has_block_start known_environment | generic_block
+  _has_block_start  = `\begin{` | `\[`
+known_environment   = itemize | enumerate | description | figure | tabular | quotation
+                    | verbatim | math_block
+math_block          = equation | eqnarray | displaymath
+generic_block       = begin_generic_block { sequence | item } §end_generic_block
+begin_generic_block = <-&_LB begin_environment
+@ end_generic_block_error = '', "A block environment must be followed by a linefeed, not by: {1}"
+end_generic_block   = end_environment § LFF
+
+itemize             = "\begin{itemize}" [_WSPC] { item | command~ } §"\end{itemize}"
+enumerate           = "\begin{enumerate}" [_WSPC] { item | command~ } §"\end{enumerate}"
+description         = "\begin{description}" [_WSPC] {item | command~ } §"\end{description}"
+@item_error         = '', '\item without proper content, found: {1}'
+item                = "\item" [config] § sequence
+
+figure              = "\begin{figure}" sequence §"\end{figure}"
+quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
+                    | ("\begin{quote}" sequence §"\end{quote}")
+verbatim            = "\begin{verbatim}" sequence §"\end{verbatim}"
+
+displaymath         = _dmath_long_form | _dmath_short_form
+  _dmath_long_form  = `\begin{displaymath` [no_numbering] "}" § _block_math `\end{displaymath` [`*`] "}"
+  _dmath_short_form = "\[" § _block_math "\]"
+equation            = `\begin{equation` [no_numbering] "}" §_block_math `\end{equation` [`*`] "}"
+eqnarray            = `\begin{eqnarray` [no_numbering] "}" §_block_math `\end{eqnarray` [`*`] "}"
+  _block_math       = /(?:[^\\]*[\\]?(?!end\{(?:eqnarray|equation|displaymath)\*?\}|\])\s*)*/
+no_numbering        = `*`
+
+tabular             = "\begin{tabular}" tabular_config { tabular_row | _WSPC } §"\end{tabular}"
+tabular_row         = (multicolumn | tabular_cell) { "&" (multicolumn | tabular_cell) }
+                      ("\\" ( hline | { cline } ) [_PARSEP] | &`\end{tabular}`)
+tabular_cell        = raisebox [S|_PARSEP] | { line_element [S|_PARSEP] }
+raisebox            = "\raisebox" rb_offset [rb_up] [rb_down] block
+  rb_offset         = "{" number UNIT ~ "}"
+  rb_up             = "[" number UNIT ~ "]"
+  rb_down           = "[" number UNIT ~ "]"
+tabular_config      = "{" { cfg_celltype [cfg_unit] | cfg_separator | / +/ }+ §"}"
+  cfg_celltype      = /[lcrp]/
+  cfg_unit          = `{` number UNIT `}`
+  cfg_separator     = `|`
+
+TBCFG_VALUE         = /[lcr|]+/~
+
+#### paragraphs and sequences of paragraphs ####
+
+block_of_paragraphs = "{" [sequence] §"}"
+sequence            = [_WSPC] { (paragraph | block_environment) [_PARSEP|S] }+
+paragraph           = { !blockcmd text_element [S] }+
+text_element        = line_element | LINEFEED
+line_element        = text | inline_environment | command | block
+
+
+#### inline enivronments ####
+
+inline_environment  = known_inline_env | generic_inline_env
+known_inline_env    = inline_math
+generic_inline_env  = begin_inline_env ~ paragraph !_PARSEP §end_inline_env
+begin_inline_env    = (<-!_LB begin_environment) | (begin_environment !LFF)
+end_inline_env      = end_environment
+                      ## (<-!_LB end_environment)   | (end_environment !LFF)  # ambiguity with generic_block when EOF
+begin_environment   = /\\begin{/ §NAME /}/
+end_environment     = /\\end{/ §::NAME /}/
+
+inline_math         = _im_dollar | _im_bracket
+  _im_dollar        = `$` § _inline_math_text `$`
+  _im_bracket       = `\(` § _inline_math_text `\)`
+_inline_math_text   = /[^$]*/
+
+#### commands ####
+
+command             = known_command | text_command | assignment | generic_command
+
+known_command       = citet | citep | footnote | includegraphics | caption
+                    | multicolumn | hline | cline | documentclass | pdfinfo
+                    | hypersetup | label | ref | href | url | item
+text_command        = TXTCOMMAND | ESCAPED | BRACKETS
+assignment          = !no_command CMDNAME "=" (number [UNIT] | block | CHARS)
+generic_command     = !no_command CMDNAME [[ ~ config ] { ~ block }+ ]
+                    | `{` CMDNAME _block_content §`}`
+
+citet               = "\citet" [config] block
+citep               = ("\citep" | "\cite") [config] block
+footnote            = "\footnote" block_of_paragraphs
+includegraphics     = "\includegraphics" [ config ] block
+caption             = "\caption" block
+multicolumn         = "\multicolumn" "{" column_nr "}" tabular_config block_of_paragraphs
+hline               = "\hline"
+cline               = "\cline{" column_nr "-" column_nr "}"
+  column_nr         = INTEGER
+documentclass       = "\documentclass" [ config ] block
+pdfinfo             = "\pdfinfo" info_block
+hypersetup          = "\hypersetup" param_block
+label               = "\label{" CHARS "}"
+ref                 = ( "\ref{" | "\pageref{" ) CHARS "}"
+url                 = "\url{" urlstring "}"
+href                = "\href{" urlstring "}" block
+  urlstring         = [protocol] { path } [target]
+  protocol          = /\w+:\/\/(?!\*)/
+  path              = PATH PATHSEP
+  target            = PATH { <-!/s?ptth/ COLON PATH } [ ([BACKSLASH] HASH| <-!/s?ptth/ COLON) TAG ]
+
+
+#######################################################################
+#
+#: text
+#
+#######################################################################
+
+block          = "{" _block_content §`}`
+_block_content = { (block_environment | text_element | paragraph) [_PARSEP|S] }
+# text           = {CHARS|special}+ { (S {CHARS|special}+ }
+# text           = {LINE|special}+ { (S {LINE|special}+ }
+text           = {TEXT|special}+ { S  {TEXT|special}+ }
+  special      = `\-` | /\\/ esc_char   # reserved for characters that may appear in
+  esc_char     = `,`                    # in the middle of a word but to not delimit words
+
+no_command     = "\begin{" | "\end{" | BACKSLASH _structure_name &`{`
+blockcmd       = BACKSLASH ( ( "begin{" | "end{" ) _env_name "}"
+                           | _structure_name & `{` | `[` | `]`)
+
+_env_name      = `enumerate` | `itemize` | `description` | `figure` | `quote`
+               | `quotation` | `tabular` | `displaymath` [`*`]
+               | `equation` [`*`] | `eqnarray` [`*`]
+_structure_name = `subsection` | `section` | `chapter` | `subsubsection`
+               | `paragraph` | `subparagraph` | `item`
+
+
+#######################################################################
+#
+#: parameters
+#
+#######################################################################
+
+config       = "[" § (parameters &"]" | cfg_text) "]"
+
+param_block  = "{" [parameters] "}"
+parameters   = (association | flag) { <-! BACKSLASH "," (association | flag) }  [ WARN_Komma ]
+association  = key~ "=" value~
+flag         = _QUALIFIED | magnitude
+key          = _QUALIFIED
+value        = magnitude | _LETTERS | CMDNAME | param_block | block
+
+info_block     = "{" §{ info_assoc } "}"
+info_assoc     = info_key ~ [ "(" §info_value ")" ]
+info_key       = `/` _NAME
+info_value     = TEXT_NOPAR { S TEXT_NOPAR }  # text without parentheses
+
+magnitude    = number [UNIT]
+number       = INTEGER [FRAC]
+cfg_text     = { (~ text) | CMDNAME | SPECIAL | block }
+
+
+#######################################################################
+#
+#: errors and warnings
+#
+#######################################################################
+
+WARN_Komma = ","
+
+
+#######################################################################
+#
+#: primitives
+#
+#######################################################################
+
+CMDNAME    = /\\@?(?:(?![\d_])\w)+/~
+TXTCOMMAND = /\\text\w+/
+ESCAPED    = /\\[%$&_\/{} \n]/
+SPECIAL    = /[$&_\/\\\\]/
+BRACKETS   = /[\[\]]/                       # left or right square bracket: [ ]
+LINEFEED   = /[\\][\\]/
+
+_QUALIFIED = IDENTIFIER { <-! BACKSLASH /[:.-]/ IDENTIFIER }
+IDENTIFIER = _NAME
+NAME       = _NAME                          # captured! don't use without retrival
+_NAME      = /(?!\d)\w+\*?/
+INTEGER    = /-?(?:(?:[1-9][0-9]+)|[0-9])/
+FRAC       = /\.[0-9]+/
+UNIT       = /(?!\d)\w+/
+
+PATH       = /[\w=~?.,%&\[\]-]+/
+PATHSEP    = /\/(?!\*)/
+HASH       = `#`
+COLON      = `:`
+TAG        = /[\w=?.:\-%&\[\] \/]+/
+
+TEXT       = /(?:[^\\%$&\{\}\[\]\n]+(?:\n(?![ \t]*\n))?)+/
+TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parnetheses
+LINE       = /[^\\%$&\{\}\[\]\n]+/          # a line of text
+CHARS      = /[^\\%$&\{\}\[\]\s\n]+/        # some piece of text excluding whitespace,
+                                            # linefeed and special characters
+_LETTERS   = /\w+/
+LF         = NEW_LINE { COMMENT__ WHITESPACE__ } | EOF # linefeed but not an empty line
+LFF        = NEW_LINE [ _WSPC ] | EOF       # at least one linefeed
+S          = &/[% \t\n]/ !_GAP WSP_RE__     # significant whitespace
+_PARSEP    = { WHITESPACE__ COMMENT__ } _GAP [_WSPC] # paragraph separator
+_WSPC      = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
+_GAP       = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
+                                            # [whitespace] linefeed [whitespace] linefeed
+NEW_LINE   = /[ \t]*/ [COMMENT__] /\n/
+_LB        = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
+                                            # beginning of text marker '$' added for test code
+BACKSLASH  = /[\\]/
+
+EOF        = /(?!.)/                        # End-Of-File

@@ -1,0 +1,1261 @@
+\section{Sozialwahltheorie}
+\label{Sozialwahltheorie}
+
+Bisher haben wir uns nur mit individuellen Entscheidungen beschäftigt. Für die
+Anwendung der Theorie ist es dabei weniger wichtig, ob die Akteure bzw.
+"`Agenten"' tatsächlich einzelne Individuen sind, oder ob sie etwa Gruppen oder
+Körperschaften sind. Entscheidend ist, dass sie über eine ganz bestimmte
+Präferenzrelation verfügen, die die Bedingungen für Präferenzrelationen erfüllt,
+also Ordnung, Transitivität etc. (siehe Kapitel \ref{Praeferenzen}, ab Seite
+\pageref{Praeferenzen}). \marginline{kollektive Entscheidungen} Die
+Sozialwahltheorie beschäftigt sich nun genau mit der Frage, wie eine Gruppe von
+Individuen kollektive Entscheidungen treffen kann, wenn man noch nicht von
+vornherein eine kollektive Präferenzrelation als gegeben betrachtet. Man könnte
+auch sagen, dass das Problem bzw. eines der Hauptprobleme der Sozialwahltheorie
+darin besteht, wie man individuelle Präferenzen auf kollektive Präferenzen
+abbilden kann. Um ein Problem handelt es sich insofern, als die individuellen
+Präferenzen einer Gruppe von Menschen höchst unterschiedlich beschaffen sein
+können, selbst wenn man einmal annimmt, dass jedes Mitglied der Gruppe über eine
+im Sinne der Theorie gültige Präferenzrelation verfügt. Wie wir sehen werden,
+kann es zu Schwierigkeiten kommen, wenn man daraus eine kollektive
+Präferenzrelation ableiten will, die immer noch die Bedingungen einer
+wohlgeordneten Präferenzrelation erfüllt.
+
+Die individuellen Präferenzen sämtlicher Individuen zusammengenommen, bezeichnet
+man auch als "`{\em Präferenzprofil} "'. Ein Präferenzprofil ist also eine Menge
+von individuellen Präferenzrelationen.\marginline{soziale Wohlfahrtsfunktion} Die
+Abbildung des Profils von individuellen Präferenzrelationen auf eine einzelne
+kollektive Präferenzrelation nennt man eine "`{\em soziale Wohlfahrtsfunktion}"'
+oder, im Zusammenhang der Entscheidungstheorie, auch ein "`{\em
+Kollektiventscheidungsverfahren}"'. Mathematisch betrachtet haben wir es dabei mit
+folgenden Gegenständen zu tun:
+
+\begin{enumerate}
+  \item Mit einer Menge ${\cal X} = \{x, y, z, \ldots\}$ von Alternativen oder
+  Güterbündeln, die jeweils mit kleinen Buchstaben bezeichnet werden. Die Menge
+  aller auf ${\cal X}$ möglichen Präferenzrelationen soll mit ${\cal R}$
+  bezeichnet werden. (Für die definierenden Eigenschaften einer gültigen
+  Präferenzrelation siehe \pageref{Ordnungsaxiome}.)
+ 
+  \item Mit einer bestimmten Anzahl von Individuen $A, B, C, \ldots$, die mit
+  Großbuchstaben vom Anfang des Alphabets bezeichnet werden. Die Individuen kann
+  man sich durchnummeriert denken, so dass man sinnvollerweise statt von $A$, $B$ oder
+  $C$ auch vom ersten, zweiten oder dritten Individuuem oder ganz allgemein vom
+   "`$i$-ten Individuuem"' sprechen kann.
+  
+  \item Mit individuellen Prä\-fer\-enz\-re\-la\-tion\-en, wobei jedes
+  Individuum na\-tür\-lich eigene Prä\-fer\-enz\-en hat. Um anzuzeigen, wessen
+  Präferenzen gemeint sind, kann man einen Index an das Präferenzzeichen
+  anhängen, d.h. $x \succ_i y$, bedeutet, dass das $i$-te Individuum $x$
+  gegenüber $y$ vorzieht. Die gesammte Präferenzrelation eines Individuums kann
+  man mit $R_i$ bezeichnen.
+ 
+  \item Mit einer kollektiven Prä\-fer\-enz\-re\-la\-tion, d.i. diejenige 
+  Prä\-fer\-enz\-re\-la\-tion, die später für das Kollektiv gelten soll, und
+  die, solange nichts Näheres darüber bestimmt ist, völlig unabhängig von den
+  individuellen Präferenzen ist. Um zu kennzeichnen, dass kollektive Präferenzen gemeint
+  sind, wird der Index $K$ an das Präferenzzeichen angehängt, also etwa
+  $x \succ_K y$. Die gesamte kollektive Präferenzrelation wird wiederum mit
+  $R_K$ bezeichnet.
+   
+  \item Mit Profilen von individuellen Präferenzen. Ein Profil ist dabei ein
+  Tupel von individuellen Präferenzrelationen, in der für jedes Individuum
+  genau eine Präferenzrelation $R_i$ festgelegt ist. Wenn wir ein
+  beliebiges Präferenzprofil mit $P$ bezeichnen, dann gilt $P =
+  (R_1,\ldots, R_n)$. Zwei Präferenzprofile $P_1, P_2$
+  unterscheiden sich dann, wenn mindestens ein Individuum in $P_1$ andere 
+  Präferenzen hat als in $P_2$.
+  (Und es hat andere Präferenzen, wenn es wenigstens bezüglich eines Paars von 
+  Alternativen eine andere Ordnung vornimmt.)
+  
+  \item Mit der Menge aller möglichen Präferenzprofile ${\cal P}$, die, wie der
+  Name schon sagt, jedes nur denkbare Profil von wohlgeordneten
+  individuellen Präferenzen enthält.
+\end{enumerate}
+
+Eine {\em Kollektiventscheidungsverfahren}\marginline{mathematische Definition}
+ (auch "`soziale"' bzw.
+"`ge\-sell\-schaft\-liche Wohl\-fahrts\-funk\-tion"' oder einfach
+"`Sozialwahlfunktion"') ist nun eine Funktion $f: {\cal P} \mapsto {\cal R}$,
+die jedem Präferenzprofil $P \in {\cal P}$ eine "`kollektive"' Präferenzrelation
+$R_K \in {\cal R}$ zuordnet. Man kann auch schreiben: $f(P_1,\ldots, P_n)
+= R_K$, wobei $(P_1,\ldots, P_n)$ ein bestimmtes Präferenzprofil ist, und
+$R_K$ diejenige Präferenzrelation, die diesem Profil durch die
+Sozialwahlfunktion $f$ zugeorndet wird.
+
+Mit Hilfe dieses technischen Apparats kann die Frage untersucht werden, welche
+Entscheidungs- bzw. Abstimmungsprozeduren zum Treffen von Kollektiventscheidungen
+geeignet sind. Z.B. kann man damit die Frage untersuchen, ob die Entscheidung
+nach dem demokratischen Mehrheitsprinzip zu effizienten, gerechten und
+konsequenten Kollektiventscheidungen führt. Dazu müssen die entsprechenden
+Anforderungen an eine Sozialwahlfunktion (Effizienz, Gerechtigkeit etc.)
+natürlich zunächst mathematisch umschrieben werden. In diesem Zusammenhang ist es
+wichtig darauf hinzuweisen, dass die Sozialwahltheorie keineswegs die einzige
+Theorie ist, die sich mit diesen Fragen beschäftigt. Vielmehr werden die
+entsprechenden Fragen in der politischen Philosophie schon seit der Antike
+thematisiert, und schon längst bevor es die Sozialwahltheorie als eigenes
+Fachgebiet gab, sind auf viele der von ihr untersuchten Probleme praxistaugliche
+Lösungen gefunden worden. Was die Sozialwahltheorie von früheren Ansätzen
+unterscheidet ist der formale mathematische Rahmen, in dem sie diese Probleme
+untersucht.\marginline{Grenzen der Sozialwahltheorie} Leider erweist sich dieser
+formale Rahmen nicht immer als ein Vorteil, indem viele wichtige Probleme und
+Fragestellungen, die im Zusammenhang mit kollektiven Entscheidungsprozessen
+stehen, sich innerhalb dieses Rahmens entweder überhaupt nicht oder nicht adäquat
+artikulieren lassen. Die Sozialwahltheorie gibt nur einen ganz bestimmten
+Blickwinkel auf solche Phänomene wie das der demokratischen Mehrheitsentscheidung
+frei. Was z.B. weitgehend ausgespart bleibt, sind sogenannte "`deliberative"'
+Prozesse, also diejenigen Vorgänge, in denen sich -- in der ökonomistischen
+Sprache formuliert -- die Präferenzen der Individuen in Folge von öffentlichen
+Diskussionen veränderen, aneinander anpassen oder sich dissozieren und in Lager
+aufteilen. Und in einer nicht ökonomistischen Sprache formuliert, sind
+deliberative Prozesse all diejenigen Diskussions- und Meinungsbildungsprozesse,
+die, besonders in Demokratien, politischen Entscheidungen oder Abstimmungen
+voraus zu gehen pflegen. Will man ein richtiges und vollständiges Bild von der
+Natur demokratischer politischer Entscheidungsprozesse gewinnen, so ist die
+Sozialwahltheorie allein dafür völlig unzureichend und sollte unbedingt durch
+andere Theorien, z.B. solche, die deliberative Prozesse zum Gegenstand haben,
+ergänzt werden. Zur klassischen politischen Philosophie steht die
+Sozialwahltheorie also bestenfalls im Verhältnis einer Ergänzung. Keineswegs
+handelt es sich dabei um eine "`streng wissentschaftliche"' Alternative, die die
+traditionelle politische Philosophie ablösen oder ersetzen könnte.
+
+\subsection{Zum Einstieg: Das Condorcet-Paradox}
+\label{condorcetParadox}
+Der grundlegende Widerspruch, auf dem in der ein- oder anderen Form viele der
+Unmöglichkeitsbeweise der Sozialwahltheorie aufbauen, lässt sich beispielhaft
+am sogenannten Condorcet-Paradox erläutern. Angenommen, wir haben drei
+Individuen $A$,$B$, $C$, die über drei Alternativen
+$x$,$y$,$z$ abstimmen wollen. Alle Individuen sind dabei gleichberechtigt. Ihre
+Präferenzen sind folgendermaßen verteilt:
+
+\begin{center}
+\begin{tabular}{ccc}
+\label{condorcetParadoxTabelle}
+$A$ & $B$ & $C$ \\
+\cline{1-3}
+$z$ & $x$ & $y$ \\
+$x$ & $y$ & $z$ \\
+$y$ & $z$ & $x$ \\
+\end{tabular}
+\end{center}
+
+Welche Alternative sollte gewählt werden? Jede Alternative steht einmal an
+erster, einmal an zweiter und einmal an dritter Stelle. Man kann also keine
+Alternative ohne Weiteres als die kollektiv beste auszeichnen, wenn man nicht
+eines der Individuen in ungerechter Weise bevorzugen will. Das Problem lässt sich
+auch nicht einfach verfahrenstechnisch lösen. Denn wollte man zum Beispiel
+Stichwahlen durchführen, so würde im ersten Wahlgang jede Alternative die gleiche
+Stimmenzahl erhalten, so dass man keine Alternative für den zweiten Wahlgang
+ausschließen könnte. Wollte man paarweise Stichwahlen durchführen, so ergibt sich
+jeweils, dass $x \succ_K y$, $y \succ_K z$, aber ebenso auch $z \succ_K x$. Bei
+jedem dieser Paare wird ja das vordere Glied von jeweils zwei Individuen
+bevorzugt.\marginline{Condorcet-Kriterium} Man nennt den Mechanismus von
+paarweisen Stichwahlen zur Bestimmung der bevorzugten Alternative aus einer Menge
+von Alternativen über die mehrere Individuen (möglicherweise) unterschiedliche
+Präferenzen haben auch {\em Condorcet-Kriterium} (nach dem Marquis des Condorcet,
+einem französischen Philosphen und Mathematiker des 18. Jahrhunderts, der dieses
+Kriterium vorgeschlagen hat). Das Condorcet-Kriterium zur Bestimmung der
+kollektiven Präferenzen würde also zu {\em zyklischen Präferenzen} führen, weil
+$x \succ_K y \succ_K z \succ_K x$ gilt. \marginline{zyklische Präferenzen} Damit
+wäre aber die Transitivität der kollektiven Präferenzrelation verletzt. Nun haben
+wir zwar gesehen, dass intransitive Präferenzen keineswegs "`unnatürlich"' sein
+müssen (siehe Seite \pageref{intransitivePraeferenzen}). Das vorliegende Beispiel
+zeigt ja gerade, dass sie auf eine ganz natürliche und naheliegende Weise
+(paarweise Stichwahlen) zustande kommen können. Aber intransitive Präferenzen
+werfen trotzdem sowohl theoretische ("`Geldpumpenargument"', siehe Seite
+\pageref{Geldpumpenargument}) als auch praktische Probleme auf. Denn welche
+Alternative soll man im Fall zyklischer kollektiver Präferenzen wählen, wenn man
+vermeiden will, irgendjemanden zu bevorzugen. Eine der naheliegendsten Lösungen
+um mit "`Pattsituationen"' dieser Art umzugehen, besteht darin das Los
+entscheiden zu lassen, denn beim Losverfahren bleibt die demokratische Gleichheit dadurch
+gewahrt, dass jeder die gleichen Chancen hat.\marginline{Losentscheid zur
+Auflösung von Zyklen} Es ist daher auch nicht verwunderlich, dass wir dieses
+Mittel seit der Antike in zahlreichen Satzungen und Verfassungen für
+u.a. diejenigen Fälle vorgesehen finden, in denen eine Abstimmung nicht zu einem
+eindeutigen Ergebnis führt \cite[]{delong:1991}. (Ein anderer wichtiger Grund
+für den Einsatz des Losverfahren ist, dass es sich nicht wie Abstimmungen durch
+Stimmenkauf oder Erpessung manipulieren lässt. Bei historischen Beispielen der
+Verlosung von Ämtern (z.B. im antiken Athen oder in den italienischen Republiken
+in der Zeit der Renaissance) kommt hinzu,\footnote{Darauf hat mich Rudolf
+Schüssler aufmerksam gemacht.} dass man auf diese Weise verhindern wollte, dass
+dieselben Ämter immer in der Hand derselben Familien bleiben.)
+
+Die mögliche Entstehung {\em zyklischer kollektiver Präferenzen} ist nur eins von
+mehreren Problemen, an denen Abstimmungsverfahren leiden können. Ein weiteres
+mögliches Problem bestimmter Abstimmungsverfahren, das bei "`ungünstig"'
+verteilten individuellen Präferenzen auftreten kann, ist das der {\em
+Pfadabhängigkeit}. Angenommen, wir hätten uns entschlossen, statt, wie eben, über
+alle Paare abzustimmen, zunächst zwischen einem beliebig herausgegriffenen Paar
+von Alternativen abszustimmen und dann zwischen dem Gewinner dieser Abstimmung
+und der verbleibenden Alternative. (Sollte es mehr als drei Alternativen geben,
+kann man das Verfahren einfach noch einmal durchführen, solange bis am Ende eine
+Alternative gewonnen hat.) Die Teilnehmer $A,B$ und $c$ aus der Tabelle auf Seite
+\pageref{condorcetParadoxTabelle} würden also z.B. zuerst über $x$ und $y$
+abstimmen, wobei $x$ mit 2 Stimmen zu einer Stimme gewinnt. Dann stimmen sie über die
+verbleibende Alternative $x$ oder $z$ ab. Diesmal gewinnt $z$ mit 2:1
+Stimmen.\marginline{Pfadab\-hängigkeit} Das Problem
+besteht nun darin, dass eine ganz andere Alternative gewonnen hätte, wenn nicht
+mit der Abstimmung über $x$ und $y$ begonnen worden wäre, sondern z.B. mit der
+Abstimmung über $x$ und $z$ begonnen, dann hätte sich zunächst $z$ gegen $x$
+behauptet, aber bei der anschließenden Stichwahl zwischen $z$ und $y$ hätte $y$
+gewonnen. Das Abstimmungsergebnis hängt also (bei entsprechend ungünstig
+verteilten Präferen) in kontingenter Weise von der Reihenfolge der Abstimmung
+(bzw. dem gefählten "`Pfad"') ab. Man könnte auch sagen, der Sieg von $z$ im
+ersten Fall bzw. von $y$ im zweiten Fall ist bloß ein "`Artefakt des
+Abstimmungsmechanismus"'. (Eine präzise Definition des Begriffs des "`Artefakts
+eines Abstimmungsmechanismus"' könnte lauten: Eine Artefakt eines
+Abstimmungmechanismus ist ein Abstimmungsergebnis, das nur durch die Verletzung
+unserer Erwartungen an einen fairen und vernünftigen Abstimmungsmechanismus
+zustande gekommen ist. In dem Beispiel eben wäre dan die Erwartung verletzt, dass
+ein Abstimmungsmechanismus pfadunabhängig sein sollte.) Unter Umständen könnte
+dieses Problem sogar Manipulationsmöglichkeiten für einen geschickten
+Wahlleiter eröffnen, der die Reihenfolge der Stichwahlen festlegen darf (siehe
+Übungsaufgabe \ref{AufgPL0} auf Seite \pageref{AufgPL0}). 
+
+Dasselbe Beispiel verdeutlicht zugleich ein weiteres Problem -- wenn man es für
+ein Problem hält --, nämlich das des {\em strategischen Wählens}.
+\marginline{strategisches Wählen} Nehmen wir an, die Reihenfolge der Abstimmungen
+sei bereits dahingehend festgelegt, dass zunächst zwischen $x$ und $y$ und dann
+zwischen der Siegeralternative und $z$ abgestimmt wird. Angenommen nun,
+Individuum $B$ würde in der ersten Runde nicht für $x$, sondern "`strategisch"',
+d.h. entgegen den eigenen Präferenzen, für $y$ stimmen, dann würde sich $y$ in
+der zweiten Runde durchsetzen und $B$ hätte vermieden, dass die aus $B$s Sicht
+schlechteste Alternative $C$ gewinnt. "`Strategisches Wählen"' kann man insofern
+als ein Problem ansehen, als die Transparenz eines Abstimmungsvorgangs darunter
+leidet, erst recht dann, wenn sich alle Beteiligten solcher Ticks bedienen.
+  
+Nun wäre es sehr naheliegend, um solche Probleme zu vermeiden, die Forderung zu
+erheben, nur solche Abstimmungsverfahren zu verwenden, bei denen keine
+"`Artefakte"' auftreten können. Leider gibt es, wie u.a. der weiter unten
+(Kapitel \ref{SatzVonArrow}) zu besprechende Satz von Arrow zeigt, kein
+Verfahren, das in dieser Hinsicht alle Wünsche erfüllen könnte. Irgendwelche
+(möglichen) Artefakte muss man bei jedem Abstimmungsmechanismus in Kauf nehmen.
+Und welches Abstimmungsverfahren man unter dieser Bedingung für das
+"`bestmögliche"' hält, hängt wiederum davon ab, welche Einschränkungen man bereit
+ist in Kauf zu nehmen. Darüber und auch über die Frage, wie gravierend diese
+Schwierigkeiten insgesamt sind, werden wir uns ausführlich im nächsten Kapitel
+(Kapitel \ref{SozialwahltheorieDiskussion}) unterhalten.\footnote{Alle hier
+aufgezählten "`Probleme"' und noch einige mehr werden nicht ohne einen gewissen
+Hang zur Dramatisierung bei William Riker breit getreten \cite[]{riker:1982}.
+Eine knappe und sehr verständliche Zusammenfassung der beschriebenen Phänomene
+findet man bei Gerry Mackie \cite[S. 5-9]{mackie:2003}, der Riker's skeptischen
+Schlussfolgerungen bezüglich demokratischer Entscheidungsverfahren ansonsten aber
+entschieden wirderspricht.}
+ 
+Schließlich, und als wären die aufgezählten Probleme: zyklische kollektive
+Präferenzen, Pfadabhängikeit, Manipulation durch Festlegung der
+Abstimmungsorgnung bzw. -reihenfolge, strategisches Wählen nicht schon genug,
+kann man auch das der Tatsache, dass es keinen einzigen Abstimmungsmechanismus
+gibt, der alle Probleme vermeidet, sondern eine Vielzahl von alternativen
+Abstimmungsverfahren mit jeweils unterschiedlichen Schwierigkeiten, ein Problem
+machen. Denn da unterschiedliche Abstimmungsmechanismen unter Umständen zu
+unterschiedlichen Ergebnissen führen, so entsteht auch auf dieser ebene ein
+Kontingenzproblem: Wie kann man noch von einem Abstimmungsverfahren sagen, dass
+es die individuellen Präferenzen in angemessener Form berücksichtigt und zu einer
+kollektiven Präferenz bündelt, wenn es mehrere mehr oder weniger gleich guter und
+gleich schlechter Verfahren gibt, die möglicherweise zu unterschiedlichen
+Ergebnissen führen.
+
+Zum Schluss sein noch darauf hingewiesen, dass es sich bei den hier beschriebenen
+Phänomenen nicht ausschließlich um ein Problem von Abstimmungen und
+Kollektiventscheidungen (auch wenn es dabei vielleicht häufiger auftritt), denn
+nach dem gleichen Muster kann man -- wie zuvor (S.
+\pageref{intransitivePraeferenzen}) schon einmal angedeutet -- auch zyklische
+individuelle Präferenzen konstruieren. Insofern ist es ein Problem, dass den Kern
+der Theorie betrifft. Dazu ein Beispiel: Eine Person steht vor der Wahl mit
+welchem ihrer drei Kollegen und Kolleginnen Peter, Lisa und Klaus sie gemeinsam
+an einem Projekt arbeiten möchte. Die drei Kollegen und Kolleginnen unterscheiden
+sich dabei hinsichtlich der drei Eigenschaften nett, fleißig und pünktlich. In
+der folgenden Tabelle ist die Rangfolge der Kollegen und Kolleginnen für jede
+dieser Eigenschaften angegeben:
+
+\begin{center}
+\begin{tabular}{c|ccc}
+   & nett & fleißig & pünktlich \\
+\cline{1-4}
+1. & Peter & Lisa  & Klaus \\
+2. & Lisa  & Klaus & Peter \\
+3. & Klaus & Peter & Lisa \\
+\end{tabular}
+\end{center}
+
+Geht man danach, welcher Kollege bei mehr guten Eigenschaften besser ist als ein
+anderer (paarweiser Vergleich nach dem Condorcet-Verfahren), so ergibt sich auf
+ganz natürliche Weise die "`zyklische"' Präferenzstruktur: $Peter \succ Lisa
+\succ Klaus \succ Peter$.
+
+Das Muster der Verteilung individueller Präferenzen, das sich in beiden Tabellen
+wiederfindet, tritt in der Sozialwahltheorie ebenso wie in der Wahl- und
+Abstimmungstheorie sehr häufig auf. Viele "`paradoxe"' Ergebnisse in diesen
+Theorien beruhen in der ein- oder anderen Weise auf diesem Muster, so auch das
+weiter unten folgende "`Paradox des Liberalismus"'.
+
+
+
+\subsection{Das sogenannte "`Paradox des Liberalismus"'} 
+\label{LiberalismusParadox}
+Nach diesem Einstieg gehen wir nun zunächst zu einem der einfacheren Beispiele
+der Sozialwahltheorie über, dem sogennanten "`Paradox des Lieberalismus"' von
+Amartya Sen \cite[]{kliemt-lahno:2005}. Die Bezeichnung erscheint -- zumindest im
+Deutschen -- ein wenig unglücklich, denn es handelt sich dabei
+eher um ein Paradox der Demokratie als des Liberalismus im engeren Sinne. Hinter
+dem Namen verbirgt sich jedenfalls Folgendes: Um faire Kollektiventscheidungen über eine
+Menge von Alternativen zu treffen, soll eine "`Verfassung"' verabschiedet werden,
+die ein entsprechendes Entscheidungsverfahren vorgibt, das folgenden Bedingungen
+genügt:
+
+\marginline{Vor\-aus\-setzungen}
+\begin{enumerate} 
+  \item {\em Minimale Fairness}\footnote{Zuweilen wird diese Bedingung auch als
+  "`Bedingung des minimalen Liberalismus"' bezeichnet
+  \cite[]{kliemt-lahno:2005}. Aber die Bezeichnung ist schon deshalb irreführend, 
+  weil "`Liberalismus"' eigentlich meint, dass es 
+  bestimmte Dinge gibt, die überhaupt nicht kollektiv entschieden werden
+  müssen, nicht aber, dass bei einem Kollektiventscheidungsverfahren jeder
+  einmal zum Zuge kommen müsse.} (Prärogativrecht): Jeder soll das Recht haben,
+  die Kollektiventscheidung für mindestens ein Paar von Alternativen festzulegen. 
+  Wer über welches Paar von Alternativen 
+  entscheiden darf, wird in der Verfassung festgelegt. Die Bedingung der
+  "`minimalen Fairness"' garantiert jedem, nicht vollständig übergangen zu
+  werden.
+  
+  \item {\em Unbeschränkter Bereich}: Jedes beliebige individuelle
+  Präferenzprofil ist zugelassen (sofern es die Bedingungen einer wohlgeformten
+  Präferenzrelation erfüllt). Diese Bedingung besagt einerseits, dass die
+  Individuen völlig frei sind, ihre persönlichen Präferenzen zu wählen, und
+  andererseits, dass die gesuchte Entscheidungsprozedur der Möglichkeit
+  beliebig verteilter individueller Präferenzen Rechnung tragen muss.
+  
+  \item {\em Einstimmigkeit} oder auch "`Pareto-Effizienz"': Wenn alle
+  Individuen eine bestimmte Alternative einer anderen vorziehen, dann sollte
+  auch nach dem Kollektiventscheidungsverfahren diese Alternative vor der anderen
+  rangieren.\footnote{Da sie etwas leichter zu verstehen ist, wurde hier als
+  Voraussetzung die {\em schwache} Pareto-Bedingung anstatt der sonst üblichen
+  {\em starken} Paretobedingung gewählt. Der Beweis lässt sich aber genauso
+  mit der starken Pareto-Bedingung führen (siehe Aufgabe \ref{AufgPareto}).}
+\end{enumerate}
+
+\marginline{Beweis}
+Allen drei Bedingungen kommt ein gewisser Grad von Selbst\-ver\-ständ\-lich\-keit
+zu, d.h. man ist leicht geneigt zu verlangen, dass jede einigermaßen faire und
+sinnvolle Entscheidungsprozedur mindestens diese drei Bedingungen
+erfüllt. Es lässt sich nun jedoch zeigen, dass es unmöglich ist, alle drei
+Bedingungen auf einmal zu erfüllen. Um das zu zeigen, gehen wir von dem
+einfachsten Fall aus, in dem wir es mit zwei Individuen und drei Alternativen zu
+tun haben. Die Individuen bezeichnen wir mit $A$ und $B$, die Alternativen mit
+$x,y,z$. Nun soll in der "`Verfassung"' festgeschrieben werden, wer über welches
+Paar von Alternativen entscheiden darf. Wir nehmen an, dass das Individuum $A$
+über $y$ und $z$ und Individuum $B$ über $x$ und $z$ entscheiden darf, d.h. wenn
+$P$ die Menge der Alternativen bezeichnet, über die ein Individuum die
+"`Prärogative"' ausübt, dann gilt:
+
+\[P_A = \{x,z\} \]
+\[P_B = \{y,z\} \]
+
+Die Unmöglichkeit eines Entscheidungsverfahrens, das alle drei Bedingungen
+erfüllt, ist dann bewiesen, wenn wir Präferenzen für $A$ und $B$ finden, mit
+denen keine eindeutige Kollektiventscheidung mehr getroffen werden kann.
+Dies ist aber für folgende Präferenzen der Fall:
+
+\[A:\qquad y \succ x \succ z \]
+\[B:\qquad z \succ y \succ x \]
+
+Mit diesen Präferenzen kann keine der drei Alternativen als die beste
+gewählt werden, denn: 
+\begin{enumerate}
+  \item Aufgrund der Präferenzen von $A$, und da $A$ die
+  Prärogative über $x$ und $z$ ausübt, kann $z$ nicht gewählt werden.
+  \item Aufgrund der Präferenzen von $B$, und da $B$ die Prärogative
+  über $y$ und $z$ ausübt, kann $y$ nicht gewählt werden.
+  \item Aufgrund der Einstimmigkeitsbedingung und der Präferenzen beider, kann
+  aber auch nicht $x$ gewählt werden.  
+\end{enumerate}
+Damit ist gezeigt, dass es unmöglich ist, ein Entscheidungsverfahren zu finden,
+dass die Präferenzen von $A$ und $B$ unter Berücksichtigung der Fairness-,
+Unbeschränktheits- und Einstimmigkeitsbedingung auf kollektive Präferenzen
+abbilden kann, da keine der möglichen Alternativen in der kollektiven
+Präferenzordnung an erster Stelle auftauchen dürfte.
+
+Die Gültigkeit des Beweises hängt nicht davon ab, welche Prärogativen man wählt
+(Übungsaufgabe \ref{AufgPL1}). Es ist aber sehr wohl entscheidend für den
+Beweis, dass die Prärogativen im vorhinein festgelegt werden, d.h. bevor etwas über die
+Präferenzen der Individuen bekannt ist (Übungsaufgabe \ref{AufgPL2}).
+
+\marginline{Beweistechnik}
+An dieser Stelle sei ein kleiner Einschub gestattet zu der
+Frage: Wie kommt man auf diese Lösung? Die Beweisführung gelingt nämlich nur, wenn man
+zuvor die Präferenzen der Individuen geschickt festlegt. Wie findet man aber
+heraus, welches die Präferenzen sind, mit denen sich der Beweis nachher richtig
+führen lässt? Nun, in diesem Fall sollte man versuchen, die Präferenzen
+ausgehend von den drei Bedingungen zu wählen (wobei die Bedingung des
+unbestimmten Bereiches schon dadurch abgegolten ist, dass wir die Präferenzen
+frei wählen dürfen, und hier also nicht noch einmal in Betracht kommt). Dabei
+ist es hilfreich, wenn man mit der Einstimmigkeitsbedingung anfängt. Damit man 
+aufgrund der Einstimmigkeitsbedingung eine Alternative ausschließen kann, müssen
+die Präferenzen beider Individuen auf jeden Fall bei einem Paar von Alternativen
+(hier $x$ und $y$) gleichgeordnet sein. So scheidet aufgrund der
+Einstimmigkeitsbedingung schon einmal eine Alternative aus. 
+Die verbleibende Alternative ($z$) muss nun so in die Präferenzen eingeordnet werden, 
+dass mit Hilfe der Prärogative des einen Individuums, die bevorzugte der beiden
+anderen Alternativen ($y$) ausfällt, und dass zugleich die verbleibende
+Alternative ($z$) ausgeschlossen wird.
+
+\marginline{Geringe inhaltliche Bedeutung}
+Kann man aus diesem Beweis inhaltliche Schluss\-fol\-ger\-ung\-en be\-züg\-lich
+der Demokratie bzw. der Möglichkeit und Fairness demokratischer
+Entscheidungsverfahren ziehen? Mit einiger Vorsicht kann wohl folgende
+Schlussfolgerung gezogen werden: Eine Idealvorstellung dergestalt, dass in der
+Demokratie den Interessen jedes Bürgers (ausgedrückt durch die Präferenzen)
+wenigstens eine gewisse Berücksichtigung (ausgedrückt durch die Prärogative)
+garantiert (unbeschränkter Bereich) werden könnte, lässt sich nicht unter allen
+Umständen (Effizienz- bzw. Einstimmigkeitsgebot) halten.
+
+Wie man sieht -- aber das ist ein Grundproblem des Ansatzes -- sind inhaltlich
+nur relative schwache, d.h. nahe an der Grenze zur reinen Binsenweisheit
+liegende Schlussfolgerungen möglich. Denn, dass in der Demokratie nicht alle
+Interessen berücksichtigt werden (können), ist schon aus anderen, pragmatischen
+Gründen relativ offensichtlich. Zugleich ist aber jedem die Möglichkeit und damit
+auch die Chance gegeben, für die eigenen Interessen zu kämpfen. Dass diese
+Chancen höchst ungleich verteilt sind, stimmt leider ebenso, hängt aber weniger
+mit logisch-mathematischen Abbildungsproblemen als mit der
+innergesellschaftlichen Reichtums-, Macht- und Einkommensverteilung etc.
+zusammen.\footnote{Aufschlussreich hinsichtlich der Machtressourcenverteilung
+als Funktionsvoraussetzung der Demokratie ist die Zusammenfassung bei Schmidt
+\cite[S. 438ff.]{schmidt:2000}.}
+
+Aber auch wenn keine
+unmittelbaren starken demokratietheoretischen Schlussfolgerungen aus dem
+"`Paradox des Liberalismus"' gezogen werden können, ist ein Verständnis der
+logischen Eigenschaften von Abstimmungs- bzw. Kollektiventscheidungsverfahren
+-- neben den nicht minder wichtigen psychologischen Rahmenbedingungen --
+wichtig, wenn es um die Frage geht, welche Abstimmungsverfahren man für welchen
+Zweck heranziehen bzw. wie man sie gestalten sollte.
+
+\subsection{Der "`Klassiker"' der Sozialwahltheorie: Der Satz von Arrow}
+\label{SatzVonArrow}
+Ein historischer Vorläufer des sogennanten "`Paradox des Liberalismus"' und
+recht eigentlich der Klassiker der Sozialwahltheorie ist allerdings der "`Satz
+von Arrow"'. Der Beweis des "`Satzes von Arrow"' ist einiges komplizierter als
+das "`Paradox"' des Liberalismus, sollte aber, da er im Grunde nur relativ
+elementare mathematische Mittel voraussetzt, dennoch verständlich sein. Um es
+so einfach wie möglich zu machen, wird der Beweis in drei Teilbeweise zerlegt,
+die wir Schritt für Schritt durchgehen werden. 
+
+{\em Interessierte können sich
+gerne auch den zweiten und dritten Beweis in diesem Skript durchlesen.
+Besonders der dritte Beweis sollte, da er recht ähnlich ist, nicht mehr allzu
+schwer verständlich sein, wenn man den ersten Beweis erst einmal begriffen hat!}
+
+\subsubsection{Das Theorem}
+
+Der Satz von Arrow zeigt -- ähnlich wie Sens sog. "`Paradox des Liberalismus"' --
+dass eine Abbildung individueller Präferenzen auf eine kollektive
+Präferenzordnung nicht mehr möglich ist, wenn man nur ein par
+"`selbstverständliche"' Anforderungen an diese Abbildung stellt. Wenn wir dieses
+zunächst einmal mathematisch abstrakte Resultat auf demokratische
+Entscheidungsfindungsprozesse übertragen, dann besagt es, dass bestimmte
+normative Kriterien wie etwa 1) dass jeder eine faire Chance bekommen soll, 2)
+dass die Entscheidungsfindung effizient sein soll, 3) dass die
+Entscheidungsprozedur auch bei höchst unterschiedlichen Meinungen noch
+funktioniert, miteinander unvereinbar sein können. Da man dies den entsprechenden
+normativen Kriterien nicht unmittelbar ansieht, hat das Resultat schon einige
+Bedeutung, indem es uns auf einen möglichen Zielkonflikt aufmerksam macht. Wie
+bei beinahe allen Resultaten der Sozialwahltheorie muss man allerdings auch hier
+die Frage stellen, inwieweit die abstrakt-mathematische Formulierung die
+entsprechenden konkret-empirischen Zusammenhänge richtig erfasst.
+
+Zum Anforderungskatalog, auf den sich der Satz von Arrow bezieht, 
+gehören nun folgende Bedingungen:
+
+\begin{enumerate}\label{ArrowVoraussetzungen}\marginline{Arrows Vor\-aus\-setzungen}
+  \item {\em Diktaturfreiheit}: Es dürfen sich nicht in jedem Fall (d.h.
+  bei jedem möglichen Profil von individuellen Präferenzen)
+  die Präferenzen von ein- und demselben Individuum durchsetzen.
+  
+  {\footnotesize Diese 
+  Bedingung ist vergleichweise schwächer als die Bedingung der 
+  "`minimalen Fairness"' im Falle des Paradoxes des Liberalismus, 
+  indem sie immer noch zulässt, dass einzelne Individuen völlig übergangen
+  werden, solange nicht alle bis auf ein Individuum übergangen werden.}
+  
+  \item {\em Unbeschränkter Bereich}: Jedes beliebige individuelle
+  Präferenzprofil, das die Bedingungen einer wohlgeformten
+  Präferenzrelation erfüllt, ist zugelassen. 
+
+  \item {\em Einstimmigkeit} bzw. {\em Pareto-Effizienz}: Wenn alle Individuen
+  eine bestimmte Alternative einer anderen vorziehen, dann sollte auch nach dem
+  Kollektiventscheidungsverfahren diese Alternative der anderen vorgezeogen
+  werden.\footnote{Statt der schwachen Pareto-Bedingung kann man hier ebenso gut
+  die starke Paretobedingung einsetzen (siehe Aufgabe \ref{AufgPareto}).}
+
+  \item {\em Unabhängigkeit von dritten\footnote{Häufig wird diese Bedingung auch
+  "`Unabhängigkeit von {\em irrelevanten} Alternativen"' genannt. Wie bereits
+  zuvor (Seite \pageref{dritteAlternativen}) an einigen Beispielen dargelegt, ist
+  diese Bezeichnung irreführend, da dritte Alternativen in manchen Fällen sehr
+  wohl und zu Recht einen Einfluss auf die Rangordnung eines Paars von
+  Alternativen ausüben.} Alternativen} bzw. {\em Paar\-wei\-se
+  Un\-ab\-häng\-ig\-keit}: Die Anordnung, die das Kollektiventscheidungsverfahren
+  zwei Alternativen zuweist, sollte allein von der Ordnung {\em dieser} beiden
+  Alternativen in den Präferenzen der Individuen abhängen und nicht davon, wie
+  andere Alternativen in den Präferenzen der Individuen eingeordnet sind.
+
+  {\footnotesize Anders als bei der Paretobedingung legt die Bedingung der
+  Unabhängigkeit von dritten Alternativen nicht fest, welche kollektive
+  Wahl getroffen werden soll, wenn unterschiedliche Individuuen bezüglich
+  bestimmter Alternativen übereinstimmen, sondern vielmehr, welche Wahl
+  getroffen werden soll, wenn unterschiedliche Präferenzprofile bezüglich der
+  Anordnung bestimmter Alternativen übereinstimmen. Dabei können die
+  Individuuen innerhalb der Präferenzordnungen diese Alternativen sehr wohl
+  unterschiedlich anordnen (siehe dazu die Aufgaben \ref{AufgArrow1} und
+  \ref{AufgArrow2}).}
+ 
+% Wenn sich die Anordnung bestimmter Güter ($x$, $y$) durch die Bürger in einem
+% gegebenen Präferenzprofil ($P_1$) nicht von der Anordnung in einem anderen
+% Präferenzprofil ($P_2$) unterscheidet, dann sollte sich die Anordnung dieser
+% Güter in der durch die soziale Wohlfahrtfunktion aus dem einen Profil
+% gewonnenen Präferenzordnung nicht von der aus dem anderen Profil gewonnenen
+% unterscheiden.
+  
+% {\footnotesize Diese Bedingung, die beim sog. "`Paradox des Liberalismus"'
+% nicht vorkommt, darf nicht mit der Pareto-Bedingung verwechselt werden. Bei
+% der
+% Bedingung der Pareto-Effizienz geht es darum, dass alle Individuen in ein- und
+% demselben Präferenzprofil ein- und dieselbe Präferenz bezüglich zweier Güter
+% haben. Hier geht es aber darum, dass die Präferenzen einzelner Individuen
+% bezüglich bestimmter Güter, die sich von Individuum zu Individuum sehr wohl
+% unterscheiden können, in {\em unterschiedlichen} Profilen genauso
+% wiederkehren.}
+  
+% {\footnotesize Mann könnte das Prinzip der Unabhängigkeit von irrelevanten
+% Alternativen auch so formulieren: Wenn dieselben Präferenzen in
+% unterschiedlichen Präferenzprofilen eingebettet sind, darf dies keinen
+% Unterschied in der Abbildung dieser Präferenzen durch die soziale
+% Wohlfahrtsfunktion bewirken.}
+ 
+\end{enumerate}
+
+
+% \setlength{\parindent}{0em}
+{\bf Theorem (Satz von Arrow)}:\marginline{Satz von Arrow} {\em Es gibt (bei zwei
+oder mehr Individuen und drei oder mehr zur Wahl stehenden Alternativen) kein
+Kollektiventscheidungsverfahren, das individuelle Präferenzordnungen so auf eine
+kollektive Präferenzordnung abbildet, dass die Bedingungen der Diktaturfreiheit,
+der Ein\-stim\-migkeit und der Unabhängigkeit von dritten Alternativen für alle
+denk\-bar\-en indvididuellen Präferenzordnungen erfüllt sind.}
+~\\
+
+Um den Beweis des Theorems vorzubereiten, führen wir zunächst zwei weitere
+Definitionen ein:
+\begin{enumerate}\marginline{entscheidende Mengen}
+  \item Eine Menge von Individuen ist {\em vollständig entscheidend} für $x$
+  über $y$, wenn das Kollektiventscheidungsverfahren $x \succ_K y$ liefert,
+  sobald jedes Individuum aus dieser Menge $x$ gegenüber $y$ vorzieht.
+
+  \item Eine Menge von Individuen ist {\em beinahe entscheidend} für $x$ über
+  $y$, wenn das Kollektiventscheidungsverfahren $x \succ_K y$ liefert, sobald
+  alle Individuen aus dieser Menge $x$ gegenüber $y$ vorziehen {\em und} alle
+  Individuen außerhalb dieser Menge $y$ gegenüber $x$ vorziehen.
+  
+  {\footnotesize Umgangssprachlich besagt die Definition also, dass eine Menge
+  von Individuen "`beinahe entscheidend"' ist, wenn sie nur in dem Extremfall
+  maximaler Opposition von außerhalb entscheidend ist, aber nicht in anderen
+  Fällen. Es gilt daher, dass eine Menge von Individuen, die "`entscheidend"'
+  ist, immer auch "`beinahe entscheidend"' ist, aber nicht umgekehrt.}
+  
+  Anmerkungen:
+  \begin{enumerate}
+    \item Wenn eine Menge von Individuen beinahe (bzw. vollständig) entscheidend
+    für $x$ über $y$ ist, so muss noch lange nicht gelten, dass sie auch
+    beinahe (bzw. vollständig) entscheidend für $y$ über $x$ ist.
+    \item \label{Anmerkung2} \marginline{Existenz mindestens einer entscheidenden
+    Menge} Für jede Menge von Individuen und jedes Paar von
+    Alternativen gibt es wenigstens eine beinahe (bzw. eine vollständig) 
+    entscheidende Menge. Aufgrund der Einstimmigkeitsbedingung ist für jedes
+    Paar von Alternativen nämlich die
+    Menge aller Individuen eine zugleich beinahe als auch
+    vollständig entscheidende Menge, denn, sobald alle Individuen $x$ der
+    Alternative $y$ vorziehen, fordert die Einstimmigkeitsbedingung, 
+    dass auch kollektiv $x \succ_K y$ gilt.
+    \item Wenn eine Menge, die nur ein Individuum enthält, vollständig
+    entscheidend sowohl für $x$ über $y$ als auch für $y$ über $x$ ist, dann
+    soll das Individuum "`Diktator"' für die Alternative $x$ oder $y$ heißen.
+  \end{enumerate} 
+
+%     
+%   \item Ein Individuum ist eine Diktatorin oder ein {\em Diktator für $x$ über
+%   $y$} in dem Fall, dass die Menge, die nur aus ihm allein besteht, entscheidend
+%   für $x$ über $y$ ist.
+% 
+%   \item Ein Individuum ist beinahe Diktator oder {\em beinahe Diktatorin für
+%   $x$ über $y$}, wenn die Menge, die nur aus diesem Individuum besteht, beinahe
+%   entscheidend für $x$ über $y$ ist.
+% 
+%   \item Ein Individuum ist {\em uneingeschränkt Diktator} oder Diktatorin, wenn
+%   es für jedes Paar von Alternativen Diktator oder Diktatorin ist.
+% 
+%   \item Eine soziale Wohlfahrtsfunktion ist eine {\em diktatorische
+%   Wohlfahrtsfunktion}, wenn es ein Individuum gibt, dass bei dieser
+%   Wohlfahrtsfunktion Diktator oder Diktatorin ist. (In diesem Fall 
+%   verletzt die Wohlfahrtsfunktion das Prinzip der Diktaturfreiheit.)
+\end{enumerate}
+
+\subsubsection{Der Beweis des Theorems}
+\label{BeweisArrow}
+\marginline{Beweis nach Vickrey}
+Der wahrscheinlich einfachste Beweis, der sich für den Satz von Arrow finden
+lässt, folgt weitgehend Dennis Mueller \cite[S. 583f.]{mueller:2003}, der
+sich für seine Skizze wiederum auf William Vickrey stützt. Der Satz von Arrow wird
+dabei über drei Zwischenschritte (Lemmata) bewiesen:
+\begin{enumerate}\marginline{Grobstruktur des Beweises}
+  \item Lemma: Sei $D$ eine Teilmenge von Individuen, die
+  beinahe entscheidend für $x$ über $y$ ist, dann ist $D$
+  beinahe entscheidend für alle Alternativen.
+  
+  \item Lemma: Sei $D$ beinahe entscheidend für alle
+  Alternativen, dann enthält $D$ ein Individuum $J$, das
+  (bereits allein) beinahe entscheidend für alle Alternativen ist.
+ 
+  \item Lemma: Ist ein Individuum $J$ beinahe entscheidend für
+  alle Alternativen, dann ist $J$ auch {\em vollständig} entscheidend
+  für alle Alternativen (und damit Diktator für alle Alternativen).
+\end{enumerate}
+
+
+\paragraph{Beweis von Lemma 1} Sei $D$ eine Teilmenge von Individuen, die
+  beinahe entscheidend für $x$ über $y$ ist, dann ist $D$
+  beinahe entscheidend für alle Alternativen. 
+
+\begin{enumerate}
+  \item Sei $D$ eine Menge von Individuen, die beinahe
+    entscheidend für $x$ über $y$ ist, wobei $x$ und $y$ irgendein Paar von
+    Alternativen ist. ({\em Anmerkung \ref{Anmerkung2} auf Seite
+    \pageref{Anmerkung2}})
+ 
+  ~\\{\em 1. Teil (Ersetzbarkeit von rechts) }\label{Lemma1ErsetzbarkeitVonRechts} 
+ 
+  \item Annahme: Für alle Individuen in $D$ und eine beliebige dritte
+  Alternative $u$ gelte $x \succ y \succ u$ und für alle anderen Individuen $y
+  \succ u \succ x$. ({\em Unbeschränkter Bereich})
+  
+  \item Dann gilt für das Kollektiv: $x \succ_K y$. ({\em $D$ ist nach
+  1. beinahe entscheidend})
+  
+  \item Und es gilt für das Kollektiv: $y \succ_K u$. ({\em
+  Einstimmigkeit iVm 2.})
+  
+  \item Und es gilt für das Kollektiv: $x \succ_K u$. ({\em Transitivität iVm 3.
+  und 4.})
+
+  \item Für das Kollektiv muss $x \succ_K u$ unabhängig davon gelten, wie die
+  anderen Alternativen, einschließlich $y$, von den Individuen eingeordnet
+  werden. ({\em Unabhängigkeit von dritten Alternativen})
+
+  \item Also ist $D$ beinahe entscheidend für $x$ über $u$ (für jedes beliebige
+  $u$, das nicht identisch mit $x$ oder $y$ ist). ({\em Definition beinahe
+  entscheidender Mengen iVm 2., 5. und 6.})
+
+    ~\\{\em Damit ist der erste Teil des Beweises von Lemma 1 abgeschlossen. Was
+    bis hierher bewiesen wurde ist: Wenn eine Menge $D$ für $x \succ_K y$
+    entscheidend ist, dann dürfen wir in dieser Formel den {\em rechten} Term
+    (also das $y$) durch jede beliebige dritte Alternative ($u$) ersetzen, und
+    die Aussage stimmt immer noch. Nun wird noch gezeigt, dass das für den
+    linken Term (also das $x$) ganz genauso gilt.}
+   
+    ~\\{\em 2. Teil (Ersetzbarkeit von links)}
+
+  \item Nun nehme man anstelle der unter Punkt 2 getroffenen Annahme für $D$ die
+  Präferenzen $u' \succ x \succ y$ an, und für alle anderen Individuen $y \succ
+  u' \succ x$. Dabei kann $u'$ jede beliebige Alternative außer $x$ und $y$
+  sein. ({\em Unbeschränkter Bereich})
+  
+  \item Dann gilt für das Kollektiv: $x \succ_K y$. ({\em $D$ ist nach
+  1. beinahe entscheidend})
+  
+  \item Und es gilt für das Kollektiv: $u' \succ_K x$. ({\em
+  Einstimmigkeit iVm 8.})
+  
+  \item Und es gilt für das Kollektiv: $u' \succ_K y$. ({\em Transitivität iVm
+  9. und 10.})
+
+  \item Für das Kollektiv muss $u' \succ_K y$ unabhängig davon gelten, wie die
+  anderen Alternativen, einschließlich $x$, von den Individuen eingeordnet
+  werden. ({\em Unabhängigkeit von dritten Alternativen})  
+
+  \item \label{KleineBeweisAufgabe} Dann gilt auch: $D$ ist beinahe entscheidend
+  für $u' \succ_K y$ (wobei $u'$ eine beliebige Alternative außer $x$ und $y$
+  ist). ({\em Definition beinahe entscheidender Mengen iVm 2., 11. und 12.})  
+
+    ~\\{\em Damit ist gezeigt, dass wir auch den {\em linken} Term (das $x$)
+    in der Aussage, dass $D$ eine entscheidende Menge für $x \succ_K y$ ist,
+    durch eine beliebige dritte Alternative ($u'$) ersetzen dürfen, ohne dass die
+    Aussage falsch wird. Zusammen mit dem Resultat vom ersten Teil des
+    Beweises bedeutet das, dass wir in der Formel $x$ und $y$ beliebig
+    durch andere Alternativen ersetzen dürfen (siehe Übungsaufgabe
+    \ref{AufgArrow4}).}
+   
+    ~\\{\em Schluss}
+
+  \item Aber dann ist $D$ beinahe entscheidend für alle Paare von Alternativen.
+  ({\em Sukzessives Ersetzen von {\em u} im 1.Teil und von {\em u'} im 
+  2.Teil des Beweises})
+\end{enumerate}
+
+
+\paragraph{Beweis von Lemma 2} Sei $D$ beinahe entscheidend für alle
+  Alternativen, dann enthält $D$ ein Individuum, das bereits
+  allein beinahe entscheidend für alle Alternativen ist.
+
+\begin{enumerate}
+  \item Sei $D$ eine Menge von Individuen, die beinahe entscheidend für alle
+  Alternativen ist. ({\em Anmerkung \ref{Anmerkung2} auf Seite
+    \pageref{Anmerkung2} iVm Lemma 1})
+  
+  \item Wenn $D$ aus nur einem Individuum besteht, dann gilt die Folgerung von
+  Lemma 2 bereits. ({\em offensichtlich})
+  
+  \item Besteht $D$ aus zwei oder mehr Individuen, dann kann $D$ in zwei
+  nichtleere, disjunkte Teilmengen $A$ und $B$ aufgeteilt werden. ({\em
+  elementare Mengentheorie})
+  
+  \item Angenommen, für alle Individuen aus $A$ gelte $x \succ y \succ u$, für
+  Individuen aus $B$ gelte $y \succ u \succ x$ und für alle anderen Individuen
+  gelte $u \succ x \succ y$. ({\em Unbeschränkter Bereich})
+  
+  \item Für das Kollektiv gilt $y \succ_K u$. ({\em $A \cup B = D$ (3.) und $D$
+  ist beinahe entscheidend (1.) iVm mit den angenommenen Präferenzen (4.)})
+  
+  ~\\{\em Fallunterscheidung: 1. Fall}
+  
+  \item Falls für das Kollektiv $y \succ_K x$ gilt, dann ist $B$
+  beinahe entscheidend für $y$ über $x$. ({\em Definition von "`beinahe
+  entscheidend"' iVm mit den Präferenzen (4.) und der Unabhängigkeit von
+  dritten Alternativen})
+  
+  \item Aber dann ist $B$ auch beinahe entscheidend für alle Alternativen.
+  ({\em Lemma 1})
+  
+  ~\\{\em Fallunterscheidung: 2. Fall}
+   
+  \item Falls für das Kollektiv $x \succ_K y$ gilt, dann gilt für das Kollektiv
+  auch $x \succ_K u$. ({\em Transitivität iVm 5.})
+  
+  \item Aber dann ist $A$ beinahe entscheidend für $x$ über $u$. ({\em
+  Definition von "`beinahe entscheidend"' iVm mit den Präferenzen (4.) und der
+  Unabhängigkeit von dritten Alternativen})
+
+  \item Und $A$ ist auch beinahe entscheidend für jede andere Alternative.
+  ({\em Lemma 1})
+
+  ~\\{\em Ende der Fallunterscheidung}
+
+  \item Eine echte Teilmenge von $D$ (nämlich entweder $A$ oder $B$) ist beinahe
+  entscheidend für alle Alternativen. ({\em Zusammenführung der Konsequenzen
+  beider Fälle der Fallunterscheidung})
+   
+  \item Es gibt eine Teilmenge von $D$, die nur ein Individuum enthält, das für
+  alle Alternativen beinahe entscheidend ist. ({\em Wiederholung der Schritte
+  2.-11. für diejenige echte Teilmenge von $D$, die beinahe entscheidend für alle
+  Alternativen ist, solange, bis sie nur noch ein Individuum enthält.})
+\end{enumerate}
+
+
+\paragraph{Beweis von Lemma 3} Ist ein Individuum beinahe entscheidend für
+  alle Alternativen, dann ist dasselbe Individuum auch {\em vollständig} entscheidend
+  für alle Alternativen.
+  
+\begin{enumerate}
+  \item Sei $J$ das Individuum, das beinahe entscheidend für alle
+  Alternativen ist. ({\em Anmerkung \ref{Anmerkung2} auf Seite
+  \pageref{Anmerkung2} iVm Lemma 1 und Lemma 2})
+ 
+  \item Angenommen, für $J$ gelten die Präferenzen $x \succ y \succ u$ und für
+  alle anderen Individuen gelte sowohl $y \succ x$ als auch $y \succ u$,
+  wobei für die Ordnung von $x$ und $u$ bei den anderen Individuen beliebiges
+  gelten kann. ({\em Unbeschränkter Bereich})
+  
+  \item Dann gilt für das Kollektiv $x \succ_K y$. ({\em $J$ ist beinahe
+  entscheidend für alle Alternativen, also auch insbesondere für $x \succ_K y$
+  iVm 2.})
+  
+  \item Und es gilt für das Kollektiv $y \succ_K u$. ({\em Einstimmigkeit iVm
+  2.})
+  
+  \item Dann gilt für das Kollektiv aber auch $x \succ_K u$. ({\em
+  Transitivität})
+  
+  \item Für das Kollektiv muss $x \succ_K u$ unabhängig davon gelten, wie die
+  anderen Alternativen, einschließlich $y$, von den Individuen eingeordnet
+  werden. ({\em Unabhängigkeit von dritten Alternativen})
+  
+  \item Dann ist $J$ vollständig entscheidend für $x \succ_K u$. ({\em
+  Definition von "`vollständig entscheidend"' iVm 2., insbesondere da unter
+  2. die Ordnung von $x$ und $u$ für alle Individuen außer $x$ offen gelassen
+  wurde.})
+
+  \item \label{Lemma3Schritt8} In den Schritten 2. bis 7. wurde gezeigt, dass
+  $J$ vollständig entscheidend für $x \succ_K u$ ist -- bei beliebig gewählten, aber bestimmten
+  $x,y,u$. Um nun von irgendeinem Paar $v,w$ zu zeigen, dass $J$ vollständig
+  entscheidend für $v \succ_K w$ ist, ersetze man im 2. Beweisschritt des Lemmas
+  $x$ durch $v$, $u$ durch $w$ und $y$ durch eine beliebige Alternative außer $v$
+  und $w$ und gehe dann die Schritte 2. bis 7. für die eingesetzten Alternativen
+  durch.
+
+  \item $J$ ist {\em vollständig} entscheidend für alle Alternativen. ({\em
+  Anwendung des letzten Schrittes auf jedes mögliche Paar von Alternativen.})
+  
+\end{enumerate}
+
+Aus der Voraussetzung, dass es immer eine Teilmenge $D$ und ein Paar von
+Alternativen $x$ und $y$ gibt, für die $D$ beinahe entscheidend ist (siehe
+Anmerkung \ref{Anmerkung2} auf Seite \pageref{Anmerkung2}) ergibt sich in
+Verbindung mit Lemma 1, 2 und 3, dass es ein Individuum $J$ gibt, dass 
+{\em vollständig entscheidend} für alle Alternativen ist. Da dies dem Prinzip
+der {\em Diktaturfreiheit} widerspricht, ist es nicht möglich die
+Voraussetzungen des unbeschränkten Bereichs, der Einstimmigkeit, der
+Unabhängigkeit von dritten Alternativen und der Diktaturfreiheit
+gleichzeitig zu erfüllen. Damit ist der Satz von Arrow bewiesen.
+
+\subsubsection{Ein alternativer Beweis}
+\label{AlternativerBeweis}
+
+\marginline{Beweis nach Geanakoplos}
+Dasselbe Theorem kann auch auf andere Weise bewiesen werden. Zum tieferen
+Verständnis und weil dieser zweite Beweis etwas andere Beweistechniken
+einsetzt, sei er hier auch aufgeführt. Der Beweis stammt von John Geanakoplos
+\cite[]{geanakoplos:1996} und läuft folgendermaßen:
+
+\paragraph{Teil 1}
+
+\begin{enumerate}
+  \item Gegeben sei eine Menge von mindestens drei Alternativen, die mit
+  Kleinbuchstaben $x$, $y$, $z$,\ldots bezeichnet werden.
+  
+  \item Wenn alle Individuen $y$ am wenigstens schätzen, dann muss
+  $y$ auf Grund des {\em Einstimmigkeitsprinzips} auch die schlechteste 
+  kollektive Wahl sein.
+  
+  Ein Präferenzprofil, bei dem alle Individuen $y$ als die schlechteste
+  Alternative bewerten, nennen wir ein "`Profil vom Typ 1"' oder kürzer: {\em
+  Profil 1}.\footnote{Die abgekürzte Benennung, die suggeriert, es handele sich
+  dabei nur um ein einzelnes Präferenzprofil und nicht vielmehr um eine ganze
+  Gruppe von Präferenzprofilen, ist -- wie sich aus dem Folgenden ergibt --
+  durch die Bedingung der Unabhängigkeit von dritten Alternativen
+  gerechtfertigt.}
+
+  \item Wenn andererseits alle Individuen $y$ am meisten schätzen, dann muss $y$
+  ebenfalls auf Grund des Einstimmigkeitsprinzips die beste kollektive Wahl sein.
+  
+  Ein Präferenzprofil, bei dem alle Individuen $y$ als die beste Alternative
+  bewerten, nennen wir ein "`Profil vom Typ 2"' oder kürzer: {\em Profil 2}.
+  
+  \item Wir betrachten nun einen Übergang von {\em Profil 1} zu {\em Profil 2},
+  bei dem die Individuen ausgehend von einem Präferenzprofil vom Typ 1
+  nacheinander die Alternative $y$ vom letzten auf den ersten Platz rücken. Die
+  Reihenfolge, in der die Individuen diese Änderung vornehmen, ist beliebig
+  wählbar, stehe danach aber für den Rest des Beweises fest. Der "`Übergang"'
+  besteht also aus einer Anzahl von Schritten, die der Anzahl der Individuen
+  entspricht, auf einem Pfad von Präferenzprofilen. Der Pfad ist nicht
+  eindeutig,\footnote{Eindeutig ist wohl aber die Reihenfolge der Individuen beim
+  "`Übergang"' (zumindest an dieser Stelle des Beweises). Der Pfad ist also nicht
+  zu verwechseln mit der Folge der Individuen sondern stellt, gegeben eine
+  bestimte festgelegte Folge von Individuen, die Folge der Präferenzprofile dar,
+  die entsteht, wenn die Individuen nach einander ihre Präferenzen auf die
+  beschriebene Weise ändern.} da in jedem Schritt nur die Position von $y$ für
+  alle Individuen festgelegt ist, nicht aber die der anderen Alternativen.
+ 
+  Für diesen Übergang gilt:
+ 
+  \item Bei dem Individuum, bei dem $y$ den letzten Platz in der kollektiven
+  Präferenzordnung verlässt (es sei das "`{\em zentrale Individuum}"' oder auch
+  das $n$-te Individuum genannt\footnote{Dabei steht $n$ für die Anzahl der
+  Schritte bei vorgegebenem Übergang (Punkt 4.), bis das "`zentrale Individuum"'
+  erreicht ist.}), rückt $y$ in der kollektiven Präferenzordnung vom letzten
+  Platz sogleich auf den ersten Platz. Es gibt keine Zwischenstufen, denn sonst
+  gäbe es ein Profil, bei dem alle Individuen bis zum $n$-ten Individuum $y$ an
+  die Spitze stellen, alle Individuen ab dem $n$-ten $y$ aber (noch) ans Ende
+  stellen, während $y$ in der kollektiven Präferenzordnung zwischen zwei
+  Alternativen steht, die $x$ und $z$ genannt seien, so dass $x \succ_K y \succ_K
+  z$. Nun könnten aber alle Individuen ihre Präferenzen so abändern, dass $z$ vor
+  $x$ eingeordnet wird, ohne dass dadurch das relative Verhältnis von $z$ zu $y$
+  bzw. von $x$ zu $y$ in den individuellen Präferenzen geändert wird, da in den
+  individuellen Präferenzen $y$ entweder ganz am Anfang oder ganz am Ende, d.h.
+  entweder vor $x$ und $z$ oder nach $x$ und $z$ kommt. Aufgrund des
+  Einstimmigkeitsprinzips müsste dann aber gelten $z \succ_K x$, und da zuvor
+  angenommen wurde $x \succ_K y$, wegen der Transitivität auch $z \succ_K y$, was
+  im Widerspruch zur Unabhängigkeit von dritten Alternativen steht.
+  
+  \item Welches Individuum das {\em zentrale Individuum} ist, ist unabhängig vom
+  gewählten Pfad. Denn die Präferenzen der Individuen stimmen hinsichtlich der
+  relativen Ordnung von $y$ zu allen anderen Alternativen beim gleichen Schritt
+  zwischen sämtlichen möglichen Pfaden überein. Wegen der Unabhängikeit von
+  dritten Alternativen, muss $y$ dann aber auch innerhalb der kollektiven
+  Präferenzen beim gleichen Schritt an derselben Position (Anfang oder Ende)
+  stehen.
+  
+  \item Das $n$-te Individuum ist auch das {\em zentrale Individuum} bezüglich
+  jeder Teilmenge von Alternativen, die $y$ enthält, denn jeder mögliche Pfad bei
+  allen Alternativen ist auch ein möglicher Pfad, wenn die Betrachtung auf eine
+  Teilmenge von Alternativen beschränkt wird. Da die Eigenschaft, zentrales
+  Individuum zu sein, pfadunabhängig ist (siehe den vorhergehenden Punkt), muss
+  das zentrale Individuum für die Teilmenge dasselbe sein.
+\end{enumerate}
+
+\paragraph{Teil 2}
+
+\begin{enumerate}
+  \item Man betrachte nun die Folge von Individuen, in der alle bis zum $n$-ten
+  Individuum $y$ an die erste Position setzen, alle ab dem $n$-ten Individuum
+  $y$ an die letzte Position setzen, während das $n$-te Individuum $y$ nach
+  einer Alternative $x$ und vor einer Alternative $z$ einordnet, 
+  also $x \succ_n y \succ_n
+  z$.\footnote{Das Suffix "`n"' bei $\succ_n$ deutet an, dass es sich hier um
+  die Präferenzen des $n$-ten Individuums handelt.} (Ein Präferenzprofil, dass
+  damit übereinstimmt nennen wir Profil vom Typ 3 oder einfach {\em Profil 3}).
+
+  \item\label{Teil2Punkt2} Beschränkt man die Betrachtung auf alle Alternativen
+  $\succeq_n y$, so zeigt sich, da das $n$-te Individuum zentrales Individuum
+  ist, dass für die kollektiven Präferenzen $x \succ_K y$ gelten muss.
+  
+  \item Beschränkt man umgekehrt die Betrachtung auf alle Alternativen $\preceq_n
+  z$, so zeigt sich aus demselben Grund, dass die kollektive Präferenz $y \succ_K
+  z$ gelten muss.
+  
+  \item Aufgrund der Transititvität folgt aus $x \succ_K y$ und $y \succ_K z$,
+  dass $x \succ_K z$ gilt, und zwar für alle Profile vom Typ 3.
+  
+  \item Wegen der Unabhängigkeit von dritten Alternativen muss $x \succ_K z$
+  unabhängig davon gelten, wie die Individuen $y$ zu $x$ und $z$ einordnen. Damit
+  gilt $x \succ_K z$ aber genau dann, wenn das zentrale Individuum $x \succ_n z$
+  festlegt.\footnote{Anmerkung: Bis zu dieser Stelle spielte die Reihenfolge der
+  Individuum beim "`Übergang"' (siehe Teil 1 des Beweises) noch eine Rolle.
+  Dieses Resultat ist aber unabhängig von der beim Übergang gewählten
+  Reihenfolge.} M.a.W.: Das "`zentrale Individuum"' ist entscheidend für $x$ über
+  $z$.\footnote{Zur Erinnerung: Damit, dass das "`zentrale Individuum"'
+  entscheidend für $x$ über $z$ (in dieser Reihenfolge!) ist, ist noch nicht
+  gesagt, dass das "`zentrale Individuum"' auch entscheidend für $z$ über $x$
+  (umgekehrte Reihenfolge!) ist. Das wird erst im folgenden Schritt gezeigt. Und
+  erst dann kann man auch sagen, dass das zentrale Individuum insgesamt Diktator
+  für das Alternativenpaar $x$,$z$ ist.}
+  
+  \item Durch Vertauschen von $z$ und $x$ in den Schritten 1.-5. erhält
+  weiterhin, dass auch umgekehrt $z \succ_K x \Leftrightarrow z \succ_n x$.
+  M.a.W.: Das "`zentrale Individuum"' ist Diktator für das Paar von Alternativen
+  $x$, $z$.
+\end{enumerate}
+
+\paragraph{Teil 3}
+
+\begin{enumerate}
+  \item Entsprechend des bisherigen Beweisgangs können wir zeigen, dass es
+  nicht nur für $x$ und $z$, sondern für jedes Paar von Alternativen {\em einen}
+  Diktator gibt. Zu zeigen ist noch, dass es sich dabei jedesmal um ein- und
+  denselben Diktator handelt.
+  
+  \item Es gibt also für die Alternativen $x$ und $y$,
+  $y$ und $z$ jeweils\footnote{An dieser Stelle ist noch nicht klar, dass es
+  ein- und derselbe ist.} einen Diktator.
+
+  \item Dann kann aber kein dritter Diktator allein über $x$ und $z$ entscheiden,
+  denn wenn der erste Diktator $x \succ_K y$ festsetzt und der zweite $y \succ_K
+  z$, dann ist der dritte wegen der Transitivität nicht mehr frei $x \prec_K z$
+  festzulegen. (Dasselbe gilt, wenn man die Zeichen $\succ_K$ und $\prec_K$ im
+  vorhergehenden Satz jeweils vertauscht.) Also muss der dritte Diktator
+  identisch mit einem der ersten beiden Diktatoren sein.
+ 
+  \item Ist der dritte Diktator aber identisch mit dem ersten, dann kann der
+  erste Diktator über $x$ und $y$ und über $x$ und $z$ entscheiden. Wenn der
+  erste Diktator nun aber $y \succ_K x \succ_K z$ und damit auf Grund der
+  Transitivität $y \succ_K z$ bestimmt, dann ist der zweite nicht mehr frei, $z
+  \succ_K x$ fest zu setzen. Also muss der erste Diktator auch identisch mit dem
+  zweiten sein.
+  
+  \item Da $x$, $y$ und $z$ beliebig gewählt wurden, gibt es für jedes Tripel von
+  Alternativen genau einen Diktator. Dann gibt es aber überhaupt nur einen
+  Diktator, denn jeder Diktator, der über ein Tripel entscheidet, in dem zwei der
+  Alternativen $x$, $y$ und $z$ vorkommen, muss mit dem Diktator über $x$, $y$
+  und $z$ identisch sein (nur einer von beiden kann ja über dieses Paar
+  entscheiden). Für jede beliebige Alternative $u$ außer $x$, $y$, $z$, muss aber
+  der Diktator über $x$, $y$, $u$ dann auch identisch mit dem von $x$, $y$, $z$
+  sein. Also ist der Diktator von $x$, $y$, $z$, Diktator für alle Alternativen.
+\end{enumerate}
+
+Damit ist bewiesen, dass es unter den Bedingungen der Unabhängigkeit von
+dritten Alternativen, des unbeschränkten Bereichs und der Einstimmigkeit
+(Pareto-Effizienz) bei drei oder mehr Alternativen immer einen Diktator gibt.
+Die Bedingung der Diktatorfreiheit ist also nicht mehr erfüllbar, wenn die drei
+anderen Bedingungen erfüllt sind.
+
+
+\subsubsection{Ein dritter Beweis}
+
+Der folgende Beweis stammt aus dem Buch von Resnik \cite[S. 186ff.]{resnik:1987}.
+Der Beweis ähnelt sehr stark dem ersten hier vorgestellten Beweis.
+Nur wird diesmal nicht zuerst gezeigt, dass es
+eine Teilmenge von Individuen gibt, die beinahe entscheidend für alle
+Alternativen ist und dann, dass sie tatsächlich nur aus einem Individuum besteht.
+Sondern es wird zuerst gezeigt, dass es ein Individuum gibt, dass für eine
+Alternative beinahe entscheidend ist, und dann, dass daraus folgt, dass dieses
+Individuum für alle Alternativen nicht nur beinahe sondern vollständig
+entscheidend ist. Die einzelnen Beweisschritte sind aber zum Teil ähnlich wie
+beim ersten Beweis, so dass die Lektüre des zweiten Beweises gut zur Übung und
+zum besseren Verständnis dienen kann.
+
+Zunächst wird folgendes Lemma bewiesen: 
+
+\begin{quote}
+{\bf Lemma 1}: {\em Es existiert immer ein Individuum, das für irgendein Paar
+von Alternativen beinahe entscheidend ist.}
+\end{quote} 
+
+{\em Beweis}: Wie oben angemerkt existieren "`entscheidende"' Mengen für jedes
+Paar von Alternativen. Da jede "`entscheidende"' Menge immer auch "`beinahe
+entscheidend"' ist, existieren für jedes Paar von Alternativen auch beinahe
+"`entscheidende"' Mengen. 
+
+Wir setzten voraus, dass die Menge der Individuen und Alternativen endlich ist.
+Dann existiert wenigstens eine "`beinahe entscheidende"' Menge, die keine echte
+Teilmenge enthält, die "`beinahe entscheidende"' Menge wäre, denn: Man beginne
+mit irgend einer beliegigen "`beinahe entscheidenden"' Menge. Hat diese Menge
+noch (nicht-leere) Teilmengen, die "`beinahe entscheidende"' Mengen sind, dann
+wähle man irgend eine dieser "`beinahe entscheidenden"' Teilmengen und stelle für
+diese Teilmenge dieselbe Untersuchung an, solange bis man bei einer Menge
+angekommen ist, die keine echten Teilmengen mehr enthält, die ihrerseits
+"`beinahe entscheidende"' Mengen irgendeines Paares von Alternativen sind.
+
+Wir verfügen damit über eine "`minimale Menge"', die "`beinahe entscheidend"'
+bezüglich eines bestimmten Paares von Alternativen ist. Wenn wir zeigen können,
+dass diese "`minimale Menge"' nur noch ein einziges Individuum enthält,
+dann haben wir das Lemma bewiesen. Dazu kann ein Widerspruchsbeweis geführt werden.
+Wir nehmen also an, es gäbe eine entsprechende "`minimale beinahe entscheidende
+Menge"', die mehrere Individuen enthält und zeigen, dass diese Annahme zu einem
+Widerspruch führt.
+
+Angenommen also, $M$ sei eine "`minimale beinahe entscheidende Menge"' für die
+Alternative $x$ über $y$, die mehrere Individuen enthält. Man betrachte ein
+beliebiges Individuum $J$ aus der Menge $M$. Da die Menge $M$ mehr Individuen als
+nur $J$ enthält, und da möglicherweise noch ein "`Rest"' von
+Individuen existiert, die nicht zu $M$ gehören, kann man folgende drei
+unterschiedlichen Gruppierungen betrachten: 1) Die Menge, die nur aus dem 
+Individuum $J$ besteht.
+2) Die Menge, die aus den Individuen von $M$ ohne $J$ besteht, kurz: $M-J$. 3)
+Der "`Rest"', d.h. alle Individuen, die nicht zu $M$ gehören.
+
+Da jedes beliebige Präferenzprofil zugelassen ist ("`unbeschränkter Bereich"')
+und sich die Eigenschaft eine (minimale) "`beinahe entscheidende"' Menge zu
+sein auf alle Präferenzprofile bezieht, muss sie sich auch bei jedem beliebigen
+einzelnen Präferenzprofil bewähren. Man nehme an, dass es mindestens
+drei Güter gibt und betrachte nun folgendes Präferenzprofil:
+
+\begin{center}
+\begin{tabular}{ccc}
+$J$ & $M-J$ & Rest \\
+\cline{1-3}
+$z$ & $x$ & $y$ \\
+$x$ & $y$ & $z$ \\
+$y$ & $z$ & $x$ \\
+\end{tabular}
+
+\vspace{0.5cm}
+{\small Quelle: \cite[S. 188]{resnik:1987}}
+\end{center}
+
+Da $M$ eine "`beinahe entscheidende"' Menge für $x$ über $y$ ist und in diesem
+Präferenzprofil für alle Mitglieder von $M$ gilt: $x \succ y$, und alle
+Nicht-Mitglieder gilt: $y \succ x$, so muss die Wohlfahrtsfunktion diesem
+Präferenzprofil kollektive Präferenzen zuordnen, bei denen $x \succ y$ gilt.
+Darüber hinaus muss die Wohlfahrtsfunktion natürlich auch festlegen, welche
+Beziehung ($\succ$, $\prec$ oder $\sim$) zwischen $x$ und $z$ zu gelten hat.
+Wir betrachten die drei Möglichkeiten im Einzelnen, und zeigen, dass jede davon
+zu einem Widerspruch führt. Dabei ist zu beachten, dass wir nicht
+ausgeschlossen haben, dass die Menge "`Rest"' leer sein kann. Die folgenden
+Argumente funktionieren aber (wovon man sich leicht überzeugen kann) auch
+in dem Fall, dass die "`Rest"'-Gruppe leer ist.
+
+\begin{enumerate}
+  \item Angenommen nach der Wohlfahrtsfunktion gilt für dieses Präferenzprofil
+  $x \succ z$. Dann muss die Wohlfahrtsfunktion nach der Bedingung der
+  Unabhängigkeit von dritten Alternativen $x \succ z$ auch für alle
+  anderen Präferenzprofile liefern, nach denen $x$ und $z$ für jedes Individuum
+  in derselben Weise relativ zueinander geordnet sind wie in dem gegebenen
+  Präferenzprofil. Damit liefert die Wohlfahrtsfunktion aber immer $x \succ z$,
+  wenn für alle Individuen in $M-J$ gilt $x \succ z$ und für alle Individuen,
+  die nicht in $M-J$ enthalten sind $z \succ x$. Damit ist $M-J$ aber "`beinahe
+  entscheidende"' Menge für $x$ über $z$. Nach der Konstruktion von $M$ hätte
+  $M$ als "`minimale beinahe entscheidende Menge"' (für $x$ über $y$) aber keine
+  Teilmenge mehr enthalten dürfen, die noch "`beinahe entscheidende"' Menge
+  {\em irgendeines} Paars von Alternativen ist. Also liegt hier ein Widerspruch
+  vor, so dass die Möglichkeit, dass die Wohlfahrtfunktion dem oben stehenden
+  Präferenzprofil kollektive Präferenzen zuordnet, die $x \succ z$ enthalten,
+  ausgeschlossen ist.
+  
+  \item Angenommen, die Wohlfahrtsfunktion legt für dieses Präferenzprofil $x
+  \sim z$ fest. Dann ergibt sich, da bereits $x \succ y$ gilt, dass auch $z
+  \succ y$. Da $J$ aber $z$ gegenüber $y$ vorzieht, während alle anderen
+  Individuen $y$ gegenüber $z$ vorziehen, wäre nach dem gleichen Argument wie
+  im 1.Fall $J$ beinahe entscheidend für die Alternative $z$ über $y$, was
+  ebenfalls der Minimalität von $M$ widerspricht. 
+  Damit scheidet die zweite Möglichkeit auch aus.
+
+  \item Angenommen, die Wohlfahrtsfunktion liefert $z \succ x$. Dann gilt wegen
+  $x \succ y$ und der Transitivität der Präferenzrelation auch $z \succ y$.
+  Dann liegt aber wiederum der Fall vor, dass bei dem oben angegebenen
+  Präferenzprofil für $J$ gilt: $z \succ y$, aber für alle anderen Individuen:
+  $y \succ z$, woraus sich mit Hilfe der Bedingung der Unabhängigkeit von
+  dritten Alternativen wiederum ergibt, dass $J$ "`beinahe entscheidend"'
+  für $z \succ y$ ist, im Widerspruch zur Minimalität von $M$. Auch diese
+  Möglichkeit scheidet aus.
+\end{enumerate}
+
+Da alle Möglichkeiten zum Widerspruch führen, kann die Wohlfahrtsfunktion die
+individuellen Präferenzen nicht auf kollektive Präferenzen abbilden, sofern die
+minimale "`beinahe entscheidende"' Menge $M$ noch mehr als ein Individuum
+enthält. 
+
+Das erste Lemma scheint alleine noch nicht viel zu besagen, denn von dem
+Individuum, aus dem die Menge $M$ am Ende besteht, ist zunächst nur bewiesen, dass es
+lediglich beinahe entscheidend ist, und auch das nur für ein Paar von
+Alternativen. Ein zweites Lemma zeigt aber, dass weit mehr dahinter steckt: 
+
+\begin{quote}
+{\bf Lemma 2:} {\em Ein Individuum,
+das für irgendein Paar von Alternativen beinahe entscheidend ist, ist
+entscheidend für jedes Paar von Alternativen.}
+\end{quote}
+
+{\em Beweis}: Wir nehmen an, dass das Individuum $J$ beinahe entscheidend für
+$x$ über $y$ ist. Es muss nun gezeigt werden, dass es dann auch entscheidend
+(und zwar nicht bloß {\em beinahe} entscheidend!) für alle Paare von
+Alternativen ist. Dies ist dann bewiesen, wenn wir zwei weitere
+Alternativen $a$ und $b$ in die Betrachtung einbeziehen und beweisen können,
+dass $J$ in folgenden sieben Fällen entscheidend ist: 1) $x$ über $y$; 
+2) $y$ über $x$; 3) $x$ über $a$; 4) $a$ über $x$; 5) $y$ über $a$; 6) $a$ über
+$y$; 7) $a$ über $b$. 
+
+Da $a$ und $b$ beliebig wählbar sind, schließt der Beweis automatisch ("`ohne
+Beschränkung der Allgemeinheit"') alle weiteren Alternativen mit ein, die es
+außer $x,y,a$ und $b$ noch geben könnte. Gibt es außer $x$ und $y$ nur noch eine
+oder gar keine weiteren Alternativen, dann fallen nur einige der betrachteten
+Fälle weg, und der Beweis gilt trotzdem. Aus Gründen der Konvenienz werden in dem
+folgenden Beweis die Fälle in einer anderen Reihenfolge behandelt (vgl.
+\cite[S.190/191]{resnik:1987}). Nun zu den Fällen im Einzelnen:
+
+\begin{enumerate}
+  \item Fall {\em $x$ über $a$}: Wir betrachten das Präferenzprofil, in dem
+  $J$ die Alternativen $x,y$ und $a$ in der Reihenfolge $x \succ y \succ a$
+  ordnet, und in denen die anderen Individuen die Alternative $y$ sowohl $x$
+  als auch $a$ vorziehen, wobei zwischen $x$ und $a$ jede mögliche Reihenfolge
+  zugelassen sei. 
+  
+  Da $J$ nach Voraussetzung beinahe entscheidend für $x$ über $y$ ist, muss die
+  Wohlfahrtsfunktion bei einem solchen Profil $x \succ y$ liefern. Da aber
+  ebenfalls für alle Individuen $y \succ a$ gilt, muss auf Grund der Bedingung
+  der Pareto-Effizienz auch die Wohlfahrtsfunktion $y \succ a$ für ein
+  derartiges Präferenzprofil liefern. Da aber schon $x \succ y$ gilt, liefert
+  die Sozialwahlfunktion aufgrund der Transitivität von Präferenzen auch $x
+  \succ a$. Auf Grund der Bedingung der Unabhängigkeit von dritten Alternativen
+  gilt aber, dass die Wohlfahrtsfunktion $x \succ a$ für alle Präferenzprofile liefern
+  muss, in denen $x$ und $a$ in derselben Weise relativ zueinander geordnet
+  sind, wie in dem betrachteten Beispiel. In dem Beispiel hat $J$ aber $x$ vor
+  $a$ eingeordnet, während bei allen anderen Individuen die Ordnung beliebig
+  war. Das bedeutet aber, dass die Wohlfahrtsfunktion $x \succ a$ liefert,
+  sobald $J$ die Ordnung $x \succ a$ festlegt. Damit ist $J$ entscheidend
+  (nicht bloß nahezu entscheidend!) für $x$ über $a$.
+  
+  \item Fall {\em $a$ über $y$}: Wir betrachten das Präferenzprofil, in dem
+  für $J$ die Präferenz $a \succ x \succ y$ gilt, und in dem für alle anderen
+  Individuen $a \succ x$ und $y \succ x$ gilt, d.h. in dem $a$ und $y$ der
+  Alternative $x$ vorgezogen werden, während die Reihenfolge zwischen $a$ und
+  $y$ nicht festgelegt sein soll. 
+  
+  Weil $J$ beinahe entscheidend für $x$ über $y$ ist gilt, dass die
+  Wohlfahrtsfunktion bei den angenommenen Präferenzen $x \succ y$ liefert.
+  Aufgrund der Einstimmigkeit (Pareto-Effizienz) muss die Wohlfahrtsfunktion
+  aber auch $x \succ a$ festlegen. Aufgrund der Unabhängigkeit von dritten
+  Alternativen gilt das letztere wann immer $J$ die Präferenz $a \succ y$
+  enthält. Damit ist $J$ aber
+  entscheidend für $a$ über $y$.
+  
+  \item Fall {\em $y$ über $a$}: Betrachtet sei folgendes Präferenzprofil: Für
+  $J$ gilt $y \succ x \succ a$; für alle anderen gilt $a,y \succ x$. 
+  
+  Gemäß der Bedingung der Pareto-Effizienz liefert die Wohlfahrtsfunktion für
+  dieses Profil $y \succ x$. Da $J$ entscheidend ist für $x$ über $a$, liefert
+  sie auch $x \succ a$ und, wegen der Transitivität der Präferenzrelation
+  schließlich auch $y \succ a$. 
+ 
+  Wiederum muss, wenn die Wohlfahrtsfunktion $y \succ a$ für ein Profil liefert,
+  in dem $J$ die Alternative $y$ vor $a$ stellt, während die Ordnung von $y$ und $a$
+  für die anderen Individuen nicht festgelegt ist, auf Grund der
+  Bedingung der Unabhängigkeit von dritten Alternativen die
+  Wohlfahrtsfunktion $y \succ a$ bei allen Profilen liefern, die $y$ und $a$ in
+  derselben Weise ordnen, d.h. bei allen Profilen, in denen für $J$ gilt: $y
+  \succ a$. Damit ist $J$ aber entscheidend für $y$ über $a$.
+
+  \item Fall {\em $a$ über $x$}: Man betrachte zunächst das Profil, in dem für
+  $J$ gilt: $a \succ y \succ x$, während $y \succ x,a$ für die anderen
+  Individuen gilt. 
+  
+  Wir wissen bereits, dass $J$ entscheidend für $a \succ y$ ist. Aufgrund der
+  Bedingung der Pareto-Effizienz liefert die Wohlfahrtsfunktion aber auch $y
+  \succ x$. Analog zu den vorhergehenden Fällen können wir daraus mit Hilfe
+  der Bedingung der Unabhängigkeit von dritten Alternativen ableitent,
+  dass $J$ entscheidend für $a$ über $x$ ist.
+  
+  \item Fall {\em $x$ über $y$}: Wir betrachten das Profil, in dem für $J$ gilt:
+  $x \succ a \succ y$. Wir wissen bereits, dass $J$ entscheidend für $x \succ a$
+  und ebenso für $a \succ y$ ist. Also muss die Wohlfahrtsfunktion für dieses
+  Profil $x \succ y$ liefern. Analog zu den vorhergehenden Fällen lässt sich
+  dann mit Hilfe der Bedingung der Unabhängigkeit von dritten Alternativen
+  schließen, dass $J$ entscheidend für $x \succ y$ ist.
+
+  \item Fall {\em $y$ über $x$}: Wie im vorhergehenden Fall, nur dass
+  diesmal $x$ und $y$ vertauscht sind.
+  
+  \item Fall {\em $a$ über $b$}: Wir betrachten ein Profil, in dem für $J$ gilt
+  $a \succ x \succ b$. Analog zu dem vorhergehenden Fall, können wir dann
+  zeigen, dass $J$ entscheidend für $a$ über $b$ ist.
+
+\end{enumerate}
+
+In jedem der Fälle ist $J$ also "`entscheidend"', womit das zweite Lemma
+bewiesen ist. Aus dem ersten und dem zweiten Lemma ergibt sich zusammengenommen
+der Satz von Arrow, der damit ebenfalls bewiesen ist.
+
+\subsubsection{Resumé}
+
+Nachdem der "`Satz von Arrow"' mathematisch bewiesen ist, stellt sich nun
+erst die eigentliche Frage, wie er inhaltlich beurteilt werden muss. Der Satz
+von Arrow scheint zu zeigen, dass es nicht möglich ist, aus individuellen Präferenzen
+kollektive Entscheidungen abzuleiten, die gleichermaßen effizient, vernünftig und
+(hinsichtlich der Berücksichtigung der unterschiedlichen individuellen
+Präferenzen) gerecht sind. Aber wie weit reicht diese Erkenntnis? Dass es bei der
+kollektiven Entscheidungsfindung Zielkonflikte zwischen Gerechtigkeitsansprüchen
+und Effizienzforderungen (hier repräsentiert durch die Einstimmigkeitsbedingung)
+geben kann, wissen wir schon aus der politischen Lebenserfahrung. Dass sie -- wie
+der Satz von Arrow nahelegt -- unvermeidlich sind, ist eine wichtige Einsicht.
+Dennoch stellt sich die Frage wie relevant derartige logische Beweisführungen in
+der Praxis sein können. Immerhin mag in der politischen Praxis die Vereinbarung
+von Gerechtigkeits- und Effizienzansprüchen noch an vielen weiteren Hindernissen
+scheitern als bloß dem im Satz von Arrow erfassten logischen Abbildungsproblem.
+Und die Zielsetzung, Gerechtigkeits- und Effizienzansprüche {\em möglichst
+weitgehend} miteinander zu vereinbaren, wird durch den Satz von Arrow keineswegs
+sinnlos.
+
+% Wie hilfreich und relevant der Satz von Arrow und die zahlreichen sich an ihn
+% anschließenden Untersuchungen dabei sind, kann durchaus unterschiedlich
+% bewertet werden. Donald Green und Ian Shapiro kommen in ihrer ebenso
+% umfassenden wie kritischen Studie zu dem Ergebnis, dass die von Arrow
+% inspirierte wissenschaftliche Literatur kaum relevante Ergebnisse zu Tage
+% gefördert hat \cite{green-shapiro:1994}. Dem widerspricht Müller
+% \cite[]{mueller:2003}, unter anderem mit dem Hinweis, dass die Erkenntnisse des
+% entsprechenden Forschungszweiges zumindest für das Design und Verständnis von
+% Wahl- und Abstimmungsmechanismen eine gewisse Relevanz haben müssten. Denn wenn
+% wir ein bestimmtes Wahl- oder Abstimmungsverfahren vereinbaren, sollten wir
+% dessen logische Eigenschaften besser gut verstehen.
+% 
+% Wir können diese Debatte im Rahmen dieser Vorlesung leider nicht mehr
+% ausführlich behandeln. Soviel sollte jedoch deutlich sein: Mit dem Beweis
+% bestimmter logischer oder mathematischer Theoreme allein ist es noch nicht
+% getan. Danach fängt erst die -- in einer gewissen Hinsicht viel kompliziertere
+% -- Interpretationsarbeit an.
+

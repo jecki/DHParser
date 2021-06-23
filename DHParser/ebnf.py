@@ -1035,7 +1035,7 @@ in the sense of "without" more intuitive::
 Next to the lookahead operators, there also exist lookback operators. Be warned,
 though, that look back operators are an **experimental** feature in DHParser
 and that their implementation is highly idiosyncratic, that is, it is most
-lilely not compatible with any other parser-generator-toolkit based on EBNF-grammers.
+likely not compatible with any other parser-generator-toolkit based on EBNF-grammers.
 Also, lookback operators in DHParser are more restricted than lookahead-operators.
 They can only be used in combination with simple text or regular expression parsers
 and - here comes the idiosyncratic part - they work in the opposite direction.
@@ -1082,14 +1082,14 @@ There are three different challenges:
 
 1. Locating the error at the correct position in the source code.
 2. Providing proper error messages that explain the reason for the error.
-3. Resuming the parsing progress after an error has occured at the nearest
+3. Resuming the parsing progress after an error has occurred at the nearest
    possible place without producing artificial follow-up errors.
 
 If the following, DHParser's techniques for the first two challenges,
 locating errors and customizing error messages will be described.
 Techniques for resuming the parsing process after an error occurred
-or for passing by erreneous passages in the source code will be
-explained below, unter the heading "Fail-tolerant Parsing".
+or for passing by erroneous passages in the source code will be
+explained below, under the heading "Fail-tolerant Parsing".
 
 Farthest-Fail-Heuristics
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1101,7 +1101,7 @@ the error at the "farthest" position where a parser failed,
 reporting the last named parser in the call chain (that first reached
 this location) as the cause of the failure. This approach often works
 surprisingly well for locating errors, unless the grammar relies to
-heavy on regular exrpessions capturing large chunks of text, because
+heavy on regular expressions capturing large chunks of text, because
 the error location works only on the level of the parsing expression
 grammar not at that of the atomic regular expressions. To see how
 farthest fail word, consider a parser for simple arithmetic
@@ -1126,18 +1126,18 @@ expressions::
 As can be seen the location of the error is captured well enough,
 at least when we keep in mind that the computer cannot guess where
 we would have placed the forgotton closing bracket. It can only
-report the point where the mistake becomes apparant.
+report the point where the mistake becomes aparant.
 
 However, the reported fact that it was the sub-parser `*` of
 parser term that failed at this location does little to enlighten
 us with respect to the cause of the failure. The "farthest fail"-method
 as implemented by DHParser yields the
 first parser (of possibly several) that has been tried at the
-position where the farthest fail occured. Thus, in this case,
+position where the farthest fail occurred. Thus, in this case,
 a failure of the parser capturing `*` is reporeted rather than
 of the parser expression->`+`. Changing this by reporting the
 last parser or all parsers that failed at this location would
-do little to remedy this situaiton, however. In this example,
+do little to remedy this situation, however. In this example,
 it would just be as confusing to learn that expression->´+` failed
 at the end of the parsed string.
 
@@ -1147,8 +1147,8 @@ Marking mandatory items with "§"
 Thus, "farthest fail"-method is not very suitable for explaining
 the failure or pinpointing which parser really was the culprit.
 Therefore, DHParser provides a simple annotation that allows to
-raise a parsing error deliberately, if a ceratin point in the
-chain of parsers has not been reached: By placind the "§"-sign
+raise a parsing error deliberately, if a certain point in the
+chain of parsers has not been reached: By placing the "§"-sign
 as a "mandatory-marker" in front of a parser, the parser as well
 as all subsequent parsers in the same sequence, will not simply
 return a non-match when failing, but it will cause the entire
@@ -1178,13 +1178,13 @@ to place the mandatory marker in front of a parser that might fail at a location
 that could still be reached and matched by another branch of the grammar.
 (In our example it is clear that round brackets enclose only groups. Thus,
 if the opening round bracket has matched, we can be sure that what follows
-must be an expression fllowed by a closing round bracket, or, if not it is
+must be an expression followed by a closing round bracket, or, if not it is
 a mistake.) Luckily, although this may sound complicated, in practice it
 never is. Unless you grammar is very badly structured, you will hardly
 ever make this mistake, an if you do, you will notice soon enough.
 
 Also, there is an important restriction: There is only one §-marker
-allowed per named parser. In case you have a long EBFN-expression on the
+allowed per named parser. In case you have a long EBNF-expression on the
 right hand side of a symbol-definition, where you'd like to use the
 §-marker at more than one place, you can, however, always split it into
 several expression by introducing new symbols. These symbols, if they
@@ -1218,7 +1218,7 @@ name consists of the name of a symbol that contains a §-marker and the
 appendix `_error`. The directive always takes two arguments, separated
 as usual by a comma, of which the first is condition-expression and
 the second an error message. The condition can be used to make
-the choice of an error-message dependenant on the text following the
+the choice of an error-message dependant on the text following the
 point of failure. It can either be
 a regular expression or a simple string which must match (or be equal
 to in the case of the string) the first part of the text at the
@@ -1258,7 +1258,7 @@ different conditions and messages but related to the same symbol
 can be specified. The conditions are evaluated in the order the
 error-directives appear in the grammar and the error message
 of the first matching condition is picked. Therefore, the more
-specfic conditions should always be placed first and the more
+specific conditions should always be placed first and the more
 general or fallback conditions should be placed below these::
 
     >>> grammar = ("@ string_error  = /\\\\\\/, 'Illegal escape sequence »{1}« "
@@ -1269,7 +1269,7 @@ general or fallback conditions should be placed below these::
     1:4: Error (1040): Parser "string" stopped before end, at:  \pha"  Terminating parser.
 
 Here, the more specific and more understandable error message
-has been selectec. Careful readers might notice that the the
+has been selected. Careful readers might notice that the the
 more general customized error message "Illegal character(s)
 ... found in string" will now only be selected, if the
 string contains a character that not even regular expression
@@ -1278,7 +1278,7 @@ is not allowed within the string are the closing quotation
 marks that terminate the string and which do not cause the
 parser to fail (but only to terminate to early).
 
-Also, it might be noticed that the errors are alwayes caused
+Also, it might be noticed that the errors are always caused
 by a failure to match the second `"`-sign, because the
 characters-parser also matches the empty string and thus
 never fails or raises any error. Nonetheless, the error
@@ -1340,7 +1340,7 @@ explicitly to such nodes, afterwards:
     >>> for e in tree.errors:  print(e)
     1:2: Error (1000): Fehler im String: al\pha
 
-Unfortunetely, the error location is not very precise. This can be remedied
+Unfortunately, the error location is not very precise. This can be remedied
 by refining our error junction code::
 
     >>> grammar = '''
@@ -1368,7 +1368,7 @@ Here, the node named "ups" pinpoints the precise error location.
 Like most techniques for fail-tolerant parsing, this one is not quite
 as easy to master in practice as it might look. Generally, adding
 a junction for erroneous code works best, when the passage that shall
-be by-passed is delineated by a easily recongnizable follow-up strings.
+be by-passed is delineated by a easily recognizable follow-up strings.
 In this example the follow-up string would be the '"'. The method fails,
 of course if the follow-up text is erroneous, too, or has even been
 forgotten. So, to be absolutely sure, one would have to consider
@@ -1438,14 +1438,14 @@ parser when an error was raised by the string-parser::
       (ZOMBIE__ `(1:4: Error (1010): Illegal escape sequence »\pha"...«) "\pha")
       (:Text '"'))
 
-After the error has occured at the illegal escape-sequence, the
+After the error has occurred at the illegal escape-sequence, the
 skip-directive catches the error and skips to the location where the
 "-character lies just ahead and continues parsing with the string-parser.
 The skipped passage is stored in a ZOMBIE__-Node within the syntax-tree
 and parsing can continue through to the end of the text.
 
 In contrast to the skip-directive the resume-directive leaves the parser
-that raised the error and resumes one level higer up in the call chain.
+that raised the error and resumes one level higher up in the call chain.
 
 
 Semantic Actions and Storing Variables

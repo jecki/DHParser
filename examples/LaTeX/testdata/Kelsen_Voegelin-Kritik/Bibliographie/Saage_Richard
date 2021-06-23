@@ -1,0 +1,846 @@
+<!-- filename: full-set-head-due01  -->
+
+<html>
+<!-- called from www_a_full_set -->
+<head>
+<!-- filename: meta-tags -->
+
+<META HTTP-EQUIV="Cache-Control" CONTENT="no-cache">
+<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="0">
+<META HTTP-EQUIV="REFRESH" CONTENT="12000; URL=http://kant.ub.uni-duesseldorf.de:80/ALEPH/">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+  <title>Titelvollanzeige</title>
+<!--this screen is made up of full-set-head, full-999-body for standard format
+(or full-000-body for name or numeric format; or full-xxx-body for card format) and full-set-tail.
+The information displayed in the table is defined in a file called
+edit_doc_999.eng (for standard format) or edit_doc.eng (for card format)
+which are located in the library's TAB directory.
+For name and numeric format, all fields that are included in the Catalog
+ Record will be displayed.  The names of the fields are those listed
+in tab01.
+
+-->
+
+<style type="text/css">
+BODY
+{
+  background-color:white;
+  font-family:'Bitstream Cyberbit';
+  font-size:10pt;
+  color:black;
+}
+p,div,span,th,td,li,ul,ol
+{
+  font-family:Arial;
+  font-size:10pt;
+  color:black;
+}
+
+.title
+{
+  color:black;
+  font-weight:bold;
+  font-size:16pt;
+}
+.title1
+{
+  color:black;
+  font-weight:bold;
+  font-size:14pt;
+}
+.title2
+{
+  color:black;
+  font-weight:bold;
+  font-size:12pt;
+}
+.td1
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+}
+.td1a
+{
+  background-color:#d0d0d0;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+  border-style:solid;
+  border-color:#000000;
+  border-width:thin;
+}
+.td1b
+{
+  background-color:#d0d0d0;
+  color:black;
+  font-weight:normal;
+  font-size:12pt;
+}
+.td1c
+{
+  background-color:#d0d0d0;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+  border-style:solid;
+  border-color:#000000;
+}
+.td1r
+{
+  background-color:#efefef;
+  color:red;
+  font-weight:normal;
+  font-size:10pt;
+}
+.td3
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:bold;
+  font-size:11pt;
+}
+.td3r
+{
+  background-color:#efefef;
+  color:red;
+  font-weight:normal;
+  font-size:11pt;
+}
+.td5
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:bold;
+  font-size:10pt;
+}
+.td5r
+{
+  color:red;
+  font-weight:bold;
+  font-size:10pt;
+}
+.td6
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+}
+.td7
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+}
+.td8
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+}
+.td9
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+}
+.td10
+{
+  background-color:#efefef;
+  color:black;
+  font-weight:normal;
+  font-size:10pt;
+}
+.col1
+{
+  vertical-align: top;
+  text-align: left;
+  font-size:10pt;
+  font-weight:normal;
+  background-color:#d0d0d0;
+}
+.col1r
+{
+  vertical-align: top;
+  color:red;
+  text-align: left;
+  font-size:10pt;
+  font-weight:normal;
+  background-color:#d0d0d0;
+}
+.col7
+{
+  vertical-align: top;
+  text-align: left;
+  font-size:10pt;
+  font-weight:normal;
+  background-color:#d0d0d0;
+}
+.col8
+{
+  vertical-align: top;
+  text-align: left;
+  font-size:10pt;
+  background-color:#d0d0d0;
+  font-weight:normal;
+}
+.col9
+{
+  vertical-align: top;
+  text-align: left;
+  font-size:10pt;
+  background-color:#d0d0d0;
+  font-weight:normal;
+}
+a.small
+{
+  color:black;
+  text-decoration:none;
+  font-size:10pt;
+  font-weight:bold;
+}
+.copyright
+{
+  color:black;
+  font-weight:normal;
+  font-size:8pt;
+}
+#bold
+{
+  font-weight:bold;
+}
+#centered
+{
+  text-align: center;
+}
+#centered1
+{
+  vertical-align: top;
+  text-align: center;
+}
+#bold1
+{
+  vertical-align: top;
+  font-weight:bold;
+}
+a:link
+{
+  color:darkblue;
+  font-weight:bold;
+  text-decoration:none;
+}
+a:visited
+{
+  color:darkblue;
+  font-weight:bold;
+  text-decoration:none;
+}
+a:active
+{
+  color:darkblue;
+  font-weight:bold;
+  text-decoration:none;
+}
+</style>
+</head>
+
+<body onload=window.focus()>
+<yoh-0009>
+
+<br>
+<center>
+<div class=title>
+Titelvollanzeige
+</div>
+</center>
+<!--table width=100%>
+<tr>
+<td class=title align=center width=90% nowrap>
+Titelvollanzeige
+</td-->
+<!--<td align=right nowrap>
+<a href="#help">
+   <img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-help.gif border=0 alt="Hilfe zu dieser Seite"></a>
+</td>
+</tr>
+</table-->
+<br>
+
+<!-- filename: full-set-include-2 -->
+
+<table class=td7 width=100% border=0>
+<tr>
+<td align=left>
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47304/short-current target=frame2>
+Ergebnisliste</a>
+&nbsp;&nbsp;&nbsp;&nbsp;
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47305/file/basket-note-0?P01=DUE01-001530391 target=error >
+In den Korb</a>
+&nbsp;&nbsp;&nbsp;&nbsp;
+<!--
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47306/locate-list/DUE01-001530391>
+   <img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-locate.gif border=0 alt="In anderer Datenbank lokalisieren"></a>
+&nbsp;
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47307/file/ill-request-doc-0?P01=DUE01-001530391>
+   <img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-ill-request.gif border=0 alt="Fernleihbestellung"></a>
+&nbsp;
+-->
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47308/file/full-mail-0?P01=DUE01-001530391 target=error>
+Speich./Mail</a>
+</td>
+<td align=right>
+<a href="javascript:window.print();"><img src="http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/drucken.gif" border=0 alt="Drucken"></a>
+&nbsp;
+<a href="http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47309/file/help-vollanz-0" target="error">
+<img src="http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/hilfe.gif" width=21 height=20 border=0 title="Ausf&uuml;hrliche Hinweise zur Suche"></a>
+</td>
+<!--
+<script>
+  var a="Y";
+  if (a=="N") {
+    document.write('<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47310/file/full-save-server-0?P01=DUE01&P02=001530391 target=error>');
+    document.write('<img src="http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-save-server.gif" border=0 alt="Dokument auf dem Server speichern"></a>');
+    document.write('&nbsp;');
+  }
+</script>
+-->
+<!--
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47311/file/full-save-server-0?P01=DUE01&P02=001530391 target=error>
+  <img src="http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-save-server.gif" border=0 alt="Dokument auf dem Server speichern"></a>
+&nbsp;  --->
+
+<!--
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47312/file/metalib-0?P01=DUE01&P02=001530391 target=error>
+  <img src="http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/meta-icon.gif" border=0 alt="Jump to MetaLib"></a>  --->
+<!--
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47313/file/sfx-doc-0?P01=DUE01&P02=001530391 target=error>
+  <img src="http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/sfx.gif" border=0 alt="SFX-Services"></a>
+-->
+<!--
+</td>
+<td align=right>
+<a href="javascript:history.back();"><img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-back.gif border=0  alt="Vorherige Seite"></a>
+</td>
+-->
+</tr>
+</table>
+
+
+<br>
+<table>
+<tr>
+<td class=text3>W&auml;hlen Sie ein Format:</td>
+<td class=td7>
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47314/full-set/000004-999>Standard</a>
+</td>
+
+<!--td class=td7>
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47315/full-set/000004-037>Katalogformat</a>
+</td-->
+
+<td class=td7>
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47316/full-set/000004-002>Feldnamen</a>
+</td>
+
+<td class=td7>
+<a href=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47317/full-set/000004-001>Feldnummern</a>
+</td>
+</tr>
+</table>
+
+<table class=table3 width=100%>
+<tr>
+<td class=text3 align=left>Titel      4 von     48
+</td>
+<td align=right>
+  <A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47318/FULL-SET/000003-999-F><img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-prev-record.gif border=0 alt='Previous record'></A> &nbsp; <A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47319/FULL-SET/000005-999-F><img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-next-record.gif border=0 alt='Next record'></A>
+</td>
+</tr>
+</table>
+<table cellspacing=2 BORDER=0 WIDTH=100%>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "1.Autor";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "1.Autor";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+<x><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47320/file/service-0?P01=001530391&P02=0012&P03=TAG target=error>Saage, Richard&nbsp;</A></td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Titel";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Titel";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+<x><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47321/file/service-0?P01=001530391&P02=0013&P03=TAG target=error>Politische Ideengeschichte in demokratie-theoretischer Absicht&nbsp;</A></td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Zusatz";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Zusatz";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+das Beispiel <span class=text3 id=highlight>Hans</span> Kelsens und Max Adlers in der Zwischenkriegszeit&nbsp;</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Verfasserang.";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Verfasserang.";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+Richard Saage&nbsp;</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Ort";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Ort";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+Leipzig&nbsp;</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Verlag";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Verlag";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+Verl. der Sächs. Akad. der Wiss.&nbsp;</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Jahr";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Jahr";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+2003&nbsp;</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Umfang";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Umfang";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+22 S. : graph. Darst.&nbsp;</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "1.Gesamttitel";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "1.Gesamttitel";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+<x><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47322/file/service-0?P01=001530391&P02=0020&P03=TAG target=error>Sitzungsberichte der Sächsischen Akademie der Wissenschaften zu Leipzig, Philologisch-Historische Klasse ; 138,3&nbsp;</A></td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "ISBN";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "ISBN";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+3-7776-1223-5</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Glied 1. SWK";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Glied 1. SWK";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+<x><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47323/file/service-0?P01=001530391&P02=0025&P03=TAG target=error>Adler, Max&nbsp;/&nbsp;</A><x><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47324/file/service-0?P01=001530391&P02=0026&P03=TAG target=error>Demokratie&nbsp;/&nbsp;</A><x><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47325/file/service-0?P01=001530391&P02=0027&P03=TAG target=error>Politische Theorie&nbsp;/&nbsp;</A><x><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47326/file/service-0?P01=001530391&P02=0028&P03=TAG target=error><span class=text3 id=highlight>Kelsen</span>, <span class=text3 id=highlight>Hans</span>&nbsp;/&nbsp;</A></td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "<A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47327/direct-doc/DUE01-000222279-999-SYSNO>Gesamttitel Serie</A>";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "<A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47328/direct-doc/DUE01-000222279-999-SYSNO>Gesamttitel Serie</A>";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+Sächsische Akademie der Wissenschaften &lt;Leipzig&gt; / Philologisch-Historische Klasse:&nbsp;Sitzungsberichte der Sächsischen Akademie der Wissenschaften zu Leipzig, Philologisch-Historische Klasse.&nbsp;1962</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Bestand Ex.";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Bestand Ex.";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+Standort:&nbsp;01&nbsp;Sign.:&nbsp;algy.l201(138,3)</td>
+</tr>
+<tr>
+<!-- tag -->
+<script>
+<!--
+   var tag = "Gesamtbestand";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold width=15%>"); // nowrap
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+           document.write(tag);
+//-->
+</script>
+</td>
+<!-- contents -->
+<script>
+<!--
+   var tag = "Gesamtbestand";
+           if (tag == "Vorh. Baende")
+           {
+           document.write("<td class=td1a id=bold>");
+           }
+           else
+           {
+           document.write("<td class=td1>"); // nowrap
+           }
+//-->
+</script>
+<A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47329/file/item-global-0?P01=DUE01&P02=001530391&P03=&P04=&P05= target=error>Alle Exemplare</A></td>
+</tr>
+<!-- filename: full-set-tail -->
+
+</table>
+<p align=right><A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47330/FULL-SET/000003-999-F><img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-prev-record.gif border=0 alt='Previous record'></A> &nbsp; <A HREF=http://kant.ub.uni-duesseldorf.de:80/ALEPH/28L6VDX4SKTRUHL92GFMEXR5VCK6SC3TF81Y1VUF19PAGVMDR1-47331/FULL-SET/000005-999-F><img src=http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-next-record.gif border=0 alt='Next record'></A>
+<br>
+<hr>
+<a name="help"></a>
+<p class=help2>
+Klicken Sie auf einen fettgedruckten Begriff, um zu den Suchdiensten zu gelangen.<br>
+Klicken Sie auf <em>Alle Exemplare</em>, um zu Exemplaren zu kommen und
+ggf. zu bestellen.<br>
+<p align=left>
+<img src="http://kant.ub.uni-duesseldorf.de:80/www_ger/icon/a-copyrights.gif" border=0 alt="Copyright-Hinweis">
+</p>
+</body>
+</html>
+
+ 

@@ -1,0 +1,239 @@
+\subsubsection{Ein alternativer Beweis}
+
+Der folgende Beweis stammt aus dem Buch von Resnik \cite[S. 186ff.]{resnik:1987}.
+Der Beweis wird ebenfalls so geführt, dass gezeigt wird, dass dann, wenn die drei
+letzten Bedingungen erfüllt sind, die erste Bedingung nicht mehr erfüllt werden
+kann. Damit ist gezeigt, dass es keine Abbildungsfunktion gibt, die alle
+aufgelisteten Bedingungen erfüllen kann. Anders als beim vorhergehenden Beweis
+wird diesmal aber nicht zuerst gezeigt, dass es eine Teilmenge von Individuen
+gibt, die beinahe entscheidend für alle Alternativen ist und dann, dass sie
+tatsächlich nur aus einem Individuum besteht. Sondern es wird zuerst gezeigt,
+dass es ein Individuum gibt, dass für eine Alternative beinahe entscheidend ist,
+und dann, dass daraus folgt, dass diese Individuum für alle Alternativen nicht
+nur beinahe sondern vollständig entscheidend ist. Die einzelnen Beweisschritte
+sind aber zum Teil ähnlich wie beim ersten Beweis, so dass die Lektüre des
+zweiten Beweises gut zur Übung und zum besseren Verständnis dienen kann.
+
+Zunächst wird folgendes Lemma bewiesen: 
+
+\begin{quote}
+{\bf Lemma 1}: {\em Es existiert immer ein Individuum, das für irgendein Paar
+von Alternativen beinahe entscheidend ist.}
+\end{quote} 
+
+{\em Beweis}: Wie oben angemerkt existieren "`entscheidende"' Mengen für jedes
+Paar von Alternativen. Da jede "`entscheidende"' Menge immer auch "`beinahe
+entscheidend"' ist, existieren für jedes Paar von Alternativen auch beinahe
+"`entscheidende"' Mengen. 
+
+Wir setzten voraus, dass die Menge der Individuen und Alternativen endlich ist.
+Dann existiert wenigstens eine "`beinahe entscheidende"' Menge (bezüglich irgend
+eines Paares von Alternativen), die keine echte Teilmenge enthält, die "`beinahe
+entscheidende"' Menge (bezüglich irgend eines beliebigen Paares von Alternativen)
+wäre, denn: Man beginne mit irgend einer beliegigen "`beinahe entscheidenden"'
+Menge. Hat diese Menge noch (nicht-leere) Teilmengen, die "`beinahe
+entscheidende"' Mengen (bezüglich irgendeiner Alternative) sind, dann wähle
+ man irgend eine dieser
+"`beinahe entscheidenden"' Teilmengen und stelle für diese Teilmenge dieselbe
+Untersuchung an, solange bis man bei einer Menge angekommen ist, die keine
+echten Teilmengen mehr enthält, die ihrerseits "`beinahe entscheidende"' Mengen
+irgendeines Paares von Alternativen sind. 
+
+Wir verfügen damit über eine "`minimale Menge"', die "`beinahe entscheidend"'
+bezüglich eines bestimmten Paares von Alternativen ist. Wenn wir zeigen können,
+dass diese "`minimale Menge"' nur noch ein einziges Individuum enthält,
+dann haben wir das Lemma bewiesen. Dazu kann ein Widerspruchsbeweis geführt werden.
+Wir nehmen also an, es gäbe eine entsprechende "`minimale beinahe entscheidende
+Menge"', die mehrere Individuen enthält und zeigen, dass diese Annahme zu einem
+Widerspruch führt.
+
+Angenommen also, $M$ sei eine "`minimale beinahe entscheidende Menge"' für die
+Alternative $x$ über $y$, die mehrere Individuen enthält. Man betrachte ein
+beliebiges Individuum $J$ aus der Menge $M$. Da die Menge $M$ mehr Individuen als
+nur $J$ enthält, und da möglicherweise noch ein "`Rest"' von
+Individuen existiert, die nicht zu $M$ gehören, kann man folgende drei
+unterschiedlichen Gruppierungen betrachten: 1) Die Menge, die nur aus dem 
+Individuum $J$ besteht.
+2) Die Menge, die aus den Individuen von $M$ ohne $J$ besteht, kurz: $M-J$. 3)
+Der "`Rest"', d.h. alle Individuen, die nicht zu $M$ gehören.
+
+Da jedes beliebige Präferenzprofil zugelassen ist ("`unbeschränkter Bereich"')
+und sich die Eigenschaft eine (minimale) "`beinahe entscheidende"' Menge zu
+sein auf alle Präferenzprofile bezieht, muss sie sich auch bei jedem beliebigen
+einzelnen Präferenzprofil bewähren. Man nehme an, dass es mindestens
+drei Güter gibt und betrachte nun folgendes Präferenzprofil:
+
+\begin{center}
+\begin{tabular}{ccc}
+$J$ & $M-J$ & Rest \\
+\cline{1-3}
+$z$ & $x$ & $y$ \\
+$x$ & $y$ & $z$ \\
+$y$ & $z$ & $x$ \\
+\end{tabular}
+
+\vspace{0.5cm}
+{\small Quelle: Resnik \cite{resnik:1987}, S. 188}
+\end{center}
+
+Da $M$ eine "`beinahe entscheidende"' Menge für $x$ über $y$ ist und in diesem
+Präferenzprofil für alle Mitglieder von $M$ gilt: $x \succ y$, und alle
+Nicht-Mitglieder gilt: $y \succ x$, so muss die Wohlfahrtsfunktion diesem
+Präferenzprofil kollektive Präferenzen zuordnen, bei denen $x \succ y$ gilt.
+Darüber hinaus muss die Wohlfahrtsfunktion natürlich auch festlegen, welche
+Beziehung ($\succ$, $\prec$ oder $\sim$) zwischen $x$ und $z$ zu gelten hat.
+Wir betrachten die drei Möglichkeiten im Einzelnen, und zeigen, dass jede davon
+zu einem Widerspruch führt. Dabei ist zu beachten, dass wir nicht
+ausgeschlossen haben, dass die Menge "`Rest"' leer sein kann. Die folgenden
+Argumente funktionieren aber (wovon man sich leicht überzeugen kann) auch
+in dem Fall, dass die "`Rest"'-Gruppe leer ist.
+
+\begin{enumerate}
+  \item Angenommen nach der Wohlfahrtsfunktion gilt für dieses Präferenzprofil
+  $x \succ z$. Dann muss die Wohlfahrtsfunktion nach der Bedingung der
+  Unabhängigkeit von irrelevanten Alternativen $x \succ z$ auch für alle
+  anderen Präferenzprofile liefern, nach denen $x$ und $z$ für jedes Individuum
+  in derselben Weise relativ zueinander geordnet sind wie in dem gegebenen
+  Präferenzprofil. Damit liefert die Wohlfahrtsfunktion aber immer $x \succ z$,
+  wenn für alle Individuen in $M-J$ gilt $x \succ z$ und für alle Individuen,
+  die nicht in $M-J$ enthalten sind $z \succ x$. Damit ist $M-J$ aber "`beinahe
+  entscheidende"' Menge für $x$ über $z$. Nach der Konstruktion von $M$ hätte
+  $M$ als "`minimale beinahe entscheidende Menge"' (für $x$ über $y$) aber keine
+  Teilmenge mehr enthalten dürfen, die noch "`beinahe entscheidende"' Menge
+  {\em irgendeines} Paars von Alternativen ist. Also liegt hier ein Widerspruch
+  vor, so dass die Möglichkeit, dass die Wohlfahrtfunktion dem oben stehenden
+  Präferenzprofil kollektive Präferenzen zuordnet, die $x \succ z$ enthalten,
+  ausgeschlossen ist.
+  
+  \item Angenommen, die Wohlfahrtsfunktion legt für dieses Präferenzprofil $x
+  \sim z$ fest. Dann ergibt sich, da bereits $x \succ y$ gilt, dass auch $z
+  \succ y$. Da $J$ aber $z$ gegenüber $y$ vorzieht, während alle anderen
+  Individuen $y$ gegenüber $z$ vorziehen, wäre nach dem gleichen Argument wie
+  im 1.Fall $J$ beinahe entscheidend für die Alternative $z$ über $y$, was
+  ebenfalls der Minimalität von $M$ widerspricht. 
+  Damit scheidet die zweite Möglichkeit auch aus.
+
+  \item Angenommen, die Wohlfahrtsfunktion liefert $z \succ x$. Dann gilt wegen
+  $x \succ y$ und der Transitivität der Präferenzrelation auch $z \succ y$.
+  Dann liegt aber wiederum der Fall vor, dass bei dem oben angegebenen
+  Präferenzprofil für $J$ gilt: $z \succ y$, aber für alle anderen Individuen:
+  $y \succ z$, woraus sich mit Hilfe der Bedingung der Unabhängigkeit von
+  irrelevanten Alternativen wiederum ergibt, dass $J$ "`beinahe entscheidend"'
+  für $z \succ y$ ist, im Widerspruch zur Minimalität von $M$. Auch diese
+  Möglichkeit scheidet aus.
+\end{enumerate}
+
+Da alle Möglichkeiten zum Widerspruch führen, kann die Wohlfahrtsfunktion die
+individuellen Präferenzen nicht auf kollektive Präferenzen abbilden, sofern die
+minimale "`beinahe entscheidende"' Menge $M$ noch mehr als ein Individuum
+enthält. 
+
+Das erste Lemma scheint alleine noch nicht viel zu besagen, denn von dem
+Individuum, aus dem die Menge $M$ am Ende besteht, ist zunächst nur bewiesen, dass es
+lediglich beinahe entscheidend ist, und auch das nur für ein Paar von
+Alternativen. Ein zweites Lemma zeigt aber, dass weit mehr dahinter steckt: 
+
+\begin{quote}
+{\bf Lemma 2:} {\em Ein Individuum,
+das für irgendein Paar von Alternativen beinahe entscheidend ist, ist
+entscheidend für jedes Paar von Alternativen.}
+\end{quote}
+
+{\em Beweis}: Wir nehmen an, dass das Individuum $J$ beinahe entscheidend für
+$X$ über $y$ ist. Es muss nun gezeigt werden, dass es dann auch entscheidend
+(und zwar nicht bloß {\em beinahe} entscheidend!) für alle Paare von
+Alternativen ist. Dies ist dann bewiesen, wenn wir zwei weitere
+Alternativen $a$ und $b$ in die Betrachtung einbeziehen und beweisen können,
+dass $J$ in folgenden sieben Fällen entscheidend ist: 1) $x$ über $y$; 
+2) $y$ über $x$; 3) $x$ über $a$; 4) $a$ über $x$; 5) $y$ über $a$; 6) $a$ über
+$y$; 7) $a$ über $b$. 
+
+Da $a$ und $b$ beliebig wählbar sind, schließt der Beweis automatisch ("`ohne
+Beschränkung der Allgemeinheit"') alle weiteren Alternativen mit ein, die es
+außer $x,y,a$ und $b$ noch geben könnte. Gibt es außer $x$ und $y$ nur noch eine
+oder gar keine weiteren Alternativen, dann fallen nur einige der betrachteten
+Fälle weg, und der Beweis gilt trotzdem. Aus Gründen der Konvenienz werden in dem
+folgenden Beweis die Fälle in einer anderen Reihenfolge behandelt (vgl.
+\cite[S.190/191]{resnik:1987}). Nun zu den Fällen im Einzelnen:
+
+\begin{enumerate}
+  \item Fall {\em $x$ über $a$}: Wir betrachten das Präferenzprofil, in dem
+  $J$ die Alternativen $x,y$ und $a$ in der Reihenfolge $x \succ y \succ a$
+  ordnet, und in denen die anderen Individuen die Alternative $y$ sowohl $x$
+  als auch $a$ vorziehen, wobei zwischen $x$ und $a$ jede mögliche Reihenfolge
+  zugelassen sei. 
+  
+  Da $J$ nach Voraussetzung beinahe entscheidend für $x$ über $y$ ist, muss die
+  Wohlfahrtsfunktion bei einem solchen Profil $x \succ y$ liefern. Da aber
+  ebenfalls für alle Individuen $y \succ a$ gilt, muss auf Grund der Bedingung
+  der Pareto-Effizienz auch die Sozialwahlfunktion $y \succ a$ für ein
+  derartiges Präferenzprofil liefern. Da aber schon $x \succ y$ gilt, liefert
+  die Sozialwahlfunktion aufgrund der Transitivität von Präferenzen auch $x
+  \succ a$. Auf Grund der Bedingung der irrelevanten Alternativen gilt aber,
+  dass die Wohlfahrtsfunktion $x \succ a$ für alle Präferenzprofile liefern
+  muss, in denen $x$ und $a$ in derselben Weise relativ zueinander geordnet
+  sind, wie in dem betrachteten Beispiel. In dem Beispiel hat $J$ aber $x$ vor
+  $a$ eingeordnet, während bei allen anderen Individuen die Ordnung beliebig
+  war. Das bedeutet aber, dass die Wohlfahrtsfunktion $x \succ a$ liefert,
+  sobald $J$ die Ordnung $x \succ a$ festlegt. Damit ist $J$ entscheidend
+  (nicht bloß nahezu entscheidend!) für $x$ über $a$.
+  
+  \item Fall {\em $a$ über $y$}: Wir betrachten das Präferenzprofil, in dem
+  für $J$ die Präferenz $a \succ x \succ y$ gilt, und in dem für alle anderen
+  Individuen $a \succ x$ und $y \succ x$ gilt, d.h. in dem $a$ und $y$ der
+  Alternative $x$ vorgezogen werden, während die Reihenfolge zwischen $a$ und
+  $y$ nicht festgelegt sein soll. 
+  
+  Weil $J$ beinahe entscheidend für $x$ über $y$ ist gilt, dass die
+  Wohlfahrtsfunktion bei den angenommenen Präferenzen $x \succ y$ liefert.
+  Aufgrund der Einstimmigkeit (Pareto-Effizienz) muss die Wohlfahrtsfunktion
+  aber auch $x \succ a$ festlegen. Aufgrund der Unabhängigkeit von irrelevanten
+  Alternativen gilt das letztere wann immer $J$ die Präferenz $a \succ y$
+  enthält. Damit ist $J$ aber
+  entscheidend für $a$ über $y$.
+  
+  \item Fall {\em $y$ über $a$}: Betrachtet sei folgendes Präferenzprofil: Für
+  $J$ gilt $y \succ x \succ a$; für alle anderen gilt $a,y \succ x$. 
+  
+  Gemäß der Bedingung der Pareto-Effizienz liefert die Wohlfahrtsfunktion für
+  dieses Profil $y \succ x$. Da $J$ entscheidend ist für $x$ über $a$, liefert
+  sie auch $x \succ a$ und, wegen der Transitivität der Präferenzrelation
+  schließlich auch $y \succ a$. 
+ 
+  Wiederum muss, wenn die Wohlfahrtsfunktion $y \succ a$ für ein Profil liefert,
+  in dem $J$ die Alternative $y$ vor $a$ stellt, während die Ordnung von $y$ und $a$
+  für die anderen Individuen nicht festgelegt ist, auf Grund der
+  Bedingung der Unabhängigkeit von irrelevanten Alternativen die
+  Wohlfahrtsfunktion $y \succ a$ bei allen Profilen liefern, die $y$ und $a$ in
+  derselben Weise ordnen, d.h. bei allen Profilen, in denen für $J$ gilt: $y
+  \succ a$. Damit ist $J$ aber entscheidend für $y$ über $a$.
+
+  \item Fall {\em $a$ über $x$}: Man betrachte zunächst das Profil, in dem für
+  $J$ gilt: $a \succ y \succ x$, während $y \succ x,a$ für die anderen
+  Individuen gilt. 
+  
+  Wir wissen bereits, dass $J$ entscheidend für $a \succ y$ ist. Aufgrund der
+  Bedingung der Pareto-Effizienz liefert die Wohlfahrtsfunktion aber auch $y
+  \succ x$. Analog zu den vorhergehenden Fällen können wir daraus mit Hilfe
+  der Bedingung der Unabhängigkeit von irrelevanten Alternativen ableitent,
+  dass $J$ entscheidend für $a$ über $x$ ist.
+  
+  \item Fall {\em $x$ über $y$}: Wir betrachten das Profil, in dem für $J$ gilt:
+  $x \succ a \succ y$. Wir wissen bereits, dass $J$ entscheidend für $x \succ a$
+  und ebenso für $a \succ y$ ist. Also muss die Wohlfahrtsfunktion für dieses
+  Profil $x \succ y$ liefern. Analog zu den vorhergehenden Fällen lässt sich
+  dann mit Hilfe der Bedingung der Unabhängigkeit von irrelevanten Alternativen
+  schließen, dass $J$ entscheidend für $x \succ y$ ist.
+
+  \item Fall {\em $y$ über $x$}: Wie im vorhergehenden Fall, nur dass
+  diesmal $x$ und $y$ vertauscht sind.
+  
+  \item Fall {\em $a$ über $b$}: Wir betrachten ein Profil, in dem für $J$ gilt
+  $a \succ x \succ b$. Analog zu dem vorhergehenden Fall, können wir dann
+  zeigen, dass $J$ entscheidend für $a$ über $b$ ist.
+
+\end{enumerate}
+
+In jedem der Fälle ist $J$ also "`entscheidend"', womit das zweite Lemma
+bewiesen ist. Aus dem ersten und dem zweiten Lemma ergibt sich zusammengenommen
+der Satz von Arrow, der damit ebenfalls bewiesen ist.

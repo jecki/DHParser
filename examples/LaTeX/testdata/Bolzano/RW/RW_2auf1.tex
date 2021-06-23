@@ -1,0 +1,32 @@
+\documentclass[a4paper,landscape]{article}
+\usepackage{pdfpages}
+\usepackage{multicol}
+\usepackage[top=0cm, left=0cm, right=0cm, bottom=0cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage[latin1]{inputenc}
+\newcounter{ctbis}
+\newcounter{ctvon}
+\newcounter{ctakt}
+\usepackage{forloop}
+\newif\ifrechts\rechtsfalse
+\makeatletter
+\long\def\wennleer#1#2#3{\def\@tempa{#1}\ifx\@tempa\empty#2\else#3\fi}
+\long\def\wenngleich#1#2#3#4{\def\@tempa{#1}\def\@tempb{#2}\ifx\@tempa\@tempb #3\else#4\fi}
+\makeatother
+\newcounter{hilfsc}
+\newcommand{\zweiaufeins}[4][]{%
+	\def\datei{#4}%
+	\wennleer{#2}{\setcounter{ctvon}{1}}{\setcounter{ctvon}{#2}}%
+	\wennleer{#3}{\pdfximage{\datei}\setcounter{ctbis}{\the \pdflastximagepages}}{\setcounter{ctbis}{#3}}%
+	\forloop{hilfsc}{\value{ctvon}}{\value{hilfsc} < \value{ctbis} \or \value{hilfsc} = \value{ctbis}}%
+		{\mbox{}\vfill\includegraphics*[page=\value{hilfsc},#1]{\datei}%
+		\vfill\par\ifrechts\newpage\rechtsfalse\else\columnbreak\mbox{}\rechtstrue\fi}}
+\begin{document}
+\pagestyle{empty}
+\begin{multicols}{2}
+\centering
+%\mbox{}\vfill\includegraphics*[page=1,viewport=4.5cm 5.5cm 16.5cm 24.3cm,scale=0.95]{Jesus.pdf}\newpage
+\mbox{}\columnbreak\rechtstrue
+\zweiaufeins[viewport=4.6cm 5cm 16.4cm 25cm]{}{}{RW.pdf}
+\end{multicols}
+\end{document}

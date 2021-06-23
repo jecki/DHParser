@@ -1,0 +1,153 @@
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
+
+\documentclass[11pt,a4paper]{book}
+\usepackage{microtype}
+\usepackage{ae}
+\usepackage[ngerman]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{ucs}
+\usepackage[T1]{fontenc}
+\usepackage{t1enc}
+\usepackage{type1cm}
+%\usepackage{babel}
+
+
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+
+\usepackage{ifpdf}
+\ifpdf
+\usepackage{xmpincl}
+\usepackage[pdftex]{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black,
+    bookmarksopen=true,     % Gliederung öffnen im AR
+    bookmarksnumbered=true, % Kapitel-Nummerierung im Inhaltsverzeichniss anzeigen
+    bookmarksopenlevel=1,   % Tiefe der geöffneten Gliederung für den AR
+    pdfstartview=FitV,       % Fit, FitH=breite, FitV=hoehe, FitBH
+    pdfpagemode=UseOutlines, % FullScreen, UseNone, UseOutlines, UseThumbs
+}
+\pdfinfo{
+  /Author (Eckhart Arnold)
+  /Title (Religiöses Bewusstsein und Politische Ordnung. Eine Kritik von Eric Voegelins Bewusstseinsphilosophie)
+  /Subject (Eine Untersuchung zum Verhältnis von Religion und Politk in der Philosophie Eric Voegelins und ein Plädoyer für die Trennung von Religion und Politik im liberalen Staat.)
+  /Keywords (Politische Theologie, Eric Voegelin, Religion und Politik)
+}
+\includexmp{Voegelins_Bewusstseinsphilosophie}
+\fi
+
+%\setlength{\headheight}{15pt}
+%\addtolength{\headheight}{\baselineskip}
+
+%\fancyfoot{}
+
+%\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+%\renewcommand{\sectionmark}[1]{\markright{#1}}
+%\lhead{\leftmark}
+%\rhead{\thepage}
+
+%\renewcommand{\headrulewidth}{0pt}
+%\renewcommand{\footrulewidth}{0pt}
+
+%\addtolength{\textwidth}{-1cm}
+%\addtolength{\headwidth}{\marginparsep}
+%\addtolength{\headwidth}{\marginparwidth}
+
+%\setlength{\oddsidemargin}{0cm}
+%\setlength{\evensidemargin}{0cm}
+
+%Thanks to Daniel Ferrante
+%http://olympus.het.brown.edu/~danieldf/latex/
+%\usepackage{eso-pic}
+%\usepackage{color}
+%\makeatletter
+%  \AddToShipoutPicture{%
+%    \setlength{\@tempdimb}{.5\paperwidth}%
+%    \setlength{\@tempdimc}{.5\paperheight}%
+%    \setlength{\unitlength}{1pt}%
+%    \put(\strip@pt\@tempdimb,\strip@pt\@tempdimc){%
+%      \makebox(0,0){\rotatebox{45}{\textcolor[gray]{0.75}{\fontsize{5cm}{5cm}\selectfont{Draft}}}}
+%    }
+%}
+%\makeatother
+
+\pagestyle{plain}
+
+\sloppy
+
+% K21355
+
+\begin{document}
+
+\title{Religiöses Bewusstsein und Politische Ordnung. Eine Kritik von Eric
+  Voegelins Bewusstseinsphilosophie}
+
+\author{Eckhart Arnold}
+
+\date{31. August 2007}
+
+
+\begin{titlepage}
+
+\setlength{\parindent}{0em}
+%\setlength{\parskip}{3cm}
+\begin{flushleft}
+
+{\Large Eckhart Arnold}
+
+\setlength{\parskip}{2cm}
+{\huge\bf Religiöses Bewusstsein}
+
+\setlength{\parskip}{0.5cm}
+{\huge\bf und}
+
+\setlength{\parskip}{0.5cm}
+{\huge\bf Politische Ordnung}
+
+\setlength{\parskip}{1.0cm}
+{\huge Eine Kritik von Eric Voegelins}
+
+\setlength{\parskip}{0.5cm}
+{\huge Bewusstseinsphilosophie}
+
+\end{flushleft}
+
+\begin{center}
+
+\setlength{\parskip}{11cm}
+{\footnotesize www.eckhartarnold.de}
+\end{center}
+
+\end{titlepage}
+
+%\maketitle
+
+\newpage
+
+\pagenumbering{roman} \tableofcontents
+
+\newpage
+
+\pagenumbering{arabic}
+
+\setcounter{page}{1}
+
+\input{Einleitung.tex}
+\input{Kapitel2.tex}
+\input{Kapitel31.tex}
+\input{Kapitel32.tex}
+\input{Kapitel33.tex}
+\input{Kapitel34.tex}
+\input{Kapitel35.tex}
+\input{Kapitel4.tex}
+\input{Literatur.tex}
+\input{Abstract.tex}
+
+\end{document}

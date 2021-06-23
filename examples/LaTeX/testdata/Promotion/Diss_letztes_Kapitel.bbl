@@ -1,0 +1,64 @@
+\begin{thebibliography}{8}
+% this bibliography was produced with the style dinat.bst v2.5
+\makeatletter
+\newcommand{\dinatlabel}[1]%
+{\ifNAT@numbers\else\NAT@biblabelnum{#1}\hspace{2\labelsep}\fi}
+\makeatother
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\expandafter\ifx\csname url\endcsname\relax\def\url#1{\texttt{#1}}\fi
+
+\bibitem[Cartwright(1999)]{cartwright:1999}
+\dinatlabel{Cartwright 1999} \textsc{Cartwright}, Nancy:
+\newblock \emph{The Dappled World. A Study of the Boundaries of Science}.
+\newblock reprint 2003.
+\newblock Cambridge~: Cambridge University Press, 1999
+
+\bibitem[Gilbert und Troitzsch(2005)]{troitzsch:2005}
+\dinatlabel{Gilbert und Troitzsch 2005} \textsc{Gilbert}, Nigel~;
+  \textsc{Troitzsch}, Klaus:
+\newblock \emph{Simulation for the Social Scientist}.
+\newblock New York~: Open University Press, 2005
+
+\bibitem[Hegselmann u.\,a.(1996)Hegselmann, Mueller und
+  Troitzsch]{hegselmann:1996}
+\dinatlabel{Hegselmann u.\,a. 1996} \textsc{Hegselmann}, Rainer (Hrsg.)~;
+  \textsc{Mueller}, Ulrich (Hrsg.)~; \textsc{Troitzsch}, Klaus~G. (Hrsg.):
+\newblock \emph{Modelling and Simulation in the Social Sciences from the
+  Philosophy of Science Point of View (Mathematics and its Applications)}.
+\newblock Dordrecht / Boston /London~: Kluwer Academic Publishers, 1996
+
+\bibitem[Humphreys(2004)]{humphreys:2004}
+\dinatlabel{Humphreys 2004} \textsc{Humphreys}, Paul:
+\newblock \emph{Extending Ourselves. Computational Science, Ermpiricism, and
+  Scientific Method}.
+\newblock Oxford University Press, 2004
+
+\bibitem[Kliemt(1996)]{kliemt:1996}
+\dinatlabel{Kliemt 1996} \textsc{Kliemt}, Hartmut:
+\newblock \emph{Simulation and Rational Parctice}.
+\newblock Kap.~1, S.~13--27.
+\newblock In: \textsc{Hegselmann}, Rainer (Hrsg.)~; \textsc{Mueller}, Ulrich
+  (Hrsg.)~; \textsc{Troitzsch}, Klaus~G. (Hrsg.): \emph{Modelling and
+  Simulation in the Social Sciences from the Philosophy of Science Point of
+  View (Mathematics and Its Applications)}.
+\newblock Dordrecht / Boston /London~: Kluwer Academic Publishers, 1996
+
+\bibitem[Schüßler(1990)]{schuessler:1997}
+\dinatlabel{Schüßler 1990} \textsc{Schüßler}, Rudolf:
+\newblock \emph{Kooperation unter Egoisten: Vier Dilemmata}.
+\newblock 2. Auflage (1997).
+\newblock München~: R. Oldenbourg Verlag, 1990
+
+\bibitem[Skyrms(2004)]{skyrms:2004}
+\dinatlabel{Skyrms 2004} \textsc{Skyrms}, Brian:
+\newblock \emph{The Stag Hunt Game and the Evolution of Social Structure}.
+\newblock Cambridge University Press, 2004
+
+\bibitem[Taylor(1997)]{taylor:1987}
+\dinatlabel{Taylor 1997} \textsc{Taylor}, Michael:
+\newblock \emph{The Possibility of Cooperation. Studies in Rationality and
+  Social Change}.
+\newblock reprint (first edition:1987).
+\newblock Cambridge~: Cambridge University Press, 1997
+
+\end{thebibliography}

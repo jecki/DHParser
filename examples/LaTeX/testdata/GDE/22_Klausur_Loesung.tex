@@ -1,0 +1,139 @@
+\subsection{Die Lösung}
+
+\subsubsection*{Aufgabe: Entscheidungen unter Unwissenheit}
+
+Bedauernstabelle:
+
+\begin{center}
+\begin{tabular}{c|c|c|c|c|}
+\multicolumn{1}{c}{} & \multicolumn{1}{c}{$S_1$}
+& \multicolumn{1}{c}{$S_2$} & \multicolumn{1}{c}{$S_3$}
+& \multicolumn{1}{c}{$S_4$}
+\\ \cline{2-5}
+$A_1$ & {\bf {\em 197}} &   93 &          0 & 46 \\ \cline{2-5} 
+$A_2$ &   0             &    0 &  {\em 497} &  0 \\ \cline{2-5}
+$A_3$ &  50             &   40 &  {\em 498} & 25 \\ \cline{2-5}
+\end{tabular}
+\end{center}
+
+Lösung: {\bf $A_1$} sollte gewählt werden, da bei $A_1$ der maximale
+Gewinn, der entegehen könnte, mit 197 kleiner ist als bei $A_2$ mit
+497 und $A_3$ mit 498.
+
+
+\subsubsection*{Entscheidungsbäume}
+
+\begin{enumerate}
+\item Für den Erwartungswert der "`Handlung B"' gilt: $EW = 0.5 \cdot
+  200 + 0.5 \cdot 800 = 500$ €.  Da die "`Handlung A"' nur 400 €
+  liefert, würde eine rational handelnde Person die "`Handlung B"'
+  wählen.
+
+\item Es kann davon ausgegangen werden, dass die Personen von den
+  beiden Handlungen des rechten Entscheidungsknotens die bessere
+  wählt. Damit hat "`Ereignis 1"', wenn es eintritt, einen Wert von
+  500 € (siehe die erste Aufgabe). Der Erwartungswert der
+  "`Alternative 1"' des linken Entscheidungsknotens berechnet sich
+  dann wie gehabt: $EW = 0.2 \cdot 1000 + 0.8 \cdot 500 = 600$ €
+
+\item Um diese Frage zu beantworten, muss nur noch der Erwartungswert
+  von "`Alternative 2"' berechnet werden: $EW = 0.3 \cdot 600 + 0.5
+  \cdot 400 + 0.2 \cdot 1000 = 580$ €. Da die "`Alternative 1"' einen
+  höheren Erwartungswert hat, sollte "`Alternative 1"' gewählt werden.
+\end{enumerate}
+
+
+\subsubsection*{Nash-Gleichgewichte}
+
+\begin{enumerate}
+\item Die beiden reinen Nash-Gleichgewichte sind ($Z_1,S_1$) und
+  ($Z_2,S_2$). Weder der Zeilen- noch der Spaltenspieler kann sich im
+  Gleichgewicht durch einen Wechsel seiner Strategie noch verbessern,
+  wenn der andere Spieler seine Strategie beibehält.
+
+\item Ansatz: Ein gemischtes Gleichgewicht kann nur dann vorkommen,
+  wenn der jeweils andere Spieler bezüglich der gemischten
+  Gleichgewichtsstrategie seines Gegenüber indifferent zwischen seinen
+  reinen Strategien ist. Sei $a$ die Wahrscheinlichkeit, mit der der
+  Zeilenspieler die erste seiner beiden Strategien $Z_1$ spielt. Dann
+  errechnet sich die Auszahlung, die der Spaltenspieler erhält, wenn
+  er die Strategie $S_1$ spielt nach:
+\[ V(S_1) = a \cdot 1 + (1-a)\cdot 2 \]
+  Und die Auszahlung, die er erhält, wenn er $S_2$ spielt, ist:
+\[ V(S_2) = a \cdot 0 + (1-a)\cdot 4 \]
+  Durch Gleichsetzen erhält man:
+\begin{eqnarray}
+a \cdot 1 + (1-a)\cdot 2 & = & (1-a)\cdot 4 \\
+                  -a + 2 & = & 4 - 4a \\
+                      3a & = & 2 \\
+                       a & = & \frac{2}{3}
+\end{eqnarray}
+Im gemischten Gleichgewicht wird der Zeilenspieler also mit 2/3
+Wahrscheinlichkeit $Z_1$ spielen und mit 1/3 Wahrscheinlichkeit
+$Z_2$. Wegen der Symmetrie des Spiels spielt der Spaltenspieler mit
+genau denselben Wahrscheinlichkeiten, nämlich mit 2/3
+Wahrscheinlichkeit $S_1$ und mit 1/3 Wahrscheinlichkeit $S_2$.
+
+\end{enumerate}
+
+\subsubsection*{Aufgabe: Bayes'scher Lehrsatz}
+
+Sei $p$ das Ereignis, dass die Probegrabung erfolgreich ausfällt und
+$g$ das Ereignis, dass Gold vorhanden ist. Berechnet werden soll die
+Wahrscheinlichkeit, dass Gold vorhanden ist, wenn die Probegrabung
+negativ ausfällt, d.h. $P(g|\neg p)$. Nach dem Bayes'schen Lehrsatz
+gilt:
+\[ P(g|\neg p) = \frac{P(\neg p|g)P(g)}{P(\neg p|g)P(g) + P(\neg
+  p|\neg g)P(\neg g)} \] 
+Aus der Aufgabenstellung geht unmittelbar nur
+hervor, dass $P(g)=0.3$, $P(p|g)=0.95$ und $P(p|\neg g)=0.1$. Alle
+anderen benötigten Werte muss man aus diesen gegebenen Werten
+berechnen, also:
+\[ P(\neg g) = 1 - P(g) = 1 - 0,3 = 0,7 \]
+\[ P(\neg p|g) = 1 - P (p|g) = 1- 0,95 = 0,05 \]
+\[ P(\neg p|\neg g) = 1 - P(p|\neg g) = 1 - 0,1 = 0,9 \]
+Durch Einsetzen erhalten wir:
+\[ P(g|\neg p) = \frac{0,05 \cdot 0,3}{0,05 \cdot 0,3 + 0,9 \cdot 0,7}
+= 0,023256 \] 
+Die Lösung lautet also, dass nur noch mit ca. 2,3\%
+Wahrscheinlichkeit davon ausgegangen werden kann, dass Gold vorhanden
+ist, wenn die Probegrabung negativ ausfällt.
+
+\subsubsection*{Aufgabe: Beweise}
+
+\begin{enumerate}
+
+\item $L(a,x,y) \equiv L(b,y,x)$ wenn $b = 1-a$. Begründung: Wenn
+  $b=1-a$, dann kann man in beiden Lotterien mit genau denselben
+  Gewinnchancen dieselben Gewinne bekommen. Damit sind die Lotterien
+  aber identisch. 
+
+  \begin{small}
+  {\em Anmerkung}: Man kann in diesem Fall schon deshalb nicht mit dem
+  Erwartungsnutzen argumentieren, weil damit höchstens die Indifferenz 
+  zwischen beiden Lotterien gezeigt werden kann, aber noch nicht ihre Identität.
+  (Wenn der Erwartungsnutzen von einem Apfel für eine bestimmte Person
+  derselbe ist wie der von einer Birne, dann ist die Person zwischen Apfel und
+  Birne indifferent, aber deshalb ist ein Apfel noch lange keine Birne!)
+  \end{small}
+
+\item Nach dem ersten Teil der Aufgabe ist die Lotterie $L(a, z, x)$ identisch
+mit der Lotterie $L(1-a, x, z)$ und die Lottiere $L(a, z, y)$ identisch mit der
+      Lotterie $L(1-a, y, z)$.
+
+      Nun gilt aber: Für jedes $a$ mit $0 \leq a \leq 1$ liegt der Wert
+      $1-a$ wieder in dem Intervall von 0 bis 1. Dann gilt aber nach der Bedingung der
+      höheren Gewinne auf der ersten Stelle (Voraussetzung):
+      \[x \succ y \Leftrightarrow L(1-a, x, z) \succ L(1-a, y, z)\]
+      Aufgrund der oben festgestellten Identität gilt aber ebenfalls:
+      \[L(1-a, x, z) \succ L(1-a, y, z) \Leftrightarrow
+        L(a, z, x) \succ L(a, z, y)\]
+      Damit gilt insgesamt:
+      \[x \succ y \Leftrightarrow L(a, z, x) \succ L(a, z, y) \]      
+      q.e.d.
+      
+      \begin{small}
+      {\em Anmerkung}: Wichtig ist, dass der Beweis so geführt wird, dass klar
+      ist, dass die Formel am Ende auch tatsächlich für alle $a$ gilt!
+      \end{small}
+\end{enumerate}

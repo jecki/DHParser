@@ -1,0 +1,106 @@
+\documentclass[10pt,ngerman,final]{book}
+\overfullrule=1mm
+\newif\ifosu
+\global\osutrue
+\newif\ifnackt
+\global\nacktfalse
+\usepackage{BU_Makros}
+%---Teilkompilation
+%\includeonly{RW2}
+%
+\begin{document}
+%---Literaturverweise, automatisiert
+\ifnackt\else%
+\citealiasesdefinieren{Literatur.csv}
+%
+%---Zusätzliche Indexverweise
+% \index{bibel}{1\,Mos|see{Gen}}
+%
+%---Titelei---
+%\include{BU_titel}
+\input{BU_titel}
+%
+%---Inhaltsverzeichnis---
+\normalsize
+\RWch*{Inhaltsverzeichnis}\label{IhvzAnfang}\markboth{\kopfzeilenfmt{Inhaltsverzeichnis}}{\kopfzeilenfmt{Inhaltsverzeichnis}}
+\ptocauslesen{}\ctaddtocontents{dummy}{\protect\vspace{-0.3\baselineskip}}\label{IhvzEnde}
+%
+%%---Einleitung---
+%\include{intro}
+%
+%---Zwischentitelei---
+% \include{BU_zwititel}
+\input{BU_zwititel}
+%
+%
+%---Einleitung---
+\RWch{Einleitung des Herausgebers}\hbox{}\par\noindent\markboth{\kopfzeilenfmt{Einleitung des Herausgebers}}{\kopfzeilenfmt{Christian Tapp}}%
+% \include{BU_intro}
+\input{BU_intro}
+%
+%---Zwischentitelei---
+% \include{BU_Zwititel}
+\input{BU_Zwititel}
+%
+% Fußnoten umstellen
+\makeatletter
+\renewcommand{\@makefntext}[1]{\noindent \@makefnmark\hspace{0.33em}#1}
+\makeatother
+\haupttexttrue%
+%
+\ctaddtocontents{ptoc}{\protect\vspace{2ex}\protect\normalfont\protect\large\noindent Bolzano's Wissenschaftslehre und Religions- \\ wissenschaft in einer beurtheilenden Übersicht\protect\par}%
+
+
+%---HAUPTTEXT---
+\setcounter{footnote}{0}\renewcommand{\thefootnote}{\fnsymbol{footnote}}%
+ \tocgross\pagestyle{normal}
+\RWteil{I}{\ensuremath{[}0.}{Einleitung\ensuremath{]}}{\seitenwohne{1}}
+ \tocklein
+\fi
+\input{BU0}
+\ifnackt\else
+  \tocgross
+\RWteil{II}{I.}{Uebersicht der Wissenschaftslehre.}{\seitenwohne{17}}
+  \tocklein
+\fi
+\input{BU1}
+\ifnackt\else
+  \tocgross
+\RWteil{III}{II.}{Uebersicht der Religionswissenschaft}{\seitenwohne{119}}
+  \tocklein
+\fi
+\input{BU2}
+\ifnackt\else
+  \tocgross%
+\nolinenumbers%
+\end{document}
+
+%---Anmerkungen---
+\haupttextfalse%
+% \RWch{Anmerkungen des Herausgebers}\label{Anmerkungen}\markboth{\kopfzeilenfmt{Anmerkungen des Herausgebers}}{\kopfzeilenfmt{Christian Tapp}}%
+% \setcounter{footnoteA}{0}%
+%\input{Anm1-35}
+%\input{Anm36-70}
+% \pagestyle{empty}\thispagestyle{normal}
+%
+%---Literaturverzeichnis---
+\newpage%
+\neuerechteseite%
+\PdUtoc{chapter}{Literaturverzeichnis}
+\def\bibstart{\pagestyle{normal}\markboth{\kopfzeilenfmt{Literaturverzeichnis}}{\kopfzeilenfmt{Literaturverzeichnis}}\item\parbox{\textwidth}{BGA = \textit{Bernard Bolzano-Gesamtausgabe}. Hrsg. v. Eduard Winter, Jan Berg u.\,a. Stuttgart-Bad Cannstatt: Frommann / Frommann-Holzboog 1969--\textsymmdots}}
+\bibliographie{Literatur.csv}\pagestyle{normal}
+%\bibliographie{LiteraturB.csv}\pagestyle{normal}
+%
+%---Index---
+\newpage%
+\neuerechteseite%
+\PdUtoc{chapter}{Index}
+\footnotesize%\printindex
+\RWch{Register}\markboth{\kopfzeilenfmt{Register}}{\kopfzeilenfmt{Register}}
+\printindex{allg}{}
+\RWch{Verzeichnis der Bibelstellen}\markboth{\kopfzeilenfmt{Verzeichnis der Bibelstellen}}{\kopfzeilenfmt{Verzeichnis der Bibelstellen}}
+\printindex{bibel}{}
+\RWch{Verzeichnis der griechischen Zitate}\markboth{\kopfzeilenfmt{Zusatz-Verzeichnis}}{\kopfzeilenfmt{Zusatz-Verzeichnis}}
+\printindex{zusatz}{}
+\fi
+\end{document}

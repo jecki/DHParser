@@ -1,0 +1,106 @@
+\NeedsTeXFormat{LaTeX2e}[1994/12/01]
+\ProvidesPackage{successf}[2011/01/17 v0.2
+                           count successful runs (UL)]
+
+%% Copyright (C) 2011 Uwe Lueck, 
+%% http://www.contact-ednotes.sty.de.vu 
+%% -- author-maintained in the sense of LPPL below -- 
+%%
+%% This file can be redistributed and/or modified under 
+%% the terms of the LaTeX Project Public License; either 
+%% version 1.3c of the License, or any later version.
+%% The latest version of this license is in
+%%     http://www.latex-project.org/lppl.txt
+%% We did our best to help you, but there is NO WARRANTY. 
+%%
+%% Please report bugs, problems, and suggestions via 
+%% 
+%%   http://www.contact-ednotes.sty.de.vu 
+%%
+%% === Package Option `[clear]' ===
+%% Package Option |[clear]| issues `\par\clearpage'
+%% before the new definition of `\successfulruns'
+%% is written into the `.aux' file. This should have 
+%% the effect that the line defining `\successfulruns'
+%% appears after output from `\write' commands 
+%% that the final page issued. I am not sure 
+%% whether this conflicts with other packages, 
+%% therefore the option.
+\DeclareOption{clear}{\AtEndDocument{\par\clearpage}}
+\ProcessOptions
+%%
+%% === Most Basic: &\successfulruns ===
+%% |\successfulruns| is defined at `\begin{document}' ...
+\AtBeginDocument{%
+    \@ifundefined{successfulruns}%
+                 {\gdef\successfulruns{0}}\relax}
+%% ... and incremented at `\end{document}':
+\AtEndDocument{%
+  \begingroup
+    \count@\successfulruns \advance\count@\@ne
+    \immediate\write\@auxout{%
+        \gdef\string\successfulruns\space{\the\count@}}%
+  \endgroup}
+%% More precisely, the above `\AtBegin'\,... code only 
+%% is relevant when the `.aux' file \emph{read} there 
+%% doesn't provide a definition of `\successfulruns'. 
+%% The `\AtEnd'\,... code is intended to pass the 
+%% information on the number of completed runs to the 
+%% next run through the `.aux' file that the \LaTeX\ run 
+%% is \emph{building.}
+%% 
+%% === Derived Messages and Warnings ===
+%% These commands may be used for constructing really 
+%% useful tools. They may rather be redefined for customizing, 
+%% using relevant packages such as 'engord' or 
+%% packages producing ``watermarks" ...
+% \newcommand*{\printcurrentrun}[1]{}
+%% |\currentruntext| here is defined as a basic English message 
+%% text that may be used for screen/log messages as well as 
+%% for printed informations, in particular a warning on printed 
+%% pages. It may rather be a template for more project- 
+%% or workflow-related macros.
+\newcommand*{\currentruntext}{%
+    This 
+%% The next line is intended to produce an ASCII \lq`LaTeX'\rq\ 
+%% for screen/log messages and, on the other hand, 
+%% the \dqtd{elaborated} logo \qtd{\LaTeX} for printing:
+    \ifx\protect\@typeset@protect \LaTeX \else LaTeX\fi\space
+    run is based on \successfulruns\space 
+    completed previous 
+    run\ifnum\successfulruns=\@ne\else s\fi}
+%% The previous line avoids the English \emph{plural} form
+%% \emph{iff} the number does \emph{not} equal one, 
+%% so we have \qtd{1~run} and \qtd{0~runs.}
+%%
+%% \[|\OnSuccessfulRunsDoElse[<max>]{<unless-more-than>}{<otherwise>}|\]
+%% produces <unless-more-than> when `\successfulruns' expands to a number 
+%% not greater than <max> and to <other> otherwise.
+% TODO name still bad 2011/01/17
+\newcommand*{\OnSuccessfulRunsDoElse}   %% renamed 2011/01/17
+    [1] [\showmaxruns] {%
+    \ifnum\successfulruns>#1\relax      %% reversed 2011/01/17
+        \expandafter\@firstoftwo
+    \else 
+        \expandafter\@secondoftwo
+    \fi}
+  %% <- TODO general without ifthenelse
+%% <border-number> is defined by |\showmaxruns|
+%% which by default is the largest integer that \TeX\ can store 
+%% in a `\count' register:
+\newcommand*{\showmaxruns}{\maxdimen}
+%% That default value 
+%% % |\showmaxruns| 
+%% may be adjusted by 
+%% |\setshowmaxruns{<border-number>}|: 
+\newcommand*{\setshowmaxruns}{\def\showmaxruns}
+%%
+%% === Leaving the Package File ===
+\endinput
+%%
+%% == VERSION HISTORY ==
+
+v0.1   2011/01/14   very first 
+       2011/01/15   option [clear]
+       SENT TO CHRISTIAN as part of EDFN r0.55
+v0.2   2011/01/17   corrected and renamed \OnSucc...

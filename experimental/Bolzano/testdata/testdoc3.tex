@@ -1,0 +1,1090 @@
+
+%Kingsland, S. [1985]: Modeling Nature, Chicago and London: The
+%University of Chicago Press.
+%Suárez, M. [2008]: Fictions in Science: Philosophical Essays on
+%Modeling and Idealization, New York & London: Routledge.
+%Wimsatt, W.C. (2007) Re-Engineering Philosophy for Limited Beings:
+%Piecewise Approximations to Reality, Harvard University Press.
+%Guala, F. (2005) The Methodology of Experimental Economics. Cambridge:
+%Cambridge University Press.
+%Küppers, G. & J. Lenhard (2005). Validation of simulation: Patterns in
+%the social and natural sciences. Journal of Artificial Societies and
+%Social Simulation, 8 (4).
+
+\documentclass[12pt, english, a4paper]{article}
+%\documentclass[12pt, onecollarge]{STJour}
+\usepackage{microtype}
+\usepackage[english, czech]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{ucs} % unicode
+\usepackage[T1]{fontenc}
+%\usepackage[czech]{babel}
+\usepackage{t1enc}
+\usepackage{type1cm}
+\usepackage{times} 
+\usepackage{setspace}
+%\smartqed  % flush right qed marks, e.g. at end of proof
+%\usepackage[square,sort&compress,comma,numbers]{natbib}
+% fuer BibTeX
+\usepackage[sort&compress]{natbib}
+%\usepackage{epsfig}
+%\usepackage{amssymb}
+%\usepackage{amsmath}
+%\usepackage{mathptmx}      % use Times fonts similar to Windows Office
+%\usepackage{german}		% Apply if you wish to write in German
+%\usepackage{exscale}
+%\usepackage{psfrag}
+%\usepackage{layout}
+\usepackage{color}
+\usepackage{eurosym}  
+%\usepackage{graphicx}
+%\usepackage{rotating}
+
+\usepackage{ifpdf}
+\ifpdf
+\usepackage{xmpincl}
+\usepackage[pdftex]{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black,
+    bookmarksopen=true,     % Gliederung öffnen im AR
+    bookmarksnumbered=true, % Kapitel-Nummerierung im Inhaltsverzeichniss anzeigen
+    bookmarksopenlevel=1,   % Tiefe der geöffneten Gliederung für den AR
+    pdfstartview=FitV,       % Fit, FitH=breite, FitV=hoehe, FitBH
+    pdfpagemode=UseOutlines % FullScreen, UseNone, UseOutlines, UseThumbs
+}
+\usepackage{bookmark}
+\includexmp{Whats_wrong_with_social_simulations}
+\pdfinfo{
+  /Author (Eckhart Arnold)
+  /Title (What's wrong with social simulations?)
+  /Subject (A critique of the common practice to publish unvalidated simulations in the field of social simulations.)
+  /Keywords (Social Simulations, Epistemology of Models, Philosophy of the Social Sciences, Economic Modeling)
+}
+\else
+\usepackage{hyperref}
+\fi
+
+%\numberwithin{equation}{section}
+%\sloppy
+
+% Thanks to Daniel Ferrante
+% http://olympus.het.brown.edu/~danieldf/latex/
+%\usepackage{eso-pic}
+%\usepackage{color}
+%\makeatletter
+%  \AddToShipoutPicture{%
+% \setlength{\@tempdimb}{.5\paperwidth}%
+% \setlength{\@tempdimc}{.5\paperheight}%
+% \setlength{\unitlength}{1pt}%
+% \put(\strip@pt\@tempdimb,\strip@pt\@tempdimc){%
+%   \makebox(0,0){\rotatebox{45}{\textcolor[gray]{0.9}{\fontsize{5cm}{5cm}\selectfont{Draft}}}}
+% }
+%}
+%\makeatother
+
+\addto\captionsczech{
+  \renewcommand{\contentsname}{Table of contents}
+}
+
+\begin{document} 
+%\onehalfspacing
+%\setlanguage{english}
+
+\unitlength1cm 
+%
+
+\title{What's wrong with social simulations?}
+
+%\title{Tools or Toys?}
+%\footnote{Part of the research for this paper has been funded
+%by the German Research Foundation (DFG) within the Cluster of
+%Excellence in Simulation Technology (EXC 310/1) at the University of
+%Stuttgart}
+%\subtitle{On Specific Challenges for Modeling and the
+%Epistemology of Models and Computer Simulations in the Social
+%Sciences\\[0.2cm]
+% - Paper for the Models \& Simulations 4 Conference, Toronto, May 2010
+% -
+%}
+
+%
+% Define if Title is too long for running head
+%\titlerunning{Tools or Toys: Computer Simulations in the Social
+%Sciences}
+%
+\author{Eckhart Arnold\\{\small Institute for Philosophy}\\{\small Heinrich Heine University of Düsseldorf}}
+%
+% \institute{% $^a$ ...
+%   Institute of Philosophy, University of Stuttgart,\\
+%   Seidenstraße 36, \\
+%   70174 Stuttgart, Germany \\[2mm]
+%   eckhart.arnold@philo.uni-stuttgart.de\\
+%   www.eckhartarnold.de
+%   http://www.uni-stuttgart.de/philo/index.php?id=1043\\[2mm]
+% } 
+%
+% Define if Authorlist is too long for running head
+%\authorrunning{Eckhart Arnold}
+%
+% Convention: year  - issue in that year
+%\SimTechIssue{2012-??}
+\date{September 2013; last revision: March 2016}
+ 
+\maketitle
+
+\begin{abstract}
+%\onehalfspacing
+\singlespacing
+
+This paper tries to answer the question why the epistemic value of so
+many social simulations is questionable. I consider the epistemic
+value of a social simulation as questionable if it contributes neither
+directly nor indirectly to the understanding of empirical reality. In
+order to justify this allegation I rely mostly but not entirely on the
+survey by \citet{heath-et-al:2009} according to which 2/3 of all
+agent-based-simulations are not properly empirically validated.  In
+order to understand the reasons why so many social simulations are of
+questionable epistemic value, two classical social simulations are
+analyzed with respect to their possible epistemic justification:
+Schelling’s neighborhood segregation model \citep{schelling:1971} and
+Axelrod’s reiterated Prisoner’s Dilemma simulations of the evolution
+of cooperation \citep{axelrod:1984}. It is argued that Schelling’s
+simulation is useful, because it can be related to empirical reality,
+while Axelrod’s simulations and those of his followers cannot be
+related to empirical reality and therefore their scientific value
+remains doubtful. Finally, I critically discuss some of the typical
+epistemological background beliefs of modelers as expressed in Joshua
+Epsteins’s keynote address ``Why model?''
+\citep{epstein:2008}. Underestimating the importance of empirical
+validation is identified as one major cause of failure for social
+simulations.
+
+\vspace{0.1cm}
+\begin{flushleft}
+{\bf Keywords}: Social Simulations, Epistemology of Models, Philosophy of the Social Sciences, Economic Modeling
+\end{flushleft}
+\begin{flushleft}
+{\em Published in: The Monist 2014, Vol. 97, No.3, pp. 361-379.}
+\end{flushleft}
+
+\end{abstract}
+
+\newpage
+
+%\doublespacing
+
+\tableofcontents
+ 
+\onehalfspacing
+\section{Introduction}
+
+In this paper I will try to answer the question: Why is the epistemic
+value of so many social simulations questionable? Under social
+simulations I understand computer simulations of human interaction as
+it is studied in the social sciences. The reason why I consider the
+epistemic value of many social simulations as questionable is that
+many simulation studies cannot give an answer to the most salient
+question that any scientific study should be ready to answer: “How do
+we know it’s true?” or, if specifically directed to simulation
+studies: “How do we know that the simulation simulates the phenomenon
+correctly that it simulates?” Answering this question requires some
+kind of empirical validation of the simulation. The requirement of
+empirical validation is in line with the widely accepted notion that
+science is demarcated from non-science by its empirical testability or
+falsifiability. Many simulation studies, however, do not offer any
+suggestion how they could possibly be validated empirically.
+
+A frequent reply by simulation scientists is that no simulation of
+empirical phenomena was intended, but that the simulation only serves
+a “theoretical” purpose. Then, however, another equally salient
+question should be answered: “Why should we care about the results?”
+It is my strong impression that many social simulation studies cannot
+answer either this or the first question. This is not to say that the
+use of computer programs for answering purely theoretical questions is
+generally or necessarily devoid of value. The computer assisted proofs
+of the four color theorem \citep{wilson:2002} are an important
+counterexample. But in the social sciences it is hard to find
+similarly useful examples of the use of computers for purely
+theoretical purposes. In any case, the social sciences are empirical
+sciences. Therefore, social simulations should contribute either
+directly or indirectly to our understanding of social phenomena in the
+empirical world.
+
+There exist many different types of simulations but I will restrict
+myself to agent-based and game theoretical simulations.  I do not make
+a sharp difference between models and simulations. For the purpose of
+this paper I identify computer simulations just with programmed
+models. Most of my criticism of the practice of these simulation types
+can probably be generalized to other types of simulations or models in
+the social sciences and maybe also to some instances of the simulation
+practice in the natural sciences. It would lead too far afield to
+examine these connections here, but it should be easy to determine in
+other cases whether the particulars of bad simulation practice against
+which my criticism is directed are present or not.
+
+In order to bring my point home, I rely on the survey by
+\citet{heath-et-al:2009} on agent-based modeling practice for a
+general overview and on two example cases that I examine in detail. I
+start by discussing the survey which reveals that in an important
+sub-field of social simulations, namely, agent based simulations,
+empirical validation is commonly lacking. After that I first discuss
+Thomas Schelling’s well-known neighborhood segregation model. This is
+a model that I do not consider as being devoid of epistemic
+value. For, unlike most social simulations, it can be empirically
+falsified. The discussion of the particular features that make this
+model scientifically valuable will help us to understand why the
+simulation models discussed in the following fail to be so.
+
+The simulation models that I discuss in the following are simulations
+in the tradition of Robert Axelrod’s “Evolution of Cooperation”
+\citep{axelrod:1984}. Although the modeling tradition initiated by
+Axelrod has delivered hardly any tenable and empirically applicable
+results, it still continues to thrive today. By some, Axelrod’s
+approach is still taken as a role model
+\citep[208-209]{rendell-et-al:2010a}, although there has been severe
+criticism by others \citep{arnold:2008, binmore:1994, binmore:1998}.
+
+Finally, the question remains why scientists continue to produce such
+an abundance of simulation studies that fail to be empirically
+applicable. Leaving possible sociological explanations like the
+momentum of scientific traditions, the cohesion of peer groups, the
+necessity of justifying the investment in acquiring particular skills
+(e.g. math and programming) aside, I confine myself to the ideological
+background of simulation scientists. In my opinion the failure to
+produce useful results has a lot to do with the positivist attitude
+prevailing in this field of the social sciences. This attitude
+includes the dogmatic belief in the superiority of the methods of
+natural sciences like physics in any area of science. Therefore,
+despite frequent failure, many scientists continue to believe that
+formal modeling is just the right method for the social sciences. The
+attitude is well described in \citet{shapiro:2005}. Such attitudes are
+less often expressed explicitly in the scientific papers. Rather they
+form a background of shared convictions that, if not simply taken for
+granted as “unspoken assumptions”, find their expression in informal
+texts, conversations, blogs, keynote speeches. I discuss Joshua
+Epstein’s keynote lecture “Why Model?” \citep{epstein:2008} as an
+example.
+
+
+\section{Simulation without validation in agent-based models}
+
+In this section I give my interpretation of a survey by
+\citet{heath-et-al:2009} on agent-based-simulations. I do so with the
+intention of substantiating my claim that many social simulations are
+indeed useless. This is neither the aim nor the precise conclusion
+that \citet{heath-et-al:2009} draw, but their study does reveal that
+two thirds of the surveyed simulation studies are not completely
+validated and the authors of the study consider this state of affairs
+as ``not acceptable'' \citep[4.11]{heath-et-al:2009}. Thus my reading
+does not run counter the results of the survey. And it follows as a
+natural conclusion, if one accepts that a) an unvalidated simulation
+is - in most of the cases - a useless one and b) agent-based
+simulations make up a substantial part of social simulations.
+
+The survey by \citet{heath-et-al:2009} examines agent-based mode- ling
+practices between 1998 and 2008. It encompasses “279 articles from 92
+unique publication outlets in which the authors had constructed and
+analyzed an agent-based model” (Heath, Hill and Ciarallo, 2009,
+abstract). The articles stem from different fields of the social
+sciences including, business, economics, public policy, social
+science, traffic, military and also biology. The authors are not only
+interested in verification and validation practices, but the results
+concerning these are the results that I am interested in
+here. Verification and validation concern two separate aspects of
+securing the correctness of a simulation model.  Verification,
+as the term is used in the social simualtions community, roughly
+concerns the question whether the simulation software is bug-free and
+correctly implements the intended simulation model. Validation
+concerns the question whether the simulation model represents the
+simulated empirical target system adequately (for the intended
+purpose).
+
+Regarding verification, Heath, Hill and Ciarallo notice that ``Only 44
+(15.8\%) of the articles surveyed gave a reference for the reader to
+access or replicate the model. This indicates that the majority of the
+authors, publication outlets and reviewers did not deem it necessary
+to allow independent access to the models.  This trend appears
+consistently over the last 10 years''
+\citep[3.6]{heath-et-al:2009}. This astonishingly low figure can in
+part be explained by the fact that as long as the model is described
+with sufficient detail in the paper, it can also be replicated by
+re-programming it from the model description. It must not be forgotten
+that the replication of computer simulation results does not have the
+same epistemological importance as the replication of experimental
+results. While the replication of experiments adds additional
+inductive support to the experimental results, the replication of
+simulation results is merely a means for checking the simulation
+software for programming errors (“bugs”). Hence the possibility of
+precise replication is not an advantage that simulations enjoy over
+material experiments, as for example \citet[248]{reiss:2011}
+argues. Obviously, if the same simulation software is run in the same
+system environment the same results will be produced, no matter
+whether this is done by a different team of researchers at a different
+time and place with different computers. Even if the model is
+re-implemented the results must necessarily be the same provided that
+both the model and the system environment are fully specified and no
+programming errors have been made in the original implementation or
+the re-implementation.\footnote{A possible exception concerns the
+  frequent use of random numbers. As long as only pseudo random
+  numbers with the same random number generator and the same “seed”
+  are used, the simulation is still completely deterministic. This not
+  to say that sticking to the same “seeds” is good practice other than
+  for debugging.} Replication or reimplementation can, however, help
+to reveal such errors.\footnote{I am indebted to Paul Humphreys for
+  pointing this out to me.} It can therefore be considered as one of
+several possible means for the verification (but not validation) of a
+computer simulation. Error detection becomes much more laborious if no
+reference to the source code is provided. And it does happen that
+simulation models are not specified with sufficient detail to
+replicate them \citep{will-hegselmann:2008}. Therefore, the rather low
+proportion of articles that provide a reference to access or replicate
+the simulation is worrisome.
+
+More important than the results concerning verification is what Heath,
+Hill and Ciarallo find out about validation or, rather, the lack of
+validation:
+
+\begin{quote}
+  Without validation a model cannot be said to be representative of
+  anything real. However, 65\% of the surveyed articles were not
+  completely validated.  This is a practice that is not acceptable in
+  other sciences and should no longer be acceptable in ABM practice
+  and in publications associated with
+  ABM. \citep[4.11]{heath-et-al:2009}
+\end{quote}
+
+This conclusion needs a little further commentary. The figure of 65\%
+of not completely validated simulations is an average value over the
+whole period of study. In the earlier years that are covered by the
+survey hardly any simulation was completely validated. Later this
+figure decreases, but a ratio of less than 45\% of completely
+validated simulation studies remains constant during the last 4 yours
+of the period covered \citep[3.10]{heath-et-al:2009}.
+
+Furthermore it needs to be qualified what Heath, Hill and Ciarallo
+mean when they speak of complete validation.  The authors make a
+distinction between conceptual validation and operational validation.
+Conceptual validation concerns the question whether the mechanisms
+built into the model represent the mechanisms that drive the modeled
+real system. An “invalid conceptual model indicates the model may not
+be an appropriate representation of reality.” Operational validation
+then “validates results of the simulation against results from the
+real system.” \citep[2.13]{heath-et-al:2009}. The demand for complete
+validation is well motivated: “If a model is only conceptually
+validated, then it [is] unknown if that model will produce correct
+output results.” \citep[4.12]{heath-et-al:2009}. For even if the
+driving mechanisms of the real system are represented in the model, it
+remains – without operational validation – unclear whether the
+representation is good enough to produce correct output results. On
+the other hand, a model that has been operationally validated only,
+may be based on a false or unrealistic mechanism and thus fail to
+explain the simulated phenomenon, even if the data matches. Heath,
+Hill and Ciarallo do not go into much detail concerning how exactly
+conceptual and operational validation are done in practice and under
+what conditions a validation attempt is to be considered as successful
+or as a failure.
+
+But do really all simulations need to be validated both conceptually
+and operationally as Heath, Hill and Ciarallo demand? After all, some
+simulations may – just like thought experiments – have been intended
+to merely prove conceptual possibilities.  One would usually not
+demand an empirical (i.e. operational) validation from a thought
+experiment. Heath, Hill and Ciarallo themselves make a distinction
+between the generator, mediator and predictor role of a simulation
+\citep[2.16]{heath-et-al:2009}. In the generator role simulations are
+merely meant to generate hypotheses. Simulations in the mediator role
+“capture certain behaviors of the system and [..] characterize how the
+system may behave under certain scenarios” (3.4) and only simulations
+in the predictor role are actually calculating a real system. All of
+the surveyed studies fall into the first two categories. Obviously,
+the authors require complete validation even from these types of
+simulations.
+
+This can be disputed. As stated in the introduction, in order to be
+useful, a simulation study should make a contribution to answering
+some relevant question of empirical science. This contribution can be
+direct or indirect. The contribution is direct if the model can be
+applied to some empirical process and if it can be tested empirically
+whether the model is correct. The model’s contribution is indirect, if
+the model cannot be applied empirically, but if we can learn something
+from the model which helps us to answer an empirical question, the
+answer to which we would not have known otherwise. The latter kind of
+simulations can be said to function as thought experiments. It would
+be asking too much to demand complete empirical validation from a
+thought experiment.
+
+But does this mean that the figures from Heath, Hill and Ciarallo
+concerning the validation of simulations need to be interpreted
+differently by taking into account that some simulations may not
+require complete validation in the first place? This objection would
+miss the point, because the scenario just discussed is the exception
+rather than the rule. Classical thought experiments like Schrödinger’s
+cat usually touch upon important theoretical disputes. However, as
+will become apparent from the discussion of simulations of the
+evolution of cooperation, below, computer simulation studies all too
+easily lose the contact to relevant scientific questions. We just do
+not need all those digital thought experiments on conceivable variants
+of one and the same game theoretical model of cooperation. And the
+same surely applies to many other traditions of social modeling as
+well. But if this is true, then the figure of 65\% of not completely
+validated simulation studies in the field of agent-based simulations
+is alarming indeed.\footnote{For a detailed discussion of the cases in
+  which even unvalidated simulations can be considered as useful, see
+  \citet{arnold:2013}. There are such cases, but the conditions under
+  which this is possible appear to be quite restrictive.}
+
+Given how important empirical validation is, “because it is the only
+means that provides some evidence that a model can be used for a
+particular purpose.” \citep[4.11]{heath-et-al:2009}, it is surprising
+how little discussion this important topic finds in the textbook
+literature on social simulations. \citet{gilbert-troitzsch:2005}
+mention validation as an important part of the activity of conducting
+computer simulations in the social sciences, but then they dedicate
+only a few pages to it (22-25). \citet[98]{salamon:2011} also mentions
+it as an important question without giving any satisfactory answer to
+this question and without providing readers with so much as a hint
+concerning how simulations must be constructed so that their validity
+can be empirically tested. \citet{railsback-grimm:2011} dedicate many
+pages to describing the ODD-protocol, a protocol that is meant to
+standardize agent-based simulations and thus to facilitate the
+construction, comparison and evaluation of agent-based simulations.
+Arguably the most important topic, empirical validation of agent-based
+simulations, is not an explicit part of this protocol.  One could
+argue that this is simply a different matter, but then, given the
+importance of this topic it is slightly disappointing that Railsback
+and Grimm do not treat it more explicitly in their book.
+
+Summing it up, the survey by Heath, Hill and Ciarallo shows that an
+increasingly important sub-discipline of social simulations, namely
+the field of agent-based simulations faces the serious problem that a
+large part of its scientific literature consists of unvalidated and
+therefore most probably useless computer simulations. Moreover,
+considering the textbook literature on agent-based simulations one can
+get the impression that the scientific community is not at all
+sufficiently aware of this problem.
+
+
+\section{How a model works that works: Schelling’s neighborhood segregation model}
+
+Moving from the general finding to particular examples, I now turn to
+the discussion of Thomas Schelling’s neighborhood segregation
+model. Schelling’s neighborhood segregation model
+\citep{schelling:1971} is widely known and has been amply discussed
+not only among economists but also among philosophers of science as a
+role model for linking micro-motifs with macro-outcomes. I will
+therefore say little about the model itself, but concentrate on the
+questions if and, if so, how it fulfills my criteria for epistemically
+valuable simulations.
+
+Schelling’s model was meant to investigate the role of individual
+choice in bringing about the segregation of neighborhoods that are
+either predominantly inhabited by blacks or by whites. Schelling
+considered the role of preference based individual choice as one of
+many possible causes of this phenomenon – and probably not even the
+most important, at least not in comparison to organized action and
+economic factors as two other possible causes
+\citep[144]{schelling:1971}.
+
+In order to investigate the phenomenon, Schelling used a checkerboard
+model where the fields of the checkerboard would represent houses. The
+skin color of the inhabitants can be represented for example by
+pennies that are turned either heads or tails.\footnote{Schelling’s
+  article was published before personal computers existed. Today one
+  would of course use a computer.  A simple version of Schelling’s
+  model can be found in the netlogo models library
+  \citep{Wilensky1999}.} Schelling assumed a certain tolerance
+threshold concerning the number of differently colored inhabitants in
+the neighborhood, before a household would move to another place. A
+result that was relatively stable among the different variants of the
+model he examined was that segregated neighborhoods would emerge –
+even if the threshold preference for equally colored neighbors was far
+below 50\%, which means that segregation emerged even if the
+inhabitants would have been perfectly happy to live in an integrated
+environment with a mixed population. As \citet{aydinonat:2007}
+reports, the robustness of this result has been confirmed by many
+subsequent studies that employed variants of Schelling’s model. At the
+end of his paper Schelling discusses “tipping” that occurs when the
+entrance of a new minority starts to cause the evacuation of an area
+by its former inhabitants. In this connection Schelling also mentions
+an alternative hypothesis according to which inhabitants do not react
+to the frequency of similar or differently colored neighbors but on
+their on expectation about the future ratio of differently colored
+inhabitants. He assumes that this would aggravate the segregation
+process, but he does not investigate this hypothesis further
+\citep[185-186]{schelling:1971} and his model is built on the
+assumption that individuals react to the actual and not the future
+ratio of skin colors.
+
+Is this model scientifically valuable? Can we draw conclusions from
+this model with respect to empirical reality and can we check whether
+these conclusions are true? Concerning these questions the following
+features of this model are important:
+
+\begin{enumerate}
+
+\item The assumptions on which the model rests can be tested
+  empirically. The most important assumption is that individuals have
+  a threshold for how many neighbors of a different color they
+  tolerate and that they move to another neighborhood if this
+  threshold is passed. This assumption can be tested empirically with
+  the usual methods of empirical social research (and, of course,
+  within the confinements of these methods). Also, the question
+  whether people base their decision to move on the frequency of
+  differently colored neighbors or on their on expectation concerning
+  future changes of the neighborhood can be tested empirically.
+
+\item The model is highly robust. Changes of the basic setting and
+  even fairly large variations of its input parameters, e.g. tolerance
+  threshold, population size, do not lead to a significantly different
+  outcome. Therefore even if the empirical measurement of, say, the
+  tolerance threshold, is inaccurate, the model can still be applied.
+  Robustness in this sense is directly linked to empirical
+  testability. It should best be understood as a relational property
+  between the measurement (in-)accuracy of the input parameters and
+  the stability of the output values of a simulation.\footnote{There
+    are of course different concepts of robustness. I consider this
+    relational concept of robustness as the most important concept. An
+    important non-relational concept of robustness is that of
+    derivational robustness analysis
+    \citep{kuorikoski-lehtinen:2009}. See below.}
+
+\item The model captures only one of many possible causes of
+  neighborhood segregation. Before one can claim that the model
+  explains or, rather, contributes to an explanation of neighborhood
+  segregation, it is necessary to identify the modeled mechanism
+  empirically and to estimate its relative weight in comparison with
+  other actual causes. While the model shows that even a preference
+  for integrated neighborhoods (if still combined with a tolerance
+  limit) can lead to segregation, it may in reality still be the case
+  that latent or manifest racism causes segregation. The model alone
+  is not an explanation. (Schelling was aware of this.)
+
+\item Besides empirical explanation another possible use of the model
+  would be policy advice. In this respect the model could be useful
+  even if it does not capture an actual cause. For public policy must
+  also be concerned about possible future causes.
+
+  Assume for example, that manifest racism was a cause of neighborhood
+  segregation, but that due to increasing public awareness racism is
+  on the decline. Then the model can demonstrate that even if all
+  further possible causes, e.g. economic causes, be removed as well,
+  this might still not result in desegregated
+  neighborhoods\footnote{But then, would we really worry about
+    segregated neighborhoods, if the issue wasn't tied to racial
+    discrimination and social injustice? After all, ethnic or
+    religious groups in Canada also often live in segregated areas
+    (``Canadian mosaic''). But other than in the U.S. this is hardly
+    an issue. Therefore, Schelling's model -- for all its
+    epistemological merits that are discussed here -- really seems to
+    miss the point in terms of scientific relevance. Discrimination is
+    the important point here, not segregation. But Schelling's model
+    induces us to frame the question in a way that makes us miss the
+    point. ({\em This comment has been added later as the result of
+      some discussions I had on this point. E.A., March 25th 2016.})} -
+    provided, of course, that the basic assumption about a tolerance
+    threshold is true.
+
+  Thus, for the purpose of policy advice a model does not need to
+  capture actual causes. It can be counter-factual, but it must still
+  be realistic in the sense that its basic assumptions can be
+  empirically validated. Therefore, while the purpose of policy advice
+  justifies certain counter-factual assumptions in a model, it cannot
+  justify unrealistic and unvalidated models. This generally holds for
+  models that are meant to describe possible instead of actual
+  scenarios.
+
+\end{enumerate}
+
+Schelling did not validate his model empirically. But for classifying
+the model as useful it is sufficient that it can be validated.  Now,
+the interesting question is: Can the model be validated and is it
+valid? Recent empirical research on the topic of neighborhood
+segregation suggests that inhabitants react to anticipated future
+changes in the frequency of differently colored neighbors rather than
+the frequency itself \citep[124-125]{ellen:2000}. An important role is
+played by the fear of whites that they might end up in an all-black
+neighborhood. Thus, the basic assumption of the model that individuals
+react upon the ratio of differently colored inhabitants in their
+neighborhood is wrong and one can say that the model is in this sense
+falsified.\footnote{There are two senses in which a model (or more
+  precisely: a model-based explanation) can be falsified: a) if the
+  model’s assumptions are empirically not valid as in this case and b)
+  if the causes the model captures are (i) either blocked by factors
+  not taken into account in the model or (ii) cannot be disentangled
+  from other possible causes or (iii) turn out to be irrelevant in
+  comparison with other, stronger or otherwise more important causes
+  for the same phenomenon. The connection between the model’s
+  assumptions and its output, being a logical one, can, of course, not
+  be empirically falsified.}
+
+The strong emphasis that is placed on empirical validation here stands
+in contrast to some of the epistemological literature on simulations
+and models. Robert Sugden, noticing that “authors typically say very
+little about how their models relate to the real world”, treats models
+like that of Schelling (which is one of his examples
+\citep[6-8]{sugden:2000}) as “credible counterfactual worlds”
+\citep[3]{sugden:2009} which are not intended to raise any particular
+empirical claims. Even though the particular relation to the real
+world is not clear, Sugden believes that such models can inform us
+about the real world. His account suffers from the fact that he
+remains unclear about how we can tell a counter-factual world that is
+credible from one that is incredible, if there is no empirical
+validation.
+
+A possible candidate for stepping in this gap of Sugden’s account is
+Kuorikoski’s and Lehtinen’s concept of “derivational robustness
+analysis” \citep{kuorikoski-lehtinen:2009}. According to this concept
+conclusions from unrealistic models to reality might be vindicated if
+the model remains robust under variations of its unrealistic
+assumptions. For example, in Schelling’s model the checkerboard
+topography could be replaced by other different topographies
+\citep[441]{aydinonat:2007}. If the model still yields the same
+results about segregation, we are – if we follow the idea of
+“derivational robustness analysis” – entitled to draw the inductive
+conclusion that the model’s results would still be the same if the
+unrealistic topographies were exchanged by the topography of some real
+city, even though we have not tested it with a real topography.  A
+problem with this account is that it requires an inductive leap of a
+potentially dangerous kind: How can we be sure that the inductive
+conclusion derived from varying unrealistic assumptions holds for the
+conditions in reality which differ from any of these assumptions?
+
+Some philosophers also dwell on the analogy between simulations and
+experiments and consider simulations as “isolating devices” similar to
+experiments \citep{maeki:2009}. But the analogy between simulations
+and experiments is rather fragile, because other than experiments
+simulations are not empirical and do not allow us to learn anything
+about the world apart from what is implied in the premises of the
+simulation. In particular, we can – without some kind of empirical
+validation – never be sure whether the causal mechanism modeled in the
+simulation represents a real cause isolated in the model or does not
+exist in reality at all.
+
+Summing it up, it is difficult, if not impossible, to claim that
+models can inform us about reality without any kind of empirical
+validation. Schelling’s model, however, appears to be a scientifically
+useful model, at least in the sense that it can be validated (or
+falsified for that matter). The most decisive features of the model in
+this respect are its robustness and the practical feasibility of
+identifying the modeled cause in empirical reality. Next we will see
+how models fare when these features are not present.
+
+
+\section{How models fail: The Reiterated Prisoner’s  Dilemma model}
+
+Robert Axelrod’s computer simulations of the Reiterated Prisoner’s
+Dilemma (RPD) \citep{axelrod:1984} are well known and still considered
+by some as a role model for successful simulation research
+\citep[408-409]{rendell-et-al:2010a}. What is not so widely known is
+that the simulation research tradition initiated by Axelrod has
+remained entirely unsuccessful in terms of generating explanations for
+empirical instances of cooperation. What are the reasons for this lack
+of explanatory success? And how come that Axelrod’s research design is
+none the less considered as a role model today?
+
+Axelrod had the ingenious idea to advertise a public computer
+tournament where participation was open to everybody. Participants
+were asked to hand in their guess at a best strategy in the reiterated
+two person Prisoner’s Dilemma in the form of an algorithmic
+description or computer program. This provided Axelrod with a rich,
+though naturally very contingent set of diverse strategies and it had
+the, surely welcome, side-effect of generating attention for Axelrod’s
+research project. Axelrod ran a sequence of two tournaments. As is
+well known the rather simplistic strategy {\em Tit For Tat} won both
+tournaments.
+
+In the Prisoner’s Dilemma Game the players can decide whether to
+cooperate or not to cooperate. Mutual cooperation yields a higher
+payoff than mutual non-cooperation, but it is best to cheat by letting
+the other player cooperate while not cooperating oneself. And it is
+worst to be cheated, i.e. to cooperate while the other player does
+not. {\em Tit For Tat} cooperates in the first round of the Repeated
+Prisoner’s Dilemma, but if the other player cheats, then {\em Tit For
+  Tat} will punish the other player by not cooperating in the
+following round.\footnote{For a detailed description RPD-model and the
+  tournament see Axelrod (1984). An open-source implementation is
+  available from: \url{www.eckhartarnold.de/apppages/coopsim}.}
+Axelrod analyzed the course of the tournament in order to understand
+just why {\em Tit For Tat} was such a successful strategy. He
+concluded that it is a number of characteristics that determine the
+success of a strategy in the Reiterated Prisoner’s Dilemma
+\citep[chapter 6]{axelrod:1984}: Successful strategies are (1)
+“friendly”, i.e. they start with cooperative moves, (2) envy-free, (3)
+punishing, but also (4) forgiving. Axelrod furthermore believed that
+repeated interaction is a necessary requirement for cooperation to
+evolve and that, of course, {\em Tit For Tat} is generally quite a
+good strategy in Reiterated Prisoner’s Dilemma situations.
+
+Unfortunately for Axelrod, the Reiterated Prisoner’s Dilemma model is
+anything but robust. For each of his conclusions, variations of the
+RPD-model can be constructed where the conclusion becomes invalid
+\citep[107]{arnold:2013}. It is even possible to construct a variant
+that allows strategies to break off the repeated interaction at will
+and that does not lead to the breakdown of cooperation
+\citep{schuessler:1990}. The failure to derive any robust results
+highlights the danger of drawing generalizing conclusions from models
+and of relying on models as a tool of theoretical investigation. This
+point has most strongly been emphasized by Ken Binmore, who describes
+the popularity that Axelrod’s model enjoyed derogatorily as the “The
+Tit-For-Tat Bubble” \citep[194]{binmore:1994}. Because the folk
+theorem from game theory implies that there are infinitely many
+equilibria in the Reiterated Prisoner’s Dilemma, there is not much
+reason to assign of all things the {\em Tit For Tat}-equilibrium a
+special place \citep[313-317]{binmore:1994}. If one follows Binmore’s
+criticism then it is not the reiterated Prisoner’s Dilemma that
+explains why {\em Tit For Tat} is such a good strategy, but rather the
+fact that {\em Tit For Tat} is a very salient and easily understood
+mode of behavior in many areas of life that explains why people so
+easily believed in the superiority of the {\em Tit For Tat} strategy
+in the RPD
+game. %(See \citet[198]{binmore:1994} and \citet[317-319]{binmore:1998}.)
+
+It is not only its lack of robustness that troubles Axelrod’s
+model. It is also the difficulty of relating it to any concrete
+empirical subject matter – a problem that Axelrod shares with many
+game theoretical explanations.\footnote{This is very frankly admitted
+  by the leading game theorist \citet{rubinstein:2013} in a newspaper
+  article. Rubinstein resorts to an aesthetic vindication of game
+  theory (“flowers in the garden of God”).}  Axelrod himself had
+offered a very impressive example of empirical application by relating
+the RPD model to the silent “Live and Let Live” agreement that emerged
+between enemy soldiers on some of the quieter stretches of the western
+front in the First World War. However, as critics were quick to point
+out \citep{battermann-et-al:1998, schuessler:1990}, it is not at all
+clear whether this situation really is a Prisoner’s Dilemma situation,
+let alone how the numerical values of the payoff parameters could be
+assessed. But precise numerical payoff values would be necessary since
+Axelrod’s model is not robust against changes of the numerical values
+of the payoff parameters within the boundaries that the Prisoner’s
+Dilemma game allows \citep[80]{arnold:2008}. Also, Axelrod’s model
+could not explain why “Live and Let Live” occurred only on some
+stretches of the front line \citep[180]{arnold:2008}. Therefore,
+Axelrod’s theory of the evolution of cooperation could not really add
+anything substantial to the historical explanation of the “Live and
+Let Live” by Tony \citet{ashworth:1980}.
+
+The chapter from Axelrod’s book on the “Live and Let Live”-system
+shows that he did not understand his model only as a normative model,
+but at least also as an explanatory model. And the model was certainly
+understood as potentially explanatory by the biologists who were
+trying to apply it to cooperative behavior among animals (see
+below). The distinction is important, because the validation
+requirements for normative models are somewhat relaxed in comparison
+to explanatory models. After all, we would not expect from a model
+that is meant to generate advice for rationally adequate behavior to
+correctly predict the behavior of unadvised and potentially irrational
+agents. Still, even normative models must capture the essentials of
+the empirical situations to which they are meant to be applied well
+enough to generate credible advice. Here, too, robustness is an
+important issue. For similar reasons as in the descriptive case it
+would be dangerous to trust the advice given on the basis of a
+non-robust model.
+
+Thus, in contrast to Schelling’s model Axelrod’s model is neither
+robust nor can the postulated driving factors of the emergent
+phenomenon (stable cooperation) easily be identified empirically. In
+Schelling’s case the driving factor was the assumed tolerance
+threshold, in Axelrod’s case it is the payoff parameters of the
+Prisoner’s Dilemma.  Therefore, two important prerequisites
+(robustness and empirical identifiability) for the application of a
+formal model to a social process appear to be absent in Axelrod’s
+case.
+
+The popularity of Axelrod’s computer tournaments had the consequence
+that it became a role model for much of the subsequent simulation
+research on the evolution of cooperation. It spawned myriads of
+similar simulation studies on the evolution of cooperation
+\citep{dugatkin:1997, hoffmann:2000}. Unfortunately, most of these
+simulation studies remained unconnected to empirical research. Axelrod
+had – most probably without intending it – initiated a self-sustaining
+modeling tradition where modelers would orientate their next research
+project on the models that they or others had published before without
+paying much attention to what kind of models might be useful from an
+empirical perspective. Instead it was more or less silently assumed
+that because of the generality of the model investigations of the
+reiterated Prisoner’s Dilemma model would surely be useful.
+
+How little contact the modeling tradition initiated by Axelrod had to
+empirical research becomes very obvious in a survey of empirical
+research on the evolution of cooperation in biology by
+\citet{dugatkin:1997}. In the beginning, Dugatkin lists several dozens
+of game theoretical simulation models of the evolution of cooperation,
+an approach to which Dugatkin himself is very favorable. However, none
+of the models can be related to particular instances of cooperation in
+animal wildlife. A seemingly insurmountable obstacle in this respect
+is that payoff parameters usually cannot be measured. It is just very
+difficult to measure precisely the increased reproductive success,
+say, that apes that reciprocate grooming enjoy over apes that don’t.
+
+The most serious attempt to apply Axelrod’s model was undertaken by
+\citet{milinski:1987} in a study on predator inspection behavior in
+shoal fishes like sticklebacks. When a predator approaches, it happens
+that one or two sticklebacks leave the shoal and carefully swim closer
+to the predator. The hypothesis was that if two sticklebacks approach
+the predator they play a Reiterated Prisoner’s Dilemma and make the
+decision to turn back based on a {\em Tit For Tat} strategy taking
+into account whether the partner fish stays back or not. This was
+tested experimentally by \citet{milinski:1987} as well as others
+\citep[59-69]{dugatkin:1998}. While in his 1987-paper Milinski himself
+believed that the hypothesis could be confirmed, it was after a long
+controversy ultimately abandoned. In a joint paper on the same topic
+that appeared ten years later \citet{milinski-parker:1997} do not draw
+on the RPD model any more. In fact they treat it as an unresolved
+question whether the observed behavior is cooperative at all.
+
+In a later discussion, Dugatkin explained the problem when linking the
+model research about cooperation to the empirical research in biology
+by the difficulty of establishing a feedback-loop between model
+research and empirical research \citep[57-58]{dugatkin:1998a}. The
+empirical results were never fed back into the model building process
+and the obstacles when trying to apply the models were never
+considered by the modelers. Without a feedback-loop between
+theoretical and empirical research, however, the model-building
+process soon reaches a stalemate where models remain detached from
+reality.
+
+The frustration about this kind of pure model research is well
+expressed in a polemical article by Peter
+\citet{hammerstein:2003}. “Why is there such a discrepancy between
+theory and facts?” asks \citet[83]{hammerstein:2003} and continues: “A
+look at the best known examples of reciprocity shows that simple
+models of repeated games do not properly reflect the natural
+circumstances under which evolution takes place. Most repeated animal
+interactions do not even correspond to repeated games.” In saying so,
+Hammerstein is by no means opposed to employing game theory in
+biology. It’s just that in the aftermath of Axelrod most simulation
+studies on the evolution of cooperation focused on the Reiterated
+Prisoner’s Dilemma or similar repeated games. This shows that the
+demand for empirical validation has an important side effect besides
+allowing to judge the truth and falsehood of the models themselves: It
+forces the modelers to concern themselves seriously with the empirical
+literature and the empirical phenomena that their models address. If
+they do so, there is hope that this will lead quite naturally to the
+choice of simulation models that address relevant questions of
+empirical research. Or, as \citet[92]{hammerstein:2003} nicely puts
+it: “Most certainly, if we invested the same amount of energy in the
+resolution of all problems raised in this discourse, as we do in the
+publishing of toy models with limited applicability, we would be
+further along in our understanding of cooperation.”
+
+Just how little model researchers care for the empirical content of
+their research is inadvertently demonstrated by a research report on
+the evolution of cooperation that appeared roughly 20 years after
+the publication of Axelrod’s first paper about his computer tournament
+\citep{hoffmann:2000}. There is only one brief passage where the
+author of this research report talks about empirical applications of
+the theory of the evolution of cooperation. And in this passage there
+is but one piece of empirical literature that the author quotes, the
+study on predator inspection in sticklebacks by \citet{milinski:1987}!
+Nevertheless, Hoffmann believes that the “general framework is
+applicable to a host of realistic scenarios both in the social and
+natural worlds” \citep[4.3]{hoffmann:2000}. Much more believable is
+Dugatkin’s summary of the situation: “Despite the fact that game
+theory has a long standing tradition in the social sciences, and was
+incorporated in behavioral ecology 20 years ago, controlled tests of
+game theory models of cooperation are still relatively rare. It might
+be argued that this is not the fault of the empiricists, but rather
+due to the fact that much of the theory developed is unconnected to
+natural systems and thus may be mathematically intriguing but
+biologically meaningless” \citep[57]{dugatkin:1998a}. That this fact
+could escape the attention of the modelers tells a lot about the
+prevailing attitude of modelers towards empirical research.
+
+
+\section{An ideology of modeling}
+
+The examples discussed previously indicate that simulation models can
+be a valuable tool to study some of the possible causes of some social
+phenomena. However, the examples also content that a) modeling approaches
+in the social sciences can easily fail to deliver resilient results,
+that b) social simulations are not yet generally embedded in a
+research culture where the critical assessment of the (empirical)
+validity of the simulation models is a salient part of the research
+process and that c) the significance of pure simulation results is
+likely to be overrated.
+
+Unsurprisingly, simulation models in the social sciences excel when
+studying those causes that can be represented by a mathematical model
+as in the case of Schelling’s neighborhood segregation model. Part of
+the secret of Schelling’s success is surely that he had a good
+intuition for picking those example cases where mathematical models
+really work. But many of the causal connections that are of interest
+in the social science cannot be described mathematically.  For
+example, the question how the proliferation and easy accessibility of
+adult content in the internet shapes the attitude of youngsters
+towards love, sex and relationships, is hardly a question that could
+be answered with mathematical models. Or, if we want to understand
+what makes people follow orders to slaughter other people even in
+contradiction to their acquired moral codes
+\citep{Browning:1992}, then any reasonable answer to this
+question will hardly have the form of a mathematical model.\footnote{A
+  good discussion of the respective merits and limitations of
+  different research paradigms in the social sciences can be found in
+  \citet{moses-knutsen:2012}.}
+
+Unfortunately, the field of social simulations has by now become so
+much of a specialized field that modelers are hardly aware of the
+strong limitations of their approach in comparison with conventional,
+model-free methods in the social sciences. There is a widespread,
+though not necessarily always outspoken belief that more or less
+everything can -- somehow -- be cast into a simulation model. Part of
+the reason for this belief may be the fact that with computers the
+power of modeling techniques has indeed greatly increased. This belief
+has found explicit expression in Joshua Epstein’s keynote address to
+the Second World Congress of Social Simulation under the title “Why
+model?” \citep{epstein:2008}.
+
+In the following I am going to discuss Epstein’s arguments and point
+out the misconceptions underlying this belief. In my opinion these
+misconceptions are to no small degree responsible for the misguided
+practices in the field of social simulations.  Epstein sets out by
+arguing that it is never wrong to model, because – as he believes –
+there exists only the choice between explicit and implicit models,
+anyway:
+
+\begin{quote}
+
+  The first question that arises frequently -- sometimes innocently
+  and sometimes not -- is simply, "Why model?" Imagining a rhetorical
+  (non-innocent) inquisitor, my favorite retort is, "You are a
+  modeler."Anyone who ventures a projection, or imagines how a social
+  dynamic -- an epidemic, war, or migration -- would unfold is running
+  some model. But typically, it is an implicit model in which the
+  assumptions are hidden, their internal consistency is untested,
+  their logical con- sequences are unknown, and their relation to data
+  is unknown. But, when you close your eyes and imagine an epidemic
+  spreading, or any other social dynamic, you are running some model
+  or other. It is just an implicit model that you haven’t written down
+  (see Epstein 2007).
+
+  ...
+
+  The choice, then, is not whether to build models; it’s whether to
+  build explicit ones. In explicit models, assumptions are laid out in
+  detail, so we can study exactly what they entail. On these
+  assumptions, this sort of thing happens. When you alter the
+  assumptions that is what happens. By writing explicit models, you let
+  others replicate your results. \citep[1.2-1.5]{epstein:2008}
+\end{quote}
+
+It is not entirely clear whether Epstein restricts his arguments to
+projections, but even in this case it is most likely false. It is
+simply not possible to cast anything that can be described in natural
+language into the form of a mathematical or computer model. But then
+we also cannot assume that this must be possible, if projections to
+the future are concerned. It is of course always commendable to make
+one’s own assumptions explicit. But this does not require modeling.
+
+In addition, there are certain dangers associated with mathematical
+and computational modeling:
+
+\begin{enumerate}
+\item the danger of underrating or ignoring those causal connections
+  that do not lend themselves to formal descriptions.
+
+\item the danger of arbitrary ad hoc decisions when modeling causes of
+  which we only have a vague empirical understanding.  The necessity
+  to specify everything precisely easily leads to the sin of false
+  precision, which consists in assuming detailed knowledge where in
+  fact there is none.
+
+\item the danger of conferring a deceptive impression of understanding
+  even if the model is not validated.
+
+\item the shaping and selection of scientific questions by the
+  requirements of modeling, rather than by other, arguably more
+  important, criteria of relevance as, for example, the social impact
+  or relevance for public policy.
+
+\end{enumerate}
+
+That Epstein mentions replicability as another advantage of explicit
+modeling is ironic given that it is still quite uncommon in published
+simulation studies to give a reference for the reader to access and
+replicate the model (as described further above). More worrisome,
+however, is Epstein’s attitude towards validation:
+
+\begin{quote}
+
+  ... I am always amused when these same people challenge me with the
+  question, "Can you validate your model?" The appropriate retort, of
+  course, is, "Can you validate yours?"At least I can write mine down
+  so that it can, in principle, be calibrated to data, if that is what
+  you mean by "validate,"a term I assiduously avoid (good Popperian
+  that I am). \citep[1.4]{epstein:2008}
+
+\end{quote}
+
+Calibration (i.e. fitting a model to data) is of course neither the
+same nor a proper substitute for validation (testing a model against
+data), as Epstein knows. Validation in the sense of empirical testing
+of a model, hypothesis or theory is a common standard in almost all
+sciences, including those sciences mentioned earlier that usually do
+not rely on formal models like history, ethnology, sociology,
+political science. It is obviously not the case that validation
+presupposes explicit modeling, for otherwise history as an empirical
+science would be impossible.
+
+Epstein furthermore advances 16 reasons for building models other than
+prediction \citep[1.9-1.17]{epstein:2008}. None of these reasons is
+exclusively a reason for employing models, though. The functions, for
+example, of guiding data collection or discovering new questions can
+be fulfilled by models and also by any other kind of theoretical
+reasoning.  Nor is it an exclusive virtue of the modeling approach
+“that it enforces a scientific habit of mind”
+\citep[1.6]{epstein:2008}. Here Epstein is merely articulating the
+positivistic stock prejudice of the superiority, if only of a didactic
+kind, of formal methods. Given what \citet{heath-et-al:2009} have
+found out about the lack of proper validation of many agent-based
+simulations one might even be inclined to believe the opposite about
+the simulation method’s aptitude to encourage a scientific habit of
+mind.
+
+It fits into the picture of a somewhat dogmatic belief in the power of
+modeling approaches that modelers consider the lack of acceptance of
+their method often as more of a psychological problem on the side of
+the recipients to be addressed by better propaganda \citep[2.11-2.12,
+3.22-3.26]{barth-et-al:2012}, rather than a consequence of the still
+immature methodological basis of many agent-based simulation
+studies. This attitude runs the risk of self-deception, because one of
+the major reasons why non-modelers tend to be skeptical of agent-based
+simulations is that they perceive such simulations as highly
+speculative. As we have seen, the skeptics have good reason to do so.
+
+\section{Conclusions}
+
+It is in my opinion not least because of the abundance of simulations
+with low empirical impact that “social simulation is not yet
+recognized in the social science mainstream”
+\citep[abstract]{squazzoni-casnici:2013}. Why should a mainstream
+social scientist take simulation studies seriously, if he or she
+cannot be sure about the reliability of the results, because the
+simulations have never been validated? If modelers started to take the
+requirement of empirical validation more seriously, I expect two
+changes to occur – both of them beneficial: 1) Social simulations will
+become more focused in scope. Scientists will not attempt to cast
+anything into the form of a computer simulation from classical social
+contract philosophy \citep{skyrms:1996, skyrms:2004} to, well, the
+whole world \citep{futureict:2013, livingearth:2013}, but they will
+develop a better feeling for when simulations can be empirically
+validated and when not, and they will mostly leave out those problems
+where computer simulations cannot be applied with some hope of
+producing empirically applicable results. 2) Yet, while the simulation
+method will become more focused in scope, it will at the same time
+become much more useful in practice, because simulations will more
+frequently yield results that other scientists can rely on without
+needing to worry about their speculative character and potential lack
+of reliability.
+
+
+\singlespacing
+%\bibliographystyle{plainnat}
+\bibliographystyle{apsr}
+\bibliography{bibliography}
+
+\end{document}
+% If anything at all then it is its robustness wrt to changes of the parameter values that lends some confidence in the applicability of the tournament's results. Robustness alone is of course only one necessary, not a sufficient criterion of applicability.
