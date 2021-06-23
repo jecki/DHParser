@@ -28,8 +28,7 @@ The different parsing functions are callable descendants of class
 within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
 for an example.
 """
-
-
+import functools
 from collections import defaultdict
 import copy
 from typing import Callable, cast, List, Tuple, Set, AbstractSet, Dict, \
@@ -134,7 +133,7 @@ class ParserError(Exception):
         self.node = node      # type: Node
         self.rest = rest      # type: StringView
         self.error = error    # type: Error
-        self.first_throw = first_throw   # type:
+        self.first_throw = first_throw   # type: bool
         self.attributes_locked = frozenset({'parser', 'node', 'rest', 'error', 'first_throw'})
         self.frozen_callstack = tuple()  # type: Tuple[CallItem, ...]  # tag_name, location
 
@@ -183,7 +182,8 @@ ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
 # A return value of (-1, x) means that no reentry point before the end of the document was found
 
 
-@cython.returns(cython.int)
+# @cython.returns(cython.int)
+@functools.lru_cache()
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
 def reentry_point(rest: StringView,
                   rules: ResumeList,
@@ -518,8 +518,8 @@ class Parser:
             except ParserError as pe:
                 # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
-                rules = grammar.resume_rules__.get(
-                    self.pname or grammar.associated_symbol__(self).pname, [])
+                rules = tuple(grammar.resume_rules__.get(
+                    self.pname or grammar.associated_symbol__(self).pname, []))
                 rest = pe.rest[len(pe.node):]
                 i = reentry_point(rest, rules, grammar.comment_rx__,
                                   grammar.reentry_search_window__)
@@ -2734,7 +2734,8 @@ class MandatoryNary(NaryParser):
         `self.grammar.skip_rules__`. If no reentry-point was found or the
         skip-list ist empty, -1 is returned.
         """
-        skip = self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname, [])
+        skip = tuple(self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname,
+                                                   tuple()))
         if skip:
             gr = self._grammar
             return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)

@@ -3048,10 +3048,10 @@ class EBNFCompiler(Compiler):
             for k, v in ruleset.items():
                 if len(v) > 1:
                     delimiter = indent + ' ' * (len(k) + 5)
-                    val = '[' + delimiter.join(str(it) for it in v) + ']'
+                    val = '(' + delimiter.join(str(it) for it in v) + ')'
                 else:
-                    val = v
-                rule_repr.append("'{key}': {value}".format(key=k, value=str(val)))
+                    val = str((v[0],))  # turn single-element list into single-element tuple
+                rule_repr.append("'{key}': {value}".format(key=k, value=val))
             rule_repr[0] = '{' + rule_repr[0]
             rule_repr[-1] = rule_repr[-1] + '}'
             return rule_name, indent.join(rule_repr)
