@@ -1,0 +1,77 @@
+# ts2dataclass-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = /\s*/           # implicit whitespace, includes linefeed, but not empty lines
+@ literalws   = right           # literals have implicit whitespace on the right hand side
+@ comment     = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # /* ... */ or // to EOL
+@ ignorecase  = False           # literals and regular expressions are case-sensitive
+@ reduction   = flatten         # anonymous nodes are being reduced where possible
+@ disposable  = EOF             # EOF is considered a disposable symbol that can also be reduced
+@ drop        = EOF, whitespace # EOF and insignificant whitespace (tilde) will be dropped
+
+
+#######################################################################
+#
+#:  Enclosing Structures
+#
+#######################################################################
+
+document    = ~ { interface | namespace | type_alias } EOF
+
+interface   = ["export"] "interface" identifier
+              ["extends" identifier { "," identifier}
+              "{"  { declaration ";" }  "}"
+declaration = identifier [optional] ":" types | enumertion
+  optional  = "?"
+types       = type { "|" type } | "(" type { "|" type } ")" [array_marker]
+type        = (basic_type | identifier) [array_marker]
+
+namespace   = ["export"] "namespace" identifier
+              "{" { const } "}"
+
+#######################################################################
+#
+#: Declarations
+#
+#######################################################################
+
+type_alias  = ["export"] identifier "=" types | enumeration ";"
+const       = ["export"] "const" declaration "=" value ";"
+enumeration = literal { "|" literal }
+value       = literal
+
+#######################################################################
+#
+#: literals
+#
+#######################################################################
+
+literal    = (number | string | array) ~
+number     = /[+-]?\d+(?:\.\d+)/
+string     = /"[^"\n]*"/ | /'[^'\n]*'/
+array      = /\[\s*/ literal { /\s*,\s*/ literal } /\s*\]/
+
+#######################################################################
+#
+#: Atomic Symbols
+#
+#######################################################################
+
+basic_type   = "object" | "array" | "string" | "number" | "boolean" | "null"
+array_marker = "[]"
+
+
+#######################################################################
+#
+#: RegExes
+#
+#######################################################################
+
+identifier = /(?!\d)\w+/~
+
+EOF        =  !/./        # no more characters ahead, end of file reached
