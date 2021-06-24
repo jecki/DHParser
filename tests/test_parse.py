@@ -37,7 +37,7 @@ from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
-    GrammarError, Counted, Always, INFINITE
+    GrammarError, Counted, Always, INFINITE, longest_match
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
@@ -1619,6 +1619,40 @@ class TestMemoization:
         assert (p.eq_class == ps1.eq_class for p in (ps2, ps3))
 
         cst = grammar('"camma", "beta", "alpha"')
+
+
+class TestStringAlternative:
+    def test_longest_match(self):
+        l = ['a', 'ab', 'ca', 'cd']
+        assert longest_match(l, '0abdd') == ''
+        assert longest_match(l, 'axcde') == 'a'
+        assert longest_match(l, 'cab') == 'ca'
+        assert longest_match(l, 'b') == ''
+        assert longest_match(l, 'x') == ''
+        assert longest_match(l, 'a') == 'a'
+        assert longest_match(l, 'ab') == 'ab'
+        assert longest_match(l, 'ca') == 'ca'
+        assert longest_match(l, 'cd') == 'cd'
+        assert longest_match(l, 'cb') == ''
+        assert longest_match(l, 'cdc') == 'cd'
+        assert longest_match(l, 'c') == ''
+        l = ['a', 'ab', 'abc', 'abcd']
+        assert longest_match(l, 'abxyz') == 'ab'
+        assert longest_match(l, 'abcdxyz') == 'abcd'
+        assert longest_match(l, 'abcxyz') == 'abc'
+        assert longest_match(l, 'axyz') == 'a'
+        assert longest_match(l, 'axyz') == 'a'
+        assert longest_match(l, 'ax') == 'a'
+        assert longest_match(l, '') == ''
+        assert longest_match([], 'a') == ''
+        assert longest_match([], '') == ''
+        l = ['abc', 'xy']
+        assert longest_match(l, 'xyzt', 2) == 'xy'
+        assert longest_match(l, 'abcdefg', 1) == 'abc'
+        assert longest_match(l, 'abcdefg', 2) == 'abc'
+        assert longest_match(l, 'ax12345', 2) == ''
+        assert longest_match(l, 'a', 2) == ''
+
 
 
 if __name__ == "__main__":

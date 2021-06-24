@@ -28,6 +28,8 @@ The different parsing functions are callable descendants of class
 within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
 for an example.
 """
+
+from bisect import bisect_left
 import functools
 from collections import defaultdict, namedtuple
 import copy
@@ -87,6 +89,7 @@ __all__ = ('ParserError',
            'MandatoryNary',
            'Series',
            'Alternative',
+           'longest_match',
            'INFINITE',
            'Counted',
            'Interleave',
@@ -3010,10 +3013,6 @@ class Alternative(NaryParser):
             return ' | '.join(parser.repr for parser in self.parsers)
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
-    # def reset(self):
-    #     super(Alternative, self).reset()
-    #     return self
-
     # The following operator definitions add syntactical sugar, so one can write:
     # `RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')` instead of:
     # `Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))`
@@ -3080,6 +3079,80 @@ class Alternative(NaryParser):
                             + "\nAlternative %i will never be reached, because its starting-"
                             'string "%s" is already captured by earlier alternative %i !'
                             % (i + 1, fixed_start, k + 1), BAD_ORDER_OF_ALTERNATIVES))
+        return errors
+
+
+def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) -> str:
+    """Returns the longest string from a given list of strings that
+    matches the beginning of text.
+    >>> l = ['a', 'ab', 'ca', 'cd']
+    >>> longest_match(l, 'a')
+    'a'
+    >>> longest_match(l, 'abcdefg')
+    'ab'
+    >>> longest_match(l, 'ac')
+    'a'
+    >>> longest_match(l, 'cb')
+    ''
+    >>> longest_match(l, 'cab')
+    'ca'
+    """
+    if n > len(text):  return ''
+    if len(strings) == 1:
+        return strings[0] if text.startswith(strings[0]) else ''
+    head = text[:n]
+    if not head:  return ''
+    i = bisect_left(strings, head)
+    if i >= len(strings) or (i == 0 and not strings[0].startswith(head)):
+        return ''
+    match = longest_match(strings[i:], text, n + 1)
+    if match:  return match
+    if head == strings[i]:  return head
+    return ''
+
+
+class TextAlternative(Alternative):
+    r"""A faster Alternative-Parser for special cases where all alternatives
+    are Text-parsers or sequences beginning with a Text-Parser.
+
+    EXPERIMENTAL!!!
+    """
+
+    def __init__(self, *parsers: Parser) -> None:
+        super(TextAlternative, self).__init__(*parsers)
+        heads: List[str] = []
+        for p in parsers:
+            while isinstance(p, Synonym):
+                p = p.parser
+            if isinstance(p, Text):
+                heads.append(p.text)
+            elif isinstance(p, Series) and isinstance(p.parsers[0], Text):
+                heads.append(cast(Text, p.parsers[0]).text)
+            else:
+                raise ValueError(
+                    f'Parser {p} is not a Text-parser and does not start with a Text-parser')
+        heads.sort()
+        self.heads = heads
+        self.indices = {h: parsers.index(p) for h, p in zip(heads, parsers)}
+        self.min_head_size = min(len(h) for h in self.heads)
+
+    def _parse(self, text: StringView) -> ParsingResult:
+        m = longest_match(self.heads, text, self.min_head_size)
+        if m:
+            parser = self.parsers[self.indices[m]]
+            node, text_ = parser(text)
+            if node is not None:
+                return self._return_value(node), text_
+        return None, text
+
+    def static_analysis(self) -> List['AnalysisError']:
+        errors = super().static_analysis()
+        if len(self.heads) != len(set(self.heads)):
+            errors.append(self.static_error(
+                'Duplicate text-heads in ' + self.location_info()
+                + ' Use of Alternative() instead of TextAlternative() '
+                + ' could possibly solve this problem.',
+                DUPLICATE_PARSERS_IN_ALTERNATIVE))
         return errors
 
 
