@@ -10,6 +10,7 @@ cdef class Parser:
     cdef public bint disposable
     cdef public bint drop_content
     cdef public str tag_name
+    cdef public object eq_class
     cdef public object _grammar
     cdef object visited
     cdef object cycle_detection

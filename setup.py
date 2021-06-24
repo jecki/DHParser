@@ -14,6 +14,7 @@ cythonize_modules = [
     'DHParser/stringview.py',
     'DHParser/toolkit.py',
     'DHParser/error.py',
+    'DHParser/preprocess.py',
     'DHParser/syntaxtree.py',
     'DHParser/log.py',
     'DHParser/parse.py',

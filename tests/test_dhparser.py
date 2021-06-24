@@ -58,6 +58,7 @@ class TestDHParserCommandLineTool:
         self.python = sys.executable + ' '
 
     def teardown(self):
+        # return
         name = self.dirname
         if os.path.exists(name + '/%sServer.py' % name):
             system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)

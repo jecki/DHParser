@@ -29,7 +29,7 @@ within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
 for an example.
 """
 import functools
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import copy
 from typing import Callable, cast, List, Tuple, Set, AbstractSet, Dict, \
     DefaultDict, Sequence, Union, Optional, Iterator, Hashable, NamedTuple
@@ -754,7 +754,7 @@ class Parser:
         parsers have the same signature.
 
         By returning `id(self)` this mistake will become impossible, but
-        it will turn signature-based memoization-optimizatiopn off for
+        it will turn signature-based memoization-optimization off for
         this parser.
         """
         return id(self)
@@ -829,7 +829,6 @@ def Drop(parser: Parser) -> Parser:
 
 PARSER_PLACEHOLDER = None  # type: Optional[Parser]
 # Don't access PARSER_PLACEHOLDER directly, use get_parser_placeholder() instead
-
 
 
 def get_parser_placeholder() -> Parser:
@@ -923,11 +922,18 @@ def mixin_nonempty(whitespace: str) -> str:
     return whitespace
 
 
-# AnalysisError = Tuple[str, Parser, Error]      # pname, parser, error
-class AnalysisError(NamedTuple):
-    symbol: str
-    parser: Parser
-    error: Error
+# # AnalysisError = Tuple[str, Parser, Error]      # pname, parser, error
+# class AnalysisError(NamedTuple):
+#     symbol: str
+#     parser: Parser
+#     error: Error
+
+# collections.namedtuple needed for Cython compatbility
+AnalysisError = namedtuple('AnalysisError',
+    ['symbol',  # type: str
+     'parser',  # type: Parser
+     'error'    # type: Error
+    ], module = __name__)
 
 
 class GrammarError(Exception):

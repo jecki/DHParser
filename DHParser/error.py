@@ -46,6 +46,8 @@ However, in order to report errors, usually at least a line and
 column-number
 
 """
+
+from collections import namedtuple
 import functools
 import os
 from typing import Iterable, Iterator, Union, List, Sequence, NamedTuple, Dict, Callable
@@ -118,22 +120,48 @@ __all__ = ('SourceMap',
 #######################################################################
 
 
-class SourceMap(NamedTuple):
-    original_name: str           # nome or path or uri of the original source file
-    positions: List[int]        # a list of locations
-    offsets: List[int]          # the corresponding offsets to be added from these locations onward
-    file_names: List[str]       # list of file_names to which the source locations relate
-    originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
+# class SourceMap(NamedTuple):
+#     original_name: str           # nome or path or uri of the original source file
+#     positions: List[int]        # a list of locations
+#     offsets: List[int]          # the corresponding offsets to be added from these locations onward
+#     file_names: List[str]       # list of file_names to which the source locations relate
+#     originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
 
+# SourceMap = NamedTuple('SourceMap',
+#     [('original_name', str),
+#      ('positions', List[int]),
+#      ('offsets', List[int]),
+#      ('file_names', List[str]),
+#      ('originals_dict', Dict[str, Union[str, StringView]])])
+# SourceMap.__module__ = __name__
 
-class SourceLocation(NamedTuple):
-    original_name: str          # the file name (or path or uri) of the source code
-    original_text: Union[str, StringView]  # the source code itself
-    pos: int                  # a position within the code
+SourceMap = namedtuple('SourceMap',
+    ['original_name',  # type: str
+     'positions',  # type: List[int]
+     'offsets',  # type: List[int]
+     'file_names',  # type: List[str]
+     'originals_dict',  # type: Dict[str, Union[str, StringView]]
+    ], module = __name__)
 
+# class SourceLocation(NamedTuple):
+#     original_name: str          # the file name (or path or uri) of the source code
+#     original_text: Union[str, StringView]  # the source code itself
+#     pos: int                  # a position within the code
+
+# SourceLocation = NamedTuple('SourceLocation',
+#     [('original_name', str),
+#      ('original_text', Union[str, StringView]),
+#      ('pos', int)])
+
+SourceLocation = namedtuple('SourceLocation',
+    ['original_name',  # type: str
+     'original_text',  # type: Union[str, StringView]
+     'pos',  # type: int
+    ], module = __name__)
 
 SourceMapFunc = Union[Callable[[int], SourceLocation],
                       functools.partial]
+
 
 #######################################################################
 #

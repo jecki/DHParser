@@ -2257,7 +2257,7 @@ def as_path(context: TreeContext) -> str:
     for node in context:
         assert not node.tag_name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
         tag_list.append(node.tag_name)
-    if ctx.children:
+    if context[-1].children:
         tag_list.append('')
     return '/'.join(tag_list)
 
@@ -2267,7 +2267,7 @@ def match_path(path: str, glob_pattern: str) -> bool:
     from fnmatch import fnmatchcase
     if glob_pattern[0:1] not in ("/", "*"):
         glob_pattern = "*/" + glob_pattern
-    return fnmatchcase(path, pattern)
+    return fnmatchcase(path, glob_pattern)
 
 
 
