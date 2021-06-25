@@ -255,6 +255,7 @@ class Compiler:
             elem = elem[1:] + '__'
         try:
             compiler = self.__getattribute__(visitor_name(elem))
+            # print(self.__class__.__name__, elem, str(node)[:80])
         except AttributeError:
             compiler = self.fallback_compiler
         self.context.append(node)
