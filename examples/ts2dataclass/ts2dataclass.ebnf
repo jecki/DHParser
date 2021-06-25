@@ -23,7 +23,8 @@
 #
 #######################################################################
 
-document    = ~ { interface | type_alias | namespace | enum | literal } EOF
+document    = ~ { interface | type_alias | namespace | enum | const
+                | literal | declaration ";" } EOF
 
 
 #######################################################################
@@ -32,17 +33,20 @@ document    = ~ { interface | type_alias | namespace | enum | literal } EOF
 #
 #######################################################################
 
-interface   = ["export"] "interface" identifier
+interface   = ["export"] "interface" §identifier [type_parameter]
               ["extends" identifier { "," identifier}]
               declarations_block
-type_alias  = ["export"] "type" identifier "=" types ";" | declarations_block
+  type_parameter = "<" identifier ">"
+type_alias  = ["export"] "type" §identifier "=" (types ";" | declarations_block)
 
-declarations_block = "{"  { declaration ";" }  "}"
-declaration = (identifier [optional] | index_signature) ":" types
+declarations_block = "{"  [declaration { ";" declaration } [";"]] "}"
+declaration = (identifier [optional] | index_signature) [":" types]
   optional  = "?"
-  index_signature = identifier ":" type
-types       = type { "|" type } | "(" types ")" [array_marker]
-type        = (basic_type | identifier) [array_marker] | literal
+  index_signature = "[" identifier ":" type "]"
+types       = type { "|" types } | "(" types ")" [array_marker]
+type        = (basic_type | identifier) [array_marker]
+            | declarations_block | type_tuple | literal
+type_tuple  = "[" type {"," type} "]"
 
 
 #######################################################################
@@ -51,7 +55,7 @@ type        = (basic_type | identifier) [array_marker] | literal
 #
 #######################################################################
 
-namespace   = ["export"] "namespace" identifier
+namespace   = ["export"] "namespace" §identifier
               "{" { const } "}"
 
 #######################################################################
@@ -60,7 +64,7 @@ namespace   = ["export"] "namespace" identifier
 #
 #######################################################################
 
-enum        = ["export"] "enum" "{" item { "," item } "}"
+enum        = ["export"] "enum" §"{" item { "," item } "}"
   item      = identifier ["=" literal]
 
 
@@ -70,8 +74,8 @@ enum        = ["export"] "enum" "{" item { "," item } "}"
 #
 #######################################################################
 
-const       = ["export"] "const" declaration "=" literal ";"
-
+const       = ["export"] "const" §declaration "=" (literal | identifier) ";"
+assignment  = qualifier "=" literal ";"
 
 #######################################################################
 #
@@ -83,8 +87,8 @@ literal    = number | string | array | object
 number     = INT FRAC EXP ~
 string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
 array      = `[`~ literal { `,`~ literal } `]`~
-object     = `{`~ association { `,`~ association }  literal
- association = name `:` literal
+object     = `{`~ association { `,`~ association } `}`~
+ association = name `:`~ literal
 name       = identifier
 
 #######################################################################
@@ -103,6 +107,7 @@ array_marker = `[]`~
 #
 #######################################################################
 
+qualifier  = identifier { `.` identifier }
 identifier = /(?!\d)\w+/~
 
 INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
