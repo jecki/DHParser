@@ -1,4 +1,6 @@
 # ts2dataclass-grammar
+# for examples of typescript-interfaces
+# see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
 
 #######################################################################
 #
@@ -10,40 +12,66 @@
 @ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # /* ... */ or // to EOL
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
-@ reduction   = flatten         # anonymous nodes are being reduced where possible
-@ disposable  = EOF             # EOF is considered a disposable symbol that can also be reduced
-@ drop        = EOF, whitespace # EOF and insignificant whitespace (tilde) will be dropped
+@ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
+@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF
+@ drop        = EOF, whitespace, strings # EOF and insignificant whitespace (tilde) will be dropped
 
 
 #######################################################################
 #
-#:  Enclosing Structures
+#:  Typescript Document
 #
 #######################################################################
 
-document    = ~ { interface | namespace | type_alias } EOF
+document    = ~ { interface | type_alias | namespace | enum | literal } EOF
+
+
+#######################################################################
+#
+#:  Interfaces
+#
+#######################################################################
 
 interface   = ["export"] "interface" identifier
-              ["extends" identifier { "," identifier}
-              "{"  { declaration ";" }  "}"
-declaration = identifier [optional] ":" types | enumertion
+              ["extends" identifier { "," identifier}]
+              declarations_block
+type_alias  = ["export"] "type" identifier "=" types ";" | declarations_block
+
+declarations_block = "{"  { declaration ";" }  "}"
+declaration = (identifier [optional] | index_signature) ":" types
   optional  = "?"
-types       = type { "|" type } | "(" type { "|" type } ")" [array_marker]
-type        = (basic_type | identifier) [array_marker]
+  index_signature = identifier ":" type
+types       = type { "|" type } | "(" types ")" [array_marker]
+type        = (basic_type | identifier) [array_marker] | literal
+
+
+#######################################################################
+#
+#:  Namespaces
+#
+#######################################################################
 
 namespace   = ["export"] "namespace" identifier
               "{" { const } "}"
 
 #######################################################################
 #
-#: Declarations
+#:  Enums
 #
 #######################################################################
 
-type_alias  = ["export"] identifier "=" types | enumeration ";"
-const       = ["export"] "const" declaration "=" value ";"
-enumeration = literal { "|" literal }
-value       = literal
+enum        = ["export"] "enum" "{" item { "," item } "}"
+  item      = identifier ["=" literal]
+
+
+#######################################################################
+#
+#: Consts
+#
+#######################################################################
+
+const       = ["export"] "const" declaration "=" literal ";"
+
 
 #######################################################################
 #
@@ -51,27 +79,36 @@ value       = literal
 #
 #######################################################################
 
-literal    = (number | string | array) ~
-number     = /[+-]?\d+(?:\.\d+)/
-string     = /"[^"\n]*"/ | /'[^'\n]*'/
-array      = /\[\s*/ literal { /\s*,\s*/ literal } /\s*\]/
+literal    = number | string | array | object
+number     = INT FRAC EXP ~
+string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
+array      = `[`~ literal { `,`~ literal } `]`~
+object     = `{`~ association { `,`~ association }  literal
+ association = name `:` literal
+name       = identifier
 
 #######################################################################
 #
-#: Atomic Symbols
+#: Keywords
 #
 #######################################################################
 
-basic_type   = "object" | "array" | "string" | "number" | "boolean" | "null"
-array_marker = "[]"
+basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`)~
+array_marker = `[]`~
 
 
 #######################################################################
 #
-#: RegExes
+#: Entities
 #
 #######################################################################
 
 identifier = /(?!\d)\w+/~
+
+INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
+NEG         = `-`
+FRAC        = [ DOT /[0-9]+/ ]
+DOT         = `.`
+EXP         = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
 
 EOF        =  !/./        # no more characters ahead, end of file reached

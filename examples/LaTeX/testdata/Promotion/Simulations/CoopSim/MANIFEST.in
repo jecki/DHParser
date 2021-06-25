@@ -1,8 +1,0 @@
-include CoopSim/*
-include CoopSim/PyPlotter/*
-include CoopSim/PopulationDynamics/*
-include CoopSim/docs/*
-include CoopSim/docs/CoopSim_Doc/*
-include CoopSim/docs/big_images/*
-include CoopSim/docs/small_images/*
-include CoopSim/icons/*

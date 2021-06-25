@@ -7,7 +7,7 @@ import os
 import sys
 
 LOGGING = 'LOGS'
-DEBUG = False
+DEBUG = True
 TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)

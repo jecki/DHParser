@@ -1474,7 +1474,8 @@ from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forwa
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
     INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE
+from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
+    flatten_sxpr
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
     cython
@@ -3906,7 +3907,10 @@ class EBNFCompiler(Compiler):
         i.e. repeated n or n up to m times.
         """
         assert node.tag_name == 'counted'
-        assert len(node.children) == 2
+        if len(node.children) != 2:
+            self.tree.new_error(node, f'Wrong number of arguments for repetition: ' 
+                f'{len(node.children)} (two expected)!')
+            return Node(ZOMBIE_TAG, ''), (0, 0)
         rng = node.get('range', None)
         if rng:
             r = self.extract_range(rng)

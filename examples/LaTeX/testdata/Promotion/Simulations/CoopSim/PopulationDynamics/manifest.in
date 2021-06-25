@@ -1,6 +1,0 @@
-include PopulationDynamics/*.py
-include PopulationDynamics/LICENSE.LGPL
-include PopulationDynamics/README.txt
-include PopulationDynamics/MANIFEST.in
-include PopulationDynamics/*.tex
-include PopulationDynamics/*.pdf
