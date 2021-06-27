@@ -13,8 +13,8 @@
 @ comment     = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # /* ... */ or // to EOL
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
-@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF
-@ drop        = EOF, whitespace, strings # EOF and insignificant whitespace (tilde) will be dropped
+@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF, _literal, _array_ellipsis
+@ drop        = whitespace, strings, EOF, _array_ellipsis   # EOF and insignificant whitespace (tilde) will be dropped
 
 
 #######################################################################
@@ -24,7 +24,8 @@
 #######################################################################
 
 document    = ~ { interface | type_alias | namespace | enum | const
-                | literal | declaration ";" } EOF
+                | declaration ";" | assignment
+                | _array_ellipsis | _literal } EOF
 
 
 #######################################################################
@@ -40,7 +41,8 @@ interface   = ["export"] "interface" §identifier [type_parameter]
 type_alias  = ["export"] "type" §identifier "=" (types ";" | declarations_block)
 
 declarations_block = "{"  [declaration { ";" declaration } [";"]] "}"
-declaration = (identifier [optional] | index_signature) [":" types]
+declaration = ([qualifier] identifier [optional] | index_signature) [":" types]
+  qualifier = "readonly"
   optional  = "?"
   index_signature = "[" identifier ":" type "]"
 types       = type { "|" types } | "(" types ")" [array_marker]
@@ -64,7 +66,7 @@ namespace   = ["export"] "namespace" §identifier
 #
 #######################################################################
 
-enum        = ["export"] "enum" §"{" item { "," item } "}"
+enum        = ["export"] "enum" [identifier] §"{" item { "," item } "}"
   item      = identifier ["=" literal]
 
 
@@ -75,7 +77,7 @@ enum        = ["export"] "enum" §"{" item { "," item } "}"
 #######################################################################
 
 const       = ["export"] "const" §declaration "=" (literal | identifier) ";"
-assignment  = qualifier "=" literal ";"
+assignment  = variable "=" literal ";"
 
 #######################################################################
 #
@@ -83,13 +85,16 @@ assignment  = qualifier "=" literal ";"
 #
 #######################################################################
 
+_array_ellipsis = literal { "," literal }
+_literal   = literal
+
 literal    = number | string | array | object
 number     = INT FRAC EXP ~
 string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
-array      = `[`~ literal { `,`~ literal } `]`~
-object     = `{`~ association { `,`~ association } `}`~
+array      = `[`~ [ literal { `,`~ literal } ] `]`~
+object     = `{`~ [ association { `,`~ association } ] `}`~
  association = name `:`~ literal
-name       = identifier
+name       = identifier | '"' identifier '"'
 
 #######################################################################
 #
@@ -107,7 +112,7 @@ array_marker = `[]`~
 #
 #######################################################################
 
-qualifier  = identifier { `.` identifier }
+variable   = identifier { `.` identifier }
 identifier = /(?!\d)\w+/~
 
 INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )

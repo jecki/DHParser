@@ -1,8 +1,8 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 
 """extract_ts_from_lsp.py - extracts the typescript parts from the
-   specification of the language server protocol:
-   https://github.com/microsoft/language-server-protocol/tree/gh-pages/_specifications
+specification of the language server protocol:
+https://github.com/microsoft/language-server-protocol/tree/gh-pages/_specifications
 """
 
 def extract(source, dest):
