@@ -6,13 +6,30 @@
 #
 #######################################################################
 
-@ whitespace  = linefeed        # implicit whitespace, includes linefeed, but not empty lines
-@ literalws   = right           # literals have implicit whitespace on the right hand side
-@ comment     = /#.*/           # comments range from a '#'-character to the end of the line
-@ ignorecase  = False           # literals and regular expressions are case-sensitive
+# Regular expression for implicit whitespace or one of: horizontal, linefeed, vertical
+# Implicit whitespace is denoted by the tilde-character: ~
+@ whitespace  = linefeed
+
+# Implicit whitespace adjacent to literals: left, right, both, none
+# E.g. if @literalws = right then ")" means the same as `)`~
+@ literalws   = right
+
+# Regular expression for comments, e.g. /#.*(?:\n|$)/
+# Use: /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/ for C++-style comments: /* ... */ or // to EOL
+@ comment     = /#.*/
+
+# Case-sensitivity: True, False
+@ ignorecase  = False
+
+# Tree-simplification while parsing:  none, flatten, merge_treetops, merge
 @ reduction   = flatten         # anonymous nodes are being reduced where possible
-@ disposable  = EOF             # EOF is considered a disposable symbol that can also be reduced
-@ drop        = EOF, whitespace # EOF and insignificant whitespace (tilde) will be dropped
+
+# Tags that may be replaced with their content while parsing
+@ disposable  = EOF
+
+# Tags that will be dropped with all their content while parsing
+# Here, EOF and insignificant whitespace (tilde) will be dropped
+@ drop        = EOF, whitespace
 
 
 #######################################################################
