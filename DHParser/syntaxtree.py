@@ -2137,7 +2137,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_tree(self) -> str:
         """Serialize as a simple indented text-tree."""
-        sxpr = self.as_sxpr(flatten_threshold=0)
+        sxpr = self.as_sxpr(flatten_threshold=0, compact=True)
         if sxpr.find('\n') >= 0:
             sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
             sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)

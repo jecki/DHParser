@@ -77,21 +77,44 @@ much like you'd compile a regular expresseion. Let's do this for a
 
 Mind that this little script does not yield the json data in form of a
 nested tree of python dictionaries and arrays but only the syntax tree
-of the string encoding that data. In order to retrieve the actual data
-from the sytnax tree a few more transformations are necessary, but the
+of the string encoding that data::
+
+    $ python parse_json.py
+    json
+      json_object
+        member
+          string
+            :Text '"'
+            PLAIN "one"
+            :Text '"'
+          number
+            INT "1"
+        member
+          string
+            :Text '"'
+            PLAIN "two"
+            :Text '"'
+          number
+            INT "2"
+
+
+In order to retrieve the actual data
+from the syntax tree a few more transformations are necessary, but the
 example should suffice to show how a parser for a context-free grammar
 can be generated right inside a Python-program.
+
+Nodes, the name of which starts with a colon ":" are nodes that have
+been produced by an unnamed part of a parser, in this case the parts
+that parse the quotation marks within the string-parser. Usually, such
+nodes are either renamed or removed during abstract-syntaxtree-transformation.
 
 The three lines starting with an ``@``-sign at the beginning of the
 grammar-string are DHParser-directives (see :py:mod:`ebnf`) which
 in this case help to the syntax-tree which otherwise would can turn
 out to be rather verbose.
 
-If you want to specify the parser a Python-script, this can also be
-done directly with Python-code instead of compiling an EBNF-grammar
-first. For simple DSLs this might even be the preferred way, because
-compiling an EBNF-grammar to Python code within a script increases
-its startup-time considerably::
+Specifying a parser can also be done directly with Python-code
+instead of compiling an EBNF-grammar first::
 
     import sys, re
 
@@ -151,4 +174,115 @@ a class definition::
 
     json_parser = Grammar(JSON.json)
     ...
+
+Usually, it is best to specify the grammar in EBNF, compile it and then copy and paste the
+compiled grammar into your script, in case you want to save the startup-time that is wasted
+when the grammar is compiled when running the script. This can by done by writing the EBNF
+grammar into a text file and then calling the "dhparser"-command with the EBNF-file::
+
+    $ dhparser json.ebnf
+
+This produces a script ``jsonParser.py`` from the EBNF-grammar that can be called with any
+text-file that adheres to the EBNF-grammar and outputs it as syntax-tree::
+
+    $ echo '{ "one": 1, "two": 2 }' >test.json
+    $ python jsonParser.py --xml test.json
+    <json>
+      <object>
+        <member>
+          <string>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <PLAIN>one</PLAIN>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+          </string>
+          <number>
+            <INT>1</INT>
+          </number>
+        </member>
+        <member>
+          <string>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <PLAIN>two</PLAIN>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+          </string>
+          <number>
+            <INT>2</INT>
+          </number>
+        </member>
+      </object>
+    </json>
+
+
+Larger scale DSL-projects
+-------------------------
+
+Larger and more complex DSL-projects can easily be setup by calling the "dhparser"-script
+with a name of a project-directory that will then be created and filled with some templates::
+
+   $ dhparser json
+   $ cd json
+   $ dir
+   example.dsl  json.ebnf	jsonServer.py  README.md  tests_grammar  tst_json_grammar.py
+
+The first step is to replace the ".ebnf"-file that contains a simple demo-grammar with your
+own grammar. For the sake of the example we'll write our json-Grammar into this file::
+
+    #######################################################################
+    #
+    #  EBNF-Directives
+    #
+    #######################################################################
+
+    @literalws  = right
+    @drop       = whitespace, strings
+    @disposable = /_\w+/
+
+    #######################################################################
+    #
+    #:  compound elememts
+    #
+    #######################################################################
+
+    json        = ~ _element _EOF
+    _element    = object | array | string | number | _bool | null
+    object      = "{" member { "," §member } §"}"
+    member      = string §":" _element
+    array       = "[" [ _element { "," _element } ] §"]"
+
+    #######################################################################
+    #
+    #:  simple elements
+    #
+    #######################################################################
+
+    string      = `"` §_CHARACTERS `"` ~
+    number      = INT [ FRAC ] [ EXP ] ~
+    _bool       = true | false
+    true        = `true` ~
+    false       = `false` ~
+    null        = "null"
+
+    #######################################################################
+    #
+    #:  atomic expressions types
+    #
+    #######################################################################
+
+    _CHARACTERS = { PLAIN | ESCAPE }
+    PLAIN       = /[^"\\]+/
+    ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+    UNICODE     = "\u" HEX HEX
+    HEX         = /[0-9a-fA-F][0-9a-fA-F]/
+
+    INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
+    NEG         = `-`
+    FRAC        = DOT /[0-9]+/
+    DOT         = `.`
+    EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
+
+    _EOF        =  !/./
+
+The division of the grammar into several sections is purely conventional. If
+a comment-line starts with ``#:`` this is a hint to the test script
+to generate a separate unit-test-template for the following section.
 
