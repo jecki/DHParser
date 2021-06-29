@@ -1,6 +1,5 @@
-******
-Manual
-******
+Reference Manual
+================
 
 At the core of DHParser lies a parser generator for parsing expression grammars.
 As a parser generator it offers similar functionality as pyparsing_ or lark_.
@@ -12,23 +11,23 @@ XML-prone Digital Humanities ;-) ), fail-tolerant grammars and some
 
 DHParser is both suitable for small projects or "on the fly" use of parsing
 expression grammar as a more powerful substitute for regular expressions and
-for big projects. (The workflow for the latter is described in the `Step by
-Step Guide`_.) The usage and API of DHParser is (or will be) described
+for big projects. (The workflow for the latter is described in the
+:doc:`StepByStepGuide`.) The usage and API of DHParser is (or will be) described
 with many examples in the doctrings of its various modules. The following
 reading-order is recommended to understand DHParser:
 
-1. `ebnf` - Although DHParser also offers a Python-interface for specifying
+:py:mod:`ebnf` - Although DHParser also offers a Python-interface for specifying
    grammers (similar to pyparsing_), the recommended way of using DHParser
    is by specifying the grammar in EBNF_. Here it is described how grammars
    are specified in EBNF_ and how parsers can be auto-generated from these
    grammars and how they are used to parse text.
 
-2. `syntaxtree` - Syntax-trees are the central data-structure of any
+:py:mod:`syntaxtree` - Syntax-trees are the central data-structure of any
    parsing system. The description to this modules explains how syntax-trees
    are represented within DHParser, how they can be manipulated, queried
    and serialized or deserialized as XML, S-expressions or json.
 
-3. `transform` - It is not untypical for digital humanities applications
+:py:mod:`transform` - It is not untypical for digital humanities applications
    that document tress are transformed again and again to produce different
    representations of research data or various output forms. DHParser
    supplies the scaffolding for two different types of tree transformations,
@@ -42,18 +41,19 @@ reading-order is recommended to understand DHParser:
    specified transformation is the ``EBNF_AST_transformation_table`` within
    DHParser's ebnf-module.)
 
-4. `compile` - The compile-module offers an object-oriented scaffolding
+:py:mod:`compile` - The compile-module offers an object-oriented scaffolding
    for the `visitor pattern`_ that is more suitable for complex
    transformations that make heavy use of algorithms as well as
    transformations from trees to non-tree objects like program code.
-   (An example for the latter kind of transformation is the ``EBNFCompiler``-class of DHParser's ebnf-module.)
+   (An example for the latter kind of transformation is the ``EBNFCompiler``-class
+   of DHParser's ebnf-module.)
 
 With the documentation of these four modules you should have enough
 knowledge to realize projects that follow the workflow described
-in the `Step by Step Guide`_. In most cases there will be no need to
+in the :doc:`StepByStepGuide`. In most cases there will be no need to
 interact with the other modules directly.
 
-5. `parse` - contains the parsing algorithms and the
+:py:mod:`parse` - contains the parsing algorithms and the
    Python-Interface for defining parsers. DHParser features a packrat-parser
    for parsing-expression-grammars with full left-recursion support as well
    configurable error catching an continuation after error. The
@@ -61,44 +61,44 @@ interact with the other modules directly.
    without the need to compile an EBNF-grammar first. This is an alternative
    approach to defining grammars similar to that of pyparsing_.
 
-6. `dsl` - contains high-level functions for compiling
+:py:mod:`dsl` - contains high-level functions for compiling
    ebnf-grammars and domain specific languages "on the fly".
 
-7. `preprocess` - provides support for DSL-preprocessors as well as source
+:py:mod:`preprocess` - provides support for DSL-preprocessors as well as source
    mapping of (error-)locations from the preprocessed document to the original
    document(s). Preprocessors are a practical means for adding features to
    a DSL which are difficult or impossible to define with context-free-grammars
    in EBNF-notation, like for example scoping based on indentation (as used
    by Python) or chaining of source-texts via an "include"-directive.
 
-8. `error` - defines the ``Error``-class, the objects of which describe
+:py:mod:`error` - defines the ``Error``-class, the objects of which describe
    errors in the source document. Errors are defined by - at least - an
    error code (indicating at the same time the level of severity), a human
    readable error message and a position in the source text.
 
-9. `testing` - provides functions for unit-testing of grammars. Usually,
+:py:mod:`testing` - provides functions for unit-testing of grammars. Usually,
    developers will not need to interact with this module directly, but rely on
    the unit-testing script generated by the "dhparser.py" command-line tool.
 
-10. `trace` - Apart from unit-testing DHParser offers "post-mortem"
+:py:mod:`trace` - Apart from unit-testing DHParser offers "post-mortem"
     debugging of the parsing process itself - as described in the
-    `Step by Step Guide`_. This is helpful to figure out why a parser went
+    :doc:`StepByStepGuide`. This is helpful to figure out why a parser went
     wrong. Again, there is little need to interact with this module directly,
     as it functionality is turned on by setting the configuration variables
     ``history_tracking`` and, for tracing continuation after errors,
     ``resume_notices``, which in turn can be triggered by calling the
     auto-generated -Parser.py-scripts with the parameter ``--debug``.
 
-11. `log` - logging facilities for DHParser as well as tracking of the
+:py:mod:`log` - logging facilities for DHParser as well as tracking of the
     parsing-history in connection with module `trace`.
 
-12. `configuration` - the central place for all configuration settings of
+:py:mod:`configuration` - the central place for all configuration settings of
     DHParser. Be sure to use the ``access``, ``set`` and  ``get`` functions
     to change presets and configuration values in order to make sure that
     changes to the configuration work when used in combination with
     multithreading or multiprocessing.
 
-13. `server` - In order to avoid startup times or to provide a language
+:py:mod:`server` - In order to avoid startup times or to provide a language
     sever for a domain-specific-language (DSL), DSL-parsers generated by
     DHParser can be run as a server. Module `server` provides the scaffolding
     for an asynchronous language server. The -Server.py"-script generated
@@ -106,10 +106,10 @@ interact with the other modules directly.
     compiling a DSL. Especially if used with the just-in-time compiler
     `pypy`_ using the -Server.py script allows for a significant speed-up.
 
-14. `lsp` - (as of now, this is just a stub!) provides data classes that
+:py:mod:`lsp` - (as of now, this is just a stub!) provides data classes that
     resemble the typescript-interfaces of the `language server protocol specification`_.
 
-15. `stringview` - defines a low level class that provides views on slices
+:py:mod:`stringview` - defines a low level class that provides views on slices
     of strings. It is used by the `parse`-module to avoid excessive copying
     of data when slicing strings. (Python always creates a copy of the
     data when slicing strings as a design decision.) If any, this module
@@ -120,10 +120,10 @@ interact with the other modules directly.
     The fastest way to run DHParser, however, is pypy_, which yields
     a 4-5x speed increase, albeit only in the long run.)
 
-16. `toolkit` - various little helper functions for DHParser. Usually,
+:py:mod:`toolkit` - various little helper functions for DHParser. Usually,
     there is no need to call any of these directly.
 
-17. `versionnumber.py` - this modules contains merely the version-number
+:py:mod:`versionnumber.py` - this modules contains merely the version-number
     of the DHParser-package.
 
 
@@ -136,11 +136,7 @@ interact with the other modules directly.
 .. _EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
 .. _`visitor pattern`: https://en.wikipedia.org/wiki/Visitor_pattern
 .. _pypy: https://www.pypy.org/
-.. _`Step by Step Guide`: StepByStepGuide.rst
 
-
-Main Modules Reference
-======================
 
 Module ``ebnf``
 ---------------

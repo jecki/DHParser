@@ -476,7 +476,7 @@ class LaTeXCompiler(Compiler):
         # initialize your variables here, not in the constructor!
         self.tree.inline_tags = set()  # {'paragraph'}
         self.tree.empty_tags = set()
-        self.tree.omit_tags = {'S', 'PARSEP'}
+        self.tree.string_tags = {'S', 'PARSEP'}
 
     def fallback_generic_command(self, node: Node) -> Node:
         # if not node.result:

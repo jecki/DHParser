@@ -30,7 +30,7 @@ Syntax trees are composed of Node-objects which are linked
 unidirectionally from parent to chilren. Nodes can contain either
 child-nodes, in which case they are informally called "branch-nodes" or
 test-strings, in which case they informally called "leaf nodes", but
-not both at the same time. (There are no mixed nodes as in XML!)
+not both at the same time. (There are is no mixed content as in XML!)
 
 In order to test whether a Node is leaf-node one can check for the
 absence of children::
@@ -190,16 +190,18 @@ Serializing and de-serializing syntax-trees
 
 Syntax trees can be serialized as S-expressions, XML, JSON and indented
 text. Module 'syntaxtree' also contains two simple parsers
-(`parse_sxpr()`, `parse_xml()`) to convert XML-snippets and
-S-expressions into trees composed of Node-objects. There is also a
-function to parse JSON (`parse_json_syntaxtree()`), but in contrast
+(:py:func:`~syntaxtree.parse_sxpr()`, :py:func:`~syntaxtree.parse_xml()`)
+to convert XML-snippets and S-expressions into trees composed of Node-objects.
+In addition to that there is a function to parse JSON
+(:py:func:`~syntaxtree.parse_json_syntaxtree()`), but in contrast
 to the former two functions it can only deserialize previously
 JSON-serialized trees and not any kind of JSON-file. There is no
 function to deserialize indented text.
 
 In order to make parameterizing serialization easier, the Node-class
-also defines a generic `serialize()`-method next to the more specialized
-`as_sxpr()`-, `as_json()`- and `as_xml()`-methods::
+also defines a generic py:meth:`~syntaxtree.serialize()`-method next to
+the more specialized :py:meth:`~syntaxtree.Node.as_sxpr`-,
+:py:meth:`~syntaxtree.Node.as_json`- and :py:meth:`~syntaxtree.Node.as_xml()`-methods::
 
     >>> s = '(sentence (word "This") (blank " ") (word "is") (blank " ") (phrase (word "Buckingham") (blank " ") (word "Palace")))'
     >>> sentence = parse_sxpr(s)
@@ -216,6 +218,87 @@ also defines a generic `serialize()`-method next to the more specialized
     >>> sxpr = sentence.serialize(how='sxpr')
     >>> round_trip = parse_sxpr(sxpr)
     >>> assert sentence.equals(round_trip)
+
+When serializing as XML, there will be no mixed-content and, likewise,
+no empty tags per default, because these do not exist in
+DHParser's data model::
+
+    >>> print(sentence.as_xml())
+    <sentence>
+      <word>This</word>
+      <blank> </blank>
+      <word>is</word>
+      <blank> </blank>
+      <phrase>
+        <word>Buckingham</word>
+        <blank> </blank>
+        <word>Palace</word>
+      </phrase>
+    </sentence>
+
+However, mixed-content can be simulated with `string_tags`-parameter of the
+:py:meth:`~syntaxtree.Node.as_xml`-method.::
+
+    >>> print(sentence.as_xml(inline_tags={'sentence'}, string_tags={'word', 'blank'}))
+    <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
+
+The `inline_tags`-parameter that all listed tags and contained tags will be
+printed on a single line. This is helpful when opening the XML-serialization in
+an internet-browser in order to avoid spurios blanks when a linebreak occurs
+in the HTML/XML-source. Finally, empty tags that do not have a closing tag
+(e.g. <br />) can be declared as such with the `empty_tags`-parameter.
+
+Note that using `string_tags` can lead to a loss of information. A loss of
+information is inevitable if, like in the example above, more than one
+tag is listed in the `string_tags`-set passed to the
+:py:meth:`~syntaxtree.Node.as_xml`-method. Deserializing the XML-string
+yields::
+
+    >>> tree = parse_xml('<sentence>This is <phrase>Buckingham Palace</phrase></sentence>',
+    ...                  string_tag='MIXED')
+    >>> print(tree.serialize(how='indented'))
+    sentence
+      MIXED "This is "
+      phrase "Buckingham Palace"
+
+
+Using XML-Tools with DHParser
+-----------------------------
+
+Although DHParser offers rich support for tree-transformation, he
+whish may arise to use standard XML-tools for tree-transformation
+as an alternative or supplement to the tools DHParser offers. One
+way to do so, would be to serialize the tree of
+:py:class:`~snytaxtree.Node`-objects, then use the XML-tools and,
+possibly, to deserialize the transformed XML again.
+
+A more efficient, however, is to utilize any of the various
+Python-libraries for XML. In order to make this as easy as possible
+trees of :py:class:`~snytaxtree.Node`-objects can be converted to
+`ElementTree <https://docs.python.org/3/library/xml.etree.elementtree.html>`_-objects 
+either from the python standard library
+or from the `lxml <https://lxml.de/>`_-library
+
+    >>> import xml.etree.ElementTree as ET
+    >>> et = sentence.as_etree(ET)
+    >>> ET.dump(et)
+    <sentence><word>This</word><blank> </blank><word>is</word><blank> </blank><phrase><word>Buckingham</word><blank> </blank><word>Palace</word></phrase></sentence>
+    >>> tree = Node.from_etree(et)
+    >>> print(tree.equals(sentence))
+    True
+
+The first parameter of :py:meth:`~syntaxtree.Node.as_etree`
+is the ElementTree-library to be used. If omitted, the
+standard-library-ElementTree is used.
+
+Like the :py:meth:`~syntaxtree.Node.as_xml`-method, the
+:py:meth:`~syntaxtree.Node.as_etree` and
+:py:meth:`~syntaxtree.Node.from_etree` can be parameterized
+in order to support mixed-content and empty-tags::
+
+    >>> et = sentence.as_etree(ET, string_tags={'word', 'blank'})
+    >>> ET.dump(et)
+    <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
 
 
 Navigating and searching nodes and tree-contexts
@@ -899,7 +982,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     There are three different kinds of nodes:
 
     1. Branch nodes the have children, but no string content. Other
-       than in XML there are no mixed nodes that contain strings as
+       than in XML there are no mixed-content nodes that contain strings as
        well other tags. This constraint simplifies tree-processing
        considerably.
 
@@ -908,7 +991,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
        dropping the tag name again when serializing to XML. Since
        this is easily done, there is not serious restriction involved
        when not allowing mixed-content nodes. See `Node.as_xml()`
-       (parameter `omit_tags`) as `parse_xml`.
+       (parameter `string_tags`) as `parse_xml`.
 
     2. Leaf nodes that do not have children but only string content.
 
@@ -1323,7 +1406,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             assert len(attr_dict) == 1, "Node.with_attr() must not be called with more than one " \
                 "non-keyword parameter."
             dictionary = attr_dict[0]
-            # # commented out, because otherwise lxml fails
+            # # commented out, because otherwise lxml-conversion fails
             # assert isinstance(dictionary, dict), "The non-keyword parameter passed to " \
             #     "Node.with_attr() must be of type dict, not %s." % str(type(dictionary))
             # assert all(isinstance(a, str) and isinstance(v, str) for a, v in attr_dict.items())
@@ -1965,7 +2048,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_xml(self, src: str = None,
                indentation: int = 2,
                inline_tags: Set[str] = set(),
-               omit_tags: Set[str] = set(),
+               string_tags: Set[str] = set(),
                empty_tags: Set[str] = set()) -> str:
         """Serializes the tree of nodes as XML.
 
@@ -1974,7 +2057,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param indentation: The number of whitespaces for indentation
         :param inline_tags:  A set of tag names, the content of which will always be
                 written on a single line, unless it contains explicit line feeds (`\\n`).
-        :param omit_tags: A set of tags from which only the content will be printed, but
+        :param string_tags: A set of tags from which only the content will be printed, but
                 neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,
                 which otherwise is not supported by the Node object, because it
@@ -2004,7 +2087,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             nonlocal attr_filter
-            if node.tag_name in omit_tags and not node.has_attr():
+            if node.tag_name in string_tags and not node.has_attr():
                 return ''
             txt = ['<', xml_tag_name(node.tag_name)]
             if node.has_attr():
@@ -2028,7 +2111,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
-            if node.tag_name in empty_tags or (node.tag_name in omit_tags and not node.has_attr()):
+            if node.tag_name in empty_tags or (node.tag_name in string_tags and not node.has_attr()):
                 return ''
             return '</' + xml_tag_name(node.tag_name) + '>'
 
@@ -2050,7 +2133,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         line_breaks = linebreaks(src) if src else []
         return '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
-            allow_ommissions=bool(omit_tags)))
+            allow_ommissions=bool(string_tags)))
 
     def as_tree(self) -> str:
         """Serialize as a simple indented text-tree."""
@@ -2162,12 +2245,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, ET=None, text_tags: Set[str] = {":Text"}, empty_tags: Set[str] = set()):
+    def as_etree(self, ET=None, string_tags: Set[str] = {":Text"}, empty_tags: Set[str] = set()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
         :param ET: The ElementTree-library to be used. If None, the STL ElemtentTree
             will be used.
-        :param text_tags: A set of tags the content of which will be written without
+        :param string_tags: A set of tags the content of which will be written without
             tag-name into the mixed content of the parent.
         :param empty_tags: A set of tags that will be considered empty tags like "<br/>".
             No Node with any of these tags must contain any content.
@@ -2184,19 +2267,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # element.extend([child.as_etree(text_tags, empty_tags) for child in self.children])
             children = self.children
             i = 0;  L = len(children);  text = []
-            while i < L and children[i].tag_name in text_tags:
+            while i < L and children[i].tag_name in string_tags:
                 assert not children[i].children
                 text.append(children[i].content)
                 i += 1
             if text:  element.text = ''.join(text)
             lest_element = None
             while i < L:
-                while i < L and children[i].tag_name not in text_tags:
-                    last_element = children[i].as_etree(ET, text_tags, empty_tags)
+                while i < L and children[i].tag_name not in string_tags:
+                    last_element = children[i].as_etree(ET, string_tags, empty_tags)
                     element.append(last_element)
                     i += 1
                 text = []
-                while i < L and children[i].tag_name in text_tags:
+                while i < L and children[i].tag_name in string_tags:
                     assert not children[i].children
                     text.append(children[i].content)
                     i += 1
@@ -2211,20 +2294,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return element
 
     @staticmethod
-    def from_etree(et, text_tag: str = ':Text') -> 'Node':
+    def from_etree(et, string_tag: str = ':Text') -> 'Node':
         """Converts a standard-library- or lxml-ElementTree to a tree of nodes.
+
         :param et:  the root element-object of the ElementTree
-        :param text_tag: A tag-name that will be used for the strings
-            occuring in mixed content.
+        :param string_tag: A tag-name that will be used for the strings
+            occurring in mixed content.
         :returns: a tree of nodes.
         """
         sub_elements = et.findall('*')
         if sub_elements:
-            children = [Node(text_tag, et.text)] if et.text else []
+            children = [Node(string_tag, et.text)] if et.text else []
             for el in sub_elements:
-                children.append(Node.from_etree(el, text_tag))
+                children.append(Node.from_etree(el, string_tag))
                 if el.tail:
-                    children.append(Node(text_tag, el.tail))
+                    children.append(Node(string_tag, el.tail))
             node = Node(restore_tag_name(et.tag), tuple(children))
         else:
             node = Node(restore_tag_name(et.tag), et.text or '').with_attr(et.attrib)
@@ -2761,7 +2845,7 @@ class RootNode(Node):
     :ivar lbreaks: A list of indices of all linebreaks in the source.
 
     :ivar inline_tags: see `Node.as_xml()` for an explanation.
-    :ivar omit_tags: see `Node.as_xml()` for an explanation.
+    :ivar string_tags: see `Node.as_xml()` for an explanation.
     :ivar empty_tags: see `Node.as_xml()` for an explanation.
     """
 
@@ -2782,7 +2866,7 @@ class RootNode(Node):
         self.lbreaks = linebreaks(source)  # List[int]
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]
-        self.omit_tags = set()    # type: Set[str]
+        self.string_tags = set()    # type: Set[str]
         self.empty_tags = set()   # type: Set[str]
         if node is not None:
             self.swallow(node, source, source_mapping)
@@ -2817,7 +2901,7 @@ class RootNode(Node):
                                      for pos, s in self.error_positions.items()}
         duplicate.error_flag = self.error_flag
         duplicate.inline_tags = self.inline_tags
-        duplicate.omit_tags = self.omit_tags
+        duplicate.string_tags = self.string_tags
         duplicate.empty_tags = self.empty_tags
         duplicate.tag_name = self.tag_name
         return duplicate
@@ -3004,7 +3088,7 @@ class RootNode(Node):
         customizations.
         """
         return self.as_xml(inline_tags=self.inline_tags,
-                           omit_tags=self.omit_tags,
+                           string_tags=self.string_tags,
                            empty_tags=self.empty_tags)
 
 
@@ -3151,12 +3235,15 @@ RX_WHITESPACE_TAIL = re.compile(r'\s*$')
 
 
 def parse_xml(xml: Union[str, StringView],
+              string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
               out_empty_tags: Set[str] = set()) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
 
     :param xml: The XML-string to be parsed into a tree of Nodes
+    :param string_tag: A tag-name that will be used for
+        strings inside mixed-content-tags.
     :param ignore_pos: if True, '_pos'-attributes will be understood as
         normal XML-attributes. Otherwise '_pos' will be understood as a
         special attribute, the value of which will be written to `node._pos`
@@ -3246,7 +3333,7 @@ def parse_xml(xml: Union[str, StringView],
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
-                    res.append(Node(TOKEN_PTYPE, leaf))
+                    res.append(Node(string_tag, leaf))
                 if s[:1] == "<":
                     if s[:2] in ("<?", "<!"):
                         s = skip_special_tag(s)
@@ -3255,7 +3342,7 @@ def parse_xml(xml: Union[str, StringView],
                         res.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname, tagname + ' != ' + closing_tagname
-        if len(res) == 1 and res[0].tag_name == TOKEN_PTYPE:
+        if len(res) == 1 and res[0].tag_name == string_tag:
             result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
         else:
             result = tuple(res)

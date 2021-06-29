@@ -1,12 +1,12 @@
-DHParser's Step by Step Guide
-*****************************
+Step by Step Guide
+******************
 
-This step by step guide goes through the whole process of desining and testing
-a domain specific notation from the very start. (The terms "domain specific
-notation" and "domain specific language" are used interchangeably in the
-following. Both will be abbreviated by "DSL", however.) We will design a simple
-domain specific notation for poems as a teaching example. On the way we will
-learn:
+This step by step guide goes through the whole process of designing and testing
+a domain specific notation with the DHParser-package from the very start.
+(The terms "domain specific notation" and "domain specific language" are used
+interchangeably in the following. Both will be abbreviated by "DSL", however.)
+We will design a simple domain specific notation for poems as a teaching example.
+On the way we will learn:
 
 1. how to setup a new DHParser project
 

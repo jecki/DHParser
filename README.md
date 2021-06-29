@@ -11,6 +11,8 @@ Features
 * *Based on parsings expression grammars; handles all context-free
   grammers including left-recursive grammars*
 
+* full unicode support
+
 * *Unit testing framework and post-mortem debugger for grammars*
 
 * *Customizable error reporting*
@@ -74,6 +76,26 @@ Or, serialize as XML:
     </key_store>
 
 
+Installation
+------------
+
+You can install DHParser from the Python package index (https://pypi.org)*:
+
+    python -m pip install --user DHParser
+
+However, as the software is still in an early beta stage, it is
+recommended that you pull it directly from gitlab (see below).
+
+
+Getting Started
+---------------
+
+See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md) for the
+motivation and an overview how DHParser works or jump right into the
+[Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
+learn how to setup and use DHParser.
+
+
 License
 -------
 
@@ -92,33 +114,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-
-Author
-------
-
-Author: Eckhart Arnold, Bavarian Academy of Sciences
-Email:  arnold@badw.de
-
-
-Installation
-------------
-
-You can install DHParser from the Python package index (https://pypi.org)*:
-
-    python -m pip install --user --upgrade DHParser
-
-However, as the software is still in an early beta stage, it is
-recommended that you pull it directly from gitlab (see below).
-
-
-Getting Started
----------------
-
-See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md) for the
-motivation and an overview how DHParser works or jump right into the
-[Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
-learn how to setup and use DHParser.
 
 
 Optional Post-Installaton
@@ -169,13 +164,6 @@ may occasionally lag behind a few commits.
 
 Please contact me, if you are intested in contributing to the
 development or just using DHParser.
-
-
-Disclaimer
-----------
-
-DHParser is still in development stage. While it is already quite mature,
-there may still be changes to the API.
 
 
 Purpose
@@ -255,6 +243,13 @@ compiles the EBNF-Grammer in `examples/EBNF/EBNF.ebnf` and outputs the
 Python-based parser class representing that grammar. The concrete and
 abstract syntax tree as well as a full and abbreviated log of the
 parsing process will be stored in a sub-directory named "LOG".
+
+
+Author
+------
+
+Author: Eckhart Arnold, Bavarian Academy of Sciences
+Email:  arnold@badw.de
 
 
 References and Acknowledgement

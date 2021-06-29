@@ -1,6 +1,8 @@
 DHParser Version 0.9.6
 ......................
 
+- Documentation extended
+- Better support for error-reporting from preprocessors
 
 
 DHParser Version 0.9.5 (1.6.2020)

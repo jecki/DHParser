@@ -105,7 +105,7 @@ class TestParseXML:
         assert flatten_xml(tree.as_xml()) == \
                '<a><ANONYMOUS_Text__>  </ANONYMOUS_Text__><b>beta</b>' \
                '<ANONYMOUS_Text__>  </ANONYMOUS_Text__></a>'
-        assert tree.as_xml(inline_tags={'a'}, omit_tags={':Text'}) == '<a>  <b>beta</b>  </a>'
+        assert tree.as_xml(inline_tags={'a'}, string_tags={':Text'}) == '<a>  <b>beta</b>  </a>'
         tree = parse_xml(' <a>\n  <b>beta</b>\n</a> ')
         assert tree.as_xml(inline_tags={'a'}) == '<a><b>beta</b></a>'
 
@@ -707,10 +707,10 @@ class TestSerialization:
     def test_xml_tag_omission(self):
         tree = parse_sxpr('(XML (T "Hallo") (L " ") (T "Welt!"))')
         all_tags = {'XML', 'T', 'L'}
-        assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == "Hallo Welt!"
+        assert tree.as_xml(inline_tags=all_tags, string_tags=all_tags) == "Hallo Welt!"
         # tags with attributes will never be ommitted
         tree.pick_child('T').attr['class'] = "kursiv"
-        assert tree.as_xml(inline_tags=all_tags, omit_tags=all_tags) == \
+        assert tree.as_xml(inline_tags=all_tags, string_tags=all_tags) == \
                '<T class="kursiv">Hallo</T> Welt!'
 
 

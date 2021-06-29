@@ -25,7 +25,7 @@ Specifying Grammers with EBNF
 -----------------------------
 
 With DHParser, Grammars can be specified either directly in Python-code
-(see :py:mod:`DHParser.parse`) or in one of several EBNF-dialects. (Yes,
+(see :py:mod:`parse`) or in one of several EBNF-dialects. (Yes,
 DHParser supports several different variants of EBNF! This makes it easy
 to crate a parser directly from Grammars found in external sources.)
 "EBNF" stands for the "Extended-Backus-Naur-Form" which is a common
@@ -76,7 +76,7 @@ grouping                  (...)               (...)
 ========================  ==================  ================
 
 "insignificant whitespace" is a speciality of DHParser. Denoting
-insignificant whitespace with a particular sign `~` allows to eliminate
+insignificant whitespace with a particular sign ``~`` allows to eliminate
 it already during the parsing process without burdening later
 syntax-tree-processing stages with this common task. DHParser offers
 several more facilities to restrain the verbosity of the concrete
@@ -107,8 +107,8 @@ The structure of a JSON file can easily be described in EBNF::
 This is a rather common EBNF-grammar. A few peculiarities are noteworthy, though:
 First of all you might notice that some components of the grammar
 (or "prduction rules" as they are commonly called) have names with a leading
-underscore "_". It is a convention to mark those elements, in which we are on
-interested on their own account, with an underscore "_". When moving from the
+underscore ``_``. It is a convention to mark those elements, in which we are on
+interested on their own account, with an underscore ``_``. When moving from the
 concrete syntax-tree to a more abstract syntax-tree, these elements could be
 substituted by their content, to simplify the tree.
 
@@ -116,22 +116,22 @@ Secondly, some production rules carry a name written in captial letters. This is
 a convention to mark those symbols which with other parser-generators would
 represent tokens delivered by a lexical scanner. DHParser is a "scanner-less"
 parser, which means that the breaking down of the string into meaningful tokens
-is done in place with regular expressions (like in the definition of "_EOF")
-or simple combinations of regular expressions (see the definition of "_INT" above).
+is done in place with regular expressions (like in the definition of ``_EOF``)
+or simple combinations of regular expressions (see the definition of ``_INT`` above).
 Their is no sharp distinction between tokens and other symbols in DHParser,
 but we keep it as a loose convention. Regular expressions are enclosed in forward
 slashes and follow the standard syntax of Perl-style regular expression that is
 also used by the "re"-module of the Python standard library. (Don't worry about
-the number of backslashes in the line defining "_CHARS" for now!)
+the number of backslashes in the line defining ``_CHARS`` for now!)
 
 Finally, it is another helpful conention to indent the defintions of symbols
 that have only been introduced to simplify an otherwise uneccessarily
-complicated definition (e.g. the definition of "number", above) or to make
-it more understandable by giving names to its componentns (like "_EOF").
+complicated definition (e.g. the definition of ``number``, above) or to make
+it more understandable by giving names to its componentns (like ``_EOF``).
 
 Let's try this grammar on our test-string.  In order to compile
 this grammar into executable Python-code, we use the high-level-function
-:py:func:`create_parser()` from :py:mod:`DHParser.dsl`-module.
+:py:func:`~dsl.create_parser` from the :py:mod:`dsl`-module.
 
     >>> from DHParser.dsl import create_parser
     >>> # from DHParser.dsl import compileEBNF
@@ -175,16 +175,18 @@ captures the first json-array within the syntax-tree::
 The nodes of the syntax-tree carry the names of the production rules
 by which they have been generated. Nodes, that have been created by
 components of a prduction receive the name of of the parser-type
-that has created the node (see :py:mod:`DHParser.parse`) prefixed
+that has created the node (see :py:mod:`parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
 because they lack the name of a proper grammatical component.
+
+.. _simplifying_syntax_trees:
 
 Simplifying Syntax-Trees while Parsing
 --------------------------------------
 
 Usually, anonymous nodes are what you want to get rid of in the course
 of transforming the concrete syntax-tree into an abstract syntax-tree.
-(See :py:mod:`DHParser.transform`). DHParser already eliminates per
+(See :py:mod:`transform`). DHParser already eliminates per
 default all anonymous nodes that are not leaf-nodes by replacing them
 with their children during parsing. Anonymous leaf-nodes will be
 replaced by their content, if they are a single child of some parent,
@@ -230,7 +232,7 @@ construct of the EBNF-grammar would leave a node in the syntax-tree::
 
 This can be helpful for understanding how parsing that is directed by
 an EBNF-grammar works (next to looking at the logs of the complete
-parsing-process, see :py:mod:`DHParser.trace`), but other than that it
+parsing-process, see :py:mod:`trace`), but other than that it
 is advisable to streamline the syntax-tree as early on as possible,
 because the processing time of all subsequent tree-processing stages
 increases with the number of nodes in the tree.
@@ -241,7 +243,7 @@ on by default, because they allow to drop content or to remove named
 nodes from the tree; but they must be turned on by "directives" that
 are listed at the top of an EBNF-grammar and that guide the
 parser-generation process. DHParser-directives always start with an
-`@`-sign. For example, the `@drop`-directive advises the parser to
+``@``-sign. For example, the ``@drop``-directive advises the parser to
 drop certain nodes entirely, including their content. In the following
 example, the parser is directed to drop all insignificant whitespace::
 
@@ -251,7 +253,7 @@ Directives look similar to productions, only that on the right hand
 side of the equal sign follows a list of parameters. In the case
 of the drop-directive these can be either names of non-anomymous
 nodes that shall be dropped or one of four particular classes of
-anonymous nodes (`strings`, `backticked`, `regexp`, `whitespace`) that
+anonymous nodes (``strings``, ``backticked``, ``regexp``, ``whitespace``) that
 will be dropped.
 
 Another useful directive advises the parser to treat named nodes as
@@ -312,7 +314,7 @@ properly.
 The @drop-directive allows to drop all unnamed strings (i.e. strings
 that are not directly assigned to a symbol) and backticked strings (for
 the difference between strings and backticked strings, see below) and
-regular expressions. However, using `@drop = whitespace, strings, backticked`
+regular expressions. However, using ``@drop = whitespace, strings, backticked``
 would also drop those parts captured as string that contain data::
 
     >>> refined_grammar = '@drop = whitespace, strings, backticked \\n' \
@@ -379,17 +381,17 @@ are three ways to get around this problem:
    to the next tree-processing stage which, if you follow DHParser's suggested
    usage pattern, is the abstract-syntax-tree-transformation proper
    and which allows for a much more fine-grained specification of
-   transformation rules. See :py:mod:`DHParser.transformation`
+   transformation rules. See :py:mod:`transform`.
 
 To round this section up, we present the full grammar for a streamlined
 JSON-Parser according to the first solution-strategy. Observe, that the
 values of "bool" and "null" are now defined with regular expressions
 instead of string-literals, because the latter would be dropped because
-of the `@drop = ... strings, ...`-directive, leaving an empty named node
+of the ``@drop = ... strings, ...``-directive, leaving an empty named node
 without a value, wheneever a bool value or null occurs in the input::
 
     >>> json_gr = '''
-    ...      @disposable = /_\\\\w+/
+    ...     @disposable = /_\\\\w+/
     ...     @drop      = whitespace, strings, backticked, _EOF
     ...     json       = ~ _element _EOF
     ...       _EOF     = /$/
@@ -444,9 +446,9 @@ further by merging adjacent anonymous leaf-nodes::
 Merging adjacent anonymous leaf-nodes takes place after the @drop-directive
 comes into effect. It should be observed that merging only produces the desired
 result, if any delimiters have been dropped previously, because otherwise
-delimiters would be merged with content. Therefore, the `@reduction = merge`-
-directive should at best only be applied in conjunction with the `@drop` and
-`@dispose`-directives.
+delimiters would be merged with content. Therefore, the ``@reduction = merge`-
+directive should at best only be applied in conjunction with the ``@drop`` and
+``@disposable``-directives.
 
 Applying any of the here described tree-reduction (or "simplification" for
 that matter) requires a bit of careful planning concerning which nodes
@@ -503,7 +505,7 @@ particular symbol for each kind of whitespace. Those kinds of
 whitespace that are insignficant, i.e. that do not need to
 appear in the data, should be dropped from the syntax-tree.
 With DHParser this can be done already while parsing, using
-the `@disposable` and `@drop`-directives described earlier.
+the ``@disposable`` and ``@drop``-directives described earlier.
 
 But let's first look at an example which only includes significant
 whitespace. The following parser parses sequences of paragraphs which
@@ -530,7 +532,7 @@ of words::
     ...     PBR            = /[ \\\\t]*\\\\n[ \\\\t]*\\\\n[ \\\\t]*/
     ...     S              = /(?=[ \\\\n\\\\t])[ \\\\t]*(?:\\\\n[ \\\\t]*)?(?!\\\\n)/ '''
 
-Here, we have two types of significant whitespace `PBR` ("paragraph-break") and `S`
+Here, we have two types of significant whitespace ``PBR`` ("paragraph-break") and ``S``
 ("space"). Both types allow for a certain amount of flexibility, so that two
 whitespaces of the same type do not need to have exactly the same content, but
 we could always normalize these whitespaces in a subsequent transformation step.
@@ -627,7 +629,7 @@ and, optionally, a comment".
 Let's try this with our prose-text-grammar. In order to do so, we have
 to define a symbols for comments, a symbol for pure whitespace, and,
 finally, a symbol for whitespace with optional comment. Since, in
-our grammar, we actually have two kinds of whitespace, `S` and `PBR`,
+our grammar, we actually have two kinds of whitespace, ``S`` and ``PBR``,
 we'll have to redefine both of them. As delimiters for comments, we
 use curly braces::
 
@@ -663,8 +665,8 @@ we have succeeded::
       (word "work"))
 
 We will not worry about the more sub-structure of the S-nodes right now. If
-we are not interested in the comments, we could use the `@disposable`,
-`@drop` and `@reduction = merge`-directives to simplify these at the
+we are not interested in the comments, we could use the ``@disposable``,
+``@drop`` and ``@reduction = merge``-directives to simplify these at the
 parsing stage. Or, we could extract the comments and normalize the whitespace
 at a later tree-processing stage. For now, let's just check wehter our
 comments work as expected::
@@ -736,10 +738,10 @@ whitesapce and comments, which can make working with these
 easier in some cases.
 
 First of all, DHParser has a special dedicated token for
-insignificant whitespace which is the tilde `~`-character.
+insignificant whitespace which is the tilde ``~``-character.
 We have seen this earlier in the definition of the json-Grammar.
 
-The `~` whitespace marker differs from the usual pattern for
+The ``~``-whitespace-marker differs from the usual pattern for
 defining whitespace in that it is implicitly optional, or what
 amounts to the same, it matches the empty string. Normally,
 it is to be considered bad practice to define a symbol as
@@ -755,10 +757,10 @@ it with square brackets.
 
 The default regular expression for the tilde-whitespace captures
 arbitraily many spaces and tabs and at most one linefeed, but
-not an empty line (`[ \t]*(?:\n[ \t]*)?(?!\n)`), as this is
+not an empty line (``[ \t]*(?:\n[ \t]*)?(?!\n)``), as this is
 the most convenient way to define whitespace for text-data.
 However, the tilde whitespace can also be definied with any
-other regular expression with the `@whitespace`-directive.
+other regular expression with the ``@whitespace``-directive.
 
 Let's go back to our JSON-grammar and define the optional
 insignificant whitespace marked by the tilde-character in such a
@@ -782,9 +784,9 @@ also matches the empty string! There is no need to worry that the syntax tree
 get's cluttered by empty whitespace-nodes, because tilde-whitespace always
 yeidls anonymous nodes and DHParser drops empty anonymous nodes right away.
 
-Comments can be defined using the `@comment`-directive. DHParser automatically
+Comments can be defined using the ``@comment``-directive. DHParser automatically
 intermingles comments and whitespace so that where-ever tilde-whitespace is
-allowed, a comment defined by the `@comment`-directive is also allowed:
+allowed, a comment defined by the ``@comment``-directive is also allowed:
 
     >>> json_gr = '@comment = /#[^\\\\n]*(?:\\\\n|$)/ \\n' + json_gr
     >>> json_parser = create_parser(json_gr, "JSON")
@@ -808,7 +810,7 @@ allowed, a comment defined by the `@comment`-directive is also allowed:
           (string "bool")
           (bool "false"))))
 
-Since the json-grammar still contains the `@drop = whitespace, ...`-
+Since the json-grammar still contains the ``@drop = whitespace, ...``-
 directive from earlier on (next to other tree-reductions), the comments
 have been nicely dropped along with the tilde-whitespace.
 
@@ -829,7 +831,7 @@ However, using tilde-whitespace has yet one more benefit: With the
 tilde-whitespace, cluttering of the grammar with whitespace-markers
 can be avoid, by adding implicit whitespace adjacent to string-literals.
 Remember the definition of the JSON-Grammar earlier. If you look at
-a definition like: `object = "{" ~ member ( "," ~ §member )* "}" ~`,
+a definition like: ``object = "{" ~ member ( "," ~ §member )* "}" ~``,
 you'll notice that there are three whitespace markers, one next to
 each delimiter. Naturally so, because one usually wants to allow users
 of a domain specific language to put whitespace around delimiters.
@@ -848,13 +850,13 @@ element.
 
 In order to reduce cluttering the grammar with tile-signs, DHParser
 allows to turn on implicit tilde-whitespace adjacent to any
-string literal with the diretive `@ literalws = right` or
-`@ literalws = left`. As the argument of the directive suggests,
+string literal with the diretive ``@ literalws = right`` or
+``@ literalws = left``. As the argument of the directive suggests,
 whitespace is either "eaten" at the right hand side or the left
 hand side of the literal. String literals can either be
 enclose in double quotes "..." or single quotes '...'. Both
 kinds of literals will have implicit whitespace, if the
-`@literalws`-directive is used.
+``@literalws``-directive is used.
 
 (Don't confuse implicit whitespace
 with insignificant whitespace: Insignificnat whitespace is whitespace
@@ -865,7 +867,7 @@ whitespace denoted by the tilde-character to be declared as
 "implicit".)
 
 If left-adjacent whitespace is declared as implicit with the
-`@literalws`-directive, the expression::
+``@literalws``-directive, the expression::
 
     object     = "{" ~ member ( "," ~ §member )* "}" ~
 
@@ -917,11 +919,11 @@ The compliete json-grammar now looks like this::
     >>> syntax_tree_ = json_parser(testdata)
     >>> assert syntax_tree_.equals(syntax_tree)
 
-The whitespace defined by the `@whitespace`-directive can be access from
-within the grammar via the name `WHITESPACE__`. Other than the tilde-sign
+The whitespace defined by the ``@whitespace``-directive can be access from
+within the grammar via the name ``WHITESPACE__``. Other than the tilde-sign
 this name refers to the pure whitespace that is not intermingles with
-comments. Similarly, comments defined by the `@comment`-directive can
-be accessed via the symbol `COMMENT__`.
+comments. Similarly, comments defined by the ``@comment``-directive can
+be accessed via the symbol ``COMMENT__``.
 
 Lookahead and Lookbehind
 ------------------------
@@ -952,12 +954,12 @@ Parsing our example with the generated parser yields an error, however::
     >>> for e in syntax_tree.errors_sorted:  print(e)
     3:11: Error (1040): Parser "word->/[a-z]+|[A-Z][a-z]*/" did not match: »:= featherless biped«
 
-The reason for this error is that the parser `definiens` captures as many
+The reason for this error is that the parser ``definiens`` captures as many
 words as occur in a sequence, including the definiendum of the next definition
 which is the word "human". But then the next definition does not find it
 definiendum, any more, because it has already been captured. (All this may not
 easily become clear from the error message itself, but can easily be found
-out by using the post-mortem debugger of module :py:mode`trace`.)
+out by using the post-mortem debugger of module :py:mod:`trace`.)
 
 An common tequnique to avoid this problem would be to introduce an
 end-of-statemenet, for example, a semicolon ";". A more elegant way to solve
@@ -975,12 +977,12 @@ negative look-ahead operator "!":
     A dog    is a carnivorous quadrupel that barks
     A human  is a featherless biped
 
-The statement `word !":="` is a squence of a `word` and a negative lookahead.
-This whole sequence only matches, if `word` matches and the negative looakahead
+The statement ``word !":="`` is a squence of a ``word`` and a negative lookahead.
+This whole sequence only matches, if ``word`` matches and the negative looakahead
 matches, which is only the case of the following text cannot be matched by ":=".
 
 We could have achieved the same effect with a positive lookahead by checking
-whether any of the possible follow-up-sqeuences of parser `definines` ensues::
+whether any of the possible follow-up-sqeuences of parser ``definines`` ensues::
 
     >>> def_DSL = def_DSL_first_try.replace('definiens   = word { word }',
     ...                                     'definiens   = word { word &(word|EOF) }')
@@ -1067,7 +1069,7 @@ grammar as follows::
     >>> print(str(syntax_tree.pick('enumeration')).strip())
     water beer juice
 
-The lookback operators are `<-&` for the positive lookback and `<-!` for the
+The lookback operators are ``<-&`` for the positive lookback and ``<-!`` for the
 negative lookback, each of which must be followed by a regular expression or a string.
 Of course, this example is rather wanton and the grammar can easily be rewritten
 without the lookback-operators.
@@ -1128,17 +1130,17 @@ at least when we keep in mind that the computer cannot guess where
 we would have placed the forgotton closing bracket. It can only
 report the point where the mistake becomes aparant.
 
-However, the reported fact that it was the sub-parser `*` of
+However, the reported fact that it was the sub-parser \`*\` of
 parser term that failed at this location does little to enlighten
 us with respect to the cause of the failure. The "farthest fail"-method
 as implemented by DHParser yields the
 first parser (of possibly several) that has been tried at the
 position where the farthest fail occurred. Thus, in this case,
-a failure of the parser capturing `*` is reporeted rather than
-of the parser expression->`+`. Changing this by reporting the
+a failure of the parser capturing \`*\` is reporeted rather than
+of the parser expression->\`+\`. Changing this by reporting the
 last parser or all parsers that failed at this location would
 do little to remedy this situation, however. In this example,
-it would just be as confusing to learn that expression->´+` failed
+it would just be as confusing to learn that expression->\`+\` failed
 at the end of the parsed string.
 
 Marking mandatory items with "§"
@@ -1189,7 +1191,7 @@ right hand side of a symbol-definition, where you'd like to use the
 §-marker at more than one place, you can, however, always split it into
 several expression by introducing new symbols. These symbols, if they
 serve no other purpose, can be marked as disposable with the
-`@ dispose`-directive (see the description above).
+``@ disposable``-directive (see :ref:`simplifying_syntax_trees`).
 
 The §-marker has proven to be a very simple means of pinpointing errors
 the DSL-code, and I recommend to use it from early on in the process of
@@ -1213,9 +1215,9 @@ parsers und will therefore not always be able to make much sense of
 an error-messages that report just these.
 
 In order to customize error messages, the symbol-related directive
-`@ SYMBOLNAME_error = CONDITION, ERROR_STRING` is used. The directive's
+``@ SYMBOLNAME_error = CONDITION, ERROR_STRING`` is used. The directive's
 name consists of the name of a symbol that contains a §-marker and the
-appendix `_error`. The directive always takes two arguments, separated
+appendix ``_error``. The directive always takes two arguments, separated
 as usual by a comma, of which the first is condition-expression and
 the second an error message. The condition can be used to make
 the choice of an error-message dependant on the text following the
@@ -1226,14 +1228,14 @@ position where the parser defined by the symbol failed to match and
 raised an error. Only if the condition matches, the error message
 given as the second argument will be emitted. Otherwise, the fallback
 error-expression described above ("... expected by parser ...") will
-be shown. The empty string `''` can be used as a fallback if the
+be shown. The empty string ``''`` can be used as a fallback if the
 customized message shall always be emitted, no matter what the
 following text looks like.
 
 The error string is a format string that may include any of the
-two arguments `{0}` or `{1}` where `{0}` will be replaced by
+two arguments ``{0}`` or ``{1}`` where ``{0}`` will be replaced by
 the name or string representation of the parser that was expected
-to match but didn't and `{1}` will be replaced by the first twenty
+to match but didn't and ``{1}`` will be replaced by the first twenty
 or so letters of the unmatched rest of the text. Here is a simple
 example that could be part of a JSON-parser that is intended to
 deliver understandable error-messages::
@@ -1279,7 +1281,7 @@ marks that terminate the string and which do not cause the
 parser to fail (but only to terminate to early).
 
 Also, it might be noticed that the errors are always caused
-by a failure to match the second `"`-sign, because the
+by a failure to match the second ``"``-sign, because the
 characters-parser also matches the empty string and thus
 never fails or raises any error. Nonetheless, the error
 can occur in the interior of the string and can - with
@@ -1369,7 +1371,7 @@ Like most techniques for fail-tolerant parsing, this one is not quite
 as easy to master in practice as it might look. Generally, adding
 a junction for erroneous code works best, when the passage that shall
 be by-passed is delineated by a easily recognizable follow-up strings.
-In this example the follow-up string would be the '"'. The method fails,
+In this example the follow-up string would be the ``"``-sign. The method fails,
 of course if the follow-up text is erroneous, too, or has even been
 forgotten. So, to be absolutely sure, one would have to consider
 different follow-up sequences, say empty lines, keywords that mark
@@ -1398,7 +1400,7 @@ answered:
 The location where parsing should be resumed must be specified by
 a regular expression or a list of regular expressions. The resumption
 location is the nearest match of any of these expressions that does
-not fall into a comment (as specified by the `@comment`-directive
+not fall into a comment (as specified by the ``@comment``-directive
 described above). More precisely it is the location directly after
 the match, because this allows to search for the reentry-location
 both by the text preceding this location and the text following
@@ -1407,8 +1409,8 @@ expression.
 
 The parser that resumes parsing depends on the directive that guides
 the search for the reentry-point. DHParser offers two different
-directives for this purpose, the `@..._skip`-directive and the
-`@..._resume`-directive. The placeholder ... stands for the name
+directives for this purpose, the ``@..._skip``-directive and the
+``@..._resume``-directive. The placeholder ... stands for the name
 of a parser that contains a §-marker.
 
 The skip-directive resumes parsing with the sequence-parser that
@@ -1440,7 +1442,7 @@ parser when an error was raised by the string-parser::
 
 After the error has occurred at the illegal escape-sequence, the
 skip-directive catches the error and skips to the location where the
-"-character lies just ahead and continues parsing with the string-parser.
+`"`-character lies just ahead and continues parsing with the string-parser.
 The skipped passage is stored in a ZOMBIE__-Node within the syntax-tree
 and parsing can continue through to the end of the text.
 
@@ -2559,6 +2561,12 @@ class EBNFCompiler(Compiler):
     """
     Generates a Parser from an abstract syntax tree of a grammar specified
     in EBNF-Notation.
+
+    Usually, this class will not be instantiated or instances of this
+    class be called directly. Rather high-level functions like
+    :py:func:`~dsl.create_parser` or :py:func:`~dsl.compile_EBNF`
+    will be used to generate callable :py:class:`~parse.Grammar`-objects
+    or Python-source-code from an EBNF-grammar.
 
     Instances of this class must be called with the root-node of the
     abstract syntax tree from an EBNF-specification of a formal language.

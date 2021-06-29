@@ -641,11 +641,11 @@ class Parser:
                 assert proxy.__self__ == self
             self._parse_proxy = cast(ParseFunc, proxy)
 
-    def name(self, pname: str) -> 'Parser':
+    def name(self, pname: str, disposable: bool = False) -> 'Parser':
         """Sets the parser name to `pname` and returns `self`."""
         self.pname = pname
         self.tag_name = pname or self.ptype
-        self.disposable = not self.pname
+        self.disposable = disposable
         return self
 
     @property
@@ -2037,18 +2037,21 @@ def DropRegExp(regexp) -> RegExp:
 def withWS(parser_factory, wsL='', wsR=r'\s*'):
     """Syntactic Sugar for 'Series(Whitespace(wsL), parser_factory(), Whitespace(wsR))'.
     """
+    parser = parser_factory()
     if wsL and isinstance(wsL, str):
         wsL = Whitespace(wsL)
     if wsR and isinstance(wsR, str):
         wsR = Whitespace(wsR)
     if wsL and wsR:
-        return Series(wsL, parser_factory(), wsR)
+        combined_parser = Series(wsL, parser, wsR)
     elif wsL:
-        return Series(wsL, parser_factory())
+        combined_parser = Series(wsL, parser)
     elif wsR:
-        return Series(parser_factory(), wsR)
+        combined_parser = Series(parser, wsR)
     else:
-        return parser_factory()
+        combined_parser = parser
+    return Drop(combined_parser) if parser.drop_content else combined_parser
+
 
 
 def RE(regexp, wsL='', wsR=r'\s*'):
@@ -2916,6 +2919,8 @@ class Series(MandatoryNary):
     # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
 
     def __add__(self, other: Parser) -> 'Series':
+        if self.pname or other.pname:
+            return Series(self, other)
         if not isinstance(self, Series):
             # for some reason cython calls __add__ instead of __radd__,
             # so we have to repeat the __radd__ code here...
@@ -2930,12 +2935,16 @@ class Series(MandatoryNary):
                       mandatory=combined_mandatory(self, other))
 
     def __radd__(self, other: Parser) -> 'Series':
+        if self.pname or other.pname:
+            return Series(other, self)
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Series(*(other_parsers + self.parsers),
                       mandatory=combined_mandatory(other, self))
 
     def __iadd__(self, other: Parser) -> 'Series':
+        if self.pname or other.pname:
+            return Series(self, other)
         other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
@@ -3018,6 +3027,8 @@ class Alternative(NaryParser):
     # `Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))`
 
     def __or__(self, other: Parser) -> 'Alternative':
+        if self.pname or other.pname:
+            return Alternative(self, other)
         if not isinstance(self, Alternative):
             # for some reason cython called __or__ instead of __ror__,
             # so we have to repeat the __ror__ code here...
@@ -3030,11 +3041,15 @@ class Alternative(NaryParser):
         return Alternative(*(self.parsers + other_parsers))
 
     def __ror__(self, other: Parser) -> 'Alternative':
+        if self.pname or other.pname:
+            return Alternative(other, self)
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         return Alternative(*(other_parsers + self.parsers))
 
     def __ior__(self, other: Parser) -> 'Alternative':
+        if self.pname or other.pname:
+            return Alternative(self, other)
         other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
@@ -3282,6 +3297,8 @@ class Interleave(MandatoryNary):
         return parsers, mandatory, repetitions
 
     def __mul__(self, other: Parser) -> 'Interleave':
+        if self.pname or other.pname:
+            return Interleave(self, other)
         if not isinstance(self, Interleave):
             # for some reason cython called __mul__ instead of __rmul__,
             # so we have to flip self and other...
@@ -3290,10 +3307,14 @@ class Interleave(MandatoryNary):
         return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
 
     def __rmul__(self, other: Parser) -> 'Interleave':
+        if self.pname or other.pname:
+            return Interleave(other, self)
         parsers, mandatory, repetitions = self._prepare_combined(other)
         return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
 
     def __imul__(self, other: Parser) -> 'Interleave':
+        if self.pname or other.pname:
+            return Interleave(self, other)
         parsers, mandatory, repetitions = self._prepare_combined(other)
         self.parsers = parsers
         self.mandatory = mandatory

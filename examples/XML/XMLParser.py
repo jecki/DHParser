@@ -389,7 +389,7 @@ class XMLCompiler(Compiler):
             'Invalid value "%s" for "standalone"! Must be one of %s.' % (value, str(allowed)))
 
     def on_document(self, node):
-        self.tree.omit_tags.update({'CharData', 'document'})
+        self.tree.string_tags.update({'CharData', 'document'})
         # TODO: Remove the following line. It is specific for testing with example.xml!
         self.tree.inline_tags.update({'to', 'from', 'heading', 'body', 'remark'})
         return self.fallback_compiler(node)
