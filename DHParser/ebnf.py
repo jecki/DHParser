@@ -2449,9 +2449,9 @@ ReprType = Union[str, unrepr]
 
 VALID_DIRECTIVES = {
     'comment': r'Regular expression for comments, e.g. /#.*(?:\n|$)/',
-    'whitespace': r'Regular expression for whitespace, e.g. /\s*/',
+    'whitespace': r'Regular expression for whitespace or one of: horizontal, linefeed, vertical',
     'literalws': 'Controls implicit whitespace adjacent to literals: left, right, both, none',
-    'ignorecase': 'Controls case-sensitivity: on, off',
+    'ignorecase': 'Controls case-sensitivity: True, False',
     '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
     'disposable': 'List of symbols that shall not be turned into tag-names',
     'drop': 'List of tags to be dropped with all their content from the tree, '
@@ -2791,11 +2791,13 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar',
-                      '    "<": flatten,']
+                      '    # "<": flatten',
+                      '    # "*": replace_by_single_child',
+                      '    # ">: []']
         for name in self.rules:
             transformations = '[]'
             transtable.append('    "' + name + '": %s,' % transformations)
-        transtable += ['    "*": replace_by_single_child', '}', '']
+        transtable += ['}', '']
         transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
         return '\n'.join(transtable)
 
