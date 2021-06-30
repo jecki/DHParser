@@ -2141,6 +2141,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if sxpr.find('\n') >= 0:
             sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
             sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
+            sxpr = re.sub(r'\)(?=\n)(?!\s*")', r'', sxpr)
+            # if sxpr.count('(') < sxpr.count(')'):
+            #     sxpr = sxpr.replace(')\n', '\n')
             # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
             sl = sxpr.split('\n')
             for i in range(len(sl)):
