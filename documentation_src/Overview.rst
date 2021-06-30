@@ -229,9 +229,11 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
 
     #  EBNF-Directives
 
-    @literalws  = right
-    @drop       = whitespace, strings
-    @disposable = /_\w+/
+    @literalws  = right  # eat insignificant whitespace to the right of literals
+    @whitespace = /\s*/  # regular expression for insignificant whitespace
+    @comment    = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # C++ style comments
+    @drop       = whitespace, strings  # silently drop bare strings and whitespace
+    @disposable = /_\w+/  # regular expression to identify disposable symbols
 
     #:  compound elememts
 
@@ -289,11 +291,61 @@ just like before::
       <object>
       ...
 
-Whitespace and comments made easy
----------------------------------
+Clutter-free grammars
+---------------------
+
+DHParser tries to minimize unnecessary clutter in grammar definitions.
+To reach this goal DHParser follows a few, mostly intuitive, conventions:
+
+1. The symbols on the left hand side of any definition (or "rule" or "production"
+   if you prefer one of theses terms) in the grammar is considered significant
+   by default. The nodes produced by the parsing-expression on the right hand
+   side will carry the symbol as a tag-name.
+
+2. Some symbols can explicitly be marked as "disposable" (or "insignificant"),
+   however. These may not appear in the syntax-tree and nodes of their type
+   type may be replaced by their children, silently. Thus, you'll never see
+   an "_elment"-node in a JSON-syntaxtree produced by the above grammar,
+   but only object-, array-, string-, number-, true-, false- or null-nodes.
+
+3. Insignificant whitespace is denoted by the single character ``~``.
+
+4. Comments defined by the ``@comment``-directive at the top of the grammar
+   are allowed in any place where insignificant ``~``-whitespace is
+   allowed. Thus, you never need to worry about where to provide for
+   comments in you grammar. It is as easy as it is intuitive.
+
+5. Delimiters like "," or "[", "]" etc. typically appear as literal
+   string values in a grammar. Now, since delimiters are typically
+   surrounded by insignificant whitespace, DHParser can be advised via
+   the ``@literalws`` to automatically eat whitespace to the right hand
+   side (or to the left hand side, if you prefer) of any string literal
+   in the grammar without mentioning. This immediately removes a lot of
+   clutter from most grammars.
+
+   In case you want to grab a string without
+   eating its adjacent whitespace, you can still use the "backticked"
+   notation for string literals ```backticked string```.
+
+6. DHParser can be advised (vie the ``@drop``-directive) to drop
+   tokens in form of (non-backticked) strings from the syntax-tree
+   already while parsing. Likewise with insignificant whitespace
+   or any disposable symbol. This greatly simplifies syntax-trees
+   at a very early stage, already.
+
+   In case you want to keep a particular string token in the tree
+   none the less, you can still do so by assigning it to a
+   non-disposable symbol, e.g. ``opening_bracket = "("`` and using
+   this symbol instead of the string literal in other expressions.
+
+7. Ah, and yes, of course you do not need to end grammar definitions
+   with a semicolon ``;`` as demanded by the ISO-norm for EBNF :-)
+
 
 Declarative Abstract-syntax-tree transformation
 -----------------------------------------------
+
+
 
 Test-driven grammar development
 -------------------------------
