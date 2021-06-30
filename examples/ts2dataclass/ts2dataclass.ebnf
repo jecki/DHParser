@@ -13,7 +13,7 @@
 @ comment     = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # /* ... */ or // to EOL
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
-@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF, _literal, _array_ellipsis
+@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF, _literal, _name, _array_ellipsis
 @ drop        = whitespace, strings, EOF, _array_ellipsis   # EOF and insignificant whitespace (tilde) will be dropped
 
 
@@ -35,9 +35,9 @@ document    = ~ { interface | type_alias | namespace | enum | const
 #######################################################################
 
 interface   = ["export"] "interface" §identifier [type_parameter]
-              ["extends" identifier { "," identifier}]
-              declarations_block
+              [extends] declarations_block
   type_parameter = "<" identifier ">"
+extends     = "extends" identifier { "," identifier}
 type_alias  = ["export"] "type" §identifier "=" (types ";" | declarations_block)
 
 declarations_block = "{"  [declaration { ";" declaration } [";"]] "}"
@@ -47,7 +47,7 @@ declaration = ([qualifier] identifier [optional] | index_signature) [":" types]
   index_signature = "[" identifier ":" type "]"
 types       = type { "|" types } | "(" types ")" [array_marker]
 type        = (basic_type | identifier) [array_marker]
-            | declarations_block | type_tuple | literal
+            | declarations_block | type_tuple | _literal
 type_tuple  = "[" type {"," type} "]"
 
 
@@ -67,7 +67,7 @@ namespace   = ["export"] "namespace" §identifier
 #######################################################################
 
 enum        = ["export"] "enum" [identifier] §"{" item { "," item } "}"
-  item      = identifier ["=" literal]
+  item      = identifier ["=" _literal]
 
 
 #######################################################################
@@ -76,8 +76,8 @@ enum        = ["export"] "enum" [identifier] §"{" item { "," item } "}"
 #
 #######################################################################
 
-const       = ["export"] "const" §declaration "=" (literal | identifier) ";"
-assignment  = variable "=" literal ";"
+const       = ["export"] "const" §declaration "=" (_literal | identifier) ";"
+assignment  = variable "=" _literal ";"
 
 #######################################################################
 #
@@ -85,16 +85,15 @@ assignment  = variable "=" literal ";"
 #
 #######################################################################
 
-_array_ellipsis = literal { "," literal }
-_literal   = literal
+_array_ellipsis = _literal { "," _literal }
 
-literal    = number | string | array | object
+_literal    = number | string | array | object
 number     = INT FRAC EXP ~
 string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
-array      = `[`~ [ literal { `,`~ literal } ] `]`~
-object     = `{`~ [ association { `,`~ association } ] `}`~
- association = name `:`~ literal
-name       = identifier | '"' identifier '"'
+array      = "[" [ _literal { "," _literal } ] "]"
+object     = "{" [ association { "," association } ] "}"
+ association = _name ":" _literal
+_name       = identifier | '"' identifier '"'
 
 #######################################################################
 #

@@ -11,7 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable
+from typing import Tuple, List, Union, Any, Optional, Callable, Type
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -91,12 +91,12 @@ get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 class ts2dataclassGrammar(Grammar):
     r"""Parser for a ts2dataclass source file.
     """
+    _literal = Forward()
     declaration = Forward()
     declarations_block = Forward()
-    literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "a7fe5de433f545312b2752752a4573bb"
+    source_hash__ = "f85a80ed979edab39d4b13867a7406a0"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_literal$|_array_ellipsis$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -117,27 +117,27 @@ class ts2dataclassGrammar(Grammar):
     array_marker = Series(Text("[]"), dwsp__)
     basic_type = Series(Alternative(Text("object"), Text("array"), Text("string"), Text("number"), Text("boolean"), Text("null")), dwsp__)
     name = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__)))
-    association = Series(name, Text(":"), dwsp__, literal)
-    object = Series(Text("{"), dwsp__, Option(Series(association, ZeroOrMore(Series(Text(","), dwsp__, association)))), Text("}"), dwsp__)
-    array = Series(Text("["), dwsp__, Option(Series(literal, ZeroOrMore(Series(Text(","), dwsp__, literal)))), Text("]"), dwsp__)
+    association = Series(name, Series(Drop(Text(":")), dwsp__), _literal)
+    object = Series(Series(Drop(Text("{")), dwsp__), Option(Series(association, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), association)))), Series(Drop(Text("}")), dwsp__))
+    array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_literal, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _literal)))), Series(Drop(Text("]")), dwsp__))
     string = Alternative(Series(RegExp('"[^"\\n]*"'), dwsp__), Series(RegExp("'[^'\\n]*'"), dwsp__))
     number = Series(INT, FRAC, EXP, dwsp__)
     type_parameter = Series(Series(Drop(Text("<")), dwsp__), identifier, Series(Drop(Text(">")), dwsp__))
-    _literal = Synonym(literal)
-    _array_ellipsis = Drop(Series(literal, Drop(ZeroOrMore(Drop(Series(Series(Drop(Text(",")), dwsp__), literal))))))
-    assignment = Series(variable, Series(Drop(Text("=")), dwsp__), literal, Series(Drop(Text(";")), dwsp__))
-    const = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("const")), dwsp__), declaration, Series(Drop(Text("=")), dwsp__), Alternative(literal, identifier), Series(Drop(Text(";")), dwsp__), mandatory=2)
-    item = Series(identifier, Option(Series(Series(Drop(Text("=")), dwsp__), literal)))
+    _array_ellipsis = Drop(Series(_literal, Drop(ZeroOrMore(Drop(Series(Series(Drop(Text(",")), dwsp__), _literal))))))
+    assignment = Series(variable, Series(Drop(Text("=")), dwsp__), _literal, Series(Drop(Text(";")), dwsp__))
+    const = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("const")), dwsp__), declaration, Series(Drop(Text("=")), dwsp__), Alternative(_literal, identifier), Series(Drop(Text(";")), dwsp__), mandatory=2)
+    item = Series(identifier, Option(Series(Series(Drop(Text("=")), dwsp__), _literal)))
     enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("enum")), dwsp__), Option(identifier), Series(Drop(Text("{")), dwsp__), item, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), item)), Series(Drop(Text("}")), dwsp__), mandatory=3)
     namespace = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(const), Series(Drop(Text("}")), dwsp__), mandatory=2)
     type_tuple = Series(Series(Drop(Text("[")), dwsp__), type, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), type)), Series(Drop(Text("]")), dwsp__))
-    interface = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("interface")), dwsp__), identifier, Option(type_parameter), Option(Series(Series(Drop(Text("extends")), dwsp__), identifier, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), identifier)))), declarations_block, mandatory=2)
     type_alias = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("type")), dwsp__), identifier, Series(Drop(Text("=")), dwsp__), Alternative(Series(types, Series(Drop(Text(";")), dwsp__)), declarations_block), mandatory=2)
+    extends = Series(Series(Drop(Text("extends")), dwsp__), identifier, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), identifier)))
     index_signature = Series(Series(Drop(Text("[")), dwsp__), identifier, Series(Drop(Text(":")), dwsp__), type, Series(Drop(Text("]")), dwsp__))
     optional = Series(Text("?"), dwsp__)
     qualifier = Series(Text("readonly"), dwsp__)
-    literal.set(Alternative(number, string, array, object))
-    type.set(Alternative(Series(Alternative(basic_type, identifier), Option(array_marker)), declarations_block, type_tuple, literal))
+    interface = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("interface")), dwsp__), identifier, Option(type_parameter), Option(extends), declarations_block, mandatory=2)
+    _literal.set(Alternative(number, string, array, object))
+    type.set(Alternative(Series(Alternative(basic_type, identifier), Option(array_marker)), declarations_block, type_tuple, _literal))
     types.set(Alternative(Series(type, ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), types))), Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__), Option(array_marker))))
     declaration.set(Series(Alternative(Series(Option(qualifier), identifier, Option(optional)), index_signature), Option(Series(Series(Drop(Text(":")), dwsp__), types))))
     declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(declaration, ZeroOrMore(Series(Series(Drop(Text(";")), dwsp__), declaration)), Option(Series(Drop(Text(";")), dwsp__)))), Series(Drop(Text("}")), dwsp__)))
@@ -235,10 +235,10 @@ class ts2dataclassCompiler(Compiler):
         # initialize your variables here, not in the constructor!
 
     def on_document(self, node):
-        return self.fallback_compiler(node)
+        return node
 
-    # def on_interface(self, node):
-    #     return node
+    def on_interface(self, node):
+        return node
 
     # def on_type_parameter(self, node):
     #     return node
@@ -282,26 +282,37 @@ class ts2dataclassCompiler(Compiler):
     # def on_assignment(self, node):
     #     return node
 
-    # def on_literal(self, node):
-    #     return node
+    def literal(self, node):
+        nd = node[0] if node.children else node
+        tn = nd.tag_name
+        if tn == 'string':
+            return self.on_string(nd)
+        elif tn == 'number':
+            return self.on_number(nd)
+        elif tn == 'array':
+            return self.on_array(nd)
+        else:
+            assert tn == 'object'
+            return self.on_object(nd)
 
-    # def on_number(self, node):
-    #     return node
+    def on_number(self, node) -> str:
+        return node.content
 
-    # def on_string(self, node):
-    #     return node
+    def on_string(self, node) -> str:
+        return node.content
 
-    # def on_array(self, node):
-    #     return node
+    def on_array(self, node) -> str:
+        return '[' + \
+               ', '.join(self.literal(nd) for nd in node.children) + \
+               ']'
 
-    # def on_object(self, node):
-    #     return node
+    def on_object(self, node) -> str:
+        return '{\n' + \
+               ',\n'.join(self.on_association(nd) for nd in node.children) + \
+               '\n}'
 
-    # def on_association(self, node):
-    #     return node
-
-    # def on_name(self, node):
-    #     return node
+    def on_association(self, node) -> str:
+        return f'"{node[0].content}": ' + self.literal(node[1])
 
     # def on_basic_type(self, node):
     #     return node
