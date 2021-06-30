@@ -648,23 +648,23 @@ class TestSerialization:
 
     def test_sexpr(self):
         tree = parse_sxpr('(A (B "C") (D "E"))')
-        s = tree.as_sxpr(flatten_threshold=0)
+        s = tree.as_sxpr(compact=False, flatten_threshold=0)
         assert s == '(A\n  (B\n    "C"\n  )\n  (D\n    "E"\n  )\n)', s
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
-        s = tree.as_sxpr(flatten_threshold=0)
+        s = tree.as_sxpr(compact=False, flatten_threshold=0)
         assert s == '(A\n  (B\n    (C\n      "D"\n    )\n    (E\n      "F"\n    )' \
-            '\n  )\n  (G\n    "H"\n  )\n)', s
+            '\n  )\n  (G\n    "H"\n  )\n)'
         tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
-        s = tree.as_sxpr(flatten_threshold=0)
+        s = tree.as_sxpr(compact=False, flatten_threshold=0)
         assert s == '(A\n  (B\n    (C\n      "D"\n      "X"\n    )' \
             '\n    (E\n      "F"\n    )\n  )\n  (G\n    " H "\n    " Y "\n  )\n)', s
 
     def test_compact_representation(self):
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
-        compact = tree.as_sxpr(compact=True)
+        compact = tree.as_sxpr(compact=True, flatten_threshold=0)
         assert compact == '(A\n  (B\n    (C "D")\n    (E "F"))\n  (G "H"))'
         tree = parse_sxpr('(A (B (C "D\nX") (E "F")) (G " H \n Y "))')
-        compact = tree.as_sxpr(compact=True)
+        compact = tree.as_sxpr(compact=True, flatten_threshold=0)
         assert compact == '(A\n  (B\n    (C\n      "D"\n      "X")\n    (E "F"))' \
             '\n  (G\n    " H "\n    " Y "))'
         tree = parse_sxpr('(A (B (C "D") (E "F")) (G "H"))')
@@ -674,7 +674,6 @@ class TestSerialization:
         set_config_value('flatten_sxpr_threshold', 20)
         compact = tree.serialize('indented')
         # assert compact == 'A\n  B\n    C `(attr "val")\n      "D"\n    E\n      "F"\n  G\n    "H"'
-        print(compact)
         assert compact == 'A\n  B\n    C `(attr "val") "D"\n    E "F"\n  G "H"', compact
         tree = parse_xml('<note><priority level="high" /><remark></remark></note>')
         assert tree.serialize(how='indented') == 'note\n  priority `(level "high")\n  remark'

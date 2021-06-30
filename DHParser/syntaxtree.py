@@ -1989,7 +1989,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
-                compact: bool = False,
+                compact: bool = True,
                 flatten_threshold: int = 92) -> str:
         """
         Serializes the tree as S-expression, i.e. in lisp-like form. If this
@@ -2003,8 +2003,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             reported in case it has been initialized, i.e. pos >= 0.
         :param indentation: The number of whitespaces for indentation
         :param compact:  If True, a compact representation is returned where
-            brackets are omitted and only the indentation indicates the
-            tree structure.
+            closing brackets remain on the same line as the last element.
         :param flatten_threshold:  Return the S-expression in flattened form if
             the flattened expression does not exceed the threshold length.
             A negative number means that it will always be flattened.
@@ -2043,7 +2042,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else '"%s"' % strg.replace('"', r'\"')
 
         sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
-        return sxpr if compact else flatten_sxpr(sxpr, flatten_threshold)
+        return flatten_sxpr(sxpr, flatten_threshold)
 
     def as_xml(self, src: str = None,
                indentation: int = 2,
