@@ -227,21 +227,13 @@ with a name of a project-directory that will then be created and filled with som
 The first step is to replace the ".ebnf"-file that contains a simple demo-grammar with your
 own grammar. For the sake of the example we'll write our json-Grammar into this file::
 
-    #######################################################################
-    #
     #  EBNF-Directives
-    #
-    #######################################################################
 
     @literalws  = right
     @drop       = whitespace, strings
     @disposable = /_\w+/
 
-    #######################################################################
-    #
     #:  compound elememts
-    #
-    #######################################################################
 
     json        = ~ _element _EOF
     _element    = object | array | string | number | _bool | null
@@ -249,11 +241,7 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
     member      = string §":" _element
     array       = "[" [ _element { "," _element } ] §"]"
 
-    #######################################################################
-    #
     #:  simple elements
-    #
-    #######################################################################
 
     string      = `"` §_CHARACTERS `"` ~
     number      = INT [ FRAC ] [ EXP ] ~
@@ -262,11 +250,7 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
     false       = `false` ~
     null        = "null"
 
-    #######################################################################
-    #
     #:  atomic expressions types
-    #
-    #######################################################################
 
     _CHARACTERS = { PLAIN | ESCAPE }
     PLAIN       = /[^"\\]+/
@@ -305,14 +289,17 @@ just like before::
       <object>
       ...
 
+Whitespace and comments made easy
+---------------------------------
+
+Declarative Abstract-syntax-tree transformation
+-----------------------------------------------
+
 Test-driven grammar development
 -------------------------------
 
 Invoking the post-mortem debugger
 ---------------------------------
-
-Declarative Abstract-syntax-tree transformation
------------------------------------------------
 
 Tree compilation with the Visitor-pattern
 -----------------------------------------
