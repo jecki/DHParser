@@ -149,7 +149,7 @@ verbose, it would not make sense to print it out. We'll just look at a small
 part of it, to see what it looks like. Let's just pick the sub-tree that
 captures the first json-array within the syntax-tree::
 
-    >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+    >>> print(syntax_tree.pick('array').as_sxpr())
     (array
       (:Text "[")
       (_element
@@ -196,7 +196,7 @@ construct of the EBNF-grammar would leave a node in the syntax-tree::
     >>> from DHParser.parse import CombinedParser, TreeReduction
     >>> _ = TreeReduction(parser.json, CombinedParser.NO_TREE_REDUCTION)
     >>> syntax_tree = parser(testdata)
-    >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+    >>> print(syntax_tree.pick('array').as_sxpr())
     (array
       (:Text "[")
       (:Option
@@ -284,7 +284,7 @@ significant whitespace between "a" and "string" in "a string"). And
 the difference, the use of these two directives makes, is even more
 obvious, if we look at (a section of) the syntax-tree::
 
-    >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+    >>> print(syntax_tree.pick('array').as_sxpr())
     (array
       (:Text "[")
       (number "1")
@@ -321,7 +321,7 @@ would also drop those parts captured as string that contain data::
                           + disposable_symbols + grammar
     >>> parser = create_parser(refined_grammar, 'JSON')
     >>> syntax_tree = parser(testdata)
-    >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+    >>> print(syntax_tree.pick('array').as_sxpr(flatten_threshold=0))
     (array
       (number "1")
       (number
@@ -409,7 +409,7 @@ without a value, wheneever a bool value or null occurs in the input::
     ...     null       = /null/ ~                                  '''
     >>> json_parser = create_parser(json_gr, 'JSON')
     >>> syntax_tree = json_parser(testdata)
-    >>> print(syntax_tree.pick('array').as_sxpr(compact=True))
+    >>> print(syntax_tree.pick('array').as_sxpr(flatten_threshold=0))
     (array
       (number "1")
       (number
@@ -427,7 +427,7 @@ further by merging adjacent anonymous leaf-nodes::
     >>> json_gr = '@reduction = merge \\n' + json_gr
     >>> json_parser = create_parser(json_gr, 'JSON')
     >>> syntax_tree = json_parser(testdata)
-    >>> print(syntax_tree.as_sxpr(compact=True))
+    >>> print(syntax_tree.as_sxpr())
     (json
       (object
         (member
@@ -574,7 +574,7 @@ Let's just try our grammar on an example::
     >>> text_as_data = text_parser(text_example)
     >>> sentence = text_as_data.pick(\
             lambda nd: nd.tag_name == "sentence" and nd.content.startswith('First'))
-    >>> print(sentence.as_sxpr(compact=True))
+    >>> print(sentence.as_sxpr())
     (sentence
       (clause
         (word "First")
@@ -654,7 +654,7 @@ we have succeeded::
     >>> syntax_tree = extended_parser('What {check this again!} is work?')
     >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
     word S word S word
-    >>> print(syntax_tree.pick('clause').as_sxpr(compact=True))
+    >>> print(syntax_tree.pick('clause').as_sxpr())
     (clause
       (word "What")
       (S
@@ -710,7 +710,7 @@ contains a comment::
 
     >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('paragraph').children))
     sentence S sentence
-    >>> print(syntax_tree.pick('paragraph')['S'].as_sxpr(compact=True))
+    >>> print(syntax_tree.pick('paragraph')['S'].as_sxpr(flatten_threshold=0))
     (S
       (pure_S
         ""
@@ -1328,7 +1328,7 @@ code to the grammar::
     ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
     >>> json_string = create_parser(grammar, 'json_string')
     >>> tree = json_string('"al\\pha"')
-    >>> print(tree.as_sxpr(compact=True))
+    >>> print(tree.as_sxpr(flatten_threshold=0))
     (string
       (:Text '"')
       (string_error "al\pha")
@@ -1356,7 +1356,7 @@ by refining our error junction code::
     ... escape          = /\\\\\\[\\\\/bnrt\\\\\\]/'''
     >>> json_string = create_parser(grammar, 'json_string')
     >>> tree = json_string('"al\\pha"')
-    >>> print(tree.as_sxpr(compact=True))
+    >>> print(tree.as_sxpr())
     (string
       (:Text '"')
       (string_error
@@ -1434,7 +1434,7 @@ parser when an error was raised by the string-parser::
     "al\pha"
     >>> print(tree.errors[0])
     1:4: Error (1010): Illegal escape sequence »\pha"...«
-    >>> print(tree.as_sxpr(compact=True))
+    >>> print(tree.as_sxpr())
     (string
       (:Text '"')
       (characters

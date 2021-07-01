@@ -3111,7 +3111,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
 
     Example:
     >>> parse_sxpr("(a (b c))").as_sxpr(flatten_threshold=0)
-    '(a\\n  (b\\n    "c"\\n  )\\n)'
+    '(a\\n  (b "c"))'
 
     `parse_sxpr()` does not initialize the node's `pos`-values. This can be
     done with `Node.with_pos()`:
