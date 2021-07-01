@@ -39,7 +39,7 @@ cdef class Node:
     # cpdef milestone_segment(self, begin, end)
     # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
     # cpdef as_sxpr(self, src, indentation, compact)
-    # cpdef as_xml(self, src, indentation, inline_tags, omit_tags, empty_tags)
+    # cpdef as_xml(self, src, indentation, inline_tags, string_tags, empty_tags)
     cpdef to_json_obj(self)
     # cpdef serialize(self, how)
 
@@ -57,7 +57,7 @@ cdef class RootNode(Node):
     cdef public object source_mapping
     cdef public list lbreaks
     cdef public set inline_tags
-    cdef public set omit_tags
+    cdef public set string_tags
     cdef public set empty_tags
 
     # cpdef swallow(self, node)
