@@ -1,4 +1,5 @@
 # ts2dataclass-grammar
+# for typescript see: https://www.typescriptlang.org/docs/
 # for examples of typescript-interfaces
 # see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
 
@@ -13,8 +14,10 @@
 @ comment     = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # /* ... */ or // to EOL
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
-@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF, _literal, _name, _array_ellipsis
-@ drop        = whitespace, strings, EOF, _array_ellipsis   # EOF and insignificant whitespace (tilde) will be dropped
+@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF, _type, _literal, _name, _array_ellipsis,
+                _top_level_assignment, _top_level_literal
+@ drop        = whitespace, strings, EOF, _array_ellipsis, _top_level_assignment,
+                _top_level_literal
 
 
 #######################################################################
@@ -24,8 +27,8 @@
 #######################################################################
 
 document    = ~ { interface | type_alias | namespace | enum | const
-                | declaration ";" | assignment
-                | _array_ellipsis | _literal } EOF
+                | declaration ";" | _top_level_assignment
+                | _array_ellipsis | _top_level_literal } EOF
 
 
 #######################################################################
@@ -38,17 +41,21 @@ interface   = ["export"] "interface" §identifier [type_parameter]
               [extends] declarations_block
   type_parameter = "<" identifier ">"
 extends     = "extends" identifier { "," identifier}
-type_alias  = ["export"] "type" §identifier "=" (types ";" | declarations_block)
+type_alias  = ["export"] "type" §identifier "=" types ";"
 
-declarations_block = "{"  [declaration { ";" declaration } [";"]] "}"
-declaration = ([qualifier] identifier [optional] | index_signature) [":" types]
+declarations_block = "{"  [declaration { ";" declaration }
+                           [";" map_signature] [";"]] "}"
+declaration = [qualifier] identifier [optional] [":" types]
   qualifier = "readonly"
   optional  = "?"
-  index_signature = "[" identifier ":" type "]"
-types       = type { "|" types } | "(" types ")" [array_marker]
-type        = (basic_type | identifier) [array_marker]
-            | declarations_block | type_tuple | _literal
-type_tuple  = "[" type {"," type} "]"
+  index_signature = "[" identifier (":" | "in" "keyof") _type "]"
+types       = _type { "|" _type }
+_type        = array_of | basic_type | identifier | "(" types ")"
+             | mapped_type | declarations_block | type_tuple | _literal
+array_of    = (basic_type | "(" types ")" | identifier) "[]"
+type_tuple  = "[" _type {"," _type} "]"
+mapped_type = "{" map_signature [";"] "}"
+map_signature = index_signature ":" types
 
 
 #######################################################################
@@ -77,6 +84,7 @@ enum        = ["export"] "enum" [identifier] §"{" item { "," item } "}"
 #######################################################################
 
 const       = ["export"] "const" §declaration "=" (_literal | identifier) ";"
+_top_level_assignment = assignment
 assignment  = variable "=" _literal ";"
 
 #######################################################################
@@ -87,6 +95,7 @@ assignment  = variable "=" _literal ";"
 
 _array_ellipsis = _literal { "," _literal }
 
+_top_level_literal = _literal
 _literal    = number | string | array | object
 number     = INT FRAC EXP ~
 string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
@@ -101,8 +110,8 @@ _name       = identifier | '"' identifier '"'
 #
 #######################################################################
 
-basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`)~
-array_marker = `[]`~
+basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`
+                `integer` | `uinteger` )~
 
 
 #######################################################################
