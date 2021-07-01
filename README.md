@@ -95,6 +95,10 @@ motivation and an overview how DHParser works or jump right into the
 [Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
 learn how to setup and use DHParser.
 
+Documentation
+-------------
+
+For the full documentation see: [dhparser.readthedocs.io](https://dhparser.readthedocs.io/en/latest/)
 
 License
 -------
