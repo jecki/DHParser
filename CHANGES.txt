@@ -1,11 +1,11 @@
-DHParser Version 0.9.6
-......................
+DHParser Version 0.9.6 (1.7.2021)
+.................................
 
 - Documentation extended
 - Better support for error-reporting from preprocessors
 
 
-DHParser Version 0.9.5 (1.6.2020)
+DHParser Version 0.9.5 (1.6.2021)
 .................................
 
 - Python 3.5 compatibility dropped! DHParser now requires at least Python 3.6.
