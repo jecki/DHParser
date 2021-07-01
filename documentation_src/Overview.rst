@@ -20,12 +20,12 @@ in Python that adhere to editor-independent the
 `languag server-protocol <https://microsoft.github.io/language-server-protocol/>`.
 
 
-Writing a parser quickly
-------------------------
+Adhoc-Parsers
+-------------
 
 In case you just need a parser for some very simple DSL, you can directly add a string
-the EBNF-grammar of that DSL to you python code and compile if into an executable parser
-much like you'd compile a regular expresseion. Let's do this for a
+with the EBNF-grammar of that DSL to you python code and compile if into an executable
+parser much like you'd compile a regular expresseion. Let's do this for a
 `JSON <https://www.json.org/json-en.html>`-parser::
 
     import sys
@@ -213,8 +213,8 @@ text-file that adheres to the EBNF-grammar and outputs it as syntax-tree::
     </json>
 
 
-Larger scale DSL-projects
--------------------------
+Full scale DSLs
+---------------
 
 Larger and more complex DSL-projects can easily be setup by calling the "dhparser"-script
 with a name of a project-directory that will then be created and filled with some templates::
@@ -344,8 +344,8 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
    with a semicolon ``;`` as demanded by the ISO-norm for EBNF :-)
 
 
-Declarative Abstract-syntax-tree transformation
------------------------------------------------
+Declarative AST-building
+------------------------
 
 DHParser does does not hide any stages of the tree generation
 process. Thus, you get full access to the (simplified) concrete
@@ -411,29 +411,29 @@ easy, though, to this into an application-specific
 tree of objects of different classes.
 
 
-Test-driven grammar development
--------------------------------
+Test-driven grammars
+--------------------
 
 
+Parser-debugger
+---------------
 
-Tracing post-mortem debugger for parsers
-----------------------------------------
 
 Fail-tolerant parsing
 ---------------------
 
-Tree compilation with the Visitor-pattern
------------------------------------------
+Compiling DSLs
+--------------
 
-Serialization as you like it: JSON, XML, S-expressions
-------------------------------------------------------
+Serialization
+-------------
 
-Connecting with XML-technolgies easily
---------------------------------------
+XML-Connection
+--------------
 
-Server-mode for setting up DSL-language-servers
------------------------------------------------
+Language Servers
+----------------
 
-Performance considerations
---------------------------
+Performance
+-----------
 
