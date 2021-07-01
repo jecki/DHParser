@@ -387,6 +387,22 @@ only occur in a string at the beginning and at the
 end as nodes containing the quotation mark-delimiters
 of that string.
 
+To give an expression how AST-transformation-tables
+may look like, here is an excerpt from DHParser's
+own transformation table to derive a lean AST from
+the concrete syntax-tree of an EBNF grammar::
+
+    EBNF_AST_transformation_table = {
+        # AST Transformations for EBNF-grammar
+        "syntax":     [],
+        "directive":  [flatten, remove_tokens('@', '=', ',')],
+        "definition": [flatten, remove_tokens('=')]
+        "expression": [replace_by_single_child, flatten,
+                       remove_tokens('|')]
+        "sequence":   [replace_by_single_child, flatten],
+        ...
+    }
+
 The :py:mod:`transform`-module
 contains a number of useful transformation-rules
 that can be combined almost arbitrarily in order
@@ -396,7 +412,7 @@ grammar is well-designed and if the
 concrete syntax tree has already been simplified
 with the help of DHParser's ``@disposable``-,
 ``@reduction``- and ``@drop``-directives, only
-transformations should be necessary to produce
+few transformations should be necessary to produce
 the abstract syntax-tree.
 
 In specific application cases it is often desirable
@@ -411,12 +427,12 @@ easy, though, to this into an application-specific
 tree of objects of different classes.
 
 
-Test-driven grammars
---------------------
+Test-driven grammar development
+-------------------------------
 
 
-Parser-debugger
----------------
+Debugging parsers
+-----------------
 
 
 Fail-tolerant parsing
