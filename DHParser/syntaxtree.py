@@ -262,8 +262,8 @@ yields::
       phrase "Buckingham Palace"
 
 
-Using XML-Tools with DHParser
------------------------------
+Connecting DHParser with XML-technology
+---------------------------------------
 
 Although DHParser offers rich support for tree-transformation, he
 whish may arise to use standard XML-tools for tree-transformation

@@ -457,6 +457,8 @@ terms of speed and considerably simplified abtract-syntax-tree generation
 stage, because most of the unnecessary structure of concrete-syntax-trees
 has already been eliminated at the parsing stage.
 
+.. _comments_and_whitespace:
+
 Comments and Whitespace
 -----------------------
 
