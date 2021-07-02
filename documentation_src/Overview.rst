@@ -517,8 +517,9 @@ XML-connection
 Since DHParser has been build with Digital-Humanities-applications in mind,
 it offers to further methods to connect to X-technologies. The methods
 :py:meth:`~syntaxtree.Node.as_etree` and :py:meth:`~syntaxtree.Node.from_etree`
-allow direct conversion to the xml-ElementTrees of the Python standard-library
-or of the lxml-package which offers full support for XPath, XQuery and XSLT.
+allow direct transfer to and from the xml-ElementTrees of either the
+Python standard-library or the lxml-package which offers full support for
+XPath, XQuery and XSLT.
 
 
 Test-driven grammar development
