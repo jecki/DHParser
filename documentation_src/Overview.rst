@@ -4,20 +4,20 @@ Overview of DHParser
 DHParser is a parser-generator and domain-specific-language (DSL) construction kit that
 is designed to make the process of designing, implementing and revising as DSL as
 simple as possible. It can be used in an adhoc-fashion for small projects and
-the grammar can be specified in Python like `pyparsing <https://pypi.org/project/pyparsing/>`
+the grammar can be specified in Python like `pyparsing <https://pypi.org/project/pyparsing/>`_
 or in a slightly amended version of the
-`Extended-Backus-Naur-Form (EBNF) <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`
+`Extended-Backus-Naur-Form (EBNF) <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
 directly within the Python-code. Or DHParser can used for large projects where you set up a
 directory tree with the grammar, parser, test-runner each residing in a separate file und the
 test and example code in dedicated sub-directories.
 
-DHParser uses `packrat parsing <https://bford.info/packrat/>` with full left-recursion support
+DHParser uses `packrat parsing <https://bford.info/packrat/>`_ with full left-recursion support
 which allows to build parsers for any context-free-grammar. It's got a post-mortem debugger
 to analyse the parsing process and it offers facilities for unit-testing grammars and some
 support for fail-tolerant parsing so that the parser does not stop at the first syntax error
 it encounters. Finally, there is some support for writing language servers for DSLs
 in Python that adhere to editor-independent the
-`languag server-protocol <https://microsoft.github.io/language-server-protocol/>`.
+`languag server-protocol <https://microsoft.github.io/language-server-protocol/>_`.
 
 
 Adhoc-Parsers
@@ -26,7 +26,7 @@ Adhoc-Parsers
 In case you just need a parser for some very simple DSL, you can directly add a string
 with the EBNF-grammar of that DSL to you python code and compile if into an executable
 parser much like you'd compile a regular expresseion. Let's do this for a
-`JSON <https://www.json.org/json-en.html>`-parser::
+`JSON <https://www.json.org/json-en.html>`_-parser::
 
     import sys
     from DHParser.dsl import create_parser
@@ -609,9 +609,117 @@ text, the grammar-debugger helps to locate the cause of
 an error that is not due to a faulty source text but a
 faulty grammar in the grammar.
 
-
 Fail-tolerant parsing
 ---------------------
+
+Fail-tolerance is the ability of a parser to resume parsing after an
+error has been encountered. A parser that is fail-tolerant does not
+stop parsing at the first error but can report several if not all
+errors in a source-code file in one single run. Thus, the user is
+not forced to fix an earlier error before she is even being informed
+of the next error. Fail-tolerance is a particularly desirable property
+when using a modern IDE that annotates errors while typing the
+source code.
+
+DHParser offers support for fail-tolerant parsing that goes beyond what
+can be achieved within EBNF alone. A prerequisite for fail-tolerant-parsing
+is to annotate the the grammar with ``§``-markers ("mandatory-marker") at
+places where one can be sure that the parser annotated with the marker
+must match if it is called at all. This is usually the case for parsers
+in a series after the point where it is uniquely determined.
+
+F or example, once the opening bracket of a bracketed expression has
+been matched by a parser it is clear that eventually the closing bracket will be matched
+by its respective parser, too, or it is an error. Thus, in our JSON-grammar
+we could write::
+
+    array       = "[" [ _element { "," _element } ] §"]"
+
+The ``§`` advises the following parser(s) in the series to raise an error
+on the spot instead of merely returning a non-match if they fail.
+If we wantet to, we could also add a ``§``-marker in front of the second
+``_element``-parser, because after a komma there must always be another
+element in an array or it is an error.
+
+The §-marker can be supplemented with a ``@ ..._resume``-directive that
+tells the calling parsers where to continue after the array parser has failed.
+So, the parser resuming the parsing process is not the array parser that
+has failed, but the first of the parsers in the call-stack of the array-parser that
+catches up at the location indicated by the ``@ ..._resume``-directive.
+The location itself is determined by a regular expression, where the
+point for reentry is the location *after* the next match of the regular
+expression::
+
+    @array_resume = /\]/
+    array       = "[" [ _element { "," _element } ] §"]"
+
+Here, the whole array up to and including the closing bracket ``]`` will
+be skipped and the calling parser continue just as if the array had matched.
+
+Let's see the difference this makes by running both versions of the grammar
+over a simple test case::
+
+    [match:json]
+    M1: '''{ "number":  1,
+             "array": [1,2 3,4],
+             "string": "two" }'''
+
+First, without re-entrance and without ``§``-marker the error message is not very informative and
+no structure has been detected correctly. At least the location of the error has been determined
+with good precision by the "farthest failure"-principle.::
+
+    ### Error:
+
+    2:15: Error (1040): Parser "array->`,`" did not match: »3,4],
+    "string": "two ...«
+        Most advanced fail:    2, 15:  json->_element->object->member->_element->array-> `,`;  FAIL;  "3,4],\n"string": "two" }"
+        Last match:       2, 13:  json->_element->object->member->_element->array->_element->number;  MATCH;  "2 ";
+
+    ### AST
+
+        (ZOMBIE__ (ZOMBIE__ `() '{ "number": 1,' "") (ZOMBIE__ '"array": [1,2 3,4],' '"string": "two" }'))
+
+Secondly, still without re-entrance but with the ``§``-marker. The error-message is more precise, though the
+followup-error "Parser stopped before end" may be confusing. The AST-tree (not shown here) contains more
+structure, but is still littered with ``ZOMBIE__``-nodes of unidentified parts of the input::
+
+    ### Error:
+
+    2:12: Error (1040): Parser "json" stopped before end, at:  3,4],
+    "str ...  Terminating parser.
+    2:15: Error (1010): `]` ~ expected by parser 'array', »3,4],\n "str...« found!
+
+
+Finally, with both ``§``-marker and resume-directive as denoted in the EBNF snippet
+above, we receive a sound error message and, even more surprising, an almost complete
+AST::
+
+    ### Error:
+
+    2:15: Error (1010): `]` ~ expected by parser 'array', »3,4],\n "str...« found!
+
+    ### AST
+
+        (json
+          (object
+            (member
+              (string
+                (PLAIN "number"))
+              (number "1"))
+            (member
+              (string
+                (PLAIN "array"))
+              (array
+                (number "1")
+                (number "2")
+                (ZOMBIE__ `(2:15: Error (1010): `]` ~ expected by parser 'array', »3,4],\n "str...« found!) ",2 3,4]")))
+            (member
+              (string
+                (PLAIN "string"))
+              (string
+                (PLAIN "two")))))
+
+
 
 Compiling DSLs
 --------------

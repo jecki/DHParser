@@ -1450,6 +1450,15 @@ and parsing can continue through to the end of the text.
 
 In contrast to the skip-directive the resume-directive leaves the parser
 that raised the error and resumes one level higher up in the call chain.
+The ``@ ..._resume``-directive that tells the *calling*
+parsers where to continue after the array parser has failed.
+So, the parser resuming the parsing process is not the array parser that
+has failed, but the first parser in the reverse call-stack of "array" that
+catches up at the location indicated by the ``@ ..._resume``-directive.
+The location itself is determined by a regular expression, where the
+point for reentry is the location *after* the next match of the regular
+expression::
+
 
 
 Semantic Actions and Storing Variables

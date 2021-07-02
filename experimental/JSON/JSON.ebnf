@@ -10,8 +10,9 @@
 
     json        = ~ _element _EOF
     _element    = object | array | string | number | _bool | null
-    object      = "{" member { "," §member } §"}"
-    member      = string §":" _element
+    object      = "{" member { "," member } "}"
+    member      = string ":" _element
+    @array_resume = /(?:[^\[\]]|(?:\[.*\]))*\]\s*/  # /\]/
     array       = "[" [ _element { "," _element } ] §"]"
 
     #:  simple elements
