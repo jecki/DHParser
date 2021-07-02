@@ -191,12 +191,12 @@ Serializing and de-serializing syntax-trees
 Syntax trees can be serialized as S-expressions, XML, JSON and indented
 text. Module 'syntaxtree' also contains two simple parsers
 (:py:func:`~syntaxtree.parse_sxpr()`, :py:func:`~syntaxtree.parse_xml()`)
-to convert XML-snippets and S-expressions into trees composed of Node-objects.
-In addition to that there is a function to parse JSON
-(:py:func:`~syntaxtree.parse_json_syntaxtree()`), but in contrast
-to the former two functions it can only deserialize previously
-JSON-serialized trees and not any kind of JSON-file. There is no
-function to deserialize indented text.
+or :py:func:`~syntaxtree.parse_json()` to convert XML-snippets, S-expressions
+or json objects into trees composed of Node-objects.
+Only :py:func:`~syntaxtree.parse_xml()` can deserialize any XML-file.
+The other two functions can parse only the restricted subset of S-expressions
+or JSON into Node-trees that is used when serializing into these formats.
+There is no function to deserialize indented text.
 
 In order to make parameterizing serialization easier, the Node-class
 also defines a generic py:meth:`~syntaxtree.serialize()`-method next to
@@ -744,8 +744,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'DHParser_JSONEncoder',
            'parse_sxpr',
            'parse_xml',
-           'parse_json_syntaxtree',
-           'parse_tree',
+           'parse_json',
+           'deserialize',
            'flatten_sxpr',
            'flatten_xml')
 
@@ -2191,6 +2191,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
         """Serializes the tree originating in `self` as JSON-string."""
+        if not indent or indent <= 0:  indent = None
         return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
@@ -3377,9 +3378,9 @@ class DHParser_JSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def parse_json_syntaxtree(json_str: str) -> Node:
+def parse_json(json_str: str) -> Node:
     """
-    Parses a JSON-representation of a syntax tree. Other than parse_sxpr
+    Parses a JSON-representation of a syntax tree. Other than
     and parse_xml, this function does not convert any json-text into
     a syntax tree, but only json-text that represents a syntax tree, e.g.
     that has been produced by `Node.as_json()`!
@@ -3388,22 +3389,22 @@ def parse_json_syntaxtree(json_str: str) -> Node:
     return Node.from_json_obj(json_obj)
 
 
-def parse_tree(xml_sxpr_json: str) -> Optional[Node]:
+def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:
     """
     Parses either XML or S-expressions or a JSON representation of a
     syntax-tree. Which of these is detected automatically.
     """
-    if RX_IS_XML.match(xml_sxpr_json):
-        return parse_xml(xml_sxpr_json)
-    elif RX_IS_SXPR.match(xml_sxpr_json):
-        return parse_sxpr(xml_sxpr_json)
-    elif re.match(r'\s*', xml_sxpr_json):
+    if RX_IS_XML.match(xml_sxpr_or_json):
+        return parse_xml(xml_sxpr_or_json)
+    elif RX_IS_SXPR.match(xml_sxpr_or_json):
+        return parse_sxpr(xml_sxpr_or_json)
+    elif re.match(r'\s*', xml_sxpr_or_json):
         return None
     else:
         try:
-            return parse_json_syntaxtree(xml_sxpr_json)
+            return parse_json(xml_sxpr_or_json)
         except json.decoder.JSONDecodeError:
-            m = re.match(r'\s*(.*)\n?', xml_sxpr_json)
+            m = re.match(r'\s*(.*)\n?', xml_sxpr_or_json)
             snippet = m.group(1) if m else ''
             raise ValueError('Snippet is neither S-expression nor XML: ' + snippet + ' ...')
 

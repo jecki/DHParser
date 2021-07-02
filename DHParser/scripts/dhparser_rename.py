@@ -2,6 +2,8 @@
 
 """dhparser_rename.py - rename a dhparser project properly
 
+UNMAINTAINED!!!
+
 Copyright 2019  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
 

@@ -29,7 +29,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
-    flatten_xml, parse_json_syntaxtree, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
+    flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
     prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
     select_context_if, select_context, create_context_match_function
 from DHParser.transform import traverse, reduce_single_child, \
@@ -172,7 +172,7 @@ class TestParseJSON:
         tree_copy = Node.from_json_obj(json.loads(s))
         assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
         s = self.tree.as_json(indent=None, ensure_ascii=False)
-        tree_copy = parse_json_syntaxtree(s)
+        tree_copy = parse_json(s)
         # print(s)
         # print(self.tree.as_sxpr())
         # print(tree_copy.as_sxpr())
@@ -184,7 +184,7 @@ class TestParseJSON:
         n.attr['id'] = '007'
         # json
         json = n.as_json()
-        tree = parse_json_syntaxtree(json)
+        tree = parse_json(json)
         # print()
 
         # XML

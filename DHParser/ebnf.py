@@ -2394,6 +2394,10 @@ def preprocessor_factory() -> PreprocessorFunc:
 
 
 get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+
+
+def preprocess_{NAME}(source):
+    return get_preprocessor()(source)
 '''
 
 
@@ -2420,7 +2424,9 @@ def {NAME}Transformer() -> TransformationFunc:
     threads or processes."""
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
 
+
 get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, ident={ID})
+
 
 def transform_{NAME}(cst):
     get_transformer()(cst)
@@ -2429,6 +2435,7 @@ def transform_{NAME}(cst):
 
 COMPILER_FACTORY = '''
 get_compiler = ThreadLocalSingletonFactory({NAME}Compiler, ident={ID})
+
 
 def compile_{NAME}(ast):
     return get_compiler()(ast)

@@ -46,7 +46,7 @@ from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_hist
 from DHParser.parse import Lookahead
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
-from DHParser.syntaxtree import Node, RootNode, parse_tree, flatten_sxpr, ZOMBIE_TAG
+from DHParser.syntaxtree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
 from DHParser.toolkit import load_if_file, re, re_find, concurrent_ident, instantiate_executor
@@ -469,7 +469,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
             if "cst" in tests and len(errata) == errflag:
                 try:
-                    compare = parse_tree(get(tests, "cst", test_name))
+                    compare = deserialize(get(tests, "cst", test_name))
                 except ValueError as e:
                     raise SyntaxError('CST-TEST "%s" of parser "%s" failed with:\n%s'
                                       % (test_name, parser_name, str(e)))
@@ -483,7 +483,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
             if "ast" in tests and len(errata) == errflag:
                 try:
-                    compare = parse_tree(get(tests, "ast", test_name))
+                    compare = deserialize(get(tests, "ast", test_name))
                 except ValueError as e:
                     raise SyntaxError('AST-TEST "%s" of parser "%s" failed with:\n%s'
                                       % (test_name, parser_name, str(e)))

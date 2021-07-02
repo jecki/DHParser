@@ -355,6 +355,9 @@ DHParser does does not hide any stages of the tree generation
 process. Thus, you get full access to the (simplified) concrete
 syntax tree (CST) as well as to the abstract syntax tree (AST).
 
+An internal mini-DSL for AST-transformation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Abstract syntax tree generation is controlled in
 declarative style by simple lists of transformations
 applied to each node depending on its type. Remember
@@ -392,9 +395,10 @@ end as nodes containing the quotation mark-delimiters
 of that string.
 
 To give an expression how AST-transformation-tables
-may look like, here is an excerpt from DHParser's
-own transformation table to derive a lean AST from
-the concrete syntax-tree of an EBNF grammar::
+may look like, here is an excerpt from (a former
+version of) DHParser's own transformation table
+to derive a lean AST from the concrete syntax-tree
+of an EBNF grammar::
 
     EBNF_AST_transformation_table = {
         # AST Transformations for EBNF-grammar
@@ -427,16 +431,108 @@ are composed of a single :py:class:`~syntaxtree.Node`-type.
 Nodes contain either text-data or have one or more other nodes
 as children (but not both). The "kind" or "type"
 of a node is indicated by its "tag-name". It should be
-easy, though, to this into an application-specific
-tree of objects of different classes.
+easy, though, to this tree of nodes into an
+application-specific tree of objects of different classes.
+
+Serialization as you like it: XML, JSON, S-expressions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+DHParser makes it easy to visualize the various stages
+of tree-transformation (CST, AST, ...) by offering
+manifold serialization methods that output syntax-trees
+in either a nicely formatted or compact form::
+
+1. S-expressions::
+
+    >>> syntax_tree = JSONParser.parse_JSON('{ "one": 1, "two": 2 }')
+    >>> JSONParser.transform_JSON(syntax_tree)
+    >>> print(syntax_tree.as_sxpr())
+    (json
+      (object
+        (member
+          (string
+            (PLAIN "one"))
+          (number
+            (INT "1")))
+        (member
+          (string
+            (PLAIN "two"))
+          (number
+            (INT "2")))))
+
+2. XML::
+
+    >>> print(syntax_tree.as_xml(indent=None))
+    <json>
+      <object>
+        <member>
+          <string>
+            <PLAIN>one</PLAIN>
+          </string>
+          <number>
+            <INT>1</INT>
+          </number>
+        </member>
+        <member>
+          <string>
+            <PLAIN>two</PLAIN>
+          </string>
+          <number>
+            <INT>2</INT>
+          </number>
+        </member>
+      </object>
+    </json>
+
+3. JSON::
+
+    >>> print(syntax_tree.as_json(indent=None))
+    ["json",[["object",[["member",[["string",[["PLAIN","one",3]],2],["number",[["INT","1",9]],9]],2],["member",[["string",[["PLAIN","two",13]],12],["number",[["INT","2",19]],19]],10]],0]],0]
+
+4. Indented text-tree::
+
+    >>> print(syntax_tree.as_tree())
+    json
+      object
+        member
+          string
+            PLAIN "one"
+          number
+            INT "1"
+        member
+          string
+            PLAIN "two"
+          number
+            INT "2"
+
+All but the last serialization-formats can be de-serialized into
+a tree of nodes with the functions: :py:func:`~syntaxtree.parse_sxpr`,
+:py:func:`~syntaxtree.parse_xml`, :py:func:`~syntaxtree.parse_json`.
+The :py:func:`~syntaxtree.parse_xml` is not restricted to de-serialization but
+can parse any XML into a tree of nodes.
+
+XML-connection
+^^^^^^^^^^^^^^
+
+Since DHParser has been build with Digital-Humanities-applications in mind,
+it offers to further methods to connect to X-technologies. The methods
+:py:meth:`~syntaxtree.Node.as_etree` and :py:meth:`~syntaxtree.Node.from_etree`
+allow direct conversion to the xml-ElementTrees of the Python standard-library
+or of the lxml-package which offers full support for XPath, XQuery and XSLT.
 
 
 Test-driven grammar development
 -------------------------------
 
+Just like regular expressions, it is quite difficult to get
+EBNF-grammars right on the first try - especially, if you are
+new to the technology. For regular expressions there exist
+all kinds of "workbenches" to try and test regular expressions.
 
-Debugging parsers
------------------
+
+
+- Debugging parsers
+
 
 
 Fail-tolerant parsing
@@ -448,8 +544,8 @@ Compiling DSLs
 Serialization
 -------------
 
-XML-Connection
---------------
+- XML-Connection
+
 
 Language Servers
 ----------------
