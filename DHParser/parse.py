@@ -177,7 +177,7 @@ class ParserError(Exception):
         return pe
 
 
-PatternMatchType = Union[RxPatternType, str, Callable]
+PatternMatchType = Union[RxPatternType, str, Callable, 'Parser']
 ErrorMessagesType = List[Tuple[PatternMatchType, str]]
 ResumeList = List[PatternMatchType]  # list of strings or regular expressions
 ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
@@ -228,6 +228,7 @@ def reentry_point(rest: StringView,
     """
     upper_limit = len(rest) + 1
     closest_match = upper_limit
+    skip_node = None
     comments = None  # type: Optional[Iterator]
     if search_window < 0:
         search_window = len(rest)
@@ -299,19 +300,30 @@ def reentry_point(rest: StringView,
     # find closest match
     for rule in rules:
         comments = rest.finditer(comment_regex)
-        if callable(rule):
-            search_func = algorithm_search
-        elif isinstance(rule, str):
-            search_func = str_search
+        if isinstance(rule, Parser):
+            _node, _text = cast(Parser, rule)(rest)
+            if _node:
+                pos = len(rest) - len(_text)
+                if pos < closest_match:
+                    closest_match = pos
+                    skip_node = _node
         else:
-            search_func = rx_search
-        pos = entry_point(search_func, rule)
-        closest_match = min(pos, closest_match)
+            if callable(rule):
+                search_func = algorithm_search
+            elif isinstance(rule, str):
+                search_func = str_search
+            else:
+                search_func = rx_search
+            pos = entry_point(search_func, rule)
+            if pos < closest_match:
+                skip_node = None
+                closest_match = pos
 
     # in case no rule matched return -1
     if closest_match == upper_limit:
         closest_match = -1
-    skip_node = Node(ZOMBIE_TAG, rest[:max(closest_match,0)])
+    if skip_node is None:
+        skip_node = Node(ZOMBIE_TAG, rest[:max(closest_match,0)])
     return closest_match, skip_node
 
 
@@ -2760,7 +2772,7 @@ class MandatoryNary(NaryParser):
                             failed_on_lookahead: bool,
                             expected: str,
                             reloc: int,
-                            err_node: Node) -> Tuple[Error, Node, StringView]:
+                            err_node: Node) -> Tuple[Error, StringView]:
         """
         Chooses the right error message in case of a mandatory violation and
         returns an error with this message, an error node, to which the error
