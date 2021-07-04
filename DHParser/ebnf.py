@@ -3143,7 +3143,7 @@ class EBNFCompiler(Compiler):
                         refined = self.gen_search_rule(nd)
                     except IndexError:
                         nd = self.tree  # TODO: Allow arbitrary parsers, here
-                        refined = ""
+                        refined = ''    #       refined = rule
                     except KeyError:
                         # rule represents a procedure name
                         nd = self.tree
