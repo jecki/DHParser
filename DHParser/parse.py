@@ -191,7 +191,7 @@ ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
 def reentry_point(rest: StringView,
                   rules: ResumeList,
                   comment_regex,
-                  search_window: int = -1) -> int:
+                  search_window: int = -1) -> Tuple[int, Node]:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
@@ -222,7 +222,8 @@ def reentry_point(rest: StringView,
         reentry-point. A value smaller than zero means that the complete remaining
         text will be searched. A value of zero effectively turns of resuming after
         error.
-    :return: The integer index of the closest reentry point or -1 if no
+    :return: A tuple of integer index of the closest reentry point and a Node
+        capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
         reentry-point was found.
     """
     upper_limit = len(rest) + 1
@@ -310,7 +311,8 @@ def reentry_point(rest: StringView,
     # in case no rule matched return -1
     if closest_match == upper_limit:
         closest_match = -1
-    return closest_match
+    skip_node = Node(ZOMBIE_TAG, rest[:max(closest_match,0)])
+    return closest_match, skip_node
 
 
 ########################################################################
@@ -524,8 +526,8 @@ class Parser:
                 rules = tuple(grammar.resume_rules__.get(
                     self.pname or grammar.associated_symbol__(self).pname, []))
                 rest = pe.rest[len(pe.node):]
-                i = reentry_point(rest, rules, grammar.comment_rx__,
-                                  grammar.reentry_search_window__)
+                i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
+                                             grammar.reentry_search_window__)
                 if i >= 0 or self == grammar.start_parser__:
                     # either a reentry point was found or the
                     # error has fallen through to the first level
@@ -540,9 +542,8 @@ class Parser:
                         zombie.result = rest[:i]
                         tail = tuple()  # type: ChildrenType
                     else:
-                        nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
                         # nd.attr['err'] = pe.error.message
-                        tail = (nd,)
+                        tail = (skip_node,)
                     rest = rest[i:]
                     if pe.first_throw:
                         node = pe.node
@@ -2741,7 +2742,7 @@ class MandatoryNary(NaryParser):
         return duplicate
 
     @cython.returns(cython.int)
-    def get_reentry_point(self, text_: StringView) -> int:
+    def get_reentry_point(self, text_: StringView) -> Tuple[int, Node]:
         """Returns a reentry-point determined by the associated skip-list in
         `self.grammar.skip_rules__`. If no reentry-point was found or the
         skip-list ist empty, -1 is returned.
@@ -2751,14 +2752,15 @@ class MandatoryNary(NaryParser):
         if skip:
             gr = self._grammar
             return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
-        return -1
+        return -1, Node(ZOMBIE_TAG, '')
 
-    @cython.locals(i=cython.int, location=cython.int)
+    @cython.locals(location=cython.int)
     def mandatory_violation(self,
                             text_: StringView,
                             failed_on_lookahead: bool,
                             expected: str,
-                            reloc: int) -> Tuple[Error, Node, StringView]:
+                            reloc: int,
+                            err_node: Node) -> Tuple[Error, Node, StringView]:
         """
         Chooses the right error message in case of a mandatory violation and
         returns an error with this message, an error node, to which the error
@@ -2772,18 +2774,18 @@ class MandatoryNary(NaryParser):
         :param failed_on_lookahead: True if the violating parser was a
                 Lookahead-Parser.
         :param expected:  the expected (but not found) text at this point.
+        :param err_node: A zombie-node that captures the text from the
+                position where the error occurred to a suggested
+                reentry-position.
         :param reloc: A position value that represents the reentry point for
                 parsing after the error occurred.
 
-        :return:   a tuple of an error object, a zombie node at the position
-                where the mandatory violation occurred and to which the error
-                object is attached and a string view for the continuation the
-                parsing process
+        :return:   a tuple of an error object and a string view for the
+                continuation the parsing process
         """
         grammar = self._grammar
-        i = reloc if reloc >= 0 else 0
         location = grammar.document_length__ - len(text_)
-        err_node = Node(ZOMBIE_TAG, text_[:i], True).with_pos(location)
+        err_node.with_pos(location)
         found = text_[:10].replace('\n', '\\n ') + '...'
         sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
@@ -2814,7 +2816,7 @@ class MandatoryNary(NaryParser):
             # signal error to tracer directly, because this error is not raised!
             grammar.most_recent_error__ = ParserError(
                 self, err_node, text_, error, first_throw=False)
-        return error, err_node, text_[i:]
+        return error, text_[max(reloc, 0):]
 
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
@@ -2888,9 +2890,9 @@ class Series(MandatoryNary):
                 if pos < mandatory:
                     return None, text
                 else:
-                    reloc = self.get_reentry_point(text_)
-                    error, node, text_ = self.mandatory_violation(
-                        text_, isinstance(parser, Lookahead), parser.repr, reloc)
+                    reloc, node = self.get_reentry_point(text_)
+                    error, text_ = self.mandatory_violation(
+                        text_, isinstance(parser, Lookahead), parser.repr, reloc, node)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
@@ -3243,9 +3245,9 @@ class Interleave(MandatoryNary):
                         break
                 else:
                     return None, text
-                reloc = self.get_reentry_point(text_)
+                reloc, err_node = self.get_reentry_point(text_)
                 expected = ' ° '.join([parser.repr for parser in self.parsers])
-                error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
+                error, text_ = self.mandatory_violation(text_, False, expected, reloc, err_node)
                 results += (err_node,)
                 if reloc < 0:
                     break
