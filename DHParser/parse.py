@@ -967,6 +967,9 @@ class GrammarError(Exception):
                                 for i, err_tuple in enumerate(self.errors))
 
 
+RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
+
+
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -1276,7 +1279,7 @@ class Grammar:
         if cls.parser_initialization__[0] != "done":
             cdict = cls.__dict__
             for entry, parser in cdict.items():
-                if isinstance(parser, Parser) and sane_parser_name(entry):
+                if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
                     anonymous = True if cls.disposable__.match(entry) else False
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
@@ -1360,10 +1363,24 @@ class Grammar:
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
 
         self.root_parser__.apply(self._add_parser__)
+
+        resume_lists = []
+        self.resume_parsers__: List[Parser] = []
+        if hasattr(self, 'resume_rules__'):
+            resume_lists.extend(self.resume_rules__.values())
+        if hasattr(self, 'skip_rules__'):
+            resume_lists.extend(self.skip_rules__.values())
+        for l in resume_lists:
+            for i in range(len(l)):
+                if isinstance(l[i], Parser):
+                    l[i] = self[l[i].pname]
+                    self.resume_parsers__.append(l[i])
+
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
         self.root_parser__.apply(lambda ctx: ctx[-1].reset())
+        for p in self.resume_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1450,27 +1467,21 @@ class Grammar:
         particular instance of Grammar.
         """
         parser = context[-1]
-        if parser.pname:
-            # prevent overwriting instance variables or parsers of a different class
-            assert (parser.pname not in self.__dict__
-                    or isinstance(self.__dict__[parser.pname], parser.__class__)), \
-                ('Cannot add parser "%s" because a field with the same name '
-                 'already exists in grammar object: %s!'
-                 % (parser.pname, str(self.__dict__[parser.pname])))
-            setattr(self, parser.pname, parser)
-        # if isinstance(parser, MandatoryNary):
-        #     for p in reversed(context):
-        #         if p.pname:
-        #             cast(MandatoryNary, parser).nearest_pname = p.pname
-        #             break
-        #     else:
-        #         assert False, '???'
-        if parser.disposable:
-            parser.tag_name = parser.ptype
-        else:
-            parser.tag_name = parser.pname
-        self.all_parsers__.add(parser)
-        parser.grammar = self
+        if parser not in self.all_parsers__:
+            if parser.pname:
+                # prevent overwriting instance variables or parsers of a different class
+                assert (parser.pname not in self.__dict__
+                        or isinstance(self.__dict__[parser.pname], parser.__class__)), \
+                    ('Cannot add parser "%s" because a field with the same name '
+                     'already exists in grammar object: %s!'
+                     % (parser.pname, str(self.__dict__[parser.pname])))
+                setattr(self, parser.pname, parser)
+            if parser.disposable:
+                parser.tag_name = parser.ptype
+            else:
+                parser.tag_name = parser.pname
+            self.all_parsers__.add(parser)
+            parser.grammar = self
 
 
     def get_memoization_dict__(self, parser: Parser):
@@ -1532,6 +1543,7 @@ class Grammar:
         if self._dirty_flag__:
             self._reset__()
             parser.apply(lambda ctx: ctx[-1].reset())
+            for p in self.resume_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
         else:
             self._dirty_flag__ = True
 
@@ -1741,6 +1753,8 @@ class Grammar:
             symbol = parser
         else:
             self.root_parser__.apply(find_symbol_for_parser)
+            for resume_parser in self.resume_parsers__:
+                resume_parser.apply(find_symbol_for_parser)
             if symbol is None:
                 raise AttributeError('Parser %s (%i) is not contained in Grammar!'
                                      % (str(parser), id(parser)))

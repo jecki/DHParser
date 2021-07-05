@@ -833,10 +833,9 @@ class TestCustomizedResumeParsing:
             cba = "c" "b" §"a"
         GAMMA_RE = /(?=GA\w+)/
         """
-    gr = grammar_provider(lang)()
 
     def test_several_resume_rules_innermost_rule_matching(self):
-        gr = self.gr
+        gr = grammar_provider(self.lang)()
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -903,12 +902,11 @@ class TestCustomizedResumeParsing_with_Parsers:
             cab = "c" "a" §"b"
             cba = "c" "b" §"a"
         GAMMA_RE = /(?=GA\w+)/
-        ALPHA_RESUME = { !`BETA` !`GAMMA` /./ } 
+        ALPHA_RESUME = { !`BETA` !`GAMMA` /./ }
         """
-    gr = grammar_provider(lang)()
 
     def test_several_resume_rules_innermost_rule_matching(self):
-        gr = self.gr
+        gr = grammar_provider(self.lang)()
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -930,8 +928,8 @@ class TestCustomizedResumeParsing_with_Parsers:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
-        assert len(cst.errors_sorted) == 1
+        # because of resuming, there should be only one error message
+        assert len(cst.errors_sorted) == 1, str(cst.errors_sorted)
 
 
 class TestInSeriesResume:
@@ -1302,7 +1300,6 @@ class TestTreeOptimization:
         parser = create_parser(lang.replace('none', 'flatten'))
         assert parser('ABC').as_sxpr() == '(root (:Text "A") (:Text "B") (important "C"))'
         parser = create_parser(lang.replace('none', 'merge_treetops'))
-        # print(parser.python_src__)
         assert parser('ABC').as_sxpr() == '(root (:Text "A") (:Text "B") (important "C"))'
         assert parser('ABD').as_sxpr() == '(root "ABD")'
         parser = create_parser(lang.replace('none', 'merge_leaves'))
