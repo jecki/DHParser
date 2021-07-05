@@ -1110,6 +1110,10 @@ class Grammar:
                 was started (see method `__call__`) or `None` if no parsing process
                 is running.
 
+        unconnected_parsers__: A list of parsers that is not connected to the
+                root parser. This list of parsers is collected during instantiation
+                from the ``resume_rules__`` and ``skip_rules__``-data.
+
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
                 when it is called again.
@@ -1363,9 +1367,14 @@ class Grammar:
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
 
         self.root_parser__.apply(self._add_parser__)
+        root_connected = frozenset(self.all_parsers__)
 
+        assert 'root_parser__' in self.__dict__
+        assert self.root_parser__ == self.__dict__['root_parser__']
+        self.ff_parser__ = self.root_parser__
+        self.root_parser__.apply(lambda ctx: ctx[-1].reset())
+        self.unconnected_parsers__: List[Parser] = []
         resume_lists = []
-        self.resume_parsers__: List[Parser] = []
         if hasattr(self, 'resume_rules__'):
             resume_lists.extend(self.resume_rules__.values())
         if hasattr(self, 'skip_rules__'):
@@ -1374,13 +1383,9 @@ class Grammar:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
                     l[i] = self[l[i].pname]
-                    self.resume_parsers__.append(l[i])
-
-        assert 'root_parser__' in self.__dict__
-        assert self.root_parser__ == self.__dict__['root_parser__']
-        self.ff_parser__ = self.root_parser__
-        self.root_parser__.apply(lambda ctx: ctx[-1].reset())
-        for p in self.resume_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
+                    if l[i] not in root_connected:
+                        self.unconnected_parsers__.append(l[i])
+        for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1543,7 +1548,7 @@ class Grammar:
         if self._dirty_flag__:
             self._reset__()
             parser.apply(lambda ctx: ctx[-1].reset())
-            for p in self.resume_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
+            for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
         else:
             self._dirty_flag__ = True
 
@@ -1753,7 +1758,7 @@ class Grammar:
             symbol = parser
         else:
             self.root_parser__.apply(find_symbol_for_parser)
-            for resume_parser in self.resume_parsers__:
+            for resume_parser in self.unconnected_parsers__:
                 resume_parser.apply(find_symbol_for_parser)
             if symbol is None:
                 raise AttributeError('Parser %s (%i) is not contained in Grammar!'
