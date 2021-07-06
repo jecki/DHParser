@@ -177,7 +177,7 @@ class ParserError(Exception):
         return pe
 
 
-PatternMatchType = Union[RxPatternType, str, Callable]
+PatternMatchType = Union[RxPatternType, str, Callable, 'Parser']
 ErrorMessagesType = List[Tuple[PatternMatchType, str]]
 ResumeList = List[PatternMatchType]  # list of strings or regular expressions
 ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
@@ -191,7 +191,7 @@ ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
 def reentry_point(rest: StringView,
                   rules: ResumeList,
                   comment_regex,
-                  search_window: int = -1) -> int:
+                  search_window: int = -1) -> Tuple[int, Node]:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
@@ -222,11 +222,13 @@ def reentry_point(rest: StringView,
         reentry-point. A value smaller than zero means that the complete remaining
         text will be searched. A value of zero effectively turns of resuming after
         error.
-    :return: The integer index of the closest reentry point or -1 if no
+    :return: A tuple of integer index of the closest reentry point and a Node
+        capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
         reentry-point was found.
     """
     upper_limit = len(rest) + 1
     closest_match = upper_limit
+    skip_node = None
     comments = None  # type: Optional[Iterator]
     if search_window < 0:
         search_window = len(rest)
@@ -298,19 +300,31 @@ def reentry_point(rest: StringView,
     # find closest match
     for rule in rules:
         comments = rest.finditer(comment_regex)
-        if callable(rule):
-            search_func = algorithm_search
-        elif isinstance(rule, str):
-            search_func = str_search
+        if isinstance(rule, Parser):
+            _node, _text = cast(Parser, rule)(rest)
+            if _node:
+                pos = len(rest) - len(_text)
+                if pos < closest_match:
+                    closest_match = pos
+                    skip_node = _node
         else:
-            search_func = rx_search
-        pos = entry_point(search_func, rule)
-        closest_match = min(pos, closest_match)
+            if callable(rule):
+                search_func = algorithm_search
+            elif isinstance(rule, str):
+                search_func = str_search
+            else:
+                search_func = rx_search
+            pos = entry_point(search_func, rule)
+            if pos < closest_match:
+                skip_node = None
+                closest_match = pos
 
     # in case no rule matched return -1
     if closest_match == upper_limit:
         closest_match = -1
-    return closest_match
+    if skip_node is None:
+        skip_node = Node(ZOMBIE_TAG, rest[:max(closest_match,0)])
+    return closest_match, skip_node
 
 
 ########################################################################
@@ -524,8 +538,8 @@ class Parser:
                 rules = tuple(grammar.resume_rules__.get(
                     self.pname or grammar.associated_symbol__(self).pname, []))
                 rest = pe.rest[len(pe.node):]
-                i = reentry_point(rest, rules, grammar.comment_rx__,
-                                  grammar.reentry_search_window__)
+                i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
+                                             grammar.reentry_search_window__)
                 if i >= 0 or self == grammar.start_parser__:
                     # either a reentry point was found or the
                     # error has fallen through to the first level
@@ -540,9 +554,8 @@ class Parser:
                         zombie.result = rest[:i]
                         tail = tuple()  # type: ChildrenType
                     else:
-                        nd = Node(ZOMBIE_TAG, rest[:i]).with_pos(location)
                         # nd.attr['err'] = pe.error.message
-                        tail = (nd,)
+                        tail = (skip_node,)
                     rest = rest[i:]
                     if pe.first_throw:
                         node = pe.node
@@ -954,6 +967,9 @@ class GrammarError(Exception):
                                 for i, err_tuple in enumerate(self.errors))
 
 
+RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
+
+
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -1093,6 +1109,10 @@ class Grammar:
         start_parser__:  During parsing, the parser with which the parsing process
                 was started (see method `__call__`) or `None` if no parsing process
                 is running.
+
+        unconnected_parsers__: A list of parsers that is not connected to the
+                root parser. This list of parsers is collected during instantiation
+                from the ``resume_rules__`` and ``skip_rules__``-data.
 
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -1263,7 +1283,7 @@ class Grammar:
         if cls.parser_initialization__[0] != "done":
             cdict = cls.__dict__
             for entry, parser in cdict.items():
-                if isinstance(parser, Parser) and sane_parser_name(entry):
+                if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
                     anonymous = True if cls.disposable__.match(entry) else False
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
@@ -1347,10 +1367,25 @@ class Grammar:
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
 
         self.root_parser__.apply(self._add_parser__)
+        root_connected = frozenset(self.all_parsers__)
+
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
         self.root_parser__.apply(lambda ctx: ctx[-1].reset())
+        self.unconnected_parsers__: List[Parser] = []
+        resume_lists = []
+        if hasattr(self, 'resume_rules__'):
+            resume_lists.extend(self.resume_rules__.values())
+        if hasattr(self, 'skip_rules__'):
+            resume_lists.extend(self.skip_rules__.values())
+        for l in resume_lists:
+            for i in range(len(l)):
+                if isinstance(l[i], Parser):
+                    l[i] = self[l[i].pname]
+                    if l[i] not in root_connected:
+                        self.unconnected_parsers__.append(l[i])
+        for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1437,27 +1472,21 @@ class Grammar:
         particular instance of Grammar.
         """
         parser = context[-1]
-        if parser.pname:
-            # prevent overwriting instance variables or parsers of a different class
-            assert (parser.pname not in self.__dict__
-                    or isinstance(self.__dict__[parser.pname], parser.__class__)), \
-                ('Cannot add parser "%s" because a field with the same name '
-                 'already exists in grammar object: %s!'
-                 % (parser.pname, str(self.__dict__[parser.pname])))
-            setattr(self, parser.pname, parser)
-        # if isinstance(parser, MandatoryNary):
-        #     for p in reversed(context):
-        #         if p.pname:
-        #             cast(MandatoryNary, parser).nearest_pname = p.pname
-        #             break
-        #     else:
-        #         assert False, '???'
-        if parser.disposable:
-            parser.tag_name = parser.ptype
-        else:
-            parser.tag_name = parser.pname
-        self.all_parsers__.add(parser)
-        parser.grammar = self
+        if parser not in self.all_parsers__:
+            if parser.pname:
+                # prevent overwriting instance variables or parsers of a different class
+                assert (parser.pname not in self.__dict__
+                        or isinstance(self.__dict__[parser.pname], parser.__class__)), \
+                    ('Cannot add parser "%s" because a field with the same name '
+                     'already exists in grammar object: %s!'
+                     % (parser.pname, str(self.__dict__[parser.pname])))
+                setattr(self, parser.pname, parser)
+            if parser.disposable:
+                parser.tag_name = parser.ptype
+            else:
+                parser.tag_name = parser.pname
+            self.all_parsers__.add(parser)
+            parser.grammar = self
 
 
     def get_memoization_dict__(self, parser: Parser):
@@ -1519,6 +1548,7 @@ class Grammar:
         if self._dirty_flag__:
             self._reset__()
             parser.apply(lambda ctx: ctx[-1].reset())
+            for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
         else:
             self._dirty_flag__ = True
 
@@ -1728,6 +1758,8 @@ class Grammar:
             symbol = parser
         else:
             self.root_parser__.apply(find_symbol_for_parser)
+            for resume_parser in self.unconnected_parsers__:
+                resume_parser.apply(find_symbol_for_parser)
             if symbol is None:
                 raise AttributeError('Parser %s (%i) is not contained in Grammar!'
                                      % (str(parser), id(parser)))
@@ -2741,7 +2773,7 @@ class MandatoryNary(NaryParser):
         return duplicate
 
     @cython.returns(cython.int)
-    def get_reentry_point(self, text_: StringView) -> int:
+    def get_reentry_point(self, text_: StringView) -> Tuple[int, Node]:
         """Returns a reentry-point determined by the associated skip-list in
         `self.grammar.skip_rules__`. If no reentry-point was found or the
         skip-list ist empty, -1 is returned.
@@ -2751,14 +2783,15 @@ class MandatoryNary(NaryParser):
         if skip:
             gr = self._grammar
             return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
-        return -1
+        return -1, Node(ZOMBIE_TAG, '')
 
-    @cython.locals(i=cython.int, location=cython.int)
+    @cython.locals(location=cython.int)
     def mandatory_violation(self,
                             text_: StringView,
                             failed_on_lookahead: bool,
                             expected: str,
-                            reloc: int) -> Tuple[Error, Node, StringView]:
+                            reloc: int,
+                            err_node: Node) -> Tuple[Error, StringView]:
         """
         Chooses the right error message in case of a mandatory violation and
         returns an error with this message, an error node, to which the error
@@ -2772,18 +2805,18 @@ class MandatoryNary(NaryParser):
         :param failed_on_lookahead: True if the violating parser was a
                 Lookahead-Parser.
         :param expected:  the expected (but not found) text at this point.
+        :param err_node: A zombie-node that captures the text from the
+                position where the error occurred to a suggested
+                reentry-position.
         :param reloc: A position value that represents the reentry point for
                 parsing after the error occurred.
 
-        :return:   a tuple of an error object, a zombie node at the position
-                where the mandatory violation occurred and to which the error
-                object is attached and a string view for the continuation the
-                parsing process
+        :return:   a tuple of an error object and a string view for the
+                continuation the parsing process
         """
         grammar = self._grammar
-        i = reloc if reloc >= 0 else 0
         location = grammar.document_length__ - len(text_)
-        err_node = Node(ZOMBIE_TAG, text_[:i], True).with_pos(location)
+        err_node.with_pos(location)
         found = text_[:10].replace('\n', '\\n ') + '...'
         sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
@@ -2814,7 +2847,7 @@ class MandatoryNary(NaryParser):
             # signal error to tracer directly, because this error is not raised!
             grammar.most_recent_error__ = ParserError(
                 self, err_node, text_, error, first_throw=False)
-        return error, err_node, text_[i:]
+        return error, text_[max(reloc, 0):]
 
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
@@ -2888,9 +2921,9 @@ class Series(MandatoryNary):
                 if pos < mandatory:
                     return None, text
                 else:
-                    reloc = self.get_reentry_point(text_)
-                    error, node, text_ = self.mandatory_violation(
-                        text_, isinstance(parser, Lookahead), parser.repr, reloc)
+                    reloc, node = self.get_reentry_point(text_)
+                    error, text_ = self.mandatory_violation(
+                        text_, isinstance(parser, Lookahead), parser.repr, reloc, node)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
@@ -3243,9 +3276,9 @@ class Interleave(MandatoryNary):
                         break
                 else:
                     return None, text
-                reloc = self.get_reentry_point(text_)
+                reloc, err_node = self.get_reentry_point(text_)
                 expected = ' ° '.join([parser.repr for parser in self.parsers])
-                error, err_node, text_ = self.mandatory_violation(text_, False, expected, reloc)
+                error, text_ = self.mandatory_violation(text_, False, expected, reloc, err_node)
                 results += (err_node,)
                 if reloc < 0:
                     break

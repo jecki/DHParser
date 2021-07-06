@@ -280,11 +280,8 @@ def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str = '') -
     grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),
                              get_ebnf_transformer(), get_ebnf_compiler(branding, ebnf_src))
     log_name = get_config_value('compiled_EBNF_log')
-    if log_name:
-        if is_logging():
+    if log_name and is_logging():
             append_log(log_name, grammar_src)
-        else:
-            print(grammar_src)
     imports = DHPARSER_IMPORTS.format(dhparser_parentdir=relative_path('.', DHPARSER_PARENTDIR))
     grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                             r'get_(?:\w+_)?grammar$')

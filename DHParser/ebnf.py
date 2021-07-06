@@ -2420,6 +2420,11 @@ def get_grammar() -> {NAME}Grammar:
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
 def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=True):
@@ -2925,18 +2930,13 @@ class EBNFCompiler(Compiler):
             return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
         elif nd.tag_name == 'procedure':
             return unrepr(nd.content)
-        elif nd.tag_name != 'symbol':
-            self.tree.new_error(nd, 'Only regular expressions, string literals and external '
-                                'procedures are allowed as search rules, but not: ' + nd.tag_name)
-        return ''
-
-
-    def gen_search_list(self, nodes: Sequence[Node]) -> List[Union[unrepr, str]]:
-        search_list = []  # type: List[Union[unrepr, str]]
-        for child in nodes:
-            rule = self.gen_search_rule(child)
-            search_list.append(rule if rule else unrepr(child.content.strip()))
-        return search_list
+        elif nd.tag_name == 'symbol':
+            return unrepr(nd.content.strip())
+        else:
+            return ''
+        #     self.tree.new_error(nd, 'Only regular expressions, string literals and external '
+        #                         'procedures are allowed as search rules, but not: ' + nd.tag_name)
+        # return unrepr('')
 
 
     def directly_referred(self, symbol: str) -> FrozenSet[str]:
@@ -3067,7 +3067,6 @@ class EBNFCompiler(Compiler):
         Creates the Python code for the parser after compilation of
         the EBNF-Grammar
         """
-
         def pp_rules(rule_name: str, ruleset: Dict[str, List]) -> Tuple[str, str]:
             """Pretty-print skip- and resume-rule and error-messages dictionaries
             to avoid excessively long lines in the generated python source."""
@@ -3075,11 +3074,8 @@ class EBNFCompiler(Compiler):
             indent = ",\n" + " " * (len(rule_name) + 8)
             rule_repr = []
             for k, v in ruleset.items():
-                if len(v) > 1:
-                    delimiter = indent + ' ' * (len(k) + 5)
-                    val = '(' + delimiter.join(str(it) for it in v) + ')'
-                else:
-                    val = str((v[0],))  # turn single-element list into single-element tuple
+                delimiter = indent + ' ' * (len(k) + 5)
+                val = '[' + delimiter.join(str(it) for it in v) + ']'
                 rule_repr.append("'{key}': {value}".format(key=k, value=val))
             rule_repr[0] = '{' + rule_repr[0]
             rule_repr[-1] = rule_repr[-1] + '}'
@@ -3102,6 +3098,7 @@ class EBNFCompiler(Compiler):
 
         # minimize the necessary number of forward declarations
         self.optimize_definitions_order(definitions)
+        self.root_symbol = definitions[0][0] if definitions else ""
 
         # provide for capturing of symbols that are variables, i.e. the
         # value of which will be retrieved at some point during the parsing process
@@ -3150,9 +3147,10 @@ class EBNFCompiler(Compiler):
                     try:
                         nd = self.rules[rule.s][0].children[1]
                         refined = self.gen_search_rule(nd)
+                        if not refined:  refined = unrepr(rule.s)
                     except IndexError:
-                        nd = self.tree
-                        refined = ""
+                        nd = self.tree  # TODO: Allow arbitrary parsers, here
+                        refined = ''    #       refined = rule
                     except KeyError:
                         # rule represents a procedure name
                         nd = self.tree
@@ -3168,7 +3166,7 @@ class EBNFCompiler(Compiler):
                     refined_rules.append(rule)
             resume_rules[symbol] = refined_rules
         if resume_rules:
-            definitions.append(pp_rules(self.RESUME_RULES_KEYWORD, resume_rules))
+            definitions.insert(0, pp_rules(self.RESUME_RULES_KEYWORD, resume_rules))
 
         # prepare and add skip-rules
 
@@ -3189,7 +3187,7 @@ class EBNFCompiler(Compiler):
                 rules.append(search)
             skip_rules[symbol] = rules
         if skip_rules:
-            definitions.append(pp_rules(self.SKIP_RULES_KEYWORD, skip_rules))
+            definitions.insert(0, pp_rules(self.SKIP_RULES_KEYWORD, skip_rules))
 
         for symbol in self.directives.skip.keys():
             if symbol not in self.consumed_skip_rules:
@@ -3266,7 +3264,6 @@ class EBNFCompiler(Compiler):
 
         # turn definitions into declarations in reverse order
 
-        self.root_symbol = definitions[0][0] if definitions else ""
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
@@ -3323,7 +3320,7 @@ class EBNFCompiler(Compiler):
                                         'Filter declared for uncaptured symbol "%s"' % symbol,
                                         WARNING)
 
-        # set root_symbol parser and assemble python grammar definition
+        # assemble python grammar definition
 
         if self.root_symbol:
             if self.directives.reduction != CombinedParser.DEFAULT_OPTIMIZATION:
@@ -3332,6 +3329,8 @@ class EBNFCompiler(Compiler):
                 declarations.append('root__ = TreeReduction(' + self.root_symbol + opt)
             else:
                 declarations.append('root__ = ' + self.root_symbol)
+        else:
+            declarations.append(f'root__ = RegExp(r"{NEVER_MATCH_PATTERN}")')
         declarations.append('')
         self.python_src = '\n    '.join(declarations) \
                           + GRAMMAR_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)
@@ -3343,7 +3342,6 @@ class EBNFCompiler(Compiler):
 
     def on_ZOMBIE__(self, node: Node) -> str:
         result = ['Illegal node in AST generated from EBNF-Source!']
-        # print(self.tree.as_sxpr())
         if node.children:
             result.append(' Fragments found: ')
             result.extend([str(self.compile(child)) for child in node.children])
@@ -3598,11 +3596,11 @@ class EBNFCompiler(Compiler):
                     node, 'Directive "%s" requires message string or a a pair ' % key
                     + '(regular expression or search string, message string) as argument!')
             if len(node.children) == 2:
-                error_msgs.append(('', unrepr(node.children[1].content)))
+                error_msgs.append(('', unrepr(node[1].content)))
             elif len(node.children) == 3:
-                rule = self.gen_search_rule(node.children[1])
-                error_msgs.append((rule if rule else unrepr(node.children[1].content),
-                                   unrepr(node.children[2].content)))
+                rule = self.gen_search_rule(node[1])
+                error_msgs.append((rule if rule else unrepr(node[1].content),
+                                   unrepr(node[2].content)))
             else:
                 self.tree.new_error(node, 'Directive "%s" allows at most two parameters' % key)
             self.directives.error[symbol] = error_msgs
@@ -3612,11 +3610,11 @@ class EBNFCompiler(Compiler):
             # if symbol in self.rules:
             #     self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
             #                         ' must be defined before the symbol!'.format(symbol))
-            self.directives.skip[symbol] = self.gen_search_list(node.children[1:])
+            self.directives.skip[symbol] = [self.gen_search_rule(nd) for nd in node[1:]]
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            self.directives.resume[symbol] = self.gen_search_list(node.children[1:])
+            self.directives.resume[symbol] = [self.gen_search_rule(nd) for nd in node[1:]]
 
         else:
             if any(key.startswith(directive) for directive in ('skip', 'error', 'resume')):
