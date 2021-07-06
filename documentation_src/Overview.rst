@@ -17,7 +17,7 @@ to analyse the parsing process and it offers facilities for unit-testing grammar
 support for fail-tolerant parsing so that the parser does not stop at the first syntax error
 it encounters. Finally, there is some support for writing language servers for DSLs
 in Python that adhere to editor-independent the
-`languag server-protocol <https://microsoft.github.io/language-server-protocol/>_`.
+`languag server-protocol <https://microsoft.github.io/language-server-protocol/>`_.
 
 
 Adhoc-Parsers
