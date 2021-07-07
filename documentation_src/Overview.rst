@@ -4,20 +4,20 @@ Overview of DHParser
 DHParser is a parser-generator and domain-specific-language (DSL) construction kit that
 is designed to make the process of designing, implementing and revising as DSL as
 simple as possible. It can be used in an adhoc-fashion for small projects and
-the grammar can be specified in Python like `pyparsing <https://pypi.org/project/pyparsing/>`
+the grammar can be specified in Python like `pyparsing <https://pypi.org/project/pyparsing/>`_
 or in a slightly amended version of the
-`Extended-Backus-Naur-Form (EBNF) <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`
+`Extended-Backus-Naur-Form (EBNF) <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
 directly within the Python-code. Or DHParser can used for large projects where you set up a
 directory tree with the grammar, parser, test-runner each residing in a separate file und the
 test and example code in dedicated sub-directories.
 
-DHParser uses `packrat parsing <https://bford.info/packrat/>` with full left-recursion support
+DHParser uses `packrat parsing <https://bford.info/packrat/>`_ with full left-recursion support
 which allows to build parsers for any context-free-grammar. It's got a post-mortem debugger
 to analyse the parsing process and it offers facilities for unit-testing grammars and some
 support for fail-tolerant parsing so that the parser does not stop at the first syntax error
 it encounters. Finally, there is some support for writing language servers for DSLs
 in Python that adhere to editor-independent the
-`languag server-protocol <https://microsoft.github.io/language-server-protocol/>`.
+`languag server-protocol <https://microsoft.github.io/language-server-protocol/>`_.
 
 
 Adhoc-Parsers
@@ -26,7 +26,7 @@ Adhoc-Parsers
 In case you just need a parser for some very simple DSL, you can directly add a string
 with the EBNF-grammar of that DSL to you python code and compile if into an executable
 parser much like you'd compile a regular expresseion. Let's do this for a
-`JSON <https://www.json.org/json-en.html>`-parser::
+`JSON <https://www.json.org/json-en.html>`_-parser::
 
     import sys
     from DHParser.dsl import create_parser
@@ -54,10 +54,8 @@ parser much like you'd compile a regular expresseion. Let's do this for a
         UNICODE     = "\u" HEX HEX
         HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
-        INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
-        NEG         = `-`
-        FRAC        = DOT /[0-9]+/
-        DOT         = `.`
+        INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
+        FRAC        = `.` /[0-9]+/
         EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
 
         _EOF        =  !/./
@@ -106,7 +104,7 @@ can be generated right inside a Python-program.
 Nodes, the name of which starts with a colon ":" are nodes that have
 been produced by an unnamed part of a parser, in this case the parts
 that parse the quotation marks within the string-parser. Usually, such
-nodes are either renamed or removed during abstract-syntaxtree-transformation.
+nodes are either renamed or removed during abstract-syntax-tree-transformation.
 
 The three lines starting with an ``@``-sign at the beginning of the
 grammar-string are DHParser-directives (see :py:mod:`ebnf`) which
@@ -125,10 +123,8 @@ instead of compiling an EBNF-grammar first::
     _dwsp = Drop(Whitespace(r'\s*'))
     _EOF = NegativeLookahead(RegExp('.'))
     EXP = (Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')).name('EXP')
-    DOT = Text(".").name('DOT')
-    FRAC = (DOT + RegExp(r'[0-9]+')).name('FRAC')
-    NEG = Text("-").name('NEG')
-    INT = (Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
+    FRAC = (Text(".") + RegExp(r'[0-9]+')).name('FRAC')
+    INT = (Option(Text("-")) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
     HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]').name('HEX')
     UNICODE = (DTKN("\\u") + HEX + HEX).name('unicode')
     ESCAPE = (RegExp('\\\\[/bnrt\\\\]') | UNICODE).name('ESCAPE')
@@ -222,7 +218,7 @@ with a name of a project-directory that will then be created and filled with som
    $ dhparser JSON
    $ cd JSON
    $ dir
-   example.dsl  JSON.ebnf	JSONServer.py  README.md  tests_grammar  tst_JSON_grammar.py
+   example.dsl  JSON.ebnf    JSONServer.py  README.md  tests_grammar  tst_JSON_grammar.py
 
 The first step is to replace the ".ebnf"-file that contains a simple demo-grammar with your
 own grammar. For the sake of the example we'll write our json-Grammar into this file::
@@ -235,7 +231,7 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
     @drop       = whitespace, strings  # silently drop bare strings and whitespace
     @disposable = /_\w+/  # regular expression to identify disposable symbols
 
-    #:  compound elememts
+    #:  compound elements
 
     json        = ~ _element _EOF
     _element    = object | array | string | number | _bool | null
@@ -260,10 +256,8 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
     UNICODE     = "\u" HEX HEX
     HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
-    INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
-    NEG         = `-`
-    FRAC        = DOT /[0-9]+/
-    DOT         = `.`
+    INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
+    FRAC        = `.` /[0-9]+/
     EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
 
     _EOF        =  !/./
@@ -276,7 +270,7 @@ The ``tst_..._grammar.py``-script is the most important tool in any DSL-project.
 The script generates or updates the ``...Parser.py``-program if the grammar
 has changed and runs the unit tests in the ``tests_grammar`` subdirectory.
 After filling in the above grammar in the ``json.ebnf``-file, a parser can
-be generated by running the test skript::
+be generated by running the test script::
 
     $ python tst_JSON_grammar.py
 
@@ -331,8 +325,8 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
    grammar clear of too many whitespace markers.
 
    In case you want to grab a string without
-   eating its adjacent whitespace, you can still use the "backticked"
-   notation for string literals ```backticked string```.
+   eating its adjacent whitespace, you can still use the "backt-icked"
+   notation for string literals ```back-ticked string```.
 
 6. DHParser can be advised (vie the ``@drop``-directive) to drop
    string-tokens completely from the syntax-tree and, likewise,
@@ -527,25 +521,208 @@ Test-driven grammar development
 
 Just like regular expressions, it is quite difficult to get
 EBNF-grammars right on the first try - especially, if you are
-new to the technology. For regular expressions there exist
-all kinds of "workbenches" to try and test regular expressions.
+new to the technology. DHParser offers a unit-testing
+environment and a dbugger for EBNF-grammars which
+is helpful when learning to work with parser-technology
+and almost indispensable when refactoring the grammar of
+evolving DSLs.
 
+This unit-testing system is quite simple to handle: Tests
+for any symbol of the grammar are written into ``.ini``-Files
+in the ``tests_grammar`` sub-directory of the DSL-project.
+Test-cases look like this::
 
+    [match:number]
+    M1: "-3.2E-32"
+    M2: "42"
 
-- Debugging parsers
+Here, we test, whether the parser "number" really matches the
+given strings as we would expect. "M1" and "M2" are arbitrary
+names for the individual test-cases. Since parsers should not
+only match strings that conform to the grammar of that
+parser, but must also fail to match strings that don't, it
+is also possible to specify "fail-tests"::
 
+    [fail:number]
+    F1: "π"
 
+Running the ``tst_JSON_grammar.py``-script on a test-file
+the test-directory yields the results of those tests::
+
+    $ python tst_JSON_grammar.py tests_grammar/02_simple_elements.ini
+    GRAMMAR TEST UNIT: 02_test_simple_elements
+      Match-Tests for parser "number"
+        match-test "M1" ... OK
+        match-test "M2" ... OK
+      Fail-Tests for parser "number"
+        fail-test  "F1" ... OK
+
+    SUCCESS! All tests passed :-)
+
+In addition to this summary-report the test-script stores
+detailed reports of all tests for each test-file into
+Markdown-documents in the "test_grammar/REPORTS" directory.
+These reports contain the ASTs of all matches and the
+error messages for all fail-tests. If we look at the
+AST of the first match-test "M1" we might find to our
+surprise that it is not what we expect, but much more verbose::
+
+   (number (INT (NEG "-") (:RegExp "3"))
+           (FRAC (DOT ".") (:RegExp "2"))
+           (EXP (:Text "E") (:Text "-") (:RegExp "32")))
+
+None, of these details are really needed in an abstract syntax-tree.
+Luckily, ASTs can also be tested for, which allows to develop
+AST-generation in a test driven manner. We simply need to add
+an AST-Test to the grammar with the same name as the match-test
+that yields the AST we'd like to test::
+
+    [ast:number]
+    M1: (number "-3.2E-32")
+
+Running the test-suite will, of course, yield a failure for the
+AST-Test until we fix the issue, which in this case could be done
+by adding ``"number": [collapse]`` to our AST-transformations.
+Since it is sometimes helpful to inspect the CST as well, a
+match test's name can be marked with an asterix, e.g.
+``M1*:  "-3.2E-32"`` to include the CST for this test in the
+report, too.
+
+If a parser fails to match it is sometimes hard to tell, what
+mistake in the grammar definition has been responsible for that
+failure. DHParser's testing-framwork therefore includes a
+post-mortem debugger that delivers a detailed account of the
+parsing process up to the failure. These accounts will be
+written in HTML-format into the ``test_grammar/LOGS``-subdirectory
+and can be viewed with a browser.
+
+To see what this looks like, let's introduce a little mistake
+into our grammar, let's assume that we had forgotten that
+the exponent of a decimal number can also be introduced by
+a capital letter "E": ``EXP = `e` [`+`|`-`] /[0-9]+/``.
+
+.. image:: debugger_snippet.png
+    :alt: a screenshot of DHParser's post-mortem-debugger
+
+While error messages help to locate errors in the source
+text, the grammar-debugger helps to locate the cause of
+an error that is not due to a faulty source text but a
+faulty grammar in the grammar.
 
 Fail-tolerant parsing
 ---------------------
 
+Fail-tolerance is the ability of a parser to resume parsing after an
+error has been encountered. A parser that is fail-tolerant does not
+stop parsing at the first error but can report several if not all
+errors in a source-code file in one single run. Thus, the user is
+not forced to fix an earlier error before she is even being informed
+of the next error. Fail-tolerance is a particularly desirable property
+when using a modern IDE that annotates errors while typing the
+source code.
+
+DHParser offers support for fail-tolerant parsing that goes beyond what
+can be achieved within EBNF alone. A prerequisite for fail-tolerant-parsing
+is to annotate the the grammar with ``§``-markers ("mandatory-marker") at
+places where one can be sure that the parser annotated with the marker
+must match if it is called at all. This is usually the case for parsers
+in a series after the point where it is uniquely determined.
+
+F or example, once the opening bracket of a bracketed expression has
+been matched by a parser it is clear that eventually the closing bracket will be matched
+by its respective parser, too, or it is an error. Thus, in our JSON-grammar
+we could write::
+
+    array       = "[" [ _element { "," _element } ] §"]"
+
+The ``§`` advises the following parser(s) in the series to raise an error
+on the spot instead of merely returning a non-match if they fail.
+If we wantet to, we could also add a ``§``-marker in front of the second
+``_element``-parser, because after a komma there must always be another
+element in an array or it is an error.
+
+The §-marker can be supplemented with a ``@ ..._resume``-directive that
+tells the calling parsers where to continue after the array parser has failed.
+So, the parser resuming the parsing process is not the array parser that
+has failed, but the first of the parsers in the call-stack of the array-parser that
+catches up at the location indicated by the ``@ ..._resume``-directive.
+The location itself is determined by a regular expression, where the
+point for reentry is the location *after* the next match of the regular
+expression::
+
+    @array_resume = /\]/
+    array       = "[" [ _element { "," _element } ] §"]"
+
+Here, the whole array up to and including the closing bracket ``]`` will
+be skipped and the calling parser continue just as if the array had matched.
+
+Let's see the difference this makes by running both versions of the grammar
+over a simple test case::
+
+    [match:json]
+    M1: '''{ "number":  1,
+             "array": [1,2 3,4],
+             "string": "two" }'''
+
+First, without re-entrance and without ``§``-marker the error message is not very informative and
+no structure has been detected correctly. At least the location of the error has been determined
+with good precision by the "farthest failure"-principle.::
+
+    ### Error:
+
+    2:15: Error (1040): Parser "array->`,`" did not match: »3,4],
+    "string": "two ...«
+        Most advanced fail:    2, 15:  json->_element->object->member->_element->array-> `,`;  FAIL;  "3,4],\n"string": "two" }"
+        Last match:       2, 13:  json->_element->object->member->_element->array->_element->number;  MATCH;  "2 ";
+
+    ### AST
+
+        (ZOMBIE__ (ZOMBIE__ `() '{ "number": 1,' "") (ZOMBIE__ '"array": [1,2 3,4],' '"string": "two" }'))
+
+Secondly, still without re-entrance but with the ``§``-marker. The error-message is more precise, though the
+followup-error "Parser stopped before end" may be confusing. The AST-tree (not shown here) contains more
+structure, but is still littered with ``ZOMBIE__``-nodes of unidentified parts of the input::
+
+    ### Error:
+
+    2:12: Error (1040): Parser "json" stopped before end, at:  3,4],
+    "str ...  Terminating parser.
+    2:15: Error (1010): `]` ~ expected by parser 'array', »3,4],\n "str...« found!
+
+
+Finally, with both ``§``-marker and resume-directive as denoted in the EBNF snippet
+above, we receive a sound error message and, even more surprising, an almost complete
+AST::
+
+    ### Error:
+
+    2:15: Error (1010): `]` ~ expected by parser 'array', »3,4],\n "str...« found!
+
+    ### AST
+
+        (json
+          (object
+            (member
+              (string
+                (PLAIN "number"))
+              (number "1"))
+            (member
+              (string
+                (PLAIN "array"))
+              (array
+                (number "1")
+                (number "2")
+                (ZOMBIE__ `(2:15: Error (1010): `]` ~ expected by parser 'array', »3,4],\n "str...« found!) ",2 3,4]")))
+            (member
+              (string
+                (PLAIN "string"))
+              (string
+                (PLAIN "two")))))
+
+
+
 Compiling DSLs
 --------------
-
-Serialization
--------------
-
-- XML-Connection
 
 
 Language Servers
