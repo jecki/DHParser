@@ -1,6 +1,4 @@
-import os
 import setuptools
-import sys
 
 try:
     from Cython.Build import cythonize
@@ -12,19 +10,19 @@ from DHParser.versionnumber import __version__
 
 cythonize_modules = [
     'DHParser/stringview.py',
-    # 'DHParser/toolkit.py',
-    # 'DHParser/preprocess.py',
-    # 'DHParser/error.py',
-    # 'DHParser/syntaxtree.py',
-    # 'DHParser/log.py',
-    # 'DHParser/parse.py',
-    # 'DHParser/trace.py',
-    # 'DHParser/transform.py',
-    # 'DHParser/compile.py',
-    # 'DHParser/ebnf.py',
+    'DHParser/toolkit.py',
+    'DHParser/error.py',
+    'DHParser/preprocess.py',
+    'DHParser/syntaxtree.py',
+    'DHParser/log.py',
+    'DHParser/parse.py',
+    'DHParser/trace.py',
+    'DHParser/transform.py',
+    'DHParser/compile.py',
+    'DHParser/ebnf.py',
 ]
 
-with open('README.md', encoding='utf-8') as f:
+with open('../../README.md', encoding='utf-8') as f:
     read_me = f.read()
 
 setuptools.setup(
@@ -40,16 +38,17 @@ setuptools.setup(
     long_description = read_me,
     long_description_content_type="text/markdown",
     keywords='parser generator, domain specific languages, Digital Humanities, parser combinators, EBNF',
-    classifiers=[
+    classifiers = [
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Environment :: Console',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Text Processing :: Markup',
@@ -57,10 +56,12 @@ setuptools.setup(
         'Topic :: Software Development :: Compilers'
     ],
     scripts=['DHParser/scripts/dhparser.py',
-             'DHParser/scripts/dhparser_rename.py'],
+             'DHParser/scripts/dhparser_rename.py',
+             'DHParser/scrtips/build_dhparser_cython.py'],
     entry_points={
         'console_scripts': [
-            'dhparser=DHParser.scripts.dhparser:main'
+            'dhparser=DHParser.scripts.dhparser:main',
+            'dhparser_build_cython=DHParser.scripts.dhparser_build_cython:main'
         ]
     }
 )

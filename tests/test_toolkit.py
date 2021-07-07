@@ -38,8 +38,8 @@ from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, re
 class TestLoggingAndLoading:
     def setup(self):
         self.tmpname = 'tmp_' + concurrent_ident()
-        self.filename = os.path.join("test", self.tmpname, "test.py") if os.path.isdir('test') \
-            else os.path.join(self.tmpname, "test.py")
+        self.filename = os.path.join("test", self.tmpname, "key_value_example.py") if os.path.isdir('test') \
+            else os.path.join(self.tmpname, "key_value_example.py")
         self.dirname = os.path.dirname(self.filename)
         self.code1 = "x = 46\n"
         self.code2 = "def f():\n    return 46"
