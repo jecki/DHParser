@@ -2819,7 +2819,8 @@ class MandatoryNary(NaryParser):
         """
         grammar = self._grammar
         location = grammar.document_length__ - len(text_)
-        err_node.with_pos(location)
+        err_node._pos = -1  # bad hack to avoid error in case position is re-set
+        err_node.with_pos(location)  # for testing artifacts
         found = text_[:10].replace('\n', '\\n ') + '...'
         sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])

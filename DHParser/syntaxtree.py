@@ -1307,7 +1307,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # assert self._pos < 0 or self.pos == pos, ("pos mismatch %i != %i at Node: %s"
         #                                           % (self._pos, pos, repr(self)))
         if pos != self._pos >= 0:
-            raise AssertionError("Position value cannot be reassigned to a different value!")
+            raise AssertionError(f"Position value {self._pos} cannot be "
+                                 f"reassigned to a different value ({pos})!")
         assert pos >= 0, "Negative value %i not allowed!"
         if self._pos < 0:
             self._pos = pos
