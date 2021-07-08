@@ -1,7 +1,7 @@
 DHParser Version 0.9.7
 ......................
 
-- Packaging changed to poetry
+- Packaging changed to poetry <https://python-poetry.org/>
 
 
 DHParser Version 0.9.6 (1.7.2021)
