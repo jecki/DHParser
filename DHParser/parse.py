@@ -1686,7 +1686,10 @@ class Grammar:
         """
         self.rollback__.append((location, func))
         self.last_rb__loc__ = location
+        # memoization must be suspended to allow recapturing of variables
         self.suspend_memoization__ = True
+        # memoization will be turned back on again in Parser.__call__ after
+        # the parser that called push_rollback__() has returned.
 
 
     @property
@@ -1861,7 +1864,7 @@ def is_grammar_placeholder(grammar: Optional[Grammar]) -> bool:
 ########################################################################
 
 class Unparameterized(Parser):
-    """Unparameterized parsers do not receive any parameters on instantian.
+    """Unparameterized parsers do not receive any parameters on instantiation.
     As a consequence, different instances of the same unparameterized
     parser are always functionally equivalent."""
 
@@ -3584,8 +3587,6 @@ class Capture(ContextSensitive):
                 "Cannot capture content from parsers that drop content!"
             self.grammar.variables__[self.pname].append(node.content)
             self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
-            # memoizing will be blocked by push_rollback__(),
-            # because it would prevent recapturing of rolled back captures
             return self._return_value(node), text_
         else:
             return None, text
