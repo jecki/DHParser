@@ -55,12 +55,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def EBNFPreprocessor(text):
+def FixedEBNFPreprocessor(text):
     return text, lambda i: i
 
 
 def get_preprocessor() -> PreprocessorFunc:
-    return EBNFPreprocessor
+    return FixedEBNFPreprocessor
 
 
 #######################################################################
@@ -69,19 +69,17 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class EBNFGrammar(Grammar):
-    r"""Parser for an EBNF source file.
+class FixedEBNFGrammar(Grammar):
+    r"""Parser for a FixedEBNF source file.
     """
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "a61d3b1b834c8e16f190d6e5e8b41cf0"
+    source_hash__ = "0da7ed4d4fae3d6fa358ddd7867ccadb"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
-    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
-                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -94,68 +92,75 @@ class EBNFGrammar(Grammar):
     regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n\\t ]'), Series(dwsp__, literal_heuristics), Series(Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
-    CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")))
-    RE_LEADOUT = Capture(Text("/"))
-    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")))
-    TIMES = Capture(Text("*"))
-    RNG_DELIM = Capture(Text(","))
-    BRACE_SIGN = Capture(Alternative(Text("{"), Text("(")))
-    RNG_BRACE = Capture(Retrieve(BRACE_SIGN))
-    ENDL = Capture(Alternative(Text(";"), Text("")))
-    AND = Capture(Alternative(Text(","), Text("")))
-    OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))))
-    DEF = Capture(Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": ")))
-    EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
+    CH_LEADIN = Text("0x")
+    RE_LEADOUT = Text("/")
+    RE_LEADIN = Text("/")
+    TIMES = Text("*")
+    RNG_DELIM = Text(",")
+    RNG_CLOSE = Text("}")
+    RNG_OPEN = Text("{")
+    ENDL = Text("")
+    AND = Text("")
+    OR = Text("|")
+    DEF = Text("=")
+    EOF = Drop(NegativeLookahead(RegExp('.')))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
-    character = Series(Retrieve(CH_LEADIN), HEXCODE)
+    character = Series(CH_LEADIN, HEXCODE)
     char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)), Series(Text("]"), dwsp__))
-    regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
+    regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
-    no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
-    range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
-    counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
-    option = Alternative(Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=2), Series(element, Series(Text("?"), dwsp__)))
+    no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), TIMES))
+    range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
+    counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier), Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
+    option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1), Series(element, Series(Text("?"), dwsp__)))
     repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2), Series(element, Series(Text("*"), dwsp__), no_range))
     oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)), Series(element, Series(Text("+"), dwsp__)))
     group = Series(Series(Text("("), dwsp__), no_range, expression, Series(Text(")"), dwsp__), mandatory=2)
     retrieveop = Alternative(Series(Text("::"), dwsp__), Series(Text(":?"), dwsp__), Series(Text(":"), dwsp__))
     flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__), Series(Text("<-&"), dwsp__))
     ANY_SUFFIX = RegExp('[?*+]')
-    literals = OneOrMore(literal)
-    pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
+    pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
+    component = Alternative(procedure, expression)
     term = Alternative(oneormore, counted, repetition, option, pure_elem)
     difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
-    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)))
+    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group))
+    literals = OneOrMore(literal)
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group))
     countable.set(Alternative(option, oneormore, element))
-    expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
+    expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
+    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
+                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
     
 
-_raw_grammar = ThreadLocalSingletonFactory(EBNFGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(FixedEBNFGrammar, ident=1)
 
-def get_grammar() -> EBNFGrammar:
+def get_grammar() -> FixedEBNFGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
-def parse_EBNF(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_FixedEBNF(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -226,8 +231,7 @@ EBNF_AST_transformation_table = {
 }
 
 
-
-def CreateEBNFTransformer() -> TransformationFunc:
+def CreateFixedEBNFTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
@@ -237,10 +241,10 @@ def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.FixedEBNF_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.EBNF_00000001_transformer_singleton = CreateEBNFTransformer()
-        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
+        THREAD_LOCALS.FixedEBNF_00000001_transformer_singleton = CreateFixedEBNFTransformer()
+        transformer = THREAD_LOCALS.FixedEBNF_00000001_transformer_singleton
     return transformer
 
 
@@ -250,12 +254,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class EBNFCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a EBNF source file.
+class FixedEBNFCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a FixedEBNF source file.
     """
 
     def __init__(self):
-        super(EBNFCompiler, self).__init__()
+        super(FixedEBNFCompiler, self).__init__()
 
     def reset(self):
         super().reset()
@@ -381,10 +385,10 @@ class EBNFCompiler(Compiler):
     # def on_ENDL(self, node):
     #     return node
 
-    # def on_RNG_BRACE(self, node):
+    # def on_RNG_OPEN(self, node):
     #     return node
 
-    # def on_BRACE_SIGN(self, node):
+    # def on_RNG_CLOSE(self, node):
     #     return node
 
     # def on_RNG_DELIM(self, node):
@@ -422,14 +426,14 @@ class EBNFCompiler(Compiler):
 
 
 
-def get_compiler() -> EBNFCompiler:
-    """Returns a thread/process-exclusive EBNFCompiler-singleton."""
+def get_compiler() -> FixedEBNFCompiler:
+    """Returns a thread/process-exclusive FixedEBNFCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.FixedEBNF_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.EBNF_00000001_compiler_singleton = EBNFCompiler()
-        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
+        THREAD_LOCALS.FixedEBNF_00000001_compiler_singleton = FixedEBNFCompiler()
+        compiler = THREAD_LOCALS.FixedEBNF_00000001_compiler_singleton
     return compiler
 
 
@@ -439,7 +443,7 @@ def get_compiler() -> EBNFCompiler:
 #
 #######################################################################
 
-def compile_src(source):
+def compile_src(source: str):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
@@ -475,7 +479,7 @@ if __name__ == "__main__":
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a EBNF-file and shows its syntax-tree.")
+    parser = ArgumentParser(description="Parses a FixedEBNF-file and shows its syntax-tree.")
     parser.add_argument('files', nargs=1)
     parser.add_argument('-d', '--debug', action='store_const', const='debug')
     parser.add_argument('-x', '--xml', action='store_const', const='xml')
@@ -494,7 +498,7 @@ if __name__ == "__main__":
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
         set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', {'cst', 'ast'})
+        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
 
     result, errors, _ = compile_src(file_name)

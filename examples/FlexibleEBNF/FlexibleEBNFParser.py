@@ -7,10 +7,10 @@
 #######################################################################
 
 
-import collections
 from functools import partial
 import os
 import sys
+from typing import Tuple, List
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -46,7 +46,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory
+    has_attr, has_parent, ThreadLocalSingletonFactory, NEVER_MATCH_PATTERN, Error, \
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
 
 #######################################################################
@@ -55,12 +56,30 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def FixedEBNFPreprocessor(text):
-    return text, lambda i: i
+RE_INCLUDE = NEVER_MATCH_PATTERN
+# To capture includes, replace the NEVER_MATCH_PATTERN
+# by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 
 
-def get_preprocessor() -> PreprocessorFunc:
-    return FixedEBNFPreprocessor
+def newTokenizer(original_text) -> Tuple[str, List[Error]]:
+    # Here, a function body can be filled in that adds preprocessor tokens
+    # to the source code and returns the modified source.
+    return original_text, []
+
+
+def preprocessor_factory() -> PreprocessorFunc:
+    # below, the second parameter must always be the same as newGrammar.COMMENT__!
+    find_next_include = gen_find_include_func(RE_INCLUDE, '#.*')
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    tokenizing_prep = make_preprocessor(newTokenizer)
+    return chain_preprocessors(include_prep, tokenizing_prep)
+
+
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+
+
+def preprocess_new(source):
+    return get_preprocessor()(source)
 
 
 #######################################################################
@@ -69,19 +88,17 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class FixedEBNFGrammar(Grammar):
-    r"""Parser for a FixedEBNF source file.
+class EBNFGrammar(Grammar):
+    r"""Parser for an EBNF source file.
     """
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "8dbc09df6de2f2758e43fc351a3671c7"
+    source_hash__ = "039bffeb637f4cf2eca83dd83477b83a"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
-    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
-                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -94,32 +111,32 @@ class FixedEBNFGrammar(Grammar):
     regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n\\t ]'), Series(dwsp__, literal_heuristics), Series(Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
-    CH_LEADIN = Text("0x")
-    RE_LEADOUT = Text("/")
-    RE_LEADIN = Text("/")
-    TIMES = Text("*")
-    RNG_DELIM = Text(",")
-    RNG_CLOSE = Text("}")
-    RNG_OPEN = Text("{")
-    ENDL = Text("")
-    AND = Text("")
-    OR = Text("|")
-    DEF = Text("=")
-    EOF = Drop(NegativeLookahead(RegExp('.')))
+    CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")))
+    RE_LEADOUT = Capture(Text("/"))
+    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")))
+    TIMES = Capture(Text("*"))
+    RNG_DELIM = Capture(Text(","))
+    BRACE_SIGN = Capture(Alternative(Text("{"), Text("(")))
+    RNG_BRACE = Capture(Retrieve(BRACE_SIGN))
+    ENDL = Capture(Alternative(Text(";"), Text("")))
+    AND = Capture(Alternative(Text(","), Text("")))
+    OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))))
+    DEF = Capture(Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": ")))
+    EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
-    character = Series(CH_LEADIN, HEXCODE)
+    character = Series(Retrieve(CH_LEADIN), HEXCODE)
     char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)), Series(Text("]"), dwsp__))
-    regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
+    regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
-    no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), TIMES))
-    range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
-    counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier), Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
-    option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1), Series(element, Series(Text("?"), dwsp__)))
+    no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
+    range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
+    counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
+    option = Alternative(Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=2), Series(element, Series(Text("?"), dwsp__)))
     repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2), Series(element, Series(Text("*"), dwsp__), no_range))
     oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)), Series(element, Series(Text("+"), dwsp__)))
     group = Series(Series(Text("("), dwsp__), no_range, expression, Series(Text(")"), dwsp__), mandatory=2)
@@ -133,29 +150,36 @@ class FixedEBNFGrammar(Grammar):
     difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
-    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group))
     countable.set(Alternative(option, oneormore, element))
-    expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
+    expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
+    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
+                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
     
 
-_raw_grammar = ThreadLocalSingletonFactory(FixedEBNFGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(EBNFGrammar, ident=1)
 
-def get_grammar() -> FixedEBNFGrammar:
+def get_grammar() -> EBNFGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
-def parse_FixedEBNF(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_EBNF(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -165,81 +189,82 @@ def parse_FixedEBNF(document, start_parser = "root_parser__", *, complete_match=
 #
 #######################################################################
 
-FixedEBNF_AST_transformation_table = {
-    # AST Transformations for the FixedEBNF-grammar
-    "<": flatten,
-    "syntax": [],
-    "definition": [],
-    "directive": [],
-    "literals": [],
-    "procedure": [],
-    "FOLLOW_UP": [],
-    "expression": [],
-    "sequence": [],
-    "interleave": [],
-    "lookaround": [],
-    "difference": [],
-    "term": [],
-    "countable": [],
-    "pure_elem": [],
-    "element": [],
-    "ANY_SUFFIX": [],
-    "flowmarker": [],
-    "retrieveop": [],
-    "group": [],
-    "oneormore": [],
-    "repetition": [],
-    "option": [],
-    "counted": [],
-    "range": [],
-    "no_range": [],
-    "multiplier": [],
-    "symbol": [],
-    "literal": [],
-    "plaintext": [],
-    "regexp": [],
-    "char_range": [],
-    "character": [],
-    "free_char": [],
-    "any_char": [],
-    "whitespace": [],
-    "EOF": [],
-    "DEF": [],
-    "OR": [],
-    "AND": [],
-    "ENDL": [],
-    "RNG_OPEN": [],
-    "RNG_CLOSE": [],
-    "RNG_DELIM": [],
-    "TIMES": [],
-    "RE_LEADIN": [],
-    "RE_LEADOUT": [],
-    "CH_LEADIN": [],
-    "char_range_heuristics": [],
-    "literal_heuristics": [],
-    "regex_heuristics": [],
-    "RE_CORE": [],
-    "SYM_REGEX": [],
-    "HEXCODE": [],
-    "*": replace_by_single_child
+EBNF_AST_transformation_table = {
+    # AST Transformations for the EBNF-grammar
+    "<":
+        [remove_children_if(all_of(not_one_of('regexp'), is_empty))],
+    "syntax":
+        [],
+    "directive":
+        [flatten, remove_tokens('@', '=', ',')],
+    "procedure":
+        [remove_tokens('()'), reduce_single_child],
+    "literals":
+        [replace_by_single_child],
+    "definition":
+        [flatten, remove_children('DEF', 'ENDL'),
+         remove_tokens('=')],  # remove_tokens('=') is only for backwards-compatibility
+    "expression":
+        [replace_by_single_child, flatten, remove_children('OR'),
+         remove_tokens('|')],  # remove_tokens('|') is only for backwards-compatibility
+    "sequence":
+        [replace_by_single_child, flatten, remove_children('AND')],
+    "interleave":
+        [replace_by_single_child, flatten, remove_tokens('°')],
+    "lookaround":
+        [],
+    "difference":
+        [remove_tokens('-'), replace_by_single_child],
+    "term, pure_elem, element":
+        [replace_by_single_child],
+    "flowmarker, retrieveop":
+        [reduce_single_child],
+    "group":
+        [remove_brackets],
+    "oneormore, repetition, option":
+        [reduce_single_child, remove_brackets,  # remove_tokens('?', '*', '+'),
+         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
+    "counted":
+        [remove_children('TIMES')],
+    "range":
+        [remove_children('BRACE_SIGN', 'RNG_BRACE', 'RNG_DELIM')],
+    "symbol, literal, any_char":
+        [reduce_single_child],
+    "plaintext":
+        [],
+    "regexp":
+        [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
+    "char_range":
+        [flatten, remove_tokens('[', ']')],
+    "character":
+        [remove_children('CH_LEADIN'), reduce_single_child],
+    "free_char":
+        [],
+    (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
+        [reduce_single_child],
+    "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, "
+    "RE_LEADIN, RE_CORE, RE_LEADOUT, CH_LEADIN":
+        [],
+    "*":
+        [replace_by_single_child]
 }
 
 
 
-def CreateFixedEBNFTransformer() -> TransformationFunc:
+def CreateEBNFTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=FixedEBNF_AST_transformation_table.copy())
+    return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.FixedEBNF_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.FixedEBNF_00000001_transformer_singleton = CreateFixedEBNFTransformer()
-        transformer = THREAD_LOCALS.FixedEBNF_00000001_transformer_singleton
+        THREAD_LOCALS.EBNF_00000001_transformer_singleton = CreateEBNFTransformer()
+        transformer = THREAD_LOCALS.EBNF_00000001_transformer_singleton
     return transformer
 
 
@@ -249,12 +274,12 @@ def get_transformer() -> TransformationFunc:
 #
 #######################################################################
 
-class FixedEBNFCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a FixedEBNF source file.
+class EBNFCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a EBNF source file.
     """
 
     def __init__(self):
-        super(FixedEBNFCompiler, self).__init__()
+        super(EBNFCompiler, self).__init__()
 
     def reset(self):
         super().reset()
@@ -380,10 +405,10 @@ class FixedEBNFCompiler(Compiler):
     # def on_ENDL(self, node):
     #     return node
 
-    # def on_RNG_OPEN(self, node):
+    # def on_RNG_BRACE(self, node):
     #     return node
 
-    # def on_RNG_CLOSE(self, node):
+    # def on_BRACE_SIGN(self, node):
     #     return node
 
     # def on_RNG_DELIM(self, node):
@@ -421,14 +446,14 @@ class FixedEBNFCompiler(Compiler):
 
 
 
-def get_compiler() -> FixedEBNFCompiler:
-    """Returns a thread/process-exclusive FixedEBNFCompiler-singleton."""
+def get_compiler() -> EBNFCompiler:
+    """Returns a thread/process-exclusive EBNFCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.FixedEBNF_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.FixedEBNF_00000001_compiler_singleton = FixedEBNFCompiler()
-        compiler = THREAD_LOCALS.FixedEBNF_00000001_compiler_singleton
+        THREAD_LOCALS.EBNF_00000001_compiler_singleton = EBNFCompiler()
+        compiler = THREAD_LOCALS.EBNF_00000001_compiler_singleton
     return compiler
 
 
@@ -438,7 +463,7 @@ def get_compiler() -> FixedEBNFCompiler:
 #
 #######################################################################
 
-def compile_src(source: str):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
@@ -474,7 +499,7 @@ if __name__ == "__main__":
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a FixedEBNF-file and shows its syntax-tree.")
+    parser = ArgumentParser(description="Parses a EBNF-file and shows its syntax-tree.")
     parser.add_argument('files', nargs=1)
     parser.add_argument('-d', '--debug', action='store_const', const='debug')
     parser.add_argument('-x', '--xml', action='store_const', const='xml')
@@ -493,7 +518,7 @@ if __name__ == "__main__":
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
         set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
+        set_config_value('log_syntax_trees', {'cst', 'ast'})
     start_logging(log_dir)
 
     result, errors, _ = compile_src(file_name)

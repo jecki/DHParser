@@ -3584,7 +3584,7 @@ class Capture(ContextSensitive):
                 "Cannot capture content from parsers that drop content!"
             self.grammar.variables__[self.pname].append(node.content)
             self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
-            # memoizing will be blocked by parser guard (see way above),
+            # memoizing will be blocked by push_rollback__(),
             # because it would prevent recapturing of rolled back captures
             return self._return_value(node), text_
         else:
