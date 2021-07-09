@@ -264,7 +264,6 @@ Juancarlo Añez: grako, a PEG parser generator in Python, 2017. URL:
 
 [Añez_2017]: https://bitbucket.org/apalala/grako
 
-
 Eckhart Arnold: Domänenspezifische Notationen. Eine (noch)
 unterschätzte Technologie in den Digitalen Geisteswissenschaften,
 Präsentation auf dem

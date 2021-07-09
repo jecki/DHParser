@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-"""EBNFServer.py - starts a server (if not already running) for the
-                    compilation of EBNF
+"""FlexibleEBNFServer.py - starts a server (if not already running)
+                           for the compilation of EBNF
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -249,7 +249,7 @@ class EBNFLanguageServerProtocol:
             'processId': 0,
             'rootUri': '',
             'clientCapabilities': {},
-            'serverInfo': {"name": "EBNF-Server", "version": "0.2"},
+            'serverInfo': {"name": "FlexibleEBNFServer", "version": "0.2"},
             'serverCapabilities': {
                 "textDocumentSync": TextDocumentSyncKind.Incremental,
                 "completionProvider": {
@@ -432,11 +432,11 @@ def run_server(host, port, log_path=None):
     if dhparserdir not in sys.path:
         sys.path.append(dhparserdir)
     try:
-        from EBNFParser import compile_src
+        from FlexibleEBNFParser import compile_src
     except ModuleNotFoundError:
-        from tst_EBNF_grammar import recompile_grammar
+        from tst_FlexibleEBNF_grammar import recompile_grammar
         recompile_grammar(grammar_src, force=False)
-        from EBNFParser import compile_src
+        from FlexibleEBNFParser import compile_src
     from DHParser.server import Server, probe_tcp_server, StreamReaderProxy, StreamWriterProxy
     from DHParser.lsp import gen_lsp_table
 
@@ -447,7 +447,7 @@ def run_server(host, port, log_path=None):
                          cpu_bound=set(EBNF_lsp.cpu_bound.lsp_table.keys()),
                          blocking=set(EBNF_lsp.blocking.lsp_table.keys()),
                          connection_callback=EBNF_lsp.connect,
-                         server_name='EBNFServer',
+                         server_name='FlexibleEBNFServer',
                          strict_lsp=True)
 
     if log_path is not None:
@@ -770,11 +770,11 @@ if __name__ == "__main__":
 
     else:
         echo('Usages:\n'
-             + '    python EBNFServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python EBNFServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python EBNFServer.py --stream\n'
-             + '    python EBNFServer.py --stopserver\n'
-             + '    python EBNFServer.py --status\n'
-             + '    python EBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
-             + '    python EBNFServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
+             + '    python FlexibleEBNFServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python FlexibleEBNFServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python FlexibleEBNFServer.py --stream\n'
+             + '    python FlexibleEBNFServer.py --stopserver\n'
+             + '    python FlexibleEBNFServer.py --status\n'
+             + '    python FlexibleEBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
+             + '    python FlexibleEBNFServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
         sys.exit(1)

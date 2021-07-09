@@ -99,7 +99,7 @@ class ts2dataclassGrammar(Grammar):
     declarations_block = Forward()
     index_signature = Forward()
     types = Forward()
-    source_hash__ = "5f9e38899e4238611532f9504cd149f0"
+    source_hash__ = "b6b4d2e92e13a9911485fd79e02d8cac"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_type$|_literal$|_name$|_array_ellipsis$|_top_level_assignment$|_top_level_literal$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -160,6 +160,11 @@ def get_grammar() -> ts2dataclassGrammar:
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
 def parse_ts2dataclass(document, start_parser = "root_parser__", *, complete_match=True):
