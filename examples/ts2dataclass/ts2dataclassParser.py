@@ -13,6 +13,7 @@ import os
 import sys
 from typing import Tuple, List, Union, Any, Optional, Callable, Type, cast
 
+
 try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
@@ -50,7 +51,6 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
-
 
 
 USE_PYTHON_3_10_TYPE_UNION = False  # https://www.python.org/dev/peps/pep-0604/
@@ -366,7 +366,7 @@ RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
 
 def compile_src(source: str) -> Tuple[Any, List[Error]]:
-    """Compiles ``source`` and returns (result, errors, ast)."""
+    """Compiles ``source`` and returns (result, errors)."""
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
                                   get_compiler())
     return result_tuple[:2]  # drop the AST at the end of the result tuple
@@ -443,6 +443,51 @@ def batch_process(file_names: List[str], out_dir: str,
     else:
         run_batch(submit_func)
     return error_list
+
+
+INSPECT_TEMPLATE = """<h2>{testname}</h2>
+<h3>AST</h3>
+<code style="background-color: lightgrey;">
+{ast_str}
+</code>
+<h3>Program code</h3>
+<code style="background-color: yellow;">
+{code}
+</code>
+"""
+
+
+def inspect(test_file_path: str):
+    assert test_file_path[-4:] == '.ini'
+    from DHParser.testing import unit_from_file
+    test_unit = unit_from_file(test_file_path)
+    grammar = get_grammar()
+    transformer = get_transformer()
+    compiler = get_compiler()
+    results = []
+    for parser in test_unit:
+        for testname, test_code in test_unit[parser].get('match', dict()).items():
+            ast = grammar(test_code, parser)
+            ast_str = ast.as_tree()
+            transformer(ast)
+            code = compiler(ast)
+            results.append(INSPECT_TEMPLATE.format(testname=testname, ast_str=ast_str, code=code))
+    test_file_name = os.path.basename(test_file_path)
+    results_str = '\n        '.join(results)
+    html = f'''<html>
+    <head><meta charset="utf-8"><title>{test_file_name}</title></head>
+    <body>
+        <h1>{test_file_name}<h1>
+        {results_str}
+    </body></html>'''
+    destdir = os.path.join(os.path.dirname(test_file_path), "REPORT")
+    if not os.path.exists(destdir):  os.mkdir(destdir)
+    destpath = os.path.join(destdir, test_file_name[:-4] + '.html')
+    with open(destpath, 'w', encoding='utf-8') as f:
+        f.write(html)
+    import webbrowser
+    webbrowser.open('file://' + destpath if sys.platform == "darwin" else destpath)
+
 
 
 if __name__ == "__main__":
@@ -534,6 +579,10 @@ if __name__ == "__main__":
             print('\n'.join(error_files))
             if category == "ERRORS":
                 sys.exit(1)
+
+    elif file_names[0][-4:] == '.ini':
+        inspect(file_names[0])
+
     else:
         result, errors = compile_src(file_names[0])
 

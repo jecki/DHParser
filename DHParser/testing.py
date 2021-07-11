@@ -40,11 +40,10 @@ import time
 from typing import Dict, List, Union, Deque, cast
 
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, is_error, add_source_locations, PARSER_LOOKAHEAD_MATCH_ONLY, \
+from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
-from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.syntaxtree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
@@ -345,15 +344,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         """Returns True if the parser or any of its descendant parsers is a
         Lookahead parser."""
         return parser[parser_name].apply(lambda ctx: isinstance(ctx[-1], Lookahead))
-        # lookahead_found = False
-        #
-        # def find_lookahead(p: Parser):
-        #     nonlocal lookahead_found
-        #     if not lookahead_found:
-        #         lookahead_found = isinstance(p, Lookahead)
-        #
-        # parser[parser_name].apply(find_lookahead)
-        # return lookahead_found
+
 
     def lookahead_artifact(syntax_tree: Node):
         """
@@ -585,6 +576,7 @@ def unique_name(file_name: str) -> str:
     name = 'unique_' + str(int(time.time() * resolution)) + '_' + file_name
     time.sleep(1.0 / resolution)
     return name
+
 
 def grammar_suite(directory, parser_factory, transformer_factory,
                   fn_patterns=('*test*',),
