@@ -88,13 +88,13 @@ def preprocess_new(source):
 #
 #######################################################################
 
-class EBNFGrammar(Grammar):
-    r"""Parser for an EBNF source file.
+class FlexibleEBNFGrammar(Grammar):
+    r"""Parser for a FlexibleEBNF source file.
     """
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "039bffeb637f4cf2eca83dd83477b83a"
+    source_hash__ = "431992357f565327257002ab0af2018a"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -153,7 +153,7 @@ class EBNFGrammar(Grammar):
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
     definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)))
+    component = Alternative(literals, procedure, expression)
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group))
     countable.set(Alternative(option, oneormore, element))
@@ -164,9 +164,9 @@ class EBNFGrammar(Grammar):
     root__ = syntax
     
 
-_raw_grammar = ThreadLocalSingletonFactory(EBNFGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(FlexibleEBNFGrammar, ident=1)
 
-def get_grammar() -> EBNFGrammar:
+def get_grammar() -> FlexibleEBNFGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
@@ -179,7 +179,7 @@ def get_grammar() -> EBNFGrammar:
         pass
     return grammar
     
-def parse_EBNF(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_FlexibleEBNF(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
