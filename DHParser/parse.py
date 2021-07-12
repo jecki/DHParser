@@ -3930,7 +3930,7 @@ class Forward(UnaryParser):
                 result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
-            recursion_state = grammar.suspend_memoization__
+            memoization_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
             grammar.suspend_memoization__ = False
             result = self.parser(text)
@@ -3967,9 +3967,9 @@ class Forward(UnaryParser):
                         break
                     result = next_result
                     depth += 1
-            grammar.suspend_memoization__ = recursion_state \
-                or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            # grammar.suspend_memoization__ = recursion_state
+            # grammar.suspend_memoization__ = recursion_state \
+            #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
+            grammar.suspend_memoization__ = memoization_state
             if not grammar.suspend_memoization__:
                 visited[location] = result
         return result
