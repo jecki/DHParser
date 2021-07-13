@@ -499,10 +499,7 @@ class Parser:
         `reset()`-method of the derived class."""
         global _GRAMMAR_PLACEHOLDER
         grammar = self._grammar
-        if is_grammar_placeholder(grammar):
-            self.visited: MemoizationDict = dict()
-        else:
-            self.visited = grammar.get_memoization_dict__(self)
+        self.visited: MemoizationDict = grammar.get_memoization_dict__(self)
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> ParsingResult:
@@ -664,10 +661,11 @@ class Parser:
     @property
     def grammar(self) -> 'Grammar':
         try:
-            if not is_grammar_placeholder(self._grammar):
-                return self._grammar
-            else:
-                raise ValueError('Grammar has not yet been set!')
+            # if not is_grammar_placeholder(self._grammar):
+            #     return self._grammar
+            # else:
+            #     raise ValueError('Grammar has not yet been set!')
+            return self._grammar
         except (AttributeError, NameError):
             raise AttributeError('Parser placeholder does not have a grammar!')
 
@@ -1489,10 +1487,13 @@ class Grammar:
             parser.grammar = self
 
 
-    def get_memoization_dict__(self, parser: Parser):
+    def get_memoization_dict__(self, parser: Parser) -> MemoizationDict:
         """Returns the memoization dictionary for the parser's equivalence class.
         """
-        return self.memoization__.setdefault(parser.eq_class, {})
+        try:
+            return self.memoization__.setdefault(parser.eq_class, {})
+        except AttributeError:  # happens when grammar object is the placeholder
+            return dict()
 
 
     def __call__(self,

@@ -67,7 +67,7 @@ def cpu_profile(func):
     pr.disable()
     st = pstats.Stats(pr)
     st.strip_dirs()
-    st.sort_stats('time').print_stats(40)
+    st.sort_stats('time').print_stats(80)
     return result
 
 
