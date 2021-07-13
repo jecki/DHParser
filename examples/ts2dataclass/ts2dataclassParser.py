@@ -328,6 +328,9 @@ class ts2dataclassCompiler(Compiler):
     # def on_qualifier(self, node):
     #     return node
 
+    def on_variable(self, node) -> str:
+        return node.content
+
     def on_identifier(self, node) -> str:
         return node.content
 
@@ -447,13 +450,15 @@ def batch_process(file_names: List[str], out_dir: str,
 
 INSPECT_TEMPLATE = """<h2>{testname}</h2>
 <h3>AST</h3>
-<code style="background-color: lightgrey;">
-{ast_str}
+<div style="background-color: antiquewhite;">
+<code style="white-space: pre-wrap;">{ast_str}
 </code>
+</div>
 <h3>Program code</h3>
-<code style="background-color: yellow;">
-{code}
+<div style="background-color: yellow;">
+<code style="white-space: pre-wrap;">{code}
 </code>
+</div>
 """
 
 
@@ -468,18 +473,18 @@ def inspect(test_file_path: str):
     for parser in test_unit:
         for testname, test_code in test_unit[parser].get('match', dict()).items():
             ast = grammar(test_code, parser)
-            ast_str = ast.as_tree()
             transformer(ast)
+            ast_str = ast.as_tree()
             code = compiler(ast)
-            results.append(INSPECT_TEMPLATE.format(testname=testname, ast_str=ast_str, code=code))
+            results.append(INSPECT_TEMPLATE.format(
+                testname=testname, ast_str=ast_str, code=code))
     test_file_name = os.path.basename(test_file_path)
     results_str = '\n        '.join(results)
-    html = f'''<html>
+    html = f'''<!DOCTYPE html>\n<html>
     <head><meta charset="utf-8"><title>{test_file_name}</title></head>
     <body>
-        <h1>{test_file_name}<h1>
-        {results_str}
-    </body></html>'''
+        <h1>{test_file_name}</h1>
+        {results_str}\n</body>\n</html>'''
     destdir = os.path.join(os.path.dirname(test_file_path), "REPORT")
     if not os.path.exists(destdir):  os.mkdir(destdir)
     destpath = os.path.join(destdir, test_file_name[:-4] + '.html')
