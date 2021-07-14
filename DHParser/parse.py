@@ -49,7 +49,7 @@ from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
+    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, identity
 
@@ -1671,6 +1671,8 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
+        if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
+            result = Node(EMPTY_PTYPE, '').with_pos(0)
         self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
