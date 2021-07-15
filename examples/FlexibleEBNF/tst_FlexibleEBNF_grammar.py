@@ -84,7 +84,7 @@ if __name__ == '__main__':
     except ValueError:
         profile = False
     if len(argv) > 1 and argv[1] == "--debug":
-        LOGGING = True
+        LOGGING = "LOGS"
         del argv[1]
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
         os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):

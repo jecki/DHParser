@@ -1050,7 +1050,7 @@ class TestPopRetrieve:
         assert not st.errors
         assert st.equals(st1)
         st = parser('')
-        assert "EOF expected" in str(st.errors)
+        assert "'EOF' expected" in str(st.errors), st.as_sxpr()
 
 
 class TestWhitespaceHandling:
