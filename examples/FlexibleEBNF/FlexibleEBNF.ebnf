@@ -61,7 +61,7 @@ FOLLOW_UP  = `@` | symbol | EOF
 
 expression = sequence { :OR~ sequence }
 sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
-             { :AND~ ["§"] ( interleave | lookaround ) }
+             { !`@` !(symbol :DEF) :AND~ ["§"] ( interleave | lookaround ) }
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
 difference = term ["-" § (oneormore | pure_elem)]
