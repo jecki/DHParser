@@ -38,6 +38,7 @@ __all__ = ('ALLOWED_PRESET_VALUES',
            'finalize_presets',
            'get_preset_value',
            'set_preset_value',
+           'NO_DEFAULT',
            'THREAD_LOCALS',
            'access_thread_locals',
            'get_config_value',
@@ -204,10 +205,12 @@ def access_thread_locals() -> Any:
     return THREAD_LOCALS
 
 
-def get_config_value(key: str) -> Any:
+def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
     """
     Retrieves a configuration value thread-safely.
     :param key:  the key (an immutable, usually a string)
+    :param default: a default value that is returned if no config-value
+                 exists for the key.
     :return:     the value
     """
     with access_lock:
@@ -221,7 +224,7 @@ def get_config_value(key: str) -> Any:
             return cfg[key]
         except KeyError:
             access_presets()
-            value = get_preset_value(key)
+            value = get_preset_value(key, default)
             finalize_presets()
             THREAD_LOCALS.config[key] = value
             return value
