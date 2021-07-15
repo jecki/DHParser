@@ -50,8 +50,9 @@ declaration = [qualifier] identifier [optional] [":" types]
   optional  = "?"
   index_signature = "[" identifier (":" | "in" "keyof") _type "]"
 types       = _type { "|" _type }
-_type        = array_of | basic_type | identifier | "(" types ")"
+_type        = array_of | basic_type | type_name | "(" types ")"
              | mapped_type | declarations_block | type_tuple | _literal
+type_name   = identifier
 array_of    = (basic_type | "(" types ")" | identifier) "[]"
 type_tuple  = "[" _type {"," _type} "]"
 mapped_type = "{" map_signature [";"] "}"
@@ -111,7 +112,7 @@ _name       = identifier | '"' identifier '"'
 #######################################################################
 
 basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`
-                `integer` | `uinteger` )~
+               | `integer` | `uinteger` ) ~
 
 
 #######################################################################

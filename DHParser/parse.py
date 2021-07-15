@@ -49,7 +49,7 @@ from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, ResultType
+    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, identity
 
@@ -499,10 +499,7 @@ class Parser:
         `reset()`-method of the derived class."""
         global _GRAMMAR_PLACEHOLDER
         grammar = self._grammar
-        if is_grammar_placeholder(grammar):
-            self.visited: MemoizationDict = dict()
-        else:
-            self.visited = grammar.get_memoization_dict__(self)
+        self.visited: MemoizationDict = grammar.get_memoization_dict__(self)
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> ParsingResult:
@@ -664,10 +661,11 @@ class Parser:
     @property
     def grammar(self) -> 'Grammar':
         try:
-            if not is_grammar_placeholder(self._grammar):
-                return self._grammar
-            else:
-                raise ValueError('Grammar has not yet been set!')
+            # if not is_grammar_placeholder(self._grammar):
+            #     return self._grammar
+            # else:
+            #     raise ValueError('Grammar has not yet been set!')
+            return self._grammar
         except (AttributeError, NameError):
             raise AttributeError('Parser placeholder does not have a grammar!')
 
@@ -1489,10 +1487,13 @@ class Grammar:
             parser.grammar = self
 
 
-    def get_memoization_dict__(self, parser: Parser):
+    def get_memoization_dict__(self, parser: Parser) -> MemoizationDict:
         """Returns the memoization dictionary for the parser's equivalence class.
         """
-        return self.memoization__.setdefault(parser.eq_class, {})
+        try:
+            return self.memoization__.setdefault(parser.eq_class, {})
+        except AttributeError:  # happens when grammar object is the placeholder
+            return dict()
 
 
     def __call__(self,
@@ -1670,6 +1671,8 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
+        if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
+            result = Node(EMPTY_PTYPE, '').with_pos(0)
         self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
@@ -3930,7 +3933,7 @@ class Forward(UnaryParser):
                 result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
-            recursion_state = grammar.suspend_memoization__
+            memoization_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
             grammar.suspend_memoization__ = False
             result = self.parser(text)
@@ -3967,9 +3970,9 @@ class Forward(UnaryParser):
                         break
                     result = next_result
                     depth += 1
-            grammar.suspend_memoization__ = recursion_state \
-                or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            # grammar.suspend_memoization__ = recursion_state
+            # grammar.suspend_memoization__ = recursion_state \
+            #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
+            grammar.suspend_memoization__ = memoization_state
             if not grammar.suspend_memoization__:
                 visited[location] = result
         return result

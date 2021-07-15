@@ -16,7 +16,8 @@ if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)
 
 try:
-    from DHParser.configuration import get_config_value, set_config_value
+    from DHParser.configuration import get_config_value, set_config_value, \
+        access_presets, set_preset_value, finalize_presets
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
@@ -57,9 +58,32 @@ def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
     return error_report
 
 
+def cpu_profile(func):
+    import cProfile as profile
+    import pstats
+    pr = profile.Profile()
+    pr.enable()
+    result = func()
+    pr.disable()
+    st = pstats.Stats(pr)
+    st.strip_dirs()
+    st.sort_stats('time').print_stats(80)
+    return result
+
+
 if __name__ == '__main__':
     argv = sys.argv[:]
-    if len(argv) > 1 and sys.argv[1] == "--debug":
+    try:
+        i = argv.index('--profile')
+        del argv[i]
+        access_presets()
+        set_preset_value('test_parallelization', False)
+        finalize_presets()
+        print("Profiling test run...")
+        profile = True
+    except ValueError:
+        profile = False
+    if len(argv) > 1 and argv[1] == "--debug":
         LOGGING = True
         del argv[1]
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
@@ -77,7 +101,11 @@ if __name__ == '__main__':
                           force=False)
         sys.path.append('.')
         from FlexibleEBNFParser import get_grammar, get_transformer
-        error_report = run_grammar_tests(arg, get_grammar, get_transformer)
+        if profile:
+            error_report = cpu_profile(
+                lambda : run_grammar_tests(arg, get_grammar, get_transformer))
+        else:
+            error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')
             print(error_report)
