@@ -2543,7 +2543,7 @@ class EBNFCompiler(Compiler):
             the set of symbols that are referred to in the definition
             of a particular symbol.
 
-    :ivar symbols:  A mapping of symbol names to their first usage (not
+    :ivar symbols:  A mapping of symbol names to their usages (not
             their definition!) in the EBNF source.
 
     :ivar variables:  A set of symbols names that are used with the
@@ -2660,7 +2660,7 @@ class EBNFCompiler(Compiler):
         self.directly_referred_cache = dict()  # type: Dict[str, FrozenSet[str]]
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
-        self.symbols = {}                      # type: Dict[str, Node]
+        self.symbols = {}                      # type: Dict[str, List[Node]]
         self.variables = set()                 # type: Set[str]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
@@ -2845,6 +2845,10 @@ class EBNFCompiler(Compiler):
         elif nd.tag_name == 'symbol':
             return unrepr(nd.content.strip())
         else:
+            # in case of an arbitrary expression do the following:
+            # 1. Create an artificial symbol "xxx_resume_1__ = ..." and postpone compilation
+            # 2. Return the name of that symbol
+            # 3. Compile when or just be assembling Python source code
             return ''
         #     self.tree.new_error(nd, 'Only regular expressions, string literals and external '
         #                         'procedures are allowed as search rules, but not: ' + nd.tag_name)
@@ -3190,8 +3194,9 @@ class EBNFCompiler(Compiler):
         defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS
         for symbol in self.symbols:
             if symbol not in defined_symbols:
-                self.tree.new_error(self.symbols[symbol],
-                                    "Missing definition for symbol '%s'" % symbol)
+                for usage in self.symbols[symbol]:
+                    self.tree.new_error(
+                        usage, "Missing definition for symbol '%s'" % symbol)
 
         # check for unconnected rules
 
@@ -3416,11 +3421,14 @@ class EBNFCompiler(Compiler):
                     self.add_to_disposable_regexp(re_pattern)
             else:
                 args = node.children[1:]
-                assert all(child.tag_name == "symbol" for child in args)
+                for child in args:
+                    if child.tag_name != "symbol":
+                        self.tree.new_error(
+                            child, f'Non-symbol argument: {flatten_sxpr(child.as_sxpr())}'
+                            ' not allowed in @disposable-directive')
                 alist = [child.content for child in args]
                 for asym in alist:
-                    if asym not in self.symbols:
-                        self.symbols[asym] = node
+                    self.symbols.setdefault(asym, []).append(node)
                 self.add_to_disposable_regexp('$|'.join(alist) + '$')
 
         elif key == 'drop':
@@ -3893,10 +3901,9 @@ class EBNFCompiler(Compiler):
             return 'PreprocessorToken("' + symbol + '")'
         else:
             self.current_symbols.append(node)
-            if symbol not in self.symbols:
-                # remember first use of symbol, so that dangling references or
-                # redundant definitions or usages of symbols can be detected later
-                self.symbols[symbol] = node
+            self.symbols.setdefault(symbol, []).append(node)
+            # remember use of symbol, so that dangling references or
+            # redundant definitions or usages of symbols can be detected later
             if symbol in self.rules:
                 self.forward.add(symbol)
             if symbol in EBNFCompiler.KEYWORD_SUBSTITUTION:
