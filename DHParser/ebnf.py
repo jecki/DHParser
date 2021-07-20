@@ -774,7 +774,7 @@ to at most a single linefeed::
     >>> testdata = '{"array": [1, 2.0, "a string"], \\n\\n\\n "number": -1.3e+25, "bool": false}'
     >>> syntax_tree = json_parser(testdata)
     >>> print(syntax_tree.errors[0])
-    1:32: Error (1010): member expected by parser 'object', » \\n \\n \\n  "numb...« found!
+    1:32: Error (1010): 'member' expected by parser 'object', but » \\n \\n \\n  "numb...« found instead!
     >>> json_gr = '@whitespace = /\\\\s*/ \\n' + json_gr
     >>> json_parser = create_parser(json_gr, "JSON")
     >>> syntax_tree = json_parser(testdata)
@@ -1165,10 +1165,10 @@ of failure::
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
     >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
-    1:17: Error (1010): `)` ~ expected by parser 'group', »...« found!
+    1:17: Error (1010): '`)` ~' expected by parser 'group', but »...« found instead!
     >>> terms = arithmetic('(2 - 3) * ( )')
     >>> print(terms.errors[0])
-    1:13: Error (1010): expression expected by parser 'group', »)...« found!
+    1:13: Error (1010): 'expression' expected by parser 'group', but »)...« found instead!
 
 The error messages give a much better indication of the cause of the
 error. What is reported as cause is either the name of the parser that was
