@@ -3062,23 +3062,17 @@ class EBNFCompiler(Compiler):
 
         # prepare and add resume-rules
 
-        resume_rules = dict()  # type: Dict[str, List[ReprType]]
-        for symbol, rules in self.directives.resume.items():
+        if self.directives.resume:
+            definitions.insert(0, pp_rules(self.RESUME_RULES_KEYWORD, self.directives.resume))
+        for symbol in self.directives.resume.keys():
             verify_directive_against_symbol(symbol + '_resume', symbol)
-            resume_rules[symbol] = rules
-        if resume_rules:
-            definitions.insert(0, pp_rules(self.RESUME_RULES_KEYWORD, resume_rules))
 
         # prepare and add skip-rules
 
-        skip_rules = dict()  # # type: Dict[str, List[ReprType]]
-        for symbol, skip in self.directives.skip.items():
-            verify_directive_against_symbol(symbol + '_skip', symbol)
-            skip_rules[symbol] = skip
-        if skip_rules:
-            definitions.insert(0, pp_rules(self.SKIP_RULES_KEYWORD, skip_rules))
-
+        if self.directives.skip:
+            definitions.insert(0, pp_rules(self.SKIP_RULES_KEYWORD, self.directives.skip))
         for symbol in self.directives.skip.keys():
+            verify_directive_against_symbol(symbol + '_skip', symbol)
             if symbol not in self.consumed_skip_rules:
                 # check for indirectly reachable unconsumed mandatory markers
                 for s in self.referred_symbols(symbol):
@@ -3099,14 +3093,11 @@ class EBNFCompiler(Compiler):
 
         # prepare and add customized error-messages
 
-        error_messages = dict()  # type: Dict[str, List[Tuple[ReprType, ReprType]]]
-        for symbol, err_msgs in self.directives.error.items():
-            verify_directive_against_symbol(symbol + '_error', symbol)
-            error_messages[symbol] = err_msgs
-        if error_messages:
-            definitions.append(pp_rules(self.ERR_MSGS_KEYWORD, error_messages))
+        if self.directives.error:
+            definitions.append(pp_rules(self.ERR_MSGS_KEYWORD, self.directives.error))
 
         for symbol in self.directives.error.keys():
+            verify_directive_against_symbol(symbol + '_error', symbol)
             if symbol in self.rules and symbol not in self.consumed_custom_errors:
                 # try:
                 def_node = self.rules[symbol][0]
