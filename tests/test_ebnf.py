@@ -36,7 +36,7 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
-    ERROR
+    ERROR, WARNING
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
@@ -835,7 +835,7 @@ class TestCustomizedResumeParsing:
         """
 
     def test_several_resume_rules_innermost_rule_matching(self):
-        gr = grammar_provider(self.lang)()
+        gr = grammar_provider(self.lang, fail_when=WARNING)()
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -906,7 +906,7 @@ class TestCustomizedResumeParsing_with_Parsers:
         """
 
     def test_several_resume_rules_innermost_rule_matching(self):
-        gr = grammar_provider(self.lang)()
+        gr = grammar_provider(self.lang, fail_when=WARNING)()
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag

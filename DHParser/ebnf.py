@@ -2826,7 +2826,7 @@ class EBNFCompiler(Compiler):
         return value
 
 
-    def gen_search_rule(self, nd: Node) -> ReprType:
+    def gen_search_rule(self, symbol: str, nd: Node) -> ReprType:
         """Generates a search rule, which can be either a string for simple
         string search or a regular expression from the node's content. Returns
         an empty string in case the node is neither regexp nor literal.
@@ -3062,7 +3062,7 @@ class EBNFCompiler(Compiler):
                 if isinstance(rule, unrepr) and rule.s.isidentifier():
                     try:
                         nd = self.rules[rule.s][0].children[1]
-                        refined = self.gen_search_rule(nd)
+                        refined = self.gen_search_rule(symbol, nd)
                         if not refined:  refined = unrepr(rule.s)
                     except IndexError:
                         nd = self.tree  # TODO: Allow arbitrary parsers, here
@@ -3094,7 +3094,7 @@ class EBNFCompiler(Compiler):
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
                         nd = self.rules[search.s][0].children[1]
-                        search = self.gen_search_rule(nd)
+                        search = self.gen_search_rule(symbol, nd)
                     except IndexError:
                         search = ''
                     except KeyError:
@@ -3134,7 +3134,7 @@ class EBNFCompiler(Compiler):
                 if isinstance(search, unrepr) and search.s.isidentifier():
                     try:
                         nd = self.rules[search.s][0].children[1]
-                        search = self.gen_search_rule(nd)
+                        search = self.gen_search_rule(symbol, nd)
                     except IndexError:
                         search = ''
                     except KeyError:
@@ -3518,7 +3518,7 @@ class EBNFCompiler(Compiler):
             if len(node.children) == 2:
                 error_msgs.append(('', unrepr(node[1].content)))
             elif len(node.children) == 3:
-                rule = self.gen_search_rule(node[1])
+                rule = self.gen_search_rule(symbol, node[1])
                 error_msgs.append((rule if rule else unrepr(node[1].content),
                                    unrepr(node[2].content)))
             else:
@@ -3530,11 +3530,11 @@ class EBNFCompiler(Compiler):
             # if symbol in self.rules:
             #     self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
             #                         ' must be defined before the symbol!'.format(symbol))
-            self.directives.skip[symbol] = [self.gen_search_rule(nd) for nd in node[1:]]
+            self.directives.skip[symbol] = [self.gen_search_rule(symbol, nd) for nd in node[1:]]
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            self.directives.resume[symbol] = [self.gen_search_rule(nd) for nd in node[1:]]
+            self.directives.resume[symbol] = [self.gen_search_rule(symbol, nd) for nd in node[1:]]
 
         else:
             if any(key.startswith(directive) for directive in ('skip', 'error', 'resume')):
