@@ -2826,11 +2826,18 @@ class EBNFCompiler(Compiler):
         return value
 
 
-    def gen_search_rule(self, symbol: str, nd: Node) -> ReprType:
+    def gen_search_rule(self, symbol: str, nd: Node, kind: str) -> ReprType:
         """Generates a search rule, which can be either a string for simple
         string search or a regular expression from the node's content. Returns
         an empty string in case the node is neither regexp nor literal.
+
+        :param symbol: The symbol of the parser to which the definition of the
+            search rule is related
+        :param nd: The node containing the AST of the search rule
+        :param kind:  The kind of the search rule, which must be one of
+            "resume", "skip", "error"
         """
+        assert kind in ('resume', 'skip', 'error')
         if nd.tag_name == 'regexp':
             super_ws = self.directives.super_ws
             nonempty_ws = mixin_nonempty(super_ws)
@@ -2843,8 +2850,9 @@ class EBNFCompiler(Compiler):
         elif nd.tag_name == 'procedure':
             return unrepr(nd.content)
         elif nd.tag_name == 'symbol':
-            return unrepr(nd.content.strip())
+            return unrepr(symbol)
         else:
+            pass # Add artificial symbol here!
             # in case of an arbitrary expression do the following:
             # 1. Create an artificial symbol "xxx_resume_1__ = ..." and postpone compilation
             # 2. Return the name of that symbol
@@ -3059,27 +3067,28 @@ class EBNFCompiler(Compiler):
             refined_rules = []  # type: List[ReprType]
             verify_directive_against_symbol(symbol + '_resume', symbol)
             for rule in raw_rules:
-                if isinstance(rule, unrepr) and rule.s.isidentifier():
-                    try:
-                        nd = self.rules[rule.s][0].children[1]
-                        refined = self.gen_search_rule(symbol, nd)
-                        if not refined:  refined = unrepr(rule.s)
-                    except IndexError:
-                        nd = self.tree  # TODO: Allow arbitrary parsers, here
-                        refined = ''    #       refined = rule
-                    except KeyError:
-                        # rule represents a procedure name
-                        nd = self.tree
-                        refined = rule
-                    if refined:
-                        refined_rules.append(refined)
-                    else:
-                        self.tree.new_error(
-                            nd, 'Symbol "%s" cannot be used in resume rule, since it represents '
-                            'neither literal nor regexp nor procedure!',
-                            INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
-                else:
-                    refined_rules.append(rule)
+                # if isinstance(rule, unrepr) and rule.s.isidentifier():
+                #     try:
+                #         nd = self.rules[rule.s][0].children[1]
+                #         refined = self.gen_search_rule(symbol, nd, 'resume')
+                #         if not refined:  refined = unrepr(rule.s)
+                #     except IndexError:
+                #         nd = self.tree  # TODO: Allow arbitrary parsers, here
+                #         refined = ''    #       refined = rule
+                #     except KeyError:
+                #         # rule represents a procedure name
+                #         nd = self.tree
+                #         refined = rule
+                #     if refined:
+                #         refined_rules.append(refined)
+                #     else:
+                #         self.tree.new_error(
+                #             nd, 'Symbol "%s" cannot be used in resume rule, since it represents '
+                #             'neither literal nor regexp nor procedure!',
+                #             INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
+                # else:
+                #     refined_rules.append(rule)
+                refined_rules.append(rule)
             resume_rules[symbol] = refined_rules
         if resume_rules:
             definitions.insert(0, pp_rules(self.RESUME_RULES_KEYWORD, resume_rules))
@@ -3091,15 +3100,15 @@ class EBNFCompiler(Compiler):
             rules = []  # type: List[ReprType]
             verify_directive_against_symbol(symbol + '_skip', symbol)
             for search in skip:
-                if isinstance(search, unrepr) and search.s.isidentifier():
-                    try:
-                        nd = self.rules[search.s][0].children[1]
-                        search = self.gen_search_rule(symbol, nd)
-                    except IndexError:
-                        search = ''
-                    except KeyError:
-                        # rule represents a procedure name
-                        pass
+                # if isinstance(search, unrepr) and search.s.isidentifier():
+                #     try:
+                #         nd = self.rules[search.s][0].children[1]
+                #         search = self.gen_search_rule(symbol, nd, 'skip')
+                #     except IndexError:
+                #         search = ''
+                #     except KeyError:
+                #         # rule represents a procedure name
+                #         pass
                 rules.append(search)
             skip_rules[symbol] = rules
         if skip_rules:
@@ -3131,14 +3140,14 @@ class EBNFCompiler(Compiler):
             custom_errors = []  # type: List[Tuple[ReprType, ReprType]]
             verify_directive_against_symbol(symbol + '_error', symbol)
             for search, message in err_msgs:
-                if isinstance(search, unrepr) and search.s.isidentifier():
-                    try:
-                        nd = self.rules[search.s][0].children[1]
-                        search = self.gen_search_rule(symbol, nd)
-                    except IndexError:
-                        search = ''
-                    except KeyError:
-                        pass
+                # if isinstance(search, unrepr) and search.s.isidentifier():
+                #     try:
+                #         nd = self.rules[search.s][0].children[1]
+                #         search = self.gen_search_rule(symbol, nd, 'error')
+                #     except IndexError:
+                #         search = ''
+                #     except KeyError:
+                #         pass
                 custom_errors.append((search, message))
             error_messages[symbol] = custom_errors
         if error_messages:
@@ -3518,7 +3527,7 @@ class EBNFCompiler(Compiler):
             if len(node.children) == 2:
                 error_msgs.append(('', unrepr(node[1].content)))
             elif len(node.children) == 3:
-                rule = self.gen_search_rule(symbol, node[1])
+                rule = self.gen_search_rule(symbol, node[1], 'error')
                 error_msgs.append((rule if rule else unrepr(node[1].content),
                                    unrepr(node[2].content)))
             else:
@@ -3530,11 +3539,13 @@ class EBNFCompiler(Compiler):
             # if symbol in self.rules:
             #     self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
             #                         ' must be defined before the symbol!'.format(symbol))
-            self.directives.skip[symbol] = [self.gen_search_rule(symbol, nd) for nd in node[1:]]
+            self.directives.skip[symbol] = [self.gen_search_rule(symbol, nd, 'skip')
+                                            for nd in node[1:]]
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            self.directives.resume[symbol] = [self.gen_search_rule(symbol, nd) for nd in node[1:]]
+            self.directives.resume[symbol] = [self.gen_search_rule(symbol, nd, 'resume')
+                                              for nd in node[1:]]
 
         else:
             if any(key.startswith(directive) for directive in ('skip', 'error', 'resume')):
