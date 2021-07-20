@@ -2543,6 +2543,11 @@ class EBNFCompiler(Compiler):
             the set of symbols that are referred to in the definition
             of a particular symbol.
 
+    :ivar referred_by_directive: A set of symbols which are directly
+           referred to in a directive. It does not matter whether
+           these symbals are reachable (i.e. directly oder indirectly
+           referred to) from the root-symbol.
+
     :ivar symbols:  A mapping of symbol names to their usages (not
             their definition!) in the EBNF source.
 
@@ -2658,6 +2663,7 @@ class EBNFCompiler(Compiler):
         self.rules = OrderedDict()             # type: OrderedDict[str, List[Node]]
         self.referred_symbols_cache = dict()   # type: Dict[str, FrozenSet[str]]
         self.directly_referred_cache = dict()  # type: Dict[str, FrozenSet[str]]
+        self.referred_by_directive = set()     # type: Set[str]
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
@@ -2826,13 +2832,12 @@ class EBNFCompiler(Compiler):
         return value
 
 
-    def gen_search_rule(self, symbol: str, nd: Node, kind: str) -> ReprType:
+    def gen_search_rule(self, node: Node, nd: Node, kind: str) -> ReprType:
         """Generates a search rule, which can be either a string for simple
         string search or a regular expression from the node's content. Returns
         an empty string in case the node is neither regexp nor literal.
 
-        :param symbol: The symbol of the parser to which the definition of the
-            search rule is related
+        :param node: The node of the directive
         :param nd: The node containing the AST of the search rule
         :param kind:  The kind of the search rule, which must be one of
             "resume", "skip", "error"
@@ -2850,17 +2855,25 @@ class EBNFCompiler(Compiler):
         elif nd.tag_name == 'procedure':
             return unrepr(nd.content)
         elif nd.tag_name == 'symbol':
-            return unrepr(symbol)
+            referred_symbol = nd.content.strip()
+            self.referred_by_directive.add(referred_symbol)
+            return unrepr(referred_symbol)
         else:
-            pass # Add artificial symbol here!
-            # in case of an arbitrary expression do the following:
-            # 1. Create an artificial symbol "xxx_resume_1__ = ..." and postpone compilation
-            # 2. Return the name of that symbol
-            # 3. Compile when or just be assembling Python source code
-            return ''
-        #     self.tree.new_error(nd, 'Only regular expressions, string literals and external '
-        #                         'procedures are allowed as search rules, but not: ' + nd.tag_name)
-        # return unrepr('')
+            symbol = node[0].content.split('_')[0]
+            stub = f"{symbol}_{kind}_"
+            L = len(stub)
+            nr = 1
+            for rule in self.rules.keys():
+                if rule[:L] == stub:
+                    i = int(rule[L:].strip('_'))
+                    if i > nr:  nr = i + 1
+            rule = stub + str(nr) + '__'
+            self.current_symbols = [node]
+            self.rules[rule] = self.current_symbols
+            defn = self.compile(nd)
+            assert defn.find("(") >= 0  # synonyms impossible here
+            self.definitions[rule] = defn
+            return unrepr(rule)
 
 
     def directly_referred(self, symbol: str) -> FrozenSet[str]:
@@ -3164,6 +3177,9 @@ class EBNFCompiler(Compiler):
                     remove_connections(str(related))
 
         remove_connections(self.root_symbol)
+        for symbol in self.referred_by_directive:
+            if symbol in defined_symbols:
+                remove_connections(symbol)
         for leftover in defined_symbols:
             self.tree.new_error(self.rules[leftover][0],
                                 'Rule "%s" is not connected to parser root "%s" !' %
