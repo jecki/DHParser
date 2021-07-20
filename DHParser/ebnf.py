@@ -3063,33 +3063,9 @@ class EBNFCompiler(Compiler):
         # prepare and add resume-rules
 
         resume_rules = dict()  # type: Dict[str, List[ReprType]]
-        for symbol, raw_rules in self.directives.resume.items():
-            refined_rules = []  # type: List[ReprType]
+        for symbol, rules in self.directives.resume.items():
             verify_directive_against_symbol(symbol + '_resume', symbol)
-            for rule in raw_rules:
-                # if isinstance(rule, unrepr) and rule.s.isidentifier():
-                #     try:
-                #         nd = self.rules[rule.s][0].children[1]
-                #         refined = self.gen_search_rule(symbol, nd, 'resume')
-                #         if not refined:  refined = unrepr(rule.s)
-                #     except IndexError:
-                #         nd = self.tree  # TODO: Allow arbitrary parsers, here
-                #         refined = ''    #       refined = rule
-                #     except KeyError:
-                #         # rule represents a procedure name
-                #         nd = self.tree
-                #         refined = rule
-                #     if refined:
-                #         refined_rules.append(refined)
-                #     else:
-                #         self.tree.new_error(
-                #             nd, 'Symbol "%s" cannot be used in resume rule, since it represents '
-                #             'neither literal nor regexp nor procedure!',
-                #             INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE)
-                # else:
-                #     refined_rules.append(rule)
-                refined_rules.append(rule)
-            resume_rules[symbol] = refined_rules
+            resume_rules[symbol] = rules
         if resume_rules:
             definitions.insert(0, pp_rules(self.RESUME_RULES_KEYWORD, resume_rules))
 
@@ -3097,20 +3073,8 @@ class EBNFCompiler(Compiler):
 
         skip_rules = dict()  # # type: Dict[str, List[ReprType]]
         for symbol, skip in self.directives.skip.items():
-            rules = []  # type: List[ReprType]
             verify_directive_against_symbol(symbol + '_skip', symbol)
-            for search in skip:
-                # if isinstance(search, unrepr) and search.s.isidentifier():
-                #     try:
-                #         nd = self.rules[search.s][0].children[1]
-                #         search = self.gen_search_rule(symbol, nd, 'skip')
-                #     except IndexError:
-                #         search = ''
-                #     except KeyError:
-                #         # rule represents a procedure name
-                #         pass
-                rules.append(search)
-            skip_rules[symbol] = rules
+            skip_rules[symbol] = skip
         if skip_rules:
             definitions.insert(0, pp_rules(self.SKIP_RULES_KEYWORD, skip_rules))
 
@@ -3137,19 +3101,8 @@ class EBNFCompiler(Compiler):
 
         error_messages = dict()  # type: Dict[str, List[Tuple[ReprType, ReprType]]]
         for symbol, err_msgs in self.directives.error.items():
-            custom_errors = []  # type: List[Tuple[ReprType, ReprType]]
             verify_directive_against_symbol(symbol + '_error', symbol)
-            for search, message in err_msgs:
-                # if isinstance(search, unrepr) and search.s.isidentifier():
-                #     try:
-                #         nd = self.rules[search.s][0].children[1]
-                #         search = self.gen_search_rule(symbol, nd, 'error')
-                #     except IndexError:
-                #         search = ''
-                #     except KeyError:
-                #         pass
-                custom_errors.append((search, message))
-            error_messages[symbol] = custom_errors
+            error_messages[symbol] = err_msgs
         if error_messages:
             definitions.append(pp_rules(self.ERR_MSGS_KEYWORD, error_messages))
 
