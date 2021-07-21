@@ -2832,7 +2832,7 @@ class EBNFCompiler(Compiler):
         return value
 
 
-    def gen_search_rule(self, node: Node, nd: Node, kind: str) -> ReprType:
+    def make_search_rule(self, node: Node, nd: Node, kind: str) -> ReprType:
         """Generates a search rule, which can be either a string for simple
         string search or a regular expression from the node's content. Returns
         an empty string in case the node is neither regexp nor literal.
@@ -2873,6 +2873,7 @@ class EBNFCompiler(Compiler):
             defn = self.compile(nd)
             assert defn.find("(") >= 0  # synonyms impossible here
             self.definitions[rule] = defn
+            self.referred_by_directive.add(rule)
             return unrepr(rule)
 
 
@@ -3487,7 +3488,7 @@ class EBNFCompiler(Compiler):
             if len(node.children) == 2:
                 error_msgs.append(('', unrepr(node[1].content)))
             elif len(node.children) == 3:
-                rule = self.gen_search_rule(symbol, node[1], 'error')
+                rule = self.make_search_rule(symbol, node[1], 'error')
                 error_msgs.append((rule if rule else unrepr(node[1].content),
                                    unrepr(node[2].content)))
             else:
@@ -3499,12 +3500,12 @@ class EBNFCompiler(Compiler):
             # if symbol in self.rules:
             #     self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
             #                         ' must be defined before the symbol!'.format(symbol))
-            self.directives.skip[symbol] = [self.gen_search_rule(symbol, nd, 'skip')
+            self.directives.skip[symbol] = [self.make_search_rule(symbol, nd, 'skip')
                                             for nd in node[1:]]
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            self.directives.resume[symbol] = [self.gen_search_rule(symbol, nd, 'resume')
+            self.directives.resume[symbol] = [self.make_search_rule(symbol, nd, 'resume')
                                               for nd in node[1:]]
 
         else:
