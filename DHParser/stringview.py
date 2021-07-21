@@ -98,8 +98,8 @@ def fast_real_indices(begin: Optional[int],
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
-    # cbegin = 0 if begin is None else begin
-    cbegin = begin if begin else 0
+    cbegin = 0 if begin is None else begin
+    # cbegin = begin if begin else 0
     cend = length if end is None else end
     return pack_index(cbegin, length), pack_index(cend, length)
 
