@@ -99,7 +99,7 @@ class ts2dataclassGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "12a6f5d82611b6dff385298eb09e8c34"
+    source_hash__ = "f159fc49d227517c449e7b82a4e6814b"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_array_ellipsis$|_top_level_assignment$|_top_level_literal$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -117,7 +117,7 @@ class ts2dataclassGrammar(Grammar):
     INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
     identifier = Series(RegExp('(?!\\d)\\w+'), dwsp__)
     variable = Series(identifier, ZeroOrMore(Series(Text("."), identifier)))
-    basic_type = Series(Alternative(Text("object"), Text("array"), Text("string"), Text("number"), Text("boolean"), Text("null"), Text("integer"), Text("uinteger")), dwsp__)
+    basic_type = Series(Alternative(Text("object"), Text("array"), Text("string"), Text("number"), Text("boolean"), Text("null"), Text("integer"), Text("uinteger"), Text("decimal")), dwsp__)
     name = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__)))
     association = Series(name, Series(Drop(Text(":")), dwsp__), literal)
     object = Series(Series(Drop(Text("{")), dwsp__), Option(Series(association, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), association)))), Series(Drop(Text("}")), dwsp__))
@@ -127,11 +127,11 @@ class ts2dataclassGrammar(Grammar):
     type_parameter = Series(Series(Drop(Text("<")), dwsp__), identifier, Series(Drop(Text(">")), dwsp__))
     _top_level_literal = Drop(Synonym(literal))
     _array_ellipsis = Drop(Series(literal, Drop(ZeroOrMore(Drop(Series(Series(Drop(Text(",")), dwsp__), literal))))))
-    assignment = Series(variable, Series(Drop(Text("=")), dwsp__), literal, Series(Drop(Text(";")), dwsp__))
+    assignment = Series(variable, Series(Drop(Text("=")), dwsp__), Alternative(literal, variable), Series(Drop(Text(";")), dwsp__))
     _top_level_assignment = Drop(Synonym(assignment))
     const = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("const")), dwsp__), declaration, Series(Drop(Text("=")), dwsp__), Alternative(literal, identifier), Series(Drop(Text(";")), dwsp__), mandatory=2)
     item = Series(identifier, Option(Series(Series(Drop(Text("=")), dwsp__), literal)))
-    enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("enum")), dwsp__), Option(identifier), Series(Drop(Text("{")), dwsp__), item, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), item)), Series(Drop(Text("}")), dwsp__), mandatory=3)
+    enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("enum")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), item, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), item)), Series(Drop(Text("}")), dwsp__), mandatory=3)
     namespace = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(const), Series(Drop(Text("}")), dwsp__), mandatory=2)
     map_signature = Series(index_signature, Series(Drop(Text(":")), dwsp__), types)
     mapped_type = Series(Series(Drop(Text("{")), dwsp__), map_signature, Option(Series(Drop(Text(";")), dwsp__)), Series(Drop(Text("}")), dwsp__))
@@ -181,8 +181,6 @@ def parse_ts2dataclass(document, start_parser = "root_parser__", *, complete_mat
 ts2dataclass_AST_transformation_table = {
     # AST Transformations for the ts2dataclass-grammar
     # "<": flatten,
-    "types": [replace_by_single_child],
-    "type_name": [reduce_single_child],
     ":Text": change_tag_name('TEXT')
     # "*": replace_by_single_child
 }
@@ -217,10 +215,16 @@ class ts2dataclassCompiler(Compiler):
         self.PythonEnums = get_config_value('ts2dataclass.PythonEnums', False)
         # initialize your variables here, not in the constructor!
 
-    def on_document(self, node):
-        return self.compile(node)
+    def compile(self, node) -> str:
+        result = super().compile(node)
+        if isinstance(result, str):  return result
+        raise TypeError(f"Compilation of {node.tag_name} yielded a result of "
+                        f"type {type(result)} and not str as expected!")
 
-    def on_interface(self, node):
+    def on_document(self, node) -> str:
+        return '\n\n'.join(self.compile(child) for child in node.children)
+
+    def on_interface(self, node) -> str:
         name = self.compile(node['identifier'])
         try:
             tp = self.compile(node['type_parameter'])
@@ -241,82 +245,95 @@ class ts2dataclassCompiler(Compiler):
         decls = self.compile(node['declarations_block'])
         return interface + '\n    ' + decls.replace('\n', '\n    ')
 
-    def on_type_parameter(self, node):
+    def on_type_parameter(self, node) -> str:
         return self.compile(node['identifier'])
 
-    def on_extends(self, node):
+    def on_extends(self, node) -> str:
         return ', '.join(self.compile(nd) for nd in node.children)
 
-    def on_type_alias(self, node):
+    def on_type_alias(self, node) -> str:
         alias = self.compile(node['identifier'])
-        types = self.compile(node[-1])
+        types = self.compile(node['types'])
         return f"{alias} = {types}"
 
-    def on_declarations_block(self, node):
+    def on_declarations_block(self, node) -> str:
         declarations = '\n'.join(self.compile(nd) for nd in node
                                  if nd.tag_name == 'declaration')
         # ignore map_signature for now
         return declarations
 
-    def on_declaration(self, node):
-        if node[-1].tag_name in ('identifier', 'optional'):
-            # no types were specified
-            T = 'Any'
-        else:
-            T = self.compile(node[-1])
+    def on_declaration(self, node) -> str:
+        T = self.compile(node['types']) if 'types' in node else 'Any'
         if 'optional' in node:
             T = f"Optional[{T}]"
         identifier = self.compile(node['identifier'])
-        if T == 'Any':
-            return identifier
-        else:
-            return f"{identifier}: {T}"
+        return identifier if T == 'Any' else f"{identifier}: {T}"
 
     def on_optional(self, node):
         assert False, "This method should never have been called!"
 
     def on_index_signature(self, node) -> str:
-        return node[-1].content
+        return self.compile(node['type'])
 
-    def on_types(self, node):
-        if sys.version_info >= (3, 10) and USE_PYTHON_3_10_TYPE_UNION:
-            return '| '.join(self.any_type(nd) for nd in node)
+    def on_types(self, node) -> str:
+        if len(node.children) == 1:
+            return self.compile(node[0])
         else:
-            return f"Union[{', '.join(self.any_type(nd) for nd in node)}]"
+            if sys.version_info >= (3, 10) and USE_PYTHON_3_10_TYPE_UNION:
+                return '| '.join(self.compile(nd) for nd in node)
+            else:
+                return f"Union[{', '.join(self.compile(nd) for nd in node)}]"
 
-    def any_type(self, node) -> str:
-        # assert node.tag_name in ('array_of', 'basic_type', 'identifier',
-        #                          'types', 'mapped_type', 'declarations_blokc',
-        #                          'type_tuple',
-        #                          'number', 'string', 'array', 'object') ?
-        return self.compile(node)
+    def on_type(self, node) -> str:
+        assert len(node.children) == 1
+        typ = node[0]
+        if typ.tag_name == 'declarations_block':
+            return 'Dict'
+        elif typ.tag_name == 'literal':
+            literal_typ = typ[0].tag_name
+            if literal_typ == 'array':
+                return 'List'
+            elif literal_typ == 'object':
+                return 'Dict'
+            elif literal_typ == 'number':
+                literal = self.compile(typ)
+                try:
+                    val = int(literal)
+                    return f'IntEnum("{val}", {val})'
+                except ValueError:
+                    return f'Enum({val}, {val})'
+            else:
+                assert literal_typ == 'string'
+                literal = self.compile(typ)
+                return f'Enum("", {literal})'
+        else:
+            return self.compile(typ)
 
     def on_type_tuple(self, node):
-        assert False, "Not yet implemented"
+        return 'Tuple[' + ', '.join(self.compile(nd) for nd in node) + ']'
 
     def on_mapped_type(self, node) -> str:
-        return cast(str, self.compile(node['map_signature']))
+        return self.compile(node['map_signature'])
 
     def on_map_signature(self, node) -> str:
         return "Dict[%s, %s]" % (self.compile(node['index_signature']),
                                  self.compile(node['types']))
 
-    def on_namespace(self, node):
+    def on_namespace(self, node) -> str:
         name = self.compile(node['identifier'])
         namespace = [f'class {name}:']
-        for i in node.indices('const'):
-            namespace.append(self.compile(node[i]))
+        for const in node.select_children('const'):
+            namespace.append(self.compile(const))
         return '\n    '.join(namespace)
 
-    def on_enum(self, node):
-        i = node.index('identifier')
+    def on_enum(self, node) -> str:
         base_class = '(enum.Enum)' if self.PythonEnums else ''
-        enum = ['class ' + self.compile(node[i]) + base_class + ':']
-        for item in node[i + 1:]:
+        enum = ['class ' + self.compile(node['identifier']) + base_class + ':']
+        for item in node.select_children('item'):
             enum.append(self.compile(item))
         return '\n    '.join(enum)
 
-    def on_item(self, node):
+    def on_item(self, node) -> str:
         if len(node.children) == 1:
             identifier = self.compile(node[0])
             if self.PythonEnums:
@@ -324,18 +341,17 @@ class ts2dataclassCompiler(Compiler):
             else:
                 return identifier + ' = ' + repr(identifier)
         else:
-            return self.compile(node[0]) + ' = ' + self.any_literal(node[1])
+            return self.compile(node['identifier']) + ' = ' + self.compile(node['literal'])
 
-    def on_const(self, node):
-        self.compile(node['declaration'])
+    def on_const(self, node) -> str:
         return self.compile(node['declaration']) + ' = ' + self.compile(node[-1])
 
     def on_assignment(self, node) -> str:
-        return node[0].content + ' = ' + self.any_literal(node[1])
+        return self.compile(node['variable']) + ' = ' + self.compile(node[1])
 
-    def any_literal(self, node) -> str:
-        assert node.tag_name in ('string', 'number', 'array', 'object')
-        return self.compile(node)
+    def on_literal(self, node) -> str:
+        assert len(node.children) == 1
+        return self.compile(node[0])
 
     def on_number(self, node) -> str:
         return node.content
@@ -345,7 +361,7 @@ class ts2dataclassCompiler(Compiler):
 
     def on_array(self, node) -> str:
         return '[' + \
-               ', '.join(self.any_literal(nd) for nd in node.children) + \
+               ', '.join(self.compile(nd) for nd in node.children) + \
                ']'
 
     def on_object(self, node) -> str:
@@ -354,13 +370,17 @@ class ts2dataclassCompiler(Compiler):
                '\n}'
 
     def on_association(self, node) -> str:
-        return f'"{node[0].content}": ' + self.any_literal(node[1])
+        return f'"{self.compile(node["name"])}": ' + self.compile(node['literal'])
+
+    def on_name(self, node) -> str:
+        return self.content
 
     def on_basic_type(self, node) -> str:
         python_basic_types = {'object': 'object',
                               'array': 'List',
                               'string': 'str',
                               'number': 'float',
+                              'decimal': 'float',
                               'integer': 'int',
                               'uinteger': 'int',
                               'boolean': 'bool',
@@ -368,14 +388,14 @@ class ts2dataclassCompiler(Compiler):
         return python_basic_types[node.content]
 
     def on_type_name(self, node) -> str:
-        return node.content
+        return self.compile(node['identifier'])
 
     def on_array_of(self, node) -> str:
         assert len(node.children) == 1
         return 'List[' + self.compile(node[0]) + ']'
 
     def on_qualifier(self, node):
-        assert False, "Qualifiers should be ignored and this method never be called!"
+        assert False, "Qualifiers should be ignored and this method should never be called!"
 
     def on_variable(self, node) -> str:
         return node.content
@@ -514,7 +534,10 @@ def inspect(test_file_path: str):
             ast_str = ast.as_tree()
             code = compiler(ast)
             results.append(INSPECT_TEMPLATE.format(
-                testname=testname, test_source=test_source, ast_str=ast_str, code=code))
+                testname=testname,
+                test_source=test_source.replace('<', '&lt;').replace('>', '&gt;'),
+                ast_str=ast_str.replace('<', '&lt;').replace('>', '&gt;'),
+                code=code.replace('<', '&lt;').replace('>', '&gt;')))
     test_file_name = os.path.basename(test_file_path)
     results_str = '\n        '.join(results)
     html = f'''<!DOCTYPE html>\n<html>
