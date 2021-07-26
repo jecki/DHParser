@@ -303,7 +303,7 @@ class ts2dataclassCompiler(Compiler):
                     val = int(literal)
                     return f'IntEnum("{val}", {val})'
                 except ValueError:
-                    return f'Enum({val}, {val})'
+                    return f'Enum({literal}, {literal})'
             else:
                 assert literal_typ == 'string'
                 literal = self.compile(typ)

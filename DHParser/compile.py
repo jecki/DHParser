@@ -338,7 +338,7 @@ def compile_source(source: str,
         1. The result as returned by the compiler or ``None`` in case of failure
         2. A list of error or warning messages
         3. The root-node of the abstract syntax tree if `preserve_ast` is True
-            or `None` otherwise.
+           or `None` otherwise.
     """
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
