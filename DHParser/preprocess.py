@@ -113,6 +113,7 @@ FindIncludeFunc = Union[Callable[[str, int], IncludeInfo],   # (document: str,  
 PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
                          functools.partial]
 Tokenizer = Union[Callable[[str], Tuple[str, List[Error]]], functools.partial]
+
 # a functions that merely adds preprocessor tokens to a source text
 
 

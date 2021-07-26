@@ -38,12 +38,12 @@ import copy
 import functools
 import os
 import traceback
-from typing import Any, Optional, Tuple, List, Set, Union, Callable, cast
+from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
-from DHParser.transform import TransformationFunc
+from DHParser.transform import TransformerCallable
 from DHParser.parse import Grammar
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
@@ -54,8 +54,8 @@ from DHParser.toolkit import load_if_file, is_filename
 
 __all__ = ('CompilerError',
            'Compiler',
-           'GrammarCallable',
            'CompilerCallable',
+           'TreeProcessorCallable',
            'ResultTuple',
            'compile_source',
            'visitor_name',
@@ -287,8 +287,7 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
         return name[:i] + '_out' if i >= 0 else name
 
 
-GrammarCallable = Union[Grammar, Callable[[str], RootNode], functools.partial]
-CompilerCallable = Union[Compiler, Callable[[Node], Any], functools.partial]
+CompilerCallable = Union[Compiler, Callable[[RootNode], Any], functools.partial]
 ResultTuple = Tuple[Optional[Any], List[Error], Optional[Node]]
 
 
@@ -305,13 +304,11 @@ def filter_stacktrace(stacktrace: List[str]) -> List[str]:
 
 
 def compile_source(source: str,
-                   preprocessor: Optional[PreprocessorFunc],  # str -> str
-                   parser: GrammarCallable,  # str -> Node (concrete syntax tree (CST))
-                   transformer: TransformationFunc,  # Node (CST) -> Node (abstract ST (AST))
-                   compiler: CompilerCallable,  # Node (AST), Source -> Any
-                   # out_source_data: list = NOPE,  # Tuple[str, SourceMapFunc]
-                   *, preserve_AST: bool = False) \
-        -> Tuple[Optional[Any], List[Error], Optional[Node]]:
+                   preprocessor: Optional[PreprocessorFunc],
+                   parser: Grammar,
+                   transformer: TransformerCallable,
+                   compiler: CompilerCallable,
+                   *, preserve_AST: bool = False) -> ResultTuple:
     """Compiles a source in four stages:
 
     1. Pre-Processing (if needed)
@@ -459,7 +456,10 @@ class TreeProcessor(Compiler):
         return cast(RootNode, result)
 
 
-def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Error]]:
+TreeProcessorCallable = Union[TreeProcessor, Callable[[RootNode], RootNode], functools.partial]
+
+
+def process_tree(tp: TreeProcessorCallable, tree: RootNode) -> Tuple[RootNode, List[Error]]:
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Catch any Python-exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
@@ -509,17 +509,9 @@ def process_tree(tp: TreeProcessor, tree: RootNode) -> Tuple[RootNode, List[Erro
     return tree, messages
 
 
-# def compiler_factory(compiler_class: Compiler) -> CompilerCallable
-#
-#     def get_compiler() -> CompilerCallable:
-#         """Returns a thread/process-exclusive Compiler-singleton."""
-#         THREAD_LOCALS = access_thread_locals()
-#         try:
-#             compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
-#         except AttributeError:
-#             THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton = {NAME}Compiler()
-#             compiler = THREAD_LOCALS.{NAME}_{ID:08d}_compiler_singleton
-#         return compiler
+
+
+
 
 # TODO: Verify compiler against grammar,
 #       i.e. make sure that for all on_X()-methods, `X` is the name of a parser

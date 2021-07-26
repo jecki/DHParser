@@ -38,7 +38,7 @@ from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, a
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
-from DHParser.transform import TransformationFunc, TransformationDict
+from DHParser.transform import TransformerCallable, TransformationDict
 from DHParser.toolkit import DHPARSER_DIR, DHPARSER_PARENTDIR, load_if_file, is_python_code, \
     compile_python_object, re, as_identifier, is_filename, relative_path
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
@@ -183,7 +183,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 def compileDSL(text_or_file: str,
                preprocessor: Optional[PreprocessorFunc],
                dsl_grammar: Union[str, Grammar],
-               ast_transformation: TransformationFunc,
+               ast_transformation: TransformerCallable,
                compiler: Compiler,
                fail_when: ErrorCode = ERROR) -> Any:
     """

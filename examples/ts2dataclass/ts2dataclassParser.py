@@ -191,7 +191,9 @@ def ts2dataclassTransformer() -> TransformationFunc:
     threads or processes."""
     return partial(traverse, processing_table=ts2dataclass_AST_transformation_table.copy())
 
+
 get_transformer = ThreadLocalSingletonFactory(ts2dataclassTransformer, ident=1)
+
 
 def transform_ts2dataclass(cst):
     get_transformer()(cst)

@@ -42,9 +42,9 @@ from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list,
 
 __all__ = ('TransformationDict',
            'TransformationProc',
-           'TransformationFunc',
            'ConditionFunc',
            'KeyFunc',
+           'TransformerCallable',
            'transformation_factory',
            'key_tag_name',
            'Filter',
@@ -147,11 +147,11 @@ class Filter:
 TransformationProc = Callable[[TreeContext], None]
 TransformationDict = Dict[str, Union[Callable, Sequence[Callable]]]
 TransformationCache = Dict[str, Tuple[Sequence[Filter], Sequence[Callable]]]
-TransformationFunc = Union[Callable[[TreeContext], Any], partial]
 ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[TreeContext], bool]
 KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
+TransformerCallable = Union[Callable[[Node], None], partial]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):

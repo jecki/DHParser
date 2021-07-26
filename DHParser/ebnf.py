@@ -1492,7 +1492,7 @@ from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, Z
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
     cython
-from DHParser.transform import TransformationFunc, traverse, remove_brackets, \
+from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
     BLOCK_LEAVES
@@ -1554,7 +1554,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \\
     compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \\
-    remove_if, Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \\
+    remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, traverse, \\
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \\
@@ -2260,11 +2260,11 @@ EBNF_AST_transformation_table = {
 }
 
 
-def EBNFTransform() -> TransformationFunc:
+def EBNFTransform() -> TransformerCallable:
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
 
-def get_ebnf_transformer() -> TransformationFunc:
+def get_ebnf_transformer() -> TransformerCallable:
     THREAD_LOCALS = access_thread_locals()
     try:
         transformer = THREAD_LOCALS.EBNF_transformer_singleton
@@ -2290,7 +2290,7 @@ def transform_ebnf(cst: Node) -> None:
 
 PreprocessorFactoryFunc = Callable[[], PreprocessorFunc]
 ParserFactoryFunc = Callable[[], Grammar]
-TransformerFactoryFunc = Callable[[], TransformationFunc]
+TransformerFactoryFunc = Callable[[], TransformerCallable]
 CompilerFactoryFunc = Callable[[], Compiler]
 
 PREPROCESSOR_FACTORY = '''
@@ -2345,7 +2345,7 @@ def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=Tru
 
 
 TRANSFORMER_FACTORY = '''
-def {NAME}Transformer() -> TransformationFunc:
+def {NAME}Transformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
