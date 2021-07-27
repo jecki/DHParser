@@ -1621,11 +1621,11 @@ class Grammar:
                         i = self.ff_pos__ or tail_pos(stitches)
                         fs = self.document__[i:i + 10]
                         if i + 10 < len(self.document__) - 1:  fs += ' ...'
-                        root_name = self.root_parser__.pname \
-                                    or self.associated_symbol__(self.root_parser__).pname
+                        root_name = self.start_parser__.pname \
+                                    or self.associated_symbol__(self.start_parser__).pname
                         error_msg = f'Parser "{root_name}" ' \
-                            "stopped before end, at:  " + fs + \
-                            (("  Trying to recover" +
+                            "stopped before end, at: »" + fs + \
+                            (("« Trying to recover" +
                               (" but stopping history recording at this point."
                                if self.history_tracking__ else "..."))
                              if len(stitches) < self.max_parser_dropouts__

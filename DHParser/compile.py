@@ -454,11 +454,11 @@ class TreeProcessor(Compiler):
     functions which makes sure that a tree-processor is only invoked if no
     fatal errors have occurred in any of the earlier stages.
     """
-    def __call__(self, root: RootNode) -> None:
+    def __call__(self, root: RootNode) -> Optional[RootNode]:
         assert isinstance(root, RootNode)
         result = super().__call__(root)
-        assert isinstance(result, RootNode), str(result)
-
+        assert result is None or isinstance(result, RootNode), str(result)
+        return result
 
 TreeProcessorCallable = Union[TreeProcessor, Callable[[RootNode], RootNode], functools.partial]
 

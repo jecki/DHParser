@@ -505,9 +505,9 @@ the other end of the tree rooted in `node`::
 
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
     >>> pointer = t.pick_context('G')
-    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ALL_CONTEXTS)]
+    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ANY_CONTEXT)]
     ['A <- G:4', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- H:56', 'A <- K:7', 'A:1234567']
-    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ALL_CONTEXTS, reverse=True)]
+    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ANY_CONTEXT, reverse=True)]
     ['A <- G:4', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- C <- D:23', 'A <- C:23', 'A <- B:1', 'A:1234567']
 
 Another important difference, besides the starting point is then the
@@ -515,10 +515,10 @@ Another important difference, besides the starting point is then the
 post-order (or "depth first"), while the respective methods ot the
 Node-class traverse the tree pre-order. See the difference::
 
-    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ALL_CONTEXTS, include_root=True)]
+    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ANY_CONTEXT, include_root=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
-    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ALL_CONTEXTS, include_root=True, reverse=True)]
+    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ANY_CONTEXT, include_root=True, reverse=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
@@ -696,12 +696,12 @@ __all__ = ('WHITESPACE_PTYPE',
            'CriteriaType',
            'NodeMatchFunction',
            'ContextMatchFunction',
-           'ALL_NODES',
-           'NO_NODES',
-           'LEAF_NODES',
-           'ALL_CONTEXTS',
-           'NO_CONTEXTS',
-           'LEAF_CONTEXTS',
+           'ANY_NODE',
+           'NO_NODE',
+           'LEAF_NODE',
+           'ANY_CONTEXT',
+           'NO_CONTEXT',
+           'LEAF_CONTEXT',
            'Node',
            'content',
            'validate_token_sequence',
@@ -788,13 +788,13 @@ TreeContext = List['Node']
 NodeMatchFunction = Callable[['Node'], bool]
 ContextMatchFunction = Callable[[TreeContext], bool]
 
-ALL_NODES = lambda nd: True
-NO_NODES = lambda nd: False
-LEAF_NODES = lambda nd: not nd._children
+ANY_NODE = lambda nd: True
+NO_NODE = lambda nd: False
+LEAF_NODE = lambda nd: not nd._children
 
-ALL_CONTEXTS = lambda ctx: True
-NO_CONTEXTS = lambda ctx: False
-LEAF_CONTEXTS = lambda ctx: not ctx[-1].children
+ANY_CONTEXT = lambda ctx: True
+NO_CONTEXT = lambda ctx: False
+LEAF_CONTEXT = lambda ctx: not ctx[-1].children
 
 
 def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
@@ -1582,7 +1582,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_if(self, match_function: NodeMatchFunction,
                   include_root: bool = False, reverse: bool = False,
-                  skip_subtree: NodeMatchFunction = NO_NODES) -> Iterator['Node']:
+                  skip_subtree: NodeMatchFunction = NO_NODE) -> Iterator['Node']:
         """
         Generates an iterator over all nodes in the tree for which
         `match_function()` returns True. See the more general function
@@ -1600,7 +1600,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select(self, criterion: CriteriaType,
                include_root: bool = False, reverse: bool = False,
-               skip_subtree: CriteriaType = NO_NODES) -> Iterator['Node']:
+               skip_subtree: CriteriaType = NO_NODE) -> Iterator['Node']:
         """
         Generates an iterator over all nodes in the tree that fulfill the
         given criterion. See :py:func:`create_match_function()` for a
@@ -1651,7 +1651,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pick(self, criterion: CriteriaType,
              include_root: bool = False,
              reverse: bool = False,
-             skip_subtree: CriteriaType = NO_NODES) -> Optional['Node']:
+             skip_subtree: CriteriaType = NO_NODE) -> Optional['Node']:
         """
         Picks the first (or last if run in reverse mode) descendant that
         fulfils the given criterion. See :py:func:`create_match_function()`
@@ -1714,7 +1714,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def select_context_if(self, match_function: ContextMatchFunction,
                           include_root: bool = False,
                           reverse: bool = False,
-                          skip_subtree: ContextMatchFunction = NO_CONTEXTS) -> Iterator[TreeContext]:
+                          skip_subtree: ContextMatchFunction = NO_CONTEXT) -> Iterator[TreeContext]:
         """
         Like :py:func:`Node.select_if()` but yields the entire context (i.e. list
         of descendants, the last one being the matching node) instead of just
@@ -1738,7 +1738,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def select_context(self, criterion: CriteriaType,
                        include_root: bool = False,
                        reverse: bool = False,
-                       skip_subtree: CriteriaType = NO_CONTEXTS) -> Iterator[TreeContext]:
+                       skip_subtree: CriteriaType = NO_CONTEXT) -> Iterator[TreeContext]:
         """
         Like :py:meth:`Node.select()` but yields the entire context (i.e. list of
         descendants, the last one being the matching node) instead of just
@@ -1751,7 +1751,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pick_context(self, criterion: CriteriaType,
                      include_root: bool = False,
                      reverse: bool = False,
-                     skip_subtree: CriteriaType = NO_CONTEXTS) -> TreeContext:
+                     skip_subtree: CriteriaType = NO_CONTEXT) -> TreeContext:
         """
         Like :py:meth:`Node.pick()`, only that the entire context (i.e.
         chain of descendants) relative to `self` is returned.
@@ -2471,17 +2471,31 @@ def ensuing_str(context: TreeContext, length: int = -1) -> str:
 
 def select_context_if(context: TreeContext,
                       match_function: ContextMatchFunction,
-                      reverse: bool = False) -> Iterator[TreeContext]:
+                      include_root: bool = False,
+                      reverse: bool = False,
+                      skip_subtree: CriteriaType = NO_CONTEXT) -> Iterator[TreeContext]:
     """
     Creates an Iterator yielding all `contexts` for which the
     `match_function` is true, starting from `context`.
     """
+
+    def recursive(ctx, include_root):
+        nonlocal match_function, reverse, skip_subtree
+        if include_root and match_function(ctx):
+            yield ctx
+        top = ctx[-1]
+        child_iterator = reversed(top._children) if reverse else top._children
+        for child in child_iterator:
+            child_ctx = ctx + [child]
+            if match_function(child_ctx):
+                yield child_ctx
+            if child._children and not skip_subtree(child_ctx):
+                yield from recursive(child_ctx, include_root=False)
+
     context = context.copy()
     while context:
-        if match_function(context):
-            yield context
+        yield from recursive(context, include_root)
         node = context.pop()
-
         edge, delta = (0, -1) if reverse else (-1, 1)
         while context and node is context[-1]._children[edge]:
             if match_function(context):
@@ -2491,25 +2505,48 @@ def select_context_if(context: TreeContext,
             parent = context[-1]
             i = parent.index(node)
             nearest_sibling = parent._children[i + delta]
-            innermost_ctx = nearest_sibling.pick_context(
-                LEAF_CONTEXTS, include_root=True, reverse=reverse)
-            context.extend(innermost_ctx)
+            context.append(nearest_sibling)
+            include_root = True
+
+    # context = context.copy()
+    # while context:
+    #     if match_function(context):
+    #         yield context
+    #     node = context.pop()
+    #
+    #     edge, delta = (0, -1) if reverse else (-1, 1)
+    #     while context and node is context[-1]._children[edge]:
+    #         if match_function(context):
+    #             yield context
+    #         node = context.pop()
+    #     if context:
+    #         parent = context[-1]
+    #         i = parent.index(node)
+    #         nearest_sibling = parent._children[i + delta]
+    #         innermost_ctx = nearest_sibling.pick_context(
+    #             LEAF_CONTEXT, include_root=True, reverse=reverse)
+    #         context.extend(innermost_ctx)
 
 
 def select_context(context: TreeContext,
                    criterion: CriteriaType,
-                   reverse: bool = False) -> Iterator[TreeContext]:
+                   include_root: bool = False,
+                   reverse: bool = False,
+                   skip_subtree: CriteriaType = NO_CONTEXT) -> Iterator[TreeContext]:
     """
     Like `select_context_if()` but yields the entire context (i.e. list of
     descendants, the last one being the matching node) instead of just
     the matching nodes.
     """
-    return select_context_if(context, create_context_match_function(criterion), reverse)
+    return select_context_if(context, create_context_match_function(criterion),
+                             include_root, reverse, skip_subtree)
 
 
 def pick_context(context: TreeContext,
                  criterion: CriteriaType,
-                 reverse: bool = False) -> Optional[TreeContext]:
+                 include_root: bool = False,
+                 reverse: bool = False,
+                 skip_subtree: CriteriaType = NO_CONTEXT) -> Optional[TreeContext]:
     """
     Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
     relative to `self` is returned.
@@ -2595,7 +2632,7 @@ def generate_context_mapping(node: Node) -> ContextMapping:
     """
     pos = 0
     pos_list, ctx_list = [], []
-    for ctx in node.select_context_if(LEAF_CONTEXTS, include_root=True):
+    for ctx in node.select_context_if(LEAF_CONTEXT, include_root=True):
         pos_list.append(pos)
         ctx_list.append(ctx)
         pos += len(ctx[-1])
