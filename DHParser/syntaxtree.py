@@ -2276,7 +2276,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 text.append(children[i].content)
                 i += 1
             if text:  element.text = ''.join(text)
-            lest_element = None
+            last_element = None
             while i < L:
                 while i < L and children[i].tag_name not in string_tags:
                     last_element = children[i].as_etree(ET, string_tags, empty_tags)
@@ -2287,7 +2287,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     assert not children[i].children
                     text.append(children[i].content)
                     i += 1
-                if text:  last_element.tail = ''.join(text)
+                if text and last_element is not None:  last_element.tail = ''.join(text)
         else:
             element = ET.Element(tag_name, attrib=attributes)
             if tag_name in empty_tags:

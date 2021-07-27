@@ -151,7 +151,7 @@ ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[TreeContext], bool]
 KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
-TransformerCallable = Union[Callable[[Node], None], partial]
+TransformerCallable = Union[Callable[[RootNode], None], partial]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):

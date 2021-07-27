@@ -348,7 +348,8 @@ def compile_source(source: str,
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
     source_name = source if is_filename(source) else 'source'
-    compiler.source = original_text
+    if isinstance(compiler, Compiler):
+        compiler.source = original_text
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
         # log only for custom parser/transformer/compilers
@@ -460,10 +461,8 @@ class TreeProcessor(Compiler):
         assert result is None or isinstance(result, RootNode), str(result)
         return result
 
-TreeProcessorCallable = Union[TreeProcessor, Callable[[RootNode], RootNode], functools.partial]
 
-
-def process_tree(tp: TreeProcessorCallable, tree: RootNode) -> Tuple[RootNode, List[Error]]:
+def process_tree(tp: TransformerCallable, tree: RootNode):
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Catch any Python-exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
@@ -510,7 +509,6 @@ def process_tree(tp: TreeProcessorCallable, tree: RootNode) -> Tuple[RootNode, L
     new_msgs = [msg for msg in messages if msg.line < 0]
     # Obsolete, because RootNode adjusts error locations whenever an error is added:
     # adjust_error_locations(new_msgs, tree.source, tree.source_mapping)
-    return tree, messages
 
 
 
