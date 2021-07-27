@@ -34,6 +34,7 @@ See module ``ebnf`` for a sample of the implementation of a
 compiler object.
 """
 
+from collections import namedtuple
 import copy
 import functools
 import os
@@ -56,7 +57,7 @@ __all__ = ('CompilerError',
            'Compiler',
            'CompilerCallable',
            'TreeProcessorCallable',
-           'ResultTuple',
+           'CompilationResult',
            'compile_source',
            'visitor_name',
            'attr_visitor_name',
@@ -288,7 +289,11 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 
 
 CompilerCallable = Union[Compiler, Callable[[RootNode], Any], functools.partial]
-ResultTuple = Tuple[Optional[Any], List[Error], Optional[Node]]
+CompilationResult = namedtuple('CompilationResult',
+    ['result',      # type: Optional[Any]
+     'messages',    # type: List[Error]
+     'AST'],        # type: RootNode
+    module=__name__)
 
 
 def filter_stacktrace(stacktrace: List[str]) -> List[str]:
@@ -308,7 +313,7 @@ def compile_source(source: str,
                    parser: Grammar,
                    transformer: TransformerCallable,
                    compiler: CompilerCallable,
-                   *, preserve_AST: bool = False) -> ResultTuple:
+                   *, preserve_AST: bool = False) -> CompilationResult:
     """Compiles a source in four stages:
 
     1. Pre-Processing (if needed)
@@ -362,7 +367,7 @@ def compile_source(source: str,
         _, source_text, source_mapping, errors = preprocessor(original_text, source_name)
 
     if has_errors(errors, FATAL):
-        return None, errors, None
+        return CompilationResult(None, errors, None)
 
     # parsing
 
@@ -431,12 +436,12 @@ def compile_source(source: str,
     messages = syntax_tree.errors_sorted  # type: List[Error]
     # Obsolete, because RootNode adjusts error locations whenever an error is added:
     # adjust_error_locations(messages, original_text, source_mapping)
-    return result, messages, ast
+    return CompilationResult(result, messages, ast)
 
 
 class TreeProcessor(Compiler):
-    """A special kind of Compiler class that takes a tree as input (just like
-    `Compiler`) but always yields a tree as result.
+    """A special kind of Compiler class that (just like `Compiler`) transforms a
+    tree inplace, but does not yield a (non-tree) result.
 
     The intended use case for TreeProcessor are digital-humanities-applications
     where domain specific languages often describe data structures that, again,
@@ -449,11 +454,10 @@ class TreeProcessor(Compiler):
     functions which makes sure that a tree-processor is only invoked if no
     fatal errors have occurred in any of the earlier stages.
     """
-    def __call__(self, root: RootNode) -> RootNode:
+    def __call__(self, root: RootNode) -> None:
         assert isinstance(root, RootNode)
         result = super().__call__(root)
         assert isinstance(result, RootNode), str(result)
-        return cast(RootNode, result)
 
 
 TreeProcessorCallable = Union[TreeProcessor, Callable[[RootNode], RootNode], functools.partial]
@@ -481,12 +485,13 @@ def process_tree(tp: TreeProcessorCallable, tree: RootNode) -> Tuple[RootNode, L
     make a deep copy of the input tree, before calling process_tree.
     """
     assert isinstance(tp, TreeProcessor)
+    assert isinstance(tree, RootNode)
     if not is_fatal(tree.error_flag):
         if is_error(tree.error_flag):
             # assume Python crashes are merely a consequence of earlier
             # errors, so let's catch them
             try:
-                tree = tp(tree)
+                tp(tree)
             except Exception as e:
                 node = tp.context[-1] if tp.context else tree
                 st = traceback.format_list(traceback.extract_tb(e.__traceback__))
@@ -499,8 +504,7 @@ def process_tree(tp: TreeProcessorCallable, tree: RootNode) -> Tuple[RootNode, L
         else:
             # assume Python crashes are programming mistakes, so let
             # the exceptions through
-            tree = tp(tree)
-        assert isinstance(tree, RootNode)
+            tp(tree)
 
     messages = tree.errors_sorted  # type: List[Error]
     new_msgs = [msg for msg in messages if msg.line < 0]

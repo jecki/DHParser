@@ -1474,7 +1474,7 @@ import keyword
 import os
 from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Sequence, Union, Optional
 
-from DHParser.compile import CompilerError, Compiler, ResultTuple, compile_source, visitor_name
+from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source, visitor_name
 from DHParser.configuration import access_thread_locals, get_config_value, \
     NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
@@ -4015,7 +4015,7 @@ def compile_ebnf_ast(ast: RootNode) -> str:
 ########################################################################
 
 def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool = False) \
-        -> ResultTuple:
+        -> CompilationResult:
     """
     Compiles an `ebnf_source` (file_name or EBNF-string) and returns
     a tuple of the python code of the compiler, a list of warnings or errors
