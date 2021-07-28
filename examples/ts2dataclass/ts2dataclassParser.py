@@ -34,7 +34,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \
     compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
-    remove_if, Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    remove_if, Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -99,7 +99,7 @@ class ts2dataclassGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "f159fc49d227517c449e7b82a4e6814b"
+    source_hash__ = "9dc9e879a2568aad7a0335b2d0a6dcc2"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_array_ellipsis$|_top_level_assignment$|_top_level_literal$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -186,7 +186,7 @@ ts2dataclass_AST_transformation_table = {
 }
 
 
-def ts2dataclassTransformer() -> TransformationFunc:
+def ts2dataclassTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=ts2dataclass_AST_transformation_table.copy())
@@ -222,6 +222,9 @@ class ts2dataclassCompiler(Compiler):
         if isinstance(result, str):  return result
         raise TypeError(f"Compilation of {node.tag_name} yielded a result of "
                         f"type {type(result)} and not str as expected!")
+
+    def on_EMPTY__(self, node) -> str:
+        return ''
 
     def on_document(self, node) -> str:
         return '\n\n'.join(self.compile(child) for child in node.children)
@@ -375,7 +378,7 @@ class ts2dataclassCompiler(Compiler):
         return f'"{self.compile(node["name"])}": ' + self.compile(node['literal'])
 
     def on_name(self, node) -> str:
-        return self.content
+        return node.content
 
     def on_basic_type(self, node) -> str:
         python_basic_types = {'object': 'object',
@@ -513,7 +516,7 @@ INSPECT_TEMPLATE = """<h2>{testname}</h2>
 <code style="white-space: pre-wrap;">{ast_str}
 </code>
 </div>
-<h3>Program code</h3>
+<h3>Python</h3>
 <div style="background-color: yellow;">
 <code style="white-space: pre-wrap;">{code}
 </code>
@@ -524,7 +527,7 @@ INSPECT_TEMPLATE = """<h2>{testname}</h2>
 def inspect(test_file_path: str):
     assert test_file_path[-4:] == '.ini'
     from DHParser.testing import unit_from_file
-    test_unit = unit_from_file(test_file_path)
+    test_unit = unit_from_file(test_file_path, additional_stages={'py'})
     grammar = get_grammar()
     transformer = get_transformer()
     compiler = get_compiler()

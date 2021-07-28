@@ -56,11 +56,13 @@ from DHParser.toolkit import load_if_file, is_filename
 __all__ = ('CompilerError',
            'Compiler',
            'CompilerCallable',
+           'CompilerFactory',
            'CompilationResult',
+           'process_tree',
+           'run_pipeline',
            'compile_source',
            'visitor_name',
-           'attr_visitor_name',
-           'process_tree')
+           'attr_visitor_name')
 
 
 class CompilerError(Exception):
@@ -287,6 +289,7 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 
 
 CompilerCallable = Union[Compiler, Callable[[RootNode], Any], functools.partial]
+CompilerFactory = Union[Callable[[], CompilerCallable], functools.partial]
 
 
 def filter_stacktrace(stacktrace: List[str]) -> List[str]:
@@ -345,19 +348,19 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
     return result
 
 
-Junction = Tuple[str, CompilerCallable, str]
+Junction = Tuple[str, CompilerFactory, str]
 
 
-def process_pipeline(junctions: Set[Junction],
-                     source_stages: Dict[str, RootNode],
-                     target_stages: Set[str]) -> Dict[str, Any]:
+def run_pipeline(junctions: Set[Junction],
+                 source_stages: Dict[str, RootNode],
+                 target_stages: Set[str]) -> Dict[str, Tuple[Any, List[Error]]]:
     t_to_j = {j[-1]: j for j in junctions}
     steps = []
     targets = target_stages.copy()
-    already_reached = targets.copy()
+    already_reached = targets.copy() | source_stages.keys()
     while targets:
         steps.append([t_to_j[t] for t in targets if t not in source_stages])
-        targets = { j[0] for j in steps[-1] if j[0] not in already_reached }
+        targets = {j[0] for j in steps[-1] if j[0] not in already_reached}
         already_reached |= targets
         for step in steps[:-1]:
             for j in steps[-1]:
@@ -366,30 +369,33 @@ def process_pipeline(junctions: Set[Junction],
                 except ValueError:
                     pass
     if not (target_stages <= already_reached):
-        raise ValueError(f'Target-stages: {trage_stages - already_reached} '
+        raise ValueError(f'Target-stages: {target_stages - already_reached} '
                          f'cannot be reached with junctions: {junctions}.')
     sources = [j[0] for step in steps for j in step]
-    disposables = {s for s in set(sources) if s not in target_stages and souces.count(s) <= 1 }
+    disposables = {s for s in set(sources) if s not in target_stages and sources.count(s) <= 1}
     steps.reverse()
-    results = source_stages.copy()
+    results: Dict[str, Any] = source_stages.copy()
+    errata: Dict[str, List[Error]] = {s: source_stages[s].errors_sorted for s in source_stages}
     for step in steps:
         for junction in step:
             t = junction[-1]
             if t not in results:
                 s = junction[0]
-                tree = results[s] if source in disposables else copy.deepcopy(results[s])
+                tree = results[s] if s in disposables else copy.deepcopy(results[s])
                 if s not in target_stages:
                     sources.remove(s)
                     if sources.count(s) <= 1:
                         disposables.add(s)
                 if tree is None:
                     results[t] = None
+                    errata[t] = []
                 else:
                     if not isinstance(tree, RootNode):
                         raise ValueError(f'Object in stage {s} is not a tree but a {type(tree)} '
                                          f'and, therefore, cannot be processed to {t}')
-                    results[t] = process_tree(junction[1], tree)
-    return {t: results[t] for t in target_stages}
+                    results[t] = process_tree(junction[1](), tree)
+                    errata[t] = copy.copy(tree.errors_sorted)
+    return {t: (results[t], errata[t]) for t in target_stages}
 
 
 CompilationResult = namedtuple('CompilationResult',
