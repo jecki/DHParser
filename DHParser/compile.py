@@ -56,12 +56,10 @@ from DHParser.toolkit import load_if_file, is_filename
 __all__ = ('CompilerError',
            'Compiler',
            'CompilerCallable',
-           'TreeProcessorCallable',
            'CompilationResult',
            'compile_source',
            'visitor_name',
            'attr_visitor_name',
-           'TreeProcessor',
            'process_tree')
 
 
@@ -289,11 +287,6 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 
 
 CompilerCallable = Union[Compiler, Callable[[RootNode], Any], functools.partial]
-CompilationResult = namedtuple('CompilationResult',
-    ['result',      # type: Optional[Any]
-     'messages',    # type: List[Error]
-     'AST'],        # type: RootNode
-    module=__name__)
 
 
 def filter_stacktrace(stacktrace: List[str]) -> List[str]:
@@ -306,6 +299,104 @@ def filter_stacktrace(stacktrace: List[str]) -> List[str]:
         if frame.find("DHParser", i, k) < 0:
             break
     return stacktrace[n:]
+
+
+def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
+    """Process a tree with the tree-processor `tp` only if no fatal error
+    has occurred so far. Catch any Python-exceptions in case
+    any normal errors have occurred earlier in the processing pipeline.
+    Don't catch Python-exceptions if no errors have occurred earlier.
+
+    This behaviour is based on the assumption that given any non-fatal
+    errors have occurred earlier, the tree passed through the pipeline
+    might not be in a state that is expected by the later stages, thus if
+    an exception occurs it is not really to be considered a programming
+    error. Processing stages should be written with possible errors
+    occurring in earlier stages in mind, though. However, because it could
+    be difficult to provide for all possible kinds of badly structured
+    trees resulting from errors, exceptions occurring when processing
+    potentially faulty trees will be dealt with gracefully.
+
+    Tree processing should generally be assumed to change the tree
+    in place. If the input tree shall be preserved, it is necessary to
+    make a deep copy of the input tree, before calling process_tree.
+    """
+    assert isinstance(tree, RootNode)
+    result = None
+    if not is_fatal(tree.error_flag):
+        if is_error(tree.error_flag):
+            # assume Python crashes are merely a consequence of earlier
+            # errors, so let's catch them
+            try:
+                result = tp(tree)
+            except Exception as e:
+                node = tp.context[-1] if tp.context else tree
+                st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+                trace = ''.join(filter_stacktrace(st))
+                tree.new_error(
+                    node, "Tree-processing failed, most likely, due to errors earlier in "
+                          "in the processing pipeline. Crash Message: %s: %s\n%s"
+                          % (e.__class__.__name__, str(e), trace),
+                    TREE_PROCESSING_CRASH)
+        else:
+            # assume Python crashes are programming mistakes, so let
+            # the exceptions through
+            result = tp(tree)
+    return result
+
+
+Junction = Tuple[str, CompilerCallable, str]
+
+
+def process_pipeline(junctions: Set[Junction],
+                     source_stages: Dict[str, RootNode],
+                     target_stages: Set[str]) -> Dict[str, Any]:
+    t_to_j = {j[-1]: j for j in junctions}
+    steps = []
+    targets = target_stages.copy()
+    already_reached = targets.copy()
+    while targets:
+        steps.append([t_to_j[t] for t in targets if t not in source_stages])
+        targets = { j[0] for j in steps[-1] if j[0] not in already_reached }
+        already_reached |= targets
+        for step in steps[:-1]:
+            for j in steps[-1]:
+                try:
+                    step.remove(j)
+                except ValueError:
+                    pass
+    if not (target_stages <= already_reached):
+        raise ValueError(f'Target-stages: {trage_stages - already_reached} '
+                         f'cannot be reached with junctions: {junctions}.')
+    sources = [j[0] for step in steps for j in step]
+    disposables = {s for s in set(sources) if s not in target_stages and souces.count(s) <= 1 }
+    steps.reverse()
+    results = source_stages.copy()
+    for step in steps:
+        for junction in step:
+            t = junction[-1]
+            if t not in results:
+                s = junction[0]
+                tree = results[s] if source in disposables else copy.deepcopy(results[s])
+                if s not in target_stages:
+                    sources.remove(s)
+                    if sources.count(s) <= 1:
+                        disposables.add(s)
+                if tree is None:
+                    results[t] = None
+                else:
+                    if not isinstance(tree, RootNode):
+                        raise ValueError(f'Object in stage {s} is not a tree but a {type(tree)} '
+                                         f'and, therefore, cannot be processed to {t}')
+                    results[t] = process_tree(junction[1], tree)
+    return {t: results[t] for t in target_stages}
+
+
+CompilationResult = namedtuple('CompilationResult',
+    ['result',      # type: Optional[Any]
+     'messages',    # type: List[Error]
+     'AST'],        # type: RootNode
+    module=__name__)
 
 
 def compile_source(source: str,
@@ -412,107 +503,34 @@ def compile_source(source: str,
 
             # Compilation
 
-            if is_error(syntax_tree.error_flag):
-                # assume Python crashes are merely a consequence of earlier
-                # errors, so let's catch them
-                try:
-                    result = compiler(syntax_tree)
-                except Exception as e:
-                    # raise e
-                    node = syntax_tree  # type: Node
-                    if isinstance(compiler, Compiler) and compiler.context:
-                        node = compiler.context[-1]
-                    st = traceback.format_list(traceback.extract_tb(e.__traceback__))
-                    trace = ''.join(filter_stacktrace(st))
-                    syntax_tree.new_error(
-                        node, "Compilation failed, most likely, due to errors earlier "
-                              "in the processing pipeline. Crash Message: %s: %s\n%s"
-                              % (e.__class__.__name__, str(e), trace),
-                        COMPILER_CRASH)
-            else:
-                # assume Python crashes are programming mistakes, so let
-                # the exceptions through
-                result = compiler(syntax_tree)
+            result = process_tree(compiler, syntax_tree)
+
+            # if is_error(syntax_tree.error_flag):
+            #     # assume Python crashes are merely a consequence of earlier
+            #     # errors, so let's catch them
+            #     try:
+            #         result = compiler(syntax_tree)
+            #     except Exception as e:
+            #         # raise e
+            #         node = syntax_tree  # type: Node
+            #         if isinstance(compiler, Compiler) and compiler.context:
+            #             node = compiler.context[-1]
+            #         st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+            #         trace = ''.join(filter_stacktrace(st))
+            #         syntax_tree.new_error(
+            #             node, "Compilation failed, most likely, due to errors earlier "
+            #                   "in the processing pipeline. Crash Message: %s: %s\n%s"
+            #                   % (e.__class__.__name__, str(e), trace),
+            #             COMPILER_CRASH)
+            # else:
+            #     # assume Python crashes are programming mistakes, so let
+            #     # the exceptions through
+            #     result = compiler(syntax_tree)
 
     messages = syntax_tree.errors_sorted  # type: List[Error]
     # Obsolete, because RootNode adjusts error locations whenever an error is added:
     # adjust_error_locations(messages, original_text, source_mapping)
     return CompilationResult(result, messages, ast)
-
-
-class TreeProcessor(Compiler):
-    """A special kind of Compiler class that (just like `Compiler`) transforms a
-    tree inplace, but does not yield a (non-tree) result.
-
-    The intended use case for TreeProcessor are digital-humanities-applications
-    where domain specific languages often describe data structures that, again,
-    most of the times are tree structures that can be serialized as XML or HTML.
-    Typically, these tree structures pass through several processing stages in
-    sequence that - as long as no fatal errors occur on the way - end with
-    HTML-preview or a preprint-XML.
-
-    The tree-processors can most suitably be invoked with the `process-tree()`-
-    functions which makes sure that a tree-processor is only invoked if no
-    fatal errors have occurred in any of the earlier stages.
-    """
-    def __call__(self, root: RootNode) -> Optional[RootNode]:
-        assert isinstance(root, RootNode)
-        result = super().__call__(root)
-        assert result is None or isinstance(result, RootNode), str(result)
-        return result
-
-
-def process_tree(tp: TransformerCallable, tree: RootNode):
-    """Process a tree with the tree-processor `tp` only if no fatal error
-    has occurred so far. Catch any Python-exceptions in case
-    any normal errors have occurred earlier in the processing pipeline.
-    Don't catch Python-exceptions if no errors have occurred earlier.
-
-    This behaviour is based on the assumption that given any non-fatal
-    errors have occurred earlier, the tree passed through the pipeline
-    might not be in a state that is expected by the later stages, thus if
-    an exception occurs it is not really to be considered a programming
-    error. Processing stages should be written with possible errors
-    occurring in earlier stages in mind, though. However, because it could
-    be difficult to provide for all possible kinds of badly structured
-    trees resulting from errors, exceptions occurring when processing
-    potentially faulty trees will be dealt with gracefully.
-
-    Although process_tree returns the root-node of the processed tree,
-    tree processing should generally be assumed to change the tree
-    in place. If the input tree shall be preserved, it is necessary to
-    make a deep copy of the input tree, before calling process_tree.
-    """
-    assert isinstance(tp, TreeProcessor)
-    assert isinstance(tree, RootNode)
-    if not is_fatal(tree.error_flag):
-        if is_error(tree.error_flag):
-            # assume Python crashes are merely a consequence of earlier
-            # errors, so let's catch them
-            try:
-                tp(tree)
-            except Exception as e:
-                node = tp.context[-1] if tp.context else tree
-                st = traceback.format_list(traceback.extract_tb(e.__traceback__))
-                trace = ''.join(filter_stacktrace(st))
-                tree.new_error(
-                    node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "in the processing pipeline. Crash Message: %s: %s\n%s"
-                          % (e.__class__.__name__, str(e), trace),
-                    TREE_PROCESSING_CRASH)
-        else:
-            # assume Python crashes are programming mistakes, so let
-            # the exceptions through
-            tp(tree)
-
-    messages = tree.errors_sorted  # type: List[Error]
-    new_msgs = [msg for msg in messages if msg.line < 0]
-    # Obsolete, because RootNode adjusts error locations whenever an error is added:
-    # adjust_error_locations(new_msgs, tree.source, tree.source_mapping)
-
-
-
-
 
 
 # TODO: Verify compiler against grammar,

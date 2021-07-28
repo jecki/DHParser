@@ -2274,11 +2274,11 @@ def get_ebnf_transformer() -> TransformerCallable:
     return transformer
 
 
-def transform_ebnf(cst: Node) -> None:
+def transform_ebnf(cst: RootNode) -> RootNode:
     """Transforms the concrete-syntax-tree of an EBNF-source-code
     into the abstract-syntax-tree. The transformation changes the
     syntax tree in place. No value is returned."""
-    get_ebnf_transformer()(cst)
+    return cast(RootNode, get_ebnf_transformer()(cst))
 
 
 ########################################################################
@@ -2355,7 +2355,7 @@ get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, ident={ID})
 
 
 def transform_{NAME}(cst):
-    get_transformer()(cst)
+    return get_transformer()(cst)
 '''
 
 

@@ -151,7 +151,7 @@ ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[TreeContext], bool]
 KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
-TransformerCallable = Union[Callable[[RootNode], None], partial]
+TransformerCallable = Union[Callable[[RootNode], RootNode], partial]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
@@ -311,7 +311,7 @@ BLOCK_ANONYMOUS_LEAVES = BlockAnonymousLeaves()
 
 def traverse(root_node: Node,
              processing_table: ProcessingTableType,
-             key_func: KeyFunc = key_tag_name) -> None:
+             key_func: KeyFunc = key_tag_name) -> Node:
     """
     Traverses the syntax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
@@ -426,6 +426,7 @@ def traverse(root_node: Node,
                                      % (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
 
     traverse_recursive([root_node])
+    return root_node
     # assert processing_table['__cache__']
 
 
