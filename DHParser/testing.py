@@ -248,9 +248,9 @@ def get_report(test_unit) -> str:
     report = []
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
-        report.append('\n\n%s\n%s\n' % (heading, '=' * len(heading)))
+        report.append('\n\n%s\n%s' % (heading, '=' * len(heading)))
         for test_name, test_code in tests.get('match', dict()).items():
-            heading = 'Match-test "%s"' % test_name
+            heading = '\nMatch-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:\n')
             report.append(indent(test_code))
@@ -273,7 +273,7 @@ def get_report(test_unit) -> str:
             for stage in compilation_stages:
                 if test_name in tests[stage]:
                     result = tests[stage][test_name]
-                    report.append(f'\n### {stage.strip("_")}')
+                    report.append(f'\n### {stage.strip("_")}\n')
                     if isinstance(result, Node):
                         result_str = cast(Node, result).serialize('ast')
                     else:
@@ -550,28 +550,21 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                               f'\tExpected:  {compare_str}\n'
                                               f'\tReceived:  {test_str}')
                         else:
-                            raw = get(tests, stage, test_name)
-                            lines = raw.split('\n')
-                            if all(line[:4] == '    ' for line in lines[1:]):
-                                lines = lines[0:1] + [line[4:] for line in lines[1:]]
-                            else:
-                                raise SyntaxError(
-                                    f'Result for test {test_name} for parser {parser_name} '
-                                    f'must be specified with an indentation of four spaces '
-                                    f'after the first line!')
-                            compare = '\n'.join(lines)
-                            test_str = targets[stage][0]
-                            if not compare == test_str:
-                                test_code_str = "\n\t".join(test_code.split("\n"))
-                                errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
-                                              f'\tExpr.:     {test_code_str}\n'
-                                              f'\tExpected:\n{compare}\n'
-                                              f'\tReceived:\n{test_str}')
+                            compare = get(tests, stage, test_name).strip('\n')
+                            if compare:
+                                test_str = targets[stage][0]
+                                if not compare == test_str:
+                                    test_code_str = "\n\t".join(test_code.split("\n"))
+                                    errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
+                                                  f'\tExpr.:\n{test_code_str}\n'
+                                                  f'\tExpected:\n{compare}\n'
+                                                  f'\tReceived:\n{test_str}')
                     except ValueError as e:
                         raise SyntaxError(f'{stage}-test {test_name} of parser {parser_name} '
                                           f'failed with:\n{str(e)}.')
                     if verbose:
-                        infostr = f'      {stage}-test "' + test_name + '" ... '
+                        infostr = ' ' * (max(0, 9 - len(stage))) \
+                                  + f'{stage}-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if len(errata) > errflag:
