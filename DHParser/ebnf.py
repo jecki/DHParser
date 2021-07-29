@@ -3636,7 +3636,10 @@ class EBNFCompiler(Compiler):
         custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
         # add custom error message if it has been declared for the current definition
         if custom_args:
-            current_symbol = next(reversed(self.rules.keys()))
+            try:
+                current_symbol = next(reversed(self.rules.keys()))
+            except StopIteration:
+                current_symbol = ''
             # add customized error messages, if defined
             if current_symbol in self.directives.error:
                 if current_symbol in self.consumed_custom_errors:

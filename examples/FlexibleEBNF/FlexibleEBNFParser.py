@@ -32,7 +32,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -251,13 +251,13 @@ EBNF_AST_transformation_table = {
 
 
 
-def CreateEBNFTransformer() -> TransformationFunc:
+def CreateEBNFTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformationFunc:
+def get_transformer() -> TransformerCallable:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:

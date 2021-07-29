@@ -281,7 +281,7 @@ def get_report(test_unit) -> str:
                     report.append(indent(result_str))
 
         for test_name, test_code in tests.get('fail', dict()).items():
-            heading = 'Fail-test "%s"' % test_name
+            heading = '\nFail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:')
             report.append(indent(test_code))
@@ -322,6 +322,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     """
     Unit tests for a grammar-parser and ast transformations.
     """
+    assert isinstance(report, str)
+    assert isinstance(show, set) and all(isinstance(element, str) for element in show), \
+        f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
+    assert isinstance(junctions, set) and all(isinstance(e[0], str) and isinstance(e[2], str)
+                                              and callable(e[1]) for e in junctions), \
+        f"Value {repr(junctions)} passed to parameter 'show' is not a set of compilation-junctions!"
+
     output = []
 
     def write(s):
@@ -491,6 +498,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 except ValueError as e:
                     raise SyntaxError(f'Compilation-Test {test_name} of parser {parser_name} '
                                       f'failed with:\n{str(e)}')
+                # except Exception as e:
+                #     raise AssertionError(
+                #         f'Partial-Compilation of {test_name} with parser {parser_name} '
+                #         f'failed with {repr(e)} when compiling:\n {test_code}')
                 t_errors: Dict[str, List[Error]] = {}
                 for stage in transformation_stages | show:
                     tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
@@ -662,6 +673,11 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     unit, if it has the word "test" in its name.
     """
     assert isinstance(report, str)
+    assert isinstance(show, set) and all(isinstance(element, str) for element in show), \
+        f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
+    assert isinstance(junctions, set) and all(isinstance(e[0], str) and isinstance(e[2], str)
+                                              and callable(e[1]) for e in junctions), \
+        f"Value {repr(junctions)} passed to parameter 'show' is not a set of compilation-junctions!"
 
     if not isinstance(fn_patterns, collections.abc.Iterable):
         fn_patterns = [fn_patterns]

@@ -48,7 +48,8 @@ def run_grammar_tests(fn_pattern, get_grammar, get_transformer):
     DHParser.log.start_logging(os.path.join(testdir, LOGGING))
     error_report = testing.grammar_suite(
         testdir, get_grammar, get_transformer,
-        fn_patterns=[fn_pattern], report='REPORT', verbose=True)
+        fn_patterns=[fn_pattern], report='REPORT', verbose=True,
+        junctions=set(), show=set())
     return error_report
 
 

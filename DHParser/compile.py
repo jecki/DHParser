@@ -359,7 +359,10 @@ def run_pipeline(junctions: Set[Junction],
     targets = target_stages.copy()
     already_reached = targets.copy() | source_stages.keys()
     while targets:
-        steps.append([t_to_j[t] for t in targets if t not in source_stages])
+        try:
+            steps.append([t_to_j[t] for t in targets if t not in source_stages])
+        except KeyError as e:
+            raise AssertionError(f"{e.args[0]} is not a valid target.")
         targets = {j[0] for j in steps[-1] if j[0] not in already_reached}
         already_reached |= targets
         for step in steps[:-1]:
