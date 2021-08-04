@@ -901,7 +901,7 @@ class Server:
 
     :var server_name: A name for the server. Defaults to
         `CLASSNAME_OBJECTID`
-    :var strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
+    :var strict_lsp: Enforce Language-Server-Protocol on json-rpc-calls.
         If `False` json-rpc calls will be processed even without prior
         initialization, just like plain data or http calls.
     :var cpu_bound: Set of function names of functions that are cpu-bound
