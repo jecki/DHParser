@@ -156,7 +156,7 @@ class CodeDescription:
 class Command:
     title: str
     command: str
-    arguments: Optional[List['any']]
+    arguments: Optional[List[Any]]
 
 
 @dataclass
@@ -382,13 +382,13 @@ class ClientInfo_:
 class InitializeParams(WorkDoneProgressParams):
     processId: Union[int, None]
     clientInfo: ClientInfo_
-    locale: str
-    rootPath: Union[str, None]
+    locale: Optional[str]
+    rootPath: Optional[Union[str, None]]
     rootUri: Union[DocumentUri, None]
-    initializationOptions: 'any'
+    initializationOptions: Optional[Any]
     capabilities: 'ClientCapabilities'
-    trace: TraceValue
-    workspaceFolders: Union[List['WorkspaceFolder'], None]
+    trace: Optional[TraceValue]
+    workspaceFolders: Optional[Union[List['WorkspaceFolder'], None]]
 
 
 @dataclass
@@ -449,24 +449,24 @@ class Workspace_:
 
 @dataclass
 class Window_:
-    workDoneProgress: bool
-    showMessage: 'ShowMessageRequestClientCapabilities'
-    showDocument: 'ShowDocumentClientCapabilities'
+    workDoneProgress: Optional[bool]
+    showMessage: Optional['ShowMessageRequestClientCapabilities']
+    showDocument: Optional['ShowDocumentClientCapabilities']
 
 
 @dataclass
 class General_:
-    regularExpressions: RegularExpressionsClientCapabilities
-    markdown: MarkdownClientCapabilities
+    regularExpressions: Optional[RegularExpressionsClientCapabilities]
+    markdown: Optional[MarkdownClientCapabilities]
 
 
 @dataclass
 class ClientCapabilities:
     workspace: Workspace_
-    textDocument: TextDocumentClientCapabilities
+    textDocument: Optional[TextDocumentClientCapabilities]
     window: Window_
     general: General_
-    experimental: 'any'
+    experimental: Optional[Any]
 
 
 @dataclass
@@ -537,7 +537,7 @@ class ServerCapabilities:
     monikerProvider: Optional[Union[bool, 'MonikerOptions', 'MonikerRegistrationOptions']]
     workspaceSymbolProvider: Optional[Union[bool, 'WorkspaceSymbolOptions']]
     workspace: Workspace_
-    experimental: 'any'
+    experimental: Optional[Any]
 
 
 @dataclass
@@ -630,7 +630,7 @@ class WorkDoneProgressCancelParams:
 class Registration:
     id: str
     method: str
-    registerOptions: Optional['any']
+    registerOptions: Optional[Any]
 
 
 @dataclass
@@ -679,7 +679,7 @@ class DidChangeConfigurationClientCapabilities:
 
 @dataclass
 class DidChangeConfigurationParams:
-    settings: 'any'
+    settings: Any
 
 
 @dataclass
@@ -784,7 +784,7 @@ class ExecuteCommandRegistrationOptions(ExecuteCommandOptions):
 @dataclass
 class ExecuteCommandParams(WorkDoneProgressParams):
     command: str
-    arguments: Optional[List['any']]
+    arguments: Optional[List[Any]]
 
 
 @dataclass
@@ -970,9 +970,9 @@ class TagSupport_:
 class PublishDiagnosticsClientCapabilities:
     relatedInformation: Optional[bool]
     tagSupport: TagSupport_
-    versionSupport: bool
-    codeDescriptionSupport: bool
-    dataSupport: bool
+    versionSupport: Optional[bool]
+    codeDescriptionSupport: Optional[bool]
+    dataSupport: Optional[bool]
 
 
 @dataclass
@@ -1005,14 +1005,14 @@ class CompletionItem_:
     deprecatedSupport: Optional[bool]
     preselectSupport: Optional[bool]
     tagSupport: TagSupport_
-    insertReplaceSupport: bool
+    insertReplaceSupport: Optional[bool]
     resolveSupport: ResolveSupport_
     insertTextModeSupport: InsertTextModeSupport_
 
 
 @dataclass
 class CompletionItemKind_:
-    valueSet: List['CompletionItemKind']
+    valueSet: Optional[List['CompletionItemKind']]
 
 
 @dataclass
@@ -1020,7 +1020,7 @@ class CompletionClientCapabilities:
     dynamicRegistration: Optional[bool]
     completionItem: CompletionItem_
     completionItemKind: CompletionItemKind_
-    contextSupport: bool
+    contextSupport: Optional[bool]
 
 
 @dataclass
@@ -1101,7 +1101,7 @@ class CompletionItem:
     additionalTextEdits: Optional[List[TextEdit]]
     commitCharacters: Optional[List[str]]
     command: Optional[Command]
-    data: Optional['any']
+    data: Optional[Any]
 
 
 @dataclass
@@ -1177,14 +1177,14 @@ class ParameterInformation_:
 class SignatureInformation_:
     documentationFormat: Optional[List[MarkupKind]]
     parameterInformation: ParameterInformation_
-    activeParameterSupport: bool
+    activeParameterSupport: Optional[bool]
 
 
 @dataclass
 class SignatureHelpClientCapabilities:
     dynamicRegistration: Optional[bool]
     signatureInformation: SignatureInformation_
-    contextSupport: bool
+    contextSupport: Optional[bool]
 
 
 @dataclass
@@ -1395,9 +1395,9 @@ class TagSupport_:
 class DocumentSymbolClientCapabilities:
     dynamicRegistration: Optional[bool]
     symbolKind: SymbolKind_
-    hierarchicalDocumentSymbolSupport: bool
+    hierarchicalDocumentSymbolSupport: Optional[bool]
     tagSupport: TagSupport_
-    labelSupport: bool
+    labelSupport: Optional[bool]
 
 
 @dataclass
@@ -1491,11 +1491,11 @@ class ResolveSupport_:
 class CodeActionClientCapabilities:
     dynamicRegistration: Optional[bool]
     codeActionLiteralSupport: CodeActionLiteralSupport_
-    isPreferredSupport: bool
-    disabledSupport: bool
-    dataSupport: bool
+    isPreferredSupport: Optional[bool]
+    disabledSupport: Optional[bool]
+    dataSupport: Optional[bool]
     resolveSupport: ResolveSupport_
-    honorsChangeAnnotations: bool
+    honorsChangeAnnotations: Optional[bool]
 
 
 @dataclass
@@ -1546,9 +1546,9 @@ class CodeAction:
     diagnostics: Optional[List[Diagnostic]]
     isPreferred: Optional[bool]
     disabled: Disabled_
-    edit: WorkspaceEdit
-    command: Command
-    data: 'any'
+    edit: Optional[WorkspaceEdit]
+    command: Optional[Command]
+    data: Optional[Any]
 
 
 @dataclass
@@ -1575,7 +1575,7 @@ class CodeLensParams(WorkDoneProgressParams, PartialResultParams):
 class CodeLens:
     range: Range
     command: Optional[Command]
-    data: Optional['any']
+    data: Optional[Any]
 
 
 @dataclass
@@ -1609,7 +1609,7 @@ class DocumentLink:
     range: Range
     target: Optional[DocumentUri]
     tooltip: Optional[str]
-    data: Optional['any']
+    data: Optional[Any]
 
 
 @dataclass
@@ -1944,7 +1944,7 @@ class Range_1:
 
 @dataclass
 class Full_1:
-    delta: bool
+    delta: Optional[bool]
 
 
 @dataclass
@@ -1960,8 +1960,8 @@ class SemanticTokensClientCapabilities:
     tokenTypes: List[str]
     tokenModifiers: List[str]
     formats: List[TokenFormat]
-    overlappingTokenSupport: bool
-    multilineTokenSupport: bool
+    overlappingTokenSupport: Optional[bool]
+    multilineTokenSupport: Optional[bool]
 
 
 @dataclass
@@ -1971,7 +1971,7 @@ class Range_1:
 
 @dataclass
 class Full_1:
-    delta: bool
+    delta: Optional[bool]
 
 
 @dataclass

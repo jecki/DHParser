@@ -113,7 +113,7 @@ object     = "{" [ association { "," association } ] "}"
 #######################################################################
 
 basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`
-               | `integer` | `uinteger` | `decimal` | `unknown` ) ~
+               | `integer` | `uinteger` | `decimal` | `unknown` | `any` ) ~
 
 #######################################################################
 #

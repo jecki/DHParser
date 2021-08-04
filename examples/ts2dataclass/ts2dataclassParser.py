@@ -100,7 +100,7 @@ class ts2dataclassGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "78b26279106d56afa1951fc4b33247f2"
+    source_hash__ = "590d9b568c116d038c4a5a10a680e4c0"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_array_ellipsis$|_top_level_assignment$|_top_level_literal$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -118,7 +118,7 @@ class ts2dataclassGrammar(Grammar):
     INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
     identifier = Series(RegExp('(?!\\d)\\w+'), dwsp__)
     variable = Series(identifier, ZeroOrMore(Series(Text("."), identifier)))
-    basic_type = Series(Alternative(Text("object"), Text("array"), Text("string"), Text("number"), Text("boolean"), Text("null"), Text("integer"), Text("uinteger"), Text("decimal"), Text("unknown")), dwsp__)
+    basic_type = Series(Alternative(Text("object"), Text("array"), Text("string"), Text("number"), Text("boolean"), Text("null"), Text("integer"), Text("uinteger"), Text("decimal"), Text("unknown"), Text("any")), dwsp__)
     name = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__)))
     association = Series(name, Series(Drop(Text(":")), dwsp__), literal)
     object = Series(Series(Drop(Text("{")), dwsp__), Option(Series(association, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), association)))), Series(Drop(Text("}")), dwsp__))
@@ -315,14 +315,15 @@ class ts2dataclassCompiler(Compiler):
             class_name = identifier[0].upper() + identifier[1:] + '_'
             self.local_classes.append(T.format(class_name=class_name))
             T = class_name
-        elif self.local_classes:
+        elif T.find('CLASS__') >= 0:
             cname_prefix = identifier[0].upper() + identifier[1:] + '_'
             T = T.replace('CLASS__', cname_prefix)
             for i in range(len(self.local_classes)):
                 self.local_classes[i] = self.local_classes[i].replace('CLASS__', cname_prefix)
         elif 'optional' in node:
             T = f"Optional[{T}]"
-        return identifier if T == 'Any' else f"{identifier}: {T}"
+        return f"{identifier}: {T}"
+        # return identifier if T == 'Any' else f"{identifier}: {T}"
 
     def on_optional(self, node):
         assert False, "This method should never have been called!"
@@ -484,7 +485,8 @@ class ts2dataclassCompiler(Compiler):
                               'uinteger': 'int',
                               'boolean': 'bool',
                               'null': 'None',
-                              'unknown': 'Any'}
+                              'unknown': 'Any',
+                              'any': 'Any'}
         return python_basic_types[node.content]
 
     def on_type_name(self, node) -> str:
