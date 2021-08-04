@@ -30,7 +30,6 @@ document    = ~ { interface | type_alias | namespace | enum | const
                 | declaration ";" | _top_level_assignment
                 | _array_ellipsis | _top_level_literal } EOF
 
-
 #######################################################################
 #
 #:  Interfaces
@@ -65,8 +64,9 @@ map_signature = index_signature ":" types
 #
 #######################################################################
 
-namespace   = ["export"] "namespace" §identifier
-              "{" { const } "}"
+namespace   = ["export"] "namespace" §identifier "{"
+              { interface | type_alias | enum | const
+              | declaration ";" }  "}"
 
 #######################################################################
 #
@@ -97,7 +97,8 @@ assignment  = variable "=" (literal | variable) ";"  # no expressions, yet
 _array_ellipsis = literal { "," literal }
 
 _top_level_literal = literal
-literal    = number | string | array | object
+literal    = integer | number | string | array | object
+integer    = INT !/[.Ee]/ ~
 number     = INT FRAC EXP ~
 string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
 array      = "[" [ literal { "," literal } ] "]"
@@ -112,7 +113,7 @@ object     = "{" [ association { "," association } ] "}"
 #######################################################################
 
 basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`
-               | `integer` | `uinteger` | `decimal` ) ~
+               | `integer` | `uinteger` | `decimal` | `unknown` ) ~
 
 #######################################################################
 #

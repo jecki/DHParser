@@ -335,7 +335,7 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
             except Exception as e:
                 node = tp.context[-1] if tp.context else tree
                 st = traceback.format_list(traceback.extract_tb(e.__traceback__))
-                trace = ''.join(filter_stacktrace(st))
+                trace = ''.join(st)  # filter_stacktrace(st)
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
                           "in the processing pipeline. Crash Message: %s: %s\n%s"
