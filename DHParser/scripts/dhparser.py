@@ -184,7 +184,7 @@ def main():
     parameter) or runs a quick self-test.
     """
     access_presets()
-    set_preset_value('syntax_variant', 'heuristic')
+    set_preset_value('syntax_variant', 'flexible')  # TODO: Bugs in Transformation-Table
     finalize_presets()
     if len(sys.argv) > 1:
         if sys.argv[1].lower() == "--selftest":

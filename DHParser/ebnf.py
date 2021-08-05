@@ -3488,7 +3488,7 @@ class EBNFCompiler(Compiler):
             if len(node.children) == 2:
                 error_msgs.append(('', unrepr(node[1].content)))
             elif len(node.children) == 3:
-                rule = self.make_search_rule(symbol, node[1], 'error')
+                rule = self.make_search_rule(node, node[1], 'error')
                 error_msgs.append((rule if rule else unrepr(node[1].content),
                                    unrepr(node[2].content)))
             else:
@@ -3500,12 +3500,12 @@ class EBNFCompiler(Compiler):
             # if symbol in self.rules:
             #     self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
             #                         ' must be defined before the symbol!'.format(symbol))
-            self.directives.skip[symbol] = [self.make_search_rule(symbol, nd, 'skip')
+            self.directives.skip[symbol] = [self.make_search_rule(node, nd, 'skip')
                                             for nd in node[1:]]
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
-            self.directives.resume[symbol] = [self.make_search_rule(symbol, nd, 'resume')
+            self.directives.resume[symbol] = [self.make_search_rule(node, nd, 'resume')
                                               for nd in node[1:]]
 
         else:
