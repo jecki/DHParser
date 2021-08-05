@@ -124,15 +124,18 @@ DefValType = Dict[str, Dict[str, Any]]
 RefObjType = Dict[str, Dict[str, List[Union[str, Any]]]]
 
 
-def fromdict(D: JSON_Dict, Class: Any,
+def fromdict(D: JSON_Dict, DataClass: Any,
              default_values: DefValType = {},
              referred_objects: RefObjType = {}):
-    name = Class.__name__
+    name = DataClass.__name__
     if name not in referred_objects:
         references = {}
         for key, value in D.items():
             if isinstance(value, Dict):
-                raise ValueError(f'Missing type for referred object "{key}"!')
+                typ = DataClass.__annotations__[key]
+                if isinstance(typ, str):
+                    typ = eval(typ)
+                references[key] = typ
         referred_objects[name] = references
     else:
         references = referred_objects[name]
@@ -149,7 +152,7 @@ def fromdict(D: JSON_Dict, Class: Any,
                     break
                 except TypeError:
                     pass
-    return Class(**ChainMap(D, default_values.get(name, {})))
+    return DataClass(**ChainMap(D, default_values.get(name, {})))
 
 
 def typed_lsp(lsp_function):
