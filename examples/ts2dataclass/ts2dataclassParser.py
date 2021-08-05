@@ -6,12 +6,13 @@
 #
 #######################################################################
 
+import json
 import keyword
 from functools import partial
 import os
 import re
 import sys
-from typing import Tuple, List, Union, Any, Callable, Set
+from typing import Tuple, List, Union, Any, Callable, Set, Dict
 
 
 try:
@@ -51,7 +52,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    pick_from_context
+    pick_from_context, json_dumps
+from DHParser.server import pp_json
 
 
 USE_PYTHON_3_10_TYPE_UNION = False  # https://www.python.org/dev/peps/pep-0604/
@@ -212,7 +214,6 @@ IMPORTS = """
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
-
 """
 
 
@@ -225,11 +226,18 @@ class ts2dataclassCompiler(Compiler):
 
     def reset(self):
         super().reset()
-        self.PythonEnums = get_config_value('ts2dataclass.PythonEnums', True)
+        self.use_enums = get_config_value('ts2dataclass.UseEnums', True)
+        self.use_py310_type_union = get_config_value('ts2dataclass.UsePy310TypeUnion', False)
+        if self.use_py310_type_union:  assert sys.version_info >= (3, 10)
+        self.use_py308_literal_type = get_config_value('ts2dataclass.UsePy308LiteralType', False)
+        if self.use_py308_literal_type:  assert sys.version_info >= (3, 8)
         self.overloaded_type_names: Set[str] = set()
         self.known_types: Set[str] = set()
         # self.referred_types: Set[str] = set()
         self.local_classes: List[str] = []
+        self.default_values: Dict = {}
+        self.referred_objects: Dict = {}
+        self.obj_name = ''
         self.strip_type_from_const = False
 
     def compile(self, node) -> str:
@@ -249,12 +257,26 @@ class ts2dataclassCompiler(Compiler):
         type_aliases = {nd['identifier'].content for nd in node.select_children('type_alias')}
         namespaces = {nd['identifier'].content for nd in node.select_children('namespace')}
         self.overloaded_type_names = type_aliases & namespaces
-        raw = IMPORTS + '\n\n'.join(self.compile(child) for child in node.children)
-        cooked = re.sub(r'\s*class ', '\n\n\n@dataclass\nclass ', raw)
+        raw = '\n\n'.join(self.compile(child) for child in node.children)
+        cooked = re.sub(r'\s*class (?!.*?Enum\))', '\n\n\n@dataclass\nclass ', raw)
+        code_blocks = [IMPORTS, cooked]
+        if '' in self.default_values:  del self.default_values['']
+        if '' in self.referred_objects:  del self.referred_objects['']
+        if self.default_values:
+            code_blocks.append('default_values = ' +
+                               json.dumps(self.default_values, indent=4).replace('null', 'None'))
+        if self.referred_objects:
+            dump = json.dumps(self.referred_objects, indent=4)
+            dump = re.sub(r'\[\s*', '[', dump)
+            dump = re.sub(r'\s*\]', ']', dump)
+            code_blocks.append('referred_objects = ' + dump)
+        cooked = '\n\n\n'.join(code_blocks)
         return cooked
 
     def on_interface(self, node) -> str:
         name = self.compile(node['identifier'])
+        save_obj_name = self.obj_name
+        self.obj_name = name
         try:
             tp = self.compile(node['type_parameter'])
             preface = f"{tp} = TypeVar('{tp}')\n\n"
@@ -276,6 +298,7 @@ class ts2dataclassCompiler(Compiler):
             preface = '\n\n'.join(self.local_classes) + '\n\n' + preface
         self.local_classes = []
         self.known_types.add(name)
+        self.obj_name = save_obj_name
         return preface + interface + '\n    ' + decls.replace('\n', '\n    ')
 
     def on_type_parameter(self, node) -> str:
@@ -286,22 +309,27 @@ class ts2dataclassCompiler(Compiler):
 
     def on_type_alias(self, node) -> str:
         alias = self.compile(node['identifier'])
+        save_obj_name = self.obj_name
+        self.obj_name = alias
         if alias not in self.overloaded_type_names:
             self.known_types.add(alias)
             types = self.compile(node['types'])
             if types[0:5] == 'class':
                 types.format(class_name=alias)
-                return types + '\n\n'
+                code = types + '\n\n'
             elif self.local_classes:
                 types = types.replace('CLASS__', alias + '_')
                 for i in range(len(self.local_classes)):
                     self.local_classes[i] = self.local_classes[i].replace('CLASS__', alias + '_')
                 preface = '\n\n'.join(self.local_classes) + '\n\n'
                 self.local_classes = []
-                return preface + f"{alias} = {types}"
+                code = preface + f"{alias} = {types}"
             else:
-                return f"{alias} = {types}"
-        return ''
+                code = f"{alias} = {types}"
+        else:
+            code = ''
+        self.obj_name = save_obj_name
+        return code
 
     def on_declarations_block(self, node) -> str:
         declarations = '\n'.join(self.compile(nd) for nd in node
@@ -315,15 +343,26 @@ class ts2dataclassCompiler(Compiler):
             class_name = identifier[0].upper() + identifier[1:] + '_'
             self.local_classes.append(T.format(class_name=class_name))
             T = class_name
+            self.referred_objects.setdefault(self.obj_name, {})[identifier] = [class_name]
         elif T.find('CLASS__') >= 0:
             cname_prefix = identifier[0].upper() + identifier[1:] + '_'
             T = T.replace('CLASS__', cname_prefix)
+            clist = []
+            for m in re.finditer(r'CLASS__(\d+)', T):
+                cname = cname_prefix + m.group(1)
+                clist.append(cname)
+            if clist:
+                self.referred_objects.setdefault(self.obj_name, {})[identifier] = clist
             for i in range(len(self.local_classes)):
                 self.local_classes[i] = self.local_classes[i].replace('CLASS__', cname_prefix)
-        elif 'optional' in node:
+        else:
+            for complex_type in node.select('type_name'):
+                type_name = complex_type.content
+                self.referred_objects.setdefault(self.obj_name, {})[identifier] = [type_name]
+        if 'optional' in node:
+            self.default_values.setdefault(self.obj_name, {})[identifier] = None
             T = f"Optional[{T}]"
         return f"{identifier}: {T}"
-        # return identifier if T == 'Any' else f"{identifier}: {T}"
 
     def on_optional(self, node):
         assert False, "This method should never have been called!"
@@ -335,6 +374,7 @@ class ts2dataclassCompiler(Compiler):
         if len(node.children) == 1:
             return self.compile(node[0])
         else:
+            assert len(node.children) > 1
             union = []
             for nd in node.children:
                 typ = self.compile(nd)
@@ -349,9 +389,15 @@ class ts2dataclassCompiler(Compiler):
                         union[i] = cname
                     else:
                         union[i] = 'Dict'
-            if sys.version_info >= (3, 10) and USE_PYTHON_3_10_TYPE_UNION:
+            if self.use_py308_literal_type and \
+                    any(nd[0].tag_name == 'literal' for nd in node.children):
+                assert all(nd[0].tag_name == 'literal' for nd in node.children)
+                return f"Literal[{', '.join(union)}]"
+            elif self.use_py310_type_union:
                 return '| '.join(union)
             else:
+                if len(union) == 1:
+                    return union[0]
                 return f"Union[{', '.join(union)}]"
 
     def on_type(self, node) -> str:
@@ -364,7 +410,9 @@ class ts2dataclassCompiler(Compiler):
             return 'Dict'
         elif typ.tag_name == 'literal':
             literal_typ = typ[0].tag_name
-            if literal_typ == 'array':
+            if self.use_py308_literal_type:
+                return self.compile(typ)
+            elif literal_typ == 'array':
                 return 'List'
             elif literal_typ == 'object':
                 return 'Dict'
@@ -411,14 +459,14 @@ class ts2dataclassCompiler(Compiler):
         return '\n    '.join(namespace)
 
     def on_enum(self, node) -> str:
-        if self.PythonEnums:
+        if self.use_enums:
             if all(nd['literal'][0].tag_name == 'integer' for
                    nd in node.select_children('item')):
                 base_class = '(IntEnum)'
             else:
                 base_class = '(Enum)'
         else:
-            bas_class = ''
+            base_class = ''
         name = self.compile(node['identifier'])
         self.known_types.add(name)
         enum = ['class ' + name + base_class + ':']
@@ -429,7 +477,7 @@ class ts2dataclassCompiler(Compiler):
     def on_item(self, node) -> str:
         if len(node.children) == 1:
             identifier = self.compile(node[0])
-            if self.PythonEnums:
+            if self.use_enums:
                 return identifier + ' = enum.auto()'
             else:
                 return identifier + ' = ' + repr(identifier)

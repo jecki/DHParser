@@ -219,11 +219,11 @@ def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
 
 def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
     """Returns json-object as pretty-printed string. Other than the standard-library's
-    `json.dumps()`-function `pp_json` allows to include already serialzed
+    `json.dumps()`-function `pp_json` allows to include already serialized
     parts (in the form of JSONStr-objects) in the json-object. Example::
 
     :param obj: A json-object (or a tree of json-objects) to be serialized
-    :param cls: The class of a custom json-encoder berived from `json.JSONEncoder`
+    :param cls: The class of a custom json-encoder derived from `json.JSONEncoder`
     :return: The pretty-printed string-serialized form of the json-object.
     """
     custom_encoder = cls()

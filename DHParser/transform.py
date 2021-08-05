@@ -28,7 +28,7 @@ for CST -> AST transformations.
 
 
 import collections.abc
-from functools import partial, singledispatch, reduce
+from functools import partial, singledispatch, reduce, wraps
 import inspect
 import operator
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \

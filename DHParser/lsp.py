@@ -24,13 +24,166 @@ EXPERIMENTAL!!!
 
 
 import bisect
+from collections import ChainMap
 from enum import Enum, IntEnum
+import functools
 from typing import  Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, \
     Iterator, Iterable, Callable
 
 from DHParser.server import RPC_Table
-from DHParser.toolkit import dataclasses
+from DHParser.toolkit import dataclasses, JSON_Type, JSON_Dict
 from dataclasses import dataclass, asdict
+
+
+
+#######################################################################
+#
+# Language-Server-Protocol functions
+#
+#######################################################################
+
+
+# general #############################################################
+
+# def get_lsp_methods(cls: Any, prefix: str= 'lsp_') -> List[str]:
+#     """Returns the language-server-protocol-method-names from class `cls`.
+#     Methods are selected based on the prefix and their name converted in
+#     accordance with the LSP-specification."""
+#     return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
+
+
+def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
+    """Returns an iterator over all method names from a class that either
+    have a certain prefix or, if no prefix was given, all non-special and
+    non-private-methods of the class."""
+    assert not prefix[:1] == '_'
+    if prefix:
+        # return [fn for fn in dir(cls) if fn.startswith(prefix) and callable(getattr(cls, fn))]
+        for fn in dir(cls):
+            if fn[:len(prefix)] == prefix and callable(getattr(cls, fn)):
+                yield fn
+    else:
+        # return [fn for fn in dir(cls) if not fn.startswith('_') and callable(getattr(cls, fn))]
+        for fn in dir(cls):
+            if not fn[:1] == '_' and callable(getattr(cls, fn)):
+                yield fn
+
+
+def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
+    """Generates the name of an lsp-method from a function name,
+    e.g. "lsp_S_cancelRequest" -> "$/cancelRequest" """
+    assert func_name[:len(prefix)] == prefix
+    return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
+
+
+def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
+                  prefix: str = 'lsp_') -> RPC_Table:
+    """Creates an RPC from a list of functions or from the methods
+    of a class that implement the language server protocol.
+    The dictionary keys are derived from the function name by replacing an
+    underscore _ with a slash / and a single capital S with a $-sign.
+    if `prefix` is not the empty string only functions or methods that start
+    with `prefix` will be added to the table. The prefix will be removed
+    before converting the functions' name to a dictionary key.
+
+    >>> class LSP:
+    ...     def lsp_initialize(self, **kw):
+    ...         pass
+    ...     def lsp_shutdown(self, **kw):
+    ...         pass
+    >>> lsp = LSP()
+    >>> gen_lsp_table(lsp, 'lsp_').keys()
+    dict_keys(['initialize', 'shutdown'])
+    """
+    if isinstance(lsp_funcs_or_instance, Iterable):
+        assert all(callable(func) for func in lsp_funcs_or_instance)
+        rpc_table = {gen_lsp_name(func.__name__, prefix): func for func in lsp_funcs_or_instance}
+    else:
+        # assume lsp_funcs_or_instance is the instance of a class
+        cls = lsp_funcs_or_instance
+        rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn)
+                     for fn in lsp_candidates(cls, prefix)}
+    return rpc_table
+
+
+# textDocument/completion #############################################
+
+def shortlist(long_list: List[str], typed: str, lo: int = 0, hi: int = -1) -> Tuple[int, int]:
+    if not typed:
+        return 0, 0
+    if hi < 0:
+        hi = len(long_list)
+    a = bisect.bisect_left(long_list, typed, lo, hi)
+    b = bisect.bisect_left(long_list, typed[:-1] + chr(ord(typed[-1]) + 1), lo, hi)
+    return a, b
+
+
+# decorator for typed lsp-functions ###################################
+
+DefValType = Dict[str, Dict[str, Any]]
+RefObjType = Dict[str, Dict[str, List[Union[str, Any]]]]
+
+
+def fromdict(D: JSON_Dict, Class: Any,
+             default_values: DefValType = {},
+             referred_objects: RefObjType = {}):
+    name = Class.__name__
+    if name not in referred_objects:
+        references = {}
+        for key, value in D.items():
+            if isinstance(value, Dict):
+                raise ValueError(f'Missing type for referred object "{key}"!')
+        referred_objects[name] = references
+    else:
+        references = referred_objects[name]
+    if references:
+        D = D.copy()
+        for field, types in references.items():
+            for i in range(len(types)):
+                typ = types[i]
+                if isinstance(typ, str):
+                    typ = eval(typ)
+                    references[field][i] = typ
+                try:
+                    D[field] = fromdict(D[field], typ, default_values, referred_objects)
+                    break
+                except TypeError:
+                    pass
+    return Class(**ChainMap(D, default_values.get(name, {})))
+
+
+def typed_lsp(lsp_function):
+    params = lsp_function.__annotations__
+    if len(params) != 2 or 'return' not in params:
+        raise ValueError(f'Decorator "typed_lsp" does not work with function '
+            f'"{lsp_function.__name__}" annotated with "{params}"! '
+            f'LSP functions can have at most one argument. Both the type of the '
+            f' argument and the return type must be specified with annotations.')
+    return_type = params['return']
+    for k in params.items():
+        if k != 'return':
+            call_type = params[k]
+            break
+    ct_is_str = isinstance(call_type, str)
+    call_type_name = call_type if ct_is_str else call_type.__name__
+    rt_is_str = isinstance(return_type, str)
+    return_type_name = return_type if rt_is_str else return_type.__name__
+    resolve_types = ct_is_str or rt_is_str
+
+    @functools.wraps(lsp_function)
+    def type_guard(*args, **kwargs):
+        global default_values, referred_objects
+        nonlocal resolve_types, return_type, call_type, call_type_name, return_type_name
+        if resolve_types:
+            if isinstance(call_type, str):  call_type = eval(call_type)
+            if isinstance(return_type, str):  return_type = eval(return_type)
+            resolve_types = False
+        dict_obj = args[0] if args else kwargs
+        call_obj = fromdict(call_type, dict_obj, default_values, referred_objects)
+        dict_val = lsp_function(call_type(**dict_obj))
+        return asdict(dict_val)
+
+    return type_guard
 
 
 #######################################################################
@@ -99,16 +252,18 @@ class NotificationMessage(Message):
 class CancelParams:
     id: Union[int, str]
 
-
 ProgressToken = Union[int, str]
+
 T = TypeVar('T')
+
+
 @dataclass
 class ProgressParams(Generic[T]):
     token: ProgressToken
     value: 'T'
 
-
 DocumentUri = str
+
 URI = str
 
 
@@ -116,7 +271,6 @@ URI = str
 class RegularExpressionsClientCapabilities:
     engine: str
     version: Optional[str]
-
 
 EOL: List[str] = ['\n', '\r\n', '\r']
 
@@ -279,7 +433,7 @@ class WorkspaceEditClientCapabilities:
     resourceOperations: Optional[List['ResourceOperationKind']]
     failureHandling: Optional['FailureHandlingKind']
     normalizesLineEndings: Optional[bool]
-    changeAnnotationSupport: ChangeAnnotationSupport_
+    changeAnnotationSupport: Optional[ChangeAnnotationSupport_]
 
 
 @dataclass
@@ -402,7 +556,7 @@ window: Optional[Dict]
 class PartialResultParams:
     partialResultToken: Optional[ProgressToken]
 
-TraceValue = Union[str]
+TraceValue = str
 
 
 @dataclass
@@ -414,7 +568,7 @@ class ClientInfo_:
 @dataclass
 class InitializeParams(WorkDoneProgressParams):
     processId: Union[int, None]
-    clientInfo: ClientInfo_
+    clientInfo: Optional[ClientInfo_]
     locale: Optional[str]
     rootPath: Optional[Union[str, None]]
     rootUri: Union[DocumentUri, None]
@@ -477,7 +631,7 @@ class Workspace_:
     configuration: Optional[bool]
     semanticTokens: Optional['SemanticTokensWorkspaceClientCapabilities']
     codeLens: Optional['CodeLensWorkspaceClientCapabilities']
-    fileOperations: FileOperations_
+    fileOperations: Optional[FileOperations_]
 
 
 @dataclass
@@ -495,10 +649,10 @@ class General_:
 
 @dataclass
 class ClientCapabilities:
-    workspace: Workspace_
+    workspace: Optional[Workspace_]
     textDocument: Optional[TextDocumentClientCapabilities]
-    window: Window_
-    general: General_
+    window: Optional[Window_]
+    general: Optional[General_]
     experimental: Optional[Any]
 
 
@@ -511,7 +665,7 @@ class ServerInfo_:
 @dataclass
 class InitializeResult:
     capabilities: 'ServerCapabilities'
-    serverInfo: ServerInfo_
+    serverInfo: Optional[ServerInfo_]
 
 
 @dataclass
@@ -537,7 +691,7 @@ class FileOperations_:
 @dataclass
 class Workspace_:
     workspaceFolders: Optional['WorkspaceFoldersServerCapabilities']
-    fileOperations: FileOperations_
+    fileOperations: Optional[FileOperations_]
 
 
 @dataclass
@@ -569,7 +723,7 @@ class ServerCapabilities:
     semanticTokensProvider: Optional[Union['SemanticTokensOptions', 'SemanticTokensRegistrationOptions']]
     monikerProvider: Optional[Union[bool, 'MonikerOptions', 'MonikerRegistrationOptions']]
     workspaceSymbolProvider: Optional[Union[bool, 'WorkspaceSymbolOptions']]
-    workspace: Workspace_
+    workspace: Optional[Workspace_]
     experimental: Optional[Any]
 
 
@@ -610,7 +764,7 @@ class MessageActionItem_:
 
 @dataclass
 class ShowMessageRequestClientCapabilities:
-    messageActionItem: MessageActionItem_
+    messageActionItem: Optional[MessageActionItem_]
 
 
 @dataclass
@@ -780,8 +934,8 @@ class TagSupport_:
 @dataclass
 class WorkspaceSymbolClientCapabilities:
     dynamicRegistration: Optional[bool]
-    symbolKind: SymbolKind_
-    tagSupport: TagSupport_
+    symbolKind: Optional[SymbolKind_]
+    tagSupport: Optional[TagSupport_]
 
 
 @dataclass
@@ -1002,7 +1156,7 @@ class TagSupport_:
 @dataclass
 class PublishDiagnosticsClientCapabilities:
     relatedInformation: Optional[bool]
-    tagSupport: TagSupport_
+    tagSupport: Optional[TagSupport_]
     versionSupport: Optional[bool]
     codeDescriptionSupport: Optional[bool]
     dataSupport: Optional[bool]
@@ -1037,10 +1191,10 @@ class CompletionItem_:
     documentationFormat: Optional[List[MarkupKind]]
     deprecatedSupport: Optional[bool]
     preselectSupport: Optional[bool]
-    tagSupport: TagSupport_
+    tagSupport: Optional[TagSupport_]
     insertReplaceSupport: Optional[bool]
-    resolveSupport: ResolveSupport_
-    insertTextModeSupport: InsertTextModeSupport_
+    resolveSupport: Optional[ResolveSupport_]
+    insertTextModeSupport: Optional[InsertTextModeSupport_]
 
 
 @dataclass
@@ -1051,8 +1205,8 @@ class CompletionItemKind_:
 @dataclass
 class CompletionClientCapabilities:
     dynamicRegistration: Optional[bool]
-    completionItem: CompletionItem_
-    completionItemKind: CompletionItemKind_
+    completionItem: Optional[CompletionItem_]
+    completionItemKind: Optional[CompletionItemKind_]
     contextSupport: Optional[bool]
 
 
@@ -1209,14 +1363,14 @@ class ParameterInformation_:
 @dataclass
 class SignatureInformation_:
     documentationFormat: Optional[List[MarkupKind]]
-    parameterInformation: ParameterInformation_
+    parameterInformation: Optional[ParameterInformation_]
     activeParameterSupport: Optional[bool]
 
 
 @dataclass
 class SignatureHelpClientCapabilities:
     dynamicRegistration: Optional[bool]
-    signatureInformation: SignatureInformation_
+    signatureInformation: Optional[SignatureInformation_]
     contextSupport: Optional[bool]
 
 
@@ -1427,9 +1581,9 @@ class TagSupport_:
 @dataclass
 class DocumentSymbolClientCapabilities:
     dynamicRegistration: Optional[bool]
-    symbolKind: SymbolKind_
+    symbolKind: Optional[SymbolKind_]
     hierarchicalDocumentSymbolSupport: Optional[bool]
-    tagSupport: TagSupport_
+    tagSupport: Optional[TagSupport_]
     labelSupport: Optional[bool]
 
 
@@ -1523,11 +1677,11 @@ class ResolveSupport_:
 @dataclass
 class CodeActionClientCapabilities:
     dynamicRegistration: Optional[bool]
-    codeActionLiteralSupport: CodeActionLiteralSupport_
+    codeActionLiteralSupport: Optional[CodeActionLiteralSupport_]
     isPreferredSupport: Optional[bool]
     disabledSupport: Optional[bool]
     dataSupport: Optional[bool]
-    resolveSupport: ResolveSupport_
+    resolveSupport: Optional[ResolveSupport_]
     honorsChangeAnnotations: Optional[bool]
 
 
@@ -1578,7 +1732,7 @@ class CodeAction:
     kind: Optional[CodeActionKind]
     diagnostics: Optional[List[Diagnostic]]
     isPreferred: Optional[bool]
-    disabled: Disabled_
+    disabled: Optional[Disabled_]
     edit: Optional[WorkspaceEdit]
     command: Optional[Command]
     data: Optional[Any]
@@ -1982,8 +2136,8 @@ class Full_1:
 
 @dataclass
 class Requests_:
-    range: Union[bool, Range_1]
-    full: Union[bool, Full_1]
+    range: Optional[Union[bool, Range_1]]
+    full: Optional[Union[bool, Full_1]]
 
 
 @dataclass
@@ -2010,8 +2164,8 @@ class Full_1:
 @dataclass
 class SemanticTokensOptions(WorkDoneProgressOptions):
     legend: SemanticTokensLegend
-    range: Union[bool, Range_1]
-    full: Union[bool, Full_1]
+    range: Optional[Union[bool, Range_1]]
+    full: Optional[Union[bool, Full_1]]
 
 
 @dataclass
@@ -2140,84 +2294,1041 @@ class Moniker:
     kind: Optional[MonikerKind]
 
 
+default_values = {
+    "RequestMessage": {
+        "params": None
+    },
+    "ResponseMessage": {
+        "result": None,
+        "error": None
+    },
+    "ResponseError": {
+        "data": None
+    },
+    "NotificationMessage": {
+        "params": None
+    },
+    "RegularExpressionsClientCapabilities": {
+        "version": None
+    },
+    "LocationLink": {
+        "originSelectionRange": None
+    },
+    "Diagnostic": {
+        "severity": None,
+        "code": None,
+        "codeDescription": None,
+        "source": None,
+        "tags": None,
+        "relatedInformation": None,
+        "data": None
+    },
+    "Command": {
+        "arguments": None
+    },
+    "ChangeAnnotation": {
+        "needsConfirmation": None,
+        "description": None
+    },
+    "CreateFileOptions": {
+        "overwrite": None,
+        "ignoreIfExists": None
+    },
+    "CreateFile": {
+        "options": None,
+        "annotationId": None
+    },
+    "RenameFileOptions": {
+        "overwrite": None,
+        "ignoreIfExists": None
+    },
+    "RenameFile": {
+        "options": None,
+        "annotationId": None
+    },
+    "DeleteFileOptions": {
+        "recursive": None,
+        "ignoreIfNotExists": None
+    },
+    "DeleteFile": {
+        "options": None,
+        "annotationId": None
+    },
+    "WorkspaceEdit": {
+        "changes": None,
+        "documentChanges": None,
+        "changeAnnotations": None
+    },
+    "WorkspaceEditClientCapabilities": {
+        "documentChanges": None,
+        "resourceOperations": None,
+        "failureHandling": None,
+        "normalizesLineEndings": None,
+        "groupsOnLabel": None,
+        "changeAnnotationSupport": None
+    },
+    "DocumentFilter": {
+        "language": None,
+        "scheme": None,
+        "pattern": None
+    },
+    "StaticRegistrationOptions": {
+        "id": None
+    },
+    "MarkdownClientCapabilities": {
+        "version": None
+    },
+    "WorkDoneProgressBegin": {
+        "cancellable": None,
+        "message": None,
+        "percentage": None
+    },
+    "WorkDoneProgressReport": {
+        "cancellable": None,
+        "message": None,
+        "percentage": None
+    },
+    "WorkDoneProgressEnd": {
+        "message": None
+    },
+    "WorkDoneProgressParams": {
+        "workDoneToken": None
+    },
+    "WorkDoneProgressOptions": {
+        "workDoneProgress": None
+    },
+    "PartialResultParams": {
+        "partialResultToken": None
+    },
+    "InitializeParams": {
+        "version": None,
+        "clientInfo": None,
+        "locale": None,
+        "rootPath": None,
+        "initializationOptions": None,
+        "trace": None,
+        "workspaceFolders": None
+    },
+    "TextDocumentClientCapabilities": {
+        "synchronization": None,
+        "completion": None,
+        "hover": None,
+        "signatureHelp": None,
+        "declaration": None,
+        "definition": None,
+        "typeDefinition": None,
+        "implementation": None,
+        "references": None,
+        "documentHighlight": None,
+        "documentSymbol": None,
+        "codeAction": None,
+        "codeLens": None,
+        "documentLink": None,
+        "colorProvider": None,
+        "formatting": None,
+        "rangeFormatting": None,
+        "onTypeFormatting": None,
+        "rename": None,
+        "publishDiagnostics": None,
+        "foldingRange": None,
+        "selectionRange": None,
+        "linkedEditingRange": None,
+        "callHierarchy": None,
+        "semanticTokens": None,
+        "moniker": None
+    },
+    "ClientCapabilities": {
+        "applyEdit": None,
+        "workspaceEdit": None,
+        "didChangeConfiguration": None,
+        "didChangeWatchedFiles": None,
+        "symbol": None,
+        "executeCommand": None,
+        "workspaceFolders": None,
+        "configuration": None,
+        "semanticTokens": None,
+        "codeLens": None,
+        "dynamicRegistration": None,
+        "didCreate": None,
+        "willCreate": None,
+        "didRename": None,
+        "willRename": None,
+        "didDelete": None,
+        "willDelete": None,
+        "fileOperations": None,
+        "workspace": None,
+        "textDocument": None,
+        "workDoneProgress": None,
+        "showMessage": None,
+        "showDocument": None,
+        "window": None,
+        "regularExpressions": None,
+        "markdown": None,
+        "general": None,
+        "experimental": None
+    },
+    "InitializeResult": {
+        "version": None,
+        "serverInfo": None
+    },
+    "ServerCapabilities": {
+        "textDocumentSync": None,
+        "completionProvider": None,
+        "hoverProvider": None,
+        "signatureHelpProvider": None,
+        "declarationProvider": None,
+        "definitionProvider": None,
+        "typeDefinitionProvider": None,
+        "implementationProvider": None,
+        "referencesProvider": None,
+        "documentHighlightProvider": None,
+        "documentSymbolProvider": None,
+        "codeActionProvider": None,
+        "codeLensProvider": None,
+        "documentLinkProvider": None,
+        "colorProvider": None,
+        "documentFormattingProvider": None,
+        "documentRangeFormattingProvider": None,
+        "documentOnTypeFormattingProvider": None,
+        "renameProvider": None,
+        "foldingRangeProvider": None,
+        "executeCommandProvider": None,
+        "selectionRangeProvider": None,
+        "linkedEditingRangeProvider": None,
+        "callHierarchyProvider": None,
+        "semanticTokensProvider": None,
+        "monikerProvider": None,
+        "workspaceSymbolProvider": None,
+        "workspaceFolders": None,
+        "didCreate": None,
+        "willCreate": None,
+        "didRename": None,
+        "willRename": None,
+        "didDelete": None,
+        "willDelete": None,
+        "fileOperations": None,
+        "workspace": None,
+        "experimental": None
+    },
+    "LogTraceParams": {
+        "verbose": None
+    },
+    "ShowMessageRequestClientCapabilities": {
+        "additionalPropertiesSupport": None,
+        "messageActionItem": None
+    },
+    "ShowMessageRequestParams": {
+        "actions": None
+    },
+    "ShowDocumentParams": {
+        "external": None,
+        "takeFocus": None,
+        "selection": None
+    },
+    "Registration": {
+        "registerOptions": None
+    },
+    "WorkspaceFoldersServerCapabilities": {
+        "supported": None,
+        "changeNotifications": None
+    },
+    "DidChangeConfigurationClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "ConfigurationItem": {
+        "scopeUri": None,
+        "section": None
+    },
+    "DidChangeWatchedFilesClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "FileSystemWatcher": {
+        "kind": None
+    },
+    "WorkspaceSymbolClientCapabilities": {
+        "dynamicRegistration": None,
+        "valueSet": None,
+        "symbolKind": None,
+        "tagSupport": None
+    },
+    "ExecuteCommandClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "ExecuteCommandParams": {
+        "arguments": None
+    },
+    "ApplyWorkspaceEditParams": {
+        "label": None
+    },
+    "ApplyWorkspaceEditResponse": {
+        "failureReason": None,
+        "failedChange": None
+    },
+    "FileOperationPatternOptions": {
+        "ignoreCase": None
+    },
+    "FileOperationPattern": {
+        "matches": None,
+        "options": None
+    },
+    "FileOperationFilter": {
+        "scheme": None
+    },
+    "TextDocumentSyncOptions": {
+        "openClose": None,
+        "change": None,
+        "willSave": None,
+        "willSaveWaitUntil": None,
+        "save": None
+    },
+    "TextDocumentContentChangeEvent": {
+        "rangeLength": None
+    },
+    "SaveOptions": {
+        "includeText": None
+    },
+    "TextDocumentSaveRegistrationOptions": {
+        "includeText": None
+    },
+    "DidSaveTextDocumentParams": {
+        "text": None
+    },
+    "TextDocumentSyncClientCapabilities": {
+        "dynamicRegistration": None,
+        "willSave": None,
+        "willSaveWaitUntil": None,
+        "didSave": None
+    },
+    "PublishDiagnosticsClientCapabilities": {
+        "relatedInformation": None,
+        "tagSupport": None,
+        "versionSupport": None,
+        "codeDescriptionSupport": None,
+        "dataSupport": None
+    },
+    "PublishDiagnosticsParams": {
+        "version": None
+    },
+    "CompletionClientCapabilities": {
+        "dynamicRegistration": None,
+        "snippetSupport": None,
+        "commitCharactersSupport": None,
+        "documentationFormat": None,
+        "deprecatedSupport": None,
+        "preselectSupport": None,
+        "tagSupport": None,
+        "insertReplaceSupport": None,
+        "resolveSupport": None,
+        "insertTextModeSupport": None,
+        "completionItem": None,
+        "valueSet": None,
+        "completionItemKind": None,
+        "contextSupport": None
+    },
+    "CompletionOptions": {
+        "triggerCharacters": None,
+        "allCommitCharacters": None,
+        "resolveProvider": None
+    },
+    "CompletionParams": {
+        "context": None
+    },
+    "CompletionContext": {
+        "triggerCharacter": None
+    },
+    "CompletionItem": {
+        "kind": None,
+        "tags": None,
+        "detail": None,
+        "documentation": None,
+        "deprecated": None,
+        "preselect": None,
+        "sortText": None,
+        "filterText": None,
+        "insertText": None,
+        "insertTextFormat": None,
+        "insertTextMode": None,
+        "textEdit": None,
+        "additionalTextEdits": None,
+        "commitCharacters": None,
+        "command": None,
+        "data": None
+    },
+    "HoverClientCapabilities": {
+        "dynamicRegistration": None,
+        "contentFormat": None
+    },
+    "Hover": {
+        "range": None
+    },
+    "SignatureHelpClientCapabilities": {
+        "dynamicRegistration": None,
+        "documentationFormat": None,
+        "labelOffsetSupport": None,
+        "parameterInformation": None,
+        "activeParameterSupport": None,
+        "signatureInformation": None,
+        "contextSupport": None
+    },
+    "SignatureHelpOptions": {
+        "triggerCharacters": None,
+        "retriggerCharacters": None
+    },
+    "SignatureHelpParams": {
+        "context": None
+    },
+    "SignatureHelpContext": {
+        "triggerCharacter": None,
+        "activeSignatureHelp": None
+    },
+    "SignatureHelp": {
+        "activeSignature": None,
+        "activeParameter": None
+    },
+    "SignatureInformation": {
+        "documentation": None,
+        "parameters": None,
+        "activeParameter": None
+    },
+    "ParameterInformation": {
+        "documentation": None
+    },
+    "DeclarationClientCapabilities": {
+        "dynamicRegistration": None,
+        "linkSupport": None
+    },
+    "DefinitionClientCapabilities": {
+        "dynamicRegistration": None,
+        "linkSupport": None
+    },
+    "TypeDefinitionClientCapabilities": {
+        "dynamicRegistration": None,
+        "linkSupport": None
+    },
+    "ImplementationClientCapabilities": {
+        "dynamicRegistration": None,
+        "linkSupport": None
+    },
+    "ReferenceClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "DocumentHighlightClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "DocumentHighlight": {
+        "kind": None
+    },
+    "DocumentSymbolClientCapabilities": {
+        "dynamicRegistration": None,
+        "valueSet": None,
+        "symbolKind": None,
+        "hierarchicalDocumentSymbolSupport": None,
+        "tagSupport": None,
+        "labelSupport": None
+    },
+    "DocumentSymbolOptions": {
+        "label": None
+    },
+    "DocumentSymbol": {
+        "detail": None,
+        "tags": None,
+        "deprecated": None,
+        "children": None
+    },
+    "SymbolInformation": {
+        "tags": None,
+        "deprecated": None,
+        "containerName": None
+    },
+    "CodeActionClientCapabilities": {
+        "dynamicRegistration": None,
+        "codeActionLiteralSupport": None,
+        "isPreferredSupport": None,
+        "disabledSupport": None,
+        "dataSupport": None,
+        "resolveSupport": None,
+        "honorsChangeAnnotations": None
+    },
+    "CodeActionOptions": {
+        "codeActionKinds": None,
+        "resolveProvider": None
+    },
+    "CodeActionContext": {
+        "only": None
+    },
+    "CodeAction": {
+        "kind": None,
+        "diagnostics": None,
+        "isPreferred": None,
+        "disabled": None,
+        "edit": None,
+        "command": None,
+        "data": None
+    },
+    "CodeLensClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "CodeLensOptions": {
+        "resolveProvider": None
+    },
+    "CodeLens": {
+        "command": None,
+        "data": None
+    },
+    "CodeLensWorkspaceClientCapabilities": {
+        "refreshSupport": None
+    },
+    "DocumentLinkClientCapabilities": {
+        "dynamicRegistration": None,
+        "tooltipSupport": None
+    },
+    "DocumentLinkOptions": {
+        "resolveProvider": None
+    },
+    "DocumentLink": {
+        "target": None,
+        "tooltip": None,
+        "data": None
+    },
+    "DocumentColorClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "ColorPresentation": {
+        "textEdit": None,
+        "additionalTextEdits": None
+    },
+    "DocumentFormattingClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "FormattingOptions": {
+        "trimTrailingWhitespace": None,
+        "insertFinalNewline": None,
+        "trimFinalNewlines": None
+    },
+    "DocumentRangeFormattingClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "DocumentOnTypeFormattingClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "DocumentOnTypeFormattingOptions": {
+        "moreTriggerCharacter": None
+    },
+    "RenameClientCapabilities": {
+        "dynamicRegistration": None,
+        "prepareSupport": None,
+        "prepareSupportDefaultBehavior": None,
+        "honorsChangeAnnotations": None
+    },
+    "RenameOptions": {
+        "prepareProvider": None
+    },
+    "FoldingRangeClientCapabilities": {
+        "dynamicRegistration": None,
+        "rangeLimit": None,
+        "lineFoldingOnly": None
+    },
+    "FoldingRange": {
+        "startCharacter": None,
+        "endCharacter": None,
+        "kind": None
+    },
+    "SelectionRangeClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "SelectionRange": {
+        "parent": None
+    },
+    "CallHierarchyClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "CallHierarchyItem": {
+        "tags": None,
+        "detail": None,
+        "data": None
+    },
+    "SemanticTokensClientCapabilities": {
+        "dynamicRegistration": None,
+        "range": None,
+        "delta": None,
+        "full": None,
+        "overlappingTokenSupport": None,
+        "multilineTokenSupport": None
+    },
+    "SemanticTokensOptions": {
+        "range": None,
+        "delta": None,
+        "full": None
+    },
+    "SemanticTokens": {
+        "resultId": None
+    },
+    "SemanticTokensDelta": {
+        "resultId": None
+    },
+    "SemanticTokensEdit": {
+        "data": None
+    },
+    "SemanticTokensWorkspaceClientCapabilities": {
+        "refreshSupport": None
+    },
+    "LinkedEditingRangeClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "LinkedEditingRanges": {
+        "wordPattern": None
+    },
+    "MonikerClientCapabilities": {
+        "dynamicRegistration": None
+    },
+    "Moniker": {
+        "kind": None
+    }
+}
 
-#######################################################################
-#
-# Language-Server-Protocol functions
-#
-#######################################################################
 
-
-# general #############################################################
-
-# def get_lsp_methods(cls: Any, prefix: str= 'lsp_') -> List[str]:
-#     """Returns the language-server-protocol-method-names from class `cls`.
-#     Methods are selected based on the prefix and their name converted in
-#     accordance with the LSP-specification."""
-#     return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
-
-
-def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
-    """Returns an iterator over all method names from a class that either
-    have a certain prefix or, if no prefix was given, all non-special and
-    non-private-methods of the class."""
-    assert not prefix[:1] == '_'
-    if prefix:
-        # return [fn for fn in dir(cls) if fn.startswith(prefix) and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if fn[:len(prefix)] == prefix and callable(getattr(cls, fn)):
-                yield fn
-    else:
-        # return [fn for fn in dir(cls) if not fn.startswith('_') and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if not fn[:1] == '_' and callable(getattr(cls, fn)):
-                yield fn
-
-
-def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
-    """Generates the name of an lsp-method from a function name,
-    e.g. "lsp_S_cancelRequest" -> "$/cancelRequest" """
-    assert func_name[:len(prefix)] == prefix
-    return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
-
-
-def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
-                  prefix: str = 'lsp_') -> RPC_Table:
-    """Creates an RPC from a list of functions or from the methods
-    of a class that implement the language server protocol.
-    The dictionary keys are derived from the function name by replacing an
-    underscore _ with a slash / and a single capital S with a $-sign.
-    if `prefix` is not the empty string only functions or methods that start
-    with `prefix` will be added to the table. The prefix will be removed
-    before converting the functions' name to a dictionary key.
-
-    >>> class LSP:
-    ...     def lsp_initialize(self, **kw):
-    ...         pass
-    ...     def lsp_shutdown(self, **kw):
-    ...         pass
-    >>> lsp = LSP()
-    >>> gen_lsp_table(lsp, 'lsp_').keys()
-    dict_keys(['initialize', 'shutdown'])
-    """
-    if isinstance(lsp_funcs_or_instance, Iterable):
-        assert all(callable(func) for func in lsp_funcs_or_instance)
-        rpc_table = {gen_lsp_name(func.__name__, prefix): func for func in lsp_funcs_or_instance}
-    else:
-        # assume lsp_funcs_or_instance is the instance of a class
-        cls = lsp_funcs_or_instance
-        rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn)
-                     for fn in lsp_candidates(cls, prefix)}
-    return rpc_table
-
-
-# textDocument/completion #############################################
-
-def shortlist(long_list: List[str], typed: str, lo: int = 0, hi: int = -1) -> Tuple[int, int]:
-    if not typed:
-        return 0, 0
-    if hi < 0:
-        hi = len(long_list)
-    a = bisect.bisect_left(long_list, typed, lo, hi)
-    b = bisect.bisect_left(long_list, typed[:-1] + chr(ord(typed[-1]) + 1), lo, hi)
-    return a, b
+referred_objects = {
+    "ResponseMessage": {
+        "error": ["ResponseError"]
+    },
+    "ProgressParams": {
+        "token": ["ProgressToken"],
+        "value": ["T"]
+    },
+    "Range": {
+        "start": ["Position"],
+        "end": ["Position"]
+    },
+    "Location": {
+        "uri": ["DocumentUri"],
+        "range": ["Range"]
+    },
+    "LocationLink": {
+        "originSelectionRange": ["Range"],
+        "targetUri": ["DocumentUri"],
+        "targetRange": ["Range"],
+        "targetSelectionRange": ["Range"]
+    },
+    "Diagnostic": {
+        "range": ["Range"],
+        "severity": ["DiagnosticSeverity"],
+        "codeDescription": ["CodeDescription"]
+    },
+    "DiagnosticRelatedInformation": {
+        "location": ["Location"]
+    },
+    "CodeDescription": {
+        "href": ["URI"]
+    },
+    "TextEdit": {
+        "range": ["Range"]
+    },
+    "AnnotatedTextEdit": {
+        "annotationId": ["ChangeAnnotationIdentifier"]
+    },
+    "TextDocumentEdit": {
+        "textDocument": ["OptionalVersionedTextDocumentIdentifier"],
+        "edits": ["AnnotatedTextEdit"]
+    },
+    "CreateFile": {
+        "uri": ["DocumentUri"],
+        "options": ["CreateFileOptions"],
+        "annotationId": ["ChangeAnnotationIdentifier"]
+    },
+    "RenameFile": {
+        "oldUri": ["DocumentUri"],
+        "newUri": ["DocumentUri"],
+        "options": ["RenameFileOptions"],
+        "annotationId": ["ChangeAnnotationIdentifier"]
+    },
+    "DeleteFile": {
+        "uri": ["DocumentUri"],
+        "options": ["DeleteFileOptions"],
+        "annotationId": ["ChangeAnnotationIdentifier"]
+    },
+    "WorkspaceEdit": {
+        "changes": ["DocumentUri"],
+        "documentChanges": ["DeleteFile"],
+        "changeAnnotations": ["ChangeAnnotation"]
+    },
+    "WorkspaceEditClientCapabilities": {
+        "failureHandling": ["FailureHandlingKind"],
+        "changeAnnotationSupport": ["ChangeAnnotationSupport_"]
+    },
+    "TextDocumentIdentifier": {
+        "uri": ["DocumentUri"]
+    },
+    "TextDocumentItem": {
+        "uri": ["DocumentUri"]
+    },
+    "TextDocumentPositionParams": {
+        "textDocument": ["TextDocumentIdentifier"],
+        "position": ["Position"]
+    },
+    "TextDocumentRegistrationOptions": {
+        "documentSelector": ["DocumentSelector"]
+    },
+    "MarkupContent": {
+        "kind": ["MarkupKind"]
+    },
+    "WorkDoneProgressParams": {
+        "workDoneToken": ["ProgressToken"]
+    },
+    "PartialResultParams": {
+        "partialResultToken": ["ProgressToken"]
+    },
+    "InitializeParams": {
+        "clientInfo": ["ClientInfo_"],
+        "rootUri": ["DocumentUri"],
+        "capabilities": ["ClientCapabilities"],
+        "trace": ["TraceValue"]
+    },
+    "TextDocumentClientCapabilities": {
+        "synchronization": ["TextDocumentSyncClientCapabilities"],
+        "completion": ["CompletionClientCapabilities"],
+        "hover": ["HoverClientCapabilities"],
+        "signatureHelp": ["SignatureHelpClientCapabilities"],
+        "declaration": ["DeclarationClientCapabilities"],
+        "definition": ["DefinitionClientCapabilities"],
+        "typeDefinition": ["TypeDefinitionClientCapabilities"],
+        "implementation": ["ImplementationClientCapabilities"],
+        "references": ["ReferenceClientCapabilities"],
+        "documentHighlight": ["DocumentHighlightClientCapabilities"],
+        "documentSymbol": ["DocumentSymbolClientCapabilities"],
+        "codeAction": ["CodeActionClientCapabilities"],
+        "codeLens": ["CodeLensClientCapabilities"],
+        "documentLink": ["DocumentLinkClientCapabilities"],
+        "colorProvider": ["DocumentColorClientCapabilities"],
+        "formatting": ["DocumentFormattingClientCapabilities"],
+        "rangeFormatting": ["DocumentRangeFormattingClientCapabilities"],
+        "onTypeFormatting": ["DocumentOnTypeFormattingClientCapabilities"],
+        "rename": ["RenameClientCapabilities"],
+        "publishDiagnostics": ["PublishDiagnosticsClientCapabilities"],
+        "foldingRange": ["FoldingRangeClientCapabilities"],
+        "selectionRange": ["SelectionRangeClientCapabilities"],
+        "linkedEditingRange": ["LinkedEditingRangeClientCapabilities"],
+        "callHierarchy": ["CallHierarchyClientCapabilities"],
+        "semanticTokens": ["SemanticTokensClientCapabilities"],
+        "moniker": ["MonikerClientCapabilities"]
+    },
+    "ClientCapabilities": {
+        "workspaceEdit": ["WorkspaceEditClientCapabilities"],
+        "didChangeConfiguration": ["DidChangeConfigurationClientCapabilities"],
+        "didChangeWatchedFiles": ["DidChangeWatchedFilesClientCapabilities"],
+        "symbol": ["WorkspaceSymbolClientCapabilities"],
+        "executeCommand": ["ExecuteCommandClientCapabilities"],
+        "semanticTokens": ["SemanticTokensWorkspaceClientCapabilities"],
+        "codeLens": ["CodeLensWorkspaceClientCapabilities"],
+        "fileOperations": ["FileOperations_"],
+        "workspace": ["Workspace_"],
+        "textDocument": ["TextDocumentClientCapabilities"],
+        "showMessage": ["ShowMessageRequestClientCapabilities"],
+        "showDocument": ["ShowDocumentClientCapabilities"],
+        "window": ["Window_"],
+        "regularExpressions": ["RegularExpressionsClientCapabilities"],
+        "markdown": ["MarkdownClientCapabilities"],
+        "general": ["General_"]
+    },
+    "InitializeResult": {
+        "capabilities": ["ServerCapabilities"],
+        "serverInfo": ["ServerInfo_"]
+    },
+    "ServerCapabilities": {
+        "textDocumentSync": ["TextDocumentSyncKind"],
+        "completionProvider": ["CompletionOptions"],
+        "hoverProvider": ["HoverOptions"],
+        "signatureHelpProvider": ["SignatureHelpOptions"],
+        "declarationProvider": ["DeclarationRegistrationOptions"],
+        "definitionProvider": ["DefinitionOptions"],
+        "typeDefinitionProvider": ["TypeDefinitionRegistrationOptions"],
+        "implementationProvider": ["ImplementationRegistrationOptions"],
+        "referencesProvider": ["ReferenceOptions"],
+        "documentHighlightProvider": ["DocumentHighlightOptions"],
+        "documentSymbolProvider": ["DocumentSymbolOptions"],
+        "codeActionProvider": ["CodeActionOptions"],
+        "codeLensProvider": ["CodeLensOptions"],
+        "documentLinkProvider": ["DocumentLinkOptions"],
+        "colorProvider": ["DocumentColorRegistrationOptions"],
+        "documentFormattingProvider": ["DocumentFormattingOptions"],
+        "documentRangeFormattingProvider": ["DocumentRangeFormattingOptions"],
+        "documentOnTypeFormattingProvider": ["DocumentOnTypeFormattingOptions"],
+        "renameProvider": ["RenameOptions"],
+        "foldingRangeProvider": ["FoldingRangeRegistrationOptions"],
+        "executeCommandProvider": ["ExecuteCommandOptions"],
+        "selectionRangeProvider": ["SelectionRangeRegistrationOptions"],
+        "linkedEditingRangeProvider": ["LinkedEditingRangeRegistrationOptions"],
+        "callHierarchyProvider": ["CallHierarchyRegistrationOptions"],
+        "semanticTokensProvider": ["SemanticTokensRegistrationOptions"],
+        "monikerProvider": ["MonikerRegistrationOptions"],
+        "workspaceSymbolProvider": ["WorkspaceSymbolOptions"],
+        "workspaceFolders": ["WorkspaceFoldersServerCapabilities"],
+        "didCreate": ["FileOperationRegistrationOptions"],
+        "willCreate": ["FileOperationRegistrationOptions"],
+        "didRename": ["FileOperationRegistrationOptions"],
+        "willRename": ["FileOperationRegistrationOptions"],
+        "didDelete": ["FileOperationRegistrationOptions"],
+        "willDelete": ["FileOperationRegistrationOptions"],
+        "fileOperations": ["FileOperations_"],
+        "workspace": ["Workspace_"]
+    },
+    "SetTraceParams": {
+        "value": ["TraceValue"]
+    },
+    "ShowMessageParams": {
+        "type": ["MessageType"]
+    },
+    "ShowMessageRequestClientCapabilities": {
+        "messageActionItem": ["MessageActionItem_"]
+    },
+    "ShowMessageRequestParams": {
+        "type": ["MessageType"]
+    },
+    "ShowDocumentParams": {
+        "uri": ["URI"],
+        "selection": ["Range"]
+    },
+    "LogMessageParams": {
+        "type": ["MessageType"]
+    },
+    "WorkDoneProgressCreateParams": {
+        "token": ["ProgressToken"]
+    },
+    "WorkDoneProgressCancelParams": {
+        "token": ["ProgressToken"]
+    },
+    "WorkspaceFolder": {
+        "uri": ["DocumentUri"]
+    },
+    "DidChangeWorkspaceFoldersParams": {
+        "event": ["WorkspaceFoldersChangeEvent"]
+    },
+    "ConfigurationItem": {
+        "scopeUri": ["DocumentUri"]
+    },
+    "FileEvent": {
+        "uri": ["DocumentUri"]
+    },
+    "WorkspaceSymbolClientCapabilities": {
+        "symbolKind": ["SymbolKind_"],
+        "tagSupport": ["TagSupport_"]
+    },
+    "ApplyWorkspaceEditParams": {
+        "edit": ["WorkspaceEdit"]
+    },
+    "FileOperationPattern": {
+        "matches": ["FileOperationPatternKind"],
+        "options": ["FileOperationPatternOptions"]
+    },
+    "FileOperationFilter": {
+        "pattern": ["FileOperationPattern"]
+    },
+    "TextDocumentSyncOptions": {
+        "change": ["TextDocumentSyncKind"],
+        "save": ["SaveOptions"]
+    },
+    "DidOpenTextDocumentParams": {
+        "textDocument": ["TextDocumentItem"]
+    },
+    "TextDocumentChangeRegistrationOptions": {
+        "syncKind": ["TextDocumentSyncKind"]
+    },
+    "DidChangeTextDocumentParams": {
+        "textDocument": ["VersionedTextDocumentIdentifier"]
+    },
+    "TextDocumentContentChangeEvent": {
+        "range": ["Range"]
+    },
+    "WillSaveTextDocumentParams": {
+        "textDocument": ["TextDocumentIdentifier"],
+        "reason": ["TextDocumentSaveReason"]
+    },
+    "DidSaveTextDocumentParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "DidCloseTextDocumentParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "PublishDiagnosticsClientCapabilities": {
+        "tagSupport": ["TagSupport_"]
+    },
+    "PublishDiagnosticsParams": {
+        "uri": ["DocumentUri"]
+    },
+    "CompletionClientCapabilities": {
+        "tagSupport": ["TagSupport_"],
+        "resolveSupport": ["ResolveSupport_"],
+        "insertTextModeSupport": ["InsertTextModeSupport_"],
+        "completionItem": ["CompletionItem_"],
+        "completionItemKind": ["CompletionItemKind_"]
+    },
+    "CompletionParams": {
+        "context": ["CompletionContext"]
+    },
+    "CompletionContext": {
+        "triggerKind": ["CompletionTriggerKind"]
+    },
+    "InsertReplaceEdit": {
+        "insert": ["Range"],
+        "replace": ["Range"]
+    },
+    "CompletionItem": {
+        "kind": ["CompletionItemKind"],
+        "documentation": ["MarkupContent"],
+        "insertTextFormat": ["InsertTextFormat"],
+        "insertTextMode": ["InsertTextMode"],
+        "textEdit": ["InsertReplaceEdit"],
+        "command": ["Command"]
+    },
+    "Hover": {
+        "contents": ["MarkupContent"],
+        "range": ["Range"]
+    },
+    "SignatureHelpClientCapabilities": {
+        "parameterInformation": ["ParameterInformation_"],
+        "signatureInformation": ["SignatureInformation_"]
+    },
+    "SignatureHelpParams": {
+        "context": ["SignatureHelpContext"]
+    },
+    "SignatureHelpContext": {
+        "triggerKind": ["SignatureHelpTriggerKind"],
+        "activeSignatureHelp": ["SignatureHelp"]
+    },
+    "SignatureInformation": {
+        "documentation": ["MarkupContent"]
+    },
+    "ParameterInformation": {
+        "documentation": ["MarkupContent"]
+    },
+    "ReferenceParams": {
+        "context": ["ReferenceContext"]
+    },
+    "DocumentHighlight": {
+        "range": ["Range"],
+        "kind": ["DocumentHighlightKind"]
+    },
+    "DocumentSymbolClientCapabilities": {
+        "symbolKind": ["SymbolKind_"],
+        "tagSupport": ["TagSupport_"]
+    },
+    "DocumentSymbolParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "DocumentSymbol": {
+        "kind": ["SymbolKind"],
+        "range": ["Range"],
+        "selectionRange": ["Range"]
+    },
+    "SymbolInformation": {
+        "kind": ["SymbolKind"],
+        "location": ["Location"]
+    },
+    "CodeActionClientCapabilities": {
+        "codeActionKind": ["CodeActionKind_"],
+        "codeActionLiteralSupport": ["CodeActionLiteralSupport_"],
+        "resolveSupport": ["ResolveSupport_"]
+    },
+    "CodeActionParams": {
+        "textDocument": ["TextDocumentIdentifier"],
+        "range": ["Range"],
+        "context": ["CodeActionContext"]
+    },
+    "CodeAction": {
+        "kind": ["CodeActionKind"],
+        "disabled": ["Disabled_"],
+        "edit": ["WorkspaceEdit"],
+        "command": ["Command"]
+    },
+    "CodeLensParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "CodeLens": {
+        "range": ["Range"],
+        "command": ["Command"]
+    },
+    "DocumentLinkParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "DocumentLink": {
+        "range": ["Range"],
+        "target": ["DocumentUri"]
+    },
+    "DocumentColorParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "ColorInformation": {
+        "range": ["Range"],
+        "color": ["Color"]
+    },
+    "ColorPresentationParams": {
+        "textDocument": ["TextDocumentIdentifier"],
+        "color": ["Color"],
+        "range": ["Range"]
+    },
+    "ColorPresentation": {
+        "textEdit": ["TextEdit"]
+    },
+    "DocumentFormattingParams": {
+        "textDocument": ["TextDocumentIdentifier"],
+        "options": ["FormattingOptions"]
+    },
+    "DocumentRangeFormattingParams": {
+        "textDocument": ["TextDocumentIdentifier"],
+        "range": ["Range"],
+        "options": ["FormattingOptions"]
+    },
+    "DocumentOnTypeFormattingParams": {
+        "options": ["FormattingOptions"]
+    },
+    "RenameClientCapabilities": {
+        "prepareSupportDefaultBehavior": ["PrepareSupportDefaultBehavior"]
+    },
+    "FoldingRangeParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "SelectionRangeParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "SelectionRange": {
+        "range": ["Range"],
+        "parent": ["SelectionRange"]
+    },
+    "CallHierarchyItem": {
+        "kind": ["SymbolKind"],
+        "uri": ["DocumentUri"],
+        "range": ["Range"],
+        "selectionRange": ["Range"]
+    },
+    "CallHierarchyIncomingCallsParams": {
+        "item": ["CallHierarchyItem"]
+    },
+    "CallHierarchyIncomingCall": {
+        "from_": ["CallHierarchyItem"]
+    },
+    "CallHierarchyOutgoingCallsParams": {
+        "item": ["CallHierarchyItem"]
+    },
+    "CallHierarchyOutgoingCall": {
+        "to": ["CallHierarchyItem"]
+    },
+    "SemanticTokensClientCapabilities": {
+        "requests": ["Requests_"]
+    },
+    "SemanticTokensOptions": {
+        "legend": ["SemanticTokensLegend"]
+    },
+    "SemanticTokensParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "SemanticTokensDeltaParams": {
+        "textDocument": ["TextDocumentIdentifier"]
+    },
+    "SemanticTokensRangeParams": {
+        "textDocument": ["TextDocumentIdentifier"],
+        "range": ["Range"]
+    },
+    "Moniker": {
+        "unique": ["UniquenessLevel"],
+        "kind": ["MonikerKind"]
+    }
+}
