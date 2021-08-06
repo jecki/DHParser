@@ -29,7 +29,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.stringview import StringView
 from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
-from DHParser.log import freeze_callstack, HistoryRecord
+from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 from DHParser.toolkit import cython, line_col
 
@@ -80,7 +80,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             grammar.tree__.add_error(mre.node, notice)
         errors.append(notice)
         grammar.history__.append(HistoryRecord(
-            getattr(mre, 'frozen_callstack', grammar.call_stack__), mre.node, text_,
+            getattr(mre, 'callstack_snapshot', grammar.call_stack__), mre.node, text_,
             line_col(grammar.document_lbreaks__, mre.error.pos), errors))
 
     grammar.call_stack__.append(
@@ -92,7 +92,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         node, rest = self._parse(text)   # <===== call to the actual parser!
     except ParserError as pe:
         if pe.first_throw:
-            pe.frozen_callstack = freeze_callstack(grammar.call_stack__)
+            pe.callstack_snapshot = grammar.call_stack__.copy()
             grammar.most_recent_error__ = pe
         if self == grammar.start_parser__ and grammar.most_recent_error__:
             fe = grammar.most_recent_error__  # type: ParserError

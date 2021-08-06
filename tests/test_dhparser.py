@@ -39,6 +39,13 @@ def system(s: str) -> int:
     return subprocess.call(s, shell=True)
 
 
+class TestDHParser:
+    def test_selftest(self):
+        sys.path.append('../DHParser/scripts/')
+        import dhparser
+        assert dhparser.selftest(silent=True)
+
+
 # TODO: make this code multiprocessing safe!
 class TestDHParserCommandLineTool:
     def setup(self):

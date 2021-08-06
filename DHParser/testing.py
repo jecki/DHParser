@@ -832,15 +832,22 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
         save = os.getcwd()
         os.chdir(path)
         keys = reversed(list(symbols.keys()))
+        existing_tests = {fname[3:]: fname for fname in os.listdir()}
         for i, k in enumerate(keys):
             filename = '{num:0>2}_test_{section}'.format(num=i + 1, section=k) + fmt
             if not os.path.exists(filename):
-                print('Creating test file template "{name}".'.format(name=filename))
-                with open(filename, 'w', encoding='utf-8') as f:
-                    for sym in symbols[k]:
-                        f.write('\n[match:{sym}]\n\n'.format(sym=sym))
-                        f.write('[ast:{sym}]\n\n'.format(sym=sym))
-                        f.write('[fail:{sym}]\n\n'.format(sym=sym))
+                if filename[3:] in existing_tests:
+                    old_name = existing_tests[filename[3:]]
+                    print(f'Renaming test file "{old_name}" to "{filename}"')
+                    os.rename(old_name, filename)
+                    existing_tests[filename[3:]] = filename
+                else:
+                    print('Creating test file template "{name}".'.format(name=filename))
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        for sym in symbols[k]:
+                            f.write('\n[match:{sym}]\n\n'.format(sym=sym))
+                            f.write('[ast:{sym}]\n\n'.format(sym=sym))
+                            f.write('[fail:{sym}]\n\n'.format(sym=sym))
         os.chdir(save)
     else:
         raise ValueError(path + ' is not a directory!')

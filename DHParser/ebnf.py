@@ -1485,7 +1485,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
-    INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
+    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
     flatten_sxpr
@@ -1493,7 +1493,7 @@ from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
     cython
 from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
-    reduce_single_child, replace_by_single_child, is_empty, remove_children, \
+    reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
     BLOCK_LEAVES
 from DHParser.versionnumber import __version__
@@ -1507,7 +1507,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'parse_ebnf',
            'transform_ebnf',
            'compile_ebnf_ast',
-           'EBNFGrammar',
+           'HeuristicEBNFGrammar',
            'EBNFTransform',
            'EBNFCompilerError',
            'EBNFDirectives',
@@ -1597,8 +1597,9 @@ def get_ebnf_preprocessor() -> PreprocessorFunc:
 ########################################################################
 
 
-class EBNFGrammar(Grammar):
-    r"""Parser for a FlexibleEBNF source file.
+class HeuristicEBNFGrammar(Grammar):
+    r"""Parser for an EBNF source file that heuristically detects the
+    used syntactical variant of EBNF on the fly.
 
     This grammar is tuned for flexibility, that is, it supports as many
     different flavors of EBNF as possible. However, this flexibility
@@ -1765,7 +1766,7 @@ class EBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "c76fcc24e5077d4e150b771e6b60f0a1"
+    source_hash__ = "6e4f9f85bcdcdfc3105a6273c69f3131"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -1776,6 +1777,7 @@ class EBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
+    RAISE_EXPR_WO_BRACKETS = Text("")
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
@@ -1792,7 +1794,8 @@ class EBNFGrammar(Grammar):
     ENDL = Capture(Alternative(Text(";"), Text("")))
     AND = Capture(Alternative(Text(","), Text("")))
     OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))))
-    DEF = Capture(Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": ")))
+    _DEF = Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": "))
+    DEF = Capture(Synonym(_DEF))
     EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
@@ -1824,7 +1827,7 @@ class EBNFGrammar(Grammar):
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
     definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(literals, procedure, expression)
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group))
     countable.set(Alternative(option, oneormore, element))
@@ -1897,10 +1900,10 @@ class EBNFGrammar(Grammar):
                 ALLOWED_PRESET_VALUES['syntax_variant']))
 
 
-class FixedEBNFGrammar(Grammar):
-    r"""Faster version of EBNF, where delimiters are not determined on
-    first use, but defined as constant Text-parsers. They can still be
-    adjusted with function `parse.update_scanner()`.
+class ConfigurableEBNFGrammar(Grammar):
+    r"""A parser for an EBNF grammar that can be configured to parse
+    different syntactical variants of EBNF. Other than HeuristicEBNF
+    this parser does not detect the used variant while parsing.
 
     Different syntactical variants can be configured either by adjusting
     the definitions of DEF, OR, AND, ENDL, RNG_OPEN, RNG_CLOSE, RNG_DELIM,
@@ -2052,7 +2055,7 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "d39bd97362e79f1a15bdca37c067d78b"
+    source_hash__ = "2a7080d665065a348ede8b21c6bb3448"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -2063,6 +2066,7 @@ class FixedEBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
+    RAISE_EXPR_WO_BRACKETS = Text("")
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
@@ -2111,7 +2115,7 @@ class FixedEBNFGrammar(Grammar):
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
     definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(literals, procedure, expression)
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group))
     countable.set(Alternative(option, oneormore, element))
@@ -2156,27 +2160,27 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         return chksum != grammar_class.source_hash__
 
 
-def get_ebnf_grammar() -> EBNFGrammar:
+def get_ebnf_grammar() -> HeuristicEBNFGrammar:
     """Returns a thread-local EBNF-Grammar-object for parsing EBNF sources."""
     THREAD_LOCALS = access_thread_locals()
     mode = get_config_value('syntax_variant')
     try:
         grammar = THREAD_LOCALS.ebnf_grammar_singleton
         if mode in ('fixed', 'configurable'):
-            if not isinstance(grammar, FixedEBNFGrammar):
+            if not isinstance(grammar, ConfigurableEBNFGrammar):
                 raise AttributeError
         else:
-            if not isinstance(grammar, EBNFGrammar):
+            if not isinstance(grammar, HeuristicEBNFGrammar):
                 raise AttributeError
     except AttributeError:
         if mode in ('fixed', 'configurable'):
-            grammar = FixedEBNFGrammar(static_analysis=False)
+            grammar = ConfigurableEBNFGrammar(static_analysis=False)
             if mode == "fixed":
                 # configure grammar once
                 update_scanner(grammar, get_config_value('delimiter_set'))
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
         else:
-            grammar = EBNFGrammar(static_analysis=False)
+            grammar = HeuristicEBNFGrammar(static_analysis=False)
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
     if mode == 'configurable':
         # configure grammar on each request of the grammar object
@@ -2252,6 +2256,8 @@ EBNF_AST_transformation_table = {
         [],
     (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
         [reduce_single_child],
+    "RAISE_EXPR_WO_BRACKETS":
+        [add_error("PEG Expressions in directives must be enclosed in barckets (...)")],
     "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, RNG_OPEN, "
     "RNG_CLOSE, TIMES, RE_LEADIN, RE_CORE, RE_LEADOUT, CH_LEADIN":
         [],
