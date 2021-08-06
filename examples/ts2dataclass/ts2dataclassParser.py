@@ -235,11 +235,11 @@ class ts2dataclassCompiler(Compiler):
         self.overloaded_type_names: Set[str] = set()
         self.known_types: Set[str] = set()
         # self.referred_types: Set[str] = set()
-        self.local_classes: List[str] = []
+        self.local_classes: List[List[str]] = []
         self.base_classes: Dict[str, List[str]] = {}
         self.default_values: Dict = {}
         self.referred_objects: Dict = {}
-        self.obj_name = ''
+        self.obj_name: List[str] = []
         self.strip_type_from_const = False
 
     def compile(self, node) -> str:
@@ -289,10 +289,15 @@ class ts2dataclassCompiler(Compiler):
         cooked = '\n\n\n'.join(code_blocks)
         return cooked
 
+    def render_local_classes(self) -> str:
+        if self.local_classes:
+            classes = self.local_classes.pop()
+            return '\n    ' + '\n    '.join(lc.replace('\n', '\n    ') for lc in classes)
+        return '\n'
+
     def on_interface(self, node) -> str:
         name = self.compile(node['identifier'])
-        save_obj_name = self.obj_name
-        self.obj_name = name
+        self.obj_name.append(name)
         # uncomment the following two lines to generate references and defaults-dicts
         # only if they are not empty.
         self.referred_objects[name] = {}
@@ -315,13 +320,10 @@ class ts2dataclassCompiler(Compiler):
             interface = f"class {name}({base_classes}):"
         else:
             interface = f"class {name}:"
+        interface += self.render_local_classes()
         decls = self.compile(node['declarations_block'])
-        if self.local_classes:
-            interface += '\n    ' + '\n    '.join(lc.replace('\n', '\n    ')
-                                                  for lc in self.local_classes)
-        self.local_classes = []
         self.known_types.add(name)
-        self.obj_name = save_obj_name
+        self.obj_name.pop()
         return preface + interface + '\n    ' + decls.replace('\n', '\n    ')
 
     def on_type_parameter(self, node) -> str:
@@ -332,63 +334,45 @@ class ts2dataclassCompiler(Compiler):
 
     def on_type_alias(self, node) -> str:
         alias = self.compile(node['identifier'])
-        save_obj_name = self.obj_name
-        self.obj_name = alias
+        self.obj_name.append(alias)
         if alias not in self.overloaded_type_names:
             self.known_types.add(alias)
             types = self.compile(node['types'])
             if types[0:5] == 'class':
                 types.format(class_name=alias)
                 code = types + '\n\n'
-            elif self.local_classes:
-                preface = '\n\n    '.join(self.local_classes)
-                self.local_classes = []
-                code = preface + f"{alias} = {types}"
-            else:
-                code = f"{alias} = {types}"
+            preface = self.render_local_classes()
+            code = preface + f"{alias} = {types}"
         else:
             code = ''
-        self.obj_name = save_obj_name
+        self.obj_name.pop()
         return code
 
     def on_declarations_block(self, node) -> str:
-        # if self.reorder_fields:
-        #     fields = [self.compile(nd) for nd in node if nd.tag_name == 'declaration']
-        #     do_reorder = False
-        #     for i in range(len(fields)):
-        #         if fields[i].find(': Optional[') >= 0 \
-        #                 or (fields[i].find(': Union[') >= 0 and fields[i].find('None') >= 0):
-        #             fields[i] += ' = None'
-        #             do_reorder = True
-        #     if do_reorder:
-        #         fields.sort(key=lambda field: 1 if field.endswith(' = None') else 0)
-        #     declarations = '\n'.join(fields)
-        # else:
         declarations = '\n'.join(self.compile(nd) for nd in node
                                  if nd.tag_name == 'declaration')
         return declarations or "pass"
 
     def on_declaration(self, node) -> str:
         identifier = self.compile(node['identifier'])
-        save_obj_name = self.obj_name
-        self.obj_name = identifier[0].upper() + identifier[1:] + '_'
+        self.obj_name.append(identifier[0].upper() + identifier[1:] + '_')
         T = self.compile(node['types']) if 'types' in node else 'Any'
         if T[0:5] == 'class':
-            self.local_classes.append(T.format(class_name=self.obj_name))
-            T = self.obj_name
-            self.referred_objects.setdefault(save_obj_name, {})[identifier] = [self.obj_name]
+            self.local_classes.append(T.format(class_name=self.obj_name[-1]))
+            T = self.obj_name[-1]
+            self.referred_objects.setdefault(self.obj_name[-2], {})[identifier] = [self.obj_name[-1]]
         else:
             for complex_type in node.select('type_name'):
                 type_name = complex_type.content
-                self.referred_objects.setdefault(self.obj_name, {})[identifier] = [type_name]
+                self.referred_objects.setdefault(self.obj_name[-1], {})[identifier] = [type_name]
         if 'optional' in node:
-            self.default_values.setdefault(self.obj_name, {})[identifier] = None
+            self.default_values.setdefault(self.obj_name[-1], {})[identifier] = None
             if T.startswith('Union['):
                 if T.find('None') < 0:
                   T = T[:-1] + ', None]'
             else:
                 T = f"Optional[{T}]"
-        self.obj_name = save_obj_name
+        self.obj_name.pop()
         return f"{identifier}: {T}"
 
     def on_optional(self, node):
@@ -403,27 +387,25 @@ class ts2dataclassCompiler(Compiler):
         else:
             assert len(node.children) > 1
             union = []
-            save_obj_name = self.obj_name
             i = 0
             for nd in node.children:
-                delim = '' if save_obj_name.endswith('_') else '_'
-                self.obj_name = save_obj_name + delim + str(i)
+                delim = '' if self.obj_name[-1][-1:] == '_' else '_'
+                self.obj_name.append(self.obj_name[-1] + delim + str(i))
                 typ = self.compile(nd)
                 if typ not in union:
                     union.append(typ)
                     i += 1
-            self.obj_name = save_obj_name
+                self.obj_name.pop()
             build_classes = bool(pick_from_context(self.context, {'type_alias', 'interface'}))
             for i in range(len(union)):
                 typ = union[i]
                 if typ[0:5] == 'class':
                     if build_classes:
-                        print(self.obj_name + str(i))
                         cname = re.match(r'class\s*(\w+)\s*:', typ).group(1)
                         self.local_classes.append(typ)
                         union[i] = cname
-                        self.referred_objects.setdefault(self.obj_name, {})\
-                            .setdefault(self.obj_name, []).append(cname)
+                        self.referred_objects.setdefault(self.obj_name[-1], {})\
+                            .setdefault(self.obj_name[-1], []).append(cname)
                     else:
                         union[i] = 'Dict'
             if self.use_py308_literal_type and \
@@ -443,7 +425,9 @@ class ts2dataclassCompiler(Compiler):
         if typ.tag_name == 'declarations_block':
             if pick_from_context(self.context, {'type_alias', 'interface'}):
                 decls = self.compile(typ)
-                return f"class {self.obj_name}:\n    " + decls.replace('\n', '\n    ')
+                return ''.join([f"class {self.obj_name[-1]}:",
+                                self.render_local_classes(),
+                                decls.replace('\n', '\n    ')])
             return 'Dict'
         elif typ.tag_name == 'literal':
             literal_typ = typ[0].tag_name
