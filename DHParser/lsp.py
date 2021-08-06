@@ -124,23 +124,25 @@ DefValType = Dict[str, Dict[str, Any]]
 RefObjType = Dict[str, Dict[str, List[Union[str, Any]]]]
 
 
-def fromdict(D: JSON_Dict, DataClass: Any,
-             default_values: DefValType = {},
-             referred_objects: RefObjType = {}):
+def fromdict(D: JSON_Dict, DataClass: Any, keep_dict=True):
     name = DataClass.__name__
-    if name not in referred_objects:
-        references = {}
+    if hasattr(DataClass, 'references__') and name in DataClass.references__:
+        references = DataClass.references__
+    else:
+        try:
+            references = DataClass.references__
+        except AttributeError:
+            DataClass.references__ = {}
+            references = DataClass.references
         for key, value in D.items():
             if isinstance(value, Dict):
                 typ = DataClass.__annotations__[key]
                 if isinstance(typ, str):
                     typ = eval(typ)
                 references[key] = typ
-        referred_objects[name] = references
-    else:
-        references = referred_objects[name]
+        DataClass.references__[name] = references
     if references:
-        D = D.copy()
+        if keep_dict:  D = D.copy()
         for field, types in references.items():
             for i in range(len(types)):
                 typ = types[i]
@@ -148,10 +150,11 @@ def fromdict(D: JSON_Dict, DataClass: Any,
                     typ = eval(typ)
                     references[field][i] = typ
                 try:
-                    D[field] = fromdict(D[field], typ, default_values, referred_objects)
+                    D[field] = fromdict(D[field], typ)
                     break
                 except TypeError:
                     pass
+    default_values = DataClass.defaults__ if hasattr(DataClass, 'defaults__') else {}
     return DataClass(**ChainMap(D, default_values.get(name, {})))
 
 

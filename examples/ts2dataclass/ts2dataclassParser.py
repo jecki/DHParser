@@ -230,11 +230,13 @@ class ts2dataclassCompiler(Compiler):
         self.use_py310_type_union = get_config_value('ts2dataclass.UsePy310TypeUnion', False)
         if self.use_py310_type_union:  assert sys.version_info >= (3, 10)
         self.use_py308_literal_type = get_config_value('ts2dataclass.UsePy308LiteralType', False)
-        if self.use_py308_literal_type:  assert sys.version_info >= (3, 8)
+        # if self.use_py308_literal_type:  assert sys.version_info >= (3, 8)
+        # self.reorder_fields = get_config_value('ts2dataclass.ReorderFields', True)  # Doesn't work for derived classes
         self.overloaded_type_names: Set[str] = set()
         self.known_types: Set[str] = set()
         # self.referred_types: Set[str] = set()
         self.local_classes: List[str] = []
+        self.base_classes: Dict[str, List[str]] = {}
         self.default_values: Dict = {}
         self.referred_objects: Dict = {}
         self.obj_name = ''
@@ -254,6 +256,24 @@ class ts2dataclassCompiler(Compiler):
         raise ValueError('Malformed syntax-tree!')
 
     def on_document(self, node) -> str:
+        def repdefaults(defaults):
+            if len(defaults) < 2:
+                return repr(defaults)
+            else:
+                return json.dumps(defaults, indent = 4).replace('null', 'None')
+
+        def reprefs(references):
+            if len(references) == 0:
+                return "{}"
+            elif len(references) == 1:
+                for field, typelist in references.items():
+                    return f"{{{repr(field)}: [{', '.join(typelist)}]}}"
+            else:
+                return '{\n    ' + \
+                       ',\n    '.join(f"{repr(field)}: [{', '.join(typelist)}]"
+                                      for field, typelist in references.items()) \
+                       + '\n}'
+
         type_aliases = {nd['identifier'].content for nd in node.select_children('type_alias')}
         namespaces = {nd['identifier'].content for nd in node.select_children('namespace')}
         self.overloaded_type_names = type_aliases & namespaces
@@ -262,14 +282,10 @@ class ts2dataclassCompiler(Compiler):
         code_blocks = [IMPORTS, cooked]
         if '' in self.default_values:  del self.default_values['']
         if '' in self.referred_objects:  del self.referred_objects['']
-        if self.default_values:
-            code_blocks.append('default_values = ' +
-                               json.dumps(self.default_values, indent=4).replace('null', 'None'))
-        if self.referred_objects:
-            dump = json.dumps(self.referred_objects, indent=4)
-            dump = re.sub(r'\[\s*', '[', dump)
-            dump = re.sub(r'\s*\]', ']', dump)
-            code_blocks.append('referred_objects = ' + dump)
+        code_blocks.append('\n'.join(f"{obj_name}.defaults__ = {repdefaults(defaults)}"
+                                     for obj_name, defaults in self.default_values.items()))
+        code_blocks.append('\n'.join(f"{obj_name}.references__ = {reprefs(references)}"
+                                     for obj_name, references in self.referred_objects.items()))
         cooked = '\n\n\n'.join(code_blocks)
         return cooked
 
@@ -277,6 +293,10 @@ class ts2dataclassCompiler(Compiler):
         name = self.compile(node['identifier'])
         save_obj_name = self.obj_name
         self.obj_name = name
+        # uncomment the following two lines to generate references and defaults-dicts
+        # only if they are not empty.
+        self.referred_objects[name] = {}
+        self.default_values[name] = {}
         try:
             tp = self.compile(node['type_parameter'])
             preface = f"{tp} = TypeVar('{tp}')\n\n"
@@ -285,6 +305,8 @@ class ts2dataclassCompiler(Compiler):
             preface = ''
         try:
             base_classes = self.compile(node['extends'])
+            for bc in node['extends'].children:
+                self.base_classes.setdefault(name, []).append(bc.content)
             if tp:
                 base_classes += f", Generic[{tp}]"
         except KeyError:
@@ -295,7 +317,8 @@ class ts2dataclassCompiler(Compiler):
             interface = f"class {name}:"
         decls = self.compile(node['declarations_block'])
         if self.local_classes:
-            preface = '\n\n'.join(self.local_classes) + '\n\n' + preface
+            interface += '\n    ' + '\n    '.join(lc.replace('\n', '\n    ')
+                                                  for lc in self.local_classes)
         self.local_classes = []
         self.known_types.add(name)
         self.obj_name = save_obj_name
@@ -318,10 +341,7 @@ class ts2dataclassCompiler(Compiler):
                 types.format(class_name=alias)
                 code = types + '\n\n'
             elif self.local_classes:
-                types = types.replace('CLASS__', alias + '_')
-                for i in range(len(self.local_classes)):
-                    self.local_classes[i] = self.local_classes[i].replace('CLASS__', alias + '_')
-                preface = '\n\n'.join(self.local_classes) + '\n\n'
+                preface = '\n\n    '.join(self.local_classes)
                 self.local_classes = []
                 code = preface + f"{alias} = {types}"
             else:
@@ -332,36 +352,43 @@ class ts2dataclassCompiler(Compiler):
         return code
 
     def on_declarations_block(self, node) -> str:
+        # if self.reorder_fields:
+        #     fields = [self.compile(nd) for nd in node if nd.tag_name == 'declaration']
+        #     do_reorder = False
+        #     for i in range(len(fields)):
+        #         if fields[i].find(': Optional[') >= 0 \
+        #                 or (fields[i].find(': Union[') >= 0 and fields[i].find('None') >= 0):
+        #             fields[i] += ' = None'
+        #             do_reorder = True
+        #     if do_reorder:
+        #         fields.sort(key=lambda field: 1 if field.endswith(' = None') else 0)
+        #     declarations = '\n'.join(fields)
+        # else:
         declarations = '\n'.join(self.compile(nd) for nd in node
                                  if nd.tag_name == 'declaration')
         return declarations or "pass"
 
     def on_declaration(self, node) -> str:
         identifier = self.compile(node['identifier'])
+        save_obj_name = self.obj_name
+        self.obj_name = identifier[0].upper() + identifier[1:] + '_'
         T = self.compile(node['types']) if 'types' in node else 'Any'
         if T[0:5] == 'class':
-            class_name = identifier[0].upper() + identifier[1:] + '_'
-            self.local_classes.append(T.format(class_name=class_name))
-            T = class_name
-            self.referred_objects.setdefault(self.obj_name, {})[identifier] = [class_name]
-        elif T.find('CLASS__') >= 0:
-            cname_prefix = identifier[0].upper() + identifier[1:] + '_'
-            T = T.replace('CLASS__', cname_prefix)
-            clist = []
-            for m in re.finditer(r'CLASS__(\d+)', T):
-                cname = cname_prefix + m.group(1)
-                clist.append(cname)
-            if clist:
-                self.referred_objects.setdefault(self.obj_name, {})[identifier] = clist
-            for i in range(len(self.local_classes)):
-                self.local_classes[i] = self.local_classes[i].replace('CLASS__', cname_prefix)
+            self.local_classes.append(T.format(class_name=self.obj_name))
+            T = self.obj_name
+            self.referred_objects.setdefault(save_obj_name, {})[identifier] = [self.obj_name]
         else:
             for complex_type in node.select('type_name'):
                 type_name = complex_type.content
                 self.referred_objects.setdefault(self.obj_name, {})[identifier] = [type_name]
         if 'optional' in node:
             self.default_values.setdefault(self.obj_name, {})[identifier] = None
-            T = f"Optional[{T}]"
+            if T.startswith('Union['):
+                if T.find('None') < 0:
+                  T = T[:-1] + ', None]'
+            else:
+                T = f"Optional[{T}]"
+        self.obj_name = save_obj_name
         return f"{identifier}: {T}"
 
     def on_optional(self, node):
@@ -376,17 +403,25 @@ class ts2dataclassCompiler(Compiler):
         else:
             assert len(node.children) > 1
             union = []
+            save_obj_name = self.obj_name
+            i = 0
             for nd in node.children:
+                self.obj_name = save_obj_name + '_' + str(i)
                 typ = self.compile(nd)
-                if typ not in union:  union.append(typ)
+                if typ not in union:
+                    union.append(typ)
+                    i += 1
+            self.obj_name = save_obj_name
             build_classes = bool(pick_from_context(self.context, {'type_alias', 'interface'}))
             for i in range(len(union)):
                 typ = union[i]
                 if typ[0:5] == 'class':
                     if build_classes:
-                        cname = 'CLASS__' + str(i)
+                        cname = self.obj_name + '_' + str(i)   # 'CLASS__' + str(i)
                         self.local_classes.append(typ.format(class_name=cname))
                         union[i] = cname
+                        self.referred_objects.setdefault(self.obj_name, {})\
+                            .setdefault(self.obj_name, []).append(cname)
                     else:
                         union[i] = 'Dict'
             if self.use_py308_literal_type and \
@@ -808,6 +843,7 @@ if __name__ == "__main__":
         inspect(file_names[0])
 
     else:
+        assert file_names[0].lower().endswith('.ts')
         result, errors = compile_src(file_names[0])
 
         if errors:
@@ -816,5 +852,8 @@ if __name__ == "__main__":
             if has_errors(errors, ERROR):
                 sys.exit(1)
 
-        print(result.serialize(how='default' if args.xml is None else 'xml')
-              if isinstance(result, Node) else result)
+        dest_name = file_names[0][:-3] + '.py'
+        with open(file_names[0][:-3] + '.py', 'w', encoding='utf-8') as f:
+            f.write(result)
+        #  print(result.serialize(how='default' if args.xml is None else 'xml')
+        #        if isinstance(result, Node) else result)

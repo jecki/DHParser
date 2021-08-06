@@ -418,6 +418,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     for parser_name, tests in test_unit.items():
         # if not get_config_value('test_parallelization'):
         #     print('  Testing parser: ' + parser_name)
+        if parser_name not in parser:
+            raise SyntaxError(
+                f'Unknown parser "{parser_name}" in test(s) '
+                f'{", ".join([repr(t) for t in tests.keys()])} in unit "{unit_name}"!')
 
         track_history = get_config_value('history_tracking')
         try:
