@@ -406,7 +406,8 @@ class ts2dataclassCompiler(Compiler):
             save_obj_name = self.obj_name
             i = 0
             for nd in node.children:
-                self.obj_name = save_obj_name + '_' + str(i)
+                delim = '' if save_obj_name.endswith('_') else '_'
+                self.obj_name = save_obj_name + delim + str(i)
                 typ = self.compile(nd)
                 if typ not in union:
                     union.append(typ)
@@ -417,8 +418,8 @@ class ts2dataclassCompiler(Compiler):
                 typ = union[i]
                 if typ[0:5] == 'class':
                     if build_classes:
-                        cname = self.obj_name + '_' + str(i)   # 'CLASS__' + str(i)
-                        self.local_classes.append(typ.format(class_name=cname))
+                        cname = re.match(r'class\s*(\w+)\s*:', typ).group(1)
+                        self.local_classes.append(typ)
                         union[i] = cname
                         self.referred_objects.setdefault(self.obj_name, {})\
                             .setdefault(self.obj_name, []).append(cname)
@@ -441,7 +442,7 @@ class ts2dataclassCompiler(Compiler):
         if typ.tag_name == 'declarations_block':
             if pick_from_context(self.context, {'type_alias', 'interface'}):
                 decls = self.compile(typ)
-                return "class {class_name}:\n    " + decls.replace('\n', '\n    ')
+                return "class {self.obj_name}:\n    " + decls.replace('\n', '\n    ')
             return 'Dict'
         elif typ.tag_name == 'literal':
             literal_typ = typ[0].tag_name
