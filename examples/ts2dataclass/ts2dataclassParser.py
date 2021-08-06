@@ -418,6 +418,7 @@ class ts2dataclassCompiler(Compiler):
                 typ = union[i]
                 if typ[0:5] == 'class':
                     if build_classes:
+                        print(self.obj_name + str(i))
                         cname = re.match(r'class\s*(\w+)\s*:', typ).group(1)
                         self.local_classes.append(typ)
                         union[i] = cname
@@ -442,7 +443,7 @@ class ts2dataclassCompiler(Compiler):
         if typ.tag_name == 'declarations_block':
             if pick_from_context(self.context, {'type_alias', 'interface'}):
                 decls = self.compile(typ)
-                return "class {self.obj_name}:\n    " + decls.replace('\n', '\n    ')
+                return f"class {self.obj_name}:\n    " + decls.replace('\n', '\n    ')
             return 'Dict'
         elif typ.tag_name == 'literal':
             literal_typ = typ[0].tag_name
