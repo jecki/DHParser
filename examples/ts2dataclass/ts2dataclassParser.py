@@ -290,7 +290,7 @@ class ts2dataclassCompiler(Compiler):
         return cooked
 
     def render_local_classes(self) -> str:
-        if self.local_classes:
+        if self.local_classes[-1]:
             classes = self.local_classes.pop()
             return '\n    ' + '\n    '.join(lc.replace('\n', '\n    ') for lc in classes)
         return '\n'
@@ -320,8 +320,8 @@ class ts2dataclassCompiler(Compiler):
             interface = f"class {name}({base_classes}):"
         else:
             interface = f"class {name}:"
-        interface += self.render_local_classes()
         decls = self.compile(node['declarations_block'])
+        interface += self.render_local_classes()
         self.known_types.add(name)
         self.obj_name.pop()
         return preface + interface + '\n    ' + decls.replace('\n', '\n    ')
@@ -349,6 +349,7 @@ class ts2dataclassCompiler(Compiler):
         return code
 
     def on_declarations_block(self, node) -> str:
+        self.local_classes.append([])
         declarations = '\n'.join(self.compile(nd) for nd in node
                                  if nd.tag_name == 'declaration')
         return declarations or "pass"
@@ -358,7 +359,7 @@ class ts2dataclassCompiler(Compiler):
         self.obj_name.append(identifier[0].upper() + identifier[1:] + '_')
         T = self.compile(node['types']) if 'types' in node else 'Any'
         if T[0:5] == 'class':
-            self.local_classes.append(T.format(class_name=self.obj_name[-1]))
+            self.local_classes[-1].append(T.format(class_name=self.obj_name[-1]))
             T = self.obj_name[-1]
             self.referred_objects.setdefault(self.obj_name[-2], {})[identifier] = [self.obj_name[-1]]
         else:
@@ -402,10 +403,9 @@ class ts2dataclassCompiler(Compiler):
                 if typ[0:5] == 'class':
                     if build_classes:
                         cname = re.match(r'class\s*(\w+)\s*:', typ).group(1)
-                        self.local_classes.append(typ)
+                        self.local_classes[-1].append(typ)
                         union[i] = cname
-                        self.referred_objects.setdefault(self.obj_name[-1], {})\
-                            .setdefault(self.obj_name[-1], []).append(cname)
+                        self.referred_objects.setdefault(self.obj_name[-1], []).append(cname)
                     else:
                         union[i] = 'Dict'
             if self.use_py308_literal_type and \
