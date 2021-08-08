@@ -224,7 +224,7 @@ def to_typename(varname: str) -> str:
 
 def to_varname(typename: str) -> str:
     assert typename[0].isupper() or typename[-1:] == '_', typename
-    return typename[0].lower() + typename[1:-1]
+    return typename[0].lower() + (typename[1:-1] if typename[-1:] == '_' else typename[1:])
 
 
 class ts2dataclassCompiler(Compiler):
@@ -262,11 +262,30 @@ class ts2dataclassCompiler(Compiler):
     def is_toplevel(self) -> bool:
         return self.obj_name == ['TOPLEVEL_']
 
-    def qualified_obj_name(self, varname: bool=True) -> str:
+    def qualified_obj_name(self, pos: int=0, varname: bool=False) -> str:
         obj_name = self.obj_name[1:] if len(self.obj_name) > 1 else self.obj_name
-        if varname:
-            obj_name = obj_name[:-1] + [to_varname(obj_name[-1])]
-        return '.'.join(self.obj_name)
+        if pos < 0:  obj_name = obj_name[:pos]
+        if varname:  obj_name = obj_name[:-1] + [to_varname(obj_name[-1])]
+        return '.'.join(obj_name)
+
+    def serialize_references(self) -> str:
+        references = []
+        for qualified_class_name, type_info in self.referred_objects.items():
+            info = []
+            for varname, type_list in type_info.items():
+                type_list = [qualified_class_name + '.' + typ for typ in type_list]
+                tl_str = ', '.join(type_list)
+                info.append(f"\n    '{varname}': [{tl_str}]")
+            info_str = '{' + ','.join(info) + '\n}'
+            references.append(f"{qualified_class_name}.type_info__ = {info_str}")
+        return '\n'.join(references)
+
+    def serialize_defaults(self) -> str:
+        defaults = []
+        for classname, variables in self.default_values.items():
+            for variable, value in variables.items():
+                defaults.append(f"{classname}.{variable} = {value}")
+        return '\n'.join(defaults)
 
     def on_EMPTY__(self, node) -> str:
         return ''
@@ -275,24 +294,6 @@ class ts2dataclassCompiler(Compiler):
         raise ValueError('Malformed syntax-tree!')
 
     def on_document(self, node) -> str:
-        # def repdefaults(defaults):
-        #     if len(defaults) < 2:
-        #         return repr(defaults)
-        #     else:
-        #         return json.dumps(defaults, indent = 4).replace('null', 'None')
-        #
-        # def reprefs(references):
-        #     if len(references) == 0:
-        #         return "{}"
-        #     elif len(references) == 1:
-        #         for field, typelist in references.items():
-        #             return f"{{{repr(field)}: [{', '.join(typelist)}]}}"
-        #     else:
-        #         return '{\n    ' + \
-        #                ',\n    '.join(f"{repr(field)}: [{', '.join(typelist)}]"
-        #                               for field, typelist in references.items()) \
-        #                + '\n}'
-
         type_aliases = {nd['identifier'].content for nd in node.select_children('type_alias')}
         namespaces = {nd['identifier'].content for nd in node.select_children('namespace')}
         self.overloaded_type_names = type_aliases & namespaces
@@ -301,8 +302,8 @@ class ts2dataclassCompiler(Compiler):
         code_blocks = [IMPORTS, cooked]
         if '' in self.default_values:  del self.default_values['']
         if '' in self.referred_objects:  del self.referred_objects['']
-        code_blocks.append(json.dumps(self.referred_objects, indent=4))
-        code_blocks.append(json.dumps(self.default_values, indent=4))
+        code_blocks.append(self.serialize_references())
+        code_blocks.append(self.serialize_defaults())
         cooked = '\n\n\n'.join(code_blocks)
         return cooked
 
@@ -344,6 +345,9 @@ class ts2dataclassCompiler(Compiler):
         interface += ('    ' + self.render_local_classes().replace('\n', '\n    ')).rstrip(' ')
         self.known_types.add(name)
         self.obj_name.pop()
+        print(self.serialize_defaults())
+        print(self.referred_objects)
+        print(self.serialize_references())
         return preface + interface + '    ' + decls.replace('\n', '\n    ')
 
     def on_type_parameter(self, node) -> str:
@@ -382,13 +386,13 @@ class ts2dataclassCompiler(Compiler):
         if T[0:5] == 'class':
             self.local_classes[-1].append(T)
             T = self.obj_name[-1]
-            self.referred_objects.setdefault(self.qualified_obj_name(), {})[identifier] \
-                = [to_typename(identifier)]
+            self.referred_objects.setdefault(
+                self.qualified_obj_name(varname=True), {})[identifier] = [to_typename(identifier)]
         else:
             for complex_type in node.select('type_name'):
                 type_name = complex_type.content
-                self.referred_objects.setdefault(self.qualified_obj_name(), {})[identifier] \
-                    = [type_name]
+                self.referred_objects.setdefault(
+                    self.qualified_obj_name(varname=True), {})[identifier] = [type_name]
         if 'optional' in node:
             self.default_values.setdefault(self.qualified_obj_name(), {})[identifier] = None
             if T.startswith('Union['):
@@ -435,7 +439,8 @@ class ts2dataclassCompiler(Compiler):
                     self.local_classes[-1].append(typ)
                     union[i] = cname
                     self.referred_objects.setdefault(
-                        self.qualified_obj_name(varname=True), []).append(cname)
+                        self.qualified_obj_name(-1, varname=False), {})\
+                        .setdefault(to_varname(self.obj_name[-1]), []).append(cname)
             if self.is_toplevel():
                 preface = self.render_local_classes()
                 self.local_classes.append([])
