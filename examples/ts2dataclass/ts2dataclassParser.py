@@ -292,8 +292,10 @@ class ts2dataclassCompiler(Compiler):
     def render_local_classes(self) -> str:
         if self.local_classes[-1]:
             classes = self.local_classes.pop()
-            return '\n    ' + '\n    '.join(lc.replace('\n', '\n    ') for lc in classes)
-        return '\n'
+            return '\n'.join(lc.replace('\n', '\n    ') for lc in classes) + '\n'
+        else:
+            self.local_classes.pop()
+            return ''
 
     def on_interface(self, node) -> str:
         name = self.compile(node['identifier'])
@@ -317,14 +319,14 @@ class ts2dataclassCompiler(Compiler):
         except KeyError:
             base_classes = f"Generic[{tp}]" if tp else ''
         if base_classes:
-            interface = f"class {name}({base_classes}):"
+            interface = f"class {name}({base_classes}):\n    "
         else:
-            interface = f"class {name}:"
+            interface = f"class {name}:\n    "
         decls = self.compile(node['declarations_block'])
         interface += self.render_local_classes()
         self.known_types.add(name)
         self.obj_name.pop()
-        return preface + interface + '\n    ' + decls.replace('\n', '\n    ')
+        return preface + interface + '    ' + decls.replace('\n', '\n    ')
 
     def on_type_parameter(self, node) -> str:
         return self.compile(node['identifier'])
@@ -359,7 +361,7 @@ class ts2dataclassCompiler(Compiler):
         self.obj_name.append(identifier[0].upper() + identifier[1:] + '_')
         T = self.compile(node['types']) if 'types' in node else 'Any'
         if T[0:5] == 'class':
-            self.local_classes[-1].append(T.format(class_name=self.obj_name[-1]))
+            self.local_classes[-1].append(T)
             T = self.obj_name[-1]
             self.referred_objects.setdefault(self.obj_name[-2], {})[identifier] = [self.obj_name[-1]]
         else:
@@ -423,12 +425,11 @@ class ts2dataclassCompiler(Compiler):
         assert len(node.children) == 1
         typ = node[0]
         if typ.tag_name == 'declarations_block':
-            if pick_from_context(self.context, {'type_alias', 'interface'}):
-                decls = self.compile(typ)
-                return ''.join([f"class {self.obj_name[-1]}:",
-                                self.render_local_classes(),
-                                decls.replace('\n', '\n    ')])
-            return 'Dict'
+            decls = self.compile(typ)
+            return ''.join([f"class {self.obj_name[-1]}:\n    ",
+                             self.render_local_classes().replace('\n', '\n    '),
+                             decls.replace('\n', '\n    ')])
+            # return 'Dict'
         elif typ.tag_name == 'literal':
             literal_typ = typ[0].tag_name
             if self.use_py308_literal_type:
