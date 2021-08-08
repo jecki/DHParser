@@ -218,7 +218,7 @@ from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 
 
 def to_typename(varname: str) -> str:
-    assert varname[-1:] != '_', varname   # and varname[0].islower()
+    assert varname[-1:] != '_' or keyword.iskeyword(varname[:-1]), varname  # and varname[0].islower()
     return varname[0].upper() + varname[1:] + '_'
 
 
@@ -245,11 +245,11 @@ class ts2dataclassCompiler(Compiler):
         self.overloaded_type_names: Set[str] = set()
         self.known_types: Set[str] = set()
         # self.referred_types: Set[str] = set()
-        self.local_classes: List[List[str]] = []
+        self.local_classes: List[List[str]] = [[]]
         self.base_classes: Dict[str, List[str]] = {}
         self.default_values: Dict = {}
         self.referred_objects: Dict = {}
-        self.obj_name: List[str] = []
+        self.obj_name: List[str] = ['TOPLEVEL_']
         self.strip_type_from_const = False
 
     def compile(self, node) -> str:
@@ -259,6 +259,15 @@ class ts2dataclassCompiler(Compiler):
         raise TypeError(f"Compilation of {node.tag_name} yielded a result of "
                         f"type {str(type(result))} and not str as expected!")
 
+    def is_toplevel(self) -> bool:
+        return self.obj_name == ['TOPLEVEL_']
+
+    def qualified_obj_name(self, varname: bool=True) -> str:
+        obj_name = self.obj_name[1:] if len(self.obj_name) > 1 else self.obj_name
+        if varname:
+            obj_name = obj_name[:-1] + [to_varname(obj_name[-1])]
+        return '.'.join(self.obj_name)
+
     def on_EMPTY__(self, node) -> str:
         return ''
 
@@ -266,23 +275,23 @@ class ts2dataclassCompiler(Compiler):
         raise ValueError('Malformed syntax-tree!')
 
     def on_document(self, node) -> str:
-        def repdefaults(defaults):
-            if len(defaults) < 2:
-                return repr(defaults)
-            else:
-                return json.dumps(defaults, indent = 4).replace('null', 'None')
-
-        def reprefs(references):
-            if len(references) == 0:
-                return "{}"
-            elif len(references) == 1:
-                for field, typelist in references.items():
-                    return f"{{{repr(field)}: [{', '.join(typelist)}]}}"
-            else:
-                return '{\n    ' + \
-                       ',\n    '.join(f"{repr(field)}: [{', '.join(typelist)}]"
-                                      for field, typelist in references.items()) \
-                       + '\n}'
+        # def repdefaults(defaults):
+        #     if len(defaults) < 2:
+        #         return repr(defaults)
+        #     else:
+        #         return json.dumps(defaults, indent = 4).replace('null', 'None')
+        #
+        # def reprefs(references):
+        #     if len(references) == 0:
+        #         return "{}"
+        #     elif len(references) == 1:
+        #         for field, typelist in references.items():
+        #             return f"{{{repr(field)}: [{', '.join(typelist)}]}}"
+        #     else:
+        #         return '{\n    ' + \
+        #                ',\n    '.join(f"{repr(field)}: [{', '.join(typelist)}]"
+        #                               for field, typelist in references.items()) \
+        #                + '\n}'
 
         type_aliases = {nd['identifier'].content for nd in node.select_children('type_alias')}
         namespaces = {nd['identifier'].content for nd in node.select_children('namespace')}
@@ -292,10 +301,8 @@ class ts2dataclassCompiler(Compiler):
         code_blocks = [IMPORTS, cooked]
         if '' in self.default_values:  del self.default_values['']
         if '' in self.referred_objects:  del self.referred_objects['']
-        code_blocks.append('\n'.join(f"{obj_name}.defaults__ = {repdefaults(defaults)}"
-                                     for obj_name, defaults in self.default_values.items()))
-        code_blocks.append('\n'.join(f"{obj_name}.references__ = {reprefs(references)}"
-                                     for obj_name, references in self.referred_objects.items()))
+        code_blocks.append(json.dumps(self.referred_objects, indent=4))
+        code_blocks.append(json.dumps(self.default_values, indent=4))
         cooked = '\n\n\n'.join(code_blocks)
         return cooked
 
@@ -375,20 +382,24 @@ class ts2dataclassCompiler(Compiler):
         if T[0:5] == 'class':
             self.local_classes[-1].append(T)
             T = self.obj_name[-1]
-            self.referred_objects.setdefault('.'.join(self.obj_name), {})[identifier] \
+            self.referred_objects.setdefault(self.qualified_obj_name(), {})[identifier] \
                 = [to_typename(identifier)]
         else:
             for complex_type in node.select('type_name'):
                 type_name = complex_type.content
-                self.referred_objects.setdefault('.'.join(self.obj_name), {})[identifier] \
+                self.referred_objects.setdefault(self.qualified_obj_name(), {})[identifier] \
                     = [type_name]
         if 'optional' in node:
-            self.default_values.setdefault('.'.join(self.obj_name), {})[identifier] = None
+            self.default_values.setdefault(self.qualified_obj_name(), {})[identifier] = None
             if T.startswith('Union['):
                 if T.find('None') < 0:
                   T = T[:-1] + ', None]'
             else:
                 T = f"Optional[{T}]"
+        if self.is_toplevel():
+            preface = self.render_local_classes()
+            self.local_classes.append([])
+            return preface + f"{identifier}:{to_typename(identifier)}"
         return f"{identifier}: {T}"
 
     def on_optional(self, node):
@@ -402,10 +413,10 @@ class ts2dataclassCompiler(Compiler):
             return self.compile(node[0])
         else:
             assert len(node.children) > 1
-            top_level = not bool(pick_from_context(self.context, {'type_alias', 'interface'}))
-            if top_level:
-                self.local_classes.append([])
-                self.obj_name.append('TOPLEVEL_')
+            # toplevel = self.is_toplevel()
+            # if toplevel:
+            #     self.local_classes.append([])
+            #     self.obj_name.append('TOPLEVEL_')
             union = []
             i = 0
             for nd in node.children:
@@ -420,17 +431,14 @@ class ts2dataclassCompiler(Compiler):
             for i in range(len(union)):
                 typ = union[i]
                 if typ[0:5] == 'class':
-                    if True:
-                        cname = re.match(r'class\s*(\w+)\s*:', typ).group(1)
-                        self.local_classes[-1].append(typ)
-                        union[i] = cname
-                        self.referred_objects.setdefault('.'.join(
-                            self.obj_name[:-1] + [to_varname(self.obj_name[-1])]), []).append(cname)
-                    else:
-                        union[i] = 'Dict'
-            if top_level:
-                self.obj_name.pop()
-                preface = self.render_local_classes().replace('\n    ', '\n')
+                    cname = re.match(r'class\s*(\w+)\s*:', typ).group(1)
+                    self.local_classes[-1].append(typ)
+                    union[i] = cname
+                    self.referred_objects.setdefault(
+                        self.qualified_obj_name(varname=True), []).append(cname)
+            if self.is_toplevel():
+                preface = self.render_local_classes()
+                self.local_classes.append([])
             else:
                 preface = ''
             if self.use_py308_literal_type and \
