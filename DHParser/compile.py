@@ -162,7 +162,7 @@ class Compiler:
         self._debug_already_compiled = set()              # type: Set[Node]
         self.finalizers = []  # type: List[Tuple[Callable, Tuple]]
 
-    def prepare(self) -> None:
+    def prepare(self, root: Node) -> None:
         """
         A preparation method that will be called after everything else has
         been initialized and immediately before compilation starts. This method
@@ -170,14 +170,14 @@ class Compiler:
         """
         pass
 
-    def finalize(self) -> None:
+    def finalize(self, result: Any) -> Any:
         """
         A finalization method that is called after compilation has finished and
         after all tasks from the finalizers stack have been executed
         """
-        pass
+        return result
 
-    def __call__(self, root: RootNode) -> Any:
+    def __call__(self, root: Node) -> Any:
         """
         Compiles the abstract syntax tree with the root node `node` and
         returns the compiled code. It is up to subclasses implementing
@@ -190,12 +190,12 @@ class Compiler:
         self._dirty_flag = True
         self.tree = root
         # self.source = source  # type: str
-        self.prepare()
+        self.prepare(root)
         result = self.compile(root)
         while self.finalizers:
             task, parameters = self.finalizers.pop()
             task(*parameters)
-        self.finalize()
+        result = self.finalize(result)
         return result
 
     def fallback_compiler(self, node: Node, block_attribute_visitors: bool=False) -> Any:

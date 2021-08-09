@@ -256,6 +256,7 @@ class TestGrammarTest:
                               grammar_provider(ARITHMETIC_EBNF),
                               lambda : ARITHMETIC_EBNFTransform,
                               'REPORT_TestGrammarTest')
+        print(errata)
         assert errata
 
 

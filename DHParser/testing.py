@@ -88,6 +88,33 @@ RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE)
 RX_COMMENT = re.compile(r'\s*[#;].*(?:\n|$)')
 
 
+def normalize_code(testcode: str, full_normalization: bool=False) -> str:
+    """Removes leading and trailing empty lines (if full_normalization ist True)
+    and leading indentation (always) from multiline text. Single line text
+    will be returned unchanged.
+    """
+    lines = testcode.split('\n')
+    if len(lines) > 1:
+        indent = sys.maxsize
+        for i in range(1, len(lines)):
+            line = lines[i]
+            if full_normalization:
+                lines[i] = line.rstrip()
+            if line:
+                indent = min(indent, len(line) - len(line.lstrip()))
+        if indent > 0 and indent != sys.maxsize:
+            for i in range(1, len(lines)):
+                lines[i] = lines[i][indent:]
+        if full_normalization:
+            for i in range(len(lines)):
+                if lines[i]:  break
+            for k in range(len(lines) - 1, -1, -1):
+                if lines[k]:  break
+            lines = lines[i:k + 1]
+        testcode = '\n'.join(lines)
+    return testcode
+
+
 def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
     """ Reads grammar unit tests contained in a file in config file (.ini)
     syntax.
@@ -129,14 +156,9 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
         #     SyntaxError('No entries in section [%s:%s]' % (stage, symbol))
         while entry_match:
             testkey, testcode = [group for group in entry_match.groups() if group is not None]
-            lines = testcode.split('\n')
-            if len(lines) > 1:
-                indent = sys.maxsize
-                for line in lines[1:]:
-                    indent = min(indent, len(line) - len(line.lstrip()))
-                for i in range(1, len(lines)):
-                    lines[i] = lines[i][indent:]
-                testcode = '\n'.join(lines)
+            testcode = normalize_code(
+                testcode, full_normalization=
+                stage not in ('match', 'fail', 'ast', 'cst'))
             # unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
             test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
             if testkey.strip('*') in test or (testkey.strip('*') + '*') in test:
@@ -418,10 +440,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     for parser_name, tests in test_unit.items():
         # if not get_config_value('test_parallelization'):
         #     print('  Testing parser: ' + parser_name)
-        if parser_name not in parser:
-            raise SyntaxError(
-                f'Unknown parser "{parser_name}" in test(s) '
-                f'{", ".join([repr(t) for t in tests.keys()])} in unit "{unit_name}"!')
 
         track_history = get_config_value('history_tracking')
         try:
@@ -494,7 +512,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 ast_errors = [e for e in ast.errors if e not in old_errors]
                 add_errors_to_errata(ast_errors)
 
+            # compilation-tests
+
             if transformation_stages or show:
+                if parser_name not in parser:
+                    # fail hard when trying a compiliation test with a non-existing
+                    # parser (resp. node-type), because otherwise obscure subsequent
+                    # errors can occur. (Eventually develop a better solution, that ist...)
+                    raise SyntaxError(
+                        f'Unknown parser "{parser_name}" in test(s) '
+                        f'{", ".join([repr(t) for t in tests.keys()])} in unit "{unit_name}"!')
                 old_errors = set(ast.errors)
                 try:
                     targets = run_pipeline(junctions, {'ast': copy.deepcopy(ast)},
@@ -502,10 +529,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 except ValueError as e:
                     raise SyntaxError(f'Compilation-Test {test_name} of parser {parser_name} '
                                       f'failed with:\n{str(e)}')
-                # except Exception as e:
-                #     raise AssertionError(
-                #         f'Partial-Compilation of {test_name} with parser {parser_name} '
-                #         f'failed with {repr(e)} when compiling:\n {test_code}')
                 t_errors: Dict[str, List[Error]] = {}
                 for stage in transformation_stages | show:
                     tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
@@ -568,6 +591,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                             compare = get(tests, stage, test_name).strip('\n')
                             if compare:
                                 test_str = targets[stage][0]
+                                # if stage not in ('match', 'fail', 'ast', 'cst'):
+                                test_str = normalize_code(
+                                    test_str, full_normalization=
+                                    stage not in ('match', 'fail', 'ast', 'cst'))
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
                                     errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'

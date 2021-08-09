@@ -52,7 +52,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    pick_from_context, json_dumps
+    pick_from_context, json_dumps, RootNode
 from DHParser.server import pp_json
 
 
@@ -277,15 +277,35 @@ class ts2dataclassCompiler(Compiler):
                 tl_str = ', '.join(type_list)
                 info.append(f"\n    '{varname}': [{tl_str}]")
             info_str = '{' + ','.join(info) + '\n}'
-            references.append(f"{qualified_class_name}.type_info__ = {info_str}")
+            references.append(f"{qualified_class_name}.child_obj_types__ = {info_str}")
         return '\n'.join(references)
 
     def serialize_defaults(self) -> str:
         defaults = []
-        for classname, variables in self.default_values.items():
+        for qualified_class_name, variables in self.default_values.items():
+            obj_defaults = []
             for variable, value in variables.items():
-                defaults.append(f"{classname}.{variable} = {value}")
+                obj_defaults.append(f"\n    '{variable}': {repr(value)}")
+            obj_defaults_str = '{' + ','.join(obj_defaults) + '\n}'
+            defaults.append(f"{qualified_class_name}.optional_fields = {obj_defaults_str}")
         return '\n'.join(defaults)
+
+    def prepare(self, root: Node) ->None:
+        type_aliases = {nd['identifier'].content for nd in root.select_children('type_alias')}
+        namespaces = {nd['identifier'].content for nd in root.select_children('namespace')}
+        self.overloaded_type_names = type_aliases & namespaces
+        return None
+
+    def finalize(self, result: Any) -> Any:
+        code_blocks = [IMPORTS] if self.tree.tag_name == 'document' else []
+        code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
+                           '\g<1>@dataclass\n\g<1>class ', result))
+        if '' in self.default_values:  del self.default_values['']
+        if '' in self.referred_objects:  del self.referred_objects['']
+        code_blocks.append(self.serialize_references())
+        code_blocks.append(self.serialize_defaults())
+        cooked = '\n\n'.join(code_blocks)
+        return cooked
 
     def on_EMPTY__(self, node) -> str:
         return ''
@@ -294,18 +314,7 @@ class ts2dataclassCompiler(Compiler):
         raise ValueError('Malformed syntax-tree!')
 
     def on_document(self, node) -> str:
-        type_aliases = {nd['identifier'].content for nd in node.select_children('type_alias')}
-        namespaces = {nd['identifier'].content for nd in node.select_children('namespace')}
-        self.overloaded_type_names = type_aliases & namespaces
-        raw = '\n\n'.join(self.compile(child) for child in node.children)
-        cooked = re.sub(r'\s*class (?!.*?Enum\))', '\n\n\n@dataclass\nclass ', raw)
-        code_blocks = [IMPORTS, cooked]
-        if '' in self.default_values:  del self.default_values['']
-        if '' in self.referred_objects:  del self.referred_objects['']
-        code_blocks.append(self.serialize_references())
-        code_blocks.append(self.serialize_defaults())
-        cooked = '\n\n\n'.join(code_blocks)
-        return cooked
+        return '\n\n'.join(self.compile(child) for child in node.children)
 
     def render_local_classes(self) -> str:
         if self.local_classes[-1]:
@@ -345,9 +354,6 @@ class ts2dataclassCompiler(Compiler):
         interface += ('    ' + self.render_local_classes().replace('\n', '\n    ')).rstrip(' ')
         self.known_types.add(name)
         self.obj_name.pop()
-        print(self.serialize_defaults())
-        print(self.referred_objects)
-        print(self.serialize_references())
         return preface + interface + '    ' + decls.replace('\n', '\n    ')
 
     def on_type_parameter(self, node) -> str:
@@ -382,17 +388,17 @@ class ts2dataclassCompiler(Compiler):
         identifier = self.compile(node['identifier'])
         self.obj_name.append(to_typename(identifier))
         T = self.compile(node['types']) if 'types' in node else 'Any'
-        self.obj_name.pop()
+        typename = self.obj_name.pop()
         if T[0:5] == 'class':
             self.local_classes[-1].append(T)
-            T = self.obj_name[-1]
+            T = typename  # substitute typename for type
             self.referred_objects.setdefault(
-                self.qualified_obj_name(varname=True), {})[identifier] = [to_typename(identifier)]
+                self.qualified_obj_name(varname=False), {})[identifier] = [to_typename(identifier)]
         else:
             for complex_type in node.select('type_name'):
                 type_name = complex_type.content
                 self.referred_objects.setdefault(
-                    self.qualified_obj_name(varname=True), {})[identifier] = [type_name]
+                    self.qualified_obj_name(varname=False), {})[identifier] = [type_name]
         if 'optional' in node:
             self.default_values.setdefault(self.qualified_obj_name(), {})[identifier] = None
             if T.startswith('Union['):
@@ -465,7 +471,7 @@ class ts2dataclassCompiler(Compiler):
             decls = self.compile(typ)
             return ''.join([f"class {self.obj_name[-1]}:\n    ",
                              self.render_local_classes().replace('\n', '\n    '),
-                             decls.replace('\n', '\n    ')])
+                             decls.replace('\n', '\n    ')])   # maybe add one '\n'?
             # return 'Dict'
         elif typ.tag_name == 'literal':
             literal_typ = typ[0].tag_name
