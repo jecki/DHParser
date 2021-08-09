@@ -273,7 +273,8 @@ class ts2dataclassCompiler(Compiler):
         for qualified_class_name, type_info in self.referred_objects.items():
             info = []
             for varname, type_list in type_info.items():
-                type_list = [qualified_class_name + '.' + typ for typ in type_list]
+                type_list = [((qualified_class_name + '.' + typ) if re.match(r'\d*_', typ[::-1])
+                              else typ) for typ in type_list]
                 tl_str = ', '.join(type_list)
                 info.append(f"\n    '{varname}': [{tl_str}]")
             info_str = '{' + ','.join(info) + '\n}'
@@ -304,8 +305,9 @@ class ts2dataclassCompiler(Compiler):
         if '' in self.referred_objects:  del self.referred_objects['']
         code_blocks.append(self.serialize_references())
         code_blocks.append(self.serialize_defaults())
+        code_blocks.append('')
         cooked = '\n\n'.join(code_blocks)
-        return cooked
+        return re.sub(r'\n\n+', '\n\n\n', cooked)
 
     def on_EMPTY__(self, node) -> str:
         return ''
@@ -314,7 +316,7 @@ class ts2dataclassCompiler(Compiler):
         raise ValueError('Malformed syntax-tree!')
 
     def on_document(self, node) -> str:
-        return '\n\n'.join(self.compile(child) for child in node.children)
+        return '\n\n'.join(self.compile(child) for child in node.children if child.tag_name != 'declaration')
 
     def render_local_classes(self) -> str:
         if self.local_classes[-1]:
@@ -406,7 +408,7 @@ class ts2dataclassCompiler(Compiler):
                   T = T[:-1] + ', None]'
             else:
                 T = f"Optional[{T}]"
-        if self.is_toplevel():
+        if self.is_toplevel() and T[0:5] == 'class':
             preface = self.render_local_classes()
             self.local_classes.append([])
             return preface + f"{identifier}:{to_typename(identifier)}"
@@ -507,6 +509,7 @@ class ts2dataclassCompiler(Compiler):
 
     def on_namespace(self, node) -> str:
         name = self.compile(node['identifier'])
+        if name in self.known_types:  return ''
         self.known_types.add(name)
         save = self.strip_type_from_const
         if all(child.tag_name == 'const' for child in node.children[1:]):
