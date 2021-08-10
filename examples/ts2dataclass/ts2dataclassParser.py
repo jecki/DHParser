@@ -278,7 +278,7 @@ class ts2dataclassCompiler(Compiler):
                 tl_str = ', '.join(type_list)
                 info.append(f"\n    '{varname}': [{tl_str}]")
             info_str = '{' + ','.join(info) + '\n}'
-            references.append(f"{qualified_class_name}.child_obj_types__ = {info_str}")
+            references.append(f"{qualified_class_name}.references__ = {info_str}")
         return '\n'.join(references)
 
     def serialize_defaults(self) -> str:
@@ -288,7 +288,7 @@ class ts2dataclassCompiler(Compiler):
             for variable, value in variables.items():
                 obj_defaults.append(f"\n    '{variable}': {repr(value)}")
             obj_defaults_str = '{' + ','.join(obj_defaults) + '\n}'
-            defaults.append(f"{qualified_class_name}.optional_fields = {obj_defaults_str}")
+            defaults.append(f"{qualified_class_name}.optional__ = {obj_defaults_str}")
         return '\n'.join(defaults)
 
     def prepare(self, root: Node) ->None:

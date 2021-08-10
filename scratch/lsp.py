@@ -133,7 +133,7 @@ def fromdict(D: JSON_Dict, DataClass: Any, keep_dict=True):
             references = DataClass.references__
         except AttributeError:
             DataClass.references__ = {}
-            references = DataClass.references__
+            references = DataClass.references
         for key, value in D.items():
             if isinstance(value, Dict):
                 typ = DataClass.__annotations__[key]
