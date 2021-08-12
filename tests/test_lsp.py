@@ -20,6 +20,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import dataclasses
 import os
 import sys
 
@@ -27,7 +28,35 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 
-from DHParser.lsp import shortlist
+from DHParser import lsp
+from DHParser.lsp import *
+from DHParser.toolkit import dataclasses
+
+
+@dataclasses.dataclass
+class LSPData:
+    processId: int
+    rootUri: str
+    clientCapabilities: Optional[ClientCapabilities] = None
+    serverCapabilities: Optional[ServerCapabilities] = None
+    serverInfo: Dict = dataclasses.field(
+        default_factory=lambda :{"name": "TestLSP", "version": "0.2"})
+
+
+class MyLSP(lsp.LSP):
+    def __init__(self):
+        capabilities = ServerCapabilities()
+        self.data = LSPData(processId=0,
+                            rootUri='',
+                            clientCapabilities=None,
+                            serverCapabilities=capabilities)
+
+    @typed_lsp_func
+    def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
+        self.data.processId = params.processId
+        self.data.rootUri = params.rootUri
+        self.data.clientCapabilities = params.capabilities
+        return InitializeResult(self.data.serverCapabilities, self.data.serverInfo)
 
 
 class TestLSP:
@@ -43,6 +72,14 @@ class TestLSP:
         assert shortlist(long, 'BBC') == (6, 6)
         assert shortlist(long, 'ABBO') == (0, 1)
         assert shortlist(long, 'AA') == (0, 0)
+
+    def test_typed_lsp_funcs(self):
+        params_obj = InitializeParams(capabilities=ClientCapabilities())
+        params_dict = dataclasses.asdict(params_obj)
+        mylsp = MyLSP()
+        print(mylsp.lsp_initialize)
+        result = mylsp.lsp_initialize(params_dict)
+        print(result)
 
 
 if __name__ == "__main__":

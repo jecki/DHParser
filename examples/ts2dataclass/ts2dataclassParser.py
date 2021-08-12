@@ -821,7 +821,17 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
-                        help='Sun batch jobs in a single thread (recommended only for debugging)')
+                        help='Run batch jobs in a single thread (recommended only for debugging)')
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument('-d', '--dataclass', action='store_const', const='dataclass',
+                              help='Use dataclasses.dataclass to represent typescript interfaces')
+    output_group.add_argument('-t', '--typeddict', action='store_const', const='typeddict',
+                              help='Use typing.TypedDict to represent typescript interfaces')
+    output_group.add_argument('-d', '--protocol', action='store_const', const='protocol',
+                              help='Use typing.Protocol to represent typescript interfaces')
+    output_group.add_argument('-t', '--plainclass', action='store_const', const='plainclass',
+                              help='Use plain classes to represent typescript interfaces')
+
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -839,6 +849,9 @@ if __name__ == "__main__":
         set_config_value('resume_notices', True)
         set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
     start_logging(log_dir)
+
+    if args.singlethread:
+        set_config_value('batch_processing_parallelization', False)
 
     if args.xml:
         RESULT_FILE_EXTENSION = '.xml'
