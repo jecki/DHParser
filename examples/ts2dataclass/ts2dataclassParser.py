@@ -216,6 +216,15 @@ from enum import Enum, IntEnum
 from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 """
 
+TYPESCRCIPT_INTERFACE = """
+class TSInterface:
+    def __init__(self, *args, **kwargs):
+        self.__dict__.update(collections.ChainMap(kwargs, self.__class__.optional__)
+        missing = self.__class__.__annotations__.keys().union(
+          C.__annotation__.keys() for C in self.__class__.__bases__) - self.__dict__.keys()
+        if missing:
+            raise AssertionError(str(missing))
+"""
 
 def to_typename(varname: str) -> str:
     assert varname[-1:] != '_' or keyword.iskeyword(varname[:-1]), varname  # and varname[0].islower()
@@ -299,8 +308,15 @@ class ts2dataclassCompiler(Compiler):
 
     def finalize(self, result: Any) -> Any:
         code_blocks = [IMPORTS] if self.tree.tag_name == 'document' else []
-        code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
-                           '\g<1>@dataclass\n\g<1>class ', result))
+        if get_config_value('ts2dataclass.flavour') == 'dataclass':
+            code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
+                               '\g<1>@dataclass\n\g<1>class ', result))
+        else:
+            result = re.sub(r'(?<=(?:\n|^))( *class [^):]*)(?<!Enum)(?=\))',
+                               '\g<1>, TSInterface', result)
+            result = re.sub(r'(?<=(?:\n|^))( *class [^():]*)(?=:)',
+                               '\g<1>(TSInterface)', result)
+            code_blocks.append(result)
         if '' in self.default_values:  del self.default_values['']
         if '' in self.referred_objects:  del self.referred_objects['']
         code_blocks.append(self.serialize_references())
@@ -814,8 +830,6 @@ if __name__ == "__main__":
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')
-    parser.add_argument('-x', '--xml', action='store_const', const='xml',
-                        help='Store result as XML instead of S-expression')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
@@ -823,13 +837,13 @@ if __name__ == "__main__":
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
                         help='Run batch jobs in a single thread (recommended only for debugging)')
     output_group = parser.add_mutually_exclusive_group()
-    output_group.add_argument('-d', '--dataclass', action='store_const', const='dataclass',
+    output_group.add_argument('-c', '--dataclass', action='store_const', const='dataclass',
                               help='Use dataclasses.dataclass to represent typescript interfaces')
     output_group.add_argument('-t', '--typeddict', action='store_const', const='typeddict',
                               help='Use typing.TypedDict to represent typescript interfaces')
-    output_group.add_argument('-d', '--protocol', action='store_const', const='protocol',
+    output_group.add_argument('-p', '--protocol', action='store_const', const='protocol',
                               help='Use typing.Protocol to represent typescript interfaces')
-    output_group.add_argument('-t', '--plainclass', action='store_const', const='plainclass',
+    output_group.add_argument('-l', '--plainclass', action='store_const', const='plainclass',
                               help='Use plain classes to represent typescript interfaces')
 
 
@@ -853,8 +867,10 @@ if __name__ == "__main__":
     if args.singlethread:
         set_config_value('batch_processing_parallelization', False)
 
-    if args.xml:
-        RESULT_FILE_EXTENSION = '.xml'
+    if args.dataclass:
+        set_config_value('ts2dataclass.flavour', 'dataclass')
+    else:
+        set_config_value('ts2dataclass.flavour', 'plainclass')
 
     def echo(message: str):
         if args.verbose:

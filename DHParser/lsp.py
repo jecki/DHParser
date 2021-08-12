@@ -199,11 +199,6 @@ def typed_lsp_func(lsp_function):
 
 ##### BEGIN OF LSP SPECS
 
-from dataclasses import dataclass
-from enum import Enum, IntEnum
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
-
-
 integer = float
 
 
@@ -3307,6 +3302,7 @@ MonikerClientCapabilities.optional__ = {
 Moniker.optional__ = {
     'kind': None
 }
+
 
 
 ##### END OF LSP SPECS
