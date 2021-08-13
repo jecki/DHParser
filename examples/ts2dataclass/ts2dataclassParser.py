@@ -211,6 +211,7 @@ def transform_ts2dataclass(cst):
 
 
 IMPORTS = """
+from collections import ChainMap
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
@@ -219,11 +220,18 @@ from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 TYPESCRCIPT_INTERFACE = """
 class TSInterface:
     def __init__(self, *args, **kwargs):
-        self.__dict__.update(collections.ChainMap(kwargs, self.__class__.optional__)
-        missing = self.__class__.__annotations__.keys().union(
-          C.__annotation__.keys() for C in self.__class__.__bases__) - self.__dict__.keys()
-        if missing:
-            raise AssertionError(str(missing))
+        cls = self.__class__
+        self.__dict__.update(ChainMap(kwargs, cls.optional__))
+        fields = ChainMap(cls.__annotations__, *(C.__annotation__ for C in cls.__bases__))
+        if fields.keys() != self.__dict__.keys():
+            missing = fields.keys() - self.__dict__.keys()
+            wrong = self.__dict__.keys() - fields.keys()
+            msgs = []
+            if missing:
+                msgs.append(f'No value provided for fields: {", ".join(missing)}!')
+            if wrong:
+                msgs.append(f'Fields: {", ".join(wrong)} do not exist in {cls.__name__}!')
+            raise ValueError(' '.join(msgs))
 """
 
 def to_typename(varname: str) -> str:
@@ -307,7 +315,7 @@ class ts2dataclassCompiler(Compiler):
         return None
 
     def finalize(self, result: Any) -> Any:
-        code_blocks = [IMPORTS] if self.tree.tag_name == 'document' else []
+        code_blocks = [IMPORTS, TYPESCRCIPT_INTERFACE] if self.tree.tag_name == 'document' else []
         if get_config_value('ts2dataclass.flavour') == 'dataclass':
             code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
                                '\g<1>@dataclass\n\g<1>class ', result))
