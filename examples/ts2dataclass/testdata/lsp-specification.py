@@ -3032,3 +3032,9 @@ if __name__ == "__main__":
                                          ])
     diag_dict = asdict(diag)
     print(diag_dict)
+    print(asjson_obj([DiagnosticRelatedInformation(
+                          Location('uri1', Range(Position(0, 0), Position(1, 1))), 'ups2'),
+                                          DiagnosticRelatedInformation(
+                          Location('uri2', Range(Position(3, 4), Position(5, 6))), 'ups3')
+                                         ]))
+
