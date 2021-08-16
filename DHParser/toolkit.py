@@ -899,7 +899,7 @@ def expand_table(compact_table: Dict) -> Dict:
 #######################################################################
 
 
-JSON_Type = Union[Dict, Sequence, str, int, None]
+JSON_Type = Union[Dict, Sequence, str, int, float, None]
 JSON_Dict = Dict[str, JSON_Type]
 
 

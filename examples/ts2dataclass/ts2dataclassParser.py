@@ -395,9 +395,9 @@ class ts2dataclassCompiler(Compiler):
             self.known_types.add(alias)
             self.local_classes.append([])
             types = self.compile(node['types'])
-            if types[0:5] == 'class':
-                types.format(class_name=alias)
-                code = types + '\n\n'
+            # if types[0:5] == 'class':
+            #     types.format(class_name=alias)
+            #     code = types + '\n\n'
             preface = self.render_local_classes()
             code = preface + f"{alias} = {types}"
         else:

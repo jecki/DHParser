@@ -1,9 +1,8 @@
 
-import copy
+from collections import ChainMap
 from dataclasses import dataclass
 from enum import Enum, IntEnum
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, ForwardRef, \
-    Iterable, cast
+from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 
 
 class TSICheckLevel(IntEnum):
@@ -15,52 +14,39 @@ class TSICheckLevel(IntEnum):
 TSI_DYNAMIC_CHECK = TSICheckLevel.TYPE_CHECK
 
 
-def derive_types(annotation) -> Tuple:
+def derive_types(annotation) -> List:
     types = []
-    if isinstance(annotation, ForwardRef):
-        annotation = eval(annotation.__forward_arg__)
-    elif isinstance(annotation, str):
+    if isinstance(annotation, str):
         annotation = eval(annotation)
     try:
         origin = annotation.__origin__
-        if origin is Union:
+        if origin in ('Union', 'typing.Union'):
             for t_anno in annotation.__args__:
                 types.extend(derive_types(t_anno))
         else:
             _ = annotation.__args__
             types.append(annotation.__origin__)
     except AttributeError:
-        if annotation is Any:
-            types.append(object)
-        else:
-            types.append(annotation)
-    return tuple(types)
-
-
-def chain_from_bases(cls, chain: str, field: str) -> Dict:
-    try:
-        return cls.__dict__[chain]
-    except KeyError:
-        chained = {}
-        chained.update(getattr(cls, field, {}))
-        for base in cls.__bases__:
-            chained.update(getattr(base, field, {}))
-        setattr(cls, chain, chained)
-        return chained
+        types.append(annotation)
+    print(types)
+    return types
 
 
 class TSInterface:
-    def derive_arg_types__(self, fields):
+    __annotations__ = {}
+    arg_types__ = {}
+
+    def derive_arg_types(self):
         cls = self.__class__
-        assert not hasattr(cls, 'arg_types__')
-        cls.arg_types__ = {param: derive_types(param_type)
-                           for param, param_type in fields.items()}
+        assert not cls.arg_types__
+        for param, param_type in cls.__annotations__.items():
+            arg_types__[param] =
 
     def typecheck__(self, level: TSICheckLevel):
         if level <= TSICheckLevel.NO_CHECK:  return
         # level is at least TSIContract.ARG_CHECK
         cls = self.__class__
-        fields = cls.fields__
+        fields = ChainMap(cls.__annotations__, *(base.__annotations__ for base in cls.__bases__))
         if fields.keys() != self.__dict__.keys():
             missing = fields.keys() - self.__dict__.keys()
             wrong = self.__dict__.keys() - fields.keys()
@@ -69,22 +55,33 @@ class TSInterface:
                 msgs.append(f'missing required arguments: {", ".join(missing)}!')
             if wrong:
                 msgs.append(f'got unexpected parameters: {", ".join(wrong)}!')
-            raise TypeError(' '.join(msgs) + f' Received: {self.__dict__}')
+            raise TypeError(' '.join(msgs))
         if level >= TSICheckLevel.TYPE_CHECK:
-            if not hasattr(cls, 'arg_types__'):
-                self.derive_arg_types__(fields)
-            type_errors = [f'{arg} is not a {typ}' for arg, typ in self.arg_types__.items()
-                           if (not isinstance(self.__dict__[arg], typ)
-                               or (typ == [object] and self.__dict__[arg] is None))]
+            if not cls.arg_types__:
+                cls.arg_types__ = {}
+
+            type_errors = []
+            for param, param_type in cls.__annotations__.items():
+                if isinstance(param_type, str):
+
+                    if hasattr(param_type,  '__args__'):
+
+                    flag = isinstance(self.__dict__[param], param_type)
+                except TypeError as e:
+                    print('TypeError', e, type(param_type), param_type.__dict__)
+                    assert isinstance(param_type, str), f'{param}, {param_type}'
+                    param_type = eval(param_type)
+                    cls.__annotations__[param] = param_type
+                    flag = isinstance(self.__dict__[param], param_type)
+                if not flag:
+                    type_errors.append(f'{param} is not of expected type {param_type}')
             if type_errors:
-                raise TypeError(f'{cls.__name__} got wrong types: ' + ', '.join(type_errors))
+                raise TypeError(f'{cls.__name__}' + ' '.join(type_errors))
 
     def __init__(self, *args, **kwargs):
-        cls = self.__class__
-        fields = chain_from_bases(cls, 'fields__', '__annotations__')
-        args_dict = {kw: arg for kw, arg in zip(fields.keys(), args)}
-        optional_fields = chain_from_bases(cls, 'optional_fields__', 'optional__')
-        self.__dict__.update({**optional_fields, **kwargs, **args_dict})
+        assert not args, "Presently only keyword-arguments are allowed " \
+                         "when instantiating a descendant of TSInterface."
+        self.__dict__.update(ChainMap(kwargs, getattr(self.__class__, 'optional__', {})))
         self.typecheck__(TSI_DYNAMIC_CHECK)
 
     def __getitem__(self, item):
@@ -95,77 +92,6 @@ class TSInterface:
             self.__dict__[key] = value
         else:
             raise ValueError(f'No field named "{key}" in {self.__class__.__name__}')
-
-
-def asjson_obj(data: Union[TSInterface, Dict, List, str, int, float, None],
-               deepcopy: bool = False) -> Union[Dict, List, str, int, float, None]:
-    if data is None:  return None
-    if isinstance(data, TSInterface):
-        try:
-            references = data.references__
-        except AttributeError:
-            references = {}
-        if references:
-            if deepcopy:
-                d = {field: (asjson_obj(value, True)
-                             if field in references else copy.deepcopy(value))
-                     for field, value in data.__dict__.items()}
-            else:
-                d = data.__dict__.copy()
-                for ref in references:  d[ref] = asjson_obj(d[ref], False)
-            return d
-        return copy.deepcopy(data.__dict__) if deepcopy else data.__dict__
-    elif isinstance(data, (list, tuple)):
-        return [asjson_obj(item) for item in data]
-    elif isinstance(data, dict):
-        return {key: asjson_obj(value) for key, value in data}
-    else:
-        assert isinstance(data, (str, int, float, bool, None))
-        return data
-
-
-def asdict(data: TSInterface, deepcopy: bool = False) -> Dict:
-    assert isinstance(data, TSInterface)
-    result = asjson_obj(data, deepcopy)
-    assert isinstance(result, Dict)
-    return cast(Dict, result)
-
-
-def fromjson_obj(d: Union[Dict, List, str, int, float, None],
-                 initial_type: List[type]) \
-        -> Union[TSInterface, Dict, List, str, int, float, None]:
-    if d is None:  return None
-    assert isinstance(initial_type, Iterable)
-    for itype in initial_type:
-        if issubclass(itype, TSInterface):
-            references = chain_from_bases(itype, 'all_refs__', 'references__')
-            refs = {field: fromjson_obj(d[field], typ) for field, typ in references.items()}
-            merged = {**d, **refs}
-            return itype(**merged)
-        elif issubclass(itype, (list, tuple)):
-            try:
-                typ = initial_type.__args__[0]
-                return [fromjson_obj(item, typ) for item in d]
-            except AttributeError:
-                return d
-        elif issubclass(itype, dict):
-            try:
-                typ = initial_type.__args__[1]
-                return {key: fromjson_obj(value, typ) for key, value in d}
-            except AttributeError:
-                return d
-        else:
-            assert issubclass(itype, (str, int, float, bool, None))
-            return d
-
-
-def fromdict(d: Dict, initial_type: Union[type, List[type]]) -> TSInterface:
-    assert isinstance(d, Dict)
-    if not isinstance(initial_type, Iterable):
-        initial_type = [initial_type]
-    result = fromjson_obj(d, initial_type)
-    assert isinstance(result, TSInterface)
-    return result
 
 
 integer = float
@@ -1228,8 +1154,7 @@ class TypeDefinitionOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions,
-                                        StaticRegistrationOptions, TSInterface):
+class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
@@ -2989,35 +2914,10 @@ Moniker.optional__ = {
 }
 
 
-
 if __name__ == "__main__":
-    p = Position(1, 2)
-
     msg = Message(jsonrpc="test")
-    print(asdict(msg))
+    print(msg.__dict__)
     msg = RequestMessage(jsonrpc="test", id=1, method="gogogo")
-    print(asdict(msg))
+    print(msg.__dict__)
     msg = RequestMessage(jsonrpc="test", id="2", method="gogogo", params="[1, 2, 3]")
-    print(asdict(msg))
-    try:
-        _ = ResponseError(code="ABC", message=3, data=False)
-        assert False, "TypeError exptected!"
-    except TypeError:
-        pass
-    diag = Diagnostic(Range(Position(0, 0), Position(1, 1)),
-                      message="hey")
-    diag_dict = asdict(diag)
-    print(diag_dict)
-    diag2 = fromdict(diag_dict, Diagnostic)
-    diag2_dict = asdict(diag2)
-    print(diag2_dict)
-    assert diag_dict == diag2_dict
-
-    tf = TypeDefinitionParams(TextDocumentIdentifier(DocumentUri('URI')), Position(3, 2))
-    tf_dict = asdict(tf)
-    print(tf_dict)
-    tf2 = fromdict(tf_dict, TypeDefinitionParams)
-    tf2_dict = asdict(tf2)
-    print(tf2_dict)
-    assert tf_dict == tf2_dict
-
+    print(msg.__dict__)
