@@ -101,18 +101,15 @@ def asjson_obj(data: Union[TSInterface, Dict, List, str, int, float, None],
                deepcopy: bool = False) -> Union[Dict, List, str, int, float, None]:
     if data is None:  return None
     if isinstance(data, TSInterface):
-        try:
-            references = data.references__
-        except AttributeError:
-            references = {}
+        cls = data.__class__
+        references = chain_from_bases(cls, 'all_refs__', 'references__')
+        optionals = chain_from_bases(cls, 'optional_fields__', 'optional__')
         if references:
-            if deepcopy:
-                d = {field: (asjson_obj(value, True)
-                             if field in references else copy.deepcopy(value))
-                     for field, value in data.__dict__.items()}
-            else:
-                d = data.__dict__.copy()
-                for ref in references:  d[ref] = asjson_obj(d[ref], False)
+            copyfunc = copy.deepcopy if deepcopy else copy.copy
+            d = {field: (asjson_obj(value, True)
+                         if field in references else copyfunc(value))
+                 for field, value in data.__dict__.items()
+                 if value is not None or field not in optionals}
             return d
         return copy.deepcopy(data.__dict__) if deepcopy else data.__dict__
     elif isinstance(data, (list, tuple)):
@@ -139,7 +136,8 @@ def fromjson_obj(d: Union[Dict, List, str, int, float, None],
     for itype in initial_type:
         if issubclass(itype, TSInterface):
             references = chain_from_bases(itype, 'all_refs__', 'references__')
-            refs = {field: fromjson_obj(d[field], typ) for field, typ in references.items()}
+            refs = {field: fromjson_obj(d[field], typ)
+                    for field, typ in references.items() if field in d}
             merged = {**d, **refs}
             return itype(**merged)
         elif issubclass(itype, (list, tuple)):
