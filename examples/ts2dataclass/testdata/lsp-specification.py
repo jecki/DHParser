@@ -3019,3 +3019,16 @@ if __name__ == "__main__":
     print(tf2_dict)
     assert tf_dict == tf2_dict
 
+    dgri = DiagnosticRelatedInformation(
+        Location('uri1', Range(Position(0, 0), Position(1, 1))),
+                 message="ups1")
+
+    diag = Diagnostic(Range(Position(0, 0), Position(1, 1)),
+                      message="hey",
+                      relatedInformation=[DiagnosticRelatedInformation(
+                          Location('uri1', Range(Position(0, 0), Position(1, 1))), 'ups2'),
+                                          DiagnosticRelatedInformation(
+                          Location('uri2', Range(Position(3, 4), Position(5, 6))), 'ups3')
+                                         ])
+    diag_dict = asdict(diag)
+    print(diag_dict)
