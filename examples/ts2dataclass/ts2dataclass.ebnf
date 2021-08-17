@@ -52,7 +52,7 @@ types       = type { "|" type }
 type        = array_of | basic_type | type_name | "(" types ")"
              | mapped_type | declarations_block | type_tuple | literal
 type_name   = identifier
-array_of    = (basic_type | "(" types ")" | identifier) "[]"
+array_of    = (basic_type | "(" types ")" | type_name) "[]"
 type_tuple  = "[" type {"," type} "]"
 mapped_type = "{" map_signature [";"] "}"
 map_signature = index_signature ":" types

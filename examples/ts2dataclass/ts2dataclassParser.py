@@ -102,7 +102,7 @@ class ts2dataclassGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "590d9b568c116d038c4a5a10a680e4c0"
+    source_hash__ = "c4eb6f4d494923a18eaa1002fff54233"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_array_ellipsis$|_top_level_assignment$|_top_level_literal$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -140,8 +140,8 @@ class ts2dataclassGrammar(Grammar):
     map_signature = Series(index_signature, Series(Drop(Text(":")), dwsp__), types)
     mapped_type = Series(Series(Drop(Text("{")), dwsp__), map_signature, Option(Series(Drop(Text(";")), dwsp__)), Series(Drop(Text("}")), dwsp__))
     type_tuple = Series(Series(Drop(Text("[")), dwsp__), type, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), type)), Series(Drop(Text("]")), dwsp__))
-    array_of = Series(Alternative(basic_type, Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), identifier), Series(Drop(Text("[]")), dwsp__))
     type_name = Synonym(identifier)
+    array_of = Series(Alternative(basic_type, Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), type_name), Series(Drop(Text("[]")), dwsp__))
     interface = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("interface")), dwsp__), identifier, Option(type_parameter), Option(extends), declarations_block, mandatory=2)
     type_alias = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("type")), dwsp__), identifier, Series(Drop(Text("=")), dwsp__), types, Series(Drop(Text(";")), dwsp__), mandatory=2)
     namespace = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Series(Drop(Text(";")), dwsp__)))), Series(Drop(Text("}")), dwsp__), mandatory=2)
@@ -217,22 +217,6 @@ from enum import Enum, IntEnum
 from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 """
 
-TYPESCRCIPT_INTERFACE = """
-class TSInterface:
-    def __init__(self, *args, **kwargs):
-        cls = self.__class__
-        self.__dict__.update(ChainMap(kwargs, cls.optional__))
-        fields = ChainMap(cls.__annotations__, *(C.__annotation__ for C in cls.__bases__))
-        if fields.keys() != self.__dict__.keys():
-            missing = fields.keys() - self.__dict__.keys()
-            wrong = self.__dict__.keys() - fields.keys()
-            msgs = []
-            if missing:
-                msgs.append(f'No value provided for fields: {", ".join(missing)}!')
-            if wrong:
-                msgs.append(f'Fields: {", ".join(wrong)} do not exist in {cls.__name__}!')
-            raise ValueError(' '.join(msgs))
-"""
 
 def to_typename(varname: str) -> str:
     assert varname[-1:] != '_' or keyword.iskeyword(varname[:-1]), varname  # and varname[0].islower()
@@ -257,15 +241,13 @@ class ts2dataclassCompiler(Compiler):
         self.use_py310_type_union = get_config_value('ts2dataclass.UsePy310TypeUnion', False)
         if self.use_py310_type_union:  assert sys.version_info >= (3, 10)
         self.use_py308_literal_type = get_config_value('ts2dataclass.UsePy308LiteralType', False)
-        # if self.use_py308_literal_type:  assert sys.version_info >= (3, 8)
-        # self.reorder_fields = get_config_value('ts2dataclass.ReorderFields', True)  # Doesn't work for derived classes
         self.overloaded_type_names: Set[str] = set()
         self.known_types: Set[str] = set()
-        # self.referred_types: Set[str] = set()
         self.local_classes: List[List[str]] = [[]]
         self.base_classes: Dict[str, List[str]] = {}
         self.default_values: Dict = {}
         self.referred_objects: Dict = {}
+        self.basic_type_aliases: Set[str] = set()
         self.obj_name: List[str] = ['TOPLEVEL_']
         self.strip_type_from_const = False
 
@@ -315,7 +297,7 @@ class ts2dataclassCompiler(Compiler):
         return None
 
     def finalize(self, result: Any) -> Any:
-        code_blocks = [IMPORTS, TYPESCRCIPT_INTERFACE] if self.tree.tag_name == 'document' else []
+        code_blocks = [IMPORTS] if self.tree.tag_name == 'document' else []
         if get_config_value('ts2dataclass.flavour', 'plainclass') == 'dataclass':
             code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
                                '\g<1>@dataclass\n\g<1>class ', result))
@@ -327,6 +309,12 @@ class ts2dataclassCompiler(Compiler):
             code_blocks.append(result)
         if '' in self.default_values:  del self.default_values['']
         if '' in self.referred_objects:  del self.referred_objects['']
+        for obj, fields in list(self.referred_objects.items()):
+            for name, type_list in list(fields.items()):
+                if all(t in self.basic_type_aliases for t in type_list):
+                    del fields[name]
+            if not fields:
+                del self.referred_objects[obj]
         code_blocks.append(self.serialize_references())
         code_blocks.append(self.serialize_defaults())
         code_blocks.append('')
@@ -390,14 +378,13 @@ class ts2dataclassCompiler(Compiler):
 
     def on_type_alias(self, node) -> str:
         alias = self.compile(node['identifier'])
+        if all(typ[0].tag_name in ('basic_type', 'literal') for typ in node.select('type')):
+            self.basic_type_aliases.add(alias)
         self.obj_name.append(alias)
         if alias not in self.overloaded_type_names:
             self.known_types.add(alias)
             self.local_classes.append([])
             types = self.compile(node['types'])
-            # if types[0:5] == 'class':
-            #     types.format(class_name=alias)
-            #     code = types + '\n\n'
             preface = self.render_local_classes()
             code = preface + f"{alias} = {types}"
         else:
@@ -869,7 +856,7 @@ if __name__ == "__main__":
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
         set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
+        set_config_value('log_syntax_trees', {'cst', 'ast'})  # don't use a set literal, here
     start_logging(log_dir)
 
     if args.singlethread:

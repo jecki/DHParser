@@ -1,9 +1,15 @@
 
 import copy
-from dataclasses import dataclass
 from enum import Enum, IntEnum
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, ForwardRef, \
+import functools
+from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, \
     Iterable, cast
+
+try:
+    from typing import ForwardRef
+except ImportError:
+    from typing import _ForwardRef  # Python 3.6 compatibility
+    ForwardRef = _ForwardRef
 
 
 class TSICheckLevel(IntEnum):
@@ -19,7 +25,7 @@ def derive_types(annotation) -> Tuple:
     types = []
     if isinstance(annotation, ForwardRef):
         annotation = eval(annotation.__forward_arg__)
-    elif isinstance(annotation, str):
+    elif isinstance(annotation, str):  # really needed?
         annotation = eval(annotation)
     try:
         origin = annotation.__origin__
@@ -84,7 +90,13 @@ class TSInterface:
         fields = chain_from_bases(cls, 'fields__', '__annotations__')
         args_dict = {kw: arg for kw, arg in zip(fields.keys(), args)}
         optional_fields = chain_from_bases(cls, 'optional_fields__', 'optional__')
-        self.__dict__.update({**optional_fields, **kwargs, **args_dict})
+        parameters = {**optional_fields, **kwargs, **args_dict}
+        references = chain_from_bases(cls, 'all_refs__', 'references__')
+        for ref, types in references.items():
+            d = parameters[ref]
+            if isinstance(d, (dict, tuple)):
+                parameters[ref] = fromjson_obj(d, types)
+        self.__dict__.update(parameters)
         self.typecheck__(TSI_DYNAMIC_CHECK)
 
     def __getitem__(self, item):
@@ -96,6 +108,12 @@ class TSInterface:
         else:
             raise ValueError(f'No field named "{key}" in {self.__class__.__name__}')
 
+    def __eq__(self, other):
+        return self.__dict__.keys() == other.__dict__.keys() \
+            and all(v1 == v2 for v1, v2 in zip(self.__dict__.values(), other.__dict__.values()))
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items())})"
 
 def asjson_obj(data: Union[TSInterface, Dict, List, str, int, float, None],
                deepcopy: bool = False) -> Union[Dict, List, str, int, float, None]:
@@ -105,15 +123,17 @@ def asjson_obj(data: Union[TSInterface, Dict, List, str, int, float, None],
         references = chain_from_bases(cls, 'all_refs__', 'references__')
         optionals = chain_from_bases(cls, 'optional_fields__', 'optional__')
         if references:
-            copyfunc = copy.deepcopy if deepcopy else copy.copy
-            d = {field: (asjson_obj(value, True)
-                         if field in references else copyfunc(value))
+            d = {field: (asjson_obj(value, True) if field in references
+                         else (copy.deepcopy(value) if deepcopy else value))
                  for field, value in data.__dict__.items()
                  if value is not None or field not in optionals}
             return d
         return copy.deepcopy(data.__dict__) if deepcopy else data.__dict__
     elif isinstance(data, (list, tuple)):
-        return [asjson_obj(item) for item in data]
+        if deepcopy or (data and isinstance(data[0], TSInterface)):  # assumes uniform list
+            return [asjson_obj(item) for item in data]
+        else:
+            return data
     elif isinstance(data, dict):
         return {key: asjson_obj(value) for key, value in data}
     else:
@@ -128,33 +148,39 @@ def asdict(data: TSInterface, deepcopy: bool = False) -> Dict:
     return cast(Dict, result)
 
 
-def fromjson_obj(d: Union[Dict, List, str, int, float, None],
+def fromjson_obj(d: Union[Dict, List, Tuple, str, int, float, None],
                  initial_type: List[type]) \
         -> Union[TSInterface, Dict, List, str, int, float, None]:
-    if d is None:  return None
+    if isinstance(d, (str, int, float, type(None))):  return d
     assert isinstance(initial_type, Iterable)
+    type_errors = []
     for itype in initial_type:
-        if issubclass(itype, TSInterface):
+        try:
+            origin = getattr(itype, '__origin__', None)
+            if origin is list or origin is List:
+                try:
+                    typ = itype.__args__[0]
+                    return [fromjson_obj(item, [typ]) for item in d]
+                except AttributeError:
+                    return d
+            if origin is dict or origin is Dict:
+                try:
+                    typ = initial_type.__args__[1]
+                    return {key: fromjson_obj(value, [typ]) for key, value in d}
+                except AttributeError:
+                    return d
+            assert issubclass(itype, TSInterface), str(itype)
+            if isinstance(d, tuple):
+                fields = chain_from_bases(itype, 'fields__', '__annotations__')
+                d = {kw: arg for kw, arg in zip(fields.keys(), d)}
             references = chain_from_bases(itype, 'all_refs__', 'references__')
             refs = {field: fromjson_obj(d[field], typ)
                     for field, typ in references.items() if field in d}
             merged = {**d, **refs}
             return itype(**merged)
-        elif issubclass(itype, (list, tuple)):
-            try:
-                typ = initial_type.__args__[0]
-                return [fromjson_obj(item, typ) for item in d]
-            except AttributeError:
-                return d
-        elif issubclass(itype, dict):
-            try:
-                typ = initial_type.__args__[1]
-                return {key: fromjson_obj(value, typ) for key, value in d}
-            except AttributeError:
-                return d
-        else:
-            assert issubclass(itype, (str, int, float, bool, None))
-            return d
+        except TypeError as e:
+            type_errors.append(str(e))
+    raise TypeError(f"No matching types for {d} among {initial_type}:\n" + '\n'.join(type_errors))
 
 
 def fromdict(d: Dict, initial_type: Union[type, List[type]]) -> TSInterface:
@@ -164,6 +190,39 @@ def fromdict(d: Dict, initial_type: Union[type, List[type]]) -> TSInterface:
     result = fromjson_obj(d, initial_type)
     assert isinstance(result, TSInterface)
     return result
+
+
+def json_adaptor(func):
+    params = func.__annotations__
+    if len(params) != 2 or 'return' not in params:
+        raise ValueError(f'Decorator "json_adaptor" does not work with function '
+            f'"{func.__name__}" annotated with "{params}"! '
+            f'LSP functions can have at most one argument. Both the type of the '
+            f' argument and the return type must be specified with annotations.')
+    return_type = params['return']
+    for k in params:
+        if k != 'return':
+            call_type = params[k]
+            break
+    ct_forward = isinstance(call_type, ForwardRef) or isinstance(call_type, str)
+    rt_forward = isinstance(return_type, ForwardRef) or isinstance(return_type, str)
+    resolve_types = ct_forward or rt_forward
+
+    @functools.wraps(func)
+    def adaptor(*args, **kwargs):
+        nonlocal resolve_types, return_type, call_type
+        if resolve_types:
+            if isinstance(call_type, ForwardRef):  call_type = call_type.__forward_arg__
+            elif isinstance(call_type, str):  call_type = eval(call_type)
+            if isinstance(return_type, ForwardRef):  return_type = return_type.__forward_arg__
+            elif isinstance(return_type, str):  return_type = eval(return_type)
+            resolve_types = False
+        dict_obj = args[0] if args else kwargs
+        call_params = fromjson_obj(dict_obj, [call_type])
+        return_val = func(call_params)
+        return asjson_obj(return_val)
+
+    return adaptor
 
 
 integer = float
@@ -1226,8 +1285,7 @@ class TypeDefinitionOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions,
-                                        StaticRegistrationOptions, TSInterface):
+class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
@@ -1895,7 +1953,6 @@ ResponseMessage.references__ = {
     'error': [ResponseError]
 }
 ProgressParams.references__ = {
-    'token': [ProgressToken],
     'value': [T]
 }
 Range.references__ = {
@@ -1903,66 +1960,44 @@ Range.references__ = {
     'end': [Position]
 }
 Location.references__ = {
-    'uri': [DocumentUri],
     'range': [Range]
 }
 LocationLink.references__ = {
     'originSelectionRange': [Range],
-    'targetUri': [DocumentUri],
     'targetRange': [Range],
     'targetSelectionRange': [Range]
 }
 Diagnostic.references__ = {
     'range': [Range],
-    'severity': [DiagnosticSeverity],
-    'codeDescription': [CodeDescription]
+    'codeDescription': [CodeDescription],
+    'relatedInformation': [List[DiagnosticRelatedInformation]]
 }
 DiagnosticRelatedInformation.references__ = {
     'location': [Location]
 }
-CodeDescription.references__ = {
-    'href': [URI]
-}
 TextEdit.references__ = {
     'range': [Range]
-}
-AnnotatedTextEdit.references__ = {
-    'annotationId': [ChangeAnnotationIdentifier]
 }
 TextDocumentEdit.references__ = {
     'textDocument': [OptionalVersionedTextDocumentIdentifier],
     'edits': [AnnotatedTextEdit]
 }
 CreateFile.references__ = {
-    'uri': [DocumentUri],
-    'options': [CreateFileOptions],
-    'annotationId': [ChangeAnnotationIdentifier]
+    'options': [CreateFileOptions]
 }
 RenameFile.references__ = {
-    'oldUri': [DocumentUri],
-    'newUri': [DocumentUri],
-    'options': [RenameFileOptions],
-    'annotationId': [ChangeAnnotationIdentifier]
+    'options': [RenameFileOptions]
 }
 DeleteFile.references__ = {
-    'uri': [DocumentUri],
-    'options': [DeleteFileOptions],
-    'annotationId': [ChangeAnnotationIdentifier]
+    'options': [DeleteFileOptions]
 }
 WorkspaceEdit.references__ = {
-    'changes': [DocumentUri],
+    'changes': [TextEdit],
     'documentChanges': [DeleteFile],
     'changeAnnotations': [ChangeAnnotation]
 }
 WorkspaceEditClientCapabilities.references__ = {
-    'failureHandling': [FailureHandlingKind],
     'changeAnnotationSupport': [WorkspaceEditClientCapabilities.ChangeAnnotationSupport_]
-}
-TextDocumentIdentifier.references__ = {
-    'uri': [DocumentUri]
-}
-TextDocumentItem.references__ = {
-    'uri': [DocumentUri]
 }
 TextDocumentPositionParams.references__ = {
     'textDocument': [TextDocumentIdentifier],
@@ -1971,20 +2006,10 @@ TextDocumentPositionParams.references__ = {
 TextDocumentRegistrationOptions.references__ = {
     'documentSelector': [DocumentSelector]
 }
-MarkupContent.references__ = {
-    'kind': [MarkupKind]
-}
-WorkDoneProgressParams.references__ = {
-    'workDoneToken': [ProgressToken]
-}
-PartialResultParams.references__ = {
-    'partialResultToken': [ProgressToken]
-}
 InitializeParams.references__ = {
     'clientInfo': [InitializeParams.ClientInfo_],
-    'rootUri': [DocumentUri],
     'capabilities': [ClientCapabilities],
-    'trace': [TraceValue]
+    'workspaceFolders': [WorkspaceFolder]
 }
 TextDocumentClientCapabilities.references__ = {
     'synchronization': [TextDocumentSyncClientCapabilities],
@@ -2043,7 +2068,6 @@ InitializeResult.references__ = {
     'serverInfo': [InitializeResult.ServerInfo_]
 }
 ServerCapabilities.references__ = {
-    'textDocumentSync': [TextDocumentSyncKind],
     'completionProvider': [CompletionOptions],
     'hoverProvider': [HoverOptions],
     'signatureHelpProvider': [SignatureHelpOptions],
@@ -2084,42 +2108,39 @@ ServerCapabilities.Workspace_.FileOperations_.references__ = {
     'didDelete': [FileOperationRegistrationOptions],
     'willDelete': [FileOperationRegistrationOptions]
 }
-SetTraceParams.references__ = {
-    'value': [TraceValue]
-}
-ShowMessageParams.references__ = {
-    'type': [MessageType]
-}
 ShowMessageRequestClientCapabilities.references__ = {
     'messageActionItem': [ShowMessageRequestClientCapabilities.MessageActionItem_]
 }
 ShowMessageRequestParams.references__ = {
-    'type': [MessageType]
+    'actions': [MessageActionItem]
 }
 ShowDocumentParams.references__ = {
-    'uri': [URI],
     'selection': [Range]
 }
-LogMessageParams.references__ = {
-    'type': [MessageType]
+RegistrationParams.references__ = {
+    'registrations': [Registration]
 }
-WorkDoneProgressCreateParams.references__ = {
-    'token': [ProgressToken]
-}
-WorkDoneProgressCancelParams.references__ = {
-    'token': [ProgressToken]
-}
-WorkspaceFolder.references__ = {
-    'uri': [DocumentUri]
+UnregistrationParams.references__ = {
+    'unregisterations': [Unregistration]
 }
 DidChangeWorkspaceFoldersParams.references__ = {
     'event': [WorkspaceFoldersChangeEvent]
 }
-ConfigurationItem.references__ = {
-    'scopeUri': [DocumentUri]
+WorkspaceFoldersChangeEvent.references__ = {
+    'added': [WorkspaceFolder],
+    'removed': [WorkspaceFolder]
 }
-FileEvent.references__ = {
-    'uri': [DocumentUri]
+ConfigurationParams.references__ = {
+    'items': [ConfigurationItem]
+}
+DidChangeWatchedFilesRegistrationOptions.references__ = {
+    'watchers': [FileSystemWatcher]
+}
+DidChangeWatchedFilesParams.references__ = {
+    'changes': [FileEvent]
+}
+WorkspaceSymbolClientCapabilities.SymbolKind_.references__ = {
+    'valueSet': [SymbolKind]
 }
 WorkspaceSymbolClientCapabilities.references__ = {
     'symbolKind': [WorkspaceSymbolClientCapabilities.SymbolKind_],
@@ -2128,32 +2149,39 @@ WorkspaceSymbolClientCapabilities.references__ = {
 ApplyWorkspaceEditParams.references__ = {
     'edit': [WorkspaceEdit]
 }
+FileOperationRegistrationOptions.references__ = {
+    'filters': [FileOperationFilter]
+}
 FileOperationPattern.references__ = {
-    'matches': [FileOperationPatternKind],
     'options': [FileOperationPatternOptions]
 }
 FileOperationFilter.references__ = {
     'pattern': [FileOperationPattern]
 }
+CreateFilesParams.references__ = {
+    'files': [FileCreate]
+}
+RenameFilesParams.references__ = {
+    'files': [FileRename]
+}
+DeleteFilesParams.references__ = {
+    'files': [FileDelete]
+}
 TextDocumentSyncOptions.references__ = {
-    'change': [TextDocumentSyncKind],
     'save': [SaveOptions]
 }
 DidOpenTextDocumentParams.references__ = {
     'textDocument': [TextDocumentItem]
 }
-TextDocumentChangeRegistrationOptions.references__ = {
-    'syncKind': [TextDocumentSyncKind]
-}
 DidChangeTextDocumentParams.references__ = {
-    'textDocument': [VersionedTextDocumentIdentifier]
+    'textDocument': [VersionedTextDocumentIdentifier],
+    'contentChanges': [TextDocumentContentChangeEvent]
 }
 TextDocumentContentChangeEvent_0.references__ = {
     'range': [Range]
 }
 WillSaveTextDocumentParams.references__ = {
-    'textDocument': [TextDocumentIdentifier],
-    'reason': [TextDocumentSaveReason]
+    'textDocument': [TextDocumentIdentifier]
 }
 DidSaveTextDocumentParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
@@ -2165,7 +2193,7 @@ PublishDiagnosticsClientCapabilities.references__ = {
     'tagSupport': [PublishDiagnosticsClientCapabilities.TagSupport_]
 }
 PublishDiagnosticsParams.references__ = {
-    'uri': [DocumentUri]
+    'diagnostics': [Diagnostic]
 }
 CompletionClientCapabilities.CompletionItem_.references__ = {
     'tagSupport': [CompletionClientCapabilities.CompletionItem_.TagSupport_],
@@ -2176,11 +2204,14 @@ CompletionClientCapabilities.references__ = {
     'completionItem': [CompletionClientCapabilities.CompletionItem_],
     'completionItemKind': [CompletionClientCapabilities.CompletionItemKind_]
 }
+CompletionClientCapabilities.CompletionItemKind_.references__ = {
+    'valueSet': [CompletionItemKind]
+}
 CompletionParams.references__ = {
     'context': [CompletionContext]
 }
-CompletionContext.references__ = {
-    'triggerKind': [CompletionTriggerKind]
+CompletionList.references__ = {
+    'items': [CompletionItem]
 }
 InsertReplaceEdit.references__ = {
     'insert': [Range],
@@ -2189,9 +2220,8 @@ InsertReplaceEdit.references__ = {
 CompletionItem.references__ = {
     'kind': [CompletionItemKind],
     'documentation': [MarkupContent],
-    'insertTextFormat': [InsertTextFormat],
-    'insertTextMode': [InsertTextMode],
     'textEdit': [InsertReplaceEdit],
+    'additionalTextEdits': [TextEdit],
     'command': [Command]
 }
 Hover.references__ = {
@@ -2208,11 +2238,14 @@ SignatureHelpParams.references__ = {
     'context': [SignatureHelpContext]
 }
 SignatureHelpContext.references__ = {
-    'triggerKind': [SignatureHelpTriggerKind],
     'activeSignatureHelp': [SignatureHelp]
 }
+SignatureHelp.references__ = {
+    'signatures': [SignatureInformation]
+}
 SignatureInformation.references__ = {
-    'documentation': [MarkupContent]
+    'documentation': [MarkupContent],
+    'parameters': [ParameterInformation]
 }
 ParameterInformation.references__ = {
     'documentation': [MarkupContent]
@@ -2221,8 +2254,10 @@ ReferenceParams.references__ = {
     'context': [ReferenceContext]
 }
 DocumentHighlight.references__ = {
-    'range': [Range],
-    'kind': [DocumentHighlightKind]
+    'range': [Range]
+}
+DocumentSymbolClientCapabilities.SymbolKind_.references__ = {
+    'valueSet': [SymbolKind]
 }
 DocumentSymbolClientCapabilities.references__ = {
     'symbolKind': [DocumentSymbolClientCapabilities.SymbolKind_],
@@ -2234,7 +2269,8 @@ DocumentSymbolParams.references__ = {
 DocumentSymbol.references__ = {
     'kind': [SymbolKind],
     'range': [Range],
-    'selectionRange': [Range]
+    'selectionRange': [Range],
+    'children': [DocumentSymbol]
 }
 SymbolInformation.references__ = {
     'kind': [SymbolKind],
@@ -2252,8 +2288,11 @@ CodeActionParams.references__ = {
     'range': [Range],
     'context': [CodeActionContext]
 }
+CodeActionContext.references__ = {
+    'diagnostics': [Diagnostic]
+}
 CodeAction.references__ = {
-    'kind': [CodeActionKind],
+    'diagnostics': [Diagnostic],
     'disabled': [CodeAction.Disabled_],
     'edit': [WorkspaceEdit],
     'command': [Command]
@@ -2269,8 +2308,7 @@ DocumentLinkParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
 }
 DocumentLink.references__ = {
-    'range': [Range],
-    'target': [DocumentUri]
+    'range': [Range]
 }
 DocumentColorParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
@@ -2285,7 +2323,8 @@ ColorPresentationParams.references__ = {
     'range': [Range]
 }
 ColorPresentation.references__ = {
-    'textEdit': [TextEdit]
+    'textEdit': [TextEdit],
+    'additionalTextEdits': [TextEdit]
 }
 DocumentFormattingParams.references__ = {
     'textDocument': [TextDocumentIdentifier],
@@ -2306,7 +2345,8 @@ FoldingRangeParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
 }
 SelectionRangeParams.references__ = {
-    'textDocument': [TextDocumentIdentifier]
+    'textDocument': [TextDocumentIdentifier],
+    'positions': [Position]
 }
 SelectionRange.references__ = {
     'range': [Range],
@@ -2314,7 +2354,6 @@ SelectionRange.references__ = {
 }
 CallHierarchyItem.references__ = {
     'kind': [SymbolKind],
-    'uri': [DocumentUri],
     'range': [Range],
     'selectionRange': [Range]
 }
@@ -2322,13 +2361,15 @@ CallHierarchyIncomingCallsParams.references__ = {
     'item': [CallHierarchyItem]
 }
 CallHierarchyIncomingCall.references__ = {
-    'from_': [CallHierarchyItem]
+    'from_': [CallHierarchyItem],
+    'fromRanges': [Range]
 }
 CallHierarchyOutgoingCallsParams.references__ = {
     'item': [CallHierarchyItem]
 }
 CallHierarchyOutgoingCall.references__ = {
-    'to': [CallHierarchyItem]
+    'to': [CallHierarchyItem],
+    'fromRanges': [Range]
 }
 SemanticTokensClientCapabilities.Requests_.references__ = {
     'range': [SemanticTokensClientCapabilities.Requests_.Range_1],
@@ -2348,9 +2389,18 @@ SemanticTokensParams.references__ = {
 SemanticTokensDeltaParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
 }
+SemanticTokensDelta.references__ = {
+    'edits': [SemanticTokensEdit]
+}
+SemanticTokensDeltaPartialResult.references__ = {
+    'edits': [SemanticTokensEdit]
+}
 SemanticTokensRangeParams.references__ = {
     'textDocument': [TextDocumentIdentifier],
     'range': [Range]
+}
+LinkedEditingRanges.references__ = {
+    'ranges': [Range]
 }
 Moniker.references__ = {
     'unique': [UniquenessLevel],
@@ -2988,6 +3038,7 @@ Moniker.optional__ = {
 
 
 
+
 if __name__ == "__main__":
     p = Position(1, 2)
 
@@ -3037,4 +3088,15 @@ if __name__ == "__main__":
                                           DiagnosticRelatedInformation(
                           Location('uri2', Range(Position(3, 4), Position(5, 6))), 'ups3')
                                          ]))
+    diag2 = fromdict(diag_dict, Diagnostic)
+    diag2_dict = asdict(diag2)
+    assert diag2_dict == diag_dict
 
+    r = Range(Position(0, 0), {'line': 1, 'character': 1})
+    print(asdict(r))
+    print(r)
+    s = Range(Position(0, 0), (1, 1))
+    print(asdict(s))
+    print(r == s)
+    t = repr(r)
+    print(eval(t) == r == s)
