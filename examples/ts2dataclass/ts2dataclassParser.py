@@ -316,7 +316,7 @@ class ts2dataclassCompiler(Compiler):
 
     def finalize(self, result: Any) -> Any:
         code_blocks = [IMPORTS, TYPESCRCIPT_INTERFACE] if self.tree.tag_name == 'document' else []
-        if get_config_value('ts2dataclass.flavour') == 'dataclass':
+        if get_config_value('ts2dataclass.flavour', 'plainclass') == 'dataclass':
             code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
                                '\g<1>@dataclass\n\g<1>class ', result))
         else:

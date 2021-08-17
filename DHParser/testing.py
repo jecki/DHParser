@@ -591,10 +591,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                             compare = get(tests, stage, test_name).strip('\n')
                             if compare:
                                 test_str = targets[stage][0]
-                                # if stage not in ('match', 'fail', 'ast', 'cst'):
-                                test_str = normalize_code(
-                                    test_str, full_normalization=
-                                    stage not in ('match', 'fail', 'ast', 'cst'))
+                                if stage in ('match', 'fail', 'ast', 'cst'):
+                                    test_str = normalize_code(test_str, full_normalization=False)
+                                else:
+                                    test_str = test_str.strip('\n')
+                                # test_str = normalize_code(
+                                #     test_str, full_normalization=
+                                #     stage not in ('match', 'fail', 'ast', 'cst'))
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
                                     errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'

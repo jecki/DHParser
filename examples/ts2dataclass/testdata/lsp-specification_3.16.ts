@@ -178,20 +178,7 @@ type URI = string;
  * Client capabilities specific to regular expressions.
  */
 export interface RegularExpressionsClientCapabilities {
-	/**
-	 * The engine's name.
-	 */
-	engine: string;
-
-	/**
-	 * The engine's version.
-	 */
-	version?: string;
-}
-
-export const EOL: string[] = ['\n', '\r\n', '\r'];
-
-interface Position {
+	/**interface Position {
 	/**
 	 * Line position in a document (zero-based).
 	 */
@@ -224,6 +211,19 @@ interface Range {
 	 */
 	end: Position;
 }
+	 * The engine's name.
+	 */
+	engine: string;
+
+	/**
+	 * The engine's version.
+	 */
+	version?: string;
+}
+
+export const EOL: string[] = ['\n', '\r\n', '\r'];
+
+
 
 interface Location {
 	uri: DocumentUri;
