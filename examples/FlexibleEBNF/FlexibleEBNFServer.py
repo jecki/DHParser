@@ -378,7 +378,7 @@ class EBNFLanguageServerProtocol:
             a, b = shortlist(self.completion_labels, chars)
             if a == b:
                 # returning a completion item without insertText-field
-                # supresses the display of VSC's self-generated items
+                # suprpesses the display of VSC's self-generated items
                 # Other than returning None, this does not result
                 # in a cancel event.
                 return [{'lablel': ''}]  # None
