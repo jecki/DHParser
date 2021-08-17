@@ -2469,7 +2469,7 @@ def ensuing_str(context: TreeContext, length: int = -1) -> str:
     return following if length < 0 else following[:length]
 
 
-def select_context_if(context: TreeContext,
+def select_context_if(start_context: TreeContext,
                       match_function: ContextMatchFunction,
                       include_root: bool = False,
                       reverse: bool = False,
@@ -2479,22 +2479,23 @@ def select_context_if(context: TreeContext,
     `match_function` is true, starting from `context`.
     """
 
-    def recursive(ctx, include_root):
+    def recursive(ctx):
         nonlocal match_function, reverse, skip_subtree
-        if include_root and match_function(ctx):
+        if match_function(ctx):
             yield ctx
         top = ctx[-1]
         child_iterator = reversed(top._children) if reverse else top._children
         for child in child_iterator:
             child_ctx = ctx + [child]
-            if match_function(child_ctx):
-                yield child_ctx
-            if child._children and not skip_subtree(child_ctx):
-                yield from recursive(child_ctx, include_root=False)
+            if not skip_subtree(child_ctx):
+                yield from recursive(child_ctx)
 
-    context = context.copy()
+    context = start_context.copy()
     while context:
-        yield from recursive(context, include_root)
+        if include_root:
+            yield from recursive(context)
+        else:
+            include_root = True
         node = context.pop()
         edge, delta = (0, -1) if reverse else (-1, 1)
         while context and node is context[-1]._children[edge]:
@@ -2506,7 +2507,7 @@ def select_context_if(context: TreeContext,
             i = parent.index(node)
             nearest_sibling = parent._children[i + delta]
             context.append(nearest_sibling)
-            include_root = True
+            # include_root = True
 
     # context = context.copy()
     # while context:
@@ -2528,7 +2529,7 @@ def select_context_if(context: TreeContext,
     #         context.extend(innermost_ctx)
 
 
-def select_context(context: TreeContext,
+def select_context(start_context: TreeContext,
                    criterion: CriteriaType,
                    include_root: bool = False,
                    reverse: bool = False,
@@ -2538,11 +2539,11 @@ def select_context(context: TreeContext,
     descendants, the last one being the matching node) instead of just
     the matching nodes.
     """
-    return select_context_if(context, create_context_match_function(criterion),
+    return select_context_if(start_context, create_context_match_function(criterion),
                              include_root, reverse, skip_subtree)
 
 
-def pick_context(context: TreeContext,
+def pick_context(start_context: TreeContext,
                  criterion: CriteriaType,
                  include_root: bool = False,
                  reverse: bool = False,
@@ -2552,7 +2553,9 @@ def pick_context(context: TreeContext,
     relative to `self` is returned.
     """
     try:
-        return next(select_context(context, criterion, reverse=reverse))
+        return next(select_context(
+            start_context, criterion, include_root=include_root, reverse=reverse,
+            skip_subtree=skip_subtree))
     except StopIteration:
         return None
 

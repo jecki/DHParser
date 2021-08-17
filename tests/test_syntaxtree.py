@@ -860,8 +860,8 @@ class TestContextNavigation:
 
     def test_standalone_pick_context(self):
         start = self.tree.pick_context('A', include_root=True)
-        anfang = pick_context(start, LEAF_CONTEXT)
-        ende = pick_context(start, LEAF_CONTEXT, reverse=True)
+        anfang = pick_context(start, LEAF_CONTEXT, include_root=True)
+        ende = pick_context(start, LEAF_CONTEXT, include_root=True, reverse=True)
         assert anfang[-1].tag_name == 'B'
         assert ende[-1].tag_name == 'F'
 
