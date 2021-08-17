@@ -331,7 +331,7 @@ def json_adaptor(func):
         dict_obj = args[0] if args else kwargs
         call_params = fromjson_obj(dict_obj, [call_type])
         return_val = func(call_params)
-        return asjson_obj(return_val)
+        return asjson_obj(return_val) if return_val is not None else None
 
     return adaptor
 
@@ -353,27 +353,23 @@ uinteger = float
 decimal = float
 
 
-@dataclass
-class Message:
+class Message(TSInterface):
     jsonrpc: str
 
 
-@dataclass
-class RequestMessage(Message):
+class RequestMessage(Message, TSInterface):
     id: Union[int, str]
     method: str
     params: Union[List, object, None]
 
 
-@dataclass
-class ResponseMessage(Message):
+class ResponseMessage(Message, TSInterface):
     id: Union[int, str, None]
     result: Union[str, float, bool, object, None]
     error: Optional['ResponseError']
 
 
-@dataclass
-class ResponseError:
+class ResponseError(TSInterface):
     code: int
     message: str
     data: Union[str, float, bool, List, object, None]
@@ -397,14 +393,12 @@ class ErrorCodes(IntEnum):
     lspReservedErrorRangeEnd = -32800
 
 
-@dataclass
-class NotificationMessage(Message):
+class NotificationMessage(Message, TSInterface):
     method: str
     params: Union[List, object, None]
 
 
-@dataclass
-class CancelParams:
+class CancelParams(TSInterface):
     id: Union[int, str]
 
 
@@ -414,8 +408,7 @@ ProgressToken = Union[int, str]
 T = TypeVar('T')
 
 
-@dataclass
-class ProgressParams(Generic[T]):
+class ProgressParams(Generic[T], TSInterface):
     token: ProgressToken
     value: 'T'
 
@@ -426,8 +419,7 @@ DocumentUri = str
 URI = str
 
 
-@dataclass
-class RegularExpressionsClientCapabilities:
+class RegularExpressionsClientCapabilities(TSInterface):
     engine: str
     version: Optional[str]
 
@@ -435,34 +427,29 @@ class RegularExpressionsClientCapabilities:
 EOL: List[str] = ['\n', '\r\n', '\r']
 
 
-@dataclass
-class Position:
+class Position(TSInterface):
     line: int
     character: int
 
 
-@dataclass
-class Range:
+class Range(TSInterface):
     start: Position
     end: Position
 
 
-@dataclass
-class Location:
+class Location(TSInterface):
     uri: DocumentUri
     range: Range
 
 
-@dataclass
-class LocationLink:
+class LocationLink(TSInterface):
     originSelectionRange: Optional[Range]
     targetUri: DocumentUri
     targetRange: Range
     targetSelectionRange: Range
 
 
-@dataclass
-class Diagnostic:
+class Diagnostic(TSInterface):
     range: Range
     severity: Optional['DiagnosticSeverity']
     code: Union[int, str, None]
@@ -486,32 +473,27 @@ class DiagnosticTag(IntEnum):
     Deprecated = 2
 
 
-@dataclass
-class DiagnosticRelatedInformation:
+class DiagnosticRelatedInformation(TSInterface):
     location: Location
     message: str
 
 
-@dataclass
-class CodeDescription:
+class CodeDescription(TSInterface):
     href: URI
 
 
-@dataclass
-class Command:
+class Command(TSInterface):
     title: str
     command: str
     arguments: Optional[List[Any]]
 
 
-@dataclass
-class TextEdit:
+class TextEdit(TSInterface):
     range: Range
     newText: str
 
 
-@dataclass
-class ChangeAnnotation:
+class ChangeAnnotation(TSInterface):
     label: str
     needsConfirmation: Optional[bool]
     description: Optional[str]
@@ -520,39 +502,33 @@ class ChangeAnnotation:
 ChangeAnnotationIdentifier = str
 
 
-@dataclass
-class AnnotatedTextEdit(TextEdit):
+class AnnotatedTextEdit(TextEdit, TSInterface):
     annotationId: ChangeAnnotationIdentifier
 
 
-@dataclass
-class TextDocumentEdit:
+class TextDocumentEdit(TSInterface):
     textDocument: 'OptionalVersionedTextDocumentIdentifier'
     edits: List[Union[TextEdit, AnnotatedTextEdit]]
 
 
-@dataclass
-class CreateFileOptions:
+class CreateFileOptions(TSInterface):
     overwrite: Optional[bool]
     ignoreIfExists: Optional[bool]
 
 
-@dataclass
-class CreateFile:
+class CreateFile(TSInterface):
     kind: str
     uri: DocumentUri
     options: Optional[CreateFileOptions]
     annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-@dataclass
-class RenameFileOptions:
+class RenameFileOptions(TSInterface):
     overwrite: Optional[bool]
     ignoreIfExists: Optional[bool]
 
 
-@dataclass
-class RenameFile:
+class RenameFile(TSInterface):
     kind: str
     oldUri: DocumentUri
     newUri: DocumentUri
@@ -560,31 +536,26 @@ class RenameFile:
     annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-@dataclass
-class DeleteFileOptions:
+class DeleteFileOptions(TSInterface):
     recursive: Optional[bool]
     ignoreIfNotExists: Optional[bool]
 
 
-@dataclass
-class DeleteFile:
+class DeleteFile(TSInterface):
     kind: str
     uri: DocumentUri
     options: Optional[DeleteFileOptions]
     annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-@dataclass
-class WorkspaceEdit:
+class WorkspaceEdit(TSInterface):
     changes: Optional[Dict[DocumentUri, List[TextEdit]]]
     documentChanges: Union[List[TextDocumentEdit], List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]], None]
     changeAnnotations: Optional[Dict[str, ChangeAnnotation]]
 
 
-@dataclass
-class WorkspaceEditClientCapabilities:
-    @dataclass
-    class ChangeAnnotationSupport_:
+class WorkspaceEditClientCapabilities(TSInterface):
+    class ChangeAnnotationSupport_(TSInterface):
         groupsOnLabel: Optional[bool]
     documentChanges: Optional[bool]
     resourceOperations: Optional[List['ResourceOperationKind']]
@@ -606,37 +577,31 @@ class FailureHandlingKind(Enum):
     Undo = 'undo'
 
 
-@dataclass
-class TextDocumentIdentifier:
+class TextDocumentIdentifier(TSInterface):
     uri: DocumentUri
 
 
-@dataclass
-class TextDocumentItem:
+class TextDocumentItem(TSInterface):
     uri: DocumentUri
     languageId: str
     version: int
     text: str
 
 
-@dataclass
-class VersionedTextDocumentIdentifier(TextDocumentIdentifier):
+class VersionedTextDocumentIdentifier(TextDocumentIdentifier, TSInterface):
     version: int
 
 
-@dataclass
-class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier):
+class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier, TSInterface):
     version: Union[int, None]
 
 
-@dataclass
-class TextDocumentPositionParams:
+class TextDocumentPositionParams(TSInterface):
     textDocument: TextDocumentIdentifier
     position: Position
 
 
-@dataclass
-class DocumentFilter:
+class DocumentFilter(TSInterface):
     language: Optional[str]
     scheme: Optional[str]
     pattern: Optional[str]
@@ -645,13 +610,11 @@ class DocumentFilter:
 DocumentSelector = List[DocumentFilter]
 
 
-@dataclass
-class StaticRegistrationOptions:
+class StaticRegistrationOptions(TSInterface):
     id: Optional[str]
 
 
-@dataclass
-class TextDocumentRegistrationOptions:
+class TextDocumentRegistrationOptions(TSInterface):
     documentSelector: Union[DocumentSelector, None]
 
 
@@ -660,20 +623,17 @@ class MarkupKind(Enum):
     Markdown = 'markdown'
 
 
-@dataclass
-class MarkupContent:
+class MarkupContent(TSInterface):
     kind: MarkupKind
     value: str
 
 
-@dataclass
-class MarkdownClientCapabilities:
+class MarkdownClientCapabilities(TSInterface):
     parser: str
     version: Optional[str]
 
 
-@dataclass
-class WorkDoneProgressBegin:
+class WorkDoneProgressBegin(TSInterface):
     kind: str
     title: str
     cancellable: Optional[bool]
@@ -681,42 +641,35 @@ class WorkDoneProgressBegin:
     percentage: Optional[int]
 
 
-@dataclass
-class WorkDoneProgressReport:
+class WorkDoneProgressReport(TSInterface):
     kind: str
     cancellable: Optional[bool]
     message: Optional[str]
     percentage: Optional[int]
 
 
-@dataclass
-class WorkDoneProgressEnd:
+class WorkDoneProgressEnd(TSInterface):
     kind: str
     message: Optional[str]
 
 
-@dataclass
-class WorkDoneProgressParams:
+class WorkDoneProgressParams(TSInterface):
     workDoneToken: Optional[ProgressToken]
 
 
-@dataclass
-class WorkDoneProgressOptions:
+class WorkDoneProgressOptions(TSInterface):
     workDoneProgress: Optional[bool]
 
 
-@dataclass
-class PartialResultParams:
+class PartialResultParams(TSInterface):
     partialResultToken: Optional[ProgressToken]
 
 
 TraceValue = str
 
 
-@dataclass
-class InitializeParams(WorkDoneProgressParams):
-    @dataclass
-    class ClientInfo_:
+class InitializeParams(WorkDoneProgressParams, TSInterface):
+    class ClientInfo_(TSInterface):
         name: str
         version: Optional[str]
     processId: Union[int, None]
@@ -730,8 +683,7 @@ class InitializeParams(WorkDoneProgressParams):
     workspaceFolders: Union[List['WorkspaceFolder'], None]
 
 
-@dataclass
-class TextDocumentClientCapabilities:
+class TextDocumentClientCapabilities(TSInterface):
     synchronization: Optional['TextDocumentSyncClientCapabilities']
     completion: Optional['CompletionClientCapabilities']
     hover: Optional['HoverClientCapabilities']
@@ -760,12 +712,9 @@ class TextDocumentClientCapabilities:
     moniker: Optional['MonikerClientCapabilities']
 
 
-@dataclass
-class ClientCapabilities:
-    @dataclass
-    class Workspace_:
-        @dataclass
-        class FileOperations_:
+class ClientCapabilities(TSInterface):
+    class Workspace_(TSInterface):
+        class FileOperations_(TSInterface):
             dynamicRegistration: Optional[bool]
             didCreate: Optional[bool]
             willCreate: Optional[bool]
@@ -784,13 +733,11 @@ class ClientCapabilities:
         semanticTokens: Optional['SemanticTokensWorkspaceClientCapabilities']
         codeLens: Optional['CodeLensWorkspaceClientCapabilities']
         fileOperations: Optional[FileOperations_]
-    @dataclass
-    class Window_:
+    class Window_(TSInterface):
         workDoneProgress: Optional[bool]
         showMessage: Optional['ShowMessageRequestClientCapabilities']
         showDocument: Optional['ShowDocumentClientCapabilities']
-    @dataclass
-    class General_:
+    class General_(TSInterface):
         regularExpressions: Optional[RegularExpressionsClientCapabilities]
         markdown: Optional[MarkdownClientCapabilities]
     workspace: Optional[Workspace_]
@@ -800,10 +747,8 @@ class ClientCapabilities:
     experimental: Optional[Any]
 
 
-@dataclass
-class InitializeResult:
-    @dataclass
-    class ServerInfo_:
+class InitializeResult(TSInterface):
+    class ServerInfo_(TSInterface):
         name: str
         version: Optional[str]
     capabilities: 'ServerCapabilities'
@@ -814,17 +759,13 @@ class InitializeError(IntEnum):
     unknownProtocolVersion = 1
 
 
-@dataclass
-class InitializeError:
+class InitializeError(TSInterface):
     retry: bool
 
 
-@dataclass
-class ServerCapabilities:
-    @dataclass
-    class Workspace_:
-        @dataclass
-        class FileOperations_:
+class ServerCapabilities(TSInterface):
+    class Workspace_(TSInterface):
+        class FileOperations_(TSInterface):
             didCreate: Optional['FileOperationRegistrationOptions']
             willCreate: Optional['FileOperationRegistrationOptions']
             didRename: Optional['FileOperationRegistrationOptions']
@@ -864,24 +805,20 @@ class ServerCapabilities:
     experimental: Optional[Any]
 
 
-@dataclass
-class InitializedParams:
+class InitializedParams(TSInterface):
     pass
 
 
-@dataclass
-class LogTraceParams:
+class LogTraceParams(TSInterface):
     message: str
     verbose: Optional[str]
 
 
-@dataclass
-class SetTraceParams:
+class SetTraceParams(TSInterface):
     value: TraceValue
 
 
-@dataclass
-class ShowMessageParams:
+class ShowMessageParams(TSInterface):
     type: 'MessageType'
     message: str
 
@@ -893,139 +830,114 @@ class MessageType(IntEnum):
     Log = 4
 
 
-@dataclass
-class ShowMessageRequestClientCapabilities:
-    @dataclass
-    class MessageActionItem_:
+class ShowMessageRequestClientCapabilities(TSInterface):
+    class MessageActionItem_(TSInterface):
         additionalPropertiesSupport: Optional[bool]
     messageActionItem: Optional[MessageActionItem_]
 
 
-@dataclass
-class ShowMessageRequestParams:
+class ShowMessageRequestParams(TSInterface):
     type: MessageType
     message: str
     actions: Optional[List['MessageActionItem']]
 
 
-@dataclass
-class MessageActionItem:
+class MessageActionItem(TSInterface):
     title: str
 
 
-@dataclass
-class ShowDocumentClientCapabilities:
+class ShowDocumentClientCapabilities(TSInterface):
     support: bool
 
 
-@dataclass
-class ShowDocumentParams:
+class ShowDocumentParams(TSInterface):
     uri: URI
     external: Optional[bool]
     takeFocus: Optional[bool]
     selection: Optional[Range]
 
 
-@dataclass
-class ShowDocumentResult:
+class ShowDocumentResult(TSInterface):
     success: bool
 
 
-@dataclass
-class LogMessageParams:
+class LogMessageParams(TSInterface):
     type: MessageType
     message: str
 
 
-@dataclass
-class WorkDoneProgressCreateParams:
+class WorkDoneProgressCreateParams(TSInterface):
     token: ProgressToken
 
 
-@dataclass
-class WorkDoneProgressCancelParams:
+class WorkDoneProgressCancelParams(TSInterface):
     token: ProgressToken
 
 
-@dataclass
-class Registration:
+class Registration(TSInterface):
     id: str
     method: str
     registerOptions: Optional[Any]
 
 
-@dataclass
-class RegistrationParams:
+class RegistrationParams(TSInterface):
     registrations: List[Registration]
 
 
-@dataclass
-class Unregistration:
+class Unregistration(TSInterface):
     id: str
     method: str
 
 
-@dataclass
-class UnregistrationParams:
+class UnregistrationParams(TSInterface):
     unregisterations: List[Unregistration]
 
 
-@dataclass
-class WorkspaceFoldersServerCapabilities:
+class WorkspaceFoldersServerCapabilities(TSInterface):
     supported: Optional[bool]
     changeNotifications: Union[str, bool, None]
 
 
-@dataclass
-class WorkspaceFolder:
+class WorkspaceFolder(TSInterface):
     uri: DocumentUri
     name: str
 
 
-@dataclass
-class DidChangeWorkspaceFoldersParams:
+class DidChangeWorkspaceFoldersParams(TSInterface):
     event: 'WorkspaceFoldersChangeEvent'
 
 
-@dataclass
-class WorkspaceFoldersChangeEvent:
+class WorkspaceFoldersChangeEvent(TSInterface):
     added: List[WorkspaceFolder]
     removed: List[WorkspaceFolder]
 
 
-@dataclass
-class DidChangeConfigurationClientCapabilities:
+class DidChangeConfigurationClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class DidChangeConfigurationParams:
+class DidChangeConfigurationParams(TSInterface):
     settings: Any
 
 
-@dataclass
-class ConfigurationParams:
+class ConfigurationParams(TSInterface):
     items: List['ConfigurationItem']
 
 
-@dataclass
-class ConfigurationItem:
+class ConfigurationItem(TSInterface):
     scopeUri: Optional[DocumentUri]
     section: Optional[str]
 
 
-@dataclass
-class DidChangeWatchedFilesClientCapabilities:
+class DidChangeWatchedFilesClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class DidChangeWatchedFilesRegistrationOptions:
+class DidChangeWatchedFilesRegistrationOptions(TSInterface):
     watchers: List['FileSystemWatcher']
 
 
-@dataclass
-class FileSystemWatcher:
+class FileSystemWatcher(TSInterface):
     globPattern: str
     kind: Optional[int]
 
@@ -1036,13 +948,11 @@ class WatchKind(IntEnum):
     Delete = 4
 
 
-@dataclass
-class DidChangeWatchedFilesParams:
+class DidChangeWatchedFilesParams(TSInterface):
     changes: List['FileEvent']
 
 
-@dataclass
-class FileEvent:
+class FileEvent(TSInterface):
     uri: DocumentUri
     type: int
 
@@ -1053,70 +963,57 @@ class FileChangeType(IntEnum):
     Deleted = 3
 
 
-@dataclass
-class WorkspaceSymbolClientCapabilities:
-    @dataclass
-    class SymbolKind_:
+class WorkspaceSymbolClientCapabilities(TSInterface):
+    class SymbolKind_(TSInterface):
         valueSet: Optional[List['SymbolKind']]
-    @dataclass
-    class TagSupport_:
+    class TagSupport_(TSInterface):
         valueSet: List['SymbolTag']
     dynamicRegistration: Optional[bool]
     symbolKind: Optional[SymbolKind_]
     tagSupport: Optional[TagSupport_]
 
 
-@dataclass
-class WorkspaceSymbolOptions(WorkDoneProgressOptions):
+class WorkspaceSymbolOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions):
+class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions, TSInterface):
     pass
 
 
-@dataclass
-class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams):
+class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     query: str
 
 
-@dataclass
-class ExecuteCommandClientCapabilities:
+class ExecuteCommandClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class ExecuteCommandOptions(WorkDoneProgressOptions):
+class ExecuteCommandOptions(WorkDoneProgressOptions, TSInterface):
     commands: List[str]
 
 
-@dataclass
-class ExecuteCommandRegistrationOptions(ExecuteCommandOptions):
+class ExecuteCommandRegistrationOptions(ExecuteCommandOptions, TSInterface):
     pass
 
 
-@dataclass
-class ExecuteCommandParams(WorkDoneProgressParams):
+class ExecuteCommandParams(WorkDoneProgressParams, TSInterface):
     command: str
     arguments: Optional[List[Any]]
 
 
-@dataclass
-class ApplyWorkspaceEditParams:
+class ApplyWorkspaceEditParams(TSInterface):
     label: Optional[str]
     edit: WorkspaceEdit
 
 
-@dataclass
-class ApplyWorkspaceEditResponse:
+class ApplyWorkspaceEditResponse(TSInterface):
     applied: bool
     failureReason: Optional[str]
     failedChange: Optional[int]
 
 
-@dataclass
-class FileOperationRegistrationOptions:
+class FileOperationRegistrationOptions(TSInterface):
     filters: List['FileOperationFilter']
 
 
@@ -1125,52 +1022,43 @@ class FileOperationPatternKind(Enum):
     folder = 'folder'
 
 
-@dataclass
-class FileOperationPatternOptions:
+class FileOperationPatternOptions(TSInterface):
     ignoreCase: Optional[bool]
 
 
-@dataclass
-class FileOperationPattern:
+class FileOperationPattern(TSInterface):
     glob: str
     matches: Optional[FileOperationPatternKind]
     options: Optional[FileOperationPatternOptions]
 
 
-@dataclass
-class FileOperationFilter:
+class FileOperationFilter(TSInterface):
     scheme: Optional[str]
     pattern: FileOperationPattern
 
 
-@dataclass
-class CreateFilesParams:
+class CreateFilesParams(TSInterface):
     files: List['FileCreate']
 
 
-@dataclass
-class FileCreate:
+class FileCreate(TSInterface):
     uri: str
 
 
-@dataclass
-class RenameFilesParams:
+class RenameFilesParams(TSInterface):
     files: List['FileRename']
 
 
-@dataclass
-class FileRename:
+class FileRename(TSInterface):
     oldUri: str
     newUri: str
 
 
-@dataclass
-class DeleteFilesParams:
+class DeleteFilesParams(TSInterface):
     files: List['FileDelete']
 
 
-@dataclass
-class FileDelete:
+class FileDelete(TSInterface):
     uri: str
 
 
@@ -1180,41 +1068,34 @@ class TextDocumentSyncKind(IntEnum):
     Incremental = 2
 
 
-@dataclass
-class TextDocumentSyncOptions:
+class TextDocumentSyncOptions(TSInterface):
     openClose: Optional[bool]
     change: Optional[TextDocumentSyncKind]
 
 
-@dataclass
-class DidOpenTextDocumentParams:
+class DidOpenTextDocumentParams(TSInterface):
     textDocument: TextDocumentItem
 
 
-@dataclass
-class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions):
+class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions, TSInterface):
     syncKind: TextDocumentSyncKind
 
 
-@dataclass
-class DidChangeTextDocumentParams:
+class DidChangeTextDocumentParams(TSInterface):
     textDocument: VersionedTextDocumentIdentifier
     contentChanges: List['TextDocumentContentChangeEvent']
 
 
-@dataclass
-class TextDocumentContentChangeEvent_0:
+class TextDocumentContentChangeEvent_0(TSInterface):
     range: Range
     rangeLength: Optional[int]
     text: str
-@dataclass
-class TextDocumentContentChangeEvent_1:
+class TextDocumentContentChangeEvent_1(TSInterface):
     text: str
 TextDocumentContentChangeEvent = Union[TextDocumentContentChangeEvent_0, TextDocumentContentChangeEvent_1]
 
 
-@dataclass
-class WillSaveTextDocumentParams:
+class WillSaveTextDocumentParams(TSInterface):
     textDocument: TextDocumentIdentifier
     reason: 'TextDocumentSaveReason'
 
@@ -1225,37 +1106,31 @@ class TextDocumentSaveReason(IntEnum):
     FocusOut = 3
 
 
-@dataclass
-class SaveOptions:
+class SaveOptions(TSInterface):
     includeText: Optional[bool]
 
 
-@dataclass
-class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions):
+class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions, TSInterface):
     includeText: Optional[bool]
 
 
-@dataclass
-class DidSaveTextDocumentParams:
+class DidSaveTextDocumentParams(TSInterface):
     textDocument: TextDocumentIdentifier
     text: Optional[str]
 
 
-@dataclass
-class DidCloseTextDocumentParams:
+class DidCloseTextDocumentParams(TSInterface):
     textDocument: TextDocumentIdentifier
 
 
-@dataclass
-class TextDocumentSyncClientCapabilities:
+class TextDocumentSyncClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     willSave: Optional[bool]
     willSaveWaitUntil: Optional[bool]
     didSave: Optional[bool]
 
 
-@dataclass
-class TextDocumentSyncOptions:
+class TextDocumentSyncOptions(TSInterface):
     openClose: Optional[bool]
     change: Optional[TextDocumentSyncKind]
     willSave: Optional[bool]
@@ -1263,10 +1138,8 @@ class TextDocumentSyncOptions:
     save: Union[bool, SaveOptions, None]
 
 
-@dataclass
-class PublishDiagnosticsClientCapabilities:
-    @dataclass
-    class TagSupport_:
+class PublishDiagnosticsClientCapabilities(TSInterface):
+    class TagSupport_(TSInterface):
         valueSet: List[DiagnosticTag]
     relatedInformation: Optional[bool]
     tagSupport: Optional[TagSupport_]
@@ -1275,25 +1148,19 @@ class PublishDiagnosticsClientCapabilities:
     dataSupport: Optional[bool]
 
 
-@dataclass
-class PublishDiagnosticsParams:
+class PublishDiagnosticsParams(TSInterface):
     uri: DocumentUri
     version: Optional[int]
     diagnostics: List[Diagnostic]
 
 
-@dataclass
-class CompletionClientCapabilities:
-    @dataclass
-    class CompletionItem_:
-        @dataclass
-        class TagSupport_:
+class CompletionClientCapabilities(TSInterface):
+    class CompletionItem_(TSInterface):
+        class TagSupport_(TSInterface):
             valueSet: List['CompletionItemTag']
-        @dataclass
-        class ResolveSupport_:
+        class ResolveSupport_(TSInterface):
             properties: List[str]
-        @dataclass
-        class InsertTextModeSupport_:
+        class InsertTextModeSupport_(TSInterface):
             valueSet: List['InsertTextMode']
         snippetSupport: Optional[bool]
         commitCharactersSupport: Optional[bool]
@@ -1304,8 +1171,7 @@ class CompletionClientCapabilities:
         insertReplaceSupport: Optional[bool]
         resolveSupport: Optional[ResolveSupport_]
         insertTextModeSupport: Optional[InsertTextModeSupport_]
-    @dataclass
-    class CompletionItemKind_:
+    class CompletionItemKind_(TSInterface):
         valueSet: Optional[List['CompletionItemKind']]
     dynamicRegistration: Optional[bool]
     completionItem: Optional[CompletionItem_]
@@ -1313,20 +1179,17 @@ class CompletionClientCapabilities:
     contextSupport: Optional[bool]
 
 
-@dataclass
-class CompletionOptions(WorkDoneProgressOptions):
+class CompletionOptions(WorkDoneProgressOptions, TSInterface):
     triggerCharacters: Optional[List[str]]
     allCommitCharacters: Optional[List[str]]
     resolveProvider: Optional[bool]
 
 
-@dataclass
-class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions):
+class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions, TSInterface):
     pass
 
 
-@dataclass
-class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     context: Optional['CompletionContext']
 
 
@@ -1336,14 +1199,12 @@ class CompletionTriggerKind(IntEnum):
     TriggerForIncompleteCompletions = 3
 
 
-@dataclass
-class CompletionContext:
+class CompletionContext(TSInterface):
     triggerKind: CompletionTriggerKind
     triggerCharacter: Optional[str]
 
 
-@dataclass
-class CompletionList:
+class CompletionList(TSInterface):
     isIncomplete: bool
     items: List['CompletionItem']
 
@@ -1357,8 +1218,7 @@ class CompletionItemTag(IntEnum):
     Deprecated = 1
 
 
-@dataclass
-class InsertReplaceEdit:
+class InsertReplaceEdit(TSInterface):
     newText: str
     insert: Range
     replace: Range
@@ -1369,8 +1229,7 @@ class InsertTextMode(IntEnum):
     adjustIndentation = 2
 
 
-@dataclass
-class CompletionItem:
+class CompletionItem(TSInterface):
     label: str
     kind: Optional['CompletionItemKind']
     tags: Optional[List[CompletionItemTag]]
@@ -1418,46 +1277,37 @@ class CompletionItemKind(IntEnum):
     TypeParameter = 25
 
 
-@dataclass
-class HoverClientCapabilities:
+class HoverClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     contentFormat: Optional[List[MarkupKind]]
 
 
-@dataclass
-class HoverOptions(WorkDoneProgressOptions):
+class HoverOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions):
+class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions, TSInterface):
     pass
 
 
-@dataclass
-class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams):
+class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
     pass
 
 
-@dataclass
-class Hover:
+class Hover(TSInterface):
     contents: Union['MarkedString', List['MarkedString'], MarkupContent]
     range: Optional[Range]
 
 
-@dataclass
-class MarkedString_1:
+class MarkedString_1(TSInterface):
     language: str
     value: str
 MarkedString = Union[str, MarkedString_1]
 
 
-@dataclass
-class SignatureHelpClientCapabilities:
-    @dataclass
-    class SignatureInformation_:
-        @dataclass
-        class ParameterInformation_:
+class SignatureHelpClientCapabilities(TSInterface):
+    class SignatureInformation_(TSInterface):
+        class ParameterInformation_(TSInterface):
             labelOffsetSupport: Optional[bool]
         documentationFormat: Optional[List[MarkupKind]]
         parameterInformation: Optional[ParameterInformation_]
@@ -1467,19 +1317,16 @@ class SignatureHelpClientCapabilities:
     contextSupport: Optional[bool]
 
 
-@dataclass
-class SignatureHelpOptions(WorkDoneProgressOptions):
+class SignatureHelpOptions(WorkDoneProgressOptions, TSInterface):
     triggerCharacters: Optional[List[str]]
     retriggerCharacters: Optional[List[str]]
 
 
-@dataclass
-class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions):
+class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions, TSInterface):
     pass
 
 
-@dataclass
-class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams):
+class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
     context: Optional['SignatureHelpContext']
 
 
@@ -1489,166 +1336,136 @@ class SignatureHelpTriggerKind(IntEnum):
     ContentChange = 3
 
 
-@dataclass
-class SignatureHelpContext:
+class SignatureHelpContext(TSInterface):
     triggerKind: SignatureHelpTriggerKind
     triggerCharacter: Optional[str]
     isRetrigger: bool
     activeSignatureHelp: Optional['SignatureHelp']
 
 
-@dataclass
-class SignatureHelp:
+class SignatureHelp(TSInterface):
     signatures: List['SignatureInformation']
     activeSignature: Optional[int]
     activeParameter: Optional[int]
 
 
-@dataclass
-class SignatureInformation:
+class SignatureInformation(TSInterface):
     label: str
     documentation: Union[str, MarkupContent, None]
     parameters: Optional[List['ParameterInformation']]
     activeParameter: Optional[int]
 
 
-@dataclass
-class ParameterInformation:
+class ParameterInformation(TSInterface):
     label: Union[str, Tuple[int, int]]
     documentation: Union[str, MarkupContent, None]
 
 
-@dataclass
-class DeclarationClientCapabilities:
+class DeclarationClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-@dataclass
-class DeclarationOptions(WorkDoneProgressOptions):
+class DeclarationOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
+class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     pass
 
 
-@dataclass
-class DefinitionClientCapabilities:
+class DefinitionClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-@dataclass
-class DefinitionOptions(WorkDoneProgressOptions):
+class DefinitionOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions):
+class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions, TSInterface):
     pass
 
 
-@dataclass
-class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     pass
 
 
-@dataclass
-class TypeDefinitionClientCapabilities:
+class TypeDefinitionClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-@dataclass
-class TypeDefinitionOptions(WorkDoneProgressOptions):
+class TypeDefinitionOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions):
+class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     pass
 
 
-@dataclass
-class ImplementationClientCapabilities:
+class ImplementationClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-@dataclass
-class ImplementationOptions(WorkDoneProgressOptions):
+class ImplementationOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions):
+class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     pass
 
 
-@dataclass
-class ReferenceClientCapabilities:
+class ReferenceClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class ReferenceOptions(WorkDoneProgressOptions):
+class ReferenceOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions):
+class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions, TSInterface):
     pass
 
 
-@dataclass
-class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     context: 'ReferenceContext'
 
 
-@dataclass
-class ReferenceContext:
+class ReferenceContext(TSInterface):
     includeDeclaration: bool
 
 
-@dataclass
-class DocumentHighlightClientCapabilities:
+class DocumentHighlightClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class DocumentHighlightOptions(WorkDoneProgressOptions):
+class DocumentHighlightOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions):
+class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     pass
 
 
-@dataclass
-class DocumentHighlight:
+class DocumentHighlight(TSInterface):
     range: Range
     kind: Optional['DocumentHighlightKind']
 
@@ -1659,13 +1476,10 @@ class DocumentHighlightKind(IntEnum):
     Write = 3
 
 
-@dataclass
-class DocumentSymbolClientCapabilities:
-    @dataclass
-    class SymbolKind_:
+class DocumentSymbolClientCapabilities(TSInterface):
+    class SymbolKind_(TSInterface):
         valueSet: Optional[List['SymbolKind']]
-    @dataclass
-    class TagSupport_:
+    class TagSupport_(TSInterface):
         valueSet: List['SymbolTag']
     dynamicRegistration: Optional[bool]
     symbolKind: Optional[SymbolKind_]
@@ -1674,18 +1488,15 @@ class DocumentSymbolClientCapabilities:
     labelSupport: Optional[bool]
 
 
-@dataclass
-class DocumentSymbolOptions(WorkDoneProgressOptions):
+class DocumentSymbolOptions(WorkDoneProgressOptions, TSInterface):
     label: Optional[str]
 
 
-@dataclass
-class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions):
+class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams):
+class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
 
 
@@ -1722,8 +1533,7 @@ class SymbolTag(IntEnum):
     Deprecated = 1
 
 
-@dataclass
-class DocumentSymbol:
+class DocumentSymbol(TSInterface):
     name: str
     detail: Optional[str]
     kind: SymbolKind
@@ -1734,8 +1544,7 @@ class DocumentSymbol:
     children: Optional[List['DocumentSymbol']]
 
 
-@dataclass
-class SymbolInformation:
+class SymbolInformation(TSInterface):
     name: str
     kind: SymbolKind
     tags: Optional[List[SymbolTag]]
@@ -1744,16 +1553,12 @@ class SymbolInformation:
     containerName: Optional[str]
 
 
-@dataclass
-class CodeActionClientCapabilities:
-    @dataclass
-    class CodeActionLiteralSupport_:
-        @dataclass
-        class CodeActionKind_:
+class CodeActionClientCapabilities(TSInterface):
+    class CodeActionLiteralSupport_(TSInterface):
+        class CodeActionKind_(TSInterface):
             valueSet: List['CodeActionKind']
         codeActionKind: CodeActionKind_
-    @dataclass
-    class ResolveSupport_:
+    class ResolveSupport_(TSInterface):
         properties: List[str]
     dynamicRegistration: Optional[bool]
     codeActionLiteralSupport: Optional[CodeActionLiteralSupport_]
@@ -1764,19 +1569,16 @@ class CodeActionClientCapabilities:
     honorsChangeAnnotations: Optional[bool]
 
 
-@dataclass
-class CodeActionOptions(WorkDoneProgressOptions):
+class CodeActionOptions(WorkDoneProgressOptions, TSInterface):
     codeActionKinds: Optional[List['CodeActionKind']]
     resolveProvider: Optional[bool]
 
 
-@dataclass
-class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions):
+class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions, TSInterface):
     pass
 
 
-@dataclass
-class CodeActionParams(WorkDoneProgressParams, PartialResultParams):
+class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
     range: Range
     context: 'CodeActionContext'
@@ -1793,16 +1595,13 @@ class CodeActionKind(Enum):
     SourceOrganizeImports = 'source.organizeImports'
 
 
-@dataclass
-class CodeActionContext:
+class CodeActionContext(TSInterface):
     diagnostics: List[Diagnostic]
     only: Optional[List[CodeActionKind]]
 
 
-@dataclass
-class CodeAction:
-    @dataclass
-    class Disabled_:
+class CodeAction(TSInterface):
+    class Disabled_(TSInterface):
         reason: str
     title: str
     kind: Optional[CodeActionKind]
@@ -1814,138 +1613,114 @@ class CodeAction:
     data: Optional[Any]
 
 
-@dataclass
-class CodeLensClientCapabilities:
+class CodeLensClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class CodeLensOptions(WorkDoneProgressOptions):
+class CodeLensOptions(WorkDoneProgressOptions, TSInterface):
     resolveProvider: Optional[bool]
 
 
-@dataclass
-class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions):
+class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions, TSInterface):
     pass
 
 
-@dataclass
-class CodeLensParams(WorkDoneProgressParams, PartialResultParams):
+class CodeLensParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
 
 
-@dataclass
-class CodeLens:
+class CodeLens(TSInterface):
     range: Range
     command: Optional[Command]
     data: Optional[Any]
 
 
-@dataclass
-class CodeLensWorkspaceClientCapabilities:
+class CodeLensWorkspaceClientCapabilities(TSInterface):
     refreshSupport: Optional[bool]
 
 
-@dataclass
-class DocumentLinkClientCapabilities:
+class DocumentLinkClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     tooltipSupport: Optional[bool]
 
 
-@dataclass
-class DocumentLinkOptions(WorkDoneProgressOptions):
+class DocumentLinkOptions(WorkDoneProgressOptions, TSInterface):
     resolveProvider: Optional[bool]
 
 
-@dataclass
-class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions):
+class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams):
+class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
 
 
-@dataclass
-class DocumentLink:
+class DocumentLink(TSInterface):
     range: Range
     target: Optional[DocumentUri]
     tooltip: Optional[str]
     data: Optional[Any]
 
 
-@dataclass
-class DocumentColorClientCapabilities:
+class DocumentColorClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class DocumentColorOptions(WorkDoneProgressOptions):
+class DocumentColorOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions):
+class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentColorParams(WorkDoneProgressParams, PartialResultParams):
+class DocumentColorParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
 
 
-@dataclass
-class ColorInformation:
+class ColorInformation(TSInterface):
     range: Range
     color: 'Color'
 
 
-@dataclass
-class Color:
+class Color(TSInterface):
     red: float
     green: float
     blue: float
     alpha: float
 
 
-@dataclass
-class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams):
+class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
     color: Color
     range: Range
 
 
-@dataclass
-class ColorPresentation:
+class ColorPresentation(TSInterface):
     label: str
     textEdit: Optional[TextEdit]
     additionalTextEdits: Optional[List[TextEdit]]
 
 
-@dataclass
-class DocumentFormattingClientCapabilities:
+class DocumentFormattingClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class DocumentFormattingOptions(WorkDoneProgressOptions):
+class DocumentFormattingOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions):
+class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentFormattingParams(WorkDoneProgressParams):
+class DocumentFormattingParams(WorkDoneProgressParams, TSInterface):
     textDocument: TextDocumentIdentifier
     options: 'FormattingOptions'
 
 
-@dataclass
-class FormattingOptions:
+class FormattingOptions(TSInterface):
     tabSize: int
     insertSpaces: bool
     trimTrailingWhitespace: Optional[bool]
@@ -1953,46 +1728,38 @@ class FormattingOptions:
     trimFinalNewlines: Optional[bool]
 
 
-@dataclass
-class DocumentRangeFormattingClientCapabilities:
+class DocumentRangeFormattingClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class DocumentRangeFormattingOptions(WorkDoneProgressOptions):
+class DocumentRangeFormattingOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions):
+class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentRangeFormattingParams(WorkDoneProgressParams):
+class DocumentRangeFormattingParams(WorkDoneProgressParams, TSInterface):
     textDocument: TextDocumentIdentifier
     range: Range
     options: FormattingOptions
 
 
-@dataclass
-class DocumentOnTypeFormattingClientCapabilities:
+class DocumentOnTypeFormattingClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class DocumentOnTypeFormattingOptions:
+class DocumentOnTypeFormattingOptions(TSInterface):
     firstTriggerCharacter: str
     moreTriggerCharacter: Optional[List[str]]
 
 
-@dataclass
-class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions):
+class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions, TSInterface):
     pass
 
 
-@dataclass
-class DocumentOnTypeFormattingParams(TextDocumentPositionParams):
+class DocumentOnTypeFormattingParams(TextDocumentPositionParams, TSInterface):
     ch: str
     options: FormattingOptions
 
@@ -2001,53 +1768,44 @@ class PrepareSupportDefaultBehavior(IntEnum):
     Identifier = 1
 
 
-@dataclass
-class RenameClientCapabilities:
+class RenameClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     prepareSupport: Optional[bool]
     prepareSupportDefaultBehavior: Optional[PrepareSupportDefaultBehavior]
     honorsChangeAnnotations: Optional[bool]
 
 
-@dataclass
-class RenameOptions(WorkDoneProgressOptions):
+class RenameOptions(WorkDoneProgressOptions, TSInterface):
     prepareProvider: Optional[bool]
 
 
-@dataclass
-class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions):
+class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, TSInterface):
     pass
 
 
-@dataclass
-class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams):
+class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
     newName: str
 
 
-@dataclass
-class PrepareRenameParams(TextDocumentPositionParams):
+class PrepareRenameParams(TextDocumentPositionParams, TSInterface):
     pass
 
 
-@dataclass
-class FoldingRangeClientCapabilities:
+class FoldingRangeClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
     rangeLimit: Optional[int]
     lineFoldingOnly: Optional[bool]
 
 
-@dataclass
-class FoldingRangeOptions(WorkDoneProgressOptions):
+class FoldingRangeOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions):
+class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams):
+class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
 
 
@@ -2057,8 +1815,7 @@ class FoldingRangeKind(Enum):
     Region = 'region'
 
 
-@dataclass
-class FoldingRange:
+class FoldingRange(TSInterface):
     startLine: int
     startCharacter: Optional[int]
     endLine: int
@@ -2066,55 +1823,45 @@ class FoldingRange:
     kind: Optional[str]
 
 
-@dataclass
-class SelectionRangeClientCapabilities:
+class SelectionRangeClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class SelectionRangeOptions(WorkDoneProgressOptions):
+class SelectionRangeOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions):
+class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams):
+class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
     positions: List[Position]
 
 
-@dataclass
-class SelectionRange:
+class SelectionRange(TSInterface):
     range: Range
     parent: Optional['SelectionRange']
 
 
-@dataclass
-class CallHierarchyClientCapabilities:
+class CallHierarchyClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class CallHierarchyOptions(WorkDoneProgressOptions):
+class CallHierarchyOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions):
+class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams):
+class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
     pass
 
 
-@dataclass
-class CallHierarchyItem:
+class CallHierarchyItem(TSInterface):
     name: str
     kind: SymbolKind
     tags: Optional[List[SymbolTag]]
@@ -2125,24 +1872,20 @@ class CallHierarchyItem:
     data: Optional[Any]
 
 
-@dataclass
-class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams):
+class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     item: CallHierarchyItem
 
 
-@dataclass
-class CallHierarchyIncomingCall:
+class CallHierarchyIncomingCall(TSInterface):
     from_: CallHierarchyItem
     fromRanges: List[Range]
 
 
-@dataclass
-class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams):
+class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     item: CallHierarchyItem
 
 
-@dataclass
-class CallHierarchyOutgoingCall:
+class CallHierarchyOutgoingCall(TSInterface):
     to: CallHierarchyItem
     fromRanges: List[Range]
 
@@ -2189,21 +1932,16 @@ class TokenFormat(Enum):
     Relative = 'relative'
 
 
-@dataclass
-class SemanticTokensLegend:
+class SemanticTokensLegend(TSInterface):
     tokenTypes: List[str]
     tokenModifiers: List[str]
 
 
-@dataclass
-class SemanticTokensClientCapabilities:
-    @dataclass
-    class Requests_:
-        @dataclass
-        class Range_1:
+class SemanticTokensClientCapabilities(TSInterface):
+    class Requests_(TSInterface):
+        class Range_1(TSInterface):
             pass
-        @dataclass
-        class Full_1:
+        class Full_1(TSInterface):
             delta: Optional[bool]
         range: Union[bool, Range_1, None]
         full: Union[bool, Full_1, None]
@@ -2216,118 +1954,96 @@ class SemanticTokensClientCapabilities:
     multilineTokenSupport: Optional[bool]
 
 
-@dataclass
-class SemanticTokensOptions(WorkDoneProgressOptions):
-    @dataclass
-    class Range_1:
+class SemanticTokensOptions(WorkDoneProgressOptions, TSInterface):
+    class Range_1(TSInterface):
         pass
-    @dataclass
-    class Full_1:
+    class Full_1(TSInterface):
         delta: Optional[bool]
     legend: SemanticTokensLegend
     range: Union[bool, Range_1, None]
     full: Union[bool, Full_1, None]
 
 
-@dataclass
-class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions):
+class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams):
+class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
 
 
-@dataclass
-class SemanticTokens:
+class SemanticTokens(TSInterface):
     resultId: Optional[str]
     data: List[int]
 
 
-@dataclass
-class SemanticTokensPartialResult:
+class SemanticTokensPartialResult(TSInterface):
     data: List[int]
 
 
-@dataclass
-class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams):
+class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
     previousResultId: str
 
 
-@dataclass
-class SemanticTokensDelta:
+class SemanticTokensDelta(TSInterface):
     resultId: Optional[str]
     edits: List['SemanticTokensEdit']
 
 
-@dataclass
-class SemanticTokensEdit:
+class SemanticTokensEdit(TSInterface):
     start: int
     deleteCount: int
     data: Optional[List[int]]
 
 
-@dataclass
-class SemanticTokensDeltaPartialResult:
+class SemanticTokensDeltaPartialResult(TSInterface):
     edits: List[SemanticTokensEdit]
 
 
-@dataclass
-class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams):
+class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
     textDocument: TextDocumentIdentifier
     range: Range
 
 
-@dataclass
-class SemanticTokensWorkspaceClientCapabilities:
+class SemanticTokensWorkspaceClientCapabilities(TSInterface):
     refreshSupport: Optional[bool]
 
 
-@dataclass
-class LinkedEditingRangeClientCapabilities:
+class LinkedEditingRangeClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class LinkedEditingRangeOptions(WorkDoneProgressOptions):
+class LinkedEditingRangeOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions):
+class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions, TSInterface):
     pass
 
 
-@dataclass
-class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams):
+class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
     pass
 
 
-@dataclass
-class LinkedEditingRanges:
+class LinkedEditingRanges(TSInterface):
     ranges: List[Range]
     wordPattern: Optional[str]
 
 
-@dataclass
-class MonikerClientCapabilities:
+class MonikerClientCapabilities(TSInterface):
     dynamicRegistration: Optional[bool]
 
 
-@dataclass
-class MonikerOptions(WorkDoneProgressOptions):
+class MonikerOptions(WorkDoneProgressOptions, TSInterface):
     pass
 
 
-@dataclass
-class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions):
+class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions, TSInterface):
     pass
 
 
-@dataclass
-class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
     pass
 
 
@@ -2345,8 +2061,7 @@ class MonikerKind(Enum):
     local = 'local'
 
 
-@dataclass
-class Moniker:
+class Moniker(TSInterface):
     scheme: str
     identifier: str
     unique: UniquenessLevel
@@ -3449,6 +3164,13 @@ Moniker.optional__ = {
 }
 
 
+if __name__ == "__main__":
+    msg = Message(jsonrpc="test")
+    print(msg.__dict__)
+    msg = RequestMessage(jsonrpc="test", id=1, method="gogogo")
+    print(msg.__dict__)
+    msg = RequestMessage(jsonrpc="test", id="2", method="gogogo", params="[1, 2, 3]")
+    print(msg.__dict__)
 
 ##### END OF LSP SPECS
 
@@ -3459,7 +3181,50 @@ Moniker.optional__ = {
 #
 #######################################################################
 
+class LSPTasks:
+    def __init__(self, lsp_data: dict):
+        self.lsp_data = lsp_data
+        self.lsp_table = gen_lsp_table([], prefix='lsp_')
+
+NO_TASKS = LSPTasks({})
+
 class LSPBase:
+    def __init__(self, cpu_bound: LSPTasks=NO_TASKS, blocking: LSPTasks=NO_TASKS):
+        self.lsp_data = {
+            'processId': 0,
+            'rootUri': '',
+            'clientCapabilities': {},
+            'serverInfo': {"name": self.__class__.__name__, "version": "0.1"},
+            'serverCapabilities': {
+            }
+        }
+        self.connection = None
+        self.cpu_bound = cpu_bound
+        self.blocking = blocking
+        self.lsp_table = gen_lsp_table(self, prefix='lsp_')
+        self.lsp_fulltable = self.lsp_table.copy()
+        assert self.lsp_fulltable.keys().isdisjoint(self.cpu_bound.lsp_table.keys())
+        self.lsp_fulltable.update(self.cpu_bound.lsp_table)
+        assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
+        self.lsp_fulltable.update(self.blocking.lsp_table)
+
+    def connect(self, connection):
+        self.connection = connection
+
+    def lsp_initialize(self, **kwargs) -> Dict:
+        # InitializeParams -> InitializeResult
+        self.lsp_data['processId'] = kwargs['processId']
+        self.lsp_data['rootUri'] = kwargs['rootUri']
+        self.lsp_data['clientCapabilities'] = kwargs['capabilities']
+        return {'capabilities': self.lsp_data['serverCapabilities'],
+                'serverInfo': self.lsp_data['serverInfo']}
+
     @json_adaptor
-    def initialize(self, params: InitializeParams) -> InitializeResult:
-        raise NotImplementedError
+    def lsp_initialized(self, params: InitializedParams) -> None:
+        pass
+
+    def lsp_shutdown(self) -> Dict:
+        self.lsp_data['processId'] = 0
+        self.lsp_data['rootUri'] = ''
+        self.lsp_data['clientCapabilities'] = {}
+        return {}
