@@ -277,7 +277,7 @@ class EBNFLanguageServerProtocol:
         self.completions.sort()
         self.completion_items1 = [{k: v for k, v in chain(zip(self.completion_fields, item),
                                                           [['kind', CompletionItemKind.Keyword]])}
-                                 for item in self.completions]
+                                  for item in self.completions]
         self.completion_items2 = [item.copy() for item in self.completion_items1]
         for item in self.completion_items1:
             item['insertText'] = item['insertText'][1:]
