@@ -864,8 +864,12 @@ if __name__ == "__main__":
 
     if args.dataclass:
         set_config_value('ts2dataclass.flavour', 'dataclass')
-    else:
+    elif args.plainclass:
         set_config_value('ts2dataclass.flavour', 'plainclass')
+    elif arg.protocol:
+        set_config_value('ts2dataclass.flavour', 'protocol')
+    else:  # default is typeddict
+        set_config_value('ts2dataclass.flavour', 'typeddict')
 
     def echo(message: str):
         if args.verbose:
