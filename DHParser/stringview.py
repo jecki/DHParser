@@ -435,6 +435,17 @@ class TextBuffer:
             return str(self._text)
         return str(self.snapshot('\n'))
 
+    def __len__(self) -> int:
+        if self._text:
+            return len(self._text)
+        else:
+            return sum(len(line) for line in self._buffer) + len(self._buffer) - 1
+
+    def lines(self) -> int:
+        if not self._buffer:
+            self._lazy_init()
+        return len(self._buffer)
+
     @cython.locals(l1=cython.int, c1=cython.int, l2=cython.int, c2=cython.int)
     def update(self, l1: int, c1: int, l2: int, c2: int, replacement: Union[str, StringView]):
         """Replaces the text-range from line and column (l1, c1) to
