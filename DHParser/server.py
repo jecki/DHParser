@@ -514,7 +514,7 @@ class ExecutionEnvironment:
                 # restart process pool and try again once
                 self.process_executor.shutdown(wait=True)
                 self.process_executor = ProcessPoolExecutor()
-                await self.loop.run_in_executor(executor, executable)
+                result = await self.loop.run_in_executor(executor, executable)
             except BrokenProcessPool as e:
                 rpc_error = -32050, str(e)
         except BrokenThreadPool as e:
@@ -525,7 +525,7 @@ class ExecutionEnvironment:
                 # restart thread pool and try again once
                 self.thread_executor.shutdown(wait=True)
                 self.thread_executor = ThreadPoolExecutor()
-                await self.loop.run_in_executor(executor, executable)
+                result = await self.loop.run_in_executor(executor, executable)
             except BrokenThreadPool as e:
                 rpc_error = -32060, str(e)
         except Exception as e:
