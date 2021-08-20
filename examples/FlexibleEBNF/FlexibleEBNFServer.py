@@ -417,13 +417,14 @@ def run_server(host, port, log_path=None):
     Starts a new DSLServer. If `port` is already occupied, different
     ports will be tried.
     """
-    global KNOWN_HOST, KNOWN_PORT
+    global KNOWN_HOST, KNOWN_PORT, __name__
     global scriptpath, servername
 
-    from multiprocessing import set_start_method
-    # 'forkserver' or 'spawn' required to avoid broken process pools
-    if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
-    else:  set_start_method('spawn')
+    if __name__ == "__main__":
+        from multiprocessing import set_start_method
+        # 'forkserver' or 'spawn' required to avoid broken process pools
+        if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
+        else:  set_start_method('spawn')
 
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
     dhparserdir = os.path.abspath(os.path.join(scriptpath, '../../'))
