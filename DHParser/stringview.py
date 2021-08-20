@@ -441,6 +441,12 @@ class TextBuffer:
         else:
             return sum(len(line) for line in self._buffer) + len(self._buffer) - 1
 
+    @property
+    def buffer(self) -> List[Union[str, StringView]]:
+        if not self._buffer:
+            self._lazy_init()
+        return self._buffer
+
     def lines(self) -> int:
         if not self._buffer:
             self._lazy_init()

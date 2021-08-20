@@ -1823,7 +1823,7 @@ def spawn_stream_server(reader: StreamReaderType,
         p = Concurrent(target=_run_stream_server, args=(reader, writer), kwargs=parameters)
     else:
         assert callable(parameters)
-        p = Concurrent(target=_run_stream_server, args=(host, port, parameters))
+        p = Concurrent(target=_run_stream_server, args=(reader, writer, parameters))
     p.start()
     return p
 
