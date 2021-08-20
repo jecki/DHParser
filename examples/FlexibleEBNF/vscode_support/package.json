@@ -3,7 +3,7 @@
 	"description": "Language Server for DHParser-EBNF",
 	"author": "Eckhart Arnold",
 	"license": "Apache-2.0",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"repository": {
 		"type": "git",
 		"url": "https://gitlab.lrz.de/badw-it/DHParser"
@@ -14,7 +14,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.32.0"
+		"vscode": "^1.42.0"
 	},
 	"activationEvents": [
 		"onLanguage:ebnf"
@@ -66,7 +66,7 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
+		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
 		"postinstall": "cd client && npm install && cd ..",
@@ -74,7 +74,9 @@
 	},
 	"devDependencies": {
 		"@types/mocha": "^5.2.0",
-		"@types/node": "^8.0.0",
+		"@types/node": "^12.0.0",
+		"@types/vscode": "^1.42.0",
+		"@vscode/test-electron": "^1.6.1",
 		"tslint": "^5.16.0",
 		"typescript": "^3.5.1"
 	}

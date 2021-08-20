@@ -72,7 +72,7 @@ function startLangServerStream(command: string, args: string[]): Disposable {
             return false;
         }
     };
-    console.log('activating language server connector ' + args.toString());	
+    console.log('activating language server connector ' + args.toString());
     return new LanguageClient(command, `ebnf stream lang server`, serverOptions, clientOptions).start();
 }
 
