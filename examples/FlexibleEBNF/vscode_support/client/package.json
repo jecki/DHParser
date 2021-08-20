@@ -3,7 +3,7 @@
 	"description": "DHParser language server for the EBNF-example",
 	"author": "Eckhart Arnold",
 	"license": "Apache-2.0",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"publisher": "jecki",
 	"repository": {
 		"type": "git",
@@ -12,10 +12,18 @@
 	"engines": {
 		"vscode": "^1.42.0"
 	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"postinstall": "cd client && npm install && cd ..",
+		"test": "sh ./scripts/e2e.sh"
+	},
 	"dependencies": {
 		"vscode-languageclient": "^6.1.1"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.42.0"
+		"@types/vscode": "^1.42.0",
+		"@vscode/test-electron": "^1.6.1"
 	}
 }
