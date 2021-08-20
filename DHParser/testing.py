@@ -40,12 +40,13 @@ import time
 from typing import Dict, List, Union, Deque, cast
 
 from DHParser.configuration import get_config_value
+from DHParser.compile import run_pipeline
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
-from DHParser.syntaxtree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
+from DHParser.syntaxtree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG, EMPTY_PTYPE
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
 from DHParser.toolkit import load_if_file, re, re_find, concurrent_ident, instantiate_executor
@@ -73,8 +74,8 @@ __all__ = ('unit_from_config',
            'MockStream')
 
 
-UNIT_STAGES = {'match*', 'match', 'fail', 'ast', 'cst'}
-RESULT_STAGES = {'__cst__', '__ast__', '__err__'}
+UNIT_STAGES = frozenset({'match*', 'match', 'fail', 'ast', 'cst'})
+RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
 
 RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
 RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
@@ -87,7 +88,34 @@ RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE)
 RX_COMMENT = re.compile(r'\s*[#;].*(?:\n|$)')
 
 
-def unit_from_config(config_str, filename):
+def normalize_code(testcode: str, full_normalization: bool=False) -> str:
+    """Removes leading and trailing empty lines (if full_normalization ist True)
+    and leading indentation (always) from multiline text. Single line text
+    will be returned unchanged.
+    """
+    lines = testcode.split('\n')
+    if len(lines) > 1:
+        indent = sys.maxsize
+        for i in range(1, len(lines)):
+            line = lines[i]
+            if full_normalization:
+                lines[i] = line.rstrip()
+            if line:
+                indent = min(indent, len(line) - len(line.lstrip()))
+        if indent > 0 and indent != sys.maxsize:
+            for i in range(1, len(lines)):
+                lines[i] = lines[i][indent:]
+        if full_normalization:
+            for i in range(len(lines)):
+                if lines[i]:  break
+            for k in range(len(lines) - 1, -1, -1):
+                if lines[k]:  break
+            lines = lines[i:k + 1]
+        testcode = '\n'.join(lines)
+    return testcode
+
+
+def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
     """ Reads grammar unit tests contained in a file in config file (.ini)
     syntax.
 
@@ -118,8 +146,8 @@ def unit_from_config(config_str, filename):
         first_section_missing = False
         d = section_match.groupdict()
         stage = d['stage']
-        if stage not in UNIT_STAGES:
-            raise KeyError('Unknown stage ' + stage + " ! must be one of: " + str(UNIT_STAGES))
+        if stage not in allowed_stages:
+            raise KeyError('Unknown stage ' + stage + " ! must be one of: " + str(allowed_stages))
         symbol = d['symbol']
         pos = eat_comments(cfg, section_match.span()[1])
 
@@ -128,18 +156,14 @@ def unit_from_config(config_str, filename):
         #     SyntaxError('No entries in section [%s:%s]' % (stage, symbol))
         while entry_match:
             testkey, testcode = [group for group in entry_match.groups() if group is not None]
-            lines = testcode.split('\n')
-            if len(lines) > 1:
-                indent = sys.maxsize
-                for line in lines[1:]:
-                    indent = min(indent, len(line) - len(line.lstrip()))
-                for i in range(1, len(lines)):
-                    lines[i] = lines[i][indent:]
-                testcode = '\n'.join(lines)
+            testcode = normalize_code(
+                testcode, full_normalization=
+                stage not in ('match', 'fail', 'ast', 'cst'))
             # unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
             test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
             if testkey.strip('*') in test or (testkey.strip('*') + '*') in test:
-                raise KeyError('"%s": Key %s already exists in %s:%s !' % (filename, testkey, stage, symbol))
+                raise KeyError('"%s": Key %s already exists in %s:%s !'
+                               % (filename, testkey, stage, symbol))
             test[testkey] = testcode
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
@@ -155,16 +179,16 @@ def unit_from_config(config_str, filename):
     return unit
 
 
-def unit_from_json(json_str, filename):
+def unit_from_json(json_str, filename, allowed_stages=UNIT_STAGES):
     """
     Reads grammar unit tests from a json string.
     """
     unit = json.loads(json_str)
     for symbol in unit:
         for stage in unit[symbol]:
-            if stage not in UNIT_STAGES:
+            if stage not in allowed_stages:
                 raise ValueError('in file "%s". Test stage %s not in: %s'
-                                 % (filename, stage, str(UNIT_STAGES)))
+                                 % (filename, stage, str(allowed_stages)))
     return unit
 
 
@@ -180,11 +204,12 @@ TEST_READERS = {
 }
 
 
-def unit_from_file(filename):
+def unit_from_file(filename, additional_stages=UNIT_STAGES):
     """
     Reads a grammar unit test from a file. The format of the file is
     determined by the ending of its name.
     """
+    allowed_stages = additional_stages | UNIT_STAGES
     if not os.path.exists(filename):  raise FileNotFoundError(filename)
     if not os.path.isfile(filename):  raise ValueError('"%s" is not a file!' % filename)
     try:
@@ -195,7 +220,7 @@ def unit_from_file(filename):
         raise ValueError('Unknown unit test file type "%s" of file: %s' % (filename[i:], filename))
     with open(filename, 'r', encoding='utf8') as f:
         data = f.read()
-    test_unit = reader(data, filename)
+    test_unit = reader(data, filename, allowed_stages)
 
     # Check for ambiguous Test names
     errors = []
@@ -245,9 +270,9 @@ def get_report(test_unit) -> str:
     report = []
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
-        report.append('\n\n%s\n%s\n' % (heading, '=' * len(heading)))
+        report.append('\n\n%s\n%s' % (heading, '=' * len(heading)))
         for test_name, test_code in tests.get('match', dict()).items():
-            heading = 'Match-test "%s"' % test_name
+            heading = '\nMatch-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:\n')
             report.append(indent(test_code))
@@ -263,8 +288,22 @@ def get_report(test_unit) -> str:
             if ast:
                 report.append('\n### AST\n')
                 report.append(indent(ast.serialize('ast')))
+
+            compilation_stages = [key for key in tests
+                                  if key[:2] + key[-2:] == '____' and key not in
+                                  {'__ast__', '__cst__', '__err__', 'match', 'fail'}]
+            for stage in compilation_stages:
+                if test_name in tests[stage]:
+                    result = tests[stage][test_name]
+                    report.append(f'\n### {stage.strip("_")}\n')
+                    if isinstance(result, Node):
+                        result_str = cast(Node, result).serialize('ast')
+                    else:
+                        result_str = str(result)
+                    report.append(indent(result_str))
+
         for test_name, test_code in tests.get('fail', dict()).items():
-            heading = 'Fail-test "%s"' % test_name
+            heading = '\nFail-test "%s"' % test_name
             report.append('\n%s\n%s\n' % (heading, '-' * len(heading)))
             report.append('### Test-code:')
             report.append(indent(test_code))
@@ -300,10 +339,18 @@ def md_codeblock(code: str) -> str:
         return '\n\n\t' + '\n\t'.join(lines)
 
 
-def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False):
+def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
+                 junctions=set(), show=set()):
     """
     Unit tests for a grammar-parser and ast transformations.
     """
+    assert isinstance(report, str)
+    assert isinstance(show, set) and all(isinstance(element, str) for element in show), \
+        f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
+    assert isinstance(junctions, set) and all(isinstance(e[0], str) and isinstance(e[2], str)
+                                              and callable(e[1]) for e in junctions), \
+        f"Value {repr(junctions)} passed to parameter 'show' is not a set of compilation-junctions!"
+
     output = []
 
     def write(s):
@@ -331,7 +378,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
     if isinstance(test_unit, str):
         _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
-        test_unit = unit_from_file(test_unit)
+        test_unit = unit_from_file(test_unit, UNIT_STAGES | show)
     else:
         unit_name = 'unit_test_' + str(id(test_unit))
     if verbose:
@@ -380,6 +427,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 break
         return is_artifact
 
+    def add_errors_to_errata(test_errors: List[Error]):
+        nonlocal errata
+        test_errors.sort(key=lambda e: e.pos)
+        if is_error(max(e.code for e in test_errors) if test_errors else 0):
+            if test_errors:
+                if errata:  errata[-1] = errata[-1].rstrip('\n')
+                errata.append('\t' + '\n\t'.join(
+                    str(msg).replace('\n', '\n\t\t') for msg in test_errors))
+                errata.append('\n\n')
+
     for parser_name, tests in test_unit.items():
         # if not get_config_value('test_parallelization'):
         #     print('  Testing parser: ' + parser_name)
@@ -396,22 +453,28 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         assert not any(test_type in RESULT_STAGES for test_type in tests), \
             ("Test %s in %s already has results. Use reset_unit() before running again!"
              % (parser_name, unit_name))
-        assert set(tests.keys()).issubset(UNIT_STAGES), \
-            'Unknown test-types: %s ! Must be one of %s' \
-            % (set(tests.keys()) - UNIT_STAGES, UNIT_STAGES)
+        # assert set(tests.keys()).issubset(UNIT_STAGES), \
+        #     'Unknown test-types: %s ! Must be one of %s' \
+        #     % (set(tests.keys()) - UNIT_STAGES, UNIT_STAGES)
         if verbose:
             write('  Match-Tests for parser "' + parser_name + '"')
         match_tests = set(tests['match'].keys()) if 'match' in tests else set()
-        if 'ast' in tests:
-            ast_tests = set(tests['ast'].keys())
-            if not {clean_key(k) for k in ast_tests} <= {clean_key(k) for k in match_tests}:
-                raise AssertionError('AST-Tests %s for parser %s lack corresponding match-tests!'
-                                     % (str(ast_tests - match_tests), parser_name))
-        if 'cst' in tests:
-            cst_tests = set(tests['cst'].keys())
-            if not {clean_key(k) for k in cst_tests} <= {clean_key(k) for k in match_tests}:
-                raise AssertionError('CST-Tests %s lack corresponding match-tests!'
-                                     % str(cst_tests - match_tests))
+        match_test_keys = {clean_key(k) for k in match_tests}
+
+
+        transformation_stages = {key for key in tests if key not in {'match', 'fail'}}
+        for stage in transformation_stages:
+            transformation_tests = set(tests[stage].keys())
+            if not {clean_key(k) for k in transformation_tests} <= match_test_keys:
+                raise AssertionError(f'{stage}-tests {transformation_tests - match_test_keys}'
+                                     ' lack corresponding match-tests.')
+        # cst and ast will be treated separately in the following and are thus not
+        # needed any more in the list
+        for stage in ('cst', 'ast'):
+            try:
+                transformation_stages.remove(stage)
+            except (KeyError, ValueError):
+                pass
 
         # run match tests
 
@@ -427,15 +490,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
             clean_test_name = str(test_name).replace('*', '')
             tests.setdefault('__cst__', {})[test_name] = cst
-            errors = []  # type: List[Error]
+            # errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errors = [e for e in cst.errors_sorted if e.code not in POSSIBLE_ARTIFACTS]
                 errata.append('Match test "%s" for parser "%s" failed:'
                               '\nExpr.:  %s\n\n%s\n\n' %
                               (test_name, parser_name, md_codeblock(test_code),
                                '\n'.join(str(m).replace('\n', '\n') for m in errors)))
-            if "ast" in tests or report:
-                ast = copy.deepcopy(cst)
+            if "ast" in tests or report or transformation_stages or show:
+                ast = copy.deepcopy(cst) if 'cst' in tests or str(test_name).find('*') >= 0 \
+                      else cst
                 old_errors = set(ast.errors)
                 traverse(ast, {'*': remove_children({TEST_ARTIFACT})})
                 try:
@@ -446,13 +510,32 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     raise e
                 tests.setdefault('__ast__', {})[test_name] = ast
                 ast_errors = [e for e in ast.errors if e not in old_errors]
-                ast_errors.sort(key=lambda e: e.pos)
-                if is_error(max(e.code for e in ast_errors) if ast_errors else 0):
-                    if ast_errors:
-                        if errata:  errata[-1] = errata[-1].rstrip('\n')
-                        ast_errors.append('\n')
-                        errata.append('\t' + '\n\t'.join(
-                            str(msg).replace('\n', '\n\t\t') for msg in ast_errors))
+                add_errors_to_errata(ast_errors)
+
+            # compilation-tests
+
+            if transformation_stages or show:
+                if parser_name not in parser:
+                    # fail hard when trying a compiliation test with a non-existing
+                    # parser (resp. node-type), because otherwise obscure subsequent
+                    # errors can occur. (Eventually develop a better solution, that ist...)
+                    raise SyntaxError(
+                        f'Unknown parser "{parser_name}" in test(s) '
+                        f'{", ".join([repr(t) for t in tests.keys()])} in unit "{unit_name}"!')
+                old_errors = set(ast.errors)
+                try:
+                    targets = run_pipeline(junctions, {'ast': copy.deepcopy(ast)},
+                                           transformation_stages | show)
+                except ValueError as e:
+                    raise SyntaxError(f'Compilation-Test {test_name} of parser {parser_name} '
+                                      f'failed with:\n{str(e)}')
+                t_errors: Dict[str, List[Error]] = {}
+                for stage in transformation_stages | show:
+                    tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
+                    t_errors[stage] = [e for e in targets[stage][1] if e not in old_errors]
+                    for e in t_errors[stage]:
+                        old_errors.add(e)
+                    add_errors_to_errata(t_errors[stage])
 
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
@@ -483,14 +566,50 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     if not compare.equals(ast):  # no worry: ast is defined if "ast" in tests
                         ast_str = flatten_sxpr(ast.as_sxpr())
                         compare_str = flatten_sxpr(compare.as_sxpr())
-                        # differ = difflib.Differ()
-                        # difference = ''.join(differ.compare([compare_str + '\n'], [ast_str + '\n']))
                         errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
                                       '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
                                       % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                          compare_str, ast_str))
                     if verbose:
                         infostr = '      ast-test "' + test_name + '" ... '
+                        write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+
+            if len(errata) == errflag and transformation_stages:
+                for stage in transformation_stages:
+                    try:
+                        if isinstance(targets[stage][0], Node):
+                            compare = deserialize(get(tests, stage, test_name))
+                            if not compare.equals(targets[stage][0]):
+                                test_str = flatten_sxpr(targets[stage][0].as_sxpr())
+                                compare_str = flatten_sxpr(compare.as_sxpr())
+                                test_code_str = "\n\t".join(test_code.split("\n"))
+                                errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
+                                              f'\tExpr.:     {test_code_str}\n'
+                                              f'\tExpected:  {compare_str}\n'
+                                              f'\tReceived:  {test_str}')
+                        else:
+                            compare = get(tests, stage, test_name).strip('\n')
+                            if compare:
+                                test_str = targets[stage][0]
+                                if stage in ('match', 'fail', 'ast', 'cst'):
+                                    test_str = normalize_code(test_str, full_normalization=False)
+                                else:
+                                    test_str = test_str.strip('\n')
+                                # test_str = normalize_code(
+                                #     test_str, full_normalization=
+                                #     stage not in ('match', 'fail', 'ast', 'cst'))
+                                if not compare == test_str:
+                                    test_code_str = "\n\t".join(test_code.split("\n"))
+                                    errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
+                                                  f'\tExpr.:\n{test_code_str}\n'
+                                                  f'\tExpected:\n{compare}\n'
+                                                  f'\tReceived:\n{test_str}')
+                    except ValueError as e:
+                        raise SyntaxError(f'{stage}-test {test_name} of parser {parser_name} '
+                                          f'failed with:\n{str(e)}.')
+                    if verbose:
+                        infostr = ' ' * (max(0, 9 - len(stage))) \
+                                  + f'{stage}-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if len(errata) > errflag:
@@ -581,12 +700,18 @@ def unique_name(file_name: str) -> str:
 def grammar_suite(directory, parser_factory, transformer_factory,
                   fn_patterns=('*test*',),
                   ignore_unknown_filetypes=False,
-                  report='REPORT', verbose=True):
+                  report='REPORT', verbose=True,
+                  junctions=set(), show=set()):
     """
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
     """
     assert isinstance(report, str)
+    assert isinstance(show, set) and all(isinstance(element, str) for element in show), \
+        f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
+    assert isinstance(junctions, set) and all(isinstance(e[0], str) and isinstance(e[2], str)
+                                              and callable(e[1]) for e in junctions), \
+        f"Value {repr(junctions)} passed to parameter 'show' is not a set of compilation-junctions!"
 
     if not isinstance(fn_patterns, collections.abc.Iterable):
         fn_patterns = [fn_patterns]
@@ -601,12 +726,15 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     tests = [fn for fn in sorted(os.listdir('.'))
              if any(fnmatch.fnmatch(fn, pattern) for pattern in fn_patterns)]
 
+    assert tests, f"No pattern from {fn_patterns} matched any test in directory {os.getcwd()}"
+
     # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
     with instantiate_executor(get_config_value('test_parallelization') and len(tests) > 1,
                               concurrent.futures.ProcessPoolExecutor) as pool:
         results = []
         for filename in tests:
-            parameters = filename, parser_factory, transformer_factory, report, verbose
+            parameters = (filename, parser_factory, transformer_factory,
+                          report, verbose, junctions, show)
             results.append(pool.submit(grammar_unit, *parameters))
         done, not_done = concurrent.futures.wait(results)
         assert not not_done, str(not_done)
@@ -738,15 +866,22 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
         save = os.getcwd()
         os.chdir(path)
         keys = reversed(list(symbols.keys()))
+        existing_tests = {fname[3:]: fname for fname in os.listdir()}
         for i, k in enumerate(keys):
             filename = '{num:0>2}_test_{section}'.format(num=i + 1, section=k) + fmt
             if not os.path.exists(filename):
-                print('Creating test file template "{name}".'.format(name=filename))
-                with open(filename, 'w', encoding='utf-8') as f:
-                    for sym in symbols[k]:
-                        f.write('\n[match:{sym}]\n\n'.format(sym=sym))
-                        f.write('[ast:{sym}]\n\n'.format(sym=sym))
-                        f.write('[fail:{sym}]\n\n'.format(sym=sym))
+                if filename[3:] in existing_tests:
+                    old_name = existing_tests[filename[3:]]
+                    print(f'Renaming test file "{old_name}" to "{filename}"')
+                    os.rename(old_name, filename)
+                    existing_tests[filename[3:]] = filename
+                else:
+                    print('Creating test file template "{name}".'.format(name=filename))
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        for sym in symbols[k]:
+                            f.write('\n[match:{sym}]\n\n'.format(sym=sym))
+                            f.write('[ast:{sym}]\n\n'.format(sym=sym))
+                            f.write('[fail:{sym}]\n\n'.format(sym=sym))
         os.chdir(save)
     else:
         raise ValueError(path + ' is not a directory!')

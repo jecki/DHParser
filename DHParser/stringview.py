@@ -98,8 +98,8 @@ def fast_real_indices(begin: Optional[int],
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
-    # cbegin = 0 if begin is None else begin
-    cbegin = begin if begin else 0
+    cbegin = 0 if begin is None else begin
+    # cbegin = begin if begin else 0
     cend = length if end is None else end
     return pack_index(cbegin, length), pack_index(cend, length)
 
@@ -434,6 +434,23 @@ class TextBuffer:
         if self._text:
             return str(self._text)
         return str(self.snapshot('\n'))
+
+    def __len__(self) -> int:
+        if self._text:
+            return len(self._text)
+        else:
+            return sum(len(line) for line in self._buffer) + len(self._buffer) - 1
+
+    @property
+    def buffer(self) -> List[Union[str, StringView]]:
+        if not self._buffer:
+            self._lazy_init()
+        return self._buffer
+
+    def lines(self) -> int:
+        if not self._buffer:
+            self._lazy_init()
+        return len(self._buffer)
 
     @cython.locals(l1=cython.int, c1=cython.int, l2=cython.int, c2=cython.int)
     def update(self, l1: int, c1: int, l2: int, c2: int, replacement: Union[str, StringView]):

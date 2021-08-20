@@ -50,7 +50,8 @@ definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to 
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   # component  = (regexp | literals | procedure | symbol !DEF)
-  component  = literals | procedure | expression
+  component  = regexp | literals | procedure | symbol !_DEF
+             | "(" expression ")"  | RAISE_EXPR_WO_BRACKETS expression
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
@@ -127,9 +128,10 @@ whitespace = /~/~                               # insignificant whitespace
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
            [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
-DEF        = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!
+DEF        = _DEF
+_DEF       = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!
 OR         = `|` | `/` !regex_heuristics
-AND        = `,` | ``
+AND        =  `,` | ``
 ENDL       = `;` | ``
 
 RNG_BRACE  = :BRACE_SIGN
@@ -161,3 +163,7 @@ RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, 
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
 HEXCODE    = /[A-Fa-f0-9]{1,8}/
 
+
+#: error-markers
+
+RAISE_EXPR_WO_BRACKETS = ``

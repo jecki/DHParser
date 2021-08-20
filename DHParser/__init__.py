@@ -27,6 +27,7 @@ from .dsl import *
 from .ebnf import *
 from .error import *
 from .log import *
+# from .lsp import *
 from .parse import *
 from .preprocess import *
 # from .server import *
@@ -44,6 +45,7 @@ __all__ = (compile.__all__ +
            ebnf.__all__ +
            error.__all__ +
            log.__all__ +
+           # lsp.__all__ +
            parse.__all__ +
            preprocess.__all__ +
            # server.__all__ +

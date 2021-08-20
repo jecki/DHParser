@@ -38,7 +38,7 @@ else:
 from DHParser.compile import compile_source
 from DHParser.configuration import access_presets, set_preset_value, finalize_presets
 from DHParser.dsl import compileDSL, compile_on_disk, read_template
-from DHParser.error import is_error
+from DHParser.error import is_error, has_errors, ERROR
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import start_logging
 from DHParser.toolkit import re, split_path
@@ -113,13 +113,17 @@ def create_project(path: str):
     os.chdir(curr_dir)
 
 
-def selftest() -> bool:
+def selftest(silent: bool=False) -> bool:
     """Run a simple self-test of DHParser.
     """
-    print("DHParser selftest...")
-    print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
+    if not silent:
+        print("DHParser selftest...")
+        print("\nSTAGE I:  Trying to compile EBNF-Grammar:\n")
     builtin_ebnf_parser = get_ebnf_grammar()
     docstring = str(builtin_ebnf_parser.__doc__)  # type: str
+    i = docstring.find('::')
+    if i >= 0:
+        docstring = docstring[i + 2::]
     ebnf_src = docstring[docstring.find('@'):]
     ebnf_transformer = get_ebnf_transformer()
     ebnf_compiler = get_ebnf_compiler('EBNF')
@@ -128,17 +132,20 @@ def selftest() -> bool:
         builtin_ebnf_parser, ebnf_transformer, ebnf_compiler)
     generated_ebnf_parser = cast(str, result)
 
-    if errors:
-        print("Selftest FAILED :-(")
-        print("\n\n".join(str(err) for err in errors))
+    if has_errors(errors, ERROR):
+        if not silent:
+            print("Selftest FAILED :-(")
+            print("\n\n".join(str(err) for err in errors))
         return False
-    print(generated_ebnf_parser)
-    print("\n\nSTAGE 2: Selfhosting-test: "
-          "Trying to compile EBNF-Grammar with generated parser...\n")
+    if not silent:
+        print(generated_ebnf_parser)
+        print("\n\nSTAGE 2: Selfhosting-test: "
+              "Trying to compile EBNF-Grammar with generated parser...\n")
     selfhosted_ebnf_parser = compileDSL(ebnf_src, None, generated_ebnf_parser,
                                         ebnf_transformer, ebnf_compiler)
     # ebnf_compiler.gen_transformer_skeleton()
-    print(selfhosted_ebnf_parser)
+    if not silent:
+        print(selfhosted_ebnf_parser)
     return True
 
 
@@ -181,7 +188,7 @@ def main():
     parameter) or runs a quick self-test.
     """
     access_presets()
-    set_preset_value('syntax_variant', 'heuristic')
+    set_preset_value('syntax_variant', 'heuristic')  # TODO: Bugs in Transformation-Table
     finalize_presets()
     if len(sys.argv) > 1:
         if sys.argv[1].lower() == "--selftest":

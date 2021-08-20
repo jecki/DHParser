@@ -37,7 +37,9 @@ definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to supp
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   # component  = (regexp | literals | procedure | symbol !DEF)
-  component  = literals | procedure | expression
+  # component  = literals | procedure | expression
+  component  = regexp | literals | procedure | symbol !DEF
+             | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
@@ -148,3 +150,7 @@ RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, 
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
 HEXCODE    = /[A-Fa-f0-9]{1,8}/
 
+
+#: error-markers
+
+RAISE_EXPR_WO_BRACKETS = ``

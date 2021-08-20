@@ -1,34 +1,9 @@
-# lsp.py - Language Server Protocol data structures and support functions
-#
-# Copyright 20w0  by Eckhart Arnold (arnold@badw.de)
-#                 Bavarian Academy of Sciences an Humanities (badw.de)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.  See the License for the specific language governing
-# permissions and limitations under the License.
 
-"""Module lsp.py defines (some of) the constants and data structures from
-the Language Server Protocol. See:
-<https://microsoft.github.io/language-server-protocol/specifications/specification-current/>
-
-EXPERIMENTAL!!!
-"""
-
-
-import bisect
 import copy
 from enum import Enum, IntEnum
 import functools
 from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, \
-    Iterator, Iterable, Callable, cast
+    Iterable, cast
 
 try:
     from typing import ForwardRef
@@ -36,95 +11,6 @@ except ImportError:
     from typing import _ForwardRef  # Python 3.6 compatibility
     ForwardRef = _ForwardRef
 
-from DHParser.server import RPC_Table
-from DHParser.toolkit import JSON_Type, JSON_Dict
-from dataclasses import dataclass, asdict
-
-
-
-#######################################################################
-#
-# Language-Server-Protocol functions
-#
-#######################################################################
-
-
-# general #############################################################
-
-# def get_lsp_methods(cls: Any, prefix: str= 'lsp_') -> List[str]:
-#     """Returns the language-server-protocol-method-names from class `cls`.
-#     Methods are selected based on the prefix and their name converted in
-#     accordance with the LSP-specification."""
-#     return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
-
-
-def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
-    """Returns an iterator over all method names from a class that either
-    have a certain prefix or, if no prefix was given, all non-special and
-    non-private-methods of the class."""
-    assert not prefix[:1] == '_'
-    if prefix:
-        # return [fn for fn in dir(cls) if fn.startswith(prefix) and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if fn[:len(prefix)] == prefix and callable(getattr(cls, fn)):
-                yield fn
-    else:
-        # return [fn for fn in dir(cls) if not fn.startswith('_') and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if not fn[:1] == '_' and callable(getattr(cls, fn)):
-                yield fn
-
-
-def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
-    """Generates the name of an lsp-method from a function name,
-    e.g. "lsp_S_cancelRequest" -> "$/cancelRequest" """
-    assert func_name[:len(prefix)] == prefix
-    return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
-
-
-def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
-                  prefix: str = 'lsp_') -> RPC_Table:
-    """Creates an RPC from a list of functions or from the methods
-    of a class that implement the language server protocol.
-    The dictionary keys are derived from the function name by replacing an
-    underscore _ with a slash / and a single capital S with a $-sign.
-    if `prefix` is not the empty string only functions or methods that start
-    with `prefix` will be added to the table. The prefix will be removed
-    before converting the functions' name to a dictionary key.
-
-    >>> class LSP:
-    ...     def lsp_initialize(self, **kw):
-    ...         pass  # return InitializeResult
-    ...     def lsp_shutdown(self, **kw):
-    ...         pass
-    >>> lsp = LSP()
-    >>> gen_lsp_table(lsp, 'lsp_').keys()
-    dict_keys(['initialize', 'shutdown'])
-    """
-    if isinstance(lsp_funcs_or_instance, Iterable):
-        assert all(callable(func) for func in lsp_funcs_or_instance)
-        rpc_table = {gen_lsp_name(func.__name__, prefix): func for func in lsp_funcs_or_instance}
-    else:
-        # assume lsp_funcs_or_instance is the instance of a class
-        cls = lsp_funcs_or_instance
-        rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn)
-                     for fn in lsp_candidates(cls, prefix)}
-    return rpc_table
-
-
-# textDocument/completion #############################################
-
-def shortlist(long_list: List[str], typed: str, lo: int = 0, hi: int = -1) -> Tuple[int, int]:
-    if not typed:
-        return 0, 0
-    if hi < 0:
-        hi = len(long_list)
-    a = bisect.bisect_left(long_list, typed, lo, hi)
-    b = bisect.bisect_left(long_list, typed[:-1] + chr(ord(typed[-1]) + 1), lo, hi)
-    return a, b
-
-
-# decorator for typed lsp-functions ###################################
 
 class TSICheckLevel(IntEnum):
     NO_CHECK = 0        # No checks when instantiating a Type Script Interface
@@ -229,7 +115,8 @@ class TSInterface:
     def __repr__(self):
         return f"{self.__class__.__name__}({', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items())})"
 
-def asjson_obj(data: Union[TSInterface, JSON_Type], deepcopy: bool = False) -> JSON_Type:
+def asjson_obj(data: Union[TSInterface, Dict, List, str, int, float, None],
+               deepcopy: bool = False) -> Union[Dict, List, str, int, float, None]:
     if data is None:  return None
     if isinstance(data, TSInterface):
         cls = data.__class__
@@ -261,7 +148,9 @@ def asdict(data: TSInterface, deepcopy: bool = False) -> Dict:
     return cast(Dict, result)
 
 
-def fromjson_obj(d: JSON_Type, initial_type: List[type]) -> Union[TSInterface, JSON_Type]:
+def fromjson_obj(d: Union[Dict, List, Tuple, str, int, float, None],
+                 initial_type: List[type]) \
+        -> Union[TSInterface, Dict, List, str, int, float, None]:
     if isinstance(d, (str, int, float, type(None))):  return d
     assert isinstance(initial_type, Iterable)
     type_errors = []
@@ -331,18 +220,10 @@ def json_adaptor(func):
         dict_obj = args[0] if args else kwargs
         call_params = fromjson_obj(dict_obj, [call_type])
         return_val = func(call_params)
-        return asjson_obj(return_val) if return_val is not None else None
+        return asjson_obj(return_val)
 
     return adaptor
 
-
-#######################################################################
-#
-# Language-Server-Protocol data structures (AUTOGENERATED: Don't edit!)
-#
-#######################################################################
-
-##### BEGIN OF LSP SPECS
 
 integer = float
 
@@ -2072,7 +1953,6 @@ ResponseMessage.references__ = {
     'error': [ResponseError]
 }
 ProgressParams.references__ = {
-    'token': [ProgressToken],
     'value': [T]
 }
 Range.references__ = {
@@ -2080,66 +1960,44 @@ Range.references__ = {
     'end': [Position]
 }
 Location.references__ = {
-    'uri': [DocumentUri],
     'range': [Range]
 }
 LocationLink.references__ = {
     'originSelectionRange': [Range],
-    'targetUri': [DocumentUri],
     'targetRange': [Range],
     'targetSelectionRange': [Range]
 }
 Diagnostic.references__ = {
     'range': [Range],
-    'severity': [DiagnosticSeverity],
-    'codeDescription': [CodeDescription]
+    'codeDescription': [CodeDescription],
+    'relatedInformation': [List[DiagnosticRelatedInformation]]
 }
 DiagnosticRelatedInformation.references__ = {
     'location': [Location]
 }
-CodeDescription.references__ = {
-    'href': [URI]
-}
 TextEdit.references__ = {
     'range': [Range]
-}
-AnnotatedTextEdit.references__ = {
-    'annotationId': [ChangeAnnotationIdentifier]
 }
 TextDocumentEdit.references__ = {
     'textDocument': [OptionalVersionedTextDocumentIdentifier],
     'edits': [AnnotatedTextEdit]
 }
 CreateFile.references__ = {
-    'uri': [DocumentUri],
-    'options': [CreateFileOptions],
-    'annotationId': [ChangeAnnotationIdentifier]
+    'options': [CreateFileOptions]
 }
 RenameFile.references__ = {
-    'oldUri': [DocumentUri],
-    'newUri': [DocumentUri],
-    'options': [RenameFileOptions],
-    'annotationId': [ChangeAnnotationIdentifier]
+    'options': [RenameFileOptions]
 }
 DeleteFile.references__ = {
-    'uri': [DocumentUri],
-    'options': [DeleteFileOptions],
-    'annotationId': [ChangeAnnotationIdentifier]
+    'options': [DeleteFileOptions]
 }
 WorkspaceEdit.references__ = {
-    'changes': [DocumentUri],
+    'changes': [TextEdit],
     'documentChanges': [DeleteFile],
     'changeAnnotations': [ChangeAnnotation]
 }
 WorkspaceEditClientCapabilities.references__ = {
-    'failureHandling': [FailureHandlingKind],
     'changeAnnotationSupport': [WorkspaceEditClientCapabilities.ChangeAnnotationSupport_]
-}
-TextDocumentIdentifier.references__ = {
-    'uri': [DocumentUri]
-}
-TextDocumentItem.references__ = {
-    'uri': [DocumentUri]
 }
 TextDocumentPositionParams.references__ = {
     'textDocument': [TextDocumentIdentifier],
@@ -2148,20 +2006,10 @@ TextDocumentPositionParams.references__ = {
 TextDocumentRegistrationOptions.references__ = {
     'documentSelector': [DocumentSelector]
 }
-MarkupContent.references__ = {
-    'kind': [MarkupKind]
-}
-WorkDoneProgressParams.references__ = {
-    'workDoneToken': [ProgressToken]
-}
-PartialResultParams.references__ = {
-    'partialResultToken': [ProgressToken]
-}
 InitializeParams.references__ = {
     'clientInfo': [InitializeParams.ClientInfo_],
-    'rootUri': [DocumentUri],
     'capabilities': [ClientCapabilities],
-    'trace': [TraceValue]
+    'workspaceFolders': [WorkspaceFolder]
 }
 TextDocumentClientCapabilities.references__ = {
     'synchronization': [TextDocumentSyncClientCapabilities],
@@ -2220,7 +2068,6 @@ InitializeResult.references__ = {
     'serverInfo': [InitializeResult.ServerInfo_]
 }
 ServerCapabilities.references__ = {
-    'textDocumentSync': [TextDocumentSyncKind],
     'completionProvider': [CompletionOptions],
     'hoverProvider': [HoverOptions],
     'signatureHelpProvider': [SignatureHelpOptions],
@@ -2261,42 +2108,39 @@ ServerCapabilities.Workspace_.FileOperations_.references__ = {
     'didDelete': [FileOperationRegistrationOptions],
     'willDelete': [FileOperationRegistrationOptions]
 }
-SetTraceParams.references__ = {
-    'value': [TraceValue]
-}
-ShowMessageParams.references__ = {
-    'type': [MessageType]
-}
 ShowMessageRequestClientCapabilities.references__ = {
     'messageActionItem': [ShowMessageRequestClientCapabilities.MessageActionItem_]
 }
 ShowMessageRequestParams.references__ = {
-    'type': [MessageType]
+    'actions': [MessageActionItem]
 }
 ShowDocumentParams.references__ = {
-    'uri': [URI],
     'selection': [Range]
 }
-LogMessageParams.references__ = {
-    'type': [MessageType]
+RegistrationParams.references__ = {
+    'registrations': [Registration]
 }
-WorkDoneProgressCreateParams.references__ = {
-    'token': [ProgressToken]
-}
-WorkDoneProgressCancelParams.references__ = {
-    'token': [ProgressToken]
-}
-WorkspaceFolder.references__ = {
-    'uri': [DocumentUri]
+UnregistrationParams.references__ = {
+    'unregisterations': [Unregistration]
 }
 DidChangeWorkspaceFoldersParams.references__ = {
     'event': [WorkspaceFoldersChangeEvent]
 }
-ConfigurationItem.references__ = {
-    'scopeUri': [DocumentUri]
+WorkspaceFoldersChangeEvent.references__ = {
+    'added': [WorkspaceFolder],
+    'removed': [WorkspaceFolder]
 }
-FileEvent.references__ = {
-    'uri': [DocumentUri]
+ConfigurationParams.references__ = {
+    'items': [ConfigurationItem]
+}
+DidChangeWatchedFilesRegistrationOptions.references__ = {
+    'watchers': [FileSystemWatcher]
+}
+DidChangeWatchedFilesParams.references__ = {
+    'changes': [FileEvent]
+}
+WorkspaceSymbolClientCapabilities.SymbolKind_.references__ = {
+    'valueSet': [SymbolKind]
 }
 WorkspaceSymbolClientCapabilities.references__ = {
     'symbolKind': [WorkspaceSymbolClientCapabilities.SymbolKind_],
@@ -2305,32 +2149,39 @@ WorkspaceSymbolClientCapabilities.references__ = {
 ApplyWorkspaceEditParams.references__ = {
     'edit': [WorkspaceEdit]
 }
+FileOperationRegistrationOptions.references__ = {
+    'filters': [FileOperationFilter]
+}
 FileOperationPattern.references__ = {
-    'matches': [FileOperationPatternKind],
     'options': [FileOperationPatternOptions]
 }
 FileOperationFilter.references__ = {
     'pattern': [FileOperationPattern]
 }
+CreateFilesParams.references__ = {
+    'files': [FileCreate]
+}
+RenameFilesParams.references__ = {
+    'files': [FileRename]
+}
+DeleteFilesParams.references__ = {
+    'files': [FileDelete]
+}
 TextDocumentSyncOptions.references__ = {
-    'change': [TextDocumentSyncKind],
     'save': [SaveOptions]
 }
 DidOpenTextDocumentParams.references__ = {
     'textDocument': [TextDocumentItem]
 }
-TextDocumentChangeRegistrationOptions.references__ = {
-    'syncKind': [TextDocumentSyncKind]
-}
 DidChangeTextDocumentParams.references__ = {
-    'textDocument': [VersionedTextDocumentIdentifier]
+    'textDocument': [VersionedTextDocumentIdentifier],
+    'contentChanges': [TextDocumentContentChangeEvent]
 }
 TextDocumentContentChangeEvent_0.references__ = {
     'range': [Range]
 }
 WillSaveTextDocumentParams.references__ = {
-    'textDocument': [TextDocumentIdentifier],
-    'reason': [TextDocumentSaveReason]
+    'textDocument': [TextDocumentIdentifier]
 }
 DidSaveTextDocumentParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
@@ -2342,7 +2193,7 @@ PublishDiagnosticsClientCapabilities.references__ = {
     'tagSupport': [PublishDiagnosticsClientCapabilities.TagSupport_]
 }
 PublishDiagnosticsParams.references__ = {
-    'uri': [DocumentUri]
+    'diagnostics': [Diagnostic]
 }
 CompletionClientCapabilities.CompletionItem_.references__ = {
     'tagSupport': [CompletionClientCapabilities.CompletionItem_.TagSupport_],
@@ -2353,11 +2204,14 @@ CompletionClientCapabilities.references__ = {
     'completionItem': [CompletionClientCapabilities.CompletionItem_],
     'completionItemKind': [CompletionClientCapabilities.CompletionItemKind_]
 }
+CompletionClientCapabilities.CompletionItemKind_.references__ = {
+    'valueSet': [CompletionItemKind]
+}
 CompletionParams.references__ = {
     'context': [CompletionContext]
 }
-CompletionContext.references__ = {
-    'triggerKind': [CompletionTriggerKind]
+CompletionList.references__ = {
+    'items': [CompletionItem]
 }
 InsertReplaceEdit.references__ = {
     'insert': [Range],
@@ -2366,9 +2220,8 @@ InsertReplaceEdit.references__ = {
 CompletionItem.references__ = {
     'kind': [CompletionItemKind],
     'documentation': [MarkupContent],
-    'insertTextFormat': [InsertTextFormat],
-    'insertTextMode': [InsertTextMode],
     'textEdit': [InsertReplaceEdit],
+    'additionalTextEdits': [TextEdit],
     'command': [Command]
 }
 Hover.references__ = {
@@ -2385,11 +2238,14 @@ SignatureHelpParams.references__ = {
     'context': [SignatureHelpContext]
 }
 SignatureHelpContext.references__ = {
-    'triggerKind': [SignatureHelpTriggerKind],
     'activeSignatureHelp': [SignatureHelp]
 }
+SignatureHelp.references__ = {
+    'signatures': [SignatureInformation]
+}
 SignatureInformation.references__ = {
-    'documentation': [MarkupContent]
+    'documentation': [MarkupContent],
+    'parameters': [ParameterInformation]
 }
 ParameterInformation.references__ = {
     'documentation': [MarkupContent]
@@ -2398,8 +2254,10 @@ ReferenceParams.references__ = {
     'context': [ReferenceContext]
 }
 DocumentHighlight.references__ = {
-    'range': [Range],
-    'kind': [DocumentHighlightKind]
+    'range': [Range]
+}
+DocumentSymbolClientCapabilities.SymbolKind_.references__ = {
+    'valueSet': [SymbolKind]
 }
 DocumentSymbolClientCapabilities.references__ = {
     'symbolKind': [DocumentSymbolClientCapabilities.SymbolKind_],
@@ -2411,7 +2269,8 @@ DocumentSymbolParams.references__ = {
 DocumentSymbol.references__ = {
     'kind': [SymbolKind],
     'range': [Range],
-    'selectionRange': [Range]
+    'selectionRange': [Range],
+    'children': [DocumentSymbol]
 }
 SymbolInformation.references__ = {
     'kind': [SymbolKind],
@@ -2429,8 +2288,11 @@ CodeActionParams.references__ = {
     'range': [Range],
     'context': [CodeActionContext]
 }
+CodeActionContext.references__ = {
+    'diagnostics': [Diagnostic]
+}
 CodeAction.references__ = {
-    'kind': [CodeActionKind],
+    'diagnostics': [Diagnostic],
     'disabled': [CodeAction.Disabled_],
     'edit': [WorkspaceEdit],
     'command': [Command]
@@ -2446,8 +2308,7 @@ DocumentLinkParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
 }
 DocumentLink.references__ = {
-    'range': [Range],
-    'target': [DocumentUri]
+    'range': [Range]
 }
 DocumentColorParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
@@ -2462,7 +2323,8 @@ ColorPresentationParams.references__ = {
     'range': [Range]
 }
 ColorPresentation.references__ = {
-    'textEdit': [TextEdit]
+    'textEdit': [TextEdit],
+    'additionalTextEdits': [TextEdit]
 }
 DocumentFormattingParams.references__ = {
     'textDocument': [TextDocumentIdentifier],
@@ -2483,7 +2345,8 @@ FoldingRangeParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
 }
 SelectionRangeParams.references__ = {
-    'textDocument': [TextDocumentIdentifier]
+    'textDocument': [TextDocumentIdentifier],
+    'positions': [Position]
 }
 SelectionRange.references__ = {
     'range': [Range],
@@ -2491,7 +2354,6 @@ SelectionRange.references__ = {
 }
 CallHierarchyItem.references__ = {
     'kind': [SymbolKind],
-    'uri': [DocumentUri],
     'range': [Range],
     'selectionRange': [Range]
 }
@@ -2499,13 +2361,15 @@ CallHierarchyIncomingCallsParams.references__ = {
     'item': [CallHierarchyItem]
 }
 CallHierarchyIncomingCall.references__ = {
-    'from_': [CallHierarchyItem]
+    'from_': [CallHierarchyItem],
+    'fromRanges': [Range]
 }
 CallHierarchyOutgoingCallsParams.references__ = {
     'item': [CallHierarchyItem]
 }
 CallHierarchyOutgoingCall.references__ = {
-    'to': [CallHierarchyItem]
+    'to': [CallHierarchyItem],
+    'fromRanges': [Range]
 }
 SemanticTokensClientCapabilities.Requests_.references__ = {
     'range': [SemanticTokensClientCapabilities.Requests_.Range_1],
@@ -2525,9 +2389,18 @@ SemanticTokensParams.references__ = {
 SemanticTokensDeltaParams.references__ = {
     'textDocument': [TextDocumentIdentifier]
 }
+SemanticTokensDelta.references__ = {
+    'edits': [SemanticTokensEdit]
+}
+SemanticTokensDeltaPartialResult.references__ = {
+    'edits': [SemanticTokensEdit]
+}
 SemanticTokensRangeParams.references__ = {
     'textDocument': [TextDocumentIdentifier],
     'range': [Range]
+}
+LinkedEditingRanges.references__ = {
+    'ranges': [Range]
 }
 Moniker.references__ = {
     'unique': [UniquenessLevel],
@@ -3164,67 +3037,66 @@ Moniker.optional__ = {
 }
 
 
+
+
 if __name__ == "__main__":
+    p = Position(1, 2)
+
     msg = Message(jsonrpc="test")
-    print(msg.__dict__)
+    print(asdict(msg))
     msg = RequestMessage(jsonrpc="test", id=1, method="gogogo")
-    print(msg.__dict__)
+    print(asdict(msg))
     msg = RequestMessage(jsonrpc="test", id="2", method="gogogo", params="[1, 2, 3]")
-    print(msg.__dict__)
-
-##### END OF LSP SPECS
-
-
-#######################################################################
-#
-# Language-Server-Protocol methods
-#
-#######################################################################
-
-class LSPTasks:
-    def __init__(self, lsp_data: dict):
-        self.lsp_data = lsp_data
-        self.lsp_table = gen_lsp_table([], prefix='lsp_')
-
-NO_TASKS = LSPTasks({})
-
-class LSPBase:
-    def __init__(self, cpu_bound: LSPTasks=NO_TASKS, blocking: LSPTasks=NO_TASKS):
-        self.lsp_data = {
-            'processId': 0,
-            'rootUri': '',
-            'clientCapabilities': {},
-            'serverInfo': {"name": self.__class__.__name__, "version": "0.1"},
-            'serverCapabilities': {
-            }
-        }
-        self.connection = None
-        self.cpu_bound = cpu_bound
-        self.blocking = blocking
-        self.lsp_table = gen_lsp_table(self, prefix='lsp_')
-        self.lsp_fulltable = self.lsp_table.copy()
-        assert self.lsp_fulltable.keys().isdisjoint(self.cpu_bound.lsp_table.keys())
-        self.lsp_fulltable.update(self.cpu_bound.lsp_table)
-        assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
-        self.lsp_fulltable.update(self.blocking.lsp_table)
-
-    def connect(self, connection):
-        self.connection = connection
-
-    def lsp_initialize(self, **kwargs) -> Dict:
-        # InitializeParams -> InitializeResult
-        self.lsp_data['processId'] = kwargs['processId']
-        self.lsp_data['rootUri'] = kwargs['rootUri']
-        self.lsp_data['clientCapabilities'] = kwargs['capabilities']
-        return {'capabilities': self.lsp_data['serverCapabilities'],
-                'serverInfo': self.lsp_data['serverInfo']}
-
-    @json_adaptor
-    def lsp_initialized(self, params: InitializedParams) -> None:
+    print(asdict(msg))
+    try:
+        _ = ResponseError(code="ABC", message=3, data=False)
+        assert False, "TypeError exptected!"
+    except TypeError:
         pass
+    diag = Diagnostic(Range(Position(0, 0), Position(1, 1)),
+                      message="hey")
+    diag_dict = asdict(diag)
+    print(diag_dict)
+    diag2 = fromdict(diag_dict, Diagnostic)
+    diag2_dict = asdict(diag2)
+    print(diag2_dict)
+    assert diag_dict == diag2_dict
 
-    def lsp_shutdown(self) -> Dict:
-        self.lsp_data['processId'] = 0
-        self.lsp_data['rootUri'] = ''
-        self.lsp_data['clientCapabilities'] = {}
-        return {}
+    tf = TypeDefinitionParams(TextDocumentIdentifier(DocumentUri('URI')), Position(3, 2))
+    tf_dict = asdict(tf)
+    print(tf_dict)
+    tf2 = fromdict(tf_dict, TypeDefinitionParams)
+    tf2_dict = asdict(tf2)
+    print(tf2_dict)
+    assert tf_dict == tf2_dict
+
+    dgri = DiagnosticRelatedInformation(
+        Location('uri1', Range(Position(0, 0), Position(1, 1))),
+                 message="ups1")
+
+    diag = Diagnostic(Range(Position(0, 0), Position(1, 1)),
+                      message="hey",
+                      relatedInformation=[DiagnosticRelatedInformation(
+                          Location('uri1', Range(Position(0, 0), Position(1, 1))), 'ups2'),
+                                          DiagnosticRelatedInformation(
+                          Location('uri2', Range(Position(3, 4), Position(5, 6))), 'ups3')
+                                         ])
+    diag_dict = asdict(diag)
+    print(diag_dict)
+    print(asjson_obj([DiagnosticRelatedInformation(
+                          Location('uri1', Range(Position(0, 0), Position(1, 1))), 'ups2'),
+                                          DiagnosticRelatedInformation(
+                          Location('uri2', Range(Position(3, 4), Position(5, 6))), 'ups3')
+                                         ]))
+    diag2 = fromdict(diag_dict, Diagnostic)
+    diag2_dict = asdict(diag2)
+    assert diag2_dict == diag_dict
+
+    r = Range(Position(0, 0), {'line': 1, 'character': 1})
+    print(asdict(r))
+    print(r)
+    s = Range(Position(0, 0), (1, 1))
+    print(asdict(s))
+    print(r == s)
+    t = repr(r)
+    print(eval(t) == r == s)

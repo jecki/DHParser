@@ -219,11 +219,11 @@ def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
 
 def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
     """Returns json-object as pretty-printed string. Other than the standard-library's
-    `json.dumps()`-function `pp_json` allows to include already serialzed
+    `json.dumps()`-function `pp_json` allows to include already serialized
     parts (in the form of JSONStr-objects) in the json-object. Example::
 
     :param obj: A json-object (or a tree of json-objects) to be serialized
-    :param cls: The class of a custom json-encoder berived from `json.JSONEncoder`
+    :param cls: The class of a custom json-encoder derived from `json.JSONEncoder`
     :return: The pretty-printed string-serialized form of the json-object.
     """
     custom_encoder = cls()
@@ -514,7 +514,7 @@ class ExecutionEnvironment:
                 # restart process pool and try again once
                 self.process_executor.shutdown(wait=True)
                 self.process_executor = ProcessPoolExecutor()
-                await self.loop.run_in_executor(executor, executable)
+                result = await self.loop.run_in_executor(executor, executable)
             except BrokenProcessPool as e:
                 rpc_error = -32050, str(e)
         except BrokenThreadPool as e:
@@ -525,7 +525,7 @@ class ExecutionEnvironment:
                 # restart thread pool and try again once
                 self.thread_executor.shutdown(wait=True)
                 self.thread_executor = ThreadPoolExecutor()
-                await self.loop.run_in_executor(executor, executable)
+                result = await self.loop.run_in_executor(executor, executable)
             except BrokenThreadPool as e:
                 rpc_error = -32060, str(e)
         except Exception as e:
@@ -901,7 +901,7 @@ class Server:
 
     :var server_name: A name for the server. Defaults to
         `CLASSNAME_OBJECTID`
-    :var strict_lsp: Enforce Language-Server-Protocol von json-rpc-calls.
+    :var strict_lsp: Enforce Language-Server-Protocol on json-rpc-calls.
         If `False` json-rpc calls will be processed even without prior
         initialization, just like plain data or http calls.
     :var cpu_bound: Set of function names of functions that are cpu-bound
@@ -1823,7 +1823,7 @@ def spawn_stream_server(reader: StreamReaderType,
         p = Concurrent(target=_run_stream_server, args=(reader, writer), kwargs=parameters)
     else:
         assert callable(parameters)
-        p = Concurrent(target=_run_stream_server, args=(host, port, parameters))
+        p = Concurrent(target=_run_stream_server, args=(reader, writer, parameters))
     p.start()
     return p
 

@@ -43,12 +43,13 @@ def recompile_grammar(grammar_src, force):
     dsl.restore_server_script(grammar_src)
 
 
-def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
+def run_grammar_tests(glob_pattern, get_grammar, get_transformer, get_compiler):
     testdir = os.path.join(scriptpath, TEST_DIRNAME)
     DHParser.log.start_logging(os.path.join(testdir, LOGGING))
     error_report = testing.grammar_suite(
         testdir, get_grammar, get_transformer,
-        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
+        fn_patterns=[glob_pattern], report='REPORT', verbose=True,
+        junctions={('ast', get_compiler, 'py')}, show={'py'})
     return error_report
 
 
@@ -101,11 +102,12 @@ if __name__ == '__main__':
                           force=False)
         sys.path.append('.')
         from FixedEBNFParser import get_grammar, get_transformer
+        from DHParser.ebnf import get_ebnf_compiler
         if profile:
             error_report = cpu_profile(
-                lambda : run_grammar_tests(arg, get_grammar, get_transformer))
+                lambda : run_grammar_tests(arg, get_grammar, get_transformer, get_ebnf_compiler))
         else:
-            error_report = run_grammar_tests(arg, get_grammar, get_transformer)
+            error_report = run_grammar_tests(arg, get_grammar, get_transformer, get_ebnf_compiler)
         if error_report:
             print('\n')
             print(error_report)

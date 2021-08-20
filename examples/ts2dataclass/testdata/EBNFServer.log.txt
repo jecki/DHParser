@@ -1,0 +1,2561 @@
+LOG-FILE: LOGS/FlexibleEBNFServer_20210709_1505.log
+
+Log started on 2021-7-9 at 15:5 o'clock
+
+Python Version: 3.9.6 (default, Jun 30 2021, 10:22:16)  [GCC 11.1.0]
+DHParser Version: 0.9.6
+
+
+LOOP: <_UnixSelectorEventLoop running=True closed=False debug=False>
+
+SERVER MESSAGE: New connection: 140245202122208
+RECEIVE: Content-Length: 2487
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "processId": 7067,
+    "rootPath": "/home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF",
+    "rootUri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF",
+    "capabilities": {
+      "workspace": {
+        "applyEdit": true,
+        "workspaceEdit": {"documentChanges": true},
+        "didChangeConfiguration": {"dynamicRegistration": true},
+        "didChangeWatchedFiles": {"dynamicRegistration": true},
+        "symbol": {
+          "dynamicRegistration": true,
+          "symbolKind": {
+            "valueSet": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]}},
+        "executeCommand": {"dynamicRegistration": true},
+        "configuration": true,
+        "workspaceFolders": true},
+      "textDocument": {
+        "publishDiagnostics": {"relatedInformation": true},
+        "synchronization": {
+          "dynamicRegistration": true,
+          "willSave": true,
+          "willSaveWaitUntil": true,
+          "didSave": true},
+        "completion": {
+          "dynamicRegistration": true,
+          "contextSupport": true,
+          "completionItem": {
+            "snippetSupport": true,
+            "commitCharactersSupport": true,
+            "documentationFormat": ["markdown","plaintext"],
+            "deprecatedSupport": true,
+            "preselectSupport": true},
+          "completionItemKind": {
+            "valueSet": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]}},
+        "hover": {
+          "dynamicRegistration": true,
+          "contentFormat": ["markdown","plaintext"]},
+        "signatureHelp": {
+          "dynamicRegistration": true,
+          "signatureInformation": {
+            "documentationFormat": ["markdown","plaintext"]}},
+        "definition": {"dynamicRegistration": true},
+        "references": {"dynamicRegistration": true},
+        "documentHighlight": {"dynamicRegistration": true},
+        "documentSymbol": {
+          "dynamicRegistration": true,
+          "symbolKind": {
+            "valueSet": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]},
+          "hierarchicalDocumentSymbolSupport": true},
+        "codeAction": {
+          "dynamicRegistration": true,
+          "codeActionLiteralSupport": {
+            "codeActionKind": {
+              "valueSet": ["","quickfix","refactor","refactor.extract","refactor.inline","refactor.rewrite","source","source.organizeImports"]}}},
+        "codeLens": {"dynamicRegistration": true},
+        "formatting": {"dynamicRegistration": true},
+        "rangeFormatting": {"dynamicRegistration": true},
+        "onTypeFormatting": {"dynamicRegistration": true},
+        "rename": {"dynamicRegistration": true},
+        "documentLink": {"dynamicRegistration": true},
+        "typeDefinition": {"dynamicRegistration": true},
+        "implementation": {"dynamicRegistration": true},
+        "colorProvider": {"dynamicRegistration": true},
+        "foldingRange": {
+          "dynamicRegistration": true,
+          "rangeLimit": 5000,
+          "lineFoldingOnly": true}}},
+    "trace": "off",
+    "workspaceFolders": [{
+        "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF",
+        "name": "FlexibleEBNF"}]}}
+
+RESPONSE: Content-Length: 209
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "capabilities": {
+      "textDocumentSync": 2,
+      "completionProvider": {
+        "resolveProvider": false,
+        "triggerCharacters": ["@"," "]}},
+    "serverInfo": {
+      "name": "FlexibleEBNFServer",
+      "version": "0.2"}},
+  "id": 0}
+
+RECEIVE: Content-Length: 52
+{
+  "jsonrpc": "2.0",
+  "method": "initialized",
+  "params": {}}
+
+RECEIVE: Content-Length: 7218
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didOpen",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "languageId": "ebnf",
+      "version": 1,
+      "text": "# EBNF-Grammar in EBNF"
+      ""
+      "# This grammar is tuned for flexibility, that is, it supports as many"
+      "# different flavors of EBNF as possible. However, this flexibility"
+      "# comes at the cost of some ambiguities. In particular:"
+      "#"
+      "#    1. the alternative OR-operator / could be mistaken for the start"
+      "#       of a regular expression and vice versa, and"
+      "#    2. character ranges [a-z] can be mistaken for optional blocks"
+      "#       and vice versa"
+      "#"
+      "# A strategy to avoid these ambiguities is to do all of the following:"
+      "#"
+      "#     - replace the free_char-parser by a never matching parser"
+      "#     - if this is done, it is safe to replace the char_range_heuristics-"
+      "#       parser by an always matching parser"
+      "#     - replace the regex_heuristics by an always matching parser"
+      "#"
+      "# Ambiguities can also be avoided by NOT using all the syntactic variants"
+      "# made possible by this EBNF-grammar within one and the same EBNF-document"
+      ""
+      "@ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\\n|$)|\\/\\*(?:.|\\n)*?\\*\\/|\\(\\*(?:.|\\n)*?\\*\\)/"
+      "    # comments can be either C-Style: /* ... */"
+      "    # or pascal/modula/oberon-style: (* ... *)"
+      "    # or python-style: # ... \\n, excluding, however, character markers: #x20"
+      "@ whitespace = /\\s*/                            # whitespace includes linefeed"
+      "@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly"
+      "@ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF"
+      "@ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree"
+      "@ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve"
+      ""
+      "# re-entry-rules for resuming after parsing-error"
+      ""
+      "@ definition_resume = /\\n\\s*(?=@|\\w+\\w*\\s*=)/"
+      "@ directive_resume  = /\\n\\s*(?=@|\\w+\\w*\\s*=)/"
+      ""
+      ""
+      "# specialized error messages for certain cases"
+      ""
+      "@ definition_error  = /,/, 'Delimiter \",\" not expected in definition!\\nEither this was meant to '"
+      "                           'be a directive and the directive symbol @ is missing\\nor the error is '"
+      "                           'due to inconsistent use of the comma as a delimiter\\nfor the elements '"
+      "                           'of a sequence.'"
+      ""
+      ""
+      "#: top-level"
+      ""
+      "syntax     = ~ { definition | directive } EOF"
+      "definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax"
+      ""
+      "directive  = \"@\" §symbol \"=\" component { \",\" component } & FOLLOW_UP"
+      "  component  = (regexp | literals | procedure | symbol !DEF)"
+      "  literals   = { literal }+                       # string chaining, only allowed in directives!"
+      "  procedure  = SYM_REGEX \"()\"                     # procedure name, only allowed in directives!"
+      ""
+      "FOLLOW_UP  = `@` | symbol | EOF"
+      ""
+      ""
+      "#: components"
+      ""
+      "expression = sequence { :OR~ sequence }"
+      "sequence   = [\"§\"] ( interleave | lookaround )  # \"§\" means all following terms mandatory"
+      "             { :AND~ [\"§\"] ( interleave | lookaround ) }"
+      "interleave = difference { \"°\" [\"§\"] difference }"
+      "lookaround = flowmarker § (oneormore | pure_elem)"
+      "difference = term [\"-\" § (oneormore | pure_elem)]"
+      "term       = oneormore | counted | repetition | option | pure_elem"
+      ""
+      ""
+      "#: elements"
+      ""
+      "countable  = option | oneormore | element"
+      "pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix"
+      "element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure it's not a definition"
+      "           | literal"
+      "           | plaintext"
+      "           | regexp"
+      "           | char_range"
+      "           | character ~"
+      "           | any_char"
+      "           | whitespace"
+      "           | group"
+      ""
+      ""
+      "ANY_SUFFIX = /[?*+]/"
+      ""
+      ""
+      "#: flow-operators"
+      ""
+      "flowmarker = \"!\"  | \"&\"                         # '!' negative lookahead, '&' positive lookahead"
+      "           | \"<-!\" | \"<-&\"                      # '<-!' negative lookbehind, '<-&' positive lookbehind"
+      "retrieveop = \"::\" | \":?\" | \":\"                  # '::' pop, ':?' optional pop, ':' retrieve"
+      ""
+      ""
+      "#: groups"
+      ""
+      "group      = \"(\" no_range §expression \")\""
+      "oneormore  = \"{\" no_range expression \"}+\" | element \"+\""
+      "repetition = \"{\" no_range §expression \"}\" | element \"*\" no_range"
+      "option     = !char_range \"[\" §expression \"]\" | element \"?\""
+      "counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~ §countable"
+      ""
+      "range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~"
+      "no_range   = !multiplier | &multiplier :TIMES"
+      "multiplier = /[1-9]\\d*/~"
+      ""
+      ""
+      "#: leaf-elements"
+      ""
+      "symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list"
+      "literal    = /\"(?:(?<!\\\\)\\\\\"|[^\"])*?\"/~         # e.g. \"(\", '+', 'while'"
+      "           | /'(?:(?<!\\\\)\\\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly."
+      "plaintext  = /`(?:(?<!\\\\)\\\\`|[^`])*?`/~         # like literal but does not eat whitespace"
+      "           | /´(?:(?<!\\\\)\\\\´|[^´])*?´/~"
+      "regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\\w+/, ~/#.*(?:\\n|$)/~"
+      "# regexp     = /\\/(?:(?<!\\\\)\\\\(?:\\/)|[^\\/])*?\\//~     # e.g. /\\w+/, ~/#.*(?:\\n|$)/~"
+      "char_range = `[` &char_range_heuristics"
+      "                 [`^`] (character | free_char) { [`-`] character | free_char } \"]\""
+      "character  = :CH_LEADIN HEXCODE"
+      "free_char  = /[^\\n\\[\\]\\\\]/ | /\\\\[nrt`´'\"(){}\\[\\]\\/\\\\]/"
+      "any_char   = \".\""
+      "whitespace = /~/~                               # insignificant whitespace"
+      ""
+      "#: delimiters"
+      ""
+      "EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value"
+      "           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]"
+      ""
+      "DEF        = `=` | `:=` | `::=` | `<-` | /:\\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!"
+      "OR         = `|` | `/` !regex_heuristics"
+      "AND        = `,` | ``"
+      "ENDL       = `;` | ``"
+      ""
+      "RNG_BRACE  = :BRACE_SIGN"
+      "BRACE_SIGN = `{` | `(`"
+      "RNG_DELIM  = `,`"
+      "TIMES      = `*`"
+      ""
+      "RE_LEADIN  = `/` &regex_heuristics | `^/`"
+      "RE_LEADOUT = `/`"
+      ""
+      "CH_LEADIN  = `0x` | `#x`"
+      ""
+      "#: heuristics"
+      ""
+      "char_range_heuristics  = ! ( /[\\n\\t ]/"
+      "                           | ~ literal_heuristics"
+      "                           | [`::`|`:?`|`:`] SYM_REGEX /\\s*\\]/ )"
+      "literal_heuristics     = /~?\\s*\"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^\"]*)*\"/"
+      "                       | /~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'/"
+      "                       | /~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`/"
+      "                       | /~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´/"
+      "                       | /~?\\s*\\/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^\\/]*)*\\//"
+      "regex_heuristics       = /[^ ]/ | /[^\\/\\n*?+\\\\]*[*?+\\\\][^\\/\\n]\\//"
+      ""
+      ""
+      "#: basic-regexes"
+      ""
+      "RE_CORE    = /(?:(?<!\\\\)\\\\(?:\\/)|[^\\/])*/       # core of a regular expression, i.e. the dots in /.../"
+      "SYM_REGEX  = /(?!\\d)\\w+/                        # regular expression for symbols"
+      "HEXCODE    = /[A-Fa-f0-9]{1,8}/"
+      ""
+      ""}}}
+
+RECEIVE: Content-Length: 310
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 2},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 60},
+          "end": {
+            "line": 51,
+            "character": 60}},
+        "rangeLength": 0,
+        "text": ""
+        "  "}]}}
+
+RECEIVE: Content-Length: 179
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 2}}}
+
+RECEIVE: Content-Length: 305
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 3},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 2}},
+        "rangeLength": 0,
+        "text": "c"}]}}
+
+RECEIVE: Content-Length: 242
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 3},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 1}
+
+RECEIVE: Content-Length: 305
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 4},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 3},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "rangeLength": 0,
+        "text": "o"}]}}
+
+RECEIVE: Content-Length: 242
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 4},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 2}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 4,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "Missing definition for symbol 'co'"}]}}
+
+RECEIVE: Content-Length: 305
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 5},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 4},
+          "end": {
+            "line": 52,
+            "character": 4}},
+        "rangeLength": 0,
+        "text": "m"}]}}
+
+RECEIVE: Content-Length: 242
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 5},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 3}
+
+RECEIVE: Content-Length: 305
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 6},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 5},
+          "end": {
+            "line": 52,
+            "character": 5}},
+        "rangeLength": 0,
+        "text": "p"}]}}
+
+RECEIVE: Content-Length: 242
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 6},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 4}
+
+RECEIVE: Content-Length: 305
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 7},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 6},
+          "end": {
+            "line": 52,
+            "character": 6}},
+        "rangeLength": 0,
+        "text": "o"}]}}
+
+RECEIVE: Content-Length: 242
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 7},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 5}
+
+RECEIVE: Content-Length: 305
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 8},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 7},
+          "end": {
+            "line": 52,
+            "character": 7}},
+        "rangeLength": 0,
+        "text": "n"}]}}
+
+RECEIVE: Content-Length: 242
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 8},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 6}
+
+RECEIVE: Content-Length: 305
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 9},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 8},
+          "end": {
+            "line": 52,
+            "character": 8}},
+        "rangeLength": 0,
+        "text": "e"}]}}
+
+RECEIVE: Content-Length: 242
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 9},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 7}
+
+RECEIVE: Content-Length: 306
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 10},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 9},
+          "end": {
+            "line": 52,
+            "character": 9}},
+        "rangeLength": 0,
+        "text": "n"}]}}
+
+RECEIVE: Content-Length: 243
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 10},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 8}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 11},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 10},
+          "end": {
+            "line": 52,
+            "character": 10}},
+        "rangeLength": 0,
+        "text": "t"}]}}
+
+RECEIVE: Content-Length: 243
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 11},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 49
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 9}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 12},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 11},
+          "end": {
+            "line": 52,
+            "character": 11}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 267
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 12},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 10}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 13},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 12},
+          "end": {
+            "line": 52,
+            "character": 12}},
+        "rangeLength": 0,
+        "text": "="}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 14},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 13},
+          "end": {
+            "line": 52,
+            "character": 13}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 267
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 14},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 11}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 14,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 0,
+            "character": 0},
+          "end": {
+            "line": 0,
+            "character": 1}},
+        "severity": 1,
+        "code": 10200,
+        "source": "DHParser",
+        "message": "Compilation failed, most likely, due to errors earlier in the processing pipeline. Crash Message: SyntaxError: invalid syntax (<string>, line 102)"
+        "  File \"/home/eckhart/Entwicklung/DHParser/DHParser/toolkit.py\", line 743, in compile_python_object"
+        "    code = compile(python_src, '<string>', 'exec')"
+        ""},{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 13}},
+        "severity": 1,
+        "code": 1010,
+        "source": "DHParser",
+        "message": "expression expected by parser 'definition', »literals  ...« found!"},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"},{
+        "range": {
+          "start": {
+            "line": 54,
+            "character": 2},
+          "end": {
+            "line": 54,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"procedure\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 14}}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 15},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 12},
+          "end": {
+            "line": 52,
+            "character": 12}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 267
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 13},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 12}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 15}}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 16},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 15},
+          "end": {
+            "line": 52,
+            "character": 15}},
+        "rangeLength": 0,
+        "text": "p"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 16},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 13}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 17},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 16},
+          "end": {
+            "line": 52,
+            "character": 16}},
+        "rangeLength": 0,
+        "text": "r"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 17},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 14}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 18},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 17},
+          "end": {
+            "line": 52,
+            "character": 17}},
+        "rangeLength": 0,
+        "text": "o"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 15,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 18},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 15}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 18,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 15},
+          "end": {
+            "line": 52,
+            "character": 16}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "Missing definition for symbol 'pr'"},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"},{
+        "range": {
+          "start": {
+            "line": 54,
+            "character": 2},
+          "end": {
+            "line": 54,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"procedure\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 19},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 18},
+          "end": {
+            "line": 52,
+            "character": 18}},
+        "rangeLength": 0,
+        "text": "c"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 19},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 16}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 20},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 19},
+          "end": {
+            "line": 52,
+            "character": 19}},
+        "rangeLength": 0,
+        "text": "e"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 17,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 20},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 17}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 21},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 20},
+          "end": {
+            "line": 52,
+            "character": 20}},
+        "rangeLength": 0,
+        "text": "d"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 18,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 21},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 18}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 22},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 21},
+          "end": {
+            "line": 52,
+            "character": 21}},
+        "rangeLength": 0,
+        "text": "u"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 19,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 22},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 19}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 23},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 22},
+          "end": {
+            "line": 52,
+            "character": 22}},
+        "rangeLength": 0,
+        "text": "r"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 20,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 23},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 20}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 24},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 23},
+          "end": {
+            "line": 52,
+            "character": 23}},
+        "rangeLength": 0,
+        "text": "e"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 21,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 24},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 21}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 24,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 25},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 24},
+          "end": {
+            "line": 52,
+            "character": 24}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 267
+{
+  "jsonrpc": "2.0",
+  "id": 22,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 25},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 22}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 25}}}
+
+RECEIVE: Content-Length: 309
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 26},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 25},
+          "end": {
+            "line": 52,
+            "character": 25}},
+        "rangeLength": 0,
+        "text": "»"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 23,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 26},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 23}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 26,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 25},
+          "end": {
+            "line": 52,
+            "character": 26}},
+        "severity": 1,
+        "code": 1010,
+        "source": "DHParser",
+        "message": "&FOLLOW_UP expected by parser 'definition', »»\\n   litera...« found!"},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 307
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 27},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 25},
+          "end": {
+            "line": 52,
+            "character": 26}},
+        "rangeLength": 1,
+        "text": ""}]}}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 27,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 28},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 25},
+          "end": {
+            "line": 52,
+            "character": 25}},
+        "rangeLength": 0,
+        "text": "|"}]}}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 28,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 25},
+          "end": {
+            "line": 53,
+            "character": 13}},
+        "severity": 1,
+        "code": 1010,
+        "source": "DHParser",
+        "message": "&FOLLOW_UP expected by parser 'definition', »|\\n   litera...« found!"},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 28}}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 29},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 26},
+          "end": {
+            "line": 52,
+            "character": 26}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 267
+{
+  "jsonrpc": "2.0",
+  "id": 24,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 27},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 24}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 29}}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 30},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 27},
+          "end": {
+            "line": 52,
+            "character": 27}},
+        "rangeLength": 0,
+        "text": "e"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 25,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 28},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 25}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 31},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 28},
+          "end": {
+            "line": 52,
+            "character": 28}},
+        "rangeLength": 0,
+        "text": "x"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 26,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 29},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 26}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 32},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 29},
+          "end": {
+            "line": 52,
+            "character": 29}},
+        "rangeLength": 0,
+        "text": "p"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 27,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 30},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 27}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 32,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 27},
+          "end": {
+            "line": 52,
+            "character": 28}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "Missing definition for symbol 'ex'"},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 33},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 30},
+          "end": {
+            "line": 52,
+            "character": 30}},
+        "rangeLength": 0,
+        "text": "r"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 28,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 31},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 28}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 34},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 31},
+          "end": {
+            "line": 52,
+            "character": 31}},
+        "rangeLength": 0,
+        "text": "e"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 29,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 32},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 29}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 35},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 32},
+          "end": {
+            "line": 52,
+            "character": 32}},
+        "rangeLength": 0,
+        "text": "s"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 30,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 33},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 30}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 36},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 33},
+          "end": {
+            "line": 52,
+            "character": 33}},
+        "rangeLength": 0,
+        "text": "s"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 31,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 34},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 31}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 37},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 34},
+          "end": {
+            "line": 52,
+            "character": 34}},
+        "rangeLength": 0,
+        "text": "i"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 32,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 35},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 32}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 38},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 35},
+          "end": {
+            "line": 52,
+            "character": 35}},
+        "rangeLength": 0,
+        "text": "o"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 33,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 36},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 33}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 39},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 36},
+          "end": {
+            "line": 52,
+            "character": 36}},
+        "rangeLength": 0,
+        "text": "n"}]}}
+
+RECEIVE: Content-Length: 244
+{
+  "jsonrpc": "2.0",
+  "id": 34,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 37},
+    "context": {"triggerKind": 1}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 34}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 39,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "First definition of rule \"component\" followed by illegal redefinitions."},{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 2},
+          "end": {
+            "line": 52,
+            "character": 3}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "A rule \"component\" has already been defined earlier."},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 39}}}
+
+RECEIVE: Content-Length: 306
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 40},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 2},
+          "end": {
+            "line": 51,
+            "character": 2}},
+        "rangeLength": 0,
+        "text": "#"}]}}
+
+RECEIVE: Content-Length: 306
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 41},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 51,
+            "character": 3},
+          "end": {
+            "line": 51,
+            "character": 3}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 266
+{
+  "jsonrpc": "2.0",
+  "id": 35,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 51,
+      "character": 4},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 35}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 41,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 41}}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 42},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 15},
+          "end": {
+            "line": 52,
+            "character": 15}},
+        "rangeLength": 0,
+        "text": "l"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 43},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 16},
+          "end": {
+            "line": 52,
+            "character": 16}},
+        "rangeLength": 0,
+        "text": "i"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 44},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 17},
+          "end": {
+            "line": 52,
+            "character": 17}},
+        "rangeLength": 0,
+        "text": "t"}]}}
+
+SERVER NOTIFICATION: {
+  "jsonrpc": "2.0",
+  "method": "textDocument/publishDiagnostics",
+  "params": {
+    "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+    "version": 44,
+    "diagnostics": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 15},
+          "end": {
+            "line": 52,
+            "character": 16}},
+        "severity": 1,
+        "code": 1000,
+        "source": "DHParser",
+        "message": "Missing definition for symbol 'lprocedure'"},{
+        "range": {
+          "start": {
+            "line": 53,
+            "character": 2},
+          "end": {
+            "line": 53,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"literals\" is not connected to parser root \"syntax\" !"},{
+        "range": {
+          "start": {
+            "line": 54,
+            "character": 2},
+          "end": {
+            "line": 54,
+            "character": 3}},
+        "severity": 2,
+        "code": 640,
+        "source": "DHParser",
+        "message": "Rule \"procedure\" is not connected to parser root \"syntax\" !"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 45},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 18},
+          "end": {
+            "line": 52,
+            "character": 18}},
+        "rangeLength": 0,
+        "text": "e"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 46},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 19},
+          "end": {
+            "line": 52,
+            "character": 19}},
+        "rangeLength": 0,
+        "text": "r"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 47},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 20},
+          "end": {
+            "line": 52,
+            "character": 20}},
+        "rangeLength": 0,
+        "text": "a"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 48},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 21},
+          "end": {
+            "line": 52,
+            "character": 21}},
+        "rangeLength": 0,
+        "text": "l"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 49},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 22},
+          "end": {
+            "line": 52,
+            "character": 22}},
+        "rangeLength": 0,
+        "text": "s"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 50},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 23},
+          "end": {
+            "line": 52,
+            "character": 23}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 267
+{
+  "jsonrpc": "2.0",
+  "id": 36,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 24},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 36}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 50}}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 51},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 24},
+          "end": {
+            "line": 52,
+            "character": 24}},
+        "rangeLength": 0,
+        "text": "|"}]}}
+
+RECEIVE: Content-Length: 308
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 52},
+    "contentChanges": [{
+        "range": {
+          "start": {
+            "line": 52,
+            "character": 25},
+          "end": {
+            "line": 52,
+            "character": 25}},
+        "rangeLength": 0,
+        "text": " "}]}}
+
+RECEIVE: Content-Length: 267
+{
+  "jsonrpc": "2.0",
+  "id": 37,
+  "method": "textDocument/completion",
+  "params": {
+    "textDocument": {"uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf"},
+    "position": {
+      "line": 52,
+      "character": 26},
+    "context": {
+      "triggerKind": 2,
+      "triggerCharacter": " "}}}
+
+RESPONSE: Content-Length: 50
+{
+  "jsonrpc": "2.0",
+  "result": [{"lablel": ""}],
+  "id": 37}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 52}}}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 52}}}
+
+RECEIVE: Content-Length: 180
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didSave",
+  "params": {
+    "textDocument": {
+      "uri": "file:///home/eckhart/Entwicklung/DHParser/examples/FlexibleEBNF/FlexibleEBNF.ebnf",
+      "version": 52}}}
+
+RECEIVE: Content-Length: 59
+{
+  "jsonrpc": "2.0",
+  "id": 38,
+  "method": "shutdown",
+  "params": null}
+
+RESPONSE: Content-Length: 37
+{
+  "jsonrpc": "2.0",
+  "result": {},
+  "id": 38}
+
+RECEIVE: Content-Length: 47
+{
+  "jsonrpc": "2.0",
+  "method": "exit",
+  "params": null}
+
+SERVER MESSAGE: Closing connection: 140245202122208.
+

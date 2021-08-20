@@ -33,12 +33,12 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
 from DHParser.error import Error, is_error, has_errors, only_errors, \
-    CANNOT_VERIFY_TRANSTABLE_WARNING
+    CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
-from DHParser.transform import TransformationFunc, TransformationDict
+from DHParser.transform import TransformerCallable, TransformationDict
 from DHParser.toolkit import DHPARSER_DIR, DHPARSER_PARENTDIR, load_if_file, is_python_code, \
     compile_python_object, re, as_identifier, is_filename, relative_path
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
@@ -128,6 +128,9 @@ class CompilationError(DSLException):
         self.AST = AST
         self.result = result
 
+    def __str__(self):
+        return '\n'.join(str(error) for error in self.errors)
+
 
 def error_str(messages: Iterable[Error]) -> str:
     """
@@ -180,8 +183,9 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 def compileDSL(text_or_file: str,
                preprocessor: Optional[PreprocessorFunc],
                dsl_grammar: Union[str, Grammar],
-               ast_transformation: TransformationFunc,
-               compiler: Compiler) -> Any:
+               ast_transformation: TransformerCallable,
+               compiler: Compiler,
+               fail_when: ErrorCode = ERROR) -> Any:
     """
     Compiles a text in a domain specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a
@@ -196,13 +200,13 @@ def compileDSL(text_or_file: str,
     parser, grammar_src = grammar_instance(dsl_grammar)
     result, messages, AST = compile_source(text_or_file, preprocessor, parser,
                                            ast_transformation, compiler)
-    if has_errors(messages):
+    if has_errors(messages, fail_when):
         src = load_if_file(text_or_file)
-        raise CompilationError(only_errors(messages), src, grammar_src, AST, result)
+        raise CompilationError(only_errors(messages, fail_when), src, grammar_src, AST, result)
     return result
 
 
-def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
+def raw_compileEBNF(ebnf_src: str, branding="DSL", fail_when: ErrorCode = ERROR) -> EBNFCompiler:
     """
     Compiles an EBNF grammar file and returns the compiler object
     that was used and which can now be queried for the result as well
@@ -221,7 +225,7 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL") -> EBNFCompiler:
     grammar = get_ebnf_grammar()
     compiler = get_ebnf_compiler(branding, ebnf_src)
     transformer = get_ebnf_transformer()
-    compileDSL(ebnf_src, nil_preprocessor, grammar, transformer, compiler)
+    compileDSL(ebnf_src, nil_preprocessor, grammar, transformer, compiler, fail_when)
     return compiler
 
 
@@ -259,7 +263,10 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
 
 
 @functools.lru_cache()
-def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str = '') -> ParserFactoryFunc:
+def grammar_provider(ebnf_src: str,
+                     branding="DSL",
+                     additional_code: str = '',
+                     fail_when: ErrorCode = ERROR) -> ParserFactoryFunc:
     """
     Compiles an EBNF-grammar and returns a grammar-parser provider
     function for that grammar.
@@ -277,8 +284,9 @@ def grammar_provider(ebnf_src: str, branding="DSL", additional_code: str = '') -
         A provider function for a grammar object for texts in the
         language defined by ``ebnf_src``.
     """
-    grammar_src = compileDSL(ebnf_src, nil_preprocessor, get_ebnf_grammar(),
-                             get_ebnf_transformer(), get_ebnf_compiler(branding, ebnf_src))
+    grammar_src = compileDSL(
+        ebnf_src, nil_preprocessor, get_ebnf_grammar(), get_ebnf_transformer(),
+        get_ebnf_compiler(branding, ebnf_src), fail_when)
     log_name = get_config_value('compiled_EBNF_log')
     if log_name and is_logging():
             append_log(log_name, grammar_src)
@@ -383,7 +391,7 @@ def is_outdated(compiler_suite: str, grammar_source: str) -> bool:
         return True
 
 
-def run_compiler(text_or_file: str, compiler_suite: str) -> Any:
+def run_compiler(text_or_file: str, compiler_suite: str, fail_when: ErrorCode = ERROR) -> Any:
     """Compiles a source with a given compiler suite.
 
     Args:
@@ -403,7 +411,7 @@ def run_compiler(text_or_file: str, compiler_suite: str) -> Any:
         CompilerError
     """
     preprocessor, parser, ast, compiler = load_compiler_suite(compiler_suite)
-    return compileDSL(text_or_file, preprocessor(), parser(), ast(), compiler())
+    return compileDSL(text_or_file, preprocessor(), parser(), ast(), compiler(), fail_when)
 
 
 def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> Iterable[Error]:

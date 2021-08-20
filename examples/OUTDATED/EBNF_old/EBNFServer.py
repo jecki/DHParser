@@ -130,7 +130,7 @@ def json_rpc(func, params={}, ID=None) -> str:
 
 class EBNFCPUBoundTasks:
     def __init__(self, lsp_data: dict):
-        from DHParser.compile import ResultTuple
+        from DHParser.compile import CompilationResult
         from DHParser.lsp import gen_lsp_table
 
         self.lsp_data = lsp_data

@@ -28,7 +28,7 @@ for CST -> AST transformations.
 
 
 import collections.abc
-from functools import partial, singledispatch, reduce
+from functools import partial, singledispatch, reduce, wraps
 import inspect
 import operator
 from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
@@ -42,9 +42,9 @@ from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list,
 
 __all__ = ('TransformationDict',
            'TransformationProc',
-           'TransformationFunc',
            'ConditionFunc',
            'KeyFunc',
+           'TransformerCallable',
            'transformation_factory',
            'key_tag_name',
            'Filter',
@@ -147,11 +147,11 @@ class Filter:
 TransformationProc = Callable[[TreeContext], None]
 TransformationDict = Dict[str, Union[Callable, Sequence[Callable]]]
 TransformationCache = Dict[str, Tuple[Sequence[Filter], Sequence[Callable]]]
-TransformationFunc = Union[Callable[[TreeContext], Any], partial]
 ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[TreeContext], bool]
 KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
+TransformerCallable = Union[Callable[[RootNode], RootNode], partial]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
@@ -311,7 +311,7 @@ BLOCK_ANONYMOUS_LEAVES = BlockAnonymousLeaves()
 
 def traverse(root_node: Node,
              processing_table: ProcessingTableType,
-             key_func: KeyFunc = key_tag_name) -> None:
+             key_func: KeyFunc = key_tag_name) -> Node:
     """
     Traverses the syntax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
@@ -426,6 +426,7 @@ def traverse(root_node: Node,
                                      % (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
 
     traverse_recursive([root_node])
+    return root_node
     # assert processing_table['__cache__']
 
 

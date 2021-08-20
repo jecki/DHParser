@@ -29,9 +29,10 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
-    flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ALL_NODES, next_context, \
+    flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_context, \
     prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
-    select_context_if, select_context, create_context_match_function
+    select_context_if, select_context, create_context_match_function, pick_context, \
+    LEAF_CONTEXT
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -307,7 +308,7 @@ class TestNode:
                 for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
         assert ''.join(tags) == "abdfg", ''.join(tags)
         tags = [node.tag_name
-                for node in self.unique_tree.select(ALL_NODES, include_root=True, skip_subtree='f')]
+                for node in self.unique_tree.select(ANY_NODE, include_root=True, skip_subtree='f')]
         assert ''.join(tags) == "abdf", ''.join(tags)
 
     def test_tree_select_context_if(self):
@@ -349,7 +350,7 @@ class TestNode:
 
     def test_select_children(self):
         tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
-        children = list(nd.tag_name for nd in tree.select_children(ALL_NODES))
+        children = list(nd.tag_name for nd in tree.select_children(ANY_NODE))
         assert children == ['B', 'C', 'B']
         B_values = list(nd.content for nd in tree.select_children('B', reverse=True))
         assert B_values == ['2', '1']
@@ -845,7 +846,7 @@ class TestContextNavigation:
         save = start.copy()
         sequence = []
         for ctx in select_context_if(
-                start, lambda c: True, reverse=True):
+                start, lambda c: True, include_root=True, reverse=True):
             sequence.append(''.join(n.tag_name for n in ctx))
         assert sequence == ['ACE', 'ACD', 'AC', 'AB', 'A']
         assert save == start  # context passed should not be changed by select_context
@@ -853,9 +854,16 @@ class TestContextNavigation:
         start = self.tree.pick_context('D')
         sequence = []
         for ctx in select_context_if(
-                start, lambda c: True, reverse=False):
+                start, lambda c: True, include_root=True, reverse=False):
             sequence.append(''.join(n.tag_name for n in ctx))
         assert sequence == ['ACD', 'ACE', 'AC', 'AF', 'A']
+
+    def test_standalone_pick_context(self):
+        start = self.tree.pick_context('A', include_root=True)
+        anfang = pick_context(start, LEAF_CONTEXT, include_root=True)
+        ende = pick_context(start, LEAF_CONTEXT, include_root=True, reverse=True)
+        assert anfang[-1].tag_name == 'B'
+        assert ende[-1].tag_name == 'F'
 
 
 if __name__ == "__main__":

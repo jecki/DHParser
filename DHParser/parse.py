@@ -138,7 +138,7 @@ class ParserError(Exception):
         self.error = error    # type: Error
         self.first_throw = first_throw   # type: bool
         self.attributes_locked = frozenset({'parser', 'node', 'rest', 'error', 'first_throw'})
-        self.frozen_callstack = tuple()  # type: Tuple[CallItem, ...]  # tag_name, location
+        self.callstack_snapshot = []  # type: List[CallItem, ...]  # tag_name, location
 
     def __setattr__(self, name, value):
         if name == "attributes_locked":
@@ -173,7 +173,7 @@ class ParserError(Exception):
         assert len(kwargs.keys() - args.keys()) == 0, str(kwargs.keys() - args.keys())
         args.update(kwargs)
         pe = ParserError(**args)
-        pe.frozen_callstack = self.frozen_callstack
+        pe.callstack_snapshot = self.callstack_snapshot
         return pe
 
 
@@ -1621,11 +1621,11 @@ class Grammar:
                         i = self.ff_pos__ or tail_pos(stitches)
                         fs = self.document__[i:i + 10]
                         if i + 10 < len(self.document__) - 1:  fs += ' ...'
-                        root_name = self.root_parser__.pname \
-                                    or self.associated_symbol__(self.root_parser__).pname
+                        root_name = self.start_parser__.pname \
+                                    or self.associated_symbol__(self.start_parser__).pname
                         error_msg = f'Parser "{root_name}" ' \
-                            "stopped before end, at:  " + fs + \
-                            (("  Trying to recover" +
+                            "stopped before end, at: »" + fs + \
+                            (("« Trying to recover" +
                               (" but stopping history recording at this point."
                                if self.history_tracking__ else "..."))
                              if len(stitches) < self.max_parser_dropouts__

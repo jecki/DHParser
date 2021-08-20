@@ -14,10 +14,10 @@
 @ comment     = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # /* ... */ or // to EOL
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
-@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF, _type, _literal, _name, _array_ellipsis,
-                _top_level_assignment, _top_level_literal
-@ drop        = whitespace, strings, EOF, _array_ellipsis, _top_level_assignment,
-                _top_level_literal
+@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF,
+                _array_ellipsis, _top_level_assignment, _top_level_literal
+@ drop        = whitespace, strings, EOF,
+                _array_ellipsis, _top_level_assignment, _top_level_literal
 
 
 #######################################################################
@@ -29,7 +29,6 @@
 document    = ~ { interface | type_alias | namespace | enum | const
                 | declaration ";" | _top_level_assignment
                 | _array_ellipsis | _top_level_literal } EOF
-
 
 #######################################################################
 #
@@ -48,13 +47,13 @@ declarations_block = "{"  [declaration { ";" declaration }
 declaration = [qualifier] identifier [optional] [":" types]
   qualifier = "readonly"
   optional  = "?"
-  index_signature = "[" identifier (":" | "in" "keyof") _type "]"
-types       = _type { "|" _type }
-_type        = array_of | basic_type | type_name | "(" types ")"
-             | mapped_type | declarations_block | type_tuple | _literal
+  index_signature = "[" identifier (":" | "in" "keyof") type "]"
+types       = type { "|" type }
+type        = array_of | basic_type | type_name | "(" types ")"
+             | mapped_type | declarations_block | type_tuple | literal
 type_name   = identifier
-array_of    = (basic_type | "(" types ")" | identifier) "[]"
-type_tuple  = "[" _type {"," _type} "]"
+array_of    = (basic_type | "(" types ")" | type_name) "[]"
+type_tuple  = "[" type {"," type} "]"
 mapped_type = "{" map_signature [";"] "}"
 map_signature = index_signature ":" types
 
@@ -65,8 +64,9 @@ map_signature = index_signature ":" types
 #
 #######################################################################
 
-namespace   = ["export"] "namespace" §identifier
-              "{" { const } "}"
+namespace   = ["export"] "namespace" §identifier "{"
+              { interface | type_alias | enum | const
+              | declaration ";" }  "}"
 
 #######################################################################
 #
@@ -74,8 +74,8 @@ namespace   = ["export"] "namespace" §identifier
 #
 #######################################################################
 
-enum        = ["export"] "enum" [identifier] §"{" item { "," item } "}"
-  item      = identifier ["=" _literal]
+enum        = ["export"] "enum" identifier §"{" item { "," item } "}"
+  item      = identifier ["=" literal]
 
 
 #######################################################################
@@ -84,9 +84,9 @@ enum        = ["export"] "enum" [identifier] §"{" item { "," item } "}"
 #
 #######################################################################
 
-const       = ["export"] "const" §declaration "=" (_literal | identifier) ";"
+const       = ["export"] "const" §declaration "=" (literal | identifier) ";"
 _top_level_assignment = assignment
-assignment  = variable "=" _literal ";"
+assignment  = variable "=" (literal | variable) ";"  # no expressions, yet
 
 #######################################################################
 #
@@ -94,16 +94,17 @@ assignment  = variable "=" _literal ";"
 #
 #######################################################################
 
-_array_ellipsis = _literal { "," _literal }
+_array_ellipsis = literal { "," literal }
 
-_top_level_literal = _literal
-_literal    = number | string | array | object
+_top_level_literal = literal
+literal    = integer | number | string | array | object
+integer    = INT !/[.Ee]/ ~
 number     = INT FRAC EXP ~
 string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
-array      = "[" [ _literal { "," _literal } ] "]"
+array      = "[" [ literal { "," literal } ] "]"
 object     = "{" [ association { "," association } ] "}"
- association = _name ":" _literal
-_name       = identifier | '"' identifier '"'
+  association = name ":" literal
+  name        = identifier | '"' identifier '"'
 
 #######################################################################
 #
@@ -112,8 +113,7 @@ _name       = identifier | '"' identifier '"'
 #######################################################################
 
 basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`
-               | `integer` | `uinteger` ) ~
-
+               | `integer` | `uinteger` | `decimal` | `unknown` | `any` ) ~
 
 #######################################################################
 #

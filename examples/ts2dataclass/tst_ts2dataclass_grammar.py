@@ -43,12 +43,13 @@ def recompile_grammar(grammar_src, force):
     dsl.restore_server_script(grammar_src)
 
 
-def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
+def run_grammar_tests(fn_pattern, get_grammar, get_transformer, get_compiler):
     testdir = os.path.join(scriptpath, TEST_DIRNAME)
     DHParser.log.start_logging(os.path.join(testdir, LOGGING))
     error_report = testing.grammar_suite(
         testdir, get_grammar, get_transformer,
-        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
+        fn_patterns=[fn_pattern], report='REPORT', verbose=True,
+        junctions={('ast', get_compiler, 'py')}, show={'py'})
     return error_report
 
 
@@ -59,7 +60,7 @@ if __name__ == '__main__':
         del argv[1]
 
     access_presets()
-    # set_preset_value('test_parallelization', True)
+    set_preset_value('test_parallelization', False)
     if DEBUG:  set_preset_value('history_tracking', True)
     finalize_presets()
 
@@ -77,8 +78,8 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptpath, 'ts2dataclass.ebnf'),
                           force=False)
         sys.path.append('.')
-        from ts2dataclassParser import get_grammar, get_transformer
-        error_report = run_grammar_tests(arg, get_grammar, get_transformer)
+        from ts2dataclassParser import get_grammar, get_transformer, get_compiler
+        error_report = run_grammar_tests(arg, get_grammar, get_transformer, get_compiler)
         if error_report:
             print('\n')
             print(error_report)

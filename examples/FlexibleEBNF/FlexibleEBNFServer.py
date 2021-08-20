@@ -277,7 +277,7 @@ class EBNFLanguageServerProtocol:
         self.completions.sort()
         self.completion_items1 = [{k: v for k, v in chain(zip(self.completion_fields, item),
                                                           [['kind', CompletionItemKind.Keyword]])}
-                                 for item in self.completions]
+                                  for item in self.completions]
         self.completion_items2 = [item.copy() for item in self.completion_items1]
         for item in self.completion_items1:
             item['insertText'] = item['insertText'][1:]
@@ -378,7 +378,7 @@ class EBNFLanguageServerProtocol:
             a, b = shortlist(self.completion_labels, chars)
             if a == b:
                 # returning a completion item without insertText-field
-                # supresses the display of VSC's self-generated items
+                # suprpesses the display of VSC's self-generated items
                 # Other than returning None, this does not result
                 # in a cancel event.
                 return [{'lablel': ''}]  # None

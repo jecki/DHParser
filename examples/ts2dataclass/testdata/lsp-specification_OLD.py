@@ -1,130 +1,9 @@
-# lsp.py - Language Server Protocol data structures and support functions
-#
-# Copyright 20w0  by Eckhart Arnold (arnold@badw.de)
-#                 Bavarian Academy of Sciences an Humanities (badw.de)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-# implied.  See the License for the specific language governing
-# permissions and limitations under the License.
 
-"""Module lsp.py defines (some of) the constants and data structures from
-the Language Server Protocol. See:
-<https://microsoft.github.io/language-server-protocol/specifications/specification-current/>
-
-EXPERIMENTAL!!!
-"""
-
-
-import bisect
-import copy
+from collections import ChainMap
+from dataclasses import dataclass
 from enum import Enum, IntEnum
-import functools
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, \
-    Iterator, Iterable, Callable, cast
+from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 
-try:
-    from typing import ForwardRef
-except ImportError:
-    from typing import _ForwardRef  # Python 3.6 compatibility
-    ForwardRef = _ForwardRef
-
-from DHParser.server import RPC_Table
-from DHParser.toolkit import JSON_Type, JSON_Dict
-from dataclasses import dataclass, asdict
-
-
-
-#######################################################################
-#
-# Language-Server-Protocol functions
-#
-#######################################################################
-
-
-# general #############################################################
-
-# def get_lsp_methods(cls: Any, prefix: str= 'lsp_') -> List[str]:
-#     """Returns the language-server-protocol-method-names from class `cls`.
-#     Methods are selected based on the prefix and their name converted in
-#     accordance with the LSP-specification."""
-#     return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
-
-
-def lsp_candidates(cls: Any, prefix: str = 'lsp_') -> Iterator[str]:
-    """Returns an iterator over all method names from a class that either
-    have a certain prefix or, if no prefix was given, all non-special and
-    non-private-methods of the class."""
-    assert not prefix[:1] == '_'
-    if prefix:
-        # return [fn for fn in dir(cls) if fn.startswith(prefix) and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if fn[:len(prefix)] == prefix and callable(getattr(cls, fn)):
-                yield fn
-    else:
-        # return [fn for fn in dir(cls) if not fn.startswith('_') and callable(getattr(cls, fn))]
-        for fn in dir(cls):
-            if not fn[:1] == '_' and callable(getattr(cls, fn)):
-                yield fn
-
-
-def gen_lsp_name(func_name: str, prefix: str = 'lsp_') -> str:
-    """Generates the name of an lsp-method from a function name,
-    e.g. "lsp_S_cancelRequest" -> "$/cancelRequest" """
-    assert func_name[:len(prefix)] == prefix
-    return func_name[len(prefix):].replace('_', '/').replace('S/', '$/')
-
-
-def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
-                  prefix: str = 'lsp_') -> RPC_Table:
-    """Creates an RPC from a list of functions or from the methods
-    of a class that implement the language server protocol.
-    The dictionary keys are derived from the function name by replacing an
-    underscore _ with a slash / and a single capital S with a $-sign.
-    if `prefix` is not the empty string only functions or methods that start
-    with `prefix` will be added to the table. The prefix will be removed
-    before converting the functions' name to a dictionary key.
-
-    >>> class LSP:
-    ...     def lsp_initialize(self, **kw):
-    ...         pass  # return InitializeResult
-    ...     def lsp_shutdown(self, **kw):
-    ...         pass
-    >>> lsp = LSP()
-    >>> gen_lsp_table(lsp, 'lsp_').keys()
-    dict_keys(['initialize', 'shutdown'])
-    """
-    if isinstance(lsp_funcs_or_instance, Iterable):
-        assert all(callable(func) for func in lsp_funcs_or_instance)
-        rpc_table = {gen_lsp_name(func.__name__, prefix): func for func in lsp_funcs_or_instance}
-    else:
-        # assume lsp_funcs_or_instance is the instance of a class
-        cls = lsp_funcs_or_instance
-        rpc_table = {gen_lsp_name(fn, prefix): getattr(cls, fn)
-                     for fn in lsp_candidates(cls, prefix)}
-    return rpc_table
-
-
-# textDocument/completion #############################################
-
-def shortlist(long_list: List[str], typed: str, lo: int = 0, hi: int = -1) -> Tuple[int, int]:
-    if not typed:
-        return 0, 0
-    if hi < 0:
-        hi = len(long_list)
-    a = bisect.bisect_left(long_list, typed, lo, hi)
-    b = bisect.bisect_left(long_list, typed[:-1] + chr(ord(typed[-1]) + 1), lo, hi)
-    return a, b
-
-
-# decorator for typed lsp-functions ###################################
 
 class TSICheckLevel(IntEnum):
     NO_CHECK = 0        # No checks when instantiating a Type Script Interface
@@ -135,52 +14,39 @@ class TSICheckLevel(IntEnum):
 TSI_DYNAMIC_CHECK = TSICheckLevel.TYPE_CHECK
 
 
-def derive_types(annotation) -> Tuple:
+def derive_types(annotation) -> List:
     types = []
-    if isinstance(annotation, ForwardRef):
-        annotation = eval(annotation.__forward_arg__)
-    elif isinstance(annotation, str):  # really needed?
+    if isinstance(annotation, str):
         annotation = eval(annotation)
     try:
         origin = annotation.__origin__
-        if origin is Union:
+        if origin in ('Union', 'typing.Union'):
             for t_anno in annotation.__args__:
                 types.extend(derive_types(t_anno))
         else:
             _ = annotation.__args__
             types.append(annotation.__origin__)
     except AttributeError:
-        if annotation is Any:
-            types.append(object)
-        else:
-            types.append(annotation)
-    return tuple(types)
-
-
-def chain_from_bases(cls, chain: str, field: str) -> Dict:
-    try:
-        return cls.__dict__[chain]
-    except KeyError:
-        chained = {}
-        chained.update(getattr(cls, field, {}))
-        for base in cls.__bases__:
-            chained.update(getattr(base, field, {}))
-        setattr(cls, chain, chained)
-        return chained
+        types.append(annotation)
+    print(types)
+    return types
 
 
 class TSInterface:
-    def derive_arg_types__(self, fields):
+    __annotations__ = {}
+    arg_types__ = {}
+
+    def derive_arg_types(self):
         cls = self.__class__
-        assert not hasattr(cls, 'arg_types__')
-        cls.arg_types__ = {param: derive_types(param_type)
-                           for param, param_type in fields.items()}
+        assert not cls.arg_types__
+        for param, param_type in cls.__annotations__.items():
+            arg_types__[param] =
 
     def typecheck__(self, level: TSICheckLevel):
         if level <= TSICheckLevel.NO_CHECK:  return
         # level is at least TSIContract.ARG_CHECK
         cls = self.__class__
-        fields = cls.fields__
+        fields = ChainMap(cls.__annotations__, *(base.__annotations__ for base in cls.__bases__))
         if fields.keys() != self.__dict__.keys():
             missing = fields.keys() - self.__dict__.keys()
             wrong = self.__dict__.keys() - fields.keys()
@@ -189,28 +55,33 @@ class TSInterface:
                 msgs.append(f'missing required arguments: {", ".join(missing)}!')
             if wrong:
                 msgs.append(f'got unexpected parameters: {", ".join(wrong)}!')
-            raise TypeError(' '.join(msgs) + f' Received: {self.__dict__}')
+            raise TypeError(' '.join(msgs))
         if level >= TSICheckLevel.TYPE_CHECK:
-            if not hasattr(cls, 'arg_types__'):
-                self.derive_arg_types__(fields)
-            type_errors = [f'{arg} is not a {typ}' for arg, typ in self.arg_types__.items()
-                           if (not isinstance(self.__dict__[arg], typ)
-                               or (typ == [object] and self.__dict__[arg] is None))]
+            if not cls.arg_types__:
+                cls.arg_types__ = {}
+
+            type_errors = []
+            for param, param_type in cls.__annotations__.items():
+                if isinstance(param_type, str):
+
+                    if hasattr(param_type,  '__args__'):
+
+                    flag = isinstance(self.__dict__[param], param_type)
+                except TypeError as e:
+                    print('TypeError', e, type(param_type), param_type.__dict__)
+                    assert isinstance(param_type, str), f'{param}, {param_type}'
+                    param_type = eval(param_type)
+                    cls.__annotations__[param] = param_type
+                    flag = isinstance(self.__dict__[param], param_type)
+                if not flag:
+                    type_errors.append(f'{param} is not of expected type {param_type}')
             if type_errors:
-                raise TypeError(f'{cls.__name__} got wrong types: ' + ', '.join(type_errors))
+                raise TypeError(f'{cls.__name__}' + ' '.join(type_errors))
 
     def __init__(self, *args, **kwargs):
-        cls = self.__class__
-        fields = chain_from_bases(cls, 'fields__', '__annotations__')
-        args_dict = {kw: arg for kw, arg in zip(fields.keys(), args)}
-        optional_fields = chain_from_bases(cls, 'optional_fields__', 'optional__')
-        parameters = {**optional_fields, **kwargs, **args_dict}
-        references = chain_from_bases(cls, 'all_refs__', 'references__')
-        for ref, types in references.items():
-            d = parameters[ref]
-            if isinstance(d, (dict, tuple)):
-                parameters[ref] = fromjson_obj(d, types)
-        self.__dict__.update(parameters)
+        assert not args, "Presently only keyword-arguments are allowed " \
+                         "when instantiating a descendant of TSInterface."
+        self.__dict__.update(ChainMap(kwargs, getattr(self.__class__, 'optional__', {})))
         self.typecheck__(TSI_DYNAMIC_CHECK)
 
     def __getitem__(self, item):
@@ -222,127 +93,6 @@ class TSInterface:
         else:
             raise ValueError(f'No field named "{key}" in {self.__class__.__name__}')
 
-    def __eq__(self, other):
-        return self.__dict__.keys() == other.__dict__.keys() \
-            and all(v1 == v2 for v1, v2 in zip(self.__dict__.values(), other.__dict__.values()))
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items())})"
-
-def asjson_obj(data: Union[TSInterface, JSON_Type], deepcopy: bool = False) -> JSON_Type:
-    if data is None:  return None
-    if isinstance(data, TSInterface):
-        cls = data.__class__
-        references = chain_from_bases(cls, 'all_refs__', 'references__')
-        optionals = chain_from_bases(cls, 'optional_fields__', 'optional__')
-        if references:
-            d = {field: (asjson_obj(value, True) if field in references
-                         else (copy.deepcopy(value) if deepcopy else value))
-                 for field, value in data.__dict__.items()
-                 if value is not None or field not in optionals}
-            return d
-        return copy.deepcopy(data.__dict__) if deepcopy else data.__dict__
-    elif isinstance(data, (list, tuple)):
-        if deepcopy or (data and isinstance(data[0], TSInterface)):  # assumes uniform list
-            return [asjson_obj(item) for item in data]
-        else:
-            return data
-    elif isinstance(data, dict):
-        return {key: asjson_obj(value) for key, value in data}
-    else:
-        assert isinstance(data, (str, int, float, bool, None))
-        return data
-
-
-def asdict(data: TSInterface, deepcopy: bool = False) -> Dict:
-    assert isinstance(data, TSInterface)
-    result = asjson_obj(data, deepcopy)
-    assert isinstance(result, Dict)
-    return cast(Dict, result)
-
-
-def fromjson_obj(d: JSON_Type, initial_type: List[type]) -> Union[TSInterface, JSON_Type]:
-    if isinstance(d, (str, int, float, type(None))):  return d
-    assert isinstance(initial_type, Iterable)
-    type_errors = []
-    for itype in initial_type:
-        try:
-            origin = getattr(itype, '__origin__', None)
-            if origin is list or origin is List:
-                try:
-                    typ = itype.__args__[0]
-                    return [fromjson_obj(item, [typ]) for item in d]
-                except AttributeError:
-                    return d
-            if origin is dict or origin is Dict:
-                try:
-                    typ = initial_type.__args__[1]
-                    return {key: fromjson_obj(value, [typ]) for key, value in d}
-                except AttributeError:
-                    return d
-            assert issubclass(itype, TSInterface), str(itype)
-            if isinstance(d, tuple):
-                fields = chain_from_bases(itype, 'fields__', '__annotations__')
-                d = {kw: arg for kw, arg in zip(fields.keys(), d)}
-            references = chain_from_bases(itype, 'all_refs__', 'references__')
-            refs = {field: fromjson_obj(d[field], typ)
-                    for field, typ in references.items() if field in d}
-            merged = {**d, **refs}
-            return itype(**merged)
-        except TypeError as e:
-            type_errors.append(str(e))
-    raise TypeError(f"No matching types for {d} among {initial_type}:\n" + '\n'.join(type_errors))
-
-
-def fromdict(d: Dict, initial_type: Union[type, List[type]]) -> TSInterface:
-    assert isinstance(d, Dict)
-    if not isinstance(initial_type, Iterable):
-        initial_type = [initial_type]
-    result = fromjson_obj(d, initial_type)
-    assert isinstance(result, TSInterface)
-    return result
-
-
-def json_adaptor(func):
-    params = func.__annotations__
-    if len(params) != 2 or 'return' not in params:
-        raise ValueError(f'Decorator "json_adaptor" does not work with function '
-            f'"{func.__name__}" annotated with "{params}"! '
-            f'LSP functions can have at most one argument. Both the type of the '
-            f' argument and the return type must be specified with annotations.')
-    return_type = params['return']
-    for k in params:
-        if k != 'return':
-            call_type = params[k]
-            break
-    ct_forward = isinstance(call_type, ForwardRef) or isinstance(call_type, str)
-    rt_forward = isinstance(return_type, ForwardRef) or isinstance(return_type, str)
-    resolve_types = ct_forward or rt_forward
-
-    @functools.wraps(func)
-    def adaptor(*args, **kwargs):
-        nonlocal resolve_types, return_type, call_type
-        if resolve_types:
-            if isinstance(call_type, ForwardRef):  call_type = call_type.__forward_arg__
-            elif isinstance(call_type, str):  call_type = eval(call_type)
-            if isinstance(return_type, ForwardRef):  return_type = return_type.__forward_arg__
-            elif isinstance(return_type, str):  return_type = eval(return_type)
-            resolve_types = False
-        dict_obj = args[0] if args else kwargs
-        call_params = fromjson_obj(dict_obj, [call_type])
-        return_val = func(call_params)
-        return asjson_obj(return_val) if return_val is not None else None
-
-    return adaptor
-
-
-#######################################################################
-#
-# Language-Server-Protocol data structures (AUTOGENERATED: Don't edit!)
-#
-#######################################################################
-
-##### BEGIN OF LSP SPECS
 
 integer = float
 
@@ -3171,60 +2921,3 @@ if __name__ == "__main__":
     print(msg.__dict__)
     msg = RequestMessage(jsonrpc="test", id="2", method="gogogo", params="[1, 2, 3]")
     print(msg.__dict__)
-
-##### END OF LSP SPECS
-
-
-#######################################################################
-#
-# Language-Server-Protocol methods
-#
-#######################################################################
-
-class LSPTasks:
-    def __init__(self, lsp_data: dict):
-        self.lsp_data = lsp_data
-        self.lsp_table = gen_lsp_table([], prefix='lsp_')
-
-NO_TASKS = LSPTasks({})
-
-class LSPBase:
-    def __init__(self, cpu_bound: LSPTasks=NO_TASKS, blocking: LSPTasks=NO_TASKS):
-        self.lsp_data = {
-            'processId': 0,
-            'rootUri': '',
-            'clientCapabilities': {},
-            'serverInfo': {"name": self.__class__.__name__, "version": "0.1"},
-            'serverCapabilities': {
-            }
-        }
-        self.connection = None
-        self.cpu_bound = cpu_bound
-        self.blocking = blocking
-        self.lsp_table = gen_lsp_table(self, prefix='lsp_')
-        self.lsp_fulltable = self.lsp_table.copy()
-        assert self.lsp_fulltable.keys().isdisjoint(self.cpu_bound.lsp_table.keys())
-        self.lsp_fulltable.update(self.cpu_bound.lsp_table)
-        assert self.lsp_fulltable.keys().isdisjoint(self.blocking.lsp_table.keys())
-        self.lsp_fulltable.update(self.blocking.lsp_table)
-
-    def connect(self, connection):
-        self.connection = connection
-
-    def lsp_initialize(self, **kwargs) -> Dict:
-        # InitializeParams -> InitializeResult
-        self.lsp_data['processId'] = kwargs['processId']
-        self.lsp_data['rootUri'] = kwargs['rootUri']
-        self.lsp_data['clientCapabilities'] = kwargs['capabilities']
-        return {'capabilities': self.lsp_data['serverCapabilities'],
-                'serverInfo': self.lsp_data['serverInfo']}
-
-    @json_adaptor
-    def lsp_initialized(self, params: InitializedParams) -> None:
-        pass
-
-    def lsp_shutdown(self) -> Dict:
-        self.lsp_data['processId'] = 0
-        self.lsp_data['rootUri'] = ''
-        self.lsp_data['clientCapabilities'] = {}
-        return {}

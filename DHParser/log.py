@@ -53,6 +53,7 @@ Example::
 
 import collections
 import contextlib
+import copy
 import html
 import os
 from typing import List, Tuple, Union, Optional
@@ -76,7 +77,6 @@ __all__ = ('CallItem',
            'clear_logs',
            'NONE_TAG',
            'NONE_NODE',
-           'freeze_callstack',
            'HistoryRecord',
            'log_ST',
            'log_parsing_history')
@@ -273,11 +273,6 @@ NONE_TAG = ":None"
 NONE_NODE = NoneNode(NONE_TAG, '')
 
 
-def freeze_callstack(call_stack: List[CallItem]) -> Tuple[CallItem, ...]:
-    """Returns a frozen copy of the call stack."""
-    return tuple((tn, pos) for tn, pos in call_stack if tn != ":Forward")
-
-
 class HistoryRecord:
     """
     Stores debugging information about one completed step in the
@@ -329,12 +324,7 @@ class HistoryRecord:
                  text: StringView,
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
-        # copy call stack, dropping uninformative Forward-Parsers
-        # self.call_stack = call_stack    # type: Tuple[CallItem,...]
-        if isinstance(call_stack, tuple):
-            self.call_stack = call_stack  # type: Tuple[CallItem,...]
-        else:
-            self.call_stack = freeze_callstack(call_stack)
+        self.call_stack = tuple(call_stack)              # type: Tuple[CallItem, ...]
         self.node = NONE_NODE if node is None else node  # type: Node
         self.text = text                                 # type: StringView
         self.line_col = line_col                         # type: Tuple[int, int]
@@ -416,7 +406,7 @@ class HistoryRecord:
         anonymous_tail = True
         for tag_name, _ in reversed(self.call_stack):
             if tag_name[:1] == ':':
-                if anonymous_tail:
+                if anonymous_tail and tag_name != ":Forward":
                     short_stack.append(tag_name)
             else:
                 short_stack.append(tag_name)
