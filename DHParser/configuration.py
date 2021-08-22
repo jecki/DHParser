@@ -549,7 +549,8 @@ CONFIG_PRESET['log_dir'] = ''
 # Default value: False
 CONFIG_PRESET['log_server'] = False
 
-# Echo server log messages on the terminal.
+# Echo server log messages on the terminal. Works only with tcp-server,
+# will be ignored by streaming server.
 # Default value: False
 CONFIG_PRESET['echo_server_log'] = False
 
