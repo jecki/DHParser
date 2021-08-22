@@ -59,6 +59,7 @@ except ImportError:
     # BrokenThreadPool requires Python version >= 3.8
     class BrokenThreadPool(Exception):
         pass
+from datetime import datetime
 from functools import partial
 import io
 import json
@@ -457,16 +458,40 @@ class ExecutionEnvironment:
         yields an error.
     """
     def __init__(self, event_loop: asyncio.AbstractEventLoop):
-        self.process_executor = ProcessPoolExecutor()  # type: Optional[ProcessPoolExecutor]
-        self.thread_executor = ThreadPoolExecutor()    # type: Optional[ThreadPoolExecutor]
-        self.submit_pool = None                        # type: Optional[ProcessPoolExecutor]
-        self.submit_pool_lock = threading.Lock()       # type: threading.Lock
+        self._process_executor = None                  # type: Optional[ProcessPoolExecutor]
+        self._thread_executor = None                   # type: Optional[ThreadPoolExecutor]
+        self._submit_pool = None                       # type: Optional[ProcessPoolExecutor]
+        self.submit_pool_lock = threading.Lock()       # type: multiprocessing.Lock
         self.loop = event_loop                         # type: asyncio.AbstractEventLoop
         self.log_file = ''                             # type: str
         self._closed = False                           # type: bool
 
     def __del__(self):
         self.shutdown(False)
+
+    @property
+    def process_executor(self):
+        if self._process_executor is None:
+            with self.submit_pool_lock:
+                if self._process_executor is None:
+                    self._process_executor = ProcessPoolExecutor()
+        return self._process_executor
+
+    @property
+    def thread_executor(self):
+        if self._thread_executor is None:
+            with self.submit_pool_lock:
+                if self._thread_executor is None:
+                    self._thread_executor = ThreadPoolExecutor()
+        return self._thread_executor
+
+    @property
+    def submit_pool(self):
+        if self._submit_pool is None:
+            with self.submit_pool_lock:
+                if self._submit_pool is None:
+                    self._submit_pool = ProcessPoolExecutor()
+        return self._submit_pool
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
@@ -550,15 +575,15 @@ class ExecutionEnvironment:
         process-executor.
         """
         self._closed = True
-        if self.thread_executor is not None:
-            self.thread_executor.shutdown(wait=wait)
-            self.thread_executor = None
-        if self.process_executor is not None:
-            self.process_executor.shutdown(wait=wait)
-            self.process_executor = None
-        if self.submit_pool is not None:
-            self.submit_pool.shutdown(wait=wait)
-            self.submit_pool = None
+        if self._thread_executor is not None:
+            self._thread_executor.shutdown(wait=wait)
+            self._thread_executor = None
+        if self._process_executor is not None:
+            self._process_executor.shutdown(wait=wait)
+            self._process_executor = None
+        if self._submit_pool is not None:
+            self._submit_pool.shutdown(wait=wait)
+            self._submit_pool = None
 
 
 class StreamReaderProxy:
@@ -1145,7 +1170,8 @@ class Server:
         if self.use_jsonrpc_header and response[:1] == b'{':
             response = JSONRPC_HEADER_BYTES % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
-            self.log('RESPONSE: ', *pp_transmission(response), '\n\n')
+            timestamp = str(datetime.now())[11:-3]
+            self.log(f'RESPONSE {timestamp}: ', *pp_transmission(response), '\n\n')
         try:
             writer.write(response)
             await writer.drain()
@@ -1451,7 +1477,8 @@ class Server:
                 # have been received
 
             if self.log_file:   # avoid decoding if logging is off
-                self.log('RECEIVE: ', *pp_transmission(data), '\n\n')
+                timestamp = str(datetime.now())[11:-3]
+                self.log(f'RECEIVE {timestamp}: ', *pp_transmission(data), '\n\n')
 
             if self.connection is None or not self.connection.alive:
                 break

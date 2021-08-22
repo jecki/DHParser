@@ -43,20 +43,20 @@ class LSPData:
         default_factory=lambda :{"name": "TestLSP", "version": "0.2"})
 
 
-class MyLSP(lsp.LSPBase):
-    def __init__(self):
-        capabilities = ServerCapabilities()
-        self.data = LSPData(processId=0,
-                            rootUri='',
-                            clientCapabilities=None,
-                            serverCapabilities=capabilities)
-
-    @typed_lsp_func
-    def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
-        self.data.processId = params.processId
-        self.data.rootUri = params.rootUri
-        self.data.clientCapabilities = params.capabilities
-        return InitializeResult(self.data.serverCapabilities, self.data.serverInfo)
+# class MyLSP(lsp.LSPBase):
+#     def __init__(self):
+#         capabilities = ServerCapabilities()
+#         self.data = LSPData(processId=0,
+#                             rootUri='',
+#                             clientCapabilities=None,
+#                             serverCapabilities=capabilities)
+#
+#     @typed_lsp_func
+#     def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
+#         self.data.processId = params.processId
+#         self.data.rootUri = params.rootUri
+#         self.data.clientCapabilities = params.capabilities
+#         return InitializeResult(self.data.serverCapabilities, self.data.serverInfo)
 
 
 class TestLSP:
