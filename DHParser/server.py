@@ -1324,6 +1324,7 @@ class Server:
                     "error": {"code": -32601,
                               "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
+            params['ID'] = json_id
             result, rpc_error = await self.run(method_name, method, params)
 
         if isinstance(result, Dict) and 'error' in result:
