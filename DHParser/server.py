@@ -528,9 +528,13 @@ class ExecutionEnvironment:
             else:
                 result = await self.loop.run_in_executor(executor, executable)
         except TypeError as e:
-            rpc_error = -32602, "Invalid Params: " + str(e)
+            stacktrace = traceback.format_exc()
+            rpc_error = -32602, f"Invalid Params: {e}\n{stacktrace}"
+            append_log(self.log_file, rpc_error[1])
         except NameError as e:
-            rpc_error = -32601, "Method not found: " + str(e)
+            stacktrace = traceback.format_exc()
+            rpc_error = -32601, f"Method not found: {e}\n{stacktrace}"
+            append_log(self.log_file, rpc_error[1])
         except BrokenProcessPool as e:
             if self.log_file:
                 append_log(self.log_file, 'WARNING: Broken ProcessPoolExecutor detected. '
