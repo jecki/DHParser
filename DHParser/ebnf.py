@@ -1472,7 +1472,7 @@ from collections import OrderedDict
 from functools import partial
 import keyword
 import os
-from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Sequence, Union, Optional
+from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Sequence, Union, Optional, cast
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source, visitor_name
 from DHParser.configuration import access_thread_locals, get_config_value, \
