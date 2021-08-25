@@ -34,7 +34,6 @@
 @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
 @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
 
-
 # specialized error messages for certain cases
 
 @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '

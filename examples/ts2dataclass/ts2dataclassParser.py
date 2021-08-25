@@ -214,7 +214,7 @@ IMPORTS = """
 from collections import ChainMap
 from dataclasses import dataclass
 from enum import Enum, IntEnum
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
+from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, TypedDict
 """
 
 
@@ -298,9 +298,16 @@ class ts2dataclassCompiler(Compiler):
 
     def finalize(self, result: Any) -> Any:
         code_blocks = [IMPORTS] if self.tree.tag_name == 'document' else []
-        if get_config_value('ts2dataclass.flavour', 'plainclass') == 'dataclass':
+        flavour = get_config_value('ts2dataclass.flavour', 'plainclass')
+        if flavour == 'dataclass':
             code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
                                '\g<1>@dataclass\n\g<1>class ', result))
+        elif flavour == 'typeddict':
+            result = re.sub(r'(?<=(?:\n|^))(?![\w (,]*Generic)( *class [^):]*)(?<!Enum)(?=\))',
+                               '\g<1>, TypedDict', result)
+            result = re.sub(r'(?<=(?:\n|^))( *class [^():]*)(?=:)',
+                               '\g<1>(TypedDict)', result)
+            code_blocks.append(result)
         else:
             result = re.sub(r'(?<=(?:\n|^))( *class [^):]*)(?<!Enum)(?=\))',
                                '\g<1>, TSInterface', result)
@@ -866,7 +873,7 @@ if __name__ == "__main__":
         set_config_value('ts2dataclass.flavour', 'dataclass')
     elif args.plainclass:
         set_config_value('ts2dataclass.flavour', 'plainclass')
-    elif arg.protocol:
+    elif args.protocol:
         set_config_value('ts2dataclass.flavour', 'protocol')
     else:  # default is typeddict
         set_config_value('ts2dataclass.flavour', 'typeddict')
