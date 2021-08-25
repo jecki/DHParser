@@ -528,9 +528,13 @@ class ExecutionEnvironment:
             else:
                 result = await self.loop.run_in_executor(executor, executable)
         except TypeError as e:
-            rpc_error = -32602, "Invalid Params: " + str(e)
+            stacktrace = traceback.format_exc()
+            rpc_error = -32602, f"Invalid Params: {e}\n{stacktrace}"
+            append_log(self.log_file, rpc_error[1])
         except NameError as e:
-            rpc_error = -32601, "Method not found: " + str(e)
+            stacktrace = traceback.format_exc()
+            rpc_error = -32601, f"Method not found: {e}\n{stacktrace}"
+            append_log(self.log_file, rpc_error[1])
         except BrokenProcessPool as e:
             if self.log_file:
                 append_log(self.log_file, 'WARNING: Broken ProcessPoolExecutor detected. '
@@ -1324,6 +1328,7 @@ class Server:
                     "error": {"code": -32601,
                               "message": "%s is not a service function" % method_name}}
                 method, params = self.amend_service_call(method_name, method, params, err_func)
+            params['ID'] = json_id
             result, rpc_error = await self.run(method_name, method, params)
 
         if isinstance(result, Dict) and 'error' in result:
