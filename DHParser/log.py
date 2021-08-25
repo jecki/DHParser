@@ -95,12 +95,12 @@ def start_logging(dirname: str = "LOGS"):
     """Turns logging on an sets the log-directory to `dirname`.
     The log-directory, if it does not already exist, will be created
     lazily, i.e. only when logging actually starts."""
-    access_presets()
+    # access_presets()
     log_dir = os.path.abspath(dirname) if dirname else ''
-    if log_dir != get_preset_value('log_dir'):
-        set_preset_value('log_dir', log_dir)
+    if log_dir != get_config_value('log_dir'):
+        # set_preset_value('log_dir', log_dir)
         set_config_value('log_dir', log_dir)
-    finalize_presets()
+    # finalize_presets()
 
 
 def suspend_logging() -> str:
