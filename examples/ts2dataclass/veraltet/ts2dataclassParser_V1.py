@@ -234,14 +234,13 @@ class ts2dataclassCompiler(Compiler):
 
     def __init__(self):
         super(ts2dataclassCompiler, self).__init__()
-        self.flavour = get_config_value('ts2dataclass.flavour', 'plainclass')
+
+    def reset(self):
+        super().reset()
         self.use_enums = get_config_value('ts2dataclass.UseEnums', True)
         self.use_py310_type_union = get_config_value('ts2dataclass.UsePy310TypeUnion', False)
         if self.use_py310_type_union:  assert sys.version_info >= (3, 10)
         self.use_py308_literal_type = get_config_value('ts2dataclass.UsePy308LiteralType', False)
-
-    def reset(self):
-        super().reset()
         self.overloaded_type_names: Set[str] = set()
         self.known_types: Set[str] = set()
         self.local_classes: List[List[str]] = [[]]
@@ -250,7 +249,6 @@ class ts2dataclassCompiler(Compiler):
         self.referred_objects: Dict = {}
         self.basic_type_aliases: Set[str] = set()
         self.obj_name: List[str] = ['TOPLEVEL_']
-        self.optional_keys = []
         self.strip_type_from_const = False
 
     def compile(self, node) -> str:
@@ -279,17 +277,17 @@ class ts2dataclassCompiler(Compiler):
                 tl_str = ', '.join(type_list)
                 info.append(f"\n    '{varname}': [{tl_str}]")
             info_str = '{' + ','.join(info) + '\n}'
-            references.append(f"{qualified_class_name}.__fieldtypes__ = {info_str}")
+            references.append(f"{qualified_class_name}.references__ = {info_str}")
         return '\n'.join(references)
 
     def serialize_defaults(self) -> str:
         defaults = []
         for qualified_class_name, variables in self.default_values.items():
-            optional_keys = []
-            for variable in variables:
-                optional_keys.append(repr(variable))
-            optional_keys_str = '{' + ', '.join(optional_keys) + '}'
-            defaults.append(f"{qualified_class_name}.__optional_keys__ = {optional_keys_str}")
+            obj_defaults = []
+            for variable, value in variables.items():
+                obj_defaults.append(f"\n    '{variable}': {repr(value)}")
+            obj_defaults_str = '{' + ','.join(obj_defaults) + '\n}'
+            defaults.append(f"{qualified_class_name}.optional__ = {obj_defaults_str}")
         return '\n'.join(defaults)
 
     def prepare(self, root: Node) ->None:
@@ -300,14 +298,15 @@ class ts2dataclassCompiler(Compiler):
 
     def finalize(self, result: Any) -> Any:
         code_blocks = [IMPORTS] if self.tree.tag_name == 'document' else []
-        if self.flavour == 'dataclass':
+        flavour = get_config_value('ts2dataclass.flavour', 'plainclass')
+        if flavour == 'dataclass':
             code_blocks.append(re.sub(r'(?<=(?:\n|^))( *)class (?!.*?Enum\))',
                                '\g<1>@dataclass\n\g<1>class ', result))
-        elif self.flavour == 'typeddict':
-            # result = re.sub(r'(?<=(?:\n|^))(?![\w (,]*Generic)( *class [^):]*)(?<!Enum)(?=\))',
-            #                 r'\g<1>, total=False', result)
-            # result = re.sub(r'(?<=(?:\n|^))( *class [^():]*)(?=:)',
-            #                    '\g<1>(TypedDict, total=False)', result)
+        elif flavour == 'typeddict':
+            result = re.sub(r'(?<=(?:\n|^))(?![\w (,]*Generic)( *class [^):]*)(?<!Enum)(?=\))',
+                               '\g<1>, TypedDict', result)
+            result = re.sub(r'(?<=(?:\n|^))( *class [^():]*)(?=:)',
+                               '\g<1>(TypedDict)', result)
             code_blocks.append(result)
         else:
             result = re.sub(r'(?<=(?:\n|^))( *class [^):]*)(?<!Enum)(?=\))',
@@ -326,9 +325,6 @@ class ts2dataclassCompiler(Compiler):
         code_blocks.append(self.serialize_references())
         code_blocks.append(self.serialize_defaults())
         code_blocks.append('')
-        clist = [('\n   ' + C) if i % 3 == 0 else C
-                 for i, C in enumerate(self.base_classes.keys())]
-        code_blocks.append(f'\npost_fix_classes({{{", ".join(clist)}}})\n\n')
         cooked = '\n\n'.join(code_blocks)
         return re.sub(r'\n\n+', '\n\n\n', cooked)
 
@@ -339,31 +335,7 @@ class ts2dataclassCompiler(Compiler):
         raise ValueError('Malformed syntax-tree!')
 
     def on_document(self, node) -> str:
-        return '\n\n'.join(self.compile(child) for child in node.children
-                           if child.tag_name != 'declaration')
-
-    def render_class_header(self, name: str, base_classes: str) -> str:
-        optional_key_list = self.optional_keys
-        self.optional_keys = []
-        if self.flavour == 'typeddict':
-            if optional_key_list:
-                optional_keys = ', '.join(
-                    ('\n        ' + repr(optional)) if (i + 1) % 4 == 0 else repr(optional)
-                    for i, optional in enumerate(optional_key_list))
-                if base_classes:
-                    return f"class {name}({base_classes}, optional_keys={{{optional_keys}}}):\n"
-                else:
-                    return f"class {name}(TypedDict, optional_keys={{{optional_keys}}}):\n"
-            else:
-                if base_classes:
-                    return f"class {name}({base_classes}, total=True):\n"
-                else:
-                    return f"class {name}(TypedDict, total=True):\n"
-        else:
-            if base_classes:
-                return f"class {name}({base_classes}):\n"
-            else:
-                return f"class {name}:\n"
+        return '\n\n'.join(self.compile(child) for child in node.children if child.tag_name != 'declaration')
 
     def render_local_classes(self) -> str:
         if self.local_classes[-1]:
@@ -387,18 +359,19 @@ class ts2dataclassCompiler(Compiler):
         except KeyError:
             tp = ''
             preface = ''
-        base_class_list = []
         try:
             base_classes = self.compile(node['extends'])
             for bc in node['extends'].children:
-                base_class_list.append(bc.content)
+                self.base_classes.setdefault(name, []).append(bc.content)
             if tp:
                 base_classes += f", Generic[{tp}]"
         except KeyError:
             base_classes = f"Generic[{tp}]" if tp else ''
+        if base_classes:
+            interface = f"class {name}({base_classes}):\n"
+        else:
+            interface = f"class {name}:\n"
         decls = self.compile(node['declarations_block'])
-        interface = self.render_class_header(name, base_classes)
-        self.base_classes[name] = base_class_list
         interface += ('    ' + self.render_local_classes().replace('\n', '\n    ')).rstrip(' ')
         self.known_types.add(name)
         self.obj_name.pop()
@@ -448,13 +421,11 @@ class ts2dataclassCompiler(Compiler):
                     self.qualified_obj_name(varname=False), {})[identifier] = [type_name]
         if 'optional' in node:
             self.default_values.setdefault(self.qualified_obj_name(), {})[identifier] = None
-            # if T.startswith('Union['):
-            #     if T.find('None') < 0:
-            #       T = T[:-1] + ', None]'
-            # else:
-            #     T = f"Optional[{T}]"
-            T = f"{T}  # optional"
-            self.optional_keys.append(identifier)
+            if T.startswith('Union['):
+                if T.find('None') < 0:
+                  T = T[:-1] + ', None]'
+            else:
+                T = f"Optional[{T}]"
         if self.is_toplevel() and T[0:5] == 'class':
             preface = self.render_local_classes()
             self.local_classes.append([])
@@ -490,7 +461,7 @@ class ts2dataclassCompiler(Compiler):
             for i in range(len(union)):
                 typ = union[i]
                 if typ[0:5] == 'class':
-                    cname = re.match(r"class\s*(\w+)[\w(){},' =]*\s*:", typ).group(1)
+                    cname = re.match(r'class\s*(\w+)\s*:', typ).group(1)
                     self.local_classes[-1].append(typ)
                     union[i] = cname
                     self.referred_objects.setdefault(
@@ -518,10 +489,7 @@ class ts2dataclassCompiler(Compiler):
         if typ.tag_name == 'declarations_block':
             self.local_classes.append([])
             decls = self.compile(typ)
-            # return ''.join([f"class {self.obj_name[-1]}:\n    ",
-            #                  self.render_local_classes().replace('\n', '\n    '),
-            #                  decls.replace('\n', '\n    ')])   # maybe add one '\n'?
-            return ''.join([self.render_class_header(self.obj_name[-1], '') + "    ",
+            return ''.join([f"class {self.obj_name[-1]}:\n    ",
                              self.render_local_classes().replace('\n', '\n    '),
                              decls.replace('\n', '\n    ')])   # maybe add one '\n'?
             # return 'Dict'
@@ -570,8 +538,7 @@ class ts2dataclassCompiler(Compiler):
                 namespace = [f'class {name}(Enum):']
             self.strip_type_from_const = True
         else:
-            # namespace = [f'class {name}:']
-            namespace = self.render_class_header(name, '')[:-1]  # leave out the trailing "\n"
+            namespace = [f'class {name}:']
         for child in node.children[1:]:
             namespace.append(self.compile(child))
         self.strip_type_from_const = save

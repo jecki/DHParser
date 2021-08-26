@@ -1,228 +1,8 @@
 
-import copy
+from collections import ChainMap
+from dataclasses import dataclass
 from enum import Enum, IntEnum
-import functools
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, \
-    Iterable, cast
-
-try:
-    from typing import ForwardRef
-except ImportError:
-    from typing import _ForwardRef  # Python 3.6 compatibility
-    ForwardRef = _ForwardRef
-
-
-class TSICheckLevel(IntEnum):
-    NO_CHECK = 0        # No checks when instantiating a Type Script Interface
-    ARG_CHECK = 1       # Check whether the named arguments match the given arguments
-    TYPE_CHECK = 2      # In addition, check the types of the given arguments as well
-
-
-TSI_DYNAMIC_CHECK = TSICheckLevel.TYPE_CHECK
-
-
-def derive_types(annotation) -> Tuple:
-    types = []
-    if isinstance(annotation, ForwardRef):
-        annotation = eval(annotation.__forward_arg__)
-    elif isinstance(annotation, str):  # really needed?
-        annotation = eval(annotation)
-    try:
-        origin = annotation.__origin__
-        if origin is Union:
-            for t_anno in annotation.__args__:
-                types.extend(derive_types(t_anno))
-        else:
-            _ = annotation.__args__
-            types.append(annotation.__origin__)
-    except AttributeError:
-        if annotation is Any:
-            types.append(object)
-        else:
-            types.append(annotation)
-    return tuple(types)
-
-
-def chain_from_bases(cls, chain: str, field: str) -> Dict:
-    try:
-        return cls.__dict__[chain]
-    except KeyError:
-        chained = {}
-        chained.update(getattr(cls, field, {}))
-        for base in cls.__bases__:
-            chained.update(getattr(base, field, {}))
-        setattr(cls, chain, chained)
-        return chained
-
-
-class TSInterface:
-    def derive_arg_types__(self, fields):
-        cls = self.__class__
-        assert not hasattr(cls, 'arg_types__')
-        cls.arg_types__ = {param: derive_types(param_type)
-                           for param, param_type in fields.items()}
-
-    def typecheck__(self, level: TSICheckLevel):
-        if level <= TSICheckLevel.NO_CHECK:  return
-        # level is at least TSIContract.ARG_CHECK
-        cls = self.__class__
-        fields = cls.fields__
-        if fields.keys() != self.__dict__.keys():
-            missing = fields.keys() - self.__dict__.keys()
-            wrong = self.__dict__.keys() - fields.keys()
-            msgs = [f'{cls.__name__} ']
-            if missing:
-                msgs.append(f'missing required arguments: {", ".join(missing)}!')
-            if wrong:
-                msgs.append(f'got unexpected parameters: {", ".join(wrong)}!')
-            raise TypeError(' '.join(msgs) + f' Received: {self.__dict__}')
-        if level >= TSICheckLevel.TYPE_CHECK:
-            if not hasattr(cls, 'arg_types__'):
-                self.derive_arg_types__(fields)
-            type_errors = [f'{arg} is not a {typ}' for arg, typ in self.arg_types__.items()
-                           if (not isinstance(self.__dict__[arg], typ)
-                               or (typ == [object] and self.__dict__[arg] is None))]
-            if type_errors:
-                raise TypeError(f'{cls.__name__} got wrong types: ' + ', '.join(type_errors))
-
-    def __init__(self, *args, **kwargs):
-        cls = self.__class__
-        fields = chain_from_bases(cls, 'fields__', '__annotations__')
-        args_dict = {kw: arg for kw, arg in zip(fields.keys(), args)}
-        optional_fields = chain_from_bases(cls, 'optional_fields__', 'optional__')
-        parameters = {**optional_fields, **kwargs, **args_dict}
-        references = chain_from_bases(cls, 'all_refs__', 'references__')
-        for ref, types in references.items():
-            d = parameters[ref]
-            if isinstance(d, (dict, tuple)):
-                parameters[ref] = fromjson_obj(d, types)
-        self.__dict__.update(parameters)
-        self.typecheck__(TSI_DYNAMIC_CHECK)
-
-    def __getitem__(self, item):
-        return self.__dict__[item]
-
-    def __setitem__(self, key, value):
-        if key in self.__dict__:
-            self.__dict__[key] = value
-        else:
-            raise ValueError(f'No field named "{key}" in {self.__class__.__name__}')
-
-    def __eq__(self, other):
-        return self.__dict__.keys() == other.__dict__.keys() \
-            and all(v1 == v2 for v1, v2 in zip(self.__dict__.values(), other.__dict__.values()))
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({', '.join(f'{k}={repr(v)}' for k, v in self.__dict__.items())})"
-
-def asjson_obj(data: Union[TSInterface, Dict, List, str, int, float, None],
-               deepcopy: bool = False) -> Union[Dict, List, str, int, float, None]:
-    if data is None:  return None
-    if isinstance(data, TSInterface):
-        cls = data.__class__
-        references = chain_from_bases(cls, 'all_refs__', 'references__')
-        optionals = chain_from_bases(cls, 'optional_fields__', 'optional__')
-        if references:
-            d = {field: (asjson_obj(value, True) if field in references
-                         else (copy.deepcopy(value) if deepcopy else value))
-                 for field, value in data.__dict__.items()
-                 if value is not None or field not in optionals}
-            return d
-        return copy.deepcopy(data.__dict__) if deepcopy else data.__dict__
-    elif isinstance(data, (list, tuple)):
-        if deepcopy or (data and isinstance(data[0], TSInterface)):  # assumes uniform list
-            return [asjson_obj(item) for item in data]
-        else:
-            return data
-    elif isinstance(data, dict):
-        return {key: asjson_obj(value) for key, value in data}
-    else:
-        assert isinstance(data, (str, int, float, bool, None))
-        return data
-
-
-def asdict(data: TSInterface, deepcopy: bool = False) -> Dict:
-    assert isinstance(data, TSInterface)
-    result = asjson_obj(data, deepcopy)
-    assert isinstance(result, Dict)
-    return cast(Dict, result)
-
-
-def fromjson_obj(d: Union[Dict, List, Tuple, str, int, float, None],
-                 initial_type: List[type]) \
-        -> Union[TSInterface, Dict, List, str, int, float, None]:
-    if isinstance(d, (str, int, float, type(None))):  return d
-    assert isinstance(initial_type, Iterable)
-    type_errors = []
-    for itype in initial_type:
-        try:
-            origin = getattr(itype, '__origin__', None)
-            if origin is list or origin is List:
-                try:
-                    typ = itype.__args__[0]
-                    return [fromjson_obj(item, [typ]) for item in d]
-                except AttributeError:
-                    return d
-            if origin is dict or origin is Dict:
-                try:
-                    typ = initial_type.__args__[1]
-                    return {key: fromjson_obj(value, [typ]) for key, value in d}
-                except AttributeError:
-                    return d
-            assert issubclass(itype, TSInterface), str(itype)
-            if isinstance(d, tuple):
-                fields = chain_from_bases(itype, 'fields__', '__annotations__')
-                d = {kw: arg for kw, arg in zip(fields.keys(), d)}
-            references = chain_from_bases(itype, 'all_refs__', 'references__')
-            refs = {field: fromjson_obj(d[field], typ)
-                    for field, typ in references.items() if field in d}
-            merged = {**d, **refs}
-            return itype(**merged)
-        except TypeError as e:
-            type_errors.append(str(e))
-    raise TypeError(f"No matching types for {d} among {initial_type}:\n" + '\n'.join(type_errors))
-
-
-def fromdict(d: Dict, initial_type: Union[type, List[type]]) -> TSInterface:
-    assert isinstance(d, Dict)
-    if not isinstance(initial_type, Iterable):
-        initial_type = [initial_type]
-    result = fromjson_obj(d, initial_type)
-    assert isinstance(result, TSInterface)
-    return result
-
-
-def json_adaptor(func):
-    params = func.__annotations__
-    if len(params) != 2 or 'return' not in params:
-        raise ValueError(f'Decorator "json_adaptor" does not work with function '
-            f'"{func.__name__}" annotated with "{params}"! '
-            f'LSP functions can have at most one argument. Both the type of the '
-            f' argument and the return type must be specified with annotations.')
-    return_type = params['return']
-    for k in params:
-        if k != 'return':
-            call_type = params[k]
-            break
-    ct_forward = isinstance(call_type, ForwardRef) or isinstance(call_type, str)
-    rt_forward = isinstance(return_type, ForwardRef) or isinstance(return_type, str)
-    resolve_types = ct_forward or rt_forward
-
-    @functools.wraps(func)
-    def adaptor(*args, **kwargs):
-        nonlocal resolve_types, return_type, call_type
-        if resolve_types:
-            if isinstance(call_type, ForwardRef):  call_type = call_type.__forward_arg__
-            elif isinstance(call_type, str):  call_type = eval(call_type)
-            if isinstance(return_type, ForwardRef):  return_type = return_type.__forward_arg__
-            elif isinstance(return_type, str):  return_type = eval(return_type)
-            resolve_types = False
-        dict_obj = args[0] if args else kwargs
-        call_params = fromjson_obj(dict_obj, [call_type])
-        return_val = func(call_params)
-        return asjson_obj(return_val)
-
-    return adaptor
+from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, TypedDict
 
 
 integer = float
@@ -234,23 +14,23 @@ uinteger = float
 decimal = float
 
 
-class Message(TSInterface):
+class Message(TypedDict):
     jsonrpc: str
 
 
-class RequestMessage(Message, TSInterface):
+class RequestMessage(Message, TypedDict):
     id: Union[int, str]
     method: str
     params: Union[List, object, None]
 
 
-class ResponseMessage(Message, TSInterface):
+class ResponseMessage(Message, TypedDict):
     id: Union[int, str, None]
     result: Union[str, float, bool, object, None]
     error: Optional['ResponseError']
 
 
-class ResponseError(TSInterface):
+class ResponseError(TypedDict):
     code: int
     message: str
     data: Union[str, float, bool, List, object, None]
@@ -274,12 +54,12 @@ class ErrorCodes(IntEnum):
     lspReservedErrorRangeEnd = -32800
 
 
-class NotificationMessage(Message, TSInterface):
+class NotificationMessage(Message, TypedDict):
     method: str
     params: Union[List, object, None]
 
 
-class CancelParams(TSInterface):
+class CancelParams(TypedDict):
     id: Union[int, str]
 
 
@@ -289,7 +69,7 @@ ProgressToken = Union[int, str]
 T = TypeVar('T')
 
 
-class ProgressParams(Generic[T], TSInterface):
+class ProgressParams(Generic[T]):
     token: ProgressToken
     value: 'T'
 
@@ -300,7 +80,7 @@ DocumentUri = str
 URI = str
 
 
-class RegularExpressionsClientCapabilities(TSInterface):
+class RegularExpressionsClientCapabilities(TypedDict):
     engine: str
     version: Optional[str]
 
@@ -308,29 +88,29 @@ class RegularExpressionsClientCapabilities(TSInterface):
 EOL: List[str] = ['\n', '\r\n', '\r']
 
 
-class Position(TSInterface):
+class Position(TypedDict):
     line: int
     character: int
 
 
-class Range(TSInterface):
+class Range(TypedDict):
     start: Position
     end: Position
 
 
-class Location(TSInterface):
+class Location(TypedDict):
     uri: DocumentUri
     range: Range
 
 
-class LocationLink(TSInterface):
+class LocationLink(TypedDict):
     originSelectionRange: Optional[Range]
     targetUri: DocumentUri
     targetRange: Range
     targetSelectionRange: Range
 
 
-class Diagnostic(TSInterface):
+class Diagnostic(TypedDict):
     range: Range
     severity: Optional['DiagnosticSeverity']
     code: Union[int, str, None]
@@ -354,27 +134,27 @@ class DiagnosticTag(IntEnum):
     Deprecated = 2
 
 
-class DiagnosticRelatedInformation(TSInterface):
+class DiagnosticRelatedInformation(TypedDict):
     location: Location
     message: str
 
 
-class CodeDescription(TSInterface):
+class CodeDescription(TypedDict):
     href: URI
 
 
-class Command(TSInterface):
+class Command(TypedDict):
     title: str
     command: str
     arguments: Optional[List[Any]]
 
 
-class TextEdit(TSInterface):
+class TextEdit(TypedDict):
     range: Range
     newText: str
 
 
-class ChangeAnnotation(TSInterface):
+class ChangeAnnotation(TypedDict):
     label: str
     needsConfirmation: Optional[bool]
     description: Optional[str]
@@ -383,33 +163,33 @@ class ChangeAnnotation(TSInterface):
 ChangeAnnotationIdentifier = str
 
 
-class AnnotatedTextEdit(TextEdit, TSInterface):
+class AnnotatedTextEdit(TextEdit, TypedDict):
     annotationId: ChangeAnnotationIdentifier
 
 
-class TextDocumentEdit(TSInterface):
+class TextDocumentEdit(TypedDict):
     textDocument: 'OptionalVersionedTextDocumentIdentifier'
     edits: List[Union[TextEdit, AnnotatedTextEdit]]
 
 
-class CreateFileOptions(TSInterface):
+class CreateFileOptions(TypedDict):
     overwrite: Optional[bool]
     ignoreIfExists: Optional[bool]
 
 
-class CreateFile(TSInterface):
+class CreateFile(TypedDict):
     kind: str
     uri: DocumentUri
     options: Optional[CreateFileOptions]
     annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-class RenameFileOptions(TSInterface):
+class RenameFileOptions(TypedDict):
     overwrite: Optional[bool]
     ignoreIfExists: Optional[bool]
 
 
-class RenameFile(TSInterface):
+class RenameFile(TypedDict):
     kind: str
     oldUri: DocumentUri
     newUri: DocumentUri
@@ -417,26 +197,26 @@ class RenameFile(TSInterface):
     annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-class DeleteFileOptions(TSInterface):
+class DeleteFileOptions(TypedDict):
     recursive: Optional[bool]
     ignoreIfNotExists: Optional[bool]
 
 
-class DeleteFile(TSInterface):
+class DeleteFile(TypedDict):
     kind: str
     uri: DocumentUri
     options: Optional[DeleteFileOptions]
     annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-class WorkspaceEdit(TSInterface):
+class WorkspaceEdit(TypedDict):
     changes: Optional[Dict[DocumentUri, List[TextEdit]]]
     documentChanges: Union[List[TextDocumentEdit], List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]], None]
     changeAnnotations: Optional[Dict[str, ChangeAnnotation]]
 
 
-class WorkspaceEditClientCapabilities(TSInterface):
-    class ChangeAnnotationSupport_(TSInterface):
+class WorkspaceEditClientCapabilities(TypedDict):
+    class ChangeAnnotationSupport_(TypedDict):
         groupsOnLabel: Optional[bool]
     documentChanges: Optional[bool]
     resourceOperations: Optional[List['ResourceOperationKind']]
@@ -458,31 +238,31 @@ class FailureHandlingKind(Enum):
     Undo = 'undo'
 
 
-class TextDocumentIdentifier(TSInterface):
+class TextDocumentIdentifier(TypedDict):
     uri: DocumentUri
 
 
-class TextDocumentItem(TSInterface):
+class TextDocumentItem(TypedDict):
     uri: DocumentUri
     languageId: str
     version: int
     text: str
 
 
-class VersionedTextDocumentIdentifier(TextDocumentIdentifier, TSInterface):
+class VersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict):
     version: int
 
 
-class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier, TSInterface):
+class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict):
     version: Union[int, None]
 
 
-class TextDocumentPositionParams(TSInterface):
+class TextDocumentPositionParams(TypedDict):
     textDocument: TextDocumentIdentifier
     position: Position
 
 
-class DocumentFilter(TSInterface):
+class DocumentFilter(TypedDict):
     language: Optional[str]
     scheme: Optional[str]
     pattern: Optional[str]
@@ -491,11 +271,11 @@ class DocumentFilter(TSInterface):
 DocumentSelector = List[DocumentFilter]
 
 
-class StaticRegistrationOptions(TSInterface):
+class StaticRegistrationOptions(TypedDict):
     id: Optional[str]
 
 
-class TextDocumentRegistrationOptions(TSInterface):
+class TextDocumentRegistrationOptions(TypedDict):
     documentSelector: Union[DocumentSelector, None]
 
 
@@ -504,17 +284,17 @@ class MarkupKind(Enum):
     Markdown = 'markdown'
 
 
-class MarkupContent(TSInterface):
+class MarkupContent(TypedDict):
     kind: MarkupKind
     value: str
 
 
-class MarkdownClientCapabilities(TSInterface):
+class MarkdownClientCapabilities(TypedDict):
     parser: str
     version: Optional[str]
 
 
-class WorkDoneProgressBegin(TSInterface):
+class WorkDoneProgressBegin(TypedDict):
     kind: str
     title: str
     cancellable: Optional[bool]
@@ -522,35 +302,35 @@ class WorkDoneProgressBegin(TSInterface):
     percentage: Optional[int]
 
 
-class WorkDoneProgressReport(TSInterface):
+class WorkDoneProgressReport(TypedDict):
     kind: str
     cancellable: Optional[bool]
     message: Optional[str]
     percentage: Optional[int]
 
 
-class WorkDoneProgressEnd(TSInterface):
+class WorkDoneProgressEnd(TypedDict):
     kind: str
     message: Optional[str]
 
 
-class WorkDoneProgressParams(TSInterface):
+class WorkDoneProgressParams(TypedDict):
     workDoneToken: Optional[ProgressToken]
 
 
-class WorkDoneProgressOptions(TSInterface):
+class WorkDoneProgressOptions(TypedDict):
     workDoneProgress: Optional[bool]
 
 
-class PartialResultParams(TSInterface):
+class PartialResultParams(TypedDict):
     partialResultToken: Optional[ProgressToken]
 
 
 TraceValue = str
 
 
-class InitializeParams(WorkDoneProgressParams, TSInterface):
-    class ClientInfo_(TSInterface):
+class InitializeParams(WorkDoneProgressParams, TypedDict):
+    class ClientInfo_(TypedDict):
         name: str
         version: Optional[str]
     processId: Union[int, None]
@@ -564,7 +344,7 @@ class InitializeParams(WorkDoneProgressParams, TSInterface):
     workspaceFolders: Union[List['WorkspaceFolder'], None]
 
 
-class TextDocumentClientCapabilities(TSInterface):
+class TextDocumentClientCapabilities(TypedDict):
     synchronization: Optional['TextDocumentSyncClientCapabilities']
     completion: Optional['CompletionClientCapabilities']
     hover: Optional['HoverClientCapabilities']
@@ -593,9 +373,9 @@ class TextDocumentClientCapabilities(TSInterface):
     moniker: Optional['MonikerClientCapabilities']
 
 
-class ClientCapabilities(TSInterface):
-    class Workspace_(TSInterface):
-        class FileOperations_(TSInterface):
+class ClientCapabilities(TypedDict):
+    class Workspace_(TypedDict):
+        class FileOperations_(TypedDict):
             dynamicRegistration: Optional[bool]
             didCreate: Optional[bool]
             willCreate: Optional[bool]
@@ -614,11 +394,11 @@ class ClientCapabilities(TSInterface):
         semanticTokens: Optional['SemanticTokensWorkspaceClientCapabilities']
         codeLens: Optional['CodeLensWorkspaceClientCapabilities']
         fileOperations: Optional[FileOperations_]
-    class Window_(TSInterface):
+    class Window_(TypedDict):
         workDoneProgress: Optional[bool]
         showMessage: Optional['ShowMessageRequestClientCapabilities']
         showDocument: Optional['ShowDocumentClientCapabilities']
-    class General_(TSInterface):
+    class General_(TypedDict):
         regularExpressions: Optional[RegularExpressionsClientCapabilities]
         markdown: Optional[MarkdownClientCapabilities]
     workspace: Optional[Workspace_]
@@ -628,8 +408,8 @@ class ClientCapabilities(TSInterface):
     experimental: Optional[Any]
 
 
-class InitializeResult(TSInterface):
-    class ServerInfo_(TSInterface):
+class InitializeResult(TypedDict):
+    class ServerInfo_(TypedDict):
         name: str
         version: Optional[str]
     capabilities: 'ServerCapabilities'
@@ -640,13 +420,13 @@ class InitializeError(IntEnum):
     unknownProtocolVersion = 1
 
 
-class InitializeError(TSInterface):
+class InitializeError(TypedDict):
     retry: bool
 
 
-class ServerCapabilities(TSInterface):
-    class Workspace_(TSInterface):
-        class FileOperations_(TSInterface):
+class ServerCapabilities(TypedDict):
+    class Workspace_(TypedDict):
+        class FileOperations_(TypedDict):
             didCreate: Optional['FileOperationRegistrationOptions']
             willCreate: Optional['FileOperationRegistrationOptions']
             didRename: Optional['FileOperationRegistrationOptions']
@@ -686,20 +466,20 @@ class ServerCapabilities(TSInterface):
     experimental: Optional[Any]
 
 
-class InitializedParams(TSInterface):
+class InitializedParams(TypedDict):
     pass
 
 
-class LogTraceParams(TSInterface):
+class LogTraceParams(TypedDict):
     message: str
     verbose: Optional[str]
 
 
-class SetTraceParams(TSInterface):
+class SetTraceParams(TypedDict):
     value: TraceValue
 
 
-class ShowMessageParams(TSInterface):
+class ShowMessageParams(TypedDict):
     type: 'MessageType'
     message: str
 
@@ -711,114 +491,114 @@ class MessageType(IntEnum):
     Log = 4
 
 
-class ShowMessageRequestClientCapabilities(TSInterface):
-    class MessageActionItem_(TSInterface):
+class ShowMessageRequestClientCapabilities(TypedDict):
+    class MessageActionItem_(TypedDict):
         additionalPropertiesSupport: Optional[bool]
     messageActionItem: Optional[MessageActionItem_]
 
 
-class ShowMessageRequestParams(TSInterface):
+class ShowMessageRequestParams(TypedDict):
     type: MessageType
     message: str
     actions: Optional[List['MessageActionItem']]
 
 
-class MessageActionItem(TSInterface):
+class MessageActionItem(TypedDict):
     title: str
 
 
-class ShowDocumentClientCapabilities(TSInterface):
+class ShowDocumentClientCapabilities(TypedDict):
     support: bool
 
 
-class ShowDocumentParams(TSInterface):
+class ShowDocumentParams(TypedDict):
     uri: URI
     external: Optional[bool]
     takeFocus: Optional[bool]
     selection: Optional[Range]
 
 
-class ShowDocumentResult(TSInterface):
+class ShowDocumentResult(TypedDict):
     success: bool
 
 
-class LogMessageParams(TSInterface):
+class LogMessageParams(TypedDict):
     type: MessageType
     message: str
 
 
-class WorkDoneProgressCreateParams(TSInterface):
+class WorkDoneProgressCreateParams(TypedDict):
     token: ProgressToken
 
 
-class WorkDoneProgressCancelParams(TSInterface):
+class WorkDoneProgressCancelParams(TypedDict):
     token: ProgressToken
 
 
-class Registration(TSInterface):
+class Registration(TypedDict):
     id: str
     method: str
     registerOptions: Optional[Any]
 
 
-class RegistrationParams(TSInterface):
+class RegistrationParams(TypedDict):
     registrations: List[Registration]
 
 
-class Unregistration(TSInterface):
+class Unregistration(TypedDict):
     id: str
     method: str
 
 
-class UnregistrationParams(TSInterface):
+class UnregistrationParams(TypedDict):
     unregisterations: List[Unregistration]
 
 
-class WorkspaceFoldersServerCapabilities(TSInterface):
+class WorkspaceFoldersServerCapabilities(TypedDict):
     supported: Optional[bool]
     changeNotifications: Union[str, bool, None]
 
 
-class WorkspaceFolder(TSInterface):
+class WorkspaceFolder(TypedDict):
     uri: DocumentUri
     name: str
 
 
-class DidChangeWorkspaceFoldersParams(TSInterface):
+class DidChangeWorkspaceFoldersParams(TypedDict):
     event: 'WorkspaceFoldersChangeEvent'
 
 
-class WorkspaceFoldersChangeEvent(TSInterface):
+class WorkspaceFoldersChangeEvent(TypedDict):
     added: List[WorkspaceFolder]
     removed: List[WorkspaceFolder]
 
 
-class DidChangeConfigurationClientCapabilities(TSInterface):
+class DidChangeConfigurationClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class DidChangeConfigurationParams(TSInterface):
+class DidChangeConfigurationParams(TypedDict):
     settings: Any
 
 
-class ConfigurationParams(TSInterface):
+class ConfigurationParams(TypedDict):
     items: List['ConfigurationItem']
 
 
-class ConfigurationItem(TSInterface):
+class ConfigurationItem(TypedDict):
     scopeUri: Optional[DocumentUri]
     section: Optional[str]
 
 
-class DidChangeWatchedFilesClientCapabilities(TSInterface):
+class DidChangeWatchedFilesClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class DidChangeWatchedFilesRegistrationOptions(TSInterface):
+class DidChangeWatchedFilesRegistrationOptions(TypedDict):
     watchers: List['FileSystemWatcher']
 
 
-class FileSystemWatcher(TSInterface):
+class FileSystemWatcher(TypedDict):
     globPattern: str
     kind: Optional[int]
 
@@ -829,11 +609,11 @@ class WatchKind(IntEnum):
     Delete = 4
 
 
-class DidChangeWatchedFilesParams(TSInterface):
+class DidChangeWatchedFilesParams(TypedDict):
     changes: List['FileEvent']
 
 
-class FileEvent(TSInterface):
+class FileEvent(TypedDict):
     uri: DocumentUri
     type: int
 
@@ -844,57 +624,57 @@ class FileChangeType(IntEnum):
     Deleted = 3
 
 
-class WorkspaceSymbolClientCapabilities(TSInterface):
-    class SymbolKind_(TSInterface):
+class WorkspaceSymbolClientCapabilities(TypedDict):
+    class SymbolKind_(TypedDict):
         valueSet: Optional[List['SymbolKind']]
-    class TagSupport_(TSInterface):
+    class TagSupport_(TypedDict):
         valueSet: List['SymbolTag']
     dynamicRegistration: Optional[bool]
     symbolKind: Optional[SymbolKind_]
     tagSupport: Optional[TagSupport_]
 
 
-class WorkspaceSymbolOptions(WorkDoneProgressOptions, TSInterface):
+class WorkspaceSymbolOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions, TSInterface):
+class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions, TypedDict):
     pass
 
 
-class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     query: str
 
 
-class ExecuteCommandClientCapabilities(TSInterface):
+class ExecuteCommandClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class ExecuteCommandOptions(WorkDoneProgressOptions, TSInterface):
+class ExecuteCommandOptions(WorkDoneProgressOptions, TypedDict):
     commands: List[str]
 
 
-class ExecuteCommandRegistrationOptions(ExecuteCommandOptions, TSInterface):
+class ExecuteCommandRegistrationOptions(ExecuteCommandOptions, TypedDict):
     pass
 
 
-class ExecuteCommandParams(WorkDoneProgressParams, TSInterface):
+class ExecuteCommandParams(WorkDoneProgressParams, TypedDict):
     command: str
     arguments: Optional[List[Any]]
 
 
-class ApplyWorkspaceEditParams(TSInterface):
+class ApplyWorkspaceEditParams(TypedDict):
     label: Optional[str]
     edit: WorkspaceEdit
 
 
-class ApplyWorkspaceEditResponse(TSInterface):
+class ApplyWorkspaceEditResponse(TypedDict):
     applied: bool
     failureReason: Optional[str]
     failedChange: Optional[int]
 
 
-class FileOperationRegistrationOptions(TSInterface):
+class FileOperationRegistrationOptions(TypedDict):
     filters: List['FileOperationFilter']
 
 
@@ -903,43 +683,43 @@ class FileOperationPatternKind(Enum):
     folder = 'folder'
 
 
-class FileOperationPatternOptions(TSInterface):
+class FileOperationPatternOptions(TypedDict):
     ignoreCase: Optional[bool]
 
 
-class FileOperationPattern(TSInterface):
+class FileOperationPattern(TypedDict):
     glob: str
     matches: Optional[FileOperationPatternKind]
     options: Optional[FileOperationPatternOptions]
 
 
-class FileOperationFilter(TSInterface):
+class FileOperationFilter(TypedDict):
     scheme: Optional[str]
     pattern: FileOperationPattern
 
 
-class CreateFilesParams(TSInterface):
+class CreateFilesParams(TypedDict):
     files: List['FileCreate']
 
 
-class FileCreate(TSInterface):
+class FileCreate(TypedDict):
     uri: str
 
 
-class RenameFilesParams(TSInterface):
+class RenameFilesParams(TypedDict):
     files: List['FileRename']
 
 
-class FileRename(TSInterface):
+class FileRename(TypedDict):
     oldUri: str
     newUri: str
 
 
-class DeleteFilesParams(TSInterface):
+class DeleteFilesParams(TypedDict):
     files: List['FileDelete']
 
 
-class FileDelete(TSInterface):
+class FileDelete(TypedDict):
     uri: str
 
 
@@ -949,34 +729,34 @@ class TextDocumentSyncKind(IntEnum):
     Incremental = 2
 
 
-class TextDocumentSyncOptions(TSInterface):
+class TextDocumentSyncOptions(TypedDict):
     openClose: Optional[bool]
     change: Optional[TextDocumentSyncKind]
 
 
-class DidOpenTextDocumentParams(TSInterface):
+class DidOpenTextDocumentParams(TypedDict):
     textDocument: TextDocumentItem
 
 
-class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions, TSInterface):
+class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions, TypedDict):
     syncKind: TextDocumentSyncKind
 
 
-class DidChangeTextDocumentParams(TSInterface):
+class DidChangeTextDocumentParams(TypedDict):
     textDocument: VersionedTextDocumentIdentifier
     contentChanges: List['TextDocumentContentChangeEvent']
 
 
-class TextDocumentContentChangeEvent_0(TSInterface):
+class TextDocumentContentChangeEvent_0(TypedDict):
     range: Range
     rangeLength: Optional[int]
     text: str
-class TextDocumentContentChangeEvent_1(TSInterface):
+class TextDocumentContentChangeEvent_1(TypedDict):
     text: str
 TextDocumentContentChangeEvent = Union[TextDocumentContentChangeEvent_0, TextDocumentContentChangeEvent_1]
 
 
-class WillSaveTextDocumentParams(TSInterface):
+class WillSaveTextDocumentParams(TypedDict):
     textDocument: TextDocumentIdentifier
     reason: 'TextDocumentSaveReason'
 
@@ -987,31 +767,31 @@ class TextDocumentSaveReason(IntEnum):
     FocusOut = 3
 
 
-class SaveOptions(TSInterface):
+class SaveOptions(TypedDict):
     includeText: Optional[bool]
 
 
-class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions, TSInterface):
+class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions, TypedDict):
     includeText: Optional[bool]
 
 
-class DidSaveTextDocumentParams(TSInterface):
+class DidSaveTextDocumentParams(TypedDict):
     textDocument: TextDocumentIdentifier
     text: Optional[str]
 
 
-class DidCloseTextDocumentParams(TSInterface):
+class DidCloseTextDocumentParams(TypedDict):
     textDocument: TextDocumentIdentifier
 
 
-class TextDocumentSyncClientCapabilities(TSInterface):
+class TextDocumentSyncClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     willSave: Optional[bool]
     willSaveWaitUntil: Optional[bool]
     didSave: Optional[bool]
 
 
-class TextDocumentSyncOptions(TSInterface):
+class TextDocumentSyncOptions(TypedDict):
     openClose: Optional[bool]
     change: Optional[TextDocumentSyncKind]
     willSave: Optional[bool]
@@ -1019,8 +799,8 @@ class TextDocumentSyncOptions(TSInterface):
     save: Union[bool, SaveOptions, None]
 
 
-class PublishDiagnosticsClientCapabilities(TSInterface):
-    class TagSupport_(TSInterface):
+class PublishDiagnosticsClientCapabilities(TypedDict):
+    class TagSupport_(TypedDict):
         valueSet: List[DiagnosticTag]
     relatedInformation: Optional[bool]
     tagSupport: Optional[TagSupport_]
@@ -1029,19 +809,19 @@ class PublishDiagnosticsClientCapabilities(TSInterface):
     dataSupport: Optional[bool]
 
 
-class PublishDiagnosticsParams(TSInterface):
+class PublishDiagnosticsParams(TypedDict):
     uri: DocumentUri
     version: Optional[int]
     diagnostics: List[Diagnostic]
 
 
-class CompletionClientCapabilities(TSInterface):
-    class CompletionItem_(TSInterface):
-        class TagSupport_(TSInterface):
+class CompletionClientCapabilities(TypedDict):
+    class CompletionItem_(TypedDict):
+        class TagSupport_(TypedDict):
             valueSet: List['CompletionItemTag']
-        class ResolveSupport_(TSInterface):
+        class ResolveSupport_(TypedDict):
             properties: List[str]
-        class InsertTextModeSupport_(TSInterface):
+        class InsertTextModeSupport_(TypedDict):
             valueSet: List['InsertTextMode']
         snippetSupport: Optional[bool]
         commitCharactersSupport: Optional[bool]
@@ -1052,7 +832,7 @@ class CompletionClientCapabilities(TSInterface):
         insertReplaceSupport: Optional[bool]
         resolveSupport: Optional[ResolveSupport_]
         insertTextModeSupport: Optional[InsertTextModeSupport_]
-    class CompletionItemKind_(TSInterface):
+    class CompletionItemKind_(TypedDict):
         valueSet: Optional[List['CompletionItemKind']]
     dynamicRegistration: Optional[bool]
     completionItem: Optional[CompletionItem_]
@@ -1060,17 +840,17 @@ class CompletionClientCapabilities(TSInterface):
     contextSupport: Optional[bool]
 
 
-class CompletionOptions(WorkDoneProgressOptions, TSInterface):
+class CompletionOptions(WorkDoneProgressOptions, TypedDict):
     triggerCharacters: Optional[List[str]]
     allCommitCharacters: Optional[List[str]]
     resolveProvider: Optional[bool]
 
 
-class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions, TSInterface):
+class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions, TypedDict):
     pass
 
 
-class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     context: Optional['CompletionContext']
 
 
@@ -1080,12 +860,12 @@ class CompletionTriggerKind(IntEnum):
     TriggerForIncompleteCompletions = 3
 
 
-class CompletionContext(TSInterface):
+class CompletionContext(TypedDict):
     triggerKind: CompletionTriggerKind
     triggerCharacter: Optional[str]
 
 
-class CompletionList(TSInterface):
+class CompletionList(TypedDict):
     isIncomplete: bool
     items: List['CompletionItem']
 
@@ -1099,7 +879,7 @@ class CompletionItemTag(IntEnum):
     Deprecated = 1
 
 
-class InsertReplaceEdit(TSInterface):
+class InsertReplaceEdit(TypedDict):
     newText: str
     insert: Range
     replace: Range
@@ -1110,7 +890,7 @@ class InsertTextMode(IntEnum):
     adjustIndentation = 2
 
 
-class CompletionItem(TSInterface):
+class CompletionItem(TypedDict):
     label: str
     kind: Optional['CompletionItemKind']
     tags: Optional[List[CompletionItemTag]]
@@ -1158,37 +938,37 @@ class CompletionItemKind(IntEnum):
     TypeParameter = 25
 
 
-class HoverClientCapabilities(TSInterface):
+class HoverClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     contentFormat: Optional[List[MarkupKind]]
 
 
-class HoverOptions(WorkDoneProgressOptions, TSInterface):
+class HoverOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions, TSInterface):
+class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions, TypedDict):
     pass
 
 
-class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
+class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
     pass
 
 
-class Hover(TSInterface):
+class Hover(TypedDict):
     contents: Union['MarkedString', List['MarkedString'], MarkupContent]
     range: Optional[Range]
 
 
-class MarkedString_1(TSInterface):
+class MarkedString_1(TypedDict):
     language: str
     value: str
 MarkedString = Union[str, MarkedString_1]
 
 
-class SignatureHelpClientCapabilities(TSInterface):
-    class SignatureInformation_(TSInterface):
-        class ParameterInformation_(TSInterface):
+class SignatureHelpClientCapabilities(TypedDict):
+    class SignatureInformation_(TypedDict):
+        class ParameterInformation_(TypedDict):
             labelOffsetSupport: Optional[bool]
         documentationFormat: Optional[List[MarkupKind]]
         parameterInformation: Optional[ParameterInformation_]
@@ -1198,16 +978,16 @@ class SignatureHelpClientCapabilities(TSInterface):
     contextSupport: Optional[bool]
 
 
-class SignatureHelpOptions(WorkDoneProgressOptions, TSInterface):
+class SignatureHelpOptions(WorkDoneProgressOptions, TypedDict):
     triggerCharacters: Optional[List[str]]
     retriggerCharacters: Optional[List[str]]
 
 
-class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions, TSInterface):
+class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions, TypedDict):
     pass
 
 
-class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
+class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
     context: Optional['SignatureHelpContext']
 
 
@@ -1217,136 +997,136 @@ class SignatureHelpTriggerKind(IntEnum):
     ContentChange = 3
 
 
-class SignatureHelpContext(TSInterface):
+class SignatureHelpContext(TypedDict):
     triggerKind: SignatureHelpTriggerKind
     triggerCharacter: Optional[str]
     isRetrigger: bool
     activeSignatureHelp: Optional['SignatureHelp']
 
 
-class SignatureHelp(TSInterface):
+class SignatureHelp(TypedDict):
     signatures: List['SignatureInformation']
     activeSignature: Optional[int]
     activeParameter: Optional[int]
 
 
-class SignatureInformation(TSInterface):
+class SignatureInformation(TypedDict):
     label: str
     documentation: Union[str, MarkupContent, None]
     parameters: Optional[List['ParameterInformation']]
     activeParameter: Optional[int]
 
 
-class ParameterInformation(TSInterface):
+class ParameterInformation(TypedDict):
     label: Union[str, Tuple[int, int]]
     documentation: Union[str, MarkupContent, None]
 
 
-class DeclarationClientCapabilities(TSInterface):
+class DeclarationClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-class DeclarationOptions(WorkDoneProgressOptions, TSInterface):
+class DeclarationOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TSInterface):
+class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     pass
 
 
-class DefinitionClientCapabilities(TSInterface):
+class DefinitionClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-class DefinitionOptions(WorkDoneProgressOptions, TSInterface):
+class DefinitionOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions, TSInterface):
+class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions, TypedDict):
     pass
 
 
-class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     pass
 
 
-class TypeDefinitionClientCapabilities(TSInterface):
+class TypeDefinitionClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-class TypeDefinitionOptions(WorkDoneProgressOptions, TSInterface):
+class TypeDefinitionOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TSInterface):
+class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     pass
 
 
-class ImplementationClientCapabilities(TSInterface):
+class ImplementationClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     linkSupport: Optional[bool]
 
 
-class ImplementationOptions(WorkDoneProgressOptions, TSInterface):
+class ImplementationOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions, TSInterface):
+class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     pass
 
 
-class ReferenceClientCapabilities(TSInterface):
+class ReferenceClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class ReferenceOptions(WorkDoneProgressOptions, TSInterface):
+class ReferenceOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions, TSInterface):
+class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions, TypedDict):
     pass
 
 
-class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     context: 'ReferenceContext'
 
 
-class ReferenceContext(TSInterface):
+class ReferenceContext(TypedDict):
     includeDeclaration: bool
 
 
-class DocumentHighlightClientCapabilities(TSInterface):
+class DocumentHighlightClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentHighlightOptions(WorkDoneProgressOptions, TSInterface):
+class DocumentHighlightOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions, TSInterface):
+class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions, TypedDict):
     pass
 
 
-class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     pass
 
 
-class DocumentHighlight(TSInterface):
+class DocumentHighlight(TypedDict):
     range: Range
     kind: Optional['DocumentHighlightKind']
 
@@ -1357,10 +1137,10 @@ class DocumentHighlightKind(IntEnum):
     Write = 3
 
 
-class DocumentSymbolClientCapabilities(TSInterface):
-    class SymbolKind_(TSInterface):
+class DocumentSymbolClientCapabilities(TypedDict):
+    class SymbolKind_(TypedDict):
         valueSet: Optional[List['SymbolKind']]
-    class TagSupport_(TSInterface):
+    class TagSupport_(TypedDict):
         valueSet: List['SymbolTag']
     dynamicRegistration: Optional[bool]
     symbolKind: Optional[SymbolKind_]
@@ -1369,15 +1149,15 @@ class DocumentSymbolClientCapabilities(TSInterface):
     labelSupport: Optional[bool]
 
 
-class DocumentSymbolOptions(WorkDoneProgressOptions, TSInterface):
+class DocumentSymbolOptions(WorkDoneProgressOptions, TypedDict):
     label: Optional[str]
 
 
-class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions, TSInterface):
+class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions, TypedDict):
     pass
 
 
-class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
 
 
@@ -1414,7 +1194,7 @@ class SymbolTag(IntEnum):
     Deprecated = 1
 
 
-class DocumentSymbol(TSInterface):
+class DocumentSymbol(TypedDict):
     name: str
     detail: Optional[str]
     kind: SymbolKind
@@ -1425,7 +1205,7 @@ class DocumentSymbol(TSInterface):
     children: Optional[List['DocumentSymbol']]
 
 
-class SymbolInformation(TSInterface):
+class SymbolInformation(TypedDict):
     name: str
     kind: SymbolKind
     tags: Optional[List[SymbolTag]]
@@ -1434,12 +1214,12 @@ class SymbolInformation(TSInterface):
     containerName: Optional[str]
 
 
-class CodeActionClientCapabilities(TSInterface):
-    class CodeActionLiteralSupport_(TSInterface):
-        class CodeActionKind_(TSInterface):
+class CodeActionClientCapabilities(TypedDict):
+    class CodeActionLiteralSupport_(TypedDict):
+        class CodeActionKind_(TypedDict):
             valueSet: List['CodeActionKind']
         codeActionKind: CodeActionKind_
-    class ResolveSupport_(TSInterface):
+    class ResolveSupport_(TypedDict):
         properties: List[str]
     dynamicRegistration: Optional[bool]
     codeActionLiteralSupport: Optional[CodeActionLiteralSupport_]
@@ -1450,16 +1230,16 @@ class CodeActionClientCapabilities(TSInterface):
     honorsChangeAnnotations: Optional[bool]
 
 
-class CodeActionOptions(WorkDoneProgressOptions, TSInterface):
+class CodeActionOptions(WorkDoneProgressOptions, TypedDict):
     codeActionKinds: Optional[List['CodeActionKind']]
     resolveProvider: Optional[bool]
 
 
-class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions, TSInterface):
+class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions, TypedDict):
     pass
 
 
-class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
     range: Range
     context: 'CodeActionContext'
@@ -1476,13 +1256,13 @@ class CodeActionKind(Enum):
     SourceOrganizeImports = 'source.organizeImports'
 
 
-class CodeActionContext(TSInterface):
+class CodeActionContext(TypedDict):
     diagnostics: List[Diagnostic]
     only: Optional[List[CodeActionKind]]
 
 
-class CodeAction(TSInterface):
-    class Disabled_(TSInterface):
+class CodeAction(TypedDict):
+    class Disabled_(TypedDict):
         reason: str
     title: str
     kind: Optional[CodeActionKind]
@@ -1494,114 +1274,114 @@ class CodeAction(TSInterface):
     data: Optional[Any]
 
 
-class CodeLensClientCapabilities(TSInterface):
+class CodeLensClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class CodeLensOptions(WorkDoneProgressOptions, TSInterface):
+class CodeLensOptions(WorkDoneProgressOptions, TypedDict):
     resolveProvider: Optional[bool]
 
 
-class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions, TSInterface):
+class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions, TypedDict):
     pass
 
 
-class CodeLensParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class CodeLensParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
 
 
-class CodeLens(TSInterface):
+class CodeLens(TypedDict):
     range: Range
     command: Optional[Command]
     data: Optional[Any]
 
 
-class CodeLensWorkspaceClientCapabilities(TSInterface):
+class CodeLensWorkspaceClientCapabilities(TypedDict):
     refreshSupport: Optional[bool]
 
 
-class DocumentLinkClientCapabilities(TSInterface):
+class DocumentLinkClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     tooltipSupport: Optional[bool]
 
 
-class DocumentLinkOptions(WorkDoneProgressOptions, TSInterface):
+class DocumentLinkOptions(WorkDoneProgressOptions, TypedDict):
     resolveProvider: Optional[bool]
 
 
-class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions, TSInterface):
+class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions, TypedDict):
     pass
 
 
-class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
 
 
-class DocumentLink(TSInterface):
+class DocumentLink(TypedDict):
     range: Range
     target: Optional[DocumentUri]
     tooltip: Optional[str]
     data: Optional[Any]
 
 
-class DocumentColorClientCapabilities(TSInterface):
+class DocumentColorClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentColorOptions(WorkDoneProgressOptions, TSInterface):
+class DocumentColorOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions, TSInterface):
+class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions, TypedDict):
     pass
 
 
-class DocumentColorParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class DocumentColorParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
 
 
-class ColorInformation(TSInterface):
+class ColorInformation(TypedDict):
     range: Range
     color: 'Color'
 
 
-class Color(TSInterface):
+class Color(TypedDict):
     red: float
     green: float
     blue: float
     alpha: float
 
 
-class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
     color: Color
     range: Range
 
 
-class ColorPresentation(TSInterface):
+class ColorPresentation(TypedDict):
     label: str
     textEdit: Optional[TextEdit]
     additionalTextEdits: Optional[List[TextEdit]]
 
 
-class DocumentFormattingClientCapabilities(TSInterface):
+class DocumentFormattingClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentFormattingOptions(WorkDoneProgressOptions, TSInterface):
+class DocumentFormattingOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions, TSInterface):
+class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions, TypedDict):
     pass
 
 
-class DocumentFormattingParams(WorkDoneProgressParams, TSInterface):
+class DocumentFormattingParams(WorkDoneProgressParams, TypedDict):
     textDocument: TextDocumentIdentifier
     options: 'FormattingOptions'
 
 
-class FormattingOptions(TSInterface):
+class FormattingOptions(TypedDict):
     tabSize: int
     insertSpaces: bool
     trimTrailingWhitespace: Optional[bool]
@@ -1609,38 +1389,38 @@ class FormattingOptions(TSInterface):
     trimFinalNewlines: Optional[bool]
 
 
-class DocumentRangeFormattingClientCapabilities(TSInterface):
+class DocumentRangeFormattingClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentRangeFormattingOptions(WorkDoneProgressOptions, TSInterface):
+class DocumentRangeFormattingOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions, TSInterface):
+class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions, TypedDict):
     pass
 
 
-class DocumentRangeFormattingParams(WorkDoneProgressParams, TSInterface):
+class DocumentRangeFormattingParams(WorkDoneProgressParams, TypedDict):
     textDocument: TextDocumentIdentifier
     range: Range
     options: FormattingOptions
 
 
-class DocumentOnTypeFormattingClientCapabilities(TSInterface):
+class DocumentOnTypeFormattingClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentOnTypeFormattingOptions(TSInterface):
+class DocumentOnTypeFormattingOptions(TypedDict):
     firstTriggerCharacter: str
     moreTriggerCharacter: Optional[List[str]]
 
 
-class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions, TSInterface):
+class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions, TypedDict):
     pass
 
 
-class DocumentOnTypeFormattingParams(TextDocumentPositionParams, TSInterface):
+class DocumentOnTypeFormattingParams(TextDocumentPositionParams, TypedDict):
     ch: str
     options: FormattingOptions
 
@@ -1649,44 +1429,44 @@ class PrepareSupportDefaultBehavior(IntEnum):
     Identifier = 1
 
 
-class RenameClientCapabilities(TSInterface):
+class RenameClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     prepareSupport: Optional[bool]
     prepareSupportDefaultBehavior: Optional[PrepareSupportDefaultBehavior]
     honorsChangeAnnotations: Optional[bool]
 
 
-class RenameOptions(WorkDoneProgressOptions, TSInterface):
+class RenameOptions(WorkDoneProgressOptions, TypedDict):
     prepareProvider: Optional[bool]
 
 
-class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, TSInterface):
+class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, TypedDict):
     pass
 
 
-class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
+class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
     newName: str
 
 
-class PrepareRenameParams(TextDocumentPositionParams, TSInterface):
+class PrepareRenameParams(TextDocumentPositionParams, TypedDict):
     pass
 
 
-class FoldingRangeClientCapabilities(TSInterface):
+class FoldingRangeClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
     rangeLimit: Optional[int]
     lineFoldingOnly: Optional[bool]
 
 
-class FoldingRangeOptions(WorkDoneProgressOptions, TSInterface):
+class FoldingRangeOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, TSInterface):
+class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
 
 
@@ -1696,7 +1476,7 @@ class FoldingRangeKind(Enum):
     Region = 'region'
 
 
-class FoldingRange(TSInterface):
+class FoldingRange(TypedDict):
     startLine: int
     startCharacter: Optional[int]
     endLine: int
@@ -1704,45 +1484,45 @@ class FoldingRange(TSInterface):
     kind: Optional[str]
 
 
-class SelectionRangeClientCapabilities(TSInterface):
+class SelectionRangeClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class SelectionRangeOptions(WorkDoneProgressOptions, TSInterface):
+class SelectionRangeOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TSInterface):
+class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
     positions: List[Position]
 
 
-class SelectionRange(TSInterface):
+class SelectionRange(TypedDict):
     range: Range
     parent: Optional['SelectionRange']
 
 
-class CallHierarchyClientCapabilities(TSInterface):
+class CallHierarchyClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class CallHierarchyOptions(WorkDoneProgressOptions, TSInterface):
+class CallHierarchyOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions, TSInterface):
+class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
+class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
     pass
 
 
-class CallHierarchyItem(TSInterface):
+class CallHierarchyItem(TypedDict):
     name: str
     kind: SymbolKind
     tags: Optional[List[SymbolTag]]
@@ -1753,20 +1533,20 @@ class CallHierarchyItem(TSInterface):
     data: Optional[Any]
 
 
-class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     item: CallHierarchyItem
 
 
-class CallHierarchyIncomingCall(TSInterface):
+class CallHierarchyIncomingCall(TypedDict):
     from_: CallHierarchyItem
     fromRanges: List[Range]
 
 
-class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     item: CallHierarchyItem
 
 
-class CallHierarchyOutgoingCall(TSInterface):
+class CallHierarchyOutgoingCall(TypedDict):
     to: CallHierarchyItem
     fromRanges: List[Range]
 
@@ -1813,16 +1593,16 @@ class TokenFormat(Enum):
     Relative = 'relative'
 
 
-class SemanticTokensLegend(TSInterface):
+class SemanticTokensLegend(TypedDict):
     tokenTypes: List[str]
     tokenModifiers: List[str]
 
 
-class SemanticTokensClientCapabilities(TSInterface):
-    class Requests_(TSInterface):
-        class Range_1(TSInterface):
+class SemanticTokensClientCapabilities(TypedDict):
+    class Requests_(TypedDict):
+        class Range_1(TypedDict):
             pass
-        class Full_1(TSInterface):
+        class Full_1(TypedDict):
             delta: Optional[bool]
         range: Union[bool, Range_1, None]
         full: Union[bool, Full_1, None]
@@ -1835,96 +1615,96 @@ class SemanticTokensClientCapabilities(TSInterface):
     multilineTokenSupport: Optional[bool]
 
 
-class SemanticTokensOptions(WorkDoneProgressOptions, TSInterface):
-    class Range_1(TSInterface):
+class SemanticTokensOptions(WorkDoneProgressOptions, TypedDict):
+    class Range_1(TypedDict):
         pass
-    class Full_1(TSInterface):
+    class Full_1(TypedDict):
         delta: Optional[bool]
     legend: SemanticTokensLegend
     range: Union[bool, Range_1, None]
     full: Union[bool, Full_1, None]
 
 
-class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions, TSInterface):
+class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
 
 
-class SemanticTokens(TSInterface):
+class SemanticTokens(TypedDict):
     resultId: Optional[str]
     data: List[int]
 
 
-class SemanticTokensPartialResult(TSInterface):
+class SemanticTokensPartialResult(TypedDict):
     data: List[int]
 
 
-class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
     previousResultId: str
 
 
-class SemanticTokensDelta(TSInterface):
+class SemanticTokensDelta(TypedDict):
     resultId: Optional[str]
     edits: List['SemanticTokensEdit']
 
 
-class SemanticTokensEdit(TSInterface):
+class SemanticTokensEdit(TypedDict):
     start: int
     deleteCount: int
     data: Optional[List[int]]
 
 
-class SemanticTokensDeltaPartialResult(TSInterface):
+class SemanticTokensDeltaPartialResult(TypedDict):
     edits: List[SemanticTokensEdit]
 
 
-class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, TSInterface):
+class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
     textDocument: TextDocumentIdentifier
     range: Range
 
 
-class SemanticTokensWorkspaceClientCapabilities(TSInterface):
+class SemanticTokensWorkspaceClientCapabilities(TypedDict):
     refreshSupport: Optional[bool]
 
 
-class LinkedEditingRangeClientCapabilities(TSInterface):
+class LinkedEditingRangeClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class LinkedEditingRangeOptions(WorkDoneProgressOptions, TSInterface):
+class LinkedEditingRangeOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions, TSInterface):
+class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions, TypedDict):
     pass
 
 
-class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams, TSInterface):
+class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
     pass
 
 
-class LinkedEditingRanges(TSInterface):
+class LinkedEditingRanges(TypedDict):
     ranges: List[Range]
     wordPattern: Optional[str]
 
 
-class MonikerClientCapabilities(TSInterface):
+class MonikerClientCapabilities(TypedDict):
     dynamicRegistration: Optional[bool]
 
 
-class MonikerOptions(WorkDoneProgressOptions, TSInterface):
+class MonikerOptions(WorkDoneProgressOptions, TypedDict):
     pass
 
 
-class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions, TSInterface):
+class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions, TypedDict):
     pass
 
 
-class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TSInterface):
+class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
     pass
 
 
@@ -1942,76 +1722,76 @@ class MonikerKind(Enum):
     local = 'local'
 
 
-class Moniker(TSInterface):
+class Moniker(TypedDict):
     scheme: str
     identifier: str
     unique: UniquenessLevel
     kind: Optional[MonikerKind]
 
 
-ResponseMessage.references__ = {
+ResponseMessage.__fieldtypes__ = {
     'error': [ResponseError]
 }
-ProgressParams.references__ = {
+ProgressParams.__fieldtypes__ = {
     'value': [T]
 }
-Range.references__ = {
+Range.__fieldtypes__ = {
     'start': [Position],
     'end': [Position]
 }
-Location.references__ = {
+Location.__fieldtypes__ = {
     'range': [Range]
 }
-LocationLink.references__ = {
+LocationLink.__fieldtypes__ = {
     'originSelectionRange': [Range],
     'targetRange': [Range],
     'targetSelectionRange': [Range]
 }
-Diagnostic.references__ = {
+Diagnostic.__fieldtypes__ = {
     'range': [Range],
     'codeDescription': [CodeDescription],
-    'relatedInformation': [List[DiagnosticRelatedInformation]]
+    'relatedInformation': [DiagnosticRelatedInformation]
 }
-DiagnosticRelatedInformation.references__ = {
+DiagnosticRelatedInformation.__fieldtypes__ = {
     'location': [Location]
 }
-TextEdit.references__ = {
+TextEdit.__fieldtypes__ = {
     'range': [Range]
 }
-TextDocumentEdit.references__ = {
+TextDocumentEdit.__fieldtypes__ = {
     'textDocument': [OptionalVersionedTextDocumentIdentifier],
     'edits': [AnnotatedTextEdit]
 }
-CreateFile.references__ = {
+CreateFile.__fieldtypes__ = {
     'options': [CreateFileOptions]
 }
-RenameFile.references__ = {
+RenameFile.__fieldtypes__ = {
     'options': [RenameFileOptions]
 }
-DeleteFile.references__ = {
+DeleteFile.__fieldtypes__ = {
     'options': [DeleteFileOptions]
 }
-WorkspaceEdit.references__ = {
+WorkspaceEdit.__fieldtypes__ = {
     'changes': [TextEdit],
     'documentChanges': [DeleteFile],
     'changeAnnotations': [ChangeAnnotation]
 }
-WorkspaceEditClientCapabilities.references__ = {
+WorkspaceEditClientCapabilities.__fieldtypes__ = {
     'changeAnnotationSupport': [WorkspaceEditClientCapabilities.ChangeAnnotationSupport_]
 }
-TextDocumentPositionParams.references__ = {
+TextDocumentPositionParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier],
     'position': [Position]
 }
-TextDocumentRegistrationOptions.references__ = {
+TextDocumentRegistrationOptions.__fieldtypes__ = {
     'documentSelector': [DocumentSelector]
 }
-InitializeParams.references__ = {
+InitializeParams.__fieldtypes__ = {
     'clientInfo': [InitializeParams.ClientInfo_],
     'capabilities': [ClientCapabilities],
     'workspaceFolders': [WorkspaceFolder]
 }
-TextDocumentClientCapabilities.references__ = {
+TextDocumentClientCapabilities.__fieldtypes__ = {
     'synchronization': [TextDocumentSyncClientCapabilities],
     'completion': [CompletionClientCapabilities],
     'hover': [HoverClientCapabilities],
@@ -2039,7 +1819,7 @@ TextDocumentClientCapabilities.references__ = {
     'semanticTokens': [SemanticTokensClientCapabilities],
     'moniker': [MonikerClientCapabilities]
 }
-ClientCapabilities.Workspace_.references__ = {
+ClientCapabilities.Workspace_.__fieldtypes__ = {
     'workspaceEdit': [WorkspaceEditClientCapabilities],
     'didChangeConfiguration': [DidChangeConfigurationClientCapabilities],
     'didChangeWatchedFiles': [DidChangeWatchedFilesClientCapabilities],
@@ -2049,25 +1829,25 @@ ClientCapabilities.Workspace_.references__ = {
     'codeLens': [CodeLensWorkspaceClientCapabilities],
     'fileOperations': [ClientCapabilities.Workspace_.FileOperations_]
 }
-ClientCapabilities.references__ = {
+ClientCapabilities.__fieldtypes__ = {
     'workspace': [ClientCapabilities.Workspace_],
     'textDocument': [TextDocumentClientCapabilities],
     'window': [ClientCapabilities.Window_],
     'general': [ClientCapabilities.General_]
 }
-ClientCapabilities.Window_.references__ = {
+ClientCapabilities.Window_.__fieldtypes__ = {
     'showMessage': [ShowMessageRequestClientCapabilities],
     'showDocument': [ShowDocumentClientCapabilities]
 }
-ClientCapabilities.General_.references__ = {
+ClientCapabilities.General_.__fieldtypes__ = {
     'regularExpressions': [RegularExpressionsClientCapabilities],
     'markdown': [MarkdownClientCapabilities]
 }
-InitializeResult.references__ = {
+InitializeResult.__fieldtypes__ = {
     'capabilities': [ServerCapabilities],
     'serverInfo': [InitializeResult.ServerInfo_]
 }
-ServerCapabilities.references__ = {
+ServerCapabilities.__fieldtypes__ = {
     'completionProvider': [CompletionOptions],
     'hoverProvider': [HoverOptions],
     'signatureHelpProvider': [SignatureHelpOptions],
@@ -2096,11 +1876,11 @@ ServerCapabilities.references__ = {
     'workspaceSymbolProvider': [WorkspaceSymbolOptions],
     'workspace': [ServerCapabilities.Workspace_]
 }
-ServerCapabilities.Workspace_.references__ = {
+ServerCapabilities.Workspace_.__fieldtypes__ = {
     'workspaceFolders': [WorkspaceFoldersServerCapabilities],
     'fileOperations': [ServerCapabilities.Workspace_.FileOperations_]
 }
-ServerCapabilities.Workspace_.FileOperations_.references__ = {
+ServerCapabilities.Workspace_.FileOperations_.__fieldtypes__ = {
     'didCreate': [FileOperationRegistrationOptions],
     'willCreate': [FileOperationRegistrationOptions],
     'didRename': [FileOperationRegistrationOptions],
@@ -2108,995 +1888,565 @@ ServerCapabilities.Workspace_.FileOperations_.references__ = {
     'didDelete': [FileOperationRegistrationOptions],
     'willDelete': [FileOperationRegistrationOptions]
 }
-ShowMessageRequestClientCapabilities.references__ = {
+ShowMessageRequestClientCapabilities.__fieldtypes__ = {
     'messageActionItem': [ShowMessageRequestClientCapabilities.MessageActionItem_]
 }
-ShowMessageRequestParams.references__ = {
+ShowMessageRequestParams.__fieldtypes__ = {
     'actions': [MessageActionItem]
 }
-ShowDocumentParams.references__ = {
+ShowDocumentParams.__fieldtypes__ = {
     'selection': [Range]
 }
-RegistrationParams.references__ = {
+RegistrationParams.__fieldtypes__ = {
     'registrations': [Registration]
 }
-UnregistrationParams.references__ = {
+UnregistrationParams.__fieldtypes__ = {
     'unregisterations': [Unregistration]
 }
-DidChangeWorkspaceFoldersParams.references__ = {
+DidChangeWorkspaceFoldersParams.__fieldtypes__ = {
     'event': [WorkspaceFoldersChangeEvent]
 }
-WorkspaceFoldersChangeEvent.references__ = {
+WorkspaceFoldersChangeEvent.__fieldtypes__ = {
     'added': [WorkspaceFolder],
     'removed': [WorkspaceFolder]
 }
-ConfigurationParams.references__ = {
+ConfigurationParams.__fieldtypes__ = {
     'items': [ConfigurationItem]
 }
-DidChangeWatchedFilesRegistrationOptions.references__ = {
+DidChangeWatchedFilesRegistrationOptions.__fieldtypes__ = {
     'watchers': [FileSystemWatcher]
 }
-DidChangeWatchedFilesParams.references__ = {
+DidChangeWatchedFilesParams.__fieldtypes__ = {
     'changes': [FileEvent]
 }
-WorkspaceSymbolClientCapabilities.SymbolKind_.references__ = {
+WorkspaceSymbolClientCapabilities.SymbolKind_.__fieldtypes__ = {
     'valueSet': [SymbolKind]
 }
-WorkspaceSymbolClientCapabilities.references__ = {
+WorkspaceSymbolClientCapabilities.__fieldtypes__ = {
     'symbolKind': [WorkspaceSymbolClientCapabilities.SymbolKind_],
     'tagSupport': [WorkspaceSymbolClientCapabilities.TagSupport_]
 }
-ApplyWorkspaceEditParams.references__ = {
+ApplyWorkspaceEditParams.__fieldtypes__ = {
     'edit': [WorkspaceEdit]
 }
-FileOperationRegistrationOptions.references__ = {
+FileOperationRegistrationOptions.__fieldtypes__ = {
     'filters': [FileOperationFilter]
 }
-FileOperationPattern.references__ = {
+FileOperationPattern.__fieldtypes__ = {
     'options': [FileOperationPatternOptions]
 }
-FileOperationFilter.references__ = {
+FileOperationFilter.__fieldtypes__ = {
     'pattern': [FileOperationPattern]
 }
-CreateFilesParams.references__ = {
+CreateFilesParams.__fieldtypes__ = {
     'files': [FileCreate]
 }
-RenameFilesParams.references__ = {
+RenameFilesParams.__fieldtypes__ = {
     'files': [FileRename]
 }
-DeleteFilesParams.references__ = {
+DeleteFilesParams.__fieldtypes__ = {
     'files': [FileDelete]
 }
-TextDocumentSyncOptions.references__ = {
+TextDocumentSyncOptions.__fieldtypes__ = {
     'save': [SaveOptions]
 }
-DidOpenTextDocumentParams.references__ = {
+DidOpenTextDocumentParams.__fieldtypes__ = {
     'textDocument': [TextDocumentItem]
 }
-DidChangeTextDocumentParams.references__ = {
+DidChangeTextDocumentParams.__fieldtypes__ = {
     'textDocument': [VersionedTextDocumentIdentifier],
     'contentChanges': [TextDocumentContentChangeEvent]
 }
-TextDocumentContentChangeEvent_0.references__ = {
+TextDocumentContentChangeEvent_0.__fieldtypes__ = {
     'range': [Range]
 }
-WillSaveTextDocumentParams.references__ = {
+WillSaveTextDocumentParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-DidSaveTextDocumentParams.references__ = {
+DidSaveTextDocumentParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-DidCloseTextDocumentParams.references__ = {
+DidCloseTextDocumentParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-PublishDiagnosticsClientCapabilities.references__ = {
+PublishDiagnosticsClientCapabilities.__fieldtypes__ = {
     'tagSupport': [PublishDiagnosticsClientCapabilities.TagSupport_]
 }
-PublishDiagnosticsParams.references__ = {
+PublishDiagnosticsParams.__fieldtypes__ = {
     'diagnostics': [Diagnostic]
 }
-CompletionClientCapabilities.CompletionItem_.references__ = {
+CompletionClientCapabilities.CompletionItem_.__fieldtypes__ = {
     'tagSupport': [CompletionClientCapabilities.CompletionItem_.TagSupport_],
     'resolveSupport': [CompletionClientCapabilities.CompletionItem_.ResolveSupport_],
     'insertTextModeSupport': [CompletionClientCapabilities.CompletionItem_.InsertTextModeSupport_]
 }
-CompletionClientCapabilities.references__ = {
+CompletionClientCapabilities.__fieldtypes__ = {
     'completionItem': [CompletionClientCapabilities.CompletionItem_],
     'completionItemKind': [CompletionClientCapabilities.CompletionItemKind_]
 }
-CompletionClientCapabilities.CompletionItemKind_.references__ = {
+CompletionClientCapabilities.CompletionItemKind_.__fieldtypes__ = {
     'valueSet': [CompletionItemKind]
 }
-CompletionParams.references__ = {
+CompletionParams.__fieldtypes__ = {
     'context': [CompletionContext]
 }
-CompletionList.references__ = {
+CompletionList.__fieldtypes__ = {
     'items': [CompletionItem]
 }
-InsertReplaceEdit.references__ = {
+InsertReplaceEdit.__fieldtypes__ = {
     'insert': [Range],
     'replace': [Range]
 }
-CompletionItem.references__ = {
+CompletionItem.__fieldtypes__ = {
     'kind': [CompletionItemKind],
     'documentation': [MarkupContent],
     'textEdit': [InsertReplaceEdit],
     'additionalTextEdits': [TextEdit],
     'command': [Command]
 }
-Hover.references__ = {
+Hover.__fieldtypes__ = {
     'contents': [MarkupContent],
     'range': [Range]
 }
-SignatureHelpClientCapabilities.SignatureInformation_.references__ = {
+SignatureHelpClientCapabilities.SignatureInformation_.__fieldtypes__ = {
     'parameterInformation': [SignatureHelpClientCapabilities.SignatureInformation_.ParameterInformation_]
 }
-SignatureHelpClientCapabilities.references__ = {
+SignatureHelpClientCapabilities.__fieldtypes__ = {
     'signatureInformation': [SignatureHelpClientCapabilities.SignatureInformation_]
 }
-SignatureHelpParams.references__ = {
+SignatureHelpParams.__fieldtypes__ = {
     'context': [SignatureHelpContext]
 }
-SignatureHelpContext.references__ = {
+SignatureHelpContext.__fieldtypes__ = {
     'activeSignatureHelp': [SignatureHelp]
 }
-SignatureHelp.references__ = {
+SignatureHelp.__fieldtypes__ = {
     'signatures': [SignatureInformation]
 }
-SignatureInformation.references__ = {
+SignatureInformation.__fieldtypes__ = {
     'documentation': [MarkupContent],
     'parameters': [ParameterInformation]
 }
-ParameterInformation.references__ = {
+ParameterInformation.__fieldtypes__ = {
     'documentation': [MarkupContent]
 }
-ReferenceParams.references__ = {
+ReferenceParams.__fieldtypes__ = {
     'context': [ReferenceContext]
 }
-DocumentHighlight.references__ = {
+DocumentHighlight.__fieldtypes__ = {
     'range': [Range]
 }
-DocumentSymbolClientCapabilities.SymbolKind_.references__ = {
+DocumentSymbolClientCapabilities.SymbolKind_.__fieldtypes__ = {
     'valueSet': [SymbolKind]
 }
-DocumentSymbolClientCapabilities.references__ = {
+DocumentSymbolClientCapabilities.__fieldtypes__ = {
     'symbolKind': [DocumentSymbolClientCapabilities.SymbolKind_],
     'tagSupport': [DocumentSymbolClientCapabilities.TagSupport_]
 }
-DocumentSymbolParams.references__ = {
+DocumentSymbolParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-DocumentSymbol.references__ = {
+DocumentSymbol.__fieldtypes__ = {
     'kind': [SymbolKind],
     'range': [Range],
     'selectionRange': [Range],
     'children': [DocumentSymbol]
 }
-SymbolInformation.references__ = {
+SymbolInformation.__fieldtypes__ = {
     'kind': [SymbolKind],
     'location': [Location]
 }
-CodeActionClientCapabilities.CodeActionLiteralSupport_.references__ = {
+CodeActionClientCapabilities.CodeActionLiteralSupport_.__fieldtypes__ = {
     'codeActionKind': [CodeActionClientCapabilities.CodeActionLiteralSupport_.CodeActionKind_]
 }
-CodeActionClientCapabilities.references__ = {
+CodeActionClientCapabilities.__fieldtypes__ = {
     'codeActionLiteralSupport': [CodeActionClientCapabilities.CodeActionLiteralSupport_],
     'resolveSupport': [CodeActionClientCapabilities.ResolveSupport_]
 }
-CodeActionParams.references__ = {
+CodeActionParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier],
     'range': [Range],
     'context': [CodeActionContext]
 }
-CodeActionContext.references__ = {
+CodeActionContext.__fieldtypes__ = {
     'diagnostics': [Diagnostic]
 }
-CodeAction.references__ = {
+CodeAction.__fieldtypes__ = {
     'diagnostics': [Diagnostic],
     'disabled': [CodeAction.Disabled_],
     'edit': [WorkspaceEdit],
     'command': [Command]
 }
-CodeLensParams.references__ = {
+CodeLensParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-CodeLens.references__ = {
+CodeLens.__fieldtypes__ = {
     'range': [Range],
     'command': [Command]
 }
-DocumentLinkParams.references__ = {
+DocumentLinkParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-DocumentLink.references__ = {
+DocumentLink.__fieldtypes__ = {
     'range': [Range]
 }
-DocumentColorParams.references__ = {
+DocumentColorParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-ColorInformation.references__ = {
+ColorInformation.__fieldtypes__ = {
     'range': [Range],
     'color': [Color]
 }
-ColorPresentationParams.references__ = {
+ColorPresentationParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier],
     'color': [Color],
     'range': [Range]
 }
-ColorPresentation.references__ = {
+ColorPresentation.__fieldtypes__ = {
     'textEdit': [TextEdit],
     'additionalTextEdits': [TextEdit]
 }
-DocumentFormattingParams.references__ = {
+DocumentFormattingParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier],
     'options': [FormattingOptions]
 }
-DocumentRangeFormattingParams.references__ = {
+DocumentRangeFormattingParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier],
     'range': [Range],
     'options': [FormattingOptions]
 }
-DocumentOnTypeFormattingParams.references__ = {
+DocumentOnTypeFormattingParams.__fieldtypes__ = {
     'options': [FormattingOptions]
 }
-RenameClientCapabilities.references__ = {
+RenameClientCapabilities.__fieldtypes__ = {
     'prepareSupportDefaultBehavior': [PrepareSupportDefaultBehavior]
 }
-FoldingRangeParams.references__ = {
+FoldingRangeParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-SelectionRangeParams.references__ = {
+SelectionRangeParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier],
     'positions': [Position]
 }
-SelectionRange.references__ = {
+SelectionRange.__fieldtypes__ = {
     'range': [Range],
     'parent': [SelectionRange]
 }
-CallHierarchyItem.references__ = {
+CallHierarchyItem.__fieldtypes__ = {
     'kind': [SymbolKind],
     'range': [Range],
     'selectionRange': [Range]
 }
-CallHierarchyIncomingCallsParams.references__ = {
+CallHierarchyIncomingCallsParams.__fieldtypes__ = {
     'item': [CallHierarchyItem]
 }
-CallHierarchyIncomingCall.references__ = {
+CallHierarchyIncomingCall.__fieldtypes__ = {
     'from_': [CallHierarchyItem],
     'fromRanges': [Range]
 }
-CallHierarchyOutgoingCallsParams.references__ = {
+CallHierarchyOutgoingCallsParams.__fieldtypes__ = {
     'item': [CallHierarchyItem]
 }
-CallHierarchyOutgoingCall.references__ = {
+CallHierarchyOutgoingCall.__fieldtypes__ = {
     'to': [CallHierarchyItem],
     'fromRanges': [Range]
 }
-SemanticTokensClientCapabilities.Requests_.references__ = {
+SemanticTokensClientCapabilities.Requests_.__fieldtypes__ = {
     'range': [SemanticTokensClientCapabilities.Requests_.Range_1],
     'full': [SemanticTokensClientCapabilities.Requests_.Full_1]
 }
-SemanticTokensClientCapabilities.references__ = {
+SemanticTokensClientCapabilities.__fieldtypes__ = {
     'requests': [SemanticTokensClientCapabilities.Requests_]
 }
-SemanticTokensOptions.references__ = {
+SemanticTokensOptions.__fieldtypes__ = {
     'legend': [SemanticTokensLegend],
     'range': [SemanticTokensOptions.Range_1],
     'full': [SemanticTokensOptions.Full_1]
 }
-SemanticTokensParams.references__ = {
+SemanticTokensParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-SemanticTokensDeltaParams.references__ = {
+SemanticTokensDeltaParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier]
 }
-SemanticTokensDelta.references__ = {
+SemanticTokensDelta.__fieldtypes__ = {
     'edits': [SemanticTokensEdit]
 }
-SemanticTokensDeltaPartialResult.references__ = {
+SemanticTokensDeltaPartialResult.__fieldtypes__ = {
     'edits': [SemanticTokensEdit]
 }
-SemanticTokensRangeParams.references__ = {
+SemanticTokensRangeParams.__fieldtypes__ = {
     'textDocument': [TextDocumentIdentifier],
     'range': [Range]
 }
-LinkedEditingRanges.references__ = {
+LinkedEditingRanges.__fieldtypes__ = {
     'ranges': [Range]
 }
-Moniker.references__ = {
+Moniker.__fieldtypes__ = {
     'unique': [UniquenessLevel],
     'kind': [MonikerKind]
 }
 
 
-RequestMessage.optional__ = {
-    'params': None
-}
-ResponseMessage.optional__ = {
-    'result': None,
-    'error': None
-}
-ResponseError.optional__ = {
-    'data': None
-}
-NotificationMessage.optional__ = {
-    'params': None
-}
-RegularExpressionsClientCapabilities.optional__ = {
-    'version': None
-}
-LocationLink.optional__ = {
-    'originSelectionRange': None
-}
-Diagnostic.optional__ = {
-    'severity': None,
-    'code': None,
-    'codeDescription': None,
-    'source': None,
-    'tags': None,
-    'relatedInformation': None,
-    'data': None
-}
-Command.optional__ = {
-    'arguments': None
-}
-ChangeAnnotation.optional__ = {
-    'needsConfirmation': None,
-    'description': None
-}
-CreateFileOptions.optional__ = {
-    'overwrite': None,
-    'ignoreIfExists': None
-}
-CreateFile.optional__ = {
-    'options': None,
-    'annotationId': None
-}
-RenameFileOptions.optional__ = {
-    'overwrite': None,
-    'ignoreIfExists': None
-}
-RenameFile.optional__ = {
-    'options': None,
-    'annotationId': None
-}
-DeleteFileOptions.optional__ = {
-    'recursive': None,
-    'ignoreIfNotExists': None
-}
-DeleteFile.optional__ = {
-    'options': None,
-    'annotationId': None
-}
-WorkspaceEdit.optional__ = {
-    'changes': None,
-    'documentChanges': None,
-    'changeAnnotations': None
-}
-WorkspaceEditClientCapabilities.optional__ = {
-    'documentChanges': None,
-    'resourceOperations': None,
-    'failureHandling': None,
-    'normalizesLineEndings': None,
-    'changeAnnotationSupport': None
-}
-WorkspaceEditClientCapabilities.ChangeAnnotationSupport_.optional__ = {
-    'groupsOnLabel': None
-}
-DocumentFilter.optional__ = {
-    'language': None,
-    'scheme': None,
-    'pattern': None
-}
-StaticRegistrationOptions.optional__ = {
-    'id': None
-}
-MarkdownClientCapabilities.optional__ = {
-    'version': None
-}
-WorkDoneProgressBegin.optional__ = {
-    'cancellable': None,
-    'message': None,
-    'percentage': None
-}
-WorkDoneProgressReport.optional__ = {
-    'cancellable': None,
-    'message': None,
-    'percentage': None
-}
-WorkDoneProgressEnd.optional__ = {
-    'message': None
-}
-WorkDoneProgressParams.optional__ = {
-    'workDoneToken': None
-}
-WorkDoneProgressOptions.optional__ = {
-    'workDoneProgress': None
-}
-PartialResultParams.optional__ = {
-    'partialResultToken': None
-}
-InitializeParams.ClientInfo_.optional__ = {
-    'version': None
-}
-InitializeParams.optional__ = {
-    'clientInfo': None,
-    'locale': None,
-    'rootPath': None,
-    'initializationOptions': None,
-    'trace': None,
-    'workspaceFolders': None
-}
-TextDocumentClientCapabilities.optional__ = {
-    'synchronization': None,
-    'completion': None,
-    'hover': None,
-    'signatureHelp': None,
-    'declaration': None,
-    'definition': None,
-    'typeDefinition': None,
-    'implementation': None,
-    'references': None,
-    'documentHighlight': None,
-    'documentSymbol': None,
-    'codeAction': None,
-    'codeLens': None,
-    'documentLink': None,
-    'colorProvider': None,
-    'formatting': None,
-    'rangeFormatting': None,
-    'onTypeFormatting': None,
-    'rename': None,
-    'publishDiagnostics': None,
-    'foldingRange': None,
-    'selectionRange': None,
-    'linkedEditingRange': None,
-    'callHierarchy': None,
-    'semanticTokens': None,
-    'moniker': None
-}
-ClientCapabilities.Workspace_.optional__ = {
-    'applyEdit': None,
-    'workspaceEdit': None,
-    'didChangeConfiguration': None,
-    'didChangeWatchedFiles': None,
-    'symbol': None,
-    'executeCommand': None,
-    'workspaceFolders': None,
-    'configuration': None,
-    'semanticTokens': None,
-    'codeLens': None,
-    'fileOperations': None
-}
-ClientCapabilities.Workspace_.FileOperations_.optional__ = {
-    'dynamicRegistration': None,
-    'didCreate': None,
-    'willCreate': None,
-    'didRename': None,
-    'willRename': None,
-    'didDelete': None,
-    'willDelete': None
-}
-ClientCapabilities.optional__ = {
-    'workspace': None,
-    'textDocument': None,
-    'window': None,
-    'general': None,
-    'experimental': None
-}
-ClientCapabilities.Window_.optional__ = {
-    'workDoneProgress': None,
-    'showMessage': None,
-    'showDocument': None
-}
-ClientCapabilities.General_.optional__ = {
-    'regularExpressions': None,
-    'markdown': None
-}
-InitializeResult.ServerInfo_.optional__ = {
-    'version': None
-}
-InitializeResult.optional__ = {
-    'serverInfo': None
-}
-ServerCapabilities.optional__ = {
-    'textDocumentSync': None,
-    'completionProvider': None,
-    'hoverProvider': None,
-    'signatureHelpProvider': None,
-    'declarationProvider': None,
-    'definitionProvider': None,
-    'typeDefinitionProvider': None,
-    'implementationProvider': None,
-    'referencesProvider': None,
-    'documentHighlightProvider': None,
-    'documentSymbolProvider': None,
-    'codeActionProvider': None,
-    'codeLensProvider': None,
-    'documentLinkProvider': None,
-    'colorProvider': None,
-    'documentFormattingProvider': None,
-    'documentRangeFormattingProvider': None,
-    'documentOnTypeFormattingProvider': None,
-    'renameProvider': None,
-    'foldingRangeProvider': None,
-    'executeCommandProvider': None,
-    'selectionRangeProvider': None,
-    'linkedEditingRangeProvider': None,
-    'callHierarchyProvider': None,
-    'semanticTokensProvider': None,
-    'monikerProvider': None,
-    'workspaceSymbolProvider': None,
-    'workspace': None,
-    'experimental': None
-}
-ServerCapabilities.Workspace_.optional__ = {
-    'workspaceFolders': None,
-    'fileOperations': None
-}
-ServerCapabilities.Workspace_.FileOperations_.optional__ = {
-    'didCreate': None,
-    'willCreate': None,
-    'didRename': None,
-    'willRename': None,
-    'didDelete': None,
-    'willDelete': None
-}
-LogTraceParams.optional__ = {
-    'verbose': None
-}
-ShowMessageRequestClientCapabilities.MessageActionItem_.optional__ = {
-    'additionalPropertiesSupport': None
-}
-ShowMessageRequestClientCapabilities.optional__ = {
-    'messageActionItem': None
-}
-ShowMessageRequestParams.optional__ = {
-    'actions': None
-}
-ShowDocumentParams.optional__ = {
-    'external': None,
-    'takeFocus': None,
-    'selection': None
-}
-Registration.optional__ = {
-    'registerOptions': None
-}
-WorkspaceFoldersServerCapabilities.optional__ = {
-    'supported': None,
-    'changeNotifications': None
-}
-DidChangeConfigurationClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-ConfigurationItem.optional__ = {
-    'scopeUri': None,
-    'section': None
-}
-DidChangeWatchedFilesClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-FileSystemWatcher.optional__ = {
-    'kind': None
-}
-WorkspaceSymbolClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'symbolKind': None,
-    'tagSupport': None
-}
-WorkspaceSymbolClientCapabilities.SymbolKind_.optional__ = {
-    'valueSet': None
-}
-ExecuteCommandClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-ExecuteCommandParams.optional__ = {
-    'arguments': None
-}
-ApplyWorkspaceEditParams.optional__ = {
-    'label': None
-}
-ApplyWorkspaceEditResponse.optional__ = {
-    'failureReason': None,
-    'failedChange': None
-}
-FileOperationPatternOptions.optional__ = {
-    'ignoreCase': None
-}
-FileOperationPattern.optional__ = {
-    'matches': None,
-    'options': None
-}
-FileOperationFilter.optional__ = {
-    'scheme': None
-}
-TextDocumentSyncOptions.optional__ = {
-    'openClose': None,
-    'change': None,
-    'willSave': None,
-    'willSaveWaitUntil': None,
-    'save': None
-}
-TextDocumentContentChangeEvent_0.optional__ = {
-    'rangeLength': None
-}
-SaveOptions.optional__ = {
-    'includeText': None
-}
-TextDocumentSaveRegistrationOptions.optional__ = {
-    'includeText': None
-}
-DidSaveTextDocumentParams.optional__ = {
-    'text': None
-}
-TextDocumentSyncClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'willSave': None,
-    'willSaveWaitUntil': None,
-    'didSave': None
-}
-PublishDiagnosticsClientCapabilities.optional__ = {
-    'relatedInformation': None,
-    'tagSupport': None,
-    'versionSupport': None,
-    'codeDescriptionSupport': None,
-    'dataSupport': None
-}
-PublishDiagnosticsParams.optional__ = {
-    'version': None
-}
-CompletionClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'completionItem': None,
-    'completionItemKind': None,
-    'contextSupport': None
-}
-CompletionClientCapabilities.CompletionItem_.optional__ = {
-    'snippetSupport': None,
-    'commitCharactersSupport': None,
-    'documentationFormat': None,
-    'deprecatedSupport': None,
-    'preselectSupport': None,
-    'tagSupport': None,
-    'insertReplaceSupport': None,
-    'resolveSupport': None,
-    'insertTextModeSupport': None
-}
-CompletionClientCapabilities.CompletionItemKind_.optional__ = {
-    'valueSet': None
-}
-CompletionOptions.optional__ = {
-    'triggerCharacters': None,
-    'allCommitCharacters': None,
-    'resolveProvider': None
-}
-CompletionParams.optional__ = {
-    'context': None
-}
-CompletionContext.optional__ = {
-    'triggerCharacter': None
-}
-CompletionItem.optional__ = {
-    'kind': None,
-    'tags': None,
-    'detail': None,
-    'documentation': None,
-    'deprecated': None,
-    'preselect': None,
-    'sortText': None,
-    'filterText': None,
-    'insertText': None,
-    'insertTextFormat': None,
-    'insertTextMode': None,
-    'textEdit': None,
-    'additionalTextEdits': None,
-    'commitCharacters': None,
-    'command': None,
-    'data': None
-}
-HoverClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'contentFormat': None
-}
-Hover.optional__ = {
-    'range': None
-}
-SignatureHelpClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'signatureInformation': None,
-    'contextSupport': None
-}
-SignatureHelpClientCapabilities.SignatureInformation_.optional__ = {
-    'documentationFormat': None,
-    'parameterInformation': None,
-    'activeParameterSupport': None
-}
-SignatureHelpClientCapabilities.SignatureInformation_.ParameterInformation_.optional__ = {
-    'labelOffsetSupport': None
-}
-SignatureHelpOptions.optional__ = {
-    'triggerCharacters': None,
-    'retriggerCharacters': None
-}
-SignatureHelpParams.optional__ = {
-    'context': None
-}
-SignatureHelpContext.optional__ = {
-    'triggerCharacter': None,
-    'activeSignatureHelp': None
-}
-SignatureHelp.optional__ = {
-    'activeSignature': None,
-    'activeParameter': None
-}
-SignatureInformation.optional__ = {
-    'documentation': None,
-    'parameters': None,
-    'activeParameter': None
-}
-ParameterInformation.optional__ = {
-    'documentation': None
-}
-DeclarationClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'linkSupport': None
-}
-DefinitionClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'linkSupport': None
-}
-TypeDefinitionClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'linkSupport': None
-}
-ImplementationClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'linkSupport': None
-}
-ReferenceClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-DocumentHighlightClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-DocumentHighlight.optional__ = {
-    'kind': None
-}
-DocumentSymbolClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'symbolKind': None,
-    'hierarchicalDocumentSymbolSupport': None,
-    'tagSupport': None,
-    'labelSupport': None
-}
-DocumentSymbolClientCapabilities.SymbolKind_.optional__ = {
-    'valueSet': None
-}
-DocumentSymbolOptions.optional__ = {
-    'label': None
-}
-DocumentSymbol.optional__ = {
-    'detail': None,
-    'tags': None,
-    'deprecated': None,
-    'children': None
-}
-SymbolInformation.optional__ = {
-    'tags': None,
-    'deprecated': None,
-    'containerName': None
-}
-CodeActionClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'codeActionLiteralSupport': None,
-    'isPreferredSupport': None,
-    'disabledSupport': None,
-    'dataSupport': None,
-    'resolveSupport': None,
-    'honorsChangeAnnotations': None
-}
-CodeActionOptions.optional__ = {
-    'codeActionKinds': None,
-    'resolveProvider': None
-}
-CodeActionContext.optional__ = {
-    'only': None
-}
-CodeAction.optional__ = {
-    'kind': None,
-    'diagnostics': None,
-    'isPreferred': None,
-    'disabled': None,
-    'edit': None,
-    'command': None,
-    'data': None
-}
-CodeLensClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-CodeLensOptions.optional__ = {
-    'resolveProvider': None
-}
-CodeLens.optional__ = {
-    'command': None,
-    'data': None
-}
-CodeLensWorkspaceClientCapabilities.optional__ = {
-    'refreshSupport': None
-}
-DocumentLinkClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'tooltipSupport': None
-}
-DocumentLinkOptions.optional__ = {
-    'resolveProvider': None
-}
-DocumentLink.optional__ = {
-    'target': None,
-    'tooltip': None,
-    'data': None
-}
-DocumentColorClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-ColorPresentation.optional__ = {
-    'textEdit': None,
-    'additionalTextEdits': None
-}
-DocumentFormattingClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-FormattingOptions.optional__ = {
-    'trimTrailingWhitespace': None,
-    'insertFinalNewline': None,
-    'trimFinalNewlines': None
-}
-DocumentRangeFormattingClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-DocumentOnTypeFormattingClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-DocumentOnTypeFormattingOptions.optional__ = {
-    'moreTriggerCharacter': None
-}
-RenameClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'prepareSupport': None,
-    'prepareSupportDefaultBehavior': None,
-    'honorsChangeAnnotations': None
-}
-RenameOptions.optional__ = {
-    'prepareProvider': None
-}
-FoldingRangeClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'rangeLimit': None,
-    'lineFoldingOnly': None
-}
-FoldingRange.optional__ = {
-    'startCharacter': None,
-    'endCharacter': None,
-    'kind': None
-}
-SelectionRangeClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-SelectionRange.optional__ = {
-    'parent': None
-}
-CallHierarchyClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-CallHierarchyItem.optional__ = {
-    'tags': None,
-    'detail': None,
-    'data': None
-}
-SemanticTokensClientCapabilities.optional__ = {
-    'dynamicRegistration': None,
-    'overlappingTokenSupport': None,
-    'multilineTokenSupport': None
-}
-SemanticTokensClientCapabilities.Requests_.optional__ = {
-    'range': None,
-    'full': None
-}
-SemanticTokensClientCapabilities.Requests_.Full_1.optional__ = {
-    'delta': None
-}
-SemanticTokensOptions.optional__ = {
-    'range': None,
-    'full': None
-}
-SemanticTokensOptions.Full_1.optional__ = {
-    'delta': None
-}
-SemanticTokens.optional__ = {
-    'resultId': None
-}
-SemanticTokensDelta.optional__ = {
-    'resultId': None
-}
-SemanticTokensEdit.optional__ = {
-    'data': None
-}
-SemanticTokensWorkspaceClientCapabilities.optional__ = {
-    'refreshSupport': None
-}
-LinkedEditingRangeClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-LinkedEditingRanges.optional__ = {
-    'wordPattern': None
-}
-MonikerClientCapabilities.optional__ = {
-    'dynamicRegistration': None
-}
-Moniker.optional__ = {
-    'kind': None
-}
+RequestMessage.__optional_keys__ = {'params'}
+ResponseMessage.__optional_keys__ = {'result', 'error'}
+ResponseError.__optional_keys__ = {'data'}
+NotificationMessage.__optional_keys__ = {'params'}
+RegularExpressionsClientCapabilities.__optional_keys__ = {'version'}
+LocationLink.__optional_keys__ = {'originSelectionRange'}
+Diagnostic.__optional_keys__ = {'severity', 'code', 'codeDescription', 'source', 'tags', 'relatedInformation', 'data'}
+Command.__optional_keys__ = {'arguments'}
+ChangeAnnotation.__optional_keys__ = {'needsConfirmation', 'description'}
+CreateFileOptions.__optional_keys__ = {'overwrite', 'ignoreIfExists'}
+CreateFile.__optional_keys__ = {'options', 'annotationId'}
+RenameFileOptions.__optional_keys__ = {'overwrite', 'ignoreIfExists'}
+RenameFile.__optional_keys__ = {'options', 'annotationId'}
+DeleteFileOptions.__optional_keys__ = {'recursive', 'ignoreIfNotExists'}
+DeleteFile.__optional_keys__ = {'options', 'annotationId'}
+WorkspaceEdit.__optional_keys__ = {'changes', 'documentChanges', 'changeAnnotations'}
+WorkspaceEditClientCapabilities.__optional_keys__ = {'documentChanges', 'resourceOperations', 'failureHandling', 'normalizesLineEndings', 'changeAnnotationSupport'}
+WorkspaceEditClientCapabilities.ChangeAnnotationSupport_.__optional_keys__ = {'groupsOnLabel'}
+DocumentFilter.__optional_keys__ = {'language', 'scheme', 'pattern'}
+StaticRegistrationOptions.__optional_keys__ = {'id'}
+MarkdownClientCapabilities.__optional_keys__ = {'version'}
+WorkDoneProgressBegin.__optional_keys__ = {'cancellable', 'message', 'percentage'}
+WorkDoneProgressReport.__optional_keys__ = {'cancellable', 'message', 'percentage'}
+WorkDoneProgressEnd.__optional_keys__ = {'message'}
+WorkDoneProgressParams.__optional_keys__ = {'workDoneToken'}
+WorkDoneProgressOptions.__optional_keys__ = {'workDoneProgress'}
+PartialResultParams.__optional_keys__ = {'partialResultToken'}
+InitializeParams.ClientInfo_.__optional_keys__ = {'version'}
+InitializeParams.__optional_keys__ = {'clientInfo', 'locale', 'rootPath', 'initializationOptions', 'trace', 'workspaceFolders'}
+TextDocumentClientCapabilities.__optional_keys__ = {'synchronization', 'completion', 'hover', 'signatureHelp', 'declaration', 'definition', 'typeDefinition', 'implementation', 'references', 'documentHighlight', 'documentSymbol', 'codeAction', 'codeLens', 'documentLink', 'colorProvider', 'formatting', 'rangeFormatting', 'onTypeFormatting', 'rename', 'publishDiagnostics', 'foldingRange', 'selectionRange', 'linkedEditingRange', 'callHierarchy', 'semanticTokens', 'moniker'}
+ClientCapabilities.Workspace_.__optional_keys__ = {'applyEdit', 'workspaceEdit', 'didChangeConfiguration', 'didChangeWatchedFiles', 'symbol', 'executeCommand', 'workspaceFolders', 'configuration', 'semanticTokens', 'codeLens', 'fileOperations'}
+ClientCapabilities.Workspace_.FileOperations_.__optional_keys__ = {'dynamicRegistration', 'didCreate', 'willCreate', 'didRename', 'willRename', 'didDelete', 'willDelete'}
+ClientCapabilities.__optional_keys__ = {'workspace', 'textDocument', 'window', 'general', 'experimental'}
+ClientCapabilities.Window_.__optional_keys__ = {'workDoneProgress', 'showMessage', 'showDocument'}
+ClientCapabilities.General_.__optional_keys__ = {'regularExpressions', 'markdown'}
+InitializeResult.ServerInfo_.__optional_keys__ = {'version'}
+InitializeResult.__optional_keys__ = {'serverInfo'}
+ServerCapabilities.__optional_keys__ = {'textDocumentSync', 'completionProvider', 'hoverProvider', 'signatureHelpProvider', 'declarationProvider', 'definitionProvider', 'typeDefinitionProvider', 'implementationProvider', 'referencesProvider', 'documentHighlightProvider', 'documentSymbolProvider', 'codeActionProvider', 'codeLensProvider', 'documentLinkProvider', 'colorProvider', 'documentFormattingProvider', 'documentRangeFormattingProvider', 'documentOnTypeFormattingProvider', 'renameProvider', 'foldingRangeProvider', 'executeCommandProvider', 'selectionRangeProvider', 'linkedEditingRangeProvider', 'callHierarchyProvider', 'semanticTokensProvider', 'monikerProvider', 'workspaceSymbolProvider', 'workspace', 'experimental'}
+ServerCapabilities.Workspace_.__optional_keys__ = {'workspaceFolders', 'fileOperations'}
+ServerCapabilities.Workspace_.FileOperations_.__optional_keys__ = {'didCreate', 'willCreate', 'didRename', 'willRename', 'didDelete', 'willDelete'}
+LogTraceParams.__optional_keys__ = {'verbose'}
+ShowMessageRequestClientCapabilities.MessageActionItem_.__optional_keys__ = {'additionalPropertiesSupport'}
+ShowMessageRequestClientCapabilities.__optional_keys__ = {'messageActionItem'}
+ShowMessageRequestParams.__optional_keys__ = {'actions'}
+ShowDocumentParams.__optional_keys__ = {'external', 'takeFocus', 'selection'}
+Registration.__optional_keys__ = {'registerOptions'}
+WorkspaceFoldersServerCapabilities.__optional_keys__ = {'supported', 'changeNotifications'}
+DidChangeConfigurationClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+ConfigurationItem.__optional_keys__ = {'scopeUri', 'section'}
+DidChangeWatchedFilesClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+FileSystemWatcher.__optional_keys__ = {'kind'}
+WorkspaceSymbolClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'symbolKind', 'tagSupport'}
+WorkspaceSymbolClientCapabilities.SymbolKind_.__optional_keys__ = {'valueSet'}
+ExecuteCommandClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+ExecuteCommandParams.__optional_keys__ = {'arguments'}
+ApplyWorkspaceEditParams.__optional_keys__ = {'label'}
+ApplyWorkspaceEditResponse.__optional_keys__ = {'failureReason', 'failedChange'}
+FileOperationPatternOptions.__optional_keys__ = {'ignoreCase'}
+FileOperationPattern.__optional_keys__ = {'matches', 'options'}
+FileOperationFilter.__optional_keys__ = {'scheme'}
+TextDocumentSyncOptions.__optional_keys__ = {'openClose', 'change', 'willSave', 'willSaveWaitUntil', 'save'}
+TextDocumentContentChangeEvent_0.__optional_keys__ = {'rangeLength'}
+SaveOptions.__optional_keys__ = {'includeText'}
+TextDocumentSaveRegistrationOptions.__optional_keys__ = {'includeText'}
+DidSaveTextDocumentParams.__optional_keys__ = {'text'}
+TextDocumentSyncClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'willSave', 'willSaveWaitUntil', 'didSave'}
+PublishDiagnosticsClientCapabilities.__optional_keys__ = {'relatedInformation', 'tagSupport', 'versionSupport', 'codeDescriptionSupport', 'dataSupport'}
+PublishDiagnosticsParams.__optional_keys__ = {'version'}
+CompletionClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'completionItem', 'completionItemKind', 'contextSupport'}
+CompletionClientCapabilities.CompletionItem_.__optional_keys__ = {'snippetSupport', 'commitCharactersSupport', 'documentationFormat', 'deprecatedSupport', 'preselectSupport', 'tagSupport', 'insertReplaceSupport', 'resolveSupport', 'insertTextModeSupport'}
+CompletionClientCapabilities.CompletionItemKind_.__optional_keys__ = {'valueSet'}
+CompletionOptions.__optional_keys__ = {'triggerCharacters', 'allCommitCharacters', 'resolveProvider'}
+CompletionParams.__optional_keys__ = {'context'}
+CompletionContext.__optional_keys__ = {'triggerCharacter'}
+CompletionItem.__optional_keys__ = {'kind', 'tags', 'detail', 'documentation', 'deprecated', 'preselect', 'sortText', 'filterText', 'insertText', 'insertTextFormat', 'insertTextMode', 'textEdit', 'additionalTextEdits', 'commitCharacters', 'command', 'data'}
+HoverClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'contentFormat'}
+Hover.__optional_keys__ = {'range'}
+SignatureHelpClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'signatureInformation', 'contextSupport'}
+SignatureHelpClientCapabilities.SignatureInformation_.__optional_keys__ = {'documentationFormat', 'parameterInformation', 'activeParameterSupport'}
+SignatureHelpClientCapabilities.SignatureInformation_.ParameterInformation_.__optional_keys__ = {'labelOffsetSupport'}
+SignatureHelpOptions.__optional_keys__ = {'triggerCharacters', 'retriggerCharacters'}
+SignatureHelpParams.__optional_keys__ = {'context'}
+SignatureHelpContext.__optional_keys__ = {'triggerCharacter', 'activeSignatureHelp'}
+SignatureHelp.__optional_keys__ = {'activeSignature', 'activeParameter'}
+SignatureInformation.__optional_keys__ = {'documentation', 'parameters', 'activeParameter'}
+ParameterInformation.__optional_keys__ = {'documentation'}
+DeclarationClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'linkSupport'}
+DefinitionClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'linkSupport'}
+TypeDefinitionClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'linkSupport'}
+ImplementationClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'linkSupport'}
+ReferenceClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+DocumentHighlightClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+DocumentHighlight.__optional_keys__ = {'kind'}
+DocumentSymbolClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'symbolKind', 'hierarchicalDocumentSymbolSupport', 'tagSupport', 'labelSupport'}
+DocumentSymbolClientCapabilities.SymbolKind_.__optional_keys__ = {'valueSet'}
+DocumentSymbolOptions.__optional_keys__ = {'label'}
+DocumentSymbol.__optional_keys__ = {'detail', 'tags', 'deprecated', 'children'}
+SymbolInformation.__optional_keys__ = {'tags', 'deprecated', 'containerName'}
+CodeActionClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'codeActionLiteralSupport', 'isPreferredSupport', 'disabledSupport', 'dataSupport', 'resolveSupport', 'honorsChangeAnnotations'}
+CodeActionOptions.__optional_keys__ = {'codeActionKinds', 'resolveProvider'}
+CodeActionContext.__optional_keys__ = {'only'}
+CodeAction.__optional_keys__ = {'kind', 'diagnostics', 'isPreferred', 'disabled', 'edit', 'command', 'data'}
+CodeLensClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+CodeLensOptions.__optional_keys__ = {'resolveProvider'}
+CodeLens.__optional_keys__ = {'command', 'data'}
+CodeLensWorkspaceClientCapabilities.__optional_keys__ = {'refreshSupport'}
+DocumentLinkClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'tooltipSupport'}
+DocumentLinkOptions.__optional_keys__ = {'resolveProvider'}
+DocumentLink.__optional_keys__ = {'target', 'tooltip', 'data'}
+DocumentColorClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+ColorPresentation.__optional_keys__ = {'textEdit', 'additionalTextEdits'}
+DocumentFormattingClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+FormattingOptions.__optional_keys__ = {'trimTrailingWhitespace', 'insertFinalNewline', 'trimFinalNewlines'}
+DocumentRangeFormattingClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+DocumentOnTypeFormattingClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+DocumentOnTypeFormattingOptions.__optional_keys__ = {'moreTriggerCharacter'}
+RenameClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'prepareSupport', 'prepareSupportDefaultBehavior', 'honorsChangeAnnotations'}
+RenameOptions.__optional_keys__ = {'prepareProvider'}
+FoldingRangeClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'rangeLimit', 'lineFoldingOnly'}
+FoldingRange.__optional_keys__ = {'startCharacter', 'endCharacter', 'kind'}
+SelectionRangeClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+SelectionRange.__optional_keys__ = {'parent'}
+CallHierarchyClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+CallHierarchyItem.__optional_keys__ = {'tags', 'detail', 'data'}
+SemanticTokensClientCapabilities.__optional_keys__ = {'dynamicRegistration', 'overlappingTokenSupport', 'multilineTokenSupport'}
+SemanticTokensClientCapabilities.Requests_.__optional_keys__ = {'range', 'full'}
+SemanticTokensClientCapabilities.Requests_.Full_1.__optional_keys__ = {'delta'}
+SemanticTokensOptions.__optional_keys__ = {'range', 'full'}
+SemanticTokensOptions.Full_1.__optional_keys__ = {'delta'}
+SemanticTokens.__optional_keys__ = {'resultId'}
+SemanticTokensDelta.__optional_keys__ = {'resultId'}
+SemanticTokensEdit.__optional_keys__ = {'data'}
+SemanticTokensWorkspaceClientCapabilities.__optional_keys__ = {'refreshSupport'}
+LinkedEditingRangeClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+LinkedEditingRanges.__optional_keys__ = {'wordPattern'}
+MonikerClientCapabilities.__optional_keys__ = {'dynamicRegistration'}
+Moniker.__optional_keys__ = {'kind'}
 
 
+def post_fix_classes(classes: set):
+    def post_fix(C):
+        nonlocal classes
+        annotations = getattr(C, '__annotations__', {})
+        fieldtypes = getattr(C, '__fieldtypes__', {})
+        optional_keys = set(getattr(C, '__optional_keys__', set()))
+        for base in C.__bases__:
+            if base in classes:
+                classes.remove(base)
+                post_fix(base)
+            annotations.update(getattr(base, '__annotations__', {}))
+            fieldtypes.update(getattr(base, '__fieldtypes__', {}))
+            optional_keys.update(getattr(base, '__optional_keys__', set()))
+        C.__total__ = not bool(optional_keys)
+        C.__annotations__ = annotations
+        C.__fieldtypes__ = fieldtypes
+        C.__optional_keys__ = frozenset(optional_keys)
+        C.__required_keys__ = frozenset(annotations.keys() - optional_keys)
+
+    while classes:
+        post_fix(classes.pop())
+
+
+post_fix_classes({
+   Message, RequestMessage, ResponseMessage, 
+   ResponseError, NotificationMessage, CancelParams, 
+   ProgressParams, RegularExpressionsClientCapabilities, Position, 
+   Range, Location, LocationLink, 
+   Diagnostic, DiagnosticRelatedInformation, CodeDescription, 
+   Command, TextEdit, ChangeAnnotation, 
+   AnnotatedTextEdit, TextDocumentEdit, CreateFileOptions, 
+   CreateFile, RenameFileOptions, RenameFile, 
+   DeleteFileOptions, DeleteFile, WorkspaceEdit, 
+   WorkspaceEditClientCapabilities, TextDocumentIdentifier, TextDocumentItem, 
+   VersionedTextDocumentIdentifier, OptionalVersionedTextDocumentIdentifier, TextDocumentPositionParams, 
+   DocumentFilter, StaticRegistrationOptions, TextDocumentRegistrationOptions, 
+   MarkupContent, MarkdownClientCapabilities, WorkDoneProgressBegin, 
+   WorkDoneProgressReport, WorkDoneProgressEnd, WorkDoneProgressParams, 
+   WorkDoneProgressOptions, PartialResultParams, InitializeParams, 
+   TextDocumentClientCapabilities, ClientCapabilities, InitializeResult, 
+   InitializeError, ServerCapabilities, InitializedParams, 
+   LogTraceParams, SetTraceParams, ShowMessageParams, 
+   ShowMessageRequestClientCapabilities, ShowMessageRequestParams, MessageActionItem, 
+   ShowDocumentClientCapabilities, ShowDocumentParams, ShowDocumentResult, 
+   LogMessageParams, WorkDoneProgressCreateParams, WorkDoneProgressCancelParams, 
+   Registration, RegistrationParams, Unregistration, 
+   UnregistrationParams, WorkspaceFoldersServerCapabilities, WorkspaceFolder, 
+   DidChangeWorkspaceFoldersParams, WorkspaceFoldersChangeEvent, DidChangeConfigurationClientCapabilities, 
+   DidChangeConfigurationParams, ConfigurationParams, ConfigurationItem, 
+   DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesRegistrationOptions, FileSystemWatcher, 
+   DidChangeWatchedFilesParams, FileEvent, WorkspaceSymbolClientCapabilities, 
+   WorkspaceSymbolOptions, WorkspaceSymbolRegistrationOptions, WorkspaceSymbolParams, 
+   ExecuteCommandClientCapabilities, ExecuteCommandOptions, ExecuteCommandRegistrationOptions, 
+   ExecuteCommandParams, ApplyWorkspaceEditParams, ApplyWorkspaceEditResponse, 
+   FileOperationRegistrationOptions, FileOperationPatternOptions, FileOperationPattern, 
+   FileOperationFilter, CreateFilesParams, FileCreate, 
+   RenameFilesParams, FileRename, DeleteFilesParams, 
+   FileDelete, TextDocumentSyncOptions, DidOpenTextDocumentParams, 
+   TextDocumentChangeRegistrationOptions, DidChangeTextDocumentParams, WillSaveTextDocumentParams, 
+   SaveOptions, TextDocumentSaveRegistrationOptions, DidSaveTextDocumentParams, 
+   DidCloseTextDocumentParams, TextDocumentSyncClientCapabilities, PublishDiagnosticsClientCapabilities, 
+   PublishDiagnosticsParams, CompletionClientCapabilities, CompletionOptions, 
+   CompletionRegistrationOptions, CompletionParams, CompletionContext, 
+   CompletionList, InsertReplaceEdit, CompletionItem, 
+   HoverClientCapabilities, HoverOptions, HoverRegistrationOptions, 
+   HoverParams, Hover, SignatureHelpClientCapabilities, 
+   SignatureHelpOptions, SignatureHelpRegistrationOptions, SignatureHelpParams, 
+   SignatureHelpContext, SignatureHelp, SignatureInformation, 
+   ParameterInformation, DeclarationClientCapabilities, DeclarationOptions, 
+   DeclarationRegistrationOptions, DeclarationParams, DefinitionClientCapabilities, 
+   DefinitionOptions, DefinitionRegistrationOptions, DefinitionParams, 
+   TypeDefinitionClientCapabilities, TypeDefinitionOptions, TypeDefinitionRegistrationOptions, 
+   TypeDefinitionParams, ImplementationClientCapabilities, ImplementationOptions, 
+   ImplementationRegistrationOptions, ImplementationParams, ReferenceClientCapabilities, 
+   ReferenceOptions, ReferenceRegistrationOptions, ReferenceParams, 
+   ReferenceContext, DocumentHighlightClientCapabilities, DocumentHighlightOptions, 
+   DocumentHighlightRegistrationOptions, DocumentHighlightParams, DocumentHighlight, 
+   DocumentSymbolClientCapabilities, DocumentSymbolOptions, DocumentSymbolRegistrationOptions, 
+   DocumentSymbolParams, DocumentSymbol, SymbolInformation, 
+   CodeActionClientCapabilities, CodeActionOptions, CodeActionRegistrationOptions, 
+   CodeActionParams, CodeActionContext, CodeAction, 
+   CodeLensClientCapabilities, CodeLensOptions, CodeLensRegistrationOptions, 
+   CodeLensParams, CodeLens, CodeLensWorkspaceClientCapabilities, 
+   DocumentLinkClientCapabilities, DocumentLinkOptions, DocumentLinkRegistrationOptions, 
+   DocumentLinkParams, DocumentLink, DocumentColorClientCapabilities, 
+   DocumentColorOptions, DocumentColorRegistrationOptions, DocumentColorParams, 
+   ColorInformation, Color, ColorPresentationParams, 
+   ColorPresentation, DocumentFormattingClientCapabilities, DocumentFormattingOptions, 
+   DocumentFormattingRegistrationOptions, DocumentFormattingParams, FormattingOptions, 
+   DocumentRangeFormattingClientCapabilities, DocumentRangeFormattingOptions, DocumentRangeFormattingRegistrationOptions, 
+   DocumentRangeFormattingParams, DocumentOnTypeFormattingClientCapabilities, DocumentOnTypeFormattingOptions, 
+   DocumentOnTypeFormattingRegistrationOptions, DocumentOnTypeFormattingParams, RenameClientCapabilities, 
+   RenameOptions, RenameRegistrationOptions, RenameParams, 
+   PrepareRenameParams, FoldingRangeClientCapabilities, FoldingRangeOptions, 
+   FoldingRangeRegistrationOptions, FoldingRangeParams, FoldingRange, 
+   SelectionRangeClientCapabilities, SelectionRangeOptions, SelectionRangeRegistrationOptions, 
+   SelectionRangeParams, SelectionRange, CallHierarchyClientCapabilities, 
+   CallHierarchyOptions, CallHierarchyRegistrationOptions, CallHierarchyPrepareParams, 
+   CallHierarchyItem, CallHierarchyIncomingCallsParams, CallHierarchyIncomingCall, 
+   CallHierarchyOutgoingCallsParams, CallHierarchyOutgoingCall, SemanticTokensLegend, 
+   SemanticTokensClientCapabilities, SemanticTokensOptions, SemanticTokensRegistrationOptions, 
+   SemanticTokensParams, SemanticTokens, SemanticTokensPartialResult, 
+   SemanticTokensDeltaParams, SemanticTokensDelta, SemanticTokensEdit, 
+   SemanticTokensDeltaPartialResult, SemanticTokensRangeParams, SemanticTokensWorkspaceClientCapabilities, 
+   LinkedEditingRangeClientCapabilities, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions, 
+   LinkedEditingRangeParams, LinkedEditingRanges, MonikerClientCapabilities, 
+   MonikerOptions, MonikerRegistrationOptions, MonikerParams, 
+   Moniker})
 
 
 if __name__ == "__main__":
-    p = Position(1, 2)
-
-    msg = Message(jsonrpc="test")
-    print(asdict(msg))
-    msg = RequestMessage(jsonrpc="test", id=1, method="gogogo")
-    print(asdict(msg))
-    msg = RequestMessage(jsonrpc="test", id="2", method="gogogo", params="[1, 2, 3]")
-    print(asdict(msg))
-    try:
-        _ = ResponseError(code="ABC", message=3, data=False)
-        assert False, "TypeError exptected!"
-    except TypeError:
-        pass
-    diag = Diagnostic(Range(Position(0, 0), Position(1, 1)),
-                      message="hey")
-    diag_dict = asdict(diag)
-    print(diag_dict)
-    diag2 = fromdict(diag_dict, Diagnostic)
-    diag2_dict = asdict(diag2)
-    print(diag2_dict)
-    assert diag_dict == diag2_dict
-
-    tf = TypeDefinitionParams(TextDocumentIdentifier(DocumentUri('URI')), Position(3, 2))
-    tf_dict = asdict(tf)
-    print(tf_dict)
-    tf2 = fromdict(tf_dict, TypeDefinitionParams)
-    tf2_dict = asdict(tf2)
-    print(tf2_dict)
-    assert tf_dict == tf2_dict
-
-    dgri = DiagnosticRelatedInformation(
-        Location('uri1', Range(Position(0, 0), Position(1, 1))),
-                 message="ups1")
-
-    diag = Diagnostic(Range(Position(0, 0), Position(1, 1)),
-                      message="hey",
-                      relatedInformation=[DiagnosticRelatedInformation(
-                          Location('uri1', Range(Position(0, 0), Position(1, 1))), 'ups2'),
-                                          DiagnosticRelatedInformation(
-                          Location('uri2', Range(Position(3, 4), Position(5, 6))), 'ups3')
-                                         ])
-    diag_dict = asdict(diag)
-    print(diag_dict)
-    print(asjson_obj([DiagnosticRelatedInformation(
-                          Location('uri1', Range(Position(0, 0), Position(1, 1))), 'ups2'),
-                                          DiagnosticRelatedInformation(
-                          Location('uri2', Range(Position(3, 4), Position(5, 6))), 'ups3')
-                                         ]))
-    diag2 = fromdict(diag_dict, Diagnostic)
-    diag2_dict = asdict(diag2)
-    assert diag2_dict == diag_dict
-
-    r = Range(Position(0, 0), {'line': 1, 'character': 1})
-    print(asdict(r))
-    print(r)
-    s = Range(Position(0, 0), (1, 1))
-    print(asdict(s))
-    print(r == s)
-    t = repr(r)
-    print(eval(t) == r == s)
+    if __name__ == "__main__":
+        msg = Message(jsonrpc="test")
+        print(msg)
+        msg = RequestMessage(jsonrpc="test", id=1, method="gogogo")
+        print(msg)
+        msg = RequestMessage(jsonrpc="test", id="2", method="gogogo", params="[1, 2, 3]")
+        print(msg)
+        msg = RequestMessage(jsonrpc="test", method="gogogo")
+        print(RequestMessage.__total__)
+        print(RequestMessage.__optional_keys__)
+        print(RequestMessage.__required_keys__)
+        print(RequestMessage.__annotations__)
