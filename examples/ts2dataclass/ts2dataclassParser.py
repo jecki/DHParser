@@ -250,7 +250,7 @@ class ts2dataclassCompiler(Compiler):
         self.referred_objects: Dict = {}
         self.basic_type_aliases: Set[str] = set()
         self.obj_name: List[str] = ['TOPLEVEL_']
-        self.optional_keys = []
+        self.optional_keys: List[List[str]] = [[]]
         self.strip_type_from_const = False
 
     def compile(self, node) -> str:
@@ -343,8 +343,7 @@ class ts2dataclassCompiler(Compiler):
                            if child.tag_name != 'declaration')
 
     def render_class_header(self, name: str, base_classes: str) -> str:
-        optional_key_list = self.optional_keys
-        self.optional_keys = []
+        optional_key_list = self.optional_keys.pop()
         if self.flavour == 'typeddict':
             if optional_key_list:
                 optional_keys = ', '.join(
@@ -377,6 +376,7 @@ class ts2dataclassCompiler(Compiler):
         name = self.compile(node['identifier'])
         self.obj_name.append(name)
         self.local_classes.append([])
+        self.optional_keys.append([])
         # uncomment the following two lines to generate references and defaults-dicts
         # only if they are not empty.
         # self.referred_objects[name] = {}
@@ -418,6 +418,7 @@ class ts2dataclassCompiler(Compiler):
         if alias not in self.overloaded_type_names:
             self.known_types.add(alias)
             self.local_classes.append([])
+            self.optional_keys.append([])
             types = self.compile(node['types'])
             preface = self.render_local_classes()
             code = preface + f"{alias} = {types}"
@@ -448,16 +449,12 @@ class ts2dataclassCompiler(Compiler):
                     self.qualified_obj_name(varname=False), {})[identifier] = [type_name]
         if 'optional' in node:
             self.default_values.setdefault(self.qualified_obj_name(), {})[identifier] = None
-            # if T.startswith('Union['):
-            #     if T.find('None') < 0:
-            #       T = T[:-1] + ', None]'
-            # else:
-            #     T = f"Optional[{T}]"
-            T = f"{T}  # optional"
-            self.optional_keys.append(identifier)
+            self.optional_keys[-1].append(identifier)
+            T = f"Optional[{T}]"
         if self.is_toplevel() and T[0:5] == 'class':
             preface = self.render_local_classes()
             self.local_classes.append([])
+            self.optional_keys.append([])
             return preface + f"{identifier}:{to_typename(identifier)}"
         return f"{identifier}: {T}"
 
@@ -499,6 +496,7 @@ class ts2dataclassCompiler(Compiler):
             if self.is_toplevel():
                 preface = self.render_local_classes()
                 self.local_classes.append([])
+                self.optional_keys.append([])
             else:
                 preface = ''
             if self.use_py308_literal_type and \
@@ -517,6 +515,7 @@ class ts2dataclassCompiler(Compiler):
         typ = node[0]
         if typ.tag_name == 'declarations_block':
             self.local_classes.append([])
+            self.optional_keys.append([])
             decls = self.compile(typ)
             # return ''.join([f"class {self.obj_name[-1]}:\n    ",
             #                  self.render_local_classes().replace('\n', '\n    '),
@@ -565,15 +564,18 @@ class ts2dataclassCompiler(Compiler):
         if all(child.tag_name == 'const' for child in node.children[1:]):
             if all(nd['literal'][0].tag_name == 'integer'
                    for nd in node.select_children('const') if 'literal' in nd):
-                namespace = [f'class {name}(IntEnum):']
+                header = f'class {name}(IntEnum):'
             else:
-                namespace = [f'class {name}(Enum):']
+                header =  f'class {name}(Enum):'
             self.strip_type_from_const = True
         else:
-            # namespace = [f'class {name}:']
-            namespace = self.render_class_header(name, '')[:-1]  # leave out the trailing "\n"
+            header = ''
+        namespace = []
         for child in node.children[1:]:
             namespace.append(self.compile(child))
+        if not header:
+            header = self.render_class_header(name, '')[:-1]  # leave out the trailing "\n"
+        namespace.insert(0, header)
         self.strip_type_from_const = save
         return '\n    '.join(namespace)
 
