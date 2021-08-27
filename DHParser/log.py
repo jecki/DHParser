@@ -99,7 +99,7 @@ def start_logging(dirname: str = "LOGS"):
     log_dir = os.path.abspath(dirname) if dirname else ''
     if log_dir != get_preset_value('log_dir'):
         set_preset_value('log_dir', log_dir)
-        ser_config_value('log_dir', log_dir)
+        set_config_value('log_dir', log_dir)
     finalize_presets()
 
 
