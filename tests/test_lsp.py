@@ -30,33 +30,25 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser import lsp
 from DHParser.lsp import *
-from DHParser.toolkit import dataclasses
 
 
-@dataclasses.dataclass
-class LSPData:
-    processId: int
-    rootUri: str
-    clientCapabilities: Optional[ClientCapabilities] = None
-    serverCapabilities: Optional[ServerCapabilities] = None
-    serverInfo: Dict = dataclasses.field(
-        default_factory=lambda :{"name": "TestLSP", "version": "0.2"})
+def test() -> Message:
+    return {'jsonrpc': 'Hallo Welt'}
 
 
-# class MyLSP(lsp.LSPBase):
-#     def __init__(self):
-#         capabilities = ServerCapabilities()
-#         self.data = LSPData(processId=0,
-#                             rootUri='',
-#                             clientCapabilities=None,
-#                             serverCapabilities=capabilities)
-#
-#     @typed_lsp_func
-#     def lsp_initialize(self, params: InitializeParams) -> InitializeResult:
-#         self.data.processId = params.processId
-#         self.data.rootUri = params.rootUri
-#         self.data.clientCapabilities = params.capabilities
-#         return InitializeResult(self.data.serverCapabilities, self.data.serverInfo)
+@type_check
+def type_checked_func(select_test: int, request: RequestMessage, position: Position) \
+        -> ResponseMessage:
+    if select_test == 1:
+        return {'jsonrpc': 'jsonrpc-string',
+                'id': 1,
+                'error': {'code': -404}}
+    elif select_test == 2:
+        return {'jsonrpc': 'Response',
+                'id': 2.
+                'result': "All's well that ends well"}
+    else:
+        return ResponseMessage(jsonrpc='Response', id=2, result="All's well that ends well")
 
 
 class TestLSP:

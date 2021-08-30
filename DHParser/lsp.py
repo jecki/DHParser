@@ -29,7 +29,7 @@ from enum import Enum, IntEnum
 import functools
 import sys
 from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, \
-    Iterator, Iterable, Callable, cast
+    Iterator, Iterable, Callable, cast, get_type_hints
 
 try:
     from typing import ForwardRef

@@ -359,7 +359,7 @@ class ts2dataclassCompiler(Compiler):
                 if base_classes.find('Generic[') >= 0:
                     return f"class {name}({base_classes}):\n"
                 else:
-                    return f"class {name}({base_classes}, total={total}):\n"
+                    return f"class {name}({base_classes}, TypedDict, total={total}):\n"
             else:
                 return f"class {name}(TypedDict, total={total}):\n"
         else:
