@@ -66,7 +66,7 @@ if sys.version_info >= (3, 9):
 
 
     class _TypedDictMeta(type):
-        def __new__(cls, name, bases, ns):
+        def __new__(cls, name, bases, ns, total=True):
             """Create new typed dict class object.
             This method is called when TypedDict is subclassed,
             or when TypedDict is instantiated. This way
@@ -122,7 +122,7 @@ if sys.version_info >= (3, 9):
         __instancecheck__ = __subclasscheck__
 
 
-    def TypedDict(typename, fields=None, **kwargs):
+    def TypedDict(typename, fields=None, *, total=True, **kwargs):
         """A simple typed namespace. At runtime it is equivalent to a plain dict.
         TypedDict creates a dictionary type that expects all of its
         instances to have a certain set of keys, where each key is
