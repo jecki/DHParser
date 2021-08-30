@@ -1,7 +1,8 @@
+import functools
 import sys
 from typing import Generic, Protocol, ClassVar, Final, _GenericAlias, \
     Any, NoReturn, _SpecialForm, TypeVar, ForwardRef, Optional, get_origin, \
-    Union, Dict, get_type_hints, List, Iterable, Tuple
+    Union, Dict, get_type_hints, List, Iterable, Tuple, Callable, TypedDict
 
 
 def _type_convert(arg, module=None):
@@ -159,33 +160,10 @@ _TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
 TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
 
 
-T = TypeVar('T')
-
-
-class G(Generic[T], TypedDict):
-    value: 'T'
-
-
-class T1(TypedDict):
-    s: str
-
-
-class Test(TypedDict):
-    a: int
-    t: T1
-    b: Optional[int]
-    c: 'T2'
-    d: Union[int, str, None]
-    g: G
-
-
-class T2(TypedDict):
-    x: float
-
-
-
 def validate_type(val: Any, typ):
     if isinstance(typ, _TypedDictMeta):
+        if not isinstance(val, Dict):
+            raise TypeError(f"{val} is not even a dictionary")
         validate_TypedDict(val, typ)
     elif hasattr(typ, '__args__'):
         validate_compound_type(val, typ)
@@ -197,6 +175,8 @@ def validate_type(val: Any, typ):
 def validate_uniform_sequence(sequence: Iterable, typ):
     if isinstance(typ, _TypedDictMeta):
         for val in sequence:
+            if not isinstance(val, Dict):
+                raise TypeError(f"{val} is not of type {typ}")
             validate_TypedDict(val, typ)
     elif hasattr(typ, '__args__'):
         for val in sequence:
@@ -223,7 +203,7 @@ def validate_compound_type(value: Any, T):
                     raise TypeError(f"{value} is not of type {T}")
                 for item, typ in zip(value, T.__args__):
                     validate_type(item, typ)
-        else:
+        else:  # assume that value is of type List
             if len(T.__args__) != 1:
                 raise ValueError(f"Unknown compound type {T}")
             validate_uniform_sequence(value, T)
@@ -285,6 +265,68 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
                             + '\n'.join(type_errors))
 
 
+def type_check(func: Callable) -> Callable:
+    arg_names = func.__code__.co_varnames[:func.__code__.co_argcount]
+    arg_types = get_type_hints(func)
+    return_type = arg_types.get('return', None)
+    if return_type is not None:  del arg_types['return']
+    assert arg_types or return_type, \
+        f'type_check-decorated "{func}" has no type annotations'
+
+    @functools.wraps(func)
+    def guard(*args, **kwargs):
+        nonlocal arg_names, arg_types, return_type
+        arg_dict = {**dict(zip(arg_names, args)), **kwargs}
+        for name, typ in arg_types.items():
+            try:
+                validate_type(arg_dict[name], typ)
+            except TypeError as e:
+                raise TypeError(
+                    f'Parameter "{name}" of function "{func.__name__}" failed '
+                    f'the type-check, because: {str(e)}')
+        ret = func(*args, **kwargs)
+        if return_type:
+            try:
+                validate_type(ret, return_type)
+            except TypeError as e:
+                raise TypeError(
+                    f'Value returned by function "{func.__name__}" failed '
+                    f'the type-check, because: {str(e)}')
+        return ret
+
+    return guard
+
+
+T = TypeVar('T')
+
+
+class G(Generic[T], TypedDict):
+    value: 'T'
+
+
+class T1(TypedDict):
+    s: str
+
+
+class Test(TypedDict):
+    a: int
+    t: T1
+    b: Optional[int]
+    c: 'T2'
+    d: Union[int, str, None]
+    g: G
+
+
+class T2(TypedDict):
+    x: float
+
+
+@type_check
+def type_checked(token, test: Test) -> T1:
+    if token < 0:
+        return str(test['a'])
+    else:
+        return {'s': str(test['a'])}
 
 
 
@@ -294,3 +336,15 @@ if __name__ == '__main__':
     print(Test.__optional_keys__)
     print(get_type_hints(Test))
     validate_TypedDict(t, Test)
+    print(type_checked(0, t))
+    s = Test(a=1, t=T1(s="hello"), c=T2(x=3.1415))
+    try:
+        type_checked(0, s)
+        assert False
+    except TypeError as e:
+        print(e)
+    try:
+        type_checked(-1, t)
+        assert False
+    except TypeError as e:
+        print(e)
