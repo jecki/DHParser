@@ -33,7 +33,7 @@ import multiprocessing
 import os
 import sys
 import time
-from typing import Callable
+from typing import Callable, Union
 
 
 if __name__ == "__main__":
@@ -65,7 +65,7 @@ def compiler_dummy(src: str, log_dir: str='') -> str:
     return src
 
 
-def long_running(duration: float) -> float:
+def long_running(duration: float, **kwargs) -> float:
     time.sleep(float(duration))
     return duration
 
@@ -369,11 +369,11 @@ class LSP:
         return {'processId': self.shared.processId}
 
     @lsp_rpc
-    def lsp_shutdown(self):
+    def lsp_shutdown(self, **kwargs):
         self.shared.shutdown = True
         return {}
 
-    def lsp_exit(self):
+    def lsp_exit(self, **kwargs):
         self.shared.shutdown = True
         return None
 

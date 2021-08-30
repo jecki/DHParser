@@ -1114,13 +1114,13 @@ class Server:
         if self.log_file:
             append_log(self.log_file, *args, echo=self.echo_log)
 
-    def rpc_identify_server(self, service_call: bool = False):
+    def rpc_identify_server(self, service_call: bool = False, *args, **kwargs):
         """Returns an identification string for the server."""
         identify = "DHParser %s %s under %s" \
                    % (__version__, self.server_name, identify_python())
         return (identify + ' already connected') if service_call else identify
 
-    def rpc_logging(self, *args) -> str:
+    def rpc_logging(self, *args, **kwargs) -> str:
         """Starts logging with either a) the default filename, if args is
          empty or the empty string b) the given log file name if `args[0]`
          is a non-empty string c) stops logging if `args[0]` is `None`.

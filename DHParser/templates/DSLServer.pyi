@@ -214,7 +214,7 @@ class DSLLanguageServerProtocol:
     def lsp_custom(self, **kwargs):
         return kwargs
 
-    def lsp_shutdown(self):
+    def lsp_shutdown(self, **kwargs):
         self.lsp_data['processId'] = 0
         self.lsp_data['rootUri'] = ''
         self.lsp_data['clientCapabilities'] = {}
