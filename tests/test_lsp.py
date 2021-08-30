@@ -23,17 +23,15 @@ limitations under the License.
 import dataclasses
 import os
 import sys
+from typing import TypedDict
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+print(sys.path)
 
 
 from DHParser import lsp
-from DHParser.lsp import *
-
-
-def test() -> Message:
-    return {'jsonrpc': 'Hallo Welt'}
+from DHParser.lsp import RequestMessage, Message, ResponseMessage, Position, type_check, shortlist
 
 
 @type_check
@@ -41,14 +39,19 @@ def type_checked_func(select_test: int, request: RequestMessage, position: Posit
         -> ResponseMessage:
     if select_test == 1:
         return {'jsonrpc': 'jsonrpc-string',
-                'id': 1,
-                'error': {'code': -404}}
+                'id': request['id'],
+                'error': {'code': -404, 'message': 'bad mistake'}}
     elif select_test == 2:
+        return {'jsonrpc': 'jsonrpc-string',
+                'id': request['id'],
+                'error': {'code': -404}}
+    elif select_test == 3:
         return {'jsonrpc': 'Response',
-                'id': 2.
+                'id': request['id'],
                 'result': "All's well that ends well"}
     else:
-        return ResponseMessage(jsonrpc='Response', id=2, result="All's well that ends well")
+        return ResponseMessage(jsonrpc='Response', id=request['id'],
+                               result="All's well that ends well")
 
 
 class TestLSP:
@@ -65,14 +68,35 @@ class TestLSP:
         assert shortlist(long, 'ABBO') == (0, 1)
         assert shortlist(long, 'AA') == (0, 0)
 
-    def test_typed_lsp_funcs(self):
-        # params_obj = InitializeParams(capabilities=ClientCapabilities())
-        # params_dict = dataclasses.asdict(params_obj)
-        # mylsp = MyLSP()
-        # print(mylsp.lsp_initialize)
-        # result = mylsp.lsp_initialize(params_dict)
-        # print(result)
-        pass
+    def test_type_check(self):
+        response = type_checked_func(0, {'jsonrpc': '2.0', 'id': 21, 'method': 'check'},
+                                     Position(line=21, character=15))
+        assert response['id'] == 21
+        response = type_checked_func(1, {'jsonrpc': '2.0', 'id': 21, 'method': 'check'},
+                                     Position(line=21, character=15))
+        assert response['id'] == 21
+        response = type_checked_func(3, RequestMessage(jsonrpc='2.0', id=21, method='check'),
+                                     {'line': 21, 'character': 15})
+        assert response['id'] == 21
+        if sys.version_info < (3, 7, 0):
+            return
+        try:
+            _ = type_checked_func(0, {'jsonrpc': '2.0', 'id': 21, 'method': 'check'})
+            assert False, "Missing parameter not noticed"
+        except TypeError:
+            pass
+        try:
+            _ = type_checked_func(0, {'jsonrpc': '2.0', 'method': 'check'},
+                                     Position(line=21, character=15))
+            assert False, "Type Error in parameter not detected"
+        except TypeError:
+            pass
+        try:
+            _ = type_checked_func(2, {'jsonrpc': '2.0', 'id': 21, 'method': 'check'},
+                                     Position(line=21, character=15))
+            assert False, "Type Error in nested return type not detected"
+        except TypeError:
+            pass
 
 
 if __name__ == "__main__":
