@@ -44,7 +44,7 @@ https://www.cs.princeton.edu/research/techreps/TR-554-97
 techniques, like RelaxNG.
 
 The next step and, evidently, the hard part would be to not only 
-validate vasious specimen of abstract syntax trees, but to verify 
+validate various specimen of abstract syntax trees, but to verify 
 automatically, that, given a certain grammar and a table of 
 transformations, the abstract syntax tree thet any well formed 
 source code yields is valid according to the structural definition.    

@@ -1624,8 +1624,8 @@ class Grammar:
                         root_name = self.start_parser__.pname \
                                     or self.associated_symbol__(self.start_parser__).pname
                         error_msg = f'Parser "{root_name}" ' \
-                            "stopped before end, at: »" + fs + \
-                            (("« Trying to recover" +
+                            f"stopped before end, at: »{fs}«" + \
+                            (("Trying to recover" +
                               (" but stopping history recording at this point."
                                if self.history_tracking__ else "..."))
                              if len(stitches) < self.max_parser_dropouts__
@@ -3039,7 +3039,7 @@ class Alternative(NaryParser):
         # the order of the sub-expression matters!
         >>> number = RE(r'\d+') | RE(r'\d+') + RE(r'\.') + RE(r'\d+')
         >>> str(Grammar(number)("3.1416"))
-        '3 <<< Error on ".1416" | Parser "root" stopped before end, at:  .1416  Terminating parser. >>> '
+        '3 <<< Error on ".1416" | Parser "root" stopped before end, at: ».1416«  Terminating parser. >>> '
 
         # the most selective expression should be put first:
         >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')

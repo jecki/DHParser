@@ -41,7 +41,10 @@ def system(s: str) -> int:
 
 class TestDHParser:
     def test_selftest(self):
-        sys.path.append('../DHParser/scripts/')
+        if os.getcwd().rstrip('/').endswith('/DHParser'):
+            sys.path.append('./DHParser/scripts/')
+        else:
+            sys.path.append('../DHParser/scripts/')
         import dhparser
         assert dhparser.selftest(silent=True)
 

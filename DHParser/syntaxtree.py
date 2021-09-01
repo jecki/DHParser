@@ -505,10 +505,13 @@ the other end of the tree rooted in `node`::
 
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
     >>> pointer = t.pick_context('G')
-    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ANY_CONTEXT)]
-    ['A <- G:4', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- H:56', 'A <- K:7', 'A:1234567']
-    >>> [serialize_context(ctx, with_content=1) for ctx in select_context(pointer, ANY_CONTEXT, reverse=True)]
-    ['A <- G:4', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- C <- D:23', 'A <- C:23', 'A <- B:1', 'A:1234567']
+    >>> [serialize_context(ctx, with_content=1)
+    ...  for ctx in select_context(pointer, ANY_CONTEXT, include_root=True)]
+    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7', 'A:1234567']
+    >>> [serialize_context(ctx, with_content=1)
+    ...  for ctx in select_context(
+    ...      pointer, ANY_CONTEXT, include_root=True, reverse=True)]
+    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
 
 Another important difference, besides the starting point is then the
 `select()`-generators of the `syntaxtree`-module traverse the tree

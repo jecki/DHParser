@@ -20,17 +20,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import dataclasses
 import os
 import sys
-from typing import TypedDict
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
-print(sys.path)
 
+try:
+    from typing import TypedDict
+except ImportError:
+    from DHParser.externallibs.typing_extensions import TypedDict
 
-from DHParser import lsp
 from DHParser.lsp import RequestMessage, Message, ResponseMessage, Position, type_check, shortlist
 
 
@@ -89,12 +89,16 @@ class TestLSP:
             _ = type_checked_func(0, {'jsonrpc': '2.0', 'method': 'check'},
                                      Position(line=21, character=15))
             assert False, "Type Error in parameter not detected"
+        except KeyError:
+            if sys.version_info >= (3, 8):
+                assert False, "Type Error in parameter not detected"
         except TypeError:
             pass
         try:
             _ = type_checked_func(2, {'jsonrpc': '2.0', 'id': 21, 'method': 'check'},
                                      Position(line=21, character=15))
-            assert False, "Type Error in nested return type not detected"
+            if sys.version_info >= (3, 8):
+                assert False, "Type Error in nested return type not detected"
         except TypeError:
             pass
 

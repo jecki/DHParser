@@ -1,8 +1,12 @@
-DHParser Version 0.9.7
-......................
+DHParser Version 0.9.7 (1.9.2021)
+.................................
 
-- Test-Suite
-- Packaging changed to poetry <https://python-poetry.org/>
+- test-suites can now contain test-data for tree-transformation
+  stages beyond AST, if their output is serializable as string.
+- Support for the language server protocol via: DHParser/lsp.py
+- reentry-points for resume and skip can now also be determined
+  with an EBNF-parser, and not only regular expressions as before.
+- Documentation extended
 
 
 DHParser Version 0.9.6 (1.7.2021)

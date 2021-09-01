@@ -139,7 +139,7 @@ except ImportError:
 #######################################################################
 
 
-if sys.version_info >= (3, 7):
+if sys.version_info >= (3, 8):
 
     from typing import _GenericAlias, _SpecialForm
     from DHParser.externallibs.typing_extensions import Generic, ClassVar, \

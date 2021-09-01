@@ -1253,7 +1253,7 @@ deliver understandable error-messages::
     "alpha"
     >>> for e in json_string('"al\\pha"').errors:  print(e)
     1:4: Error (1010): Illegal character(s) »\pha"...« in string.
-    1:4: Error (1040): Parser "string" stopped before end, at:  \pha"  Terminating parser.
+    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"«  Terminating parser.
 
 Customized error-messages must always be specified in the grammar
 before definition of the symbol, they are related to and they can
@@ -1270,7 +1270,7 @@ general or fallback conditions should be placed below these::
     >>> json_string = create_parser(grammar, 'json_string')
     >>> for e in json_string('"al\\pha"').errors:  print(e)
     1:4: Error (1010): Illegal escape sequence »\pha"...« Allowed values are b,n,r,t,u
-    1:4: Error (1040): Parser "string" stopped before end, at:  \pha"  Terminating parser.
+    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"«  Terminating parser.
 
 Here, the more specific and more understandable error message
 has been selected. Careful readers might notice that the the
