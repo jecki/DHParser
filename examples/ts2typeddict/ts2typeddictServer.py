@@ -1,23 +1,7 @@
 #!/usr/bin/env python3
 
-"""DSLServer.py - starts a server (if not already running) for the
-                    compilation of DSL
-
-Author: Eckhart Arnold <arnold@badw.de>
-
-Copyright 2019 Bavarian Academy of Sciences and Humanities
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+"""ts2typeddictServer.py - starts a server (if not already running) for the
+                    compilation of ts2typeddict
 """
 
 import asyncio
@@ -37,7 +21,7 @@ LOGGING_REQUEST = 'logging("")'
 LOG_PATH = 'LOGS/'
 
 DEFAULT_HOST = '127.0.0.1'
-DEFAULT_PORT = 8888
+DEFAULT_PORT = 8890
 ALTERNATIVE_PORTS = [8888, 8889, 8898, 8980, 8988, 8989]
 
 DATA_RECEIVE_LIMIT = 262144
@@ -157,21 +141,21 @@ def json_rpc(func_name, params={}, ID=None) -> dict:
     return {"jsonrpc": "2.0", "method": func_name, "params": params, "id": ID}
 
 
-class DSLCPUBoundTasks:
+class ts2typeddictCPUBoundTasks:
     def __init__(self, lsp_data: dict):
         from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
-class DSLBlockingTasks:
+class ts2typeddictBlockingTasks:
     def __init__(self, lsp_data: dict):
         from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
-class DSLLanguageServerProtocol:
+class ts2typeddictLanguageServerProtocol:
     """
     For the specification and implementation of the language server protocol, see:
         https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
@@ -184,12 +168,12 @@ class DSLLanguageServerProtocol:
             'processId': 0,
             'rootUri': '',
             'clientCapabilities': {},
-            'serverInfo': { "name": "DSL-Server", "version": "0.1" },
+            'serverInfo': { "name": "ts2typeddict-Server", "version": "0.1" },
             'serverCapabilities': {}
         }
         self.connection = None
-        self.cpu_bound = DSLCPUBoundTasks(self.lsp_data)
-        self.blocking = DSLBlockingTasks(self.lsp_data)
+        self.cpu_bound = ts2typeddictCPUBoundTasks(self.lsp_data)
+        self.blocking = ts2typeddictBlockingTasks(self.lsp_data)
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
         self.lsp_fulltable = self.lsp_table.copy()
         assert self.lsp_fulltable.keys().isdisjoint(self.cpu_bound.lsp_table.keys())
@@ -214,14 +198,14 @@ class DSLLanguageServerProtocol:
     def lsp_custom(self, **kwargs):
         return kwargs
 
-    def lsp_shutdown(self):
+    def lsp_shutdown(self, **kwargs):
         self.lsp_data['processId'] = 0
         self.lsp_data['rootUri'] = ''
         self.lsp_data['clientCapabilities'] = {}
         return {}
 
     def batch_job(self, argstr: str):
-        from DSLParser import batch_process
+        from ts2typeddictParser import batch_process
         args = argstr.split(' ')
         indir, outdir = args[1], args[3]
 
@@ -252,9 +236,13 @@ class DSLLanguageServerProtocol:
                                    log_func=self.connection.log)
         return error_list
 
+    # def simply_compile(self, argstr):
+    #     from ts2typeddictParser import compile_src
+    #     return compile_src(argstr)
+
     async def simply_compile(self, argstr: str):
         from functools import partial
-        from DSLParser import compile_src
+        from ts2typeddictParser import compile_src
         exenv = self.connection.exec
         if argstr[:2] != '--':
             return await exenv.loop.run_in_executor(
@@ -266,7 +254,7 @@ class DSLLanguageServerProtocol:
 
 def run_server(host, port, log_path=None):
     """
-    Starts a new DSLServer. If `port` is already occupied, different
+    Starts a new ts2typeddictServer. If `port` is already occupied, different
     ports will be tried.
     """
     global KNOWN_HOST, KNOWN_PORT
@@ -278,45 +266,45 @@ def run_server(host, port, log_path=None):
     else:  set_start_method('spawn')
 
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
-    dhparserdir = os.path.abspath(os.path.join(scriptpath, 'RELDHPARSERDIR'))
+    dhparserdir = os.path.abspath(os.path.join(scriptpath, "../.."))
     if scriptpath not in sys.path:
         sys.path.append(scriptpath)
     if dhparserdir not in sys.path:
         sys.path.append(dhparserdir)
-    # from tst_DSL_grammar import recompile_grammar
-    # recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
+    # from tst_ts2typeddict_grammar import recompile_grammar
+    # recompile_grammar(os.path.join(scriptpath, 'ts2typeddict.ebnf'), force=False)
     from DHParser.dsl import recompile_grammar
     if not recompile_grammar(grammar_src, force=False,
                              notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        with open('ts2typeddict_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
 
     from DHParser.server import Server, probe_tcp_server, StreamReaderProxy, StreamWriterProxy
     # from DHParser.lsp import gen_lsp_table
 
-    DSL_lsp = DSLLanguageServerProtocol()
-    lsp_table = DSL_lsp.lsp_fulltable.copy()
-    lsp_table.setdefault('default', DSL_lsp.simply_compile)
-    DSL_server = Server(rpc_functions=lsp_table,
-                        cpu_bound=DSL_lsp.cpu_bound.lsp_table.keys(),
-                        blocking=DSL_lsp.blocking.lsp_table.keys(),
-                        connection_callback=DSL_lsp.connect,
-                        server_name="DSLServer",
+    ts2typeddict_lsp = ts2typeddictLanguageServerProtocol()
+    lsp_table = ts2typeddict_lsp.lsp_fulltable.copy()
+    lsp_table.setdefault('default', ts2typeddict_lsp.simply_compile)
+    ts2typeddict_server = Server(rpc_functions=lsp_table,
+                        cpu_bound=ts2typeddict_lsp.cpu_bound.lsp_table.keys(),
+                        blocking=ts2typeddict_lsp.blocking.lsp_table.keys(),
+                        connection_callback=ts2typeddict_lsp.connect,
+                        server_name="ts2typeddictServer",
                         strict_lsp=True)
     if log_path is not None:
         # echoing does not work with stream connections!
-        DSL_server.echo_log = True if port >= 0 and host else False
-        msg = DSL_server.start_logging(log_path.strip('" \''))
-        if DSL_server.echo_log:  echo(msg)
+        ts2typeddict_server.echo_log = True if port >= 0 and host else False
+        msg = ts2typeddict_server.start_logging(log_path.strip('" \''))
+        if ts2typeddict_server.echo_log:  echo(msg)
 
     if port < 0 or not host:
         # communication via streams instead of tcp server
         reader = StreamReaderProxy(sys.stdin)
         writer = StreamWriterProxy(sys.stdout)
-        DSL_server.run_stream_server(reader, writer)
+        ts2typeddict_server.run_stream_server(reader, writer)
         return
 
     cfg_filename = get_config_filename()
@@ -355,7 +343,7 @@ def run_server(host, port, log_path=None):
                   'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
             verbose('Starting server on %s:%i' % (host, port))
-            DSL_server.run_tcp_server(host, port)  # returns only after server has stopped!
+            ts2typeddict_server.run_tcp_server(host, port)  # returns only after server has stopped!
             ports = []
         except OSError as e:
             if not (ports and e.errno == 98):
@@ -438,7 +426,7 @@ async def connect_to_daemon(host, port) -> tuple:
             reader, writer = await asyncio.open_connection(host, port)
             try:
                 ident = await send_request(reader, writer, IDENTIFY_REQUEST)
-                if not ident.endswith(servername):
+                if ident.find(servername) < 0:
                     ident = None
                     raise ValueError
                 countdown = 0
@@ -522,7 +510,7 @@ def parse_logging_args(args):
 
 if __name__ == "__main__":
     from argparse import ArgumentParser, REMAINDER
-    parser = ArgumentParser(description="Setup and Control of a Server for processing DSL-files.")
+    parser = ArgumentParser(description="Setup and Control of a Server for processing ts2typeddict-files.")
     action_group = parser.add_mutually_exclusive_group()
     action_group.add_argument('file', nargs='?')
     action_group.add_argument('-t', '--status', action='store_true',
@@ -634,11 +622,11 @@ if __name__ == "__main__":
 
     else:
         echo('Usages:\n'
-             + '    python DSLServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python DSLServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python DSLServer.py --stream\n'
-             + '    python DSLServer.py --stopserver\n'
-             + '    python DSLServer.py --status\n'
-             + '    python DSLServer.py --logging [ON|LOG_PATH|OFF]\n'
-             + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
+             + '    python ts2typeddictServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python ts2typeddictServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python ts2typeddictServer.py --stream\n'
+             + '    python ts2typeddictServer.py --stopserver\n'
+             + '    python ts2typeddictServer.py --status\n'
+             + '    python ts2typeddictServer.py --logging [ON|LOG_PATH|OFF]\n'
+             + '    python ts2typeddictServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
         sys.exit(1)

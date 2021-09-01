@@ -1,0 +1,4245 @@
+(document
+  (type_alias
+    (identifier "integer")
+    (basic_type "number"))
+  (type_alias
+    (identifier "uinteger")
+    (basic_type "number"))
+  (type_alias
+    (identifier "decimal")
+    (basic_type "number"))
+  (interface
+    (identifier "Message")
+    (declarations_block
+      (declaration
+        (identifier "jsonrpc")
+        (basic_type "string"))))
+  (interface
+    (identifier "RequestMessage")
+    (extends
+      (identifier "Message"))
+    (declarations_block
+      (declaration
+        (identifier "id")
+        (types
+          (identifier "integer")
+          (basic_type "string")))
+      (declaration
+        (identifier "method")
+        (basic_type "string"))
+      (declaration
+        (identifier "params")
+        (optional "?")
+        (types
+          (basic_type "array")
+          (basic_type "object")))))
+  (interface
+    (identifier "ResponseMessage")
+    (extends
+      (identifier "Message"))
+    (declarations_block
+      (declaration
+        (identifier "id")
+        (types
+          (identifier "integer")
+          (basic_type "string")
+          (identifier "null")))
+      (declaration
+        (identifier "result")
+        (optional "?")
+        (types
+          (basic_type "string")
+          (basic_type "number")
+          (basic_type "boolean")
+          (basic_type "object")
+          (identifier "null")))
+      (declaration
+        (identifier "error")
+        (optional "?")
+        (identifier "ResponseError"))))
+  (interface
+    (identifier "ResponseError")
+    (declarations_block
+      (declaration
+        (identifier "code")
+        (identifier "integer"))
+      (declaration
+        (identifier "message")
+        (basic_type "string"))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (types
+          (basic_type "string")
+          (basic_type "number")
+          (basic_type "boolean")
+          (basic_type "array")
+          (basic_type "object")
+          (identifier "null")))))
+  (namespace
+    (identifier "ErrorCodes")
+    (const
+      (declaration
+        (identifier "ParseError")
+        (identifier "integer"))
+      (number "-32700"))
+    (const
+      (declaration
+        (identifier "InvalidRequest")
+        (identifier "integer"))
+      (number "-32600"))
+    (const
+      (declaration
+        (identifier "MethodNotFound")
+        (identifier "integer"))
+      (number "-32601"))
+    (const
+      (declaration
+        (identifier "InvalidParams")
+        (identifier "integer"))
+      (number "-32602"))
+    (const
+      (declaration
+        (identifier "InternalError")
+        (identifier "integer"))
+      (number "-32603"))
+    (const
+      (declaration
+        (identifier "jsonrpcReservedErrorRangeStart")
+        (identifier "integer"))
+      (number "-32099"))
+    (const
+      (declaration
+        (identifier "serverErrorStart")
+        (identifier "integer"))
+      (identifier "jsonrpcReservedErrorRangeStart"))
+    (const
+      (declaration
+        (identifier "ServerNotInitialized")
+        (identifier "integer"))
+      (number "-32002"))
+    (const
+      (declaration
+        (identifier "UnknownErrorCode")
+        (identifier "integer"))
+      (number "-32001"))
+    (const
+      (declaration
+        (identifier "jsonrpcReservedErrorRangeEnd"))
+      (number "-32000"))
+    (const
+      (declaration
+        (identifier "serverErrorEnd")
+        (identifier "integer"))
+      (identifier "jsonrpcReservedErrorRangeEnd"))
+    (const
+      (declaration
+        (identifier "lspReservedErrorRangeStart")
+        (identifier "integer"))
+      (number "-32899"))
+    (const
+      (declaration
+        (identifier "ContentModified")
+        (identifier "integer"))
+      (number "-32801"))
+    (const
+      (declaration
+        (identifier "RequestCancelled")
+        (identifier "integer"))
+      (number "-32800"))
+    (const
+      (declaration
+        (identifier "lspReservedErrorRangeEnd")
+        (identifier "integer"))
+      (number "-32800")))
+  (interface
+    (identifier "NotificationMessage")
+    (extends
+      (identifier "Message"))
+    (declarations_block
+      (declaration
+        (identifier "method")
+        (basic_type "string"))
+      (declaration
+        (identifier "params")
+        (optional "?")
+        (types
+          (basic_type "array")
+          (basic_type "object")))))
+  (interface
+    (identifier "CancelParams")
+    (declarations_block
+      (declaration
+        (identifier "id")
+        (types
+          (identifier "integer")
+          (basic_type "string")))))
+  (type_alias
+    (identifier "ProgressToken")
+    (types
+      (identifier "integer")
+      (basic_type "string")))
+  (interface
+    (identifier "ProgressParams")
+    (type_parameter
+      (identifier "T"))
+    (declarations_block
+      (declaration
+        (identifier "token")
+        (identifier "ProgressToken"))
+      (declaration
+        (identifier "value")
+        (identifier "T"))))
+  (type_alias
+    (identifier "DocumentUri")
+    (basic_type "string"))
+  (type_alias
+    (identifier "URI")
+    (basic_type "string"))
+  (interface
+    (identifier "RegularExpressionsClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "engine")
+        (basic_type "string"))
+      (declaration
+        (identifier "version")
+        (optional "?")
+        (basic_type "string"))))
+  (const
+    (declaration
+      (identifier "EOL")
+      (array_of
+        (basic_type "string")))
+    (array
+      (string "'\n'")
+      (string "'\r\n'")
+      (string "'\r'")))
+  (interface
+    (identifier "Position")
+    (declarations_block
+      (declaration
+        (identifier "line")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "character")
+        (basic_type "uinteger"))))
+  (interface
+    (identifier "Range")
+    (declarations_block
+      (declaration
+        (identifier "start")
+        (identifier "Position"))
+      (declaration
+        (identifier "end")
+        (identifier "Position"))))
+  (interface
+    (identifier "Location")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "range")
+        (identifier "Range"))))
+  (interface
+    (identifier "LocationLink")
+    (declarations_block
+      (declaration
+        (identifier "originSelectionRange")
+        (optional "?")
+        (identifier "Range"))
+      (declaration
+        (identifier "targetUri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "targetRange")
+        (identifier "Range"))
+      (declaration
+        (identifier "targetSelectionRange")
+        (identifier "Range"))))
+  (interface
+    (identifier "Diagnostic")
+    (declarations_block
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "severity")
+        (optional "?")
+        (identifier "DiagnosticSeverity"))
+      (declaration
+        (identifier "code")
+        (optional "?")
+        (types
+          (identifier "integer")
+          (basic_type "string")))
+      (declaration
+        (identifier "codeDescription")
+        (optional "?")
+        (identifier "CodeDescription"))
+      (declaration
+        (identifier "source")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "message")
+        (basic_type "string"))
+      (declaration
+        (identifier "tags")
+        (optional "?")
+        (array_of
+          (identifier "DiagnosticTag")))
+      (declaration
+        (identifier "relatedInformation")
+        (optional "?")
+        (array_of
+          (identifier "DiagnosticRelatedInformation")))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (identifier "unknown"))))
+  (namespace
+    (identifier "DiagnosticSeverity")
+    (const
+      (declaration
+        (identifier "Error")
+        (number "1"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Warning")
+        (number "2"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "Information")
+        (number "3"))
+      (number "3"))
+    (const
+      (declaration
+        (identifier "Hint")
+        (number "4"))
+      (number "4")))
+  (type_alias
+    (identifier "DiagnosticSeverity")
+    (types
+      (number "1")
+      (number "2")
+      (number "3")
+      (number "4")))
+  (namespace
+    (identifier "DiagnosticTag")
+    (const
+      (declaration
+        (identifier "Unnecessary")
+        (number "1"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Deprecated")
+        (number "2"))
+      (number "2")))
+  (type_alias
+    (identifier "DiagnosticTag")
+    (types
+      (number "1")
+      (number "2")))
+  (interface
+    (identifier "DiagnosticRelatedInformation")
+    (declarations_block
+      (declaration
+        (identifier "location")
+        (identifier "Location"))
+      (declaration
+        (identifier "message")
+        (basic_type "string"))))
+  (interface
+    (identifier "CodeDescription")
+    (declarations_block
+      (declaration
+        (identifier "href")
+        (identifier "URI"))))
+  (interface
+    (identifier "Command")
+    (declarations_block
+      (declaration
+        (identifier "title")
+        (basic_type "string"))
+      (declaration
+        (identifier "command")
+        (basic_type "string"))
+      (declaration
+        (identifier "arguments")
+        (optional "?")
+        (array_of
+          (identifier "any")))))
+  (interface
+    (identifier "TextEdit")
+    (declarations_block
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "newText")
+        (basic_type "string"))))
+  (interface
+    (identifier "ChangeAnnotation")
+    (declarations_block
+      (declaration
+        (identifier "label")
+        (basic_type "string"))
+      (declaration
+        (identifier "needsConfirmation")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "description")
+        (optional "?")
+        (basic_type "string"))))
+  (type_alias
+    (identifier "ChangeAnnotationIdentifier")
+    (basic_type "string"))
+  (interface
+    (identifier "AnnotatedTextEdit")
+    (extends
+      (identifier "TextEdit"))
+    (declarations_block
+      (declaration
+        (identifier "annotationId")
+        (identifier "ChangeAnnotationIdentifier"))))
+  (interface
+    (identifier "TextDocumentEdit")
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "OptionalVersionedTextDocumentIdentifier"))
+      (declaration
+        (identifier "edits")
+        (array_of
+          (types
+            (identifier "TextEdit")
+            (identifier "AnnotatedTextEdit"))))))
+  (interface
+    (identifier "CreateFileOptions")
+    (declarations_block
+      (declaration
+        (identifier "overwrite")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "ignoreIfExists")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CreateFile")
+    (declarations_block
+      (declaration
+        (identifier "kind")
+        (string "'create'"))
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "options")
+        (optional "?")
+        (identifier "CreateFileOptions"))
+      (declaration
+        (identifier "annotationId")
+        (optional "?")
+        (identifier "ChangeAnnotationIdentifier"))))
+  (interface
+    (identifier "RenameFileOptions")
+    (declarations_block
+      (declaration
+        (identifier "overwrite")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "ignoreIfExists")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "RenameFile")
+    (declarations_block
+      (declaration
+        (identifier "kind")
+        (string "'rename'"))
+      (declaration
+        (identifier "oldUri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "newUri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "options")
+        (optional "?")
+        (identifier "RenameFileOptions"))
+      (declaration
+        (identifier "annotationId")
+        (optional "?")
+        (identifier "ChangeAnnotationIdentifier"))))
+  (interface
+    (identifier "DeleteFileOptions")
+    (declarations_block
+      (declaration
+        (identifier "recursive")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "ignoreIfNotExists")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DeleteFile")
+    (declarations_block
+      (declaration
+        (identifier "kind")
+        (string "'delete'"))
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "options")
+        (optional "?")
+        (identifier "DeleteFileOptions"))
+      (declaration
+        (identifier "annotationId")
+        (optional "?")
+        (identifier "ChangeAnnotationIdentifier"))))
+  (interface
+    (identifier "WorkspaceEdit")
+    (declarations_block
+      (declaration
+        (identifier "changes")
+        (optional "?")
+        (mapped_type
+          (map_signature
+            (index_signature
+              (identifier "uri")
+              (identifier "DocumentUri"))
+            (array_of
+              (identifier "TextEdit")))))
+      (declaration
+        (identifier "documentChanges")
+        (optional "?")
+        (types
+          (array_of
+            (identifier "TextDocumentEdit"))
+          (array_of
+            (types
+              (identifier "TextDocumentEdit")
+              (identifier "CreateFile")
+              (identifier "RenameFile")
+              (identifier "DeleteFile")))))
+      (declaration
+        (identifier "changeAnnotations")
+        (optional "?")
+        (mapped_type
+          (map_signature
+            (index_signature
+              (identifier "id")
+              (basic_type "string"))
+            (identifier "ChangeAnnotation"))))))
+  (interface
+    (identifier "WorkspaceEditClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "documentChanges")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "resourceOperations")
+        (optional "?")
+        (array_of
+          (identifier "ResourceOperationKind")))
+      (declaration
+        (identifier "failureHandling")
+        (optional "?")
+        (identifier "FailureHandlingKind"))
+      (declaration
+        (identifier "normalizesLineEndings")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "changeAnnotationSupport")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "groupsOnLabel")
+            (optional "?")
+            (basic_type "boolean"))))))
+  (type_alias
+    (identifier "ResourceOperationKind")
+    (types
+      (string "'create'")
+      (string "'rename'")
+      (string "'delete'")))
+  (namespace
+    (identifier "ResourceOperationKind")
+    (const
+      (declaration
+        (identifier "Create")
+        (identifier "ResourceOperationKind"))
+      (string "'create'"))
+    (const
+      (declaration
+        (identifier "Rename")
+        (identifier "ResourceOperationKind"))
+      (string "'rename'"))
+    (const
+      (declaration
+        (identifier "Delete")
+        (identifier "ResourceOperationKind"))
+      (string "'delete'")))
+  (type_alias
+    (identifier "FailureHandlingKind")
+    (types
+      (string "'abort'")
+      (string "'transactional'")
+      (string "'undo'")
+      (string "'textOnlyTransactional'")))
+  (namespace
+    (identifier "FailureHandlingKind")
+    (const
+      (declaration
+        (identifier "Abort")
+        (identifier "FailureHandlingKind"))
+      (string "'abort'"))
+    (const
+      (declaration
+        (identifier "Transactional")
+        (identifier "FailureHandlingKind"))
+      (string "'transactional'"))
+    (const
+      (declaration
+        (identifier "TextOnlyTransactional")
+        (identifier "FailureHandlingKind"))
+      (string "'textOnlyTransactional'"))
+    (const
+      (declaration
+        (identifier "Undo")
+        (identifier "FailureHandlingKind"))
+      (string "'undo'")))
+  (interface
+    (identifier "TextDocumentIdentifier")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))))
+  (interface
+    (identifier "TextDocumentItem")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "languageId")
+        (basic_type "string"))
+      (declaration
+        (identifier "version")
+        (identifier "integer"))
+      (declaration
+        (identifier "text")
+        (basic_type "string"))))
+  (interface
+    (identifier "VersionedTextDocumentIdentifier")
+    (extends
+      (identifier "TextDocumentIdentifier"))
+    (declarations_block
+      (declaration
+        (identifier "version")
+        (identifier "integer"))))
+  (interface
+    (identifier "OptionalVersionedTextDocumentIdentifier")
+    (extends
+      (identifier "TextDocumentIdentifier"))
+    (declarations_block
+      (declaration
+        (identifier "version")
+        (types
+          (identifier "integer")
+          (identifier "null")))))
+  (interface
+    (identifier "TextDocumentPositionParams")
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "position")
+        (identifier "Position"))))
+  (interface
+    (identifier "DocumentFilter")
+    (declarations_block
+      (declaration
+        (identifier "language")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "scheme")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "pattern")
+        (optional "?")
+        (basic_type "string"))))
+  (type_alias
+    (identifier "DocumentSelector")
+    (array_of
+      (identifier "DocumentFilter")))
+  (interface
+    (identifier "StaticRegistrationOptions")
+    (declarations_block
+      (declaration
+        (identifier "id")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "TextDocumentRegistrationOptions")
+    (declarations_block
+      (declaration
+        (identifier "documentSelector")
+        (types
+          (identifier "DocumentSelector")
+          (identifier "null")))))
+  (namespace
+    (identifier "MarkupKind")
+    (const
+      (declaration
+        (identifier "PlainText")
+        (string "'plaintext'"))
+      (string "'plaintext'"))
+    (const
+      (declaration
+        (identifier "Markdown")
+        (string "'markdown'"))
+      (string "'markdown'")))
+  (type_alias
+    (identifier "MarkupKind")
+    (types
+      (string "'plaintext'")
+      (string "'markdown'")))
+  (interface
+    (identifier "MarkupContent")
+    (declarations_block
+      (declaration
+        (identifier "kind")
+        (identifier "MarkupKind"))
+      (declaration
+        (identifier "value")
+        (basic_type "string"))))
+  (interface
+    (identifier "MarkdownClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "parser")
+        (basic_type "string"))
+      (declaration
+        (identifier "version")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "WorkDoneProgressBegin")
+    (declarations_block
+      (declaration
+        (identifier "kind")
+        (string "'begin'"))
+      (declaration
+        (identifier "title")
+        (basic_type "string"))
+      (declaration
+        (identifier "cancellable")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "message")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "percentage")
+        (optional "?")
+        (basic_type "uinteger"))))
+  (interface
+    (identifier "WorkDoneProgressReport")
+    (declarations_block
+      (declaration
+        (identifier "kind")
+        (string "'report'"))
+      (declaration
+        (identifier "cancellable")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "message")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "percentage")
+        (optional "?")
+        (basic_type "uinteger"))))
+  (interface
+    (identifier "WorkDoneProgressEnd")
+    (declarations_block
+      (declaration
+        (identifier "kind")
+        (string "'end'"))
+      (declaration
+        (identifier "message")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "WorkDoneProgressParams")
+    (declarations_block
+      (declaration
+        (identifier "workDoneToken")
+        (optional "?")
+        (identifier "ProgressToken"))))
+  (interface
+    (identifier "WorkDoneProgressOptions")
+    (declarations_block
+      (declaration
+        (identifier "workDoneProgress")
+        (optional "?")
+        (basic_type "boolean"))))
+  (declaration
+    (identifier "window")
+    (optional "?")
+    (declarations_block
+      (declaration
+        (identifier "workDoneProgress")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "PartialResultParams")
+    (declarations_block
+      (declaration
+        (identifier "partialResultToken")
+        (optional "?")
+        (identifier "ProgressToken"))))
+  (type_alias
+    (identifier "TraceValue")
+    (types
+      (string "'off'")
+      (string "'messages'")
+      (string "'verbose'")))
+  (interface
+    (identifier "InitializeParams")
+    (extends
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block
+      (declaration
+        (identifier "processId")
+        (types
+          (identifier "integer")
+          (identifier "null")))
+      (declaration
+        (identifier "clientInfo")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "name")
+            (basic_type "string"))
+          (declaration
+            (identifier "version")
+            (optional "?")
+            (basic_type "string"))))
+      (declaration
+        (identifier "locale")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "rootPath")
+        (optional "?")
+        (types
+          (basic_type "string")
+          (identifier "null")))
+      (declaration
+        (identifier "rootUri")
+        (types
+          (identifier "DocumentUri")
+          (identifier "null")))
+      (declaration
+        (identifier "initializationOptions")
+        (optional "?")
+        (identifier "any"))
+      (declaration
+        (identifier "capabilities")
+        (identifier "ClientCapabilities"))
+      (declaration
+        (identifier "trace")
+        (optional "?")
+        (identifier "TraceValue"))
+      (declaration
+        (identifier "workspaceFolders")
+        (optional "?")
+        (types
+          (array_of
+            (identifier "WorkspaceFolder"))
+          (identifier "null")))))
+  (interface
+    (identifier "TextDocumentClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "synchronization")
+        (optional "?")
+        (identifier "TextDocumentSyncClientCapabilities"))
+      (declaration
+        (identifier "completion")
+        (optional "?")
+        (identifier "CompletionClientCapabilities"))
+      (declaration
+        (identifier "hover")
+        (optional "?")
+        (identifier "HoverClientCapabilities"))
+      (declaration
+        (identifier "signatureHelp")
+        (optional "?")
+        (identifier "SignatureHelpClientCapabilities"))
+      (declaration
+        (identifier "declaration")
+        (optional "?")
+        (identifier "DeclarationClientCapabilities"))
+      (declaration
+        (identifier "definition")
+        (optional "?")
+        (identifier "DefinitionClientCapabilities"))
+      (declaration
+        (identifier "typeDefinition")
+        (optional "?")
+        (identifier "TypeDefinitionClientCapabilities"))
+      (declaration
+        (identifier "implementation")
+        (optional "?")
+        (identifier "ImplementationClientCapabilities"))
+      (declaration
+        (identifier "references")
+        (optional "?")
+        (identifier "ReferenceClientCapabilities"))
+      (declaration
+        (identifier "documentHighlight")
+        (optional "?")
+        (identifier "DocumentHighlightClientCapabilities"))
+      (declaration
+        (identifier "documentSymbol")
+        (optional "?")
+        (identifier "DocumentSymbolClientCapabilities"))
+      (declaration
+        (identifier "codeAction")
+        (optional "?")
+        (identifier "CodeActionClientCapabilities"))
+      (declaration
+        (identifier "codeLens")
+        (optional "?")
+        (identifier "CodeLensClientCapabilities"))
+      (declaration
+        (identifier "documentLink")
+        (optional "?")
+        (identifier "DocumentLinkClientCapabilities"))
+      (declaration
+        (identifier "colorProvider")
+        (optional "?")
+        (identifier "DocumentColorClientCapabilities"))
+      (declaration
+        (identifier "formatting")
+        (optional "?")
+        (identifier "DocumentFormattingClientCapabilities"))
+      (declaration
+        (identifier "rangeFormatting")
+        (optional "?")
+        (identifier "DocumentRangeFormattingClientCapabilities"))
+      (declaration
+        (identifier "onTypeFormatting")
+        (optional "?")
+        (identifier "DocumentOnTypeFormattingClientCapabilities"))
+      (declaration
+        (identifier "rename")
+        (optional "?")
+        (identifier "RenameClientCapabilities"))
+      (declaration
+        (identifier "publishDiagnostics")
+        (optional "?")
+        (identifier "PublishDiagnosticsClientCapabilities"))
+      (declaration
+        (identifier "foldingRange")
+        (optional "?")
+        (identifier "FoldingRangeClientCapabilities"))
+      (declaration
+        (identifier "selectionRange")
+        (optional "?")
+        (identifier "SelectionRangeClientCapabilities"))
+      (declaration
+        (identifier "linkedEditingRange")
+        (optional "?")
+        (identifier "LinkedEditingRangeClientCapabilities"))
+      (declaration
+        (identifier "callHierarchy")
+        (optional "?")
+        (identifier "CallHierarchyClientCapabilities"))
+      (declaration
+        (identifier "semanticTokens")
+        (optional "?")
+        (identifier "SemanticTokensClientCapabilities"))
+      (declaration
+        (identifier "moniker")
+        (optional "?")
+        (identifier "MonikerClientCapabilities"))))
+  (interface
+    (identifier "ClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "workspace")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "applyEdit")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "workspaceEdit")
+            (optional "?")
+            (identifier "WorkspaceEditClientCapabilities"))
+          (declaration
+            (identifier "didChangeConfiguration")
+            (optional "?")
+            (identifier "DidChangeConfigurationClientCapabilities"))
+          (declaration
+            (identifier "didChangeWatchedFiles")
+            (optional "?")
+            (identifier "DidChangeWatchedFilesClientCapabilities"))
+          (declaration
+            (identifier "symbol")
+            (optional "?")
+            (identifier "WorkspaceSymbolClientCapabilities"))
+          (declaration
+            (identifier "executeCommand")
+            (optional "?")
+            (identifier "ExecuteCommandClientCapabilities"))
+          (declaration
+            (identifier "workspaceFolders")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "configuration")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "semanticTokens")
+            (optional "?")
+            (identifier "SemanticTokensWorkspaceClientCapabilities"))
+          (declaration
+            (identifier "codeLens")
+            (optional "?")
+            (identifier "CodeLensWorkspaceClientCapabilities"))
+          (declaration
+            (identifier "fileOperations")
+            (optional "?")
+            (declarations_block
+              (declaration
+                (identifier "dynamicRegistration")
+                (optional "?")
+                (basic_type "boolean"))
+              (declaration
+                (identifier "didCreate")
+                (optional "?")
+                (basic_type "boolean"))
+              (declaration
+                (identifier "willCreate")
+                (optional "?")
+                (basic_type "boolean"))
+              (declaration
+                (identifier "didRename")
+                (optional "?")
+                (basic_type "boolean"))
+              (declaration
+                (identifier "willRename")
+                (optional "?")
+                (basic_type "boolean"))
+              (declaration
+                (identifier "didDelete")
+                (optional "?")
+                (basic_type "boolean"))
+              (declaration
+                (identifier "willDelete")
+                (optional "?")
+                (basic_type "boolean"))))))
+      (declaration
+        (identifier "textDocument")
+        (optional "?")
+        (identifier "TextDocumentClientCapabilities"))
+      (declaration
+        (identifier "window")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "workDoneProgress")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "showMessage")
+            (optional "?")
+            (identifier "ShowMessageRequestClientCapabilities"))
+          (declaration
+            (identifier "showDocument")
+            (optional "?")
+            (identifier "ShowDocumentClientCapabilities"))))
+      (declaration
+        (identifier "general")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "regularExpressions")
+            (optional "?")
+            (identifier "RegularExpressionsClientCapabilities"))
+          (declaration
+            (identifier "markdown")
+            (optional "?")
+            (identifier "MarkdownClientCapabilities"))))
+      (declaration
+        (identifier "experimental")
+        (optional "?")
+        (identifier "any"))))
+  (interface
+    (identifier "InitializeResult")
+    (declarations_block
+      (declaration
+        (identifier "capabilities")
+        (identifier "ServerCapabilities"))
+      (declaration
+        (identifier "serverInfo")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "name")
+            (basic_type "string"))
+          (declaration
+            (identifier "version")
+            (optional "?")
+            (basic_type "string"))))))
+  (namespace
+    (identifier "InitializeError")
+    (const
+      (declaration
+        (identifier "unknownProtocolVersion")
+        (number "1"))
+      (number "1")))
+  (interface
+    (identifier "InitializeError")
+    (declarations_block
+      (declaration
+        (identifier "retry")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "ServerCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "textDocumentSync")
+        (optional "?")
+        (types
+          (identifier "TextDocumentSyncOptions")
+          (identifier "TextDocumentSyncKind")))
+      (declaration
+        (identifier "completionProvider")
+        (optional "?")
+        (identifier "CompletionOptions"))
+      (declaration
+        (identifier "hoverProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "HoverOptions")))
+      (declaration
+        (identifier "signatureHelpProvider")
+        (optional "?")
+        (identifier "SignatureHelpOptions"))
+      (declaration
+        (identifier "declarationProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "DeclarationOptions")
+          (identifier "DeclarationRegistrationOptions")))
+      (declaration
+        (identifier "definitionProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "DefinitionOptions")))
+      (declaration
+        (identifier "typeDefinitionProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "TypeDefinitionOptions")
+          (identifier "TypeDefinitionRegistrationOptions")))
+      (declaration
+        (identifier "implementationProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "ImplementationOptions")
+          (identifier "ImplementationRegistrationOptions")))
+      (declaration
+        (identifier "referencesProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "ReferenceOptions")))
+      (declaration
+        (identifier "documentHighlightProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "DocumentHighlightOptions")))
+      (declaration
+        (identifier "documentSymbolProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "DocumentSymbolOptions")))
+      (declaration
+        (identifier "codeActionProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "CodeActionOptions")))
+      (declaration
+        (identifier "codeLensProvider")
+        (optional "?")
+        (identifier "CodeLensOptions"))
+      (declaration
+        (identifier "documentLinkProvider")
+        (optional "?")
+        (identifier "DocumentLinkOptions"))
+      (declaration
+        (identifier "colorProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "DocumentColorOptions")
+          (identifier "DocumentColorRegistrationOptions")))
+      (declaration
+        (identifier "documentFormattingProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "DocumentFormattingOptions")))
+      (declaration
+        (identifier "documentRangeFormattingProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "DocumentRangeFormattingOptions")))
+      (declaration
+        (identifier "documentOnTypeFormattingProvider")
+        (optional "?")
+        (identifier "DocumentOnTypeFormattingOptions"))
+      (declaration
+        (identifier "renameProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "RenameOptions")))
+      (declaration
+        (identifier "foldingRangeProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "FoldingRangeOptions")
+          (identifier "FoldingRangeRegistrationOptions")))
+      (declaration
+        (identifier "executeCommandProvider")
+        (optional "?")
+        (identifier "ExecuteCommandOptions"))
+      (declaration
+        (identifier "selectionRangeProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "SelectionRangeOptions")
+          (identifier "SelectionRangeRegistrationOptions")))
+      (declaration
+        (identifier "linkedEditingRangeProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "LinkedEditingRangeOptions")
+          (identifier "LinkedEditingRangeRegistrationOptions")))
+      (declaration
+        (identifier "callHierarchyProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "CallHierarchyOptions")
+          (identifier "CallHierarchyRegistrationOptions")))
+      (declaration
+        (identifier "semanticTokensProvider")
+        (optional "?")
+        (types
+          (identifier "SemanticTokensOptions")
+          (identifier "SemanticTokensRegistrationOptions")))
+      (declaration
+        (identifier "monikerProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "MonikerOptions")
+          (identifier "MonikerRegistrationOptions")))
+      (declaration
+        (identifier "workspaceSymbolProvider")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "WorkspaceSymbolOptions")))
+      (declaration
+        (identifier "workspace")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "workspaceFolders")
+            (optional "?")
+            (identifier "WorkspaceFoldersServerCapabilities"))
+          (declaration
+            (identifier "fileOperations")
+            (optional "?")
+            (declarations_block
+              (declaration
+                (identifier "didCreate")
+                (optional "?")
+                (identifier "FileOperationRegistrationOptions"))
+              (declaration
+                (identifier "willCreate")
+                (optional "?")
+                (identifier "FileOperationRegistrationOptions"))
+              (declaration
+                (identifier "didRename")
+                (optional "?")
+                (identifier "FileOperationRegistrationOptions"))
+              (declaration
+                (identifier "willRename")
+                (optional "?")
+                (identifier "FileOperationRegistrationOptions"))
+              (declaration
+                (identifier "didDelete")
+                (optional "?")
+                (identifier "FileOperationRegistrationOptions"))
+              (declaration
+                (identifier "willDelete")
+                (optional "?")
+                (identifier "FileOperationRegistrationOptions"))))))
+      (declaration
+        (identifier "experimental")
+        (optional "?")
+        (identifier "any"))))
+  (interface
+    (identifier "InitializedParams")
+    (declarations_block))
+  (interface
+    (identifier "LogTraceParams")
+    (declarations_block
+      (declaration
+        (identifier "message")
+        (basic_type "string"))
+      (declaration
+        (identifier "verbose")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "SetTraceParams")
+    (declarations_block
+      (declaration
+        (identifier "value")
+        (identifier "TraceValue"))))
+  (interface
+    (identifier "ShowMessageParams")
+    (declarations_block
+      (declaration
+        (identifier "type")
+        (identifier "MessageType"))
+      (declaration
+        (identifier "message")
+        (basic_type "string"))))
+  (namespace
+    (identifier "MessageType")
+    (const
+      (declaration
+        (identifier "Error"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Warning"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "Info"))
+      (number "3"))
+    (const
+      (declaration
+        (identifier "Log"))
+      (number "4")))
+  (type_alias
+    (identifier "MessageType")
+    (types
+      (number "1")
+      (number "2")
+      (number "3")
+      (number "4")))
+  (interface
+    (identifier "ShowMessageRequestClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "messageActionItem")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "additionalPropertiesSupport")
+            (optional "?")
+            (basic_type "boolean"))))))
+  (interface
+    (identifier "ShowMessageRequestParams")
+    (declarations_block
+      (declaration
+        (identifier "type")
+        (identifier "MessageType"))
+      (declaration
+        (identifier "message")
+        (basic_type "string"))
+      (declaration
+        (identifier "actions")
+        (optional "?")
+        (array_of
+          (identifier "MessageActionItem")))))
+  (interface
+    (identifier "MessageActionItem")
+    (declarations_block
+      (declaration
+        (identifier "title")
+        (basic_type "string"))))
+  (interface
+    (identifier "ShowDocumentClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "support")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "ShowDocumentParams")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (identifier "URI"))
+      (declaration
+        (identifier "external")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "takeFocus")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "selection")
+        (optional "?")
+        (identifier "Range"))))
+  (interface
+    (identifier "ShowDocumentResult")
+    (declarations_block
+      (declaration
+        (identifier "success")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "LogMessageParams")
+    (declarations_block
+      (declaration
+        (identifier "type")
+        (identifier "MessageType"))
+      (declaration
+        (identifier "message")
+        (basic_type "string"))))
+  (interface
+    (identifier "WorkDoneProgressCreateParams")
+    (declarations_block
+      (declaration
+        (identifier "token")
+        (identifier "ProgressToken"))))
+  (interface
+    (identifier "WorkDoneProgressCancelParams")
+    (declarations_block
+      (declaration
+        (identifier "token")
+        (identifier "ProgressToken"))))
+  (interface
+    (identifier "Registration")
+    (declarations_block
+      (declaration
+        (identifier "id")
+        (basic_type "string"))
+      (declaration
+        (identifier "method")
+        (basic_type "string"))
+      (declaration
+        (identifier "registerOptions")
+        (optional "?")
+        (identifier "any"))))
+  (interface
+    (identifier "RegistrationParams")
+    (declarations_block
+      (declaration
+        (identifier "registrations")
+        (array_of
+          (identifier "Registration")))))
+  (interface
+    (identifier "Unregistration")
+    (declarations_block
+      (declaration
+        (identifier "id")
+        (basic_type "string"))
+      (declaration
+        (identifier "method")
+        (basic_type "string"))))
+  (interface
+    (identifier "UnregistrationParams")
+    (declarations_block
+      (declaration
+        (identifier "unregisterations")
+        (array_of
+          (identifier "Unregistration")))))
+  (interface
+    (identifier "WorkspaceFoldersServerCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "supported")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "changeNotifications")
+        (optional "?")
+        (types
+          (basic_type "string")
+          (basic_type "boolean")))))
+  (interface
+    (identifier "WorkspaceFolder")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "name")
+        (basic_type "string"))))
+  (interface
+    (identifier "DidChangeWorkspaceFoldersParams")
+    (declarations_block
+      (declaration
+        (identifier "event")
+        (identifier "WorkspaceFoldersChangeEvent"))))
+  (interface
+    (identifier "WorkspaceFoldersChangeEvent")
+    (declarations_block
+      (declaration
+        (identifier "added")
+        (array_of
+          (identifier "WorkspaceFolder")))
+      (declaration
+        (identifier "removed")
+        (array_of
+          (identifier "WorkspaceFolder")))))
+  (interface
+    (identifier "DidChangeConfigurationClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DidChangeConfigurationParams")
+    (declarations_block
+      (declaration
+        (identifier "settings")
+        (identifier "any"))))
+  (interface
+    (identifier "ConfigurationParams")
+    (declarations_block
+      (declaration
+        (identifier "items")
+        (array_of
+          (identifier "ConfigurationItem")))))
+  (interface
+    (identifier "ConfigurationItem")
+    (declarations_block
+      (declaration
+        (identifier "scopeUri")
+        (optional "?")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "section")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "DidChangeWatchedFilesClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DidChangeWatchedFilesRegistrationOptions")
+    (declarations_block
+      (declaration
+        (identifier "watchers")
+        (array_of
+          (identifier "FileSystemWatcher")))))
+  (interface
+    (identifier "FileSystemWatcher")
+    (declarations_block
+      (declaration
+        (identifier "globPattern")
+        (basic_type "string"))
+      (declaration
+        (identifier "kind")
+        (optional "?")
+        (basic_type "uinteger"))))
+  (namespace
+    (identifier "WatchKind")
+    (const
+      (declaration
+        (identifier "Create"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Change"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "Delete"))
+      (number "4")))
+  (interface
+    (identifier "DidChangeWatchedFilesParams")
+    (declarations_block
+      (declaration
+        (identifier "changes")
+        (array_of
+          (identifier "FileEvent")))))
+  (interface
+    (identifier "FileEvent")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "type")
+        (basic_type "uinteger"))))
+  (namespace
+    (identifier "FileChangeType")
+    (const
+      (declaration
+        (identifier "Created"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Changed"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "Deleted"))
+      (number "3")))
+  (interface
+    (identifier "WorkspaceSymbolClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "symbolKind")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "valueSet")
+            (optional "?")
+            (array_of
+              (identifier "SymbolKind")))))
+      (declaration
+        (identifier "tagSupport")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "valueSet")
+            (array_of
+              (identifier "SymbolTag")))))))
+  (interface
+    (identifier "WorkspaceSymbolOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "WorkspaceSymbolRegistrationOptions")
+    (extends
+      (identifier "WorkspaceSymbolOptions"))
+    (declarations_block))
+  (interface
+    (identifier "WorkspaceSymbolParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "query")
+        (basic_type "string"))))
+  (interface
+    (identifier "ExecuteCommandClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "ExecuteCommandOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "commands")
+        (array_of
+          (basic_type "string")))))
+  (interface
+    (identifier "ExecuteCommandRegistrationOptions")
+    (extends
+      (identifier "ExecuteCommandOptions"))
+    (declarations_block))
+  (interface
+    (identifier "ExecuteCommandParams")
+    (extends
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block
+      (declaration
+        (identifier "command")
+        (basic_type "string"))
+      (declaration
+        (identifier "arguments")
+        (optional "?")
+        (array_of
+          (identifier "any")))))
+  (interface
+    (identifier "ApplyWorkspaceEditParams")
+    (declarations_block
+      (declaration
+        (identifier "label")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "edit")
+        (identifier "WorkspaceEdit"))))
+  (interface
+    (identifier "ApplyWorkspaceEditResponse")
+    (declarations_block
+      (declaration
+        (identifier "applied")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "failureReason")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "failedChange")
+        (optional "?")
+        (basic_type "uinteger"))))
+  (interface
+    (identifier "FileOperationRegistrationOptions")
+    (declarations_block
+      (declaration
+        (identifier "filters")
+        (array_of
+          (identifier "FileOperationFilter")))))
+  (namespace
+    (identifier "FileOperationPatternKind")
+    (const
+      (declaration
+        (identifier "file")
+        (string "'file'"))
+      (string "'file'"))
+    (const
+      (declaration
+        (identifier "folder")
+        (string "'folder'"))
+      (string "'folder'")))
+  (type_alias
+    (identifier "FileOperationPatternKind")
+    (types
+      (string "'file'")
+      (string "'folder'")))
+  (interface
+    (identifier "FileOperationPatternOptions")
+    (declarations_block
+      (declaration
+        (identifier "ignoreCase")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "FileOperationPattern")
+    (declarations_block
+      (declaration
+        (identifier "glob")
+        (basic_type "string"))
+      (declaration
+        (identifier "matches")
+        (optional "?")
+        (identifier "FileOperationPatternKind"))
+      (declaration
+        (identifier "options")
+        (optional "?")
+        (identifier "FileOperationPatternOptions"))))
+  (interface
+    (identifier "FileOperationFilter")
+    (declarations_block
+      (declaration
+        (identifier "scheme")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "pattern")
+        (identifier "FileOperationPattern"))))
+  (interface
+    (identifier "CreateFilesParams")
+    (declarations_block
+      (declaration
+        (identifier "files")
+        (array_of
+          (identifier "FileCreate")))))
+  (interface
+    (identifier "FileCreate")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (basic_type "string"))))
+  (interface
+    (identifier "RenameFilesParams")
+    (declarations_block
+      (declaration
+        (identifier "files")
+        (array_of
+          (identifier "FileRename")))))
+  (interface
+    (identifier "FileRename")
+    (declarations_block
+      (declaration
+        (identifier "oldUri")
+        (basic_type "string"))
+      (declaration
+        (identifier "newUri")
+        (basic_type "string"))))
+  (interface
+    (identifier "DeleteFilesParams")
+    (declarations_block
+      (declaration
+        (identifier "files")
+        (array_of
+          (identifier "FileDelete")))))
+  (interface
+    (identifier "FileDelete")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (basic_type "string"))))
+  (namespace
+    (identifier "TextDocumentSyncKind")
+    (const
+      (declaration
+        (identifier "None"))
+      (number "0"))
+    (const
+      (declaration
+        (identifier "Full"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Incremental"))
+      (number "2")))
+  (interface
+    (identifier "TextDocumentSyncOptions")
+    (declarations_block
+      (declaration
+        (identifier "openClose")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "change")
+        (optional "?")
+        (identifier "TextDocumentSyncKind"))))
+  (interface
+    (identifier "DidOpenTextDocumentParams")
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentItem"))))
+  (interface
+    (identifier "TextDocumentChangeRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions"))
+    (declarations_block
+      (declaration
+        (identifier "syncKind")
+        (identifier "TextDocumentSyncKind"))))
+  (interface
+    (identifier "DidChangeTextDocumentParams")
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "VersionedTextDocumentIdentifier"))
+      (declaration
+        (identifier "contentChanges")
+        (array_of
+          (identifier "TextDocumentContentChangeEvent")))))
+  (type_alias
+    (identifier "TextDocumentContentChangeEvent")
+    (types
+      (declarations_block
+        (declaration
+          (identifier "range")
+          (identifier "Range"))
+        (declaration
+          (identifier "rangeLength")
+          (optional "?")
+          (basic_type "uinteger"))
+        (declaration
+          (identifier "text")
+          (basic_type "string")))
+      (declarations_block
+        (declaration
+          (identifier "text")
+          (basic_type "string")))))
+  (interface
+    (identifier "WillSaveTextDocumentParams")
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "reason")
+        (identifier "TextDocumentSaveReason"))))
+  (namespace
+    (identifier "TextDocumentSaveReason")
+    (const
+      (declaration
+        (identifier "Manual"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "AfterDelay"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "FocusOut"))
+      (number "3")))
+  (type_alias
+    (identifier "TextDocumentSaveReason")
+    (types
+      (number "1")
+      (number "2")
+      (number "3")))
+  (interface
+    (identifier "SaveOptions")
+    (declarations_block
+      (declaration
+        (identifier "includeText")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "TextDocumentSaveRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions"))
+    (declarations_block
+      (declaration
+        (identifier "includeText")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DidSaveTextDocumentParams")
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "text")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "DidCloseTextDocumentParams")
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))))
+  (interface
+    (identifier "TextDocumentSyncClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "willSave")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "willSaveWaitUntil")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "didSave")
+        (optional "?")
+        (basic_type "boolean"))))
+  (namespace
+    (identifier "TextDocumentSyncKind")
+    (const
+      (declaration
+        (identifier "None"))
+      (number "0"))
+    (const
+      (declaration
+        (identifier "Full"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Incremental"))
+      (number "2")))
+  (type_alias
+    (identifier "TextDocumentSyncKind")
+    (types
+      (number "0")
+      (number "1")
+      (number "2")))
+  (interface
+    (identifier "TextDocumentSyncOptions")
+    (declarations_block
+      (declaration
+        (identifier "openClose")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "change")
+        (optional "?")
+        (identifier "TextDocumentSyncKind"))
+      (declaration
+        (identifier "willSave")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "willSaveWaitUntil")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "save")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (identifier "SaveOptions")))))
+  (interface
+    (identifier "PublishDiagnosticsClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "relatedInformation")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "tagSupport")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "valueSet")
+            (array_of
+              (identifier "DiagnosticTag")))))
+      (declaration
+        (identifier "versionSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "codeDescriptionSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "dataSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "PublishDiagnosticsParams")
+    (declarations_block
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "version")
+        (optional "?")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "diagnostics")
+        (array_of
+          (identifier "Diagnostic")))))
+  (interface
+    (identifier "CompletionClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "completionItem")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "snippetSupport")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "commitCharactersSupport")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "documentationFormat")
+            (optional "?")
+            (array_of
+              (identifier "MarkupKind")))
+          (declaration
+            (identifier "deprecatedSupport")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "preselectSupport")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "tagSupport")
+            (optional "?")
+            (declarations_block
+              (declaration
+                (identifier "valueSet")
+                (array_of
+                  (identifier "CompletionItemTag")))))
+          (declaration
+            (identifier "insertReplaceSupport")
+            (optional "?")
+            (basic_type "boolean"))
+          (declaration
+            (identifier "resolveSupport")
+            (optional "?")
+            (declarations_block
+              (declaration
+                (identifier "properties")
+                (array_of
+                  (basic_type "string")))))
+          (declaration
+            (identifier "insertTextModeSupport")
+            (optional "?")
+            (declarations_block
+              (declaration
+                (identifier "valueSet")
+                (array_of
+                  (identifier "InsertTextMode")))))))
+      (declaration
+        (identifier "completionItemKind")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "valueSet")
+            (optional "?")
+            (array_of
+              (identifier "CompletionItemKind")))))
+      (declaration
+        (identifier "contextSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CompletionOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "triggerCharacters")
+        (optional "?")
+        (array_of
+          (basic_type "string")))
+      (declaration
+        (identifier "allCommitCharacters")
+        (optional "?")
+        (array_of
+          (basic_type "string")))
+      (declaration
+        (identifier "resolveProvider")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CompletionRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "CompletionOptions"))
+    (declarations_block))
+  (interface
+    (identifier "CompletionParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "context")
+        (optional "?")
+        (identifier "CompletionContext"))))
+  (namespace
+    (identifier "CompletionTriggerKind")
+    (const
+      (declaration
+        (identifier "Invoked")
+        (number "1"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "TriggerCharacter")
+        (number "2"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "TriggerForIncompleteCompletions")
+        (number "3"))
+      (number "3")))
+  (type_alias
+    (identifier "CompletionTriggerKind")
+    (types
+      (number "1")
+      (number "2")
+      (number "3")))
+  (interface
+    (identifier "CompletionContext")
+    (declarations_block
+      (declaration
+        (identifier "triggerKind")
+        (identifier "CompletionTriggerKind"))
+      (declaration
+        (identifier "triggerCharacter")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "CompletionList")
+    (declarations_block
+      (declaration
+        (identifier "isIncomplete")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "items")
+        (array_of
+          (identifier "CompletionItem")))))
+  (namespace
+    (identifier "InsertTextFormat")
+    (const
+      (declaration
+        (identifier "PlainText"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Snippet"))
+      (number "2")))
+  (type_alias
+    (identifier "InsertTextFormat")
+    (types
+      (number "1")
+      (number "2")))
+  (namespace
+    (identifier "CompletionItemTag")
+    (const
+      (declaration
+        (identifier "Deprecated"))
+      (number "1")))
+  (type_alias
+    (identifier "CompletionItemTag")
+    (number "1"))
+  (interface
+    (identifier "InsertReplaceEdit")
+    (declarations_block
+      (declaration
+        (identifier "newText")
+        (basic_type "string"))
+      (declaration
+        (identifier "insert")
+        (identifier "Range"))
+      (declaration
+        (identifier "replace")
+        (identifier "Range"))))
+  (namespace
+    (identifier "InsertTextMode")
+    (const
+      (declaration
+        (identifier "asIs")
+        (number "1"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "adjustIndentation")
+        (number "2"))
+      (number "2")))
+  (type_alias
+    (identifier "InsertTextMode")
+    (types
+      (number "1")
+      (number "2")))
+  (interface
+    (identifier "CompletionItem")
+    (declarations_block
+      (declaration
+        (identifier "label")
+        (basic_type "string"))
+      (declaration
+        (identifier "kind")
+        (optional "?")
+        (identifier "CompletionItemKind"))
+      (declaration
+        (identifier "tags")
+        (optional "?")
+        (array_of
+          (identifier "CompletionItemTag")))
+      (declaration
+        (identifier "detail")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "documentation")
+        (optional "?")
+        (types
+          (basic_type "string")
+          (identifier "MarkupContent")))
+      (declaration
+        (identifier "deprecated")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "preselect")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "sortText")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "filterText")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "insertText")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "insertTextFormat")
+        (optional "?")
+        (identifier "InsertTextFormat"))
+      (declaration
+        (identifier "insertTextMode")
+        (optional "?")
+        (identifier "InsertTextMode"))
+      (declaration
+        (identifier "textEdit")
+        (optional "?")
+        (types
+          (identifier "TextEdit")
+          (identifier "InsertReplaceEdit")))
+      (declaration
+        (identifier "additionalTextEdits")
+        (optional "?")
+        (array_of
+          (identifier "TextEdit")))
+      (declaration
+        (identifier "commitCharacters")
+        (optional "?")
+        (array_of
+          (basic_type "string")))
+      (declaration
+        (identifier "command")
+        (optional "?")
+        (identifier "Command"))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (identifier "any"))))
+  (namespace
+    (identifier "CompletionItemKind")
+    (const
+      (declaration
+        (identifier "Text"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Method"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "Function"))
+      (number "3"))
+    (const
+      (declaration
+        (identifier "Constructor"))
+      (number "4"))
+    (const
+      (declaration
+        (identifier "Field"))
+      (number "5"))
+    (const
+      (declaration
+        (identifier "Variable"))
+      (number "6"))
+    (const
+      (declaration
+        (identifier "Class"))
+      (number "7"))
+    (const
+      (declaration
+        (identifier "Interface"))
+      (number "8"))
+    (const
+      (declaration
+        (identifier "Module"))
+      (number "9"))
+    (const
+      (declaration
+        (identifier "Property"))
+      (number "10"))
+    (const
+      (declaration
+        (identifier "Unit"))
+      (number "11"))
+    (const
+      (declaration
+        (identifier "Value"))
+      (number "12"))
+    (const
+      (declaration
+        (identifier "Enum"))
+      (number "13"))
+    (const
+      (declaration
+        (identifier "Keyword"))
+      (number "14"))
+    (const
+      (declaration
+        (identifier "Snippet"))
+      (number "15"))
+    (const
+      (declaration
+        (identifier "Color"))
+      (number "16"))
+    (const
+      (declaration
+        (identifier "File"))
+      (number "17"))
+    (const
+      (declaration
+        (identifier "Reference"))
+      (number "18"))
+    (const
+      (declaration
+        (identifier "Folder"))
+      (number "19"))
+    (const
+      (declaration
+        (identifier "EnumMember"))
+      (number "20"))
+    (const
+      (declaration
+        (identifier "Constant"))
+      (number "21"))
+    (const
+      (declaration
+        (identifier "Struct"))
+      (number "22"))
+    (const
+      (declaration
+        (identifier "Event"))
+      (number "23"))
+    (const
+      (declaration
+        (identifier "Operator"))
+      (number "24"))
+    (const
+      (declaration
+        (identifier "TypeParameter"))
+      (number "25")))
+  (interface
+    (identifier "HoverClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "contentFormat")
+        (optional "?")
+        (array_of
+          (identifier "MarkupKind")))))
+  (interface
+    (identifier "HoverOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "HoverRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "HoverOptions"))
+    (declarations_block))
+  (interface
+    (identifier "HoverParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block))
+  (interface
+    (identifier "Hover")
+    (declarations_block
+      (declaration
+        (identifier "contents")
+        (types
+          (identifier "MarkedString")
+          (array_of
+            (identifier "MarkedString"))
+          (identifier "MarkupContent")))
+      (declaration
+        (identifier "range")
+        (optional "?")
+        (identifier "Range"))))
+  (type_alias
+    (identifier "MarkedString")
+    (types
+      (basic_type "string")
+      (declarations_block
+        (declaration
+          (identifier "language")
+          (basic_type "string"))
+        (declaration
+          (identifier "value")
+          (basic_type "string")))))
+  (interface
+    (identifier "SignatureHelpClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "signatureInformation")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "documentationFormat")
+            (optional "?")
+            (array_of
+              (identifier "MarkupKind")))
+          (declaration
+            (identifier "parameterInformation")
+            (optional "?")
+            (declarations_block
+              (declaration
+                (identifier "labelOffsetSupport")
+                (optional "?")
+                (basic_type "boolean"))))
+          (declaration
+            (identifier "activeParameterSupport")
+            (optional "?")
+            (basic_type "boolean"))))
+      (declaration
+        (identifier "contextSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "SignatureHelpOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "triggerCharacters")
+        (optional "?")
+        (array_of
+          (basic_type "string")))
+      (declaration
+        (identifier "retriggerCharacters")
+        (optional "?")
+        (array_of
+          (basic_type "string")))))
+  (interface
+    (identifier "SignatureHelpRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "SignatureHelpOptions"))
+    (declarations_block))
+  (interface
+    (identifier "SignatureHelpParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block
+      (declaration
+        (identifier "context")
+        (optional "?")
+        (identifier "SignatureHelpContext"))))
+  (namespace
+    (identifier "SignatureHelpTriggerKind")
+    (const
+      (declaration
+        (identifier "Invoked")
+        (number "1"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "TriggerCharacter")
+        (number "2"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "ContentChange")
+        (number "3"))
+      (number "3")))
+  (type_alias
+    (identifier "SignatureHelpTriggerKind")
+    (types
+      (number "1")
+      (number "2")
+      (number "3")))
+  (interface
+    (identifier "SignatureHelpContext")
+    (declarations_block
+      (declaration
+        (identifier "triggerKind")
+        (identifier "SignatureHelpTriggerKind"))
+      (declaration
+        (identifier "triggerCharacter")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "isRetrigger")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "activeSignatureHelp")
+        (optional "?")
+        (identifier "SignatureHelp"))))
+  (interface
+    (identifier "SignatureHelp")
+    (declarations_block
+      (declaration
+        (identifier "signatures")
+        (array_of
+          (identifier "SignatureInformation")))
+      (declaration
+        (identifier "activeSignature")
+        (optional "?")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "activeParameter")
+        (optional "?")
+        (basic_type "uinteger"))))
+  (interface
+    (identifier "SignatureInformation")
+    (declarations_block
+      (declaration
+        (identifier "label")
+        (basic_type "string"))
+      (declaration
+        (identifier "documentation")
+        (optional "?")
+        (types
+          (basic_type "string")
+          (identifier "MarkupContent")))
+      (declaration
+        (identifier "parameters")
+        (optional "?")
+        (array_of
+          (identifier "ParameterInformation")))
+      (declaration
+        (identifier "activeParameter")
+        (optional "?")
+        (basic_type "uinteger"))))
+  (interface
+    (identifier "ParameterInformation")
+    (declarations_block
+      (declaration
+        (identifier "label")
+        (types
+          (basic_type "string")
+          (type_tuple
+            (basic_type "uinteger")
+            (basic_type "uinteger"))))
+      (declaration
+        (identifier "documentation")
+        (optional "?")
+        (types
+          (basic_type "string")
+          (identifier "MarkupContent")))))
+  (interface
+    (identifier "DeclarationClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "linkSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DeclarationOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DeclarationRegistrationOptions")
+    (extends
+      (identifier "DeclarationOptions")
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DeclarationParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block))
+  (interface
+    (identifier "DefinitionClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "linkSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DefinitionOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DefinitionRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "DefinitionOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DefinitionParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block))
+  (interface
+    (identifier "TypeDefinitionClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "linkSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "TypeDefinitionOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "TypeDefinitionRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "TypeDefinitionOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "TypeDefinitionParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block))
+  (interface
+    (identifier "ImplementationClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "linkSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "ImplementationOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "ImplementationRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "ImplementationOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "ImplementationParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block))
+  (interface
+    (identifier "ReferenceClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "ReferenceOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "ReferenceRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "ReferenceOptions"))
+    (declarations_block))
+  (interface
+    (identifier "ReferenceParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "context")
+        (identifier "ReferenceContext"))))
+  (interface
+    (identifier "ReferenceContext")
+    (declarations_block
+      (declaration
+        (identifier "includeDeclaration")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentHighlightClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentHighlightOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentHighlightRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "DocumentHighlightOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentHighlightParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentHighlight")
+    (declarations_block
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "kind")
+        (optional "?")
+        (identifier "DocumentHighlightKind"))))
+  (namespace
+    (identifier "DocumentHighlightKind")
+    (const
+      (declaration
+        (identifier "Text"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Read"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "Write"))
+      (number "3")))
+  (type_alias
+    (identifier "DocumentHighlightKind")
+    (types
+      (number "1")
+      (number "2")
+      (number "3")))
+  (interface
+    (identifier "DocumentSymbolClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "symbolKind")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "valueSet")
+            (optional "?")
+            (array_of
+              (identifier "SymbolKind")))))
+      (declaration
+        (identifier "hierarchicalDocumentSymbolSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "tagSupport")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "valueSet")
+            (array_of
+              (identifier "SymbolTag")))))
+      (declaration
+        (identifier "labelSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentSymbolOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "label")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "DocumentSymbolRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "DocumentSymbolOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentSymbolParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))))
+  (namespace
+    (identifier "SymbolKind")
+    (const
+      (declaration
+        (identifier "File"))
+      (number "1"))
+    (const
+      (declaration
+        (identifier "Module"))
+      (number "2"))
+    (const
+      (declaration
+        (identifier "Namespace"))
+      (number "3"))
+    (const
+      (declaration
+        (identifier "Package"))
+      (number "4"))
+    (const
+      (declaration
+        (identifier "Class"))
+      (number "5"))
+    (const
+      (declaration
+        (identifier "Method"))
+      (number "6"))
+    (const
+      (declaration
+        (identifier "Property"))
+      (number "7"))
+    (const
+      (declaration
+        (identifier "Field"))
+      (number "8"))
+    (const
+      (declaration
+        (identifier "Constructor"))
+      (number "9"))
+    (const
+      (declaration
+        (identifier "Enum"))
+      (number "10"))
+    (const
+      (declaration
+        (identifier "Interface"))
+      (number "11"))
+    (const
+      (declaration
+        (identifier "Function"))
+      (number "12"))
+    (const
+      (declaration
+        (identifier "Variable"))
+      (number "13"))
+    (const
+      (declaration
+        (identifier "Constant"))
+      (number "14"))
+    (const
+      (declaration
+        (identifier "String"))
+      (number "15"))
+    (const
+      (declaration
+        (identifier "Number"))
+      (number "16"))
+    (const
+      (declaration
+        (identifier "Boolean"))
+      (number "17"))
+    (const
+      (declaration
+        (identifier "Array"))
+      (number "18"))
+    (const
+      (declaration
+        (identifier "Object"))
+      (number "19"))
+    (const
+      (declaration
+        (identifier "Key"))
+      (number "20"))
+    (const
+      (declaration
+        (identifier "Null"))
+      (number "21"))
+    (const
+      (declaration
+        (identifier "EnumMember"))
+      (number "22"))
+    (const
+      (declaration
+        (identifier "Struct"))
+      (number "23"))
+    (const
+      (declaration
+        (identifier "Event"))
+      (number "24"))
+    (const
+      (declaration
+        (identifier "Operator"))
+      (number "25"))
+    (const
+      (declaration
+        (identifier "TypeParameter"))
+      (number "26")))
+  (namespace
+    (identifier "SymbolTag")
+    (const
+      (declaration
+        (identifier "Deprecated")
+        (number "1"))
+      (number "1")))
+  (type_alias
+    (identifier "SymbolTag")
+    (number "1"))
+  (interface
+    (identifier "DocumentSymbol")
+    (declarations_block
+      (declaration
+        (identifier "name")
+        (basic_type "string"))
+      (declaration
+        (identifier "detail")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "kind")
+        (identifier "SymbolKind"))
+      (declaration
+        (identifier "tags")
+        (optional "?")
+        (array_of
+          (identifier "SymbolTag")))
+      (declaration
+        (identifier "deprecated")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "selectionRange")
+        (identifier "Range"))
+      (declaration
+        (identifier "children")
+        (optional "?")
+        (array_of
+          (identifier "DocumentSymbol")))))
+  (interface
+    (identifier "SymbolInformation")
+    (declarations_block
+      (declaration
+        (identifier "name")
+        (basic_type "string"))
+      (declaration
+        (identifier "kind")
+        (identifier "SymbolKind"))
+      (declaration
+        (identifier "tags")
+        (optional "?")
+        (array_of
+          (identifier "SymbolTag")))
+      (declaration
+        (identifier "deprecated")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "location")
+        (identifier "Location"))
+      (declaration
+        (identifier "containerName")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "CodeActionClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "codeActionLiteralSupport")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "codeActionKind")
+            (declarations_block
+              (declaration
+                (identifier "valueSet")
+                (array_of
+                  (identifier "CodeActionKind")))))))
+      (declaration
+        (identifier "isPreferredSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "disabledSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "dataSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "resolveSupport")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "properties")
+            (array_of
+              (basic_type "string")))))
+      (declaration
+        (identifier "honorsChangeAnnotations")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CodeActionOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "codeActionKinds")
+        (optional "?")
+        (array_of
+          (identifier "CodeActionKind")))
+      (declaration
+        (identifier "resolveProvider")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CodeActionRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "CodeActionOptions"))
+    (declarations_block))
+  (interface
+    (identifier "CodeActionParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "context")
+        (identifier "CodeActionContext"))))
+  (type_alias
+    (identifier "CodeActionKind")
+    (basic_type "string"))
+  (namespace
+    (identifier "CodeActionKind")
+    (const
+      (declaration
+        (identifier "Empty")
+        (identifier "CodeActionKind"))
+      (string "''"))
+    (const
+      (declaration
+        (identifier "QuickFix")
+        (identifier "CodeActionKind"))
+      (string "'quickfix'"))
+    (const
+      (declaration
+        (identifier "Refactor")
+        (identifier "CodeActionKind"))
+      (string "'refactor'"))
+    (const
+      (declaration
+        (identifier "RefactorExtract")
+        (identifier "CodeActionKind"))
+      (string "'refactor.extract'"))
+    (const
+      (declaration
+        (identifier "RefactorInline")
+        (identifier "CodeActionKind"))
+      (string "'refactor.inline'"))
+    (const
+      (declaration
+        (identifier "RefactorRewrite")
+        (identifier "CodeActionKind"))
+      (string "'refactor.rewrite'"))
+    (const
+      (declaration
+        (identifier "Source")
+        (identifier "CodeActionKind"))
+      (string "'source'"))
+    (const
+      (declaration
+        (identifier "SourceOrganizeImports")
+        (identifier "CodeActionKind"))
+      (string "'source.organizeImports'")))
+  (interface
+    (identifier "CodeActionContext")
+    (declarations_block
+      (declaration
+        (identifier "diagnostics")
+        (array_of
+          (identifier "Diagnostic")))
+      (declaration
+        (identifier "only")
+        (optional "?")
+        (array_of
+          (identifier "CodeActionKind")))))
+  (interface
+    (identifier "CodeAction")
+    (declarations_block
+      (declaration
+        (identifier "title")
+        (basic_type "string"))
+      (declaration
+        (identifier "kind")
+        (optional "?")
+        (identifier "CodeActionKind"))
+      (declaration
+        (identifier "diagnostics")
+        (optional "?")
+        (array_of
+          (identifier "Diagnostic")))
+      (declaration
+        (identifier "isPreferred")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "disabled")
+        (optional "?")
+        (declarations_block
+          (declaration
+            (identifier "reason")
+            (basic_type "string"))))
+      (declaration
+        (identifier "edit")
+        (optional "?")
+        (identifier "WorkspaceEdit"))
+      (declaration
+        (identifier "command")
+        (optional "?")
+        (identifier "Command"))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (identifier "any"))))
+  (interface
+    (identifier "CodeLensClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CodeLensOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "resolveProvider")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CodeLensRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "CodeLensOptions"))
+    (declarations_block))
+  (interface
+    (identifier "CodeLensParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))))
+  (interface
+    (identifier "CodeLens")
+    (declarations_block
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "command")
+        (optional "?")
+        (identifier "Command"))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (identifier "any"))))
+  (interface
+    (identifier "CodeLensWorkspaceClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "refreshSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentLinkClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "tooltipSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentLinkOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "resolveProvider")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentLinkRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "DocumentLinkOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentLinkParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))))
+  (interface
+    (identifier "DocumentLink")
+    (declarations_block
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "target")
+        (optional "?")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "tooltip")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (identifier "any"))))
+  (interface
+    (identifier "DocumentColorClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentColorOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentColorRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "StaticRegistrationOptions")
+      (identifier "DocumentColorOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentColorParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))))
+  (interface
+    (identifier "ColorInformation")
+    (declarations_block
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "color")
+        (identifier "Color"))))
+  (interface
+    (identifier "Color")
+    (declarations_block
+      (declaration
+        (qualifier "readonly")
+        (identifier "red")
+        (identifier "decimal"))
+      (declaration
+        (qualifier "readonly")
+        (identifier "green")
+        (identifier "decimal"))
+      (declaration
+        (qualifier "readonly")
+        (identifier "blue")
+        (identifier "decimal"))
+      (declaration
+        (qualifier "readonly")
+        (identifier "alpha")
+        (identifier "decimal"))))
+  (interface
+    (identifier "ColorPresentationParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "color")
+        (identifier "Color"))
+      (declaration
+        (identifier "range")
+        (identifier "Range"))))
+  (interface
+    (identifier "ColorPresentation")
+    (declarations_block
+      (declaration
+        (identifier "label")
+        (basic_type "string"))
+      (declaration
+        (identifier "textEdit")
+        (optional "?")
+        (identifier "TextEdit"))
+      (declaration
+        (identifier "additionalTextEdits")
+        (optional "?")
+        (array_of
+          (identifier "TextEdit")))))
+  (interface
+    (identifier "DocumentFormattingClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentFormattingOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentFormattingRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "DocumentFormattingOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentFormattingParams")
+    (extends
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "options")
+        (identifier "FormattingOptions"))))
+  (interface
+    (identifier "FormattingOptions")
+    (declarations_block
+      (declaration
+        (identifier "tabSize")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "insertSpaces")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "trimTrailingWhitespace")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "insertFinalNewline")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "trimFinalNewlines")
+        (optional "?")
+        (basic_type "boolean"))
+      (map_signature
+        (index_signature
+          (identifier "key")
+          (basic_type "string"))
+        (types
+          (basic_type "boolean")
+          (identifier "integer")
+          (basic_type "string")))))
+  (interface
+    (identifier "DocumentRangeFormattingClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentRangeFormattingOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentRangeFormattingRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "DocumentRangeFormattingOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentRangeFormattingParams")
+    (extends
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "options")
+        (identifier "FormattingOptions"))))
+  (interface
+    (identifier "DocumentOnTypeFormattingClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "DocumentOnTypeFormattingOptions")
+    (declarations_block
+      (declaration
+        (identifier "firstTriggerCharacter")
+        (basic_type "string"))
+      (declaration
+        (identifier "moreTriggerCharacter")
+        (optional "?")
+        (array_of
+          (basic_type "string")))))
+  (interface
+    (identifier "DocumentOnTypeFormattingRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "DocumentOnTypeFormattingOptions"))
+    (declarations_block))
+  (interface
+    (identifier "DocumentOnTypeFormattingParams")
+    (extends
+      (identifier "TextDocumentPositionParams"))
+    (declarations_block
+      (declaration
+        (identifier "ch")
+        (basic_type "string"))
+      (declaration
+        (identifier "options")
+        (identifier "FormattingOptions"))))
+  (namespace
+    (identifier "PrepareSupportDefaultBehavior")
+    (const
+      (declaration
+        (identifier "Identifier")
+        (number "1"))
+      (number "1")))
+  (interface
+    (identifier "RenameClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "prepareSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "prepareSupportDefaultBehavior")
+        (optional "?")
+        (identifier "PrepareSupportDefaultBehavior"))
+      (declaration
+        (identifier "honorsChangeAnnotations")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "RenameOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "prepareProvider")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "RenameRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "RenameOptions"))
+    (declarations_block))
+  (interface
+    (identifier "RenameParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block
+      (declaration
+        (identifier "newName")
+        (basic_type "string"))))
+  (interface
+    (identifier "PrepareRenameParams")
+    (extends
+      (identifier "TextDocumentPositionParams"))
+    (declarations_block))
+  (interface
+    (identifier "FoldingRangeClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "rangeLimit")
+        (optional "?")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "lineFoldingOnly")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "FoldingRangeOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "FoldingRangeRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "FoldingRangeOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "FoldingRangeParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))))
+  (enum
+    (identifier "FoldingRangeKind")
+    (item
+      (identifier "Comment")
+      (string "'comment'"))
+    (item
+      (identifier "Imports")
+      (string "'imports'"))
+    (item
+      (identifier "Region")
+      (string "'region'")))
+  (interface
+    (identifier "FoldingRange")
+    (declarations_block
+      (declaration
+        (identifier "startLine")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "startCharacter")
+        (optional "?")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "endLine")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "endCharacter")
+        (optional "?")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "kind")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "SelectionRangeClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "SelectionRangeOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "SelectionRangeRegistrationOptions")
+    (extends
+      (identifier "SelectionRangeOptions")
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "SelectionRangeParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "positions")
+        (array_of
+          (identifier "Position")))))
+  (interface
+    (identifier "SelectionRange")
+    (declarations_block
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "parent")
+        (optional "?")
+        (identifier "SelectionRange"))))
+  (interface
+    (identifier "CallHierarchyClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "CallHierarchyOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "CallHierarchyRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "CallHierarchyOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "CallHierarchyPrepareParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block))
+  (interface
+    (identifier "CallHierarchyItem")
+    (declarations_block
+      (declaration
+        (identifier "name")
+        (basic_type "string"))
+      (declaration
+        (identifier "kind")
+        (identifier "SymbolKind"))
+      (declaration
+        (identifier "tags")
+        (optional "?")
+        (array_of
+          (identifier "SymbolTag")))
+      (declaration
+        (identifier "detail")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "uri")
+        (identifier "DocumentUri"))
+      (declaration
+        (identifier "range")
+        (identifier "Range"))
+      (declaration
+        (identifier "selectionRange")
+        (identifier "Range"))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (identifier "unknown"))))
+  (interface
+    (identifier "CallHierarchyIncomingCallsParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "item")
+        (identifier "CallHierarchyItem"))))
+  (interface
+    (identifier "CallHierarchyIncomingCall")
+    (declarations_block
+      (declaration
+        (identifier "from")
+        (identifier "CallHierarchyItem"))
+      (declaration
+        (identifier "fromRanges")
+        (array_of
+          (identifier "Range")))))
+  (interface
+    (identifier "CallHierarchyOutgoingCallsParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "item")
+        (identifier "CallHierarchyItem"))))
+  (interface
+    (identifier "CallHierarchyOutgoingCall")
+    (declarations_block
+      (declaration
+        (identifier "to")
+        (identifier "CallHierarchyItem"))
+      (declaration
+        (identifier "fromRanges")
+        (array_of
+          (identifier "Range")))))
+  (enum
+    (identifier "SemanticTokenTypes")
+    (item
+      (identifier "namespace")
+      (string "'namespace'"))
+    (item
+      (identifier "type")
+      (string "'type'"))
+    (item
+      (identifier "class")
+      (string "'class'"))
+    (item
+      (identifier "enum")
+      (string "'enum'"))
+    (item
+      (identifier "interface")
+      (string "'interface'"))
+    (item
+      (identifier "struct")
+      (string "'struct'"))
+    (item
+      (identifier "typeParameter")
+      (string "'typeParameter'"))
+    (item
+      (identifier "parameter")
+      (string "'parameter'"))
+    (item
+      (identifier "variable")
+      (string "'variable'"))
+    (item
+      (identifier "property")
+      (string "'property'"))
+    (item
+      (identifier "enumMember")
+      (string "'enumMember'"))
+    (item
+      (identifier "event")
+      (string "'event'"))
+    (item
+      (identifier "function")
+      (string "'function'"))
+    (item
+      (identifier "method")
+      (string "'method'"))
+    (item
+      (identifier "macro")
+      (string "'macro'"))
+    (item
+      (identifier "keyword")
+      (string "'keyword'"))
+    (item
+      (identifier "modifier")
+      (string "'modifier'"))
+    (item
+      (identifier "comment")
+      (string "'comment'"))
+    (item
+      (identifier "string")
+      (string "'string'"))
+    (item
+      (identifier "number")
+      (string "'number'"))
+    (item
+      (identifier "regexp")
+      (string "'regexp'"))
+    (item
+      (identifier "operator")
+      (string "'operator'")))
+  (enum
+    (identifier "SemanticTokenModifiers")
+    (item
+      (identifier "declaration")
+      (string "'declaration'"))
+    (item
+      (identifier "definition")
+      (string "'definition'"))
+    (item
+      (identifier "readonly")
+      (string "'readonly'"))
+    (item
+      (identifier "static")
+      (string "'static'"))
+    (item
+      (identifier "deprecated")
+      (string "'deprecated'"))
+    (item
+      (identifier "abstract")
+      (string "'abstract'"))
+    (item
+      (identifier "async")
+      (string "'async'"))
+    (item
+      (identifier "modification")
+      (string "'modification'"))
+    (item
+      (identifier "documentation")
+      (string "'documentation'"))
+    (item
+      (identifier "defaultLibrary")
+      (string "'defaultLibrary'")))
+  (namespace
+    (identifier "TokenFormat")
+    (const
+      (declaration
+        (identifier "Relative")
+        (string "'relative'"))
+      (string "'relative'")))
+  (type_alias
+    (identifier "TokenFormat")
+    (string "'relative'"))
+  (interface
+    (identifier "SemanticTokensLegend")
+    (declarations_block
+      (declaration
+        (identifier "tokenTypes")
+        (array_of
+          (basic_type "string")))
+      (declaration
+        (identifier "tokenModifiers")
+        (array_of
+          (basic_type "string")))))
+  (interface
+    (identifier "SemanticTokensClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "requests")
+        (declarations_block
+          (declaration
+            (identifier "range")
+            (optional "?")
+            (types
+              (basic_type "boolean")
+              (declarations_block)))
+          (declaration
+            (identifier "full")
+            (optional "?")
+            (types
+              (basic_type "boolean")
+              (declarations_block
+                (declaration
+                  (identifier "delta")
+                  (optional "?")
+                  (basic_type "boolean")))))))
+      (declaration
+        (identifier "tokenTypes")
+        (array_of
+          (basic_type "string")))
+      (declaration
+        (identifier "tokenModifiers")
+        (array_of
+          (basic_type "string")))
+      (declaration
+        (identifier "formats")
+        (array_of
+          (identifier "TokenFormat")))
+      (declaration
+        (identifier "overlappingTokenSupport")
+        (optional "?")
+        (basic_type "boolean"))
+      (declaration
+        (identifier "multilineTokenSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "SemanticTokensOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block
+      (declaration
+        (identifier "legend")
+        (identifier "SemanticTokensLegend"))
+      (declaration
+        (identifier "range")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (declarations_block)))
+      (declaration
+        (identifier "full")
+        (optional "?")
+        (types
+          (basic_type "boolean")
+          (declarations_block
+            (declaration
+              (identifier "delta")
+              (optional "?")
+              (basic_type "boolean")))))))
+  (interface
+    (identifier "SemanticTokensRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "SemanticTokensOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "SemanticTokensParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))))
+  (interface
+    (identifier "SemanticTokens")
+    (declarations_block
+      (declaration
+        (identifier "resultId")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "data")
+        (array_of
+          (basic_type "uinteger")))))
+  (interface
+    (identifier "SemanticTokensPartialResult")
+    (declarations_block
+      (declaration
+        (identifier "data")
+        (array_of
+          (basic_type "uinteger")))))
+  (interface
+    (identifier "SemanticTokensDeltaParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "previousResultId")
+        (basic_type "string"))))
+  (interface
+    (identifier "SemanticTokensDelta")
+    (declarations_block
+      (declaration
+        (qualifier "readonly")
+        (identifier "resultId")
+        (optional "?")
+        (basic_type "string"))
+      (declaration
+        (identifier "edits")
+        (array_of
+          (identifier "SemanticTokensEdit")))))
+  (interface
+    (identifier "SemanticTokensEdit")
+    (declarations_block
+      (declaration
+        (identifier "start")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "deleteCount")
+        (basic_type "uinteger"))
+      (declaration
+        (identifier "data")
+        (optional "?")
+        (array_of
+          (basic_type "uinteger")))))
+  (interface
+    (identifier "SemanticTokensDeltaPartialResult")
+    (declarations_block
+      (declaration
+        (identifier "edits")
+        (array_of
+          (identifier "SemanticTokensEdit")))))
+  (interface
+    (identifier "SemanticTokensRangeParams")
+    (extends
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block
+      (declaration
+        (identifier "textDocument")
+        (identifier "TextDocumentIdentifier"))
+      (declaration
+        (identifier "range")
+        (identifier "Range"))))
+  (interface
+    (identifier "SemanticTokensWorkspaceClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "refreshSupport")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "LinkedEditingRangeClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "LinkedEditingRangeOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "LinkedEditingRangeRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "LinkedEditingRangeOptions")
+      (identifier "StaticRegistrationOptions"))
+    (declarations_block))
+  (interface
+    (identifier "LinkedEditingRangeParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams"))
+    (declarations_block))
+  (interface
+    (identifier "LinkedEditingRanges")
+    (declarations_block
+      (declaration
+        (identifier "ranges")
+        (array_of
+          (identifier "Range")))
+      (declaration
+        (identifier "wordPattern")
+        (optional "?")
+        (basic_type "string"))))
+  (interface
+    (identifier "MonikerClientCapabilities")
+    (declarations_block
+      (declaration
+        (identifier "dynamicRegistration")
+        (optional "?")
+        (basic_type "boolean"))))
+  (interface
+    (identifier "MonikerOptions")
+    (extends
+      (identifier "WorkDoneProgressOptions"))
+    (declarations_block))
+  (interface
+    (identifier "MonikerRegistrationOptions")
+    (extends
+      (identifier "TextDocumentRegistrationOptions")
+      (identifier "MonikerOptions"))
+    (declarations_block))
+  (interface
+    (identifier "MonikerParams")
+    (extends
+      (identifier "TextDocumentPositionParams")
+      (identifier "WorkDoneProgressParams")
+      (identifier "PartialResultParams"))
+    (declarations_block))
+  (enum
+    (identifier "UniquenessLevel")
+    (item
+      (identifier "document")
+      (string "'document'"))
+    (item
+      (identifier "project")
+      (string "'project'"))
+    (item
+      (identifier "group")
+      (string "'group'"))
+    (item
+      (identifier "scheme")
+      (string "'scheme'"))
+    (item
+      (identifier "global")
+      (string "'global'")))
+  (enum
+    (identifier "MonikerKind")
+    (item
+      (identifier "import")
+      (string "'import'"))
+    (item
+      (identifier "export")
+      (string "'export'"))
+    (item
+      (identifier "local")
+      (string "'local'")))
+  (interface
+    (identifier "Moniker")
+    (declarations_block
+      (declaration
+        (identifier "scheme")
+        (basic_type "string"))
+      (declaration
+        (identifier "identifier")
+        (basic_type "string"))
+      (declaration
+        (identifier "unique")
+        (identifier "UniquenessLevel"))
+      (declaration
+        (identifier "kind")
+        (optional "?")
+        (identifier "MonikerKind")))))
