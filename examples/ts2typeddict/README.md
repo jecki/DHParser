@@ -1,14 +1,12 @@
-# ts2typeddi
+# ts2typedict
 
 A transpiler from TypeScript-Interface-definitions to TypedDict classes.
-
-Author: Eckhart Arnold <eckhart.arnold@posteo.de>, Bavarian Academy of Science and Humanities
 
 ## License
 
 ts2dataclass is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
 
-Copyright YEAR AUTHOR'S NAME <EMAIL>, AFFILIATION
+Copyright 2021 Eckhart Arnold <arnold@badw.de>, Bavarian Academy of Sciences and Humanities
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,4 +19,38 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+## Purpose
+
+When processing JSON data, as for example form a 
+[JSON-RPC](https://www.jsonrpc.org/) call, with Python, it would
+be helpful to have Python-definitions of the JSON-structures at
+hand, in order to solicit IDE-Support, static type checking and,
+potentially to enable structural validation at runtime. 
+
+There exist different technologies for defining the structure of
+JSON-data. Next to [JSON-schema](http://json-schema.org/), a 
+de facto very popular technology for defining JSON-obejcts are
+[Typescript-Interfaces](https://www.typescriptlang.org/docs/handbook/2/objects.html). 
+For example, the 
+[language server protocol](https://microsoft.github.io/language-server-protocol/specifications/specification-current/) 
+defines the structure of the JSON-data exchanged between client 
+and server with Typescript-Interfaces.
+
+In order to enable structural validation on the Python-side, 
+ts2typeddict transpiles the typescript-interface definitions
+to Python-[TypedDicts](https://www.python.org/dev/peps/pep-0589/).
+
+## Usage
+
+In order to generate TypedDict-classes from Typescript-Interfaces,
+run `ts2typeddict` on the Typescript-Interface definitions:
+
+    # ts2typeddict interface_definitions.ts
+
+This generates a .py-file in same directory as the source
+file that contains the typescript classes and can simpy be 
+imported in Python-Code:
+
+    >>> from interface_definitions import *
 
