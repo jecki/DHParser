@@ -1,6 +1,7 @@
 DHParser Version 0.9.7
 ......................
 
+- Test-Suite
 - Packaging changed to poetry <https://python-poetry.org/>
 
 
