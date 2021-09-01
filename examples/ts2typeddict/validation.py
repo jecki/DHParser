@@ -29,6 +29,11 @@ from DHParser.externallibs.typing_extensions import Generic, ClassVar, \
     Final, Protocol, NoReturn, TypeVar, TypedDict, PEP_560, get_origin
 
 
+# The following functions have been copied from the Python
+# standard libraries typing-module. They have been adapted
+# to support a more flexible version of TypedDict
+# see also: <https://www.python.org/dev/peps/pep-0655/>
+
 def _type_convert(arg, module=None):
     """For converting None to type(None), and strings to ForwardRef."""
     if arg is None:
@@ -183,6 +188,8 @@ def TypedDict(typename, fields=None, *, total=True, **kwargs):
 _TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
 TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
 
+# up to this point all functions have been copied and adapted from
+# the typing.py module of the Pyhton-STL
 
 def validate_type(val: Any, typ):
     if isinstance(typ, _TypedDictMeta):

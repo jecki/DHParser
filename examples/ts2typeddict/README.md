@@ -41,6 +41,17 @@ In order to enable structural validation on the Python-side,
 ts2typeddict transpiles the typescript-interface definitions
 to Python-[TypedDicts](https://www.python.org/dev/peps/pep-0589/).
 
+## Installation
+
+ts2typeddict can be installed from the command line with the command:
+
+    # pip install ts2typeddict
+
+ts2typedict requires the parsing-expression-grammar-framwork DHParser
+which will automatically be installed as a dependency by 
+the `pip`-command. ts2typedict requires at least Python Version 3.8
+to run. (If there is any interest, I might backport it to Python 3.6.)
+
 ## Usage
 
 In order to generate TypedDict-classes from Typescript-Interfaces,
@@ -53,4 +64,6 @@ file that contains the typescript classes and can simpy be
 imported in Python-Code:
 
     >>> from interface_definitions import *
+
+## Validation
 
