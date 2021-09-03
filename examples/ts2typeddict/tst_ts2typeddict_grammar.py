@@ -76,9 +76,10 @@ if __name__ == '__main__':
         recompile_grammar(arg, force=True)
     else:
         recompile_grammar(os.path.join(scriptpath, 'ts2typeddict.ebnf'),
+                          os.path.join(scriptpath, 'ts2typeddict.py'),
                           force=False)
         sys.path.append('.')
-        from ts2typeddictParser import get_grammar, get_transformer, get_compiler
+        from ts2typeddict import get_grammar, get_transformer, get_compiler
         error_report = run_grammar_tests(arg, get_grammar, get_transformer, get_compiler)
         if error_report:
             print('\n')

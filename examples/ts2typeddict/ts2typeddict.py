@@ -75,9 +75,6 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 from DHParser.server import pp_json
 
 
-USE_PYTHON_3_10_TYPE_UNION = False  # https://www.python.org/dev/peps/pep-0604/
-
-
 #######################################################################
 #
 # PREPROCESSOR SECTION - Can be edited. Changes will be preserved.
@@ -232,14 +229,28 @@ def transform_ts2typeddict(cst):
 IMPORTS = """
 import sys
 from enum import Enum, IntEnum
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, TypedDict, Literal
+from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 
-if sys.version_info >= (3, 8):
+try:
+    from typing import TypedDict, Literal
+except ImportError:
+    from typing_extensions import TypedDict, Literal
+"""
+
+PEP655_IMPORT = """
+try:
+    from typing import NotRequired
+except ImportError:
     try:
-        from ts2typeddict import TypedDict
+        from typing_extensions import NotRequired
     except ImportError:
-        print("Module ts2typeddict not found. Runtime Type-Validation not available :-(")
-        
+        NotRequired = Optional
+        if sys.version_info >= (3, 8):
+            try:
+                from ts2typeddict.validation import TypedDict
+            except ImportError:
+                print("Module ts2typeddict not found. Only coarse-grained " 
+                      "type-validation of TypedDicts possible")        
 """
 
 
@@ -260,9 +271,11 @@ class ts2typeddictCompiler(Compiler):
     def __init__(self):
         super(ts2typeddictCompiler, self).__init__()
         self.use_enums = get_config_value('ts2typeddict.UseEnums', True)
-        self.use_py310_type_union = get_config_value('ts2typeddict.UsePy310TypeUnion', False)
+        self.use_py310_type_union = get_config_value('ts2typeddict.UsePEP640TypeUnion', False)
+        # https://www.python.org/dev/peps/pep-0604/
         if self.use_py310_type_union:  assert sys.version_info >= (3, 10)
-        self.use_py308_literal_type = get_config_value('ts2typeddict.UsePy308LiteralType', True)
+        self.use_py308_literal_type = get_config_value('ts2typeddict.UsePEP584LiteralType', True)
+        self.assume_PEP655 = get_config_value('ts2typeddict.UsePEP655NotRequired', False)
 
     def reset(self):
         super().reset()
@@ -292,29 +305,6 @@ class ts2typeddictCompiler(Compiler):
         if pos < 0:  obj_name = obj_name[:pos]
         if varname:  obj_name = obj_name[:-1] + [to_varname(obj_name[-1])]
         return '.'.join(obj_name)
-
-    # def serialize_references(self) -> str:
-    #     references = []
-    #     for qualified_class_name, type_info in self.referred_objects.items():
-    #         info = []
-    #         for varname, type_list in type_info.items():
-    #             type_list = [((qualified_class_name + '.' + typ) if re.match(r'\d*_', typ[::-1])
-    #                           else typ) for typ in type_list]
-    #             tl_str = ', '.join(type_list)
-    #             info.append(f"\n    '{varname}': [{tl_str}]")
-    #         info_str = '{' + ','.join(info) + '\n}'
-    #         references.append(f"{qualified_class_name}.__fieldtypes__ = {info_str}")
-    #     return '\n'.join(references)
-
-    # def serialize_defaults(self) -> str:
-    #     defaults = []
-    #     for qualified_class_name, variables in self.default_values.items():
-    #         optional_keys = []
-    #         for variable in variables:
-    #             optional_keys.append(repr(variable))
-    #         optional_keys_str = '{' + ', '.join(optional_keys) + '}'
-    #         defaults.append(f"{qualified_class_name}.__optional_keys__ = {optional_keys_str}")
-    #     return '\n'.join(defaults)
 
     def prepare(self, root: Node) ->None:
         type_aliases = {nd['identifier'].content for nd in root.select_children('type_alias')}
@@ -346,7 +336,11 @@ class ts2typeddictCompiler(Compiler):
             if base_classes.find('Generic[') >= 0:
                 return f"class {name}({base_classes}):\n"
             else:
-                return f"class {name}({base_classes}, TypedDict, total={total}):\n"
+                if self.assume_PEP655:
+                    return f"class {name}({base_classes}, TypedDict):\n"
+                else:
+                    return f"class {name}({base_classes}, "\
+                            "TypedDict, total={total}):\n"
         else:
             return f"class {name}(TypedDict, total={total}):\n"
 
@@ -423,16 +417,16 @@ class ts2typeddictCompiler(Compiler):
         if T[0:5] == 'class':
             self.local_classes[-1].append(T)
             T = typename  # substitute typename for type
-        # else:
-        #     for complex_type in node.select('type_name'):
-        #         type_name = complex_type.content
         if 'optional' in node:
             self.optional_keys[-1].append(identifier)
-            if T.startswith('Union['):
-                if T.find('None') < 0:
-                    T = T[:-1] + ', None]'
+            if self.assume_PEP655:
+                T = f"NotRequired[{T}]"
             else:
-                T = f"Optional[{T}]"
+                if T.startswith('Union['):
+                    if T.find('None') < 0:
+                        T = T[:-1] + ', None]'
+                else:
+                    T = f"Optional[{T}]"
         if self.is_toplevel() and T[0:5] == 'class':
             preface = self.render_local_classes()
             self.local_classes.append([])
@@ -808,11 +802,13 @@ def inspect(test_file_path: str):
 
 if __name__ == "__main__":
     # recompile grammar if needed
-
-    if __file__.endswith('Parser.py'):
-        grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    script_path = os.path.abspath(__file__)
+    script_name = os.path.basename(script_path)
+    if script_name.endswith('Parser.py'):
+        base_path = script_path[:-9]
     else:
-        grammar_path = os.path.splitext(__file__)[0] + '.ebnf'
+        grammar_path = os.path.splitext(script_path)[0]
+    grammar_path = base_path + '.ebnf'
     parser_update = False
 
     def notify():
@@ -821,8 +817,8 @@ if __name__ == "__main__":
         print('recompiling ' + grammar_path)
 
     if os.path.exists(grammar_path) and os.path.isfile(grammar_path):
-        if not recompile_grammar(grammar_path, force=False, notify=notify):
-            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
+        if not recompile_grammar(grammar_path, script_path, force=False, notify=notify):
+            error_file = base_path + '_ebnf_ERRORS.txt'
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
@@ -845,26 +841,13 @@ if __name__ == "__main__":
                         help='Verbose output')
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
                         help='Run batch jobs in a single thread (recommended only for debugging)')
-    output_group = parser.add_mutually_exclusive_group()
-    output_group.add_argument('-c', '--dataclass', action='store_const', const='dataclass',
-                              help='Use dataclasses.dataclass to represent typescript interfaces')
-    output_group.add_argument('-t', '--typeddict', action='store_const', const='typeddict',
-                              help='Use typing.TypedDict to represent typescript interfaces')
-    output_group.add_argument('-p', '--protocol', action='store_const', const='protocol',
-                              help='Use typing.Protocol to represent typescript interfaces')
-    output_group.add_argument('-l', '--plainclass', action='store_const', const='plainclass',
-                              help='Use plain classes to represent typescript interfaces')
-
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
 
-    # if not os.path.exists(file_name):
-    #     print('File "%s" not found!' % file_name)
-    #     sys.exit(1)
-    # if not os.path.isfile(file_name):
-    #     print('"%s" is not a file!' % file_name)
-    #     sys.exit(1)
+    workdir = file_names[0] if os.path.isdir(file_names[0]) else os.path.dirname(file_names[0])
+    from DHParser.configuration import read_local_config
+    read_local_config(os.path.join(workdir, os.path.splitext(script_name)[0] + '.ini'))
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -875,15 +858,6 @@ if __name__ == "__main__":
 
     if args.singlethread:
         set_config_value('batch_processing_parallelization', False)
-
-    if args.dataclass:
-        set_config_value('ts2typeddict.flavour', 'dataclass')
-    elif args.plainclass:
-        set_config_value('ts2typeddict.flavour', 'plainclass')
-    elif args.protocol:
-        set_config_value('ts2typeddict.flavour', 'protocol')
-    else:  # default is typeddict
-        set_config_value('ts2typeddict.flavour', 'typeddict')
 
     def echo(message: str):
         if args.verbose:

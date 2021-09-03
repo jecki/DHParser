@@ -205,7 +205,7 @@ class ts2typeddictLanguageServerProtocol:
         return {}
 
     def batch_job(self, argstr: str):
-        from ts2typeddictParser import batch_process
+        from ts2typeddict import batch_process
         args = argstr.split(' ')
         indir, outdir = args[1], args[3]
 
@@ -235,10 +235,6 @@ class ts2typeddictLanguageServerProtocol:
         error_list = batch_process(file_names, outdir, submit_func=exenv.submit_as_process,
                                    log_func=self.connection.log)
         return error_list
-
-    # def simply_compile(self, argstr):
-    #     from ts2typeddictParser import compile_src
-    #     return compile_src(argstr)
 
     async def simply_compile(self, argstr: str):
         from functools import partial

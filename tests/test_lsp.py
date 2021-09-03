@@ -42,6 +42,8 @@ def type_checked_func(select_test: int, request: RequestMessage, position: Posit
                 'id': request['id'],
                 'error': {'code': -404, 'message': 'bad mistake'}}
     elif select_test == 2:
+        # missing required field 'message' in the contained
+        # error object should case an error
         return {'jsonrpc': 'jsonrpc-string',
                 'id': request['id'],
                 'error': {'code': -404}}
@@ -50,6 +52,7 @@ def type_checked_func(select_test: int, request: RequestMessage, position: Posit
                 'id': request['id'],
                 'result': "All's well that ends well"}
     else:
+        # Just a different way of creating the dictionary
         return ResponseMessage(jsonrpc='Response', id=request['id'],
                                result="All's well that ends well")
 

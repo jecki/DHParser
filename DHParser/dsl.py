@@ -578,7 +578,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     return messages
 
 
-def recompile_grammar(ebnf_filename, force=False,
+def recompile_grammar(ebnf_filename, compiler_name='', force=False,
                       notify: Callable = lambda: None) -> bool:
     """
     Re-compiles an EBNF-grammar if necessary, that is, if either no
@@ -589,6 +589,9 @@ def recompile_grammar(ebnf_filename, force=False,
         ebnf_filename(str):  The filename of the ebnf-source of the grammar.
             In case this is a directory and not a file, all files within
             this directory ending with .ebnf will be compiled.
+        compiler_name(str):  The name of the compiler script. If not given
+            the ebnf-filename without extension and with the the addition
+            of "Parser.py" will be used.
         force(bool):  If False (default), the grammar will only be
             recompiled if it has been changed.
         notify(Callable):  'notify' is a function without parameters that
@@ -608,7 +611,8 @@ def recompile_grammar(ebnf_filename, force=False,
         return success
 
     base, _ = os.path.splitext(ebnf_filename)
-    compiler_name = base + 'Parser.py'
+    if not compiler_name:
+        compiler_name = base + 'Parser.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
     messages = []  # type: Iterable[Error]
     if (not os.path.exists(compiler_name) or force

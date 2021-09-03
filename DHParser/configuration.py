@@ -178,6 +178,20 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
     PRESETS_CHANGED = True
 
 
+def read_local_config(cfg_filename: str) -> bool:
+    import configparser
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda option: option
+    if config.read(cfg_filename):
+        access_presets()
+        for section in config.sections():
+            for variable, value in cfg[section].items():
+                set_preset_value(f"{section}.{variable}", eval(value))
+        finalize_presets()
+        return True
+    return False
+
+
 class NoDefault:
     pass
 NO_DEFAULT = NoDefault()
