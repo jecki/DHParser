@@ -1,6 +1,7 @@
 DHParser Version 0.9.8
 ......................
 
+- support for local config-files.
 
 DHParser Version 0.9.7 (1.9.2021)
 .................................

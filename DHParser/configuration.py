@@ -29,8 +29,10 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
+import os
+import sys
 import threading
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 __all__ = ('ALLOWED_PRESET_VALUES',
            'validate_value',
@@ -38,6 +40,7 @@ __all__ = ('ALLOWED_PRESET_VALUES',
            'finalize_presets',
            'get_preset_value',
            'set_preset_value',
+           'read_local_config',
            'NO_DEFAULT',
            'THREAD_LOCALS',
            'access_thread_locals',
@@ -178,18 +181,52 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
     PRESETS_CHANGED = True
 
 
-def read_local_config(cfg_filename: str) -> bool:
+def read_local_config(ini_filename: str) -> str:
+    """Reads a local config file and updates the presets
+    accordingly. If the file is not found at the given path,
+    the same base name will be tried in the current working
+    directory and then in the calling script's directory.
+    This configuration file must be in the .ini-file format
+    so that it can be parsed with "configparser" from the
+    Python standard library. Any key,value-pair under the
+    section "DHParser" will directly be transferred to the
+    configuration presets. For other sections, the section
+    name will added as a qualifier to the key:
+    "section.key". Thus only values under the "DHParser"
+    section modify the DHParser-configuration while
+    configuration parameters unter other sections are
+    free to be evaluated by the calling script and cannot
+    interfere with DHParser's configuration.
+
+    :ini_filename: the file path and name of the configuration
+        file.
+    :returns:  the file path of the actually read .ini-file
+        or the empty string if no .ini-file with the given
+        name could be found either at the given path, in
+        the current working directory or in the calling
+        script's path.
+    """
     import configparser
     config = configparser.RawConfigParser()
     config.optionxform = lambda option: option
-    if config.read(cfg_filename):
+    if not os.path.exists(ini_filename):
+        # try cfg-file in current working directory next
+        ini_filename = os.path.basename(ini_filename)
+    if not os.path.exists(ini_filename):
+        # try cfg-file in script-direcotry next
+        ini_filename = os.path.abspath(sys.modules['__main__'].__file__)
+    if config.read(ini_filename):
         access_presets()
         for section in config.sections():
-            for variable, value in cfg[section].items():
-                set_preset_value(f"{section}.{variable}", eval(value))
+            if section.lower() == "dhparser":
+                for variable, value in config[section].items():
+                    set_preset_value(f"{variable}", eval(value))
+            else:
+                for variable, value in config[section].items():
+                    set_preset_value(f"{section}.{variable}", eval(value))
         finalize_presets()
-        return True
-    return False
+        return ini_filename
+    return ''
 
 
 class NoDefault:
