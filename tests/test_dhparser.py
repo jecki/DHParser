@@ -22,6 +22,7 @@ limitations under the License.
 
 import os
 import platform
+import random
 import shutil
 import subprocess
 import sys
@@ -62,8 +63,10 @@ class TestDHParserCommandLineTool:
                 os.mkdir(self.dirname)
                 counter = 0
             except FileExistsError:
-                time.sleep(0.5)
+                self.dirname = ''
+                time.sleep(random.random())
                 counter -= 1
+        assert self.dirname
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
         self.python = sys.executable + ' '
 

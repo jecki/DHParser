@@ -34,6 +34,7 @@ import fnmatch
 import inspect
 import json
 import os
+import random
 import sys
 import threading
 import time
@@ -691,8 +692,9 @@ def unique_name(file_name: str) -> str:
     that create and delete files on the disk.
     """
     # return concurrent_ident() + '_' + file_name
-    resolution = 100000
-    name = 'unique_' + str(int(time.time() * resolution)) + '_' + file_name
+    resolution = 1000000
+    unique_nr = int(time.time() * resolution) + random.randint(0, resolution)
+    name = 'unique_' + str(unique_nr) + '_' + file_name
     time.sleep(1.0 / resolution)
     return name
 

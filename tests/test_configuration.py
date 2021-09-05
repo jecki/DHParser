@@ -22,13 +22,15 @@ limitations under the License.
 
 import multiprocessing
 import os
+import shutil
 import sys
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
-    set_preset_value, get_preset_value
+    set_preset_value, get_preset_value, get_config_value, read_local_config
+from DHParser.testing import unique_name
 
 
 def evaluate_presets(flag):
@@ -42,7 +44,6 @@ def evaluate_presets(flag):
 
 
 class TestConfigMultiprocessing:
-
     def test_presets(self):
         """Checks whether changes to CONFIG_PRESET before spawning / forking
         new processes will be present in spawned or forked processes
@@ -59,6 +60,93 @@ class TestConfigMultiprocessing:
         p.join()
         assert flag.value == 1
 
+
+TEST_CFG = """
+[DHParser]
+resume_notices = True
+delimiter_set = {
+        'DEF':        ':=',
+        'OR':         '|',
+        'AND':        '',
+        'ENDL':       ';',
+        'RNG_OPEN':   '{',
+        'RNG_CLOSE':  '}',
+        'RNG_DELIM':  ',',
+        'TIMES':      '*',
+        'RE_LEADIN':  '/',
+        'RE_LEADOUT': '/',
+        'CH_LEADIN':  'ch'
+    }
+
+[project_specific]
+custom_1 = "test1"
+custom_2 = -1
+custom_3 = 3.1415
+custom_4 = [1, 2, 3]
+custom_5 = False
+"""
+
+class TestLocalConfig:
+    def setup(self):
+        self.cwd = os.getcwd()
+        os.chdir(scriptpath)
+        # avoid race-condition
+        counter = 10
+        while counter > 0:
+            try:
+                self.dirname = unique_name('test_dhparser_data')
+                os.mkdir(self.dirname)
+                counter = 0
+            except FileExistsError:
+                self.dirname = ''
+                time.sleep(random.random())
+                counter -= 1
+        assert self.dirname
+        os.mkdir(os.path.join(self.dirname, 'data'))
+
+    def teardown(self):
+        name = self.dirname
+        if os.path.exists(name) and os.path.isdir(name):
+            shutil.rmtree(name)
+        if os.path.exists(name) and not os.listdir(name):
+            os.rmdir(name)
+
+    def test_read_local_config(self):
+        ini_path = os.path.join(self.dirname, 'data', 'test.ini')
+        with open(ini_path, 'w', encoding='utf-8') as f:
+            f.write(TEST_CFG)
+        result = read_local_config('wrong_file_name.ini')
+        assert not result
+        result = read_local_config(ini_path)
+        access_presets()
+        assert get_preset_value('project_specific.custom_1') == 'test1'
+        assert get_preset_value('delimiter_set')['DEF'] == ':='
+        finalize_presets()
+        test_cfg = TEST_CFG.replace(':=', '=').replace('test1', 'test2')
+        old_path = ini_path
+        os.remove(old_path)
+        ini_path = os.path.join(self.dirname, 'test.ini')
+        with open(ini_path, 'w', encoding='utf-8') as f:
+            f.write(test_cfg)
+        assert not os.path.exists(old_path)
+        save = os.getcwd()
+        os.chdir(self.dirname)
+        result = read_local_config(old_path)
+        access_presets()
+        assert get_preset_value('project_specific.custom_1') == 'test2'
+        assert get_preset_value('delimiter_set')['DEF'] == '='
+        finalize_presets()
+        os.chdir(save)
+        os.remove(ini_path)
+        ini_path = os.path.join(scriptpath, 'test.ini')
+        with open(ini_path, 'w', encoding='utf-8') as f:
+            f.write(TEST_CFG)
+        result = read_local_config(ini_path)
+        access_presets()
+        assert get_preset_value('project_specific.custom_1') == 'test1'
+        assert get_preset_value('delimiter_set')['DEF'] == ':='
+        finalize_presets()
+        os.remove(ini_path)
 
 
 if __name__ == "__main__":

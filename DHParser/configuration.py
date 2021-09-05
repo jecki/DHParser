@@ -214,8 +214,9 @@ def read_local_config(ini_filename: str) -> str:
         ini_filename = os.path.basename(ini_filename)
     if not os.path.exists(ini_filename):
         # try cfg-file in script-direcotry next
-        ini_filename = os.path.abspath(sys.modules['__main__'].__file__)
-    if config.read(ini_filename):
+        script_path = os.path.abspath(sys.modules['__main__'].__file__)
+        ini_filename = os.path.join(os.path.dirname(script_path), ini_filename)
+    if os.path.exists(ini_filename) and config.read(ini_filename):
         access_presets()
         for section in config.sections():
             if section.lower() == "dhparser":
@@ -223,7 +224,8 @@ def read_local_config(ini_filename: str) -> str:
                     set_preset_value(f"{variable}", eval(value))
             else:
                 for variable, value in config[section].items():
-                    set_preset_value(f"{section}.{variable}", eval(value))
+                    set_preset_value(f"{section}.{variable}", eval(value),
+                                     allow_new_key=True)
         finalize_presets()
         return ini_filename
     return ''
