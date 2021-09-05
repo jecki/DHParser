@@ -39,12 +39,14 @@ __all__ = ('ALLOWED_PRESET_VALUES',
            'access_presets',
            'finalize_presets',
            'get_preset_value',
+           'get_preset_values',
            'set_preset_value',
            'read_local_config',
            'NO_DEFAULT',
            'THREAD_LOCALS',
            'access_thread_locals',
            'get_config_value',
+           'get_config_values',
            'set_config_value',
            'NEVER_MATCH_PATTERN')
 
@@ -246,6 +248,17 @@ def get_preset_value(key: str, default: Any = NO_DEFAULT):
     return CONFIG_PRESET.get(key, default)
 
 
+def get_preset_values(key_pattern: str) -> Dict:
+    """Returns a dictionary of all presets that match `key_pattern`."""
+    global CONFIG_PRESET, ACCESSING_PRESETS
+    if not ACCESSING_PRESETS:
+        raise AssertionError('Presets must be made accessible with access_presets() first, '
+                             'before they can be read!')
+    import fnmatch
+    return {key: value for key, value in CONFIG_PRESET.items()
+            if fnmatch.fnmatchcase(key, key_pattern)}
+
+
 def access_thread_locals() -> Any:
     """Intitializes (if not done yet) and returns the thread local variable
     store. (Call this function before using THREAD_LOCALS.
@@ -281,6 +294,27 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
             finalize_presets()
             THREAD_LOCALS.config[key] = value
             return value
+
+
+def get_config_values(key_pattern: str) -> Dict:
+    """Returns a dictionary of all configuration entries that match
+    `key_pattern`."""
+    access_presets()
+    presets = get_preset_values(key_pattern)
+    finalize_presets()
+    import fnmatch
+    with access_lock:
+        THREAD_LOCALS = access_thread_locals()
+        try:
+            cfg = THREAD_LOCALS.config
+        except AttributeError:
+            THREAD_LOCALS.config = dict()
+            cfg = THREAD_LOCALS.config
+        cfg_values = {key: value for key, value in cfg.items()
+                      if fnmatch.fnmatchcase(key, key_pattern)}
+        presets.update(cfg_values)
+        cfg.update(presets)
+    return presets
 
 
 def set_config_value(key: str, value: Any):

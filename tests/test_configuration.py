@@ -29,7 +29,8 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
-    set_preset_value, get_preset_value, get_config_value, read_local_config
+    set_preset_value, get_preset_value, get_config_value, read_local_config, \
+    get_config_values
 from DHParser.testing import unique_name
 
 
@@ -147,6 +148,8 @@ class TestLocalConfig:
         assert get_preset_value('delimiter_set')['DEF'] == ':='
         finalize_presets()
         os.remove(ini_path)
+        custom_cfg = get_config_values('project_specific.*')
+        assert list(custom_cfg.values()) == ['test1', -1, 3.1415, [1, 2, 3], False]
 
 
 if __name__ == "__main__":
