@@ -118,7 +118,7 @@ class ts2typeddictGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "458bffcc0fe369284261515990ddf442"
+    source_hash__ = "ccdc74f4fb78b01920c7084672efa969"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_array_ellipsis$|_top_level_assignment$|_top_level_literal$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -168,7 +168,7 @@ class ts2typeddictGrammar(Grammar):
     types.set(Series(type, ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), type))))
     index_signature.set(Series(Series(Drop(Text("[")), dwsp__), identifier, Alternative(Series(Drop(Text(":")), dwsp__), Series(Series(Drop(Text("in")), dwsp__), Series(Drop(Text("keyof")), dwsp__))), type, Series(Drop(Text("]")), dwsp__)))
     declaration.set(Series(Option(qualifier), identifier, Option(optional), Option(Series(Series(Drop(Text(":")), dwsp__), types))))
-    declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(declaration, ZeroOrMore(Series(Series(Drop(Text(";")), dwsp__), declaration)), Option(Series(Series(Drop(Text(";")), dwsp__), map_signature)), Option(Series(Drop(Text(";")), dwsp__)))), Series(Drop(Text("}")), dwsp__)))
+    declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(declaration, ZeroOrMore(Series(Option(Series(Drop(Text(";")), dwsp__)), declaration)), Option(Series(Series(Drop(Text(";")), dwsp__), map_signature)), Option(Series(Drop(Text(";")), dwsp__)))), Series(Drop(Text("}")), dwsp__)))
     document = Series(dwsp__, ZeroOrMore(Alternative(interface, type_alias, namespace, enum, const, Series(declaration, Series(Drop(Text(";")), dwsp__)), _top_level_assignment, _array_ellipsis, _top_level_literal)), EOF)
     root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
     
@@ -340,7 +340,7 @@ class ts2typeddictCompiler(Compiler):
                     return f"class {name}({base_classes}, TypedDict):\n"
                 else:
                     return f"class {name}({base_classes}, "\
-                            "TypedDict, total={total}):\n"
+                           f"TypedDict, total={total}):\n"
         else:
             return f"class {name}(TypedDict, total={total}):\n"
 

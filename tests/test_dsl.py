@@ -133,7 +133,7 @@ class TestCompilerGeneration:
         assert diff.isnumeric()
         # test compiling with a generated compiler suite
         # assert is_filename(self.text_name)
-        errors = compile_on_disk(self.text_name, self.compiler_name)
+        errors = compile_on_disk(self.text_name, compiler_suite=self.compiler_name)
         assert not errors, str(errors)
         assert os.path.exists(self.result_name)
         with open(self.result_name, 'r') as f:

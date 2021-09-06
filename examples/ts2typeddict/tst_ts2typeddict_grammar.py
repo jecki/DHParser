@@ -29,18 +29,18 @@ except ModuleNotFoundError:
     sys.exit(1)
 
 
-def recompile_grammar(grammar_src, force):
+def recompile_grammar(grammar_src, compiler_name, force=False):
     grammar_tests_dir = os.path.join(scriptpath, TEST_DIRNAME)
     testing.create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
-    if not dsl.recompile_grammar(grammar_src, force=force,
+    if not dsl.recompile_grammar(grammar_src, compiler_name, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
         with open('ts2typeddict_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
-    dsl.restore_server_script(grammar_src)
+    # dsl.restore_server_script(grammar_src)
 
 
 def run_grammar_tests(fn_pattern, get_grammar, get_transformer, get_compiler):

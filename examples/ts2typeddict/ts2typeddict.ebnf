@@ -42,7 +42,7 @@ interface   = ["export"] "interface" §identifier [type_parameter]
 extends     = "extends" identifier { "," identifier}
 type_alias  = ["export"] "type" §identifier "=" types ";"
 
-declarations_block = "{"  [declaration { ";" declaration }
+declarations_block = "{"  [declaration { [";"] declaration }
                            [";" map_signature] [";"]] "}"
 declaration = [qualifier] identifier [optional] [":" types]
   qualifier = "readonly"

@@ -414,7 +414,10 @@ def run_compiler(text_or_file: str, compiler_suite: str, fail_when: ErrorCode = 
     return compileDSL(text_or_file, preprocessor(), parser(), ast(), compiler(), fail_when)
 
 
-def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> Iterable[Error]:
+def compile_on_disk(source_file: str,
+                    parser_name: str =  '',
+                    compiler_suite: str = "",
+                    extension: str = ".xml") -> Iterable[Error]:
     """
     Compiles the a source file with a given compiler and writes the
     result to a file.
@@ -429,22 +432,20 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     returns a list of error messages or an empty list if no errors
     occurred.
 
-    Parameters:
-        source_file(str):  The file name of the source text to be
-            compiled.
-        compiler_suite(str):  The file name of the parser/compiler-suite
-            (usually ending with 'Parser.py'), with which the source
-            file shall be compiled. If this is left empty, the source
-            file is assumed to be an EBNF-Grammar that will be compiled
-            with the internal EBNF-Compiler.
-        extension(str):  The result of the compilation (if successful)
-            is written to a file with the same name but a different
-            extension than the source file. This parameter sets the
-            extension.
-
-    Returns:
-        A (potentially empty) list of error or warning messages.
+    :param source_file:  The file name of the source text to be compiled.
+    :param parser_name:  The name of the generated parser. If the empty
+        string is passed, the default name "...Parser.py" will be used.
+    :param compiler_suite:  The file name of the parser/compiler-suite
+        (usually ending with 'Parser.py'), with which the source file
+        shall be compiled. If this is left empty, the source file is
+        assumed to be an EBNF-Grammar that will be compiled with the
+        internal EBNF-Compiler.
+    :param extension:  The result of the compilation (if successful)
+        is written to a file with the same name but a different extension
+        than the source file. This parameter sets the extension.
+    :returns:  A (potentially empty) list of error or warning messages.
     """
+    if not parser_name:  parser_name = rootname + 'Parser.py'
     filepath = os.path.normpath(source_file)
     f = None  # Optional[TextIO]
     with open(source_file, encoding="utf-8") as f:
@@ -480,7 +481,6 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             AST_SECTION, COMPILER_SECTION, END_SECTIONS_MARKER, RX_WHITESPACE
         f = None
         try:
-            parser_name = rootname + 'Parser.py'
             f = open(parser_name, 'r', encoding="utf-8")
             source = f.read()
             sections = split_source(parser_name, source)
@@ -525,9 +525,8 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
         if RX_WHITESPACE.fullmatch(compiler):
             compiler = ebnf_compiler.gen_compiler_skeleton()
 
-        compilerscript = rootname + 'Parser.py'
         try:
-            f = open(compilerscript, 'w', encoding="utf-8")
+            f = open(parser_name, 'w', encoding="utf-8")
             f.write(intro)
             f.write(SECTION_MARKER.format(marker=SYMBOLS_SECTION))
             f.write(imports)
@@ -542,7 +541,7 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
             f.write(SECTION_MARKER.format(marker=END_SECTIONS_MARKER))
             f.write(outro)
         except (PermissionError, FileNotFoundError, IOError) as error:
-            print('# Could not write file "' + compilerscript + '" because of: '
+            print(f'# Could not write file "{parser_name}" because of: '
                   + "\n# ".join(str(error).split('\n)')))
             print(result)
         finally:
@@ -550,9 +549,9 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
                 f.close()
 
         if platform.system() != "Windows":
-            # set file permissions so that the compilerscript can be executed
-            st = os.stat(compilerscript)
-            os.chmod(compilerscript, st.st_mode | stat.S_IEXEC)
+            # set file permissions so that the parser_name can be executed
+            st = os.stat(parser_name)
+            os.chmod(parser_name, st.st_mode | stat.S_IEXEC)
 
     else:
         f = None
@@ -578,27 +577,27 @@ def compile_on_disk(source_file: str, compiler_suite="", extension=".xml") -> It
     return messages
 
 
-def recompile_grammar(ebnf_filename, compiler_name='', force=False,
+def recompile_grammar(ebnf_filename: str,
+                      parser_name: str = '',
+                      force: bool = False,
                       notify: Callable = lambda: None) -> bool:
     """
     Re-compiles an EBNF-grammar if necessary, that is, if either no
     corresponding 'XXXXParser.py'-file exists or if that file is
     outdated.
 
-    Parameters:
-        ebnf_filename(str):  The filename of the ebnf-source of the grammar.
+    :param ebnf_filename:  The filename of the ebnf-source of the grammar.
             In case this is a directory and not a file, all files within
             this directory ending with .ebnf will be compiled.
-        compiler_name(str):  The name of the compiler script. If not given
+    :param parser_name:  The name of the compiler script. If not given
             the ebnf-filename without extension and with the the addition
             of "Parser.py" will be used.
-        force(bool):  If False (default), the grammar will only be
+    :param force:  If False (default), the grammar will only be
             recompiled if it has been changed.
-        notify(Callable):  'notify' is a function without parameters that
+    :param notify:  'notify' is a function without parameters that
             is called when recompilation actually takes place. This can
             be used to inform the user.
-    Returns:
-        bool:  True, if recompilation of grammar has been successful or did
+    :returns: True, if recompilation of grammar has been successful or did
             not take place, because the Grammar hasn't changed since the last
             compilation. False, if the recompilation of the grammar has been
             attempted but failed.
@@ -611,14 +610,14 @@ def recompile_grammar(ebnf_filename, compiler_name='', force=False,
         return success
 
     base, _ = os.path.splitext(ebnf_filename)
-    if not compiler_name:
-        compiler_name = base + 'Parser.py'
+    if not parser_name:
+        parser_name = base + 'Parser.py'
     error_file_name = base + '_ebnf_ERRORS.txt'
     messages = []  # type: Iterable[Error]
-    if (not os.path.exists(compiler_name) or force
-            or grammar_changed(compiler_name, ebnf_filename)):
+    if (not os.path.exists(parser_name) or force
+            or grammar_changed(parser_name, ebnf_filename)):
         notify()
-        messages = compile_on_disk(ebnf_filename)
+        messages = compile_on_disk(ebnf_filename, parser_name)
         if messages:
             # print("Errors while compiling: " + ebnf_filename + '!')
             with open(error_file_name, 'w', encoding="utf-8") as f:
@@ -633,14 +632,21 @@ def recompile_grammar(ebnf_filename, compiler_name='', force=False,
     return True
 
 
-def restore_server_script(ebnf_filename: str, overwrite: bool = False):
+def restore_server_script(ebnf_filename: str,
+                          parser_name: str = '',
+                          server_name: str = '',
+                          overwrite: bool = False):
     """Creates a script for compiling texts adhering to the given grammar
     with a server. Because the server script relies on a parser script,
     a parser scripte will be created, too, if it does not yet exist.
 
-    :var ebnf_filename: The filename of the grammar, from which the servfer
+    :param ebnf_filename: The filename of the grammar, from which the servfer
         script's filename is derived.
-    :var overwrite: If True an existing server script will be overwritten.
+    :param parser_name: The filename of the parser script or the empty string
+        if the default filename shall be used.
+    :param server_name: The filename of the server script of the empty string
+        if the default filename shall be used.
+    :param overwrite: If True an existing server script will be overwritten.
     """
     if os.path.isdir(ebnf_filename):
         for entry in os.listdir(ebnf_filename):
@@ -650,8 +656,10 @@ def restore_server_script(ebnf_filename: str, overwrite: bool = False):
 
     base, _ = os.path.splitext(ebnf_filename)
     name = os.path.basename(base)
-    server_name = base + 'Server.py'
-    compiler_name = base + 'Parser.py'
+    if not server_name:
+        server_name = base + 'Server.py'
+    if not parser_name:
+        parser_name = base + 'Parser.py'
     if not os.path.exists(server_name) or overwrite:
         template = read_template('DSLServer.pyi')
         reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
@@ -659,7 +667,7 @@ def restore_server_script(ebnf_filename: str, overwrite: bool = False):
         with open(serverscript, 'w') as f:
             f.write(template.replace('DSL', name).replace('RELDHPARSERDIR', reldhparserdir))
         if platform.system() != "Windows":
-            # set file permissions so that the compilerscript can be executed
+            # set file permissions so that the server-script can be executed
             st = os.stat(serverscript)
             os.chmod(serverscript, st.st_mode | stat.S_IEXEC)
-    if not os.path.exists(compiler_name):  recompile_grammar(ebnf_filename)
+    if not os.path.exists(parser_name):  recompile_grammar(ebnf_filename, parser_name)
