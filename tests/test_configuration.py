@@ -30,7 +30,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
     set_preset_value, get_preset_value, get_config_value, read_local_config, \
-    get_config_values
+    get_config_values, set_config_value
 from DHParser.testing import unique_name
 
 
@@ -104,8 +104,18 @@ class TestLocalConfig:
                 counter -= 1
         assert self.dirname
         os.mkdir(os.path.join(self.dirname, 'data'))
+        access_presets()
+        self.save_resume_notices = get_preset_value('resume_notices')
+        self.save_delimiter_set = get_preset_value('delimiter_set')
+        finalize_presets()
 
     def teardown(self):
+        access_presets()
+        set_preset_value('resume_notices', self.save_resume_notices)
+        set_preset_value('delimiter_set', self.save_delimiter_set)
+        finalize_presets()
+        set_config_value('resume_notices', self.save_resume_notices)
+        set_config_value('delimiter_set', self.save_delimiter_set)
         name = self.dirname
         if os.path.exists(name) and os.path.isdir(name):
             shutil.rmtree(name)

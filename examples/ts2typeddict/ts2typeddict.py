@@ -807,7 +807,7 @@ if __name__ == "__main__":
     if script_name.endswith('Parser.py'):
         base_path = script_path[:-9]
     else:
-        grammar_path = os.path.splitext(script_path)[0]
+        base_path = os.path.splitext(script_path)[0]
     grammar_path = base_path + '.ebnf'
     parser_update = False
 

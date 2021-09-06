@@ -200,7 +200,7 @@ def read_local_config(ini_filename: str) -> str:
     free to be evaluated by the calling script and cannot
     interfere with DHParser's configuration.
 
-    :ini_filename: the file path and name of the configuration
+    :param ini_filename: the file path and name of the configuration
         file.
     :returns:  the file path of the actually read .ini-file
         or the empty string if no .ini-file with the given
@@ -271,6 +271,16 @@ def access_thread_locals() -> Any:
     return THREAD_LOCALS
 
 
+def _config_dict():
+    THREAD_LOCALS = access_thread_locals()
+    try:
+        cfg = THREAD_LOCALS.config
+    except AttributeError:
+        THREAD_LOCALS.config = dict()
+        cfg = THREAD_LOCALS.config
+    return cfg
+
+
 def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
     """
     Retrieves a configuration value thread-safely.
@@ -280,19 +290,14 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
     :return:     the value
     """
     with access_lock:
-        THREAD_LOCALS = access_thread_locals()
-        try:
-            cfg = THREAD_LOCALS.config
-        except AttributeError:
-            THREAD_LOCALS.config = dict()
-            cfg = THREAD_LOCALS.config
+        cfg = _config_dict()
         try:
             return cfg[key]
         except KeyError:
             access_presets()
             value = get_preset_value(key, default)
             finalize_presets()
-            THREAD_LOCALS.config[key] = value
+            cfg[key] = value
             return value
 
 
@@ -304,12 +309,7 @@ def get_config_values(key_pattern: str) -> Dict:
     finalize_presets()
     import fnmatch
     with access_lock:
-        THREAD_LOCALS = access_thread_locals()
-        try:
-            cfg = THREAD_LOCALS.config
-        except AttributeError:
-            THREAD_LOCALS.config = dict()
-            cfg = THREAD_LOCALS.config
+        cfg = _config_dict()
         cfg_values = {key: value for key, value in cfg.items()
                       if fnmatch.fnmatchcase(key, key_pattern)}
         presets.update(cfg_values)
@@ -327,12 +327,7 @@ def set_config_value(key: str, value: Any):
     :param value:  the value
     """
     with access_lock:
-        THREAD_LOCALS = access_thread_locals()
-        try:
-            cfg = THREAD_LOCALS.config
-        except AttributeError:
-            THREAD_LOCALS.config = dict()
-            cfg = THREAD_LOCALS.config
+        cfg = _config_dict()
         validate_value(key, value)
         cfg[key] = value
 

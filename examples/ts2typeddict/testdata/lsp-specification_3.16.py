@@ -1,15 +1,13 @@
 
 import sys
 from enum import Enum, IntEnum
-from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, TypedDict, Literal
+from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
 
 
-if sys.version_info >= (3, 8):
-    try:
-        from ts2typeddict import TypedDict
-    except ImportError:
-        print("Module ts2typeddict not found. Runtime Type-Validation not available :-(")
-        
+try:
+    from typing import TypedDict, Literal
+except ImportError:
+    from typing_extensions import TypedDict, Literal
 
 
 integer = float
@@ -25,13 +23,13 @@ class Message(TypedDict, total=True):
     jsonrpc: str
 
 
-class RequestMessage(Message, TypedDict, total=False):
+class RequestMessage(Message, TypedDict, total={total}):
     id: Union[int, str]
     method: str
     params: Union[List, object, None]
 
 
-class ResponseMessage(Message, TypedDict, total=False):
+class ResponseMessage(Message, TypedDict, total={total}):
     id: Union[int, str, None]
     result: Union[str, float, bool, object, None]
     error: Optional['ResponseError']
@@ -61,7 +59,7 @@ class ErrorCodes(IntEnum):
     lspReservedErrorRangeEnd = -32800
 
 
-class NotificationMessage(Message, TypedDict, total=False):
+class NotificationMessage(Message, TypedDict, total={total}):
     method: str
     params: Union[List, object, None]
 
@@ -170,7 +168,7 @@ class ChangeAnnotation(TypedDict, total=False):
 ChangeAnnotationIdentifier = str
 
 
-class AnnotatedTextEdit(TextEdit, TypedDict, total=True):
+class AnnotatedTextEdit(TextEdit, TypedDict, total={total}):
     annotationId: ChangeAnnotationIdentifier
 
 
@@ -256,11 +254,11 @@ class TextDocumentItem(TypedDict, total=True):
     text: str
 
 
-class VersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict, total=True):
+class VersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict, total={total}):
     version: int
 
 
-class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict, total=True):
+class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict, total={total}):
     version: Union[int, None]
 
 
@@ -336,7 +334,7 @@ class PartialResultParams(TypedDict, total=False):
 TraceValue = Literal['off', 'messages', 'verbose']
 
 
-class InitializeParams(WorkDoneProgressParams, TypedDict, total=False):
+class InitializeParams(WorkDoneProgressParams, TypedDict, total={total}):
     class ClientInfo_(TypedDict, total=False):
         name: str
         version: Optional[str]
@@ -641,15 +639,15 @@ class WorkspaceSymbolClientCapabilities(TypedDict, total=False):
     tagSupport: Optional[TagSupport_]
 
 
-class WorkspaceSymbolOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class WorkspaceSymbolOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions, TypedDict, total=True):
+class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions, TypedDict, total={total}):
     pass
 
 
-class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     query: str
 
 
@@ -657,15 +655,15 @@ class ExecuteCommandClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class ExecuteCommandOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class ExecuteCommandOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     commands: List[str]
 
 
-class ExecuteCommandRegistrationOptions(ExecuteCommandOptions, TypedDict, total=True):
+class ExecuteCommandRegistrationOptions(ExecuteCommandOptions, TypedDict, total={total}):
     pass
 
 
-class ExecuteCommandParams(WorkDoneProgressParams, TypedDict, total=False):
+class ExecuteCommandParams(WorkDoneProgressParams, TypedDict, total={total}):
     command: str
     arguments: Optional[List[Any]]
 
@@ -745,7 +743,7 @@ class DidOpenTextDocumentParams(TypedDict, total=True):
     textDocument: TextDocumentItem
 
 
-class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions, TypedDict, total=True):
+class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions, TypedDict, total={total}):
     syncKind: TextDocumentSyncKind
 
 
@@ -778,7 +776,7 @@ class SaveOptions(TypedDict, total=False):
     includeText: Optional[bool]
 
 
-class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions, TypedDict, total=False):
+class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions, TypedDict, total={total}):
     includeText: Optional[bool]
 
 
@@ -847,17 +845,17 @@ class CompletionClientCapabilities(TypedDict, total=False):
     contextSupport: Optional[bool]
 
 
-class CompletionOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class CompletionOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     triggerCharacters: Optional[List[str]]
     allCommitCharacters: Optional[List[str]]
     resolveProvider: Optional[bool]
 
 
-class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions, TypedDict, total=True):
+class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions, TypedDict, total={total}):
     pass
 
 
-class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=False):
+class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     context: Optional['CompletionContext']
 
 
@@ -950,15 +948,15 @@ class HoverClientCapabilities(TypedDict, total=False):
     contentFormat: Optional[List[MarkupKind]]
 
 
-class HoverOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class HoverOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions, TypedDict, total=True):
+class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions, TypedDict, total={total}):
     pass
 
 
-class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
+class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total={total}):
     pass
 
 
@@ -985,16 +983,16 @@ class SignatureHelpClientCapabilities(TypedDict, total=False):
     contextSupport: Optional[bool]
 
 
-class SignatureHelpOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class SignatureHelpOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     triggerCharacters: Optional[List[str]]
     retriggerCharacters: Optional[List[str]]
 
 
-class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions, TypedDict, total=True):
+class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions, TypedDict, total={total}):
     pass
 
 
-class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=False):
+class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total={total}):
     context: Optional['SignatureHelpContext']
 
 
@@ -1034,15 +1032,15 @@ class DeclarationClientCapabilities(TypedDict, total=False):
     linkSupport: Optional[bool]
 
 
-class DeclarationOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class DeclarationOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total=True):
+class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     pass
 
 
@@ -1051,15 +1049,15 @@ class DefinitionClientCapabilities(TypedDict, total=False):
     linkSupport: Optional[bool]
 
 
-class DefinitionOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class DefinitionOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions, TypedDict, total=True):
+class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions, TypedDict, total={total}):
     pass
 
 
-class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     pass
 
 
@@ -1068,15 +1066,15 @@ class TypeDefinitionClientCapabilities(TypedDict, total=False):
     linkSupport: Optional[bool]
 
 
-class TypeDefinitionOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class TypeDefinitionOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TypedDict, total=True):
+class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     pass
 
 
@@ -1085,15 +1083,15 @@ class ImplementationClientCapabilities(TypedDict, total=False):
     linkSupport: Optional[bool]
 
 
-class ImplementationOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class ImplementationOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions, TypedDict, total=True):
+class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     pass
 
 
@@ -1101,15 +1099,15 @@ class ReferenceClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class ReferenceOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class ReferenceOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions, TypedDict, total=True):
+class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions, TypedDict, total={total}):
     pass
 
 
-class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     context: 'ReferenceContext'
 
 
@@ -1121,15 +1119,15 @@ class DocumentHighlightClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentHighlightOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class DocumentHighlightOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions, TypedDict, total=True):
+class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     pass
 
 
@@ -1156,15 +1154,15 @@ class DocumentSymbolClientCapabilities(TypedDict, total=False):
     labelSupport: Optional[bool]
 
 
-class DocumentSymbolOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class DocumentSymbolOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     label: Optional[str]
 
 
-class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions, TypedDict, total=True):
+class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
 
 
@@ -1237,16 +1235,16 @@ class CodeActionClientCapabilities(TypedDict, total=False):
     honorsChangeAnnotations: Optional[bool]
 
 
-class CodeActionOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class CodeActionOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     codeActionKinds: Optional[List['CodeActionKind']]
     resolveProvider: Optional[bool]
 
 
-class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions, TypedDict, total=True):
+class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions, TypedDict, total={total}):
     pass
 
 
-class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
     range: Range
     context: 'CodeActionContext'
@@ -1285,15 +1283,15 @@ class CodeLensClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class CodeLensOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class CodeLensOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     resolveProvider: Optional[bool]
 
 
-class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions, TypedDict, total=True):
+class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions, TypedDict, total={total}):
     pass
 
 
-class CodeLensParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class CodeLensParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
 
 
@@ -1312,15 +1310,15 @@ class DocumentLinkClientCapabilities(TypedDict, total=False):
     tooltipSupport: Optional[bool]
 
 
-class DocumentLinkOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class DocumentLinkOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     resolveProvider: Optional[bool]
 
 
-class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions, TypedDict, total=True):
+class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
 
 
@@ -1335,15 +1333,15 @@ class DocumentColorClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentColorOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class DocumentColorOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions, TypedDict, total=True):
+class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentColorParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class DocumentColorParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
 
 
@@ -1359,7 +1357,7 @@ class Color(TypedDict, total=True):
     alpha: float
 
 
-class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
     color: Color
     range: Range
@@ -1375,15 +1373,15 @@ class DocumentFormattingClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentFormattingOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class DocumentFormattingOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions, TypedDict, total=True):
+class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentFormattingParams(WorkDoneProgressParams, TypedDict, total=True):
+class DocumentFormattingParams(WorkDoneProgressParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
     options: 'FormattingOptions'
 
@@ -1400,15 +1398,15 @@ class DocumentRangeFormattingClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class DocumentRangeFormattingOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class DocumentRangeFormattingOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions, TypedDict, total=True):
+class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentRangeFormattingParams(WorkDoneProgressParams, TypedDict, total=True):
+class DocumentRangeFormattingParams(WorkDoneProgressParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
     range: Range
     options: FormattingOptions
@@ -1423,11 +1421,11 @@ class DocumentOnTypeFormattingOptions(TypedDict, total=False):
     moreTriggerCharacter: Optional[List[str]]
 
 
-class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions, TypedDict, total=True):
+class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions, TypedDict, total={total}):
     pass
 
 
-class DocumentOnTypeFormattingParams(TextDocumentPositionParams, TypedDict, total=True):
+class DocumentOnTypeFormattingParams(TextDocumentPositionParams, TypedDict, total={total}):
     ch: str
     options: FormattingOptions
 
@@ -1443,19 +1441,19 @@ class RenameClientCapabilities(TypedDict, total=False):
     honorsChangeAnnotations: Optional[bool]
 
 
-class RenameOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class RenameOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     prepareProvider: Optional[bool]
 
 
-class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, TypedDict, total=True):
+class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, TypedDict, total={total}):
     pass
 
 
-class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
+class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total={total}):
     newName: str
 
 
-class PrepareRenameParams(TextDocumentPositionParams, TypedDict, total=True):
+class PrepareRenameParams(TextDocumentPositionParams, TypedDict, total={total}):
     pass
 
 
@@ -1465,15 +1463,15 @@ class FoldingRangeClientCapabilities(TypedDict, total=False):
     lineFoldingOnly: Optional[bool]
 
 
-class FoldingRangeOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class FoldingRangeOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, TypedDict, total=True):
+class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
 
 
@@ -1495,15 +1493,15 @@ class SelectionRangeClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class SelectionRangeOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class SelectionRangeOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total=True):
+class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
     positions: List[Position]
 
@@ -1517,15 +1515,15 @@ class CallHierarchyClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class CallHierarchyOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class CallHierarchyOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions, TypedDict, total=True):
+class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
+class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total={total}):
     pass
 
 
@@ -1540,7 +1538,7 @@ class CallHierarchyItem(TypedDict, total=False):
     data: Optional[Any]
 
 
-class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     item: CallHierarchyItem
 
 
@@ -1549,7 +1547,7 @@ class CallHierarchyIncomingCall(TypedDict, total=True):
     fromRanges: List[Range]
 
 
-class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     item: CallHierarchyItem
 
 
@@ -1622,7 +1620,7 @@ class SemanticTokensClientCapabilities(TypedDict, total=False):
     multilineTokenSupport: Optional[bool]
 
 
-class SemanticTokensOptions(WorkDoneProgressOptions, TypedDict, total=False):
+class SemanticTokensOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     class Range_1(TypedDict, total=True):
         pass
     class Full_1(TypedDict, total=False):
@@ -1632,11 +1630,11 @@ class SemanticTokensOptions(WorkDoneProgressOptions, TypedDict, total=False):
     full: Union[bool, Full_1, None]
 
 
-class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions, TypedDict, total=True):
+class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
 
 
@@ -1649,7 +1647,7 @@ class SemanticTokensPartialResult(TypedDict, total=True):
     data: List[int]
 
 
-class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
     previousResultId: str
 
@@ -1669,7 +1667,7 @@ class SemanticTokensDeltaPartialResult(TypedDict, total=True):
     edits: List[SemanticTokensEdit]
 
 
-class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     textDocument: TextDocumentIdentifier
     range: Range
 
@@ -1682,15 +1680,15 @@ class LinkedEditingRangeClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class LinkedEditingRangeOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class LinkedEditingRangeOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions, TypedDict, total=True):
+class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions, TypedDict, total={total}):
     pass
 
 
-class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
+class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total={total}):
     pass
 
 
@@ -1703,15 +1701,15 @@ class MonikerClientCapabilities(TypedDict, total=False):
     dynamicRegistration: Optional[bool]
 
 
-class MonikerOptions(WorkDoneProgressOptions, TypedDict, total=True):
+class MonikerOptions(WorkDoneProgressOptions, TypedDict, total={total}):
     pass
 
 
-class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions, TypedDict, total=True):
+class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions, TypedDict, total={total}):
     pass
 
 
-class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
+class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total={total}):
     pass
 
 
