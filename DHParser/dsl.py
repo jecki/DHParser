@@ -445,12 +445,12 @@ def compile_on_disk(source_file: str,
         than the source file. This parameter sets the extension.
     :returns:  A (potentially empty) list of error or warning messages.
     """
-    if not parser_name:  parser_name = rootname + 'Parser.py'
     filepath = os.path.normpath(source_file)
+    rootname = os.path.splitext(filepath)[0]
+    if not parser_name:  parser_name = rootname + 'Parser.py'
     f = None  # Optional[TextIO]
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
-    rootname = os.path.splitext(filepath)[0]
     dhpath = relative_path(os.path.dirname(rootname), DHPARSER_PARENTDIR)
     compiler_name = as_identifier(os.path.basename(rootname))
     if compiler_suite:

@@ -42,7 +42,7 @@ def system(s: str) -> int:
 
 class TestDHParser:
     def test_selftest(self):
-        if os.getcwd().rstrip('/').endswith('/DHParser'):
+        if os.getcwd().replace('\\', '/').rstrip('/').endswith('/DHParser'):
             sys.path.append('./DHParser/scripts/')
         else:
             sys.path.append('../DHParser/scripts/')
