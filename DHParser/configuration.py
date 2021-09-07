@@ -317,7 +317,7 @@ def get_config_values(key_pattern: str) -> Dict:
     return presets
 
 
-def set_config_value(key: str, value: Any):
+def set_config_value(key: str, value: Any, allow_new_key: bool = False):
     """
     Changes a configuration value thread-safely. The configuration
     value will be set only for the current thread. In order to
@@ -328,6 +328,10 @@ def set_config_value(key: str, value: Any):
     """
     with access_lock:
         cfg = _config_dict()
+        if not allow_new_key and key not in cfg and key not in CONFIG_PRESET:
+            raise ValueError(
+                '"%s" is not a valid config variable. Use "allow_new_key=True" to '
+                'add new variables or choose one of %s' % (key, list(cfg.keys())))
         validate_value(key, value)
         cfg[key] = value
 
@@ -444,7 +448,7 @@ ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fi
 # The concrete syntax tree, the abstract syntax tree or both.
 # Possible values are {'ast'}, {'cst'} or {'ast', 'cst'}
 # Default value: empty set
-CONFIG_PRESET['log_syntax_trees'] = set()
+CONFIG_PRESET['log_syntax_trees'] = frozenset()
 
 
 ########################################################################

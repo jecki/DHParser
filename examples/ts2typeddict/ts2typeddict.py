@@ -226,18 +226,20 @@ def transform_ts2typeddict(cst):
 #######################################################################
 
 
-IMPORTS = """
+GENERAL_IMPORTS = """
 import sys
 from enum import Enum, IntEnum
 from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar
+"""
 
+TYPEDDICT_IMPORTS = """
 try:
     from typing import TypedDict, Literal
 except ImportError:
     from typing_extensions import TypedDict, Literal
 """
 
-PEP655_IMPORT = """
+PEP655_IMPORTS = """
 try:
     from typing import NotRequired
 except ImportError:
@@ -270,12 +272,11 @@ class ts2typeddictCompiler(Compiler):
 
     def __init__(self):
         super(ts2typeddictCompiler, self).__init__()
-        self.use_enums = get_config_value('ts2typeddict.UseEnums', True)
-        self.use_py310_type_union = get_config_value('ts2typeddict.UsePEP640TypeUnion', False)
-        # https://www.python.org/dev/peps/pep-0604/
-        if self.use_py310_type_union:  assert sys.version_info >= (3, 10)
-        self.use_py308_literal_type = get_config_value('ts2typeddict.UsePEP584LiteralType', True)
-        self.assume_PEP655 = get_config_value('ts2typeddict.UsePEP655NotRequired', False)
+        self.base_class_name = get_config_value('ts2typeddict.BaseClassName', 'TypedDict')
+        self.use_enums = get_config_value('ts2typeddict.UseEnum', True)
+        self.use_type_union = get_config_value('ts2typeddict.UseTypeUnion', False)
+        self.use_literal_type = get_config_value('ts2typeddict.UseLiteralType', True)
+        self.use_not_required = get_config_value('ts2typeddict.UseNotRequired', False)
 
     def reset(self):
         super().reset()
@@ -312,9 +313,14 @@ class ts2typeddictCompiler(Compiler):
         self.overloaded_type_names = type_aliases & namespaces
         return None
 
-    def finalize(self, result: Any) -> Any:
-        code_blocks = [IMPORTS] if self.tree.tag_name == 'document' else []
-        code_blocks.append(result)
+    def finalize(self, python_code: Any) -> Any:
+        if self.tree.tag_name == 'document':
+            code_blocks = [GENERAL_IMPORTS, TYPEDDICT_IMPORTS]
+            if self.base_class_name == 'TypedDict':
+                code_blocks.append(PEP655_IMPORTS)
+        else:
+            code_blocks = []
+        code_blocks.append(python_code)
         code_blocks.append('')
         cooked = '\n\n'.join(code_blocks)
         return re.sub(r'\n\n+', '\n\n\n', cooked)
@@ -331,19 +337,27 @@ class ts2typeddictCompiler(Compiler):
 
     def render_class_header(self, name: str, base_classes: str) -> str:
         optional_key_list = self.optional_keys.pop()
-        total = not bool(optional_key_list)
-        if base_classes:
-            if base_classes.find('Generic[') >= 0:
-                return f"class {name}({base_classes}):\n"
-            else:
-                if self.assume_PEP655:
-                    return f"class {name}({base_classes}, TypedDict):\n"
+        if self.base_class_name == 'TypedDict':
+            total = not bool(optional_key_list)
+            if base_classes:
+                if base_classes.find('Generic[') >= 0:
+                    return f"class {name}({base_classes}):\n"
                 else:
-                    return f"class {name}({base_classes}, "\
-                           f"TypedDict, total={total}):\n"
+                    if self.use_not_required:
+                        return f"class {name}({base_classes}, TypedDict):\n"
+                    else:
+                        return f"class {name}({base_classes}, "\
+                               f"TypedDict, total={total}):\n"
+            else:
+                if self.use_not_required:
+                    return f"class {name}(TypedDict):\n"
+                else:
+                    return f"class {name}(TypedDict, total={total}):\n"
         else:
-            return f"class {name}(TypedDict, total={total}):\n"
-
+            if base_classes:
+                return f"class {name}({base_classes}, {self.base_class_name}):\n"
+            else:
+                return f"class {name}({self.base_class_name}):\n"
 
     def render_local_classes(self) -> str:
         if self.local_classes[-1]:
@@ -419,12 +433,15 @@ class ts2typeddictCompiler(Compiler):
             T = typename  # substitute typename for type
         if 'optional' in node:
             self.optional_keys[-1].append(identifier)
-            if self.assume_PEP655:
+            if self.use_not_required:
                 T = f"NotRequired[{T}]"
             else:
                 if T.startswith('Union['):
                     if T.find('None') < 0:
                         T = T[:-1] + ', None]'
+                elif T.find('|') >= 0:
+                    if T.find('None') < 0:
+                        T += '|None'
                 else:
                     T = f"Optional[{T}]"
         if self.is_toplevel() and T[0:5] == 'class':
@@ -468,12 +485,12 @@ class ts2typeddictCompiler(Compiler):
                 self.optional_keys.append([])
             else:
                 preface = ''
-            if self.use_py308_literal_type and \
+            if self.use_literal_type and \
                     any(nd[0].tag_name == 'literal' for nd in node.children):
                 assert all(nd[0].tag_name == 'literal' for nd in node.children)
                 return f"Literal[{', '.join(union)}]"
-            elif self.use_py310_type_union:
-                return preface + '| '.join(union)
+            elif self.use_type_union:
+                return preface + '|'.join(union)
             else:
                 if len(union) == 1:
                     return preface + union[0]
@@ -492,7 +509,7 @@ class ts2typeddictCompiler(Compiler):
             # return 'Dict'
         elif typ.tag_name == 'literal':
             literal_typ = typ[0].tag_name
-            if self.use_py308_literal_type:
+            if self.use_literal_type:
                 return self.compile(typ)
             elif literal_typ == 'array':
                 return 'List'
@@ -841,6 +858,12 @@ if __name__ == "__main__":
                         help='Verbose output')
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
                         help='Run batch jobs in a single thread (recommended only for debugging)')
+    parser.add_argument('-c', '--compatibility', nargs=1, action='extend', type=str,
+                        help='Minimal required python version (must be >= 3.6)')
+    parser.add_argument('-b', '--base', nargs=1, action='extend', type=str,
+                        help='Base class name, e.g. TypedDict (default) or BaseModel (pydantic)')
+    parser.add_argument('-p', '--peps', nargs='+', action='extend', type=str,
+                        help='Assume Python-PEPs, e.g. 655 or ~655')
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -849,11 +872,36 @@ if __name__ == "__main__":
     from DHParser.configuration import read_local_config
     read_local_config(os.path.join(workdir, os.path.splitext(script_name)[0] + '.ini'))
 
-    if args.debug is not None:
-        log_dir = 'LOGS'
-        set_config_value('history_tracking', True)
-        set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', {'cst', 'ast'})  # don't use a set literal, here
+    if args.debug or args.compatibility or args.base:
+        access_presets()
+        if args.debug is not None:
+            log_dir = 'LOGS'
+            set_preset_value('history_tracking', True)
+            set_preset_value('resume_notices', True)
+            set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here
+        if args.compatibility:
+            version_info = tuple(int(part) for part in args.compatibility[0].split('.'))
+            if version_info >= (3, 10):
+                set_preset_value('ts2typeddict.UseTypeUnion', True, allow_new_key=True)
+        if args.base:  set_preset_value('ts2typeddict.BaseClassName', args.base[0])
+        if args.peps:
+            all_peps = {'435', '584', '604', '655', '~435', '~584', '~604', '~655'}
+            if not all(pep in all_peps for pep in args.peps):
+                print(f'Unsupported PEPs specified: {args.peps}\n'
+                      'Allowed PEP arguments are:\n'
+                      '  435  - use Enums (Python 3.4)\n'
+                      '  604  - use type union (Python 3.10)\n'
+                      '  584  - use Literal type (Python 3.8)\n'
+                      '  655  - use NotRequired instead of Optional\n')
+                sys.exit(1)
+            for pep in args.peps:
+                kwargs= {'value': pep[0] != '~', 'allow_new_key': True}
+                if pep == '435':  set_preset_value('ts2typeddict.UseEnum', **kwargs)
+                if pep == '584':  set_preset_value('ts2typeddict.UseLiteralType', **kwargs)
+                if pep == '604':  set_preset_value('ts2typeddict.TypeUnion', **kwargs)
+                if pep == '655':  set_preset_value('ts2typeddict.UseNotRequired', **kwargs)
+        finalize_presets()
+
     start_logging(log_dir)
 
     if args.singlethread:

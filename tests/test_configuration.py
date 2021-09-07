@@ -149,7 +149,8 @@ class TestLocalConfig:
         finalize_presets()
         os.chdir(save)
         os.remove(ini_path)
-        ini_path = os.path.join(scriptpath, 'test.ini')
+        ini_path = 'test.ini' if os.getcwd().endswith(scriptpath) \
+            else os.path.join(scriptpath, 'test.ini')
         with open(ini_path, 'w', encoding='utf-8') as f:
             f.write(TEST_CFG)
         result = read_local_config(ini_path)
