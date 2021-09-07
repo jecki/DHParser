@@ -11,7 +11,7 @@ DEBUG = True
 TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)
-dhparserdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
+dhparserdir = os.path.abspath(os.path.join(scriptpath, '../..', '..'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparserdir not in sys.path:
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     else:
         recompile_grammar(os.path.join(scriptpath, 'ts2dataclass.ebnf'),
                           force=False)
-        sys.path.append('.')
+        sys.path.append('')
         from ts2dataclassParser import get_grammar, get_transformer, get_compiler
         error_report = run_grammar_tests(arg, get_grammar, get_transformer, get_compiler)
         if error_report:

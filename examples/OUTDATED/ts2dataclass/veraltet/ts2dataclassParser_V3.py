@@ -19,7 +19,7 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../../..'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
@@ -323,8 +323,8 @@ class ts2dataclassCompiler(Compiler):
                     del fields[name]
             if not fields:
                 del self.referred_objects[obj]
-        # code_blocks.append(self.serialize_references())
-        # code_blocks.append(self.serialize_defaults())
+        code_blocks.append(self.serialize_references())
+        code_blocks.append(self.serialize_defaults())
         # code_blocks.append('')
         # clist = [('\n   ' + C) if i % 3 == 0 else C
         #          for i, C in enumerate(self.base_classes.keys())]
@@ -354,14 +354,13 @@ class ts2dataclassCompiler(Compiler):
             #     else:
             #         return f"class {name}(TypedDict, optional_keys={{{optional_keys}}}):\n"
             # else:
-            total = not bool(optional_key_list)
             if base_classes:
                 if base_classes.find('Generic[') >= 0:
                     return f"class {name}({base_classes}):\n"
                 else:
-                    return f"class {name}({base_classes}, TypedDict, total={total}):\n"
+                    return f"class {name}({base_classes}, total=True):\n"
             else:
-                return f"class {name}(TypedDict, total={total}):\n"
+                return f"class {name}(TypedDict, total=True):\n"
         else:
             if base_classes:
                 return f"class {name}({base_classes}):\n"
@@ -454,11 +453,7 @@ class ts2dataclassCompiler(Compiler):
         if 'optional' in node:
             self.default_values.setdefault(self.qualified_obj_name(), {})[identifier] = None
             self.optional_keys[-1].append(identifier)
-            if T.startswith('Union['):
-                if T.find('None') < 0:
-                    T = T[:-1] + ', None]'
-            else:
-                T = f"Optional[{T}]"
+            T = f"Optional[{T}]"
         if self.is_toplevel() and T[0:5] == 'class':
             preface = self.render_local_classes()
             self.local_classes.append([])

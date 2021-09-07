@@ -282,7 +282,7 @@ def run_server(host, port, log_path=None):
     else:  set_start_method('spawn')
 
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
-    dhparserdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
+    dhparserdir = os.path.abspath(os.path.join(scriptpath, '../..', '..'))
     if scriptpath not in sys.path:
         sys.path.append(scriptpath)
     if dhparserdir not in sys.path:
