@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""tst_ts2typeddict_grammar.py - runs the unit tests for the ts2typeddict-grammar
+"""tst_ts2python_grammar.py - runs the unit tests for the ts2python-grammar
 """
 
 import os
@@ -37,7 +37,7 @@ def recompile_grammar(grammar_src, compiler_name, force=False):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('ts2typeddict_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        with open('ts2python_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
     # dsl.restore_server_script(grammar_src)
@@ -75,11 +75,11 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, 'ts2typeddict.ebnf'),
-                          os.path.join(scriptpath, 'ts2typeddict.py'),
+        recompile_grammar(os.path.join(scriptpath, 'ts2python.ebnf'),
+                          os.path.join(scriptpath, 'ts2python.py'),
                           force=False)
         sys.path.append('.')
-        from ts2typeddict import get_grammar, get_transformer, get_compiler
+        from ts2python import get_grammar, get_transformer, get_compiler
         error_report = run_grammar_tests(arg, get_grammar, get_transformer, get_compiler)
         if error_report:
             print('\n')

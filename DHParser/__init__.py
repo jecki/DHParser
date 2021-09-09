@@ -19,7 +19,7 @@ permissions and limitations under the License.
 # Flat namespace for the DHParser Package. Is this a good idea...?
 
 import sys
-assert sys.version_info >= (3, 5, 3), "DHParser requires at least Python-Version 3.5.3!"
+assert sys.version_info >= (3, 6, 0), "DHParser requires at least Python-Version 3.6!"
 
 from .compile import *
 from .configuration import *
@@ -58,7 +58,13 @@ __all__ = (compile.__all__ +
            versionnumber.__all__)
 
 name = "DHParser"
-__author__ = "Eckhart Arnold <arnold@badw.de>"
-__copyright__ = "http://www.apache.org/licenses/LICENSE-2.0"
+__title__ = "DHParser"
+__description__ = "Construction-Kit for Domain Specific Languages"
+__url__ = 'https://gitlab.lrz.de/badw-it/DHParser'
+__uri__ = __url__
+__author__ = "Eckhart Arnold"
+__email__ = "eckhart.arnold@posteo.de"
+__license__ = "http://www.apache.org/licenses/LICENSE-2.0"
+__copyright__ = "Copyright (c) 2016-2021 Eckhart Arnold"
 # __all__ = ['toolkit', 'stringview', 'error', 'syntaxtree', 'preprocess', 'parse',
 # 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber', 'configuration']

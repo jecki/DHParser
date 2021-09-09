@@ -16,4 +16,5 @@
 # permissions and limitations under the License.
 
 __all__ = ('__version__',)
-__version__ = '0.9.8'  # + '_dev' + str(os.stat(__file__).st_mtime)
+__version__ = '0.9.8'
+__version_info__ = tuple(int(part) for part in __version__.split('.'))

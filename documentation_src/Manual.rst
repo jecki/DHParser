@@ -123,9 +123,6 @@ interact with the other modules directly.
 :py:mod:`toolkit` - various little helper functions for DHParser. Usually,
     there is no need to call any of these directly.
 
-:py:mod:`versionnumber.py` - this modules contains merely the version-number
-    of the DHParser-package.
-
 
 .. _pyparsing: https://github.com/pyparsing/pyparsing/
 .. _lark: https://github.com/lark-parser/lark

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""ts2typeddictParser.py - compiles typescript dataclasses to Python
+"""ts2python.py - compiles typescript dataclasses to Python
         TypedDicts <https://www.python.org/dev/peps/pep-0589/>
 
 Copyright 2021  by Eckhart Arnold (arnold@badw.de)
@@ -86,17 +86,17 @@ RE_INCLUDE = NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 
 
-def ts2typeddictTokenizer(original_text) -> Tuple[str, List[Error]]:
+def ts2pythonTokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 
 def preprocessor_factory() -> PreprocessorFunc:
-    # below, the second parameter must always be the same as ts2typeddictGrammar.COMMENT__!
+    # below, the second parameter must always be the same as ts2pythonGrammar.COMMENT__!
     find_next_include = gen_find_include_func(RE_INCLUDE, '(?:\\/\\/.*)|(?:\\/\\*(?:.|\\n)*?\\*\\/)')
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor(ts2typeddictTokenizer)
+    tokenizing_prep = make_preprocessor(ts2pythonTokenizer)
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
@@ -109,8 +109,8 @@ get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 #
 #######################################################################
 
-class ts2typeddictGrammar(Grammar):
-    r"""Parser for a ts2typeddict source file.
+class ts2pythonGrammar(Grammar):
+    r"""Parser for a ts2python source file.
     """
     declaration = Forward()
     declarations_block = Forward()
@@ -118,7 +118,7 @@ class ts2typeddictGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "ccdc74f4fb78b01920c7084672efa969"
+    source_hash__ = "c2b9d066338a8ee6013115ce09acfa55"
     disposable__ = re.compile('INT$|NEG$|FRAC$|DOT$|EXP$|EOF$|_array_ellipsis$|_top_level_assignment$|_top_level_literal$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -173,9 +173,9 @@ class ts2typeddictGrammar(Grammar):
     root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
     
 
-_raw_grammar = ThreadLocalSingletonFactory(ts2typeddictGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(ts2pythonGrammar, ident=1)
 
-def get_grammar() -> ts2typeddictGrammar:
+def get_grammar() -> ts2pythonGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
@@ -188,7 +188,7 @@ def get_grammar() -> ts2typeddictGrammar:
         pass
     return grammar
     
-def parse_ts2typeddict(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_ts2python(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -198,24 +198,24 @@ def parse_ts2typeddict(document, start_parser = "root_parser__", *, complete_mat
 #
 #######################################################################
 
-ts2typeddict_AST_transformation_table = {
-    # AST Transformations for the ts2typeddict-grammar
+ts2python_AST_transformation_table = {
+    # AST Transformations for the ts2python-grammar
     # "<": flatten,
     ":Text": change_tag_name('TEXT')
     # "*": replace_by_single_child
 }
 
 
-def ts2typeddictTransformer() -> TransformerCallable:
+def ts2pythonTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=ts2typeddict_AST_transformation_table.copy())
+    return partial(traverse, processing_table=ts2python_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(ts2typeddictTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(ts2pythonTransformer, ident=1)
 
 
-def transform_ts2typeddict(cst):
+def transform_ts2python(cst):
     get_transformer()(cst)
 
 
@@ -249,9 +249,9 @@ except ImportError:
         NotRequired = Optional
         if sys.version_info >= (3, 8):
             try:
-                from ts2typeddict.validation import TypedDict
+                from ts2python.validation import TypedDict
             except ImportError:
-                print("Module ts2typeddict not found. Only coarse-grained " 
+                print("Module ts2python not found. Only coarse-grained " 
                       "type-validation of TypedDicts possible")        
 """
 
@@ -266,17 +266,17 @@ def to_varname(typename: str) -> str:
     return typename[0].lower() + (typename[1:-1] if typename[-1:] == '_' else typename[1:])
 
 
-class ts2typeddictCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a ts2typeddict source file.
+class ts2pythonCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a ts2python source file.
     """
 
     def __init__(self):
-        super(ts2typeddictCompiler, self).__init__()
-        self.base_class_name = get_config_value('ts2typeddict.BaseClassName', 'TypedDict')
-        self.use_enums = get_config_value('ts2typeddict.UseEnum', True)
-        self.use_type_union = get_config_value('ts2typeddict.UseTypeUnion', False)
-        self.use_literal_type = get_config_value('ts2typeddict.UseLiteralType', True)
-        self.use_not_required = get_config_value('ts2typeddict.UseNotRequired', False)
+        super(ts2pythonCompiler, self).__init__()
+        self.base_class_name = get_config_value('ts2python.BaseClassName', 'TypedDict')
+        self.use_enums = get_config_value('ts2python.UseEnum', True)
+        self.use_type_union = get_config_value('ts2python.UseTypeUnion', False)
+        self.use_literal_type = get_config_value('ts2python.UseLiteralType', True)
+        self.use_not_required = get_config_value('ts2python.UseNotRequired', False)
 
     def reset(self):
         super().reset()
@@ -667,10 +667,10 @@ class ts2typeddictCompiler(Compiler):
         return identifier
 
 
-get_compiler = ThreadLocalSingletonFactory(ts2typeddictCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(ts2pythonCompiler, ident=1)
 
 
-def compile_ts2typeddict(ast):
+def compile_ts2python(ast):
     return get_compiler()(ast)
 
 
@@ -848,7 +848,7 @@ if __name__ == "__main__":
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a ts2typeddict-file and shows its syntax-tree.")
+    parser = ArgumentParser(description="Parses a ts2python-file and shows its syntax-tree.")
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')
@@ -882,8 +882,8 @@ if __name__ == "__main__":
         if args.compatibility:
             version_info = tuple(int(part) for part in args.compatibility[0].split('.'))
             if version_info >= (3, 10):
-                set_preset_value('ts2typeddict.UseTypeUnion', True, allow_new_key=True)
-        if args.base:  set_preset_value('ts2typeddict.BaseClassName', args.base[0])
+                set_preset_value('ts2python.UseTypeUnion', True, allow_new_key=True)
+        if args.base:  set_preset_value('ts2python.BaseClassName', args.base[0])
         if args.peps:
             all_peps = {'435', '584', '604', '655', '~435', '~584', '~604', '~655'}
             if not all(pep in all_peps for pep in args.peps):
@@ -896,10 +896,10 @@ if __name__ == "__main__":
                 sys.exit(1)
             for pep in args.peps:
                 kwargs= {'value': pep[0] != '~', 'allow_new_key': True}
-                if pep == '435':  set_preset_value('ts2typeddict.UseEnum', **kwargs)
-                if pep == '584':  set_preset_value('ts2typeddict.UseLiteralType', **kwargs)
-                if pep == '604':  set_preset_value('ts2typeddict.TypeUnion', **kwargs)
-                if pep == '655':  set_preset_value('ts2typeddict.UseNotRequired', **kwargs)
+                if pep == '435':  set_preset_value('ts2python.UseEnum', **kwargs)
+                if pep == '584':  set_preset_value('ts2python.UseLiteralType', **kwargs)
+                if pep == '604':  set_preset_value('ts2python.TypeUnion', **kwargs)
+                if pep == '655':  set_preset_value('ts2python.UseNotRequired', **kwargs)
         finalize_presets()
 
     start_logging(log_dir)

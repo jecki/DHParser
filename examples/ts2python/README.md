@@ -1,10 +1,10 @@
-# ts2typedict
+# ts2python
 
 A transpiler from TypeScript-Interface-definitions to TypedDict classes.
 
 ## License
 
-ts2dataclass is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
+ts2python is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
 
 Copyright 2021 Eckhart Arnold <arnold@badw.de>, Bavarian Academy of Sciences and Humanities
 
@@ -38,14 +38,14 @@ defines the structure of the JSON-data exchanged between client
 and server with Typescript-Interfaces.
 
 In order to enable structural validation on the Python-side, 
-ts2typeddict transpiles the typescript-interface definitions
+ts2python transpiles the typescript-interface definitions
 to Python-[TypedDicts](https://www.python.org/dev/peps/pep-0589/).
 
 ## Installation
 
-ts2typeddict can be installed from the command line with the command:
+ts2python can be installed from the command line with the command:
 
-    # pip install ts2typeddict
+    # pip install ts2python
 
 ts2typedict requires the parsing-expression-grammar-framwork DHParser
 which will automatically be installed as a dependency by 
@@ -55,9 +55,9 @@ to run. (If there is any interest, I might backport it to Python 3.6.)
 ## Usage
 
 In order to generate TypedDict-classes from Typescript-Interfaces,
-run `ts2typeddict` on the Typescript-Interface definitions:
+run `ts2python` on the Typescript-Interface definitions:
 
-    # ts2typeddict interface_definitions.ts
+    # ts2python interface_definitions.ts
 
 This generates a .py-file in same directory as the source
 file that contains the typescript classes and can simpy be 
