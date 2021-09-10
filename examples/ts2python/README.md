@@ -53,11 +53,23 @@ ts2python can be installed from the command line with the command:
 
     # pip install ts2python
 
-ts2python requires the parsing-expression-grammar-framwork DHParser
+ts2python requires the parsing-expression-grammar-framwork 
+[DHParser](https://gitlab.lrz.de/badw-it/DHParser)
 which will automatically be installed as a dependency by 
 the `pip`-command. ts2python requires at least Python Version 3.8
 to run. (If there is any interest, I might backport it to Python 3.6.)
-The Python-code it produces is backwards compatible down to Python 3.6.  
+However, the Python-code it produces is backwards compatible 
+down to Python 3.6, if the 
+[typing extensions](https://pypi.org/project/typing-extensions/) 
+have been installed.
+
+For a demonstration how the TypeScript-Interfaces are transpiled
+to Python-code, run the `demo.sh`-script (or `demo.bat` on Windows)
+in the "demo"-sub-directory or the ts2python-directory. 
+Or, run the `tst_ts2python_gramm.py` in the ts2python-directory
+and look up the grammar-test-reports in the "REPORT"-sub-directory 
+of the "test_grammar"-subdirectory.
+
 
 ## Usage
 
@@ -348,6 +360,26 @@ Resulting Python Enum:
         Warning = 2
         Information = 3
         Hint = 4
+
+For some reason, which I do not know, `typing.TypeDict` does not work
+in combination with `typing.Generic`. Thus, interfaces containing
+generic types will, for the time being, be transpiled to plain classes:
+
+    interface ProgressParams<T> {
+        token: ProgressToken;
+        value: T;
+    }
+
+becomes:
+
+    T = TypeVar('T')
+    class ProgressParams(Generic[T]):
+        token: ProgressToken
+        value: 'T'
+
+(`TypedDict` can be added to the list of base classes manually,
+however, if the `TypedDict`-Shim from the 
+`ts2typeddict.validation`-module is used. See below.) 
 
 
 ## Validation
