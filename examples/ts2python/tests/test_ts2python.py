@@ -175,6 +175,22 @@ class TestValidation:
             pass
 
 
+class TestOptions:
+    def setup(self):
+        sys.path.append(os.path.join('..', '..'))
+
+    def teardown(self):
+        if sys.path[-1].replace('\\', '/') == '../..':
+            sys.path.pop()
+
+    def test_different_settings(self):
+        from ts2python import ts2python
+        from DHParser.configuration import set_config_value
+        set_config_value('ts2python.UseNotRequired', True, allow_new_key=True)
+        code, _ = ts2python.compile_src(TEST_DATA)
+        assert code.find('NotRequired[') >= 0
+
+
 class TestScriptCall:
     def setup(self):
         with open('testdata.ts', 'w', encoding='utf-8') as f:
@@ -182,7 +198,7 @@ class TestScriptCall:
 
     def teardown(self):
         if os.path.exists('testdata.ts'):
-            os.remove('testdata.ts')
+           os.remove('testdata.ts')
         if os.path.exists('testdata.py'):
             os.remove('testdata.py')
 
@@ -193,8 +209,12 @@ class TestScriptCall:
         assert os.path.exists('testdata.py')
         result = subprocess.run(['python', 'testdata.py'])
         assert result.returncode == 0
-        result = subprocess.run(['python', cmd, '-d attr.s', 'testdata.ts'])
-        assert result.returncode == 0
+        # result = subprocess.run(['python', cmd, '-d attr.s', 'testdata.ts'])
+        # assert result.returncode == 0
+        # result = subprocess.run(['python', cmd, '-b pydantic.BaseModel', 'testdata.ts'])
+        # assert result.returncode == 0
+        # result = subprocess.run(['python', cmd, 'testdata.ts', '-p 655'])
+        # assert result.returncode == 0
 
 
 if __name__ == "__main__":

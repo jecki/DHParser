@@ -1,6 +1,6 @@
 # ts2python
 
-A transpiler from TypeScript-Interface-definitions to TypedDict classes.
+A transpiler from TypeScript-Interface-definitions to Python data structure definitions, e.g. TypedDict.
 
 ## License
 
@@ -39,7 +39,13 @@ and server with Typescript-Interfaces.
 
 In order to enable structural validation on the Python-side, 
 ts2python transpiles the typescript-interface definitions
-to Python-[TypedDicts](https://www.python.org/dev/peps/pep-0589/).
+to Python-data structure definitions, primarily, 
+[TypedDicts](https://www.python.org/dev/peps/pep-0589/),
+but with some postprocessing it can also be adjusted to
+other popular models for records or data structures in
+Python, e.g.
+[pydantic](https://pydantic-docs.helpmanual.io/)-Classes
+and the like.
 
 ## Installation
 
@@ -47,9 +53,9 @@ ts2python can be installed from the command line with the command:
 
     # pip install ts2python
 
-ts2typedict requires the parsing-expression-grammar-framwork DHParser
+ts2python requires the parsing-expression-grammar-framwork DHParser
 which will automatically be installed as a dependency by 
-the `pip`-command. ts2typedict requires at least Python Version 3.8
+the `pip`-command. ts2python requires at least Python Version 3.8
 to run. (If there is any interest, I might backport it to Python 3.6.)
 
 ## Usage
@@ -57,13 +63,88 @@ to run. (If there is any interest, I might backport it to Python 3.6.)
 In order to generate TypedDict-classes from Typescript-Interfaces,
 run `ts2python` on the Typescript-Interface definitions:
 
-    # ts2python interface_definitions.ts
+    # ts2python interfaces.ts
 
 This generates a .py-file in same directory as the source
-file that contains the typescript classes and can simpy be 
+file that contains the TypedDict-classes and can simpy be 
 imported in Python-Code:
 
     >>> from interface_definitions import *
 
+Other data-representation models than TypedDict can be supported
+with the `--base` and `--decorator`-options, e.g.
+
+    >>> ts2python --base pydantic.BaseModel interfaces.ts
+
+or:
+
+    >>> ts2python --decorator attr.s interfaces.ts
+
+Presently, ts2python does only offer very rudimentary support
+for other models than TypedDict. So, before it can be used, 
+further adjustments to the generated file are necessary when
+using data models other than TypedDict.
+
+## Mapping of Typescript-Types to Python-Types
+
+### Mapping of Interfaces
+
+Basically, Typescript-Interfaces are mapped to Python-classes 
+and the fields of an interface are mapped to a class attribute.
+Thus,
+
+    interface Message {
+        jsonrpc: string;
+    }
+
+becomes:
+
+    class Message(TypedDict, total=True):
+        jsonrpc: str
+
+ts2python uses TypedDict as base class per default and sets the
+TypedDict total-paramter to `True`, if no fields are optional
+and to `False` otherwise. 
+
+Optional fields of a TypeScript-Interface are mapped to `Optional`-types
+in Python or, what amounts to the same to `Union`-types that include 
+`None` as one of the alternative types of the union. Thus,
+
+    interface RequestMessage extends Message {
+        id: integer | string;
+        method: string;
+        params?: array | object;
+    }
+
+becomes:
+
+    class RequestMessage(Message, TypedDict, total=False):
+        id: Union[int, str]
+        method: str
+        params: Union[List, Dict, None]
+
+Here `Optional`-types are understood as attributes that need
+not be present in the dictionary. This runs contrary
+the standard semantics of `Optional`-types in Python, which 
+requires attributes annotated with `Optional` to always be present
+although they may contain the value `None`. In fact, this non-standard 
+interpretation of `Optional` implements one of the rejected ways of 
+marking individual TypedDict items as not required in PEP 655.
+
+However, since as of Python version 3.9 PEP 655 has not yet been
+implemented, abusing `Optional` for this purpose appears to be
+a pragmatic solution that in connection with setting the parameter
+`total=False` plays well-enough with static type-checkers. Unless
+your code using ts2python-transpiled TypedDicts does not assume
+attibutes with `Optional` type to be present, there won't be a problem.
+(Still, it is possible, to enforce PEP 655 by calling `ts2python`
+with the parameter `--p 655`, in which case `NotRequired` will be
+used instead of optional.)
+
+
+
 ## Validation
 
+With TypedDict, any static type checker that already support 
+TypedDicts can be leveraged to check the classes generated
+by ts2python. However, 
