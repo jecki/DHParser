@@ -57,6 +57,7 @@ ts2python requires the parsing-expression-grammar-framwork DHParser
 which will automatically be installed as a dependency by 
 the `pip`-command. ts2python requires at least Python Version 3.8
 to run. (If there is any interest, I might backport it to Python 3.6.)
+The Python-code it produces is backwards compatible down to Python 3.6.  
 
 ## Usage
 
