@@ -24,7 +24,15 @@ permissions and limitations under the License.
 """
 
 
-from typing import _GenericAlias, _SpecialForm
+import functools
+import sys
+from typing import _GenericAlias, _SpecialForm, Any, Union, Dict, Tuple, \
+    Iterable, Callable, get_type_hints
+try:
+    from typing import ForwardRef
+except ImportError:
+    from typing import _ForwardRef  # Python 3.6 compatibility
+    ForwardRef = _ForwardRef
 from DHParser.externallibs.typing_extensions import Generic, ClassVar, \
     Final, Protocol, NoReturn, TypeVar, TypedDict, PEP_560, get_origin
 
