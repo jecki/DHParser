@@ -139,8 +139,214 @@ your code using ts2python-transpiled TypedDicts does not assume
 attibutes with `Optional` type to be present, there won't be a problem.
 (Still, it is possible, to enforce PEP 655 by calling `ts2python`
 with the parameter `--p 655`, in which case `NotRequired` will be
-used instead of optional.)
+used instead of optional.
 
+Since static validation relies on the `total`-parameter it will not
+capture missing required attributes in TypedDicts that contian
+both required and optional fields. Runtime-Validation by ts2python
+will still catch such errors (see Validation, below)
+
+### Mapping of field types
+
+For most field types the mapping is fairly straight forward:
+
+    Typscript type | Python type
+    ----------------------------    
+    number         | float
+    integer        | int
+    boolean        | bool
+    string         | str
+    null           | None
+    unknown        | Any
+    any            | any
+    array          | list
+    object         | dict
+
+For some field types, the Python-counterpart is less obvious.
+Literal types are naturally converted using `Literal`. For Python-
+Versions < 3.8, the `typing_extensions`-module must be present to
+provide the `Literal`-type:
+
+    export type ResourceOperationKind = 'create' | 'rename' | 'delete';
+
+will be converted to:
+
+    ResourceOperationKind = Literal['create', 'rename', 'delete']
+
+Enumerations can also more or less directly be transpiled to
+Python-Enums. Thus,
+
+    export enum FoldingRangeKind {
+        Comment = 'comment',
+        Imports = 'imports',
+        Region = 'region'
+    }
+
+becomes:
+
+    class FoldingRangeKind(Enum):
+        Comment = 'comment'
+        Imports = 'imports'
+        Region = 'region'
+
+Map signatures are simply transpiled to dictionaries, dropping
+the identifier of the index signature. Thus,
+
+    export interface WorkspaceEdit {
+        changes?: { [uri: DocumentUri]: TextEdit[]; };
+    
+        documentChanges?: (
+            TextDocumentEdit[] |
+            (TextDocumentEdit | CreateFile | RenameFile | DeleteFile)[]
+        );
+    
+        changeAnnotations?: {
+            [id: string /* ChangeAnnotationIdentifier */]: ChangeAnnotation;
+        };
+    }
+
+becomes:
+
+    class WorkspaceEdit(TypedDict, total=False):
+        changes: Optional[Dict['DocumentUri', List['TextEdit']]]
+        documentChanges: Union[
+            List['TextDocumentEdit'], 
+            List[Union['TextDocumentEdit', 'CreateFile', 'RenameFile', 'DeleteFile']], 
+            None]
+        changeAnnotations: Optional[Dict[str, 'ChangeAnnotation']]
+
+Likewise, tuple types are transpiled to tuple-types.
+
+Typescript:
+
+    export interface ParameterInformation {
+        label: string | [uinteger, uinteger];
+        documentation?: string | MarkupContent;
+    }
+
+Python:
+
+    class ParameterInformation(TypedDict, total=False):
+        label: Union[str, Tuple[int, int]]
+        documentation: Union[str, 'MarkupContent', None]
+
+A bit more complicated is the case of anonymous interfaces
+in TypeScript: 
+
+    interface InitializeParams extends WorkDoneProgressParams {
+        processId: integer | null;
+        clientInfo?: {
+            name: string;
+            version?: string;
+        };
+        locale?: string;
+        rootPath?: string | null;
+        rootUri: DocumentUri | null;
+        initializationOptions?: any;
+        capabilities: ClientCapabilities;
+        trace?: TraceValue;
+        workspaceFolders?: WorkspaceFolder[] | null;
+    }
+
+In order to transfer this to Python a local class is defined
+and the fields name with a capitalized first letter and 
+appended underscore is used as name for the local class:
+
+    class InitializeParams(WorkDoneProgressParams, TypedDict, total=False):
+        class ClientInfo_(TypedDict, total=False):
+            name: str
+            version: Optional[str]
+        processId: Union[int, None]
+        clientInfo: Optional[ClientInfo_]
+        locale: Optional[str]
+        rootPath: Union[str, None]
+        rootUri: Union['DocumentUri', None]
+        initializationOptions: Optional[Any]
+        capabilities: 'ClientCapabilities'
+        trace: Optional['TraceValue']
+        workspaceFolders: Union[List['WorkspaceFolder'], None]
+
+This works also for nested local interfaces:
+
+    interface SemanticTokensClientCapabilities {
+        dynamicRegistration?: boolean;
+        requests: {
+            range?: boolean | {
+            };
+            full?: boolean | {
+                delta?: boolean;
+            };
+        };
+        tokenTypes: string[];
+        tokenModifiers: string[];
+        formats: TokenFormat[];
+        overlappingTokenSupport?: boolean;
+        multilineTokenSupport?: boolean;
+    }
+
+becomes:
+
+    class SemanticTokensClientCapabilities(TypedDict, total=False):
+        class Requests_(TypedDict, total=False):
+            class Range_1(TypedDict, total=True):
+                pass
+            class Full_1(TypedDict, total=False):
+                delta: Optional[bool]
+            range: Union[bool, Range_1, None]
+            full: Union[bool, Full_1, None]
+        dynamicRegistration: Optional[bool]
+        requests: Requests_
+        tokenTypes: List[str]
+        tokenModifiers: List[str]
+        formats: List['TokenFormat']
+        overlappingTokenSupport: Optional[bool]
+        multilineTokenSupport: Optional[bool]
+
+In case of type unions, the local classes will be numbered,
+because there could be more than one local interface for the
+same field:
+
+    export type TextDocumentContentChangeEvent = {
+        range: Range;
+        rangeLength?: uinteger;
+        text: string;
+    } | {
+        text: string;
+    };
+
+becomes:
+
+    class TextDocumentContentChangeEvent_0(TypedDict, total=False):
+        range: Range
+        rangeLength: Optional[int]
+        text: str
+    class TextDocumentContentChangeEvent_1(TypedDict, total=True):
+        text: str
+    TextDocumentContentChangeEvent = Union[
+        TextDocumentContentChangeEvent_0, TextDocumentContentChangeEvent_1]
+
+### Namespaces and Generics
+
+Typescript namespaces are not supported, except for the special case where
+they consist entirely of constant definitions. In this case, namespaces
+will be transpiled to Enums:
+
+Typescript Namespace:
+
+    export namespace DiagnosticSeverity {
+        export const Error: 1 = 1;
+        export const Warning: 2 = 2;
+        export const Information: 3 = 3;
+        export const Hint: 4 = 4;
+    }
+
+Resulting Python Enum:
+
+    class DiagnosticSeverity(IntEnum):
+        Error = 1
+        Warning = 2
+        Information = 3
+        Hint = 4
 
 
 ## Validation
