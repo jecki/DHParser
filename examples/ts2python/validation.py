@@ -26,15 +26,21 @@ permissions and limitations under the License.
 
 import functools
 import sys
-from typing import _GenericAlias, _SpecialForm, Any, Union, Dict, Tuple, \
-    Iterable, Callable, get_type_hints
+from typing import Any, Union, Dict, Tuple, Iterable, Callable, get_type_hints
 try:
-    from typing import ForwardRef
+    from typing import ForwardRef, _GenericAlias, _SpecialForm
 except ImportError:
-    from typing import _ForwardRef  # Python 3.6 compatibility
+    from typing import _ForwardRef, GenericMeta  # Python 3.6 compatibility
     ForwardRef = _ForwardRef
-from DHParser.externallibs.typing_extensions import Generic, ClassVar, \
-    Final, Protocol, NoReturn, TypeVar, TypedDict, PEP_560, get_origin
+    _GenericAlias = GenericMeta
+    _SpecialForm = GenericMeta
+from typing_extensions import Generic, ClassVar, Final, Protocol, NoReturn, \
+    TypeVar, TypedDict, PEP_560
+try:
+   from typing_extensions import get_origin
+except ImportError:
+    def get_origin(typ):
+        return typ.__origin__
 
 
 # The following functions have been copied from the Python

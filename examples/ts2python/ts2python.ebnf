@@ -9,7 +9,7 @@
 #
 #######################################################################
 
-@ whitespace  = /\s*/           # implicit whitespace, includes linefeed, but not empty lines
+@ whitespace  = /\s*/           # implicit whitespace, includes linefeeds
 @ literalws   = right           # literals have implicit whitespace on the right hand side
 @ comment     = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # /* ... */ or // to EOL
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
@@ -48,6 +48,7 @@ declaration = [qualifier] identifier [optional] [":" types]
   qualifier = "readonly"
   optional  = "?"
   index_signature = "[" identifier (":" | "in" "keyof") type "]"
+
 types       = type { "|" type }
 type        = array_of | basic_type | type_name | "(" types ")"
              | mapped_type | declarations_block | type_tuple | literal
