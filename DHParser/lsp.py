@@ -456,8 +456,13 @@ else:
 ##### BEGIN OF LSP SPECS
 
 
+
 integer = float
+
+
 uinteger = float
+
+
 decimal = float
 
 
@@ -468,19 +473,19 @@ class Message(TypedDict, total=True):
 class RequestMessage(Message, TypedDict, total=False):
     id: Union[int, str]
     method: str
-    params: Union[List, object, None]
+    params: Union[List, Dict, None]
 
 
 class ResponseMessage(Message, TypedDict, total=False):
     id: Union[int, str, None]
-    result: Union[str, float, bool, object, None]
+    result: Union[str, float, bool, Dict, None]
     error: Optional['ResponseError']
 
 
 class ResponseError(TypedDict, total=False):
     code: int
     message: str
-    data: Union[str, float, bool, List, object, None]
+    data: Union[str, float, bool, List, Dict, None]
 
 
 class ErrorCodes(IntEnum):
@@ -503,7 +508,7 @@ class ErrorCodes(IntEnum):
 
 class NotificationMessage(Message, TypedDict, total=False):
     method: str
-    params: Union[List, object, None]
+    params: Union[List, Dict, None]
 
 
 class CancelParams(TypedDict, total=True):
@@ -516,7 +521,7 @@ ProgressToken = Union[int, str]
 T = TypeVar('T')
 
 
-class ProgressParams(Generic[T]):
+class ProgressParams(Generic[T], GenericTypedDict, total=True):
     token: ProgressToken
     value: 'T'
 
@@ -625,7 +630,7 @@ class CreateFileOptions(TypedDict, total=False):
 
 
 class CreateFile(TypedDict, total=False):
-    kind: str
+    kind: 'create'
     uri: DocumentUri
     options: Optional[CreateFileOptions]
     annotationId: Optional[ChangeAnnotationIdentifier]
@@ -637,7 +642,7 @@ class RenameFileOptions(TypedDict, total=False):
 
 
 class RenameFile(TypedDict, total=False):
-    kind: str
+    kind: 'rename'
     oldUri: DocumentUri
     newUri: DocumentUri
     options: Optional[RenameFileOptions]
@@ -650,7 +655,7 @@ class DeleteFileOptions(TypedDict, total=False):
 
 
 class DeleteFile(TypedDict, total=False):
-    kind: str
+    kind: 'delete'
     uri: DocumentUri
     options: Optional[DeleteFileOptions]
     annotationId: Optional[ChangeAnnotationIdentifier]
@@ -742,7 +747,7 @@ class MarkdownClientCapabilities(TypedDict, total=False):
 
 
 class WorkDoneProgressBegin(TypedDict, total=False):
-    kind: str
+    kind: 'begin'
     title: str
     cancellable: Optional[bool]
     message: Optional[str]
@@ -750,14 +755,14 @@ class WorkDoneProgressBegin(TypedDict, total=False):
 
 
 class WorkDoneProgressReport(TypedDict, total=False):
-    kind: str
+    kind: 'report'
     cancellable: Optional[bool]
     message: Optional[str]
     percentage: Optional[int]
 
 
 class WorkDoneProgressEnd(TypedDict, total=False):
-    kind: str
+    kind: 'end'
     message: Optional[str]
 
 
@@ -773,7 +778,7 @@ class PartialResultParams(TypedDict, total=False):
     partialResultToken: Optional[ProgressToken]
 
 
-TraceValue = str
+TraceValue = Literal['off', 'messages', 'verbose']
 
 
 class InitializeParams(WorkDoneProgressParams, TypedDict, total=False):
@@ -2174,6 +2179,9 @@ class Moniker(TypedDict, total=False):
     identifier: str
     unique: UniquenessLevel
     kind: Optional[MonikerKind]
+
+
+
 ##### END OF LSP SPECS
 
 

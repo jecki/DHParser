@@ -37,9 +37,9 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
-if scriptpath not in sys.path:
-    sys.path.append(scriptpath)
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
+# if scriptpath not in sys.path:
+#     sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
     sys.path.append(dhparser_parentdir)
 
@@ -71,7 +71,6 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     pick_from_context, json_dumps, RootNode, get_config_values
-from DHParser.server import pp_json
 
 
 #######################################################################
@@ -251,12 +250,20 @@ except ImportError:
         from typing_extensions import NotRequired
     except ImportError:
         NotRequired = Optional
-        if sys.version_info >= (3, 8):
-            try:
-                from ts2python.validation import TypedDict
-            except ImportError:
-                print("Module ts2python not found. Only coarse-grained " 
-                      "type-validation of TypedDicts possible")        
+        try:
+            from ts2python.validation import TypedDict, GenericTypedDict
+        except ImportError:
+            print("Module ts2python not found. Only coarse-grained " 
+                  "type-validation of TypedDicts possible")
+            if sys.version_info >= (3, 7, 0):  GenericMeta = type
+            else:
+                from typing import GenericMeta
+            class _GenericTypedDictMeta(GenericMeta):
+                def __new__(cls, name, bases, ns, total=True):
+                    return type.__new__(_GenericTypedDictMeta, name, (dict,), ns)
+                __call__ = dict
+            GenericTypedDict = _GenericTypedDictMeta('TypedDict', (dict,), {})
+            GenericTypedDict.__module__ = __name__      
 """
 
 
@@ -274,8 +281,9 @@ class ts2pythonCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a ts2python source file.
     """
 
-    def __init__(self):
-        super(ts2pythonCompiler, self).__init__()
+    def reset(self):
+        super().reset()
+
         bcn = get_config_value('ts2python.BaseClassName', 'TypedDict')
         i = bcn.rfind('.')
         if i >= 0:
@@ -294,8 +302,6 @@ class ts2pythonCompiler(Compiler):
         self.use_literal_type = get_config_value('ts2python.UseLiteralType', True)
         self.use_not_required = get_config_value('ts2python.UseNotRequired', False)
 
-    def reset(self):
-        super().reset()
         self.overloaded_type_names: Set[str] = set()
         self.known_types: Set[str] = set()
         self.local_classes: List[List[str]] = [[]]
@@ -336,10 +342,11 @@ class ts2pythonCompiler(Compiler):
                 GENERAL_IMPORTS, TYPEDDICT_IMPORTS, self.additional_imports]
             if self.base_class_name == 'TypedDict':
                 code_blocks.append(PEP655_IMPORTS)
+            code_blocks.append('\n##### BEGIN OF LSP SPECS\n')
         else:
             code_blocks = []
         code_blocks.append(python_code)
-        code_blocks.append('')
+        code_blocks.append('\n##### END OF LSP SPECS\n')
         cooked = '\n\n'.join(code_blocks)
         return re.sub(r'\n\n+', '\n\n\n', cooked)
 
@@ -360,14 +367,15 @@ class ts2pythonCompiler(Compiler):
             total = not bool(optional_key_list)
             if base_classes:
                 if base_classes.find('Generic[') >= 0:
-                    return decorator + f"class {name}({base_classes}):\n"
+                    td_name = 'GenericTypedDict'
                 else:
-                    if self.use_not_required:
-                        return decorator + \
-                               f"class {name}({base_classes}, TypedDict):\n"
-                    else:
-                        return decorator + f"class {name}({base_classes}, "\
-                               f"TypedDict, total={total}):\n"
+                    td_name = 'TypedDict'
+                if self.use_not_required:
+                    return decorator + \
+                           f"class {name}({base_classes}, {td_name}):\n"
+                else:
+                    return decorator + f"class {name}({base_classes}, "\
+                           f"{td_name}, total={total}):\n"
             else:
                 if self.use_not_required:
                     return decorator + f"class {name}(TypedDict):\n"

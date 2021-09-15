@@ -1102,7 +1102,7 @@ def instantiate_executor(allow_parallel: bool,
     """Instantiates an Executor of a particular type, if the value of the
     configuration variable 'debug_parallel_execution' allows to do so.
     Otherwise a surrogate executor will be returned.
-    If 'allow_parallel` is False, a SinglethredExecutor will be instantiated,
+    If 'allow_parallel` is False, a SingleThreadExecutor will be instantiated,
     regardless of the preferred_executor and any configuration values.
     """
     if allow_parallel:

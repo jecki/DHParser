@@ -1,6 +1,8 @@
 # ts2python
 
-A transpiler from TypeScript-Interface-definitions to Python data structure definitions, e.g. TypedDict.
+Python-interoperability for Typescript-Interfaces.
+Transpiles TypeScript-Interface-definitions to Python 
+data structure definitions, e.g. TypedDict.
 
 ## License
 
