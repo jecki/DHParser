@@ -10,7 +10,7 @@ import sys
 
 VERBOSE = False
 
-assert sys.version_info >= (3, 5, 7), "DHParser.server requires at least Python-Version 3.5.7"
+assert sys.version_info >= (3, 6, 0), "DHParser.server requires at least Python-Version 3.6.0"
 
 scriptpath = os.path.dirname(__file__)
 servername = os.path.splitext(os.path.basename(__file__))[0]
@@ -266,7 +266,7 @@ def run_server(host, port, log_path=None):
     else:  set_start_method('spawn')
 
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
-    dhparserdir = os.path.abspath(os.path.join(scriptpath, "RELDHPARSERDIR"))
+    dhparserdir = os.path.abspath(os.path.join(scriptpath, RELDHPARSERDIR))
     if scriptpath not in sys.path:
         sys.path.append(scriptpath)
     if dhparserdir not in sys.path:
