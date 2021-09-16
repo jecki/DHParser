@@ -7,16 +7,16 @@
 #######################################################################
 
 
+import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List
 
 try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../../../examples'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
@@ -32,7 +32,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
+    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -46,8 +46,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory, NEVER_MATCH_PATTERN, Error, \
-    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+    has_attr, has_parent, ThreadLocalSingletonFactory
 
 
 #######################################################################
@@ -56,30 +55,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-RE_INCLUDE = NEVER_MATCH_PATTERN
-# To capture includes, replace the NEVER_MATCH_PATTERN
-# by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
+def EBNFPreprocessor(text):
+    return text, lambda i: i
 
 
-def newTokenizer(original_text) -> Tuple[str, List[Error]]:
-    # Here, a function body can be filled in that adds preprocessor tokens
-    # to the source code and returns the modified source.
-    return original_text, []
-
-
-def preprocessor_factory() -> PreprocessorFunc:
-    # below, the second parameter must always be the same as newGrammar.COMMENT__!
-    find_next_include = gen_find_include_func(RE_INCLUDE, '#.*')
-    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor(newTokenizer)
-    return chain_preprocessors(include_prep, tokenizing_prep)
-
-
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
-
-
-def preprocess_new(source):
-    return get_preprocessor()(source)
+def get_preprocessor() -> PreprocessorFunc:
+    return EBNFPreprocessor
 
 
 #######################################################################
@@ -88,24 +69,25 @@ def preprocess_new(source):
 #
 #######################################################################
 
-class FlexibleEBNFGrammar(Grammar):
-    r"""Parser for a FlexibleEBNF source file.
+class EBNFGrammar(Grammar):
+    r"""Parser for an EBNF source file.
     """
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "6d48515301fcf790e9cca28e7543897c"
-    disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "ead36885ff2ed0c73538d02d8df5a817"
+    disposable__ = re.compile('pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
+    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
+                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    RAISE_EXPR_WO_BRACKETS = Text("")
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
@@ -122,8 +104,7 @@ class FlexibleEBNFGrammar(Grammar):
     ENDL = Capture(Alternative(Text(";"), Text("")))
     AND = Capture(Alternative(Text(","), Text("")))
     OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))))
-    _DEF = Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": "))
-    DEF = Capture(Synonym(_DEF))
+    DEF = Capture(Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": ")))
     EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
@@ -152,36 +133,28 @@ class FlexibleEBNFGrammar(Grammar):
     difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
     definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
-    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))), ZeroOrMore(Series(Series(Text(","), dwsp__), Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF))))), Lookahead(FOLLOW_UP), mandatory=1)
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
-    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
-                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
     
 
-_raw_grammar = ThreadLocalSingletonFactory(FlexibleEBNFGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(EBNFGrammar, ident=1)
 
-def get_grammar() -> FlexibleEBNFGrammar:
+def get_grammar() -> EBNFGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
     return grammar
     
-def parse_FlexibleEBNF(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_EBNF(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -253,13 +226,13 @@ EBNF_AST_transformation_table = {
 
 
 
-def CreateEBNFTransformer() -> TransformerCallable:
+def CreateEBNFTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformerCallable:
+def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:

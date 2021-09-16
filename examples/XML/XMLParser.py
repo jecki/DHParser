@@ -32,7 +32,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, PLACEHOLDER, \
@@ -55,8 +55,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def XMLPreprocessor(text):
-    return text, lambda i: i
+def XMLPreprocessor(text, source_name):
+    return None, text, lambda i: i, []
 
 
 def get_preprocessor() -> PreprocessorFunc:
@@ -77,7 +77,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "11b281a4c3d083094c84f69ae5da6f28"
+    source_hash__ = "995bdd4eae8dc6e4ce88fc87a76fd32c"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -194,6 +194,11 @@ def get_grammar() -> XMLGrammar:
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
 def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
@@ -310,13 +315,13 @@ XML_AST_transformation_table = {
 
 
 
-def CreateXMLTransformer() -> TransformationFunc:
+def CreateXMLTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=XML_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformationFunc:
+def get_transformer() -> TransformerCallable:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:

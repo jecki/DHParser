@@ -35,7 +35,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -90,7 +90,7 @@ get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "d4d0bbf5b09e354e4c6737bfaf757f57"
+    source_hash__ = "9165a36796569732979fe43298965092"
     disposable__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|LEERRAUM$|ziel$|wortfolge$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -141,6 +141,11 @@ def get_grammar() -> LyrikGrammar:
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
 def parse_Lyrik(document, start_parser = "root_parser__", *, complete_match=True):
@@ -191,13 +196,13 @@ Lyrik_AST_transformation_table = {
 
 
 
-def CreateLyrikTransformer() -> TransformationFunc:
+def CreateLyrikTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=Lyrik_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformationFunc:
+def get_transformer() -> TransformerCallable:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:

@@ -16,7 +16,7 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../../../examples'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
@@ -32,7 +32,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
+    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -42,11 +42,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, node_maker, access_thread_locals, access_presets, \
+    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, \
+    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory
+    has_attr, has_parent
 
 
 #######################################################################
@@ -55,9 +56,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
+def jsonPreprocessor(text):
+    return text, lambda i: i
+
 
 def get_preprocessor() -> PreprocessorFunc:
-    return nil_preprocessor
+    return jsonPreprocessor
 
 
 #######################################################################
@@ -66,42 +70,54 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class readme_exampleGrammar(Grammar):
-    r"""Parser for a readme_example source file.
+class jsonGrammar(Grammar):
+    r"""Parser for a json source file.
     """
-    source_hash__ = "db751c3e0cde53e7661a01c0286415d8"
+    _element = Forward()
+    source_hash__ = "617e7a1c058de72b8118e59a3452d821"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'#.*'
+    COMMENT__ = r'(?:\/\/|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    value = Series(RegExp('\\"[^"\\n]*\\"'), dwsp__)
-    key = Series(RegExp('\\w+'), dwsp__)
-    entry = Series(key, Series(Drop(Text("=")), dwsp__), value)
-    key_store = Series(dwsp__, ZeroOrMore(entry))
-    root__ = key_store
+    _EOF = NegativeLookahead(RegExp('.'))
+    EXP = Option(Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+')))
+    DOT = Text(".")
+    FRAC = Option(Series(DOT, RegExp('[0-9]+')))
+    NEG = Text("-")
+    INT = Alternative(Series(Option(NEG), RegExp('[0-9]')), RegExp('[1-9][0-9]+'))
+    HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
+    UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
+    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
+    PLAIN = RegExp('[^"\\\\]+')
+    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
+    null = Series(Text("null"), dwsp__)
+    bool = Alternative(Series(RegExp('true'), dwsp__), Series(RegExp('false'), dwsp__))
+    number = Series(INT, FRAC, EXP, dwsp__)
+    string = Series(Text('"'), _CHARACTERS, Text('"'), dwsp__, mandatory=1)
+    array = Series(Series(Drop(Text("[")), dwsp__), RegExp('[_element { "," _element }]'), Series(Drop(Text("]")), dwsp__))
+    member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
+    object = Series(Series(Drop(Text("{")), dwsp__), member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)), Series(Drop(Text("}")), dwsp__), mandatory=3)
+    _element.set(Alternative(object, array, string, number, bool, null))
+    json = Series(dwsp__, _element, _EOF)
+    root__ = json
     
 
-_raw_grammar = ThreadLocalSingletonFactory(readme_exampleGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(jsonGrammar, ident=1)
 
-def get_grammar() -> readme_exampleGrammar:
+def get_grammar() -> jsonGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
     return grammar
     
-def parse_readme_example(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_json(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -111,32 +127,48 @@ def parse_readme_example(document, start_parser = "root_parser__", *, complete_m
 #
 #######################################################################
 
-readme_example_AST_transformation_table = {
-    # AST Transformations for the readme_example-grammar
+json_AST_transformation_table = {
+    # AST Transformations for the json-grammar
     "<": flatten,
-    "key_store": [],
-    "entry": [],
-    "key": [],
-    "value": [],
+    "json": [],
+    "_element": [],
+    "object": [],
+    "member": [],
+    "array": [],
+    "string": [],
+    "number": [],
+    "bool": [],
+    "null": [],
+    "_CHARACTERS": [],
+    "PLAIN": [],
+    "ESCAPE": [],
+    "UNICODE": [],
+    "HEX": [],
+    "INT": [],
+    "NEG": [],
+    "FRAC": [],
+    "DOT": [],
+    "EXP": [],
+    "_EOF": [],
     "*": replace_by_single_child
 }
 
 
 
-def Createreadme_exampleTransformer() -> TransformerCallable:
+def CreatejsonTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=readme_example_AST_transformation_table.copy())
+    return partial(traverse, processing_table=json_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformerCallable:
+def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.readme_example_00000001_transformer_singleton
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     except AttributeError:
-        THREAD_LOCALS.readme_example_00000001_transformer_singleton = Createreadme_exampleTransformer()
-        transformer = THREAD_LOCALS.readme_example_00000001_transformer_singleton
+        THREAD_LOCALS.json_00000001_transformer_singleton = CreatejsonTransformer()
+        transformer = THREAD_LOCALS.json_00000001_transformer_singleton
     return transformer
 
 
@@ -146,39 +178,87 @@ def get_transformer() -> TransformerCallable:
 #
 #######################################################################
 
-class readme_exampleCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a readme_example source file.
+class jsonCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a json source file.
     """
 
     def __init__(self):
-        super(readme_exampleCompiler, self).__init__()
+        super(jsonCompiler, self).__init__()
 
     def reset(self):
         super().reset()
         # initialize your variables here, not in the constructor!
 
-    def on_key_store(self, node):
+    def on_json(self, node):
         return self.fallback_compiler(node)
 
-    # def on_entry(self, node):
+    # def on__element(self, node):
     #     return node
 
-    # def on_key(self, node):
+    # def on_object(self, node):
     #     return node
 
-    # def on_value(self, node):
+    # def on_member(self, node):
+    #     return node
+
+    # def on_array(self, node):
+    #     return node
+
+    # def on_string(self, node):
+    #     return node
+
+    # def on_number(self, node):
+    #     return node
+
+    # def on_bool(self, node):
+    #     return node
+
+    # def on_null(self, node):
+    #     return node
+
+    # def on__CHARACTERS(self, node):
+    #     return node
+
+    # def on_PLAIN(self, node):
+    #     return node
+
+    # def on_ESCAPE(self, node):
+    #     return node
+
+    # def on_UNICODE(self, node):
+    #     return node
+
+    # def on_HEX(self, node):
+    #     return node
+
+    # def on_INT(self, node):
+    #     return node
+
+    # def on_NEG(self, node):
+    #     return node
+
+    # def on_FRAC(self, node):
+    #     return node
+
+    # def on_DOT(self, node):
+    #     return node
+
+    # def on_EXP(self, node):
+    #     return node
+
+    # def on__EOF(self, node):
     #     return node
 
 
 
-def get_compiler() -> readme_exampleCompiler:
-    """Returns a thread/process-exclusive readme_exampleCompiler-singleton."""
+def get_compiler() -> jsonCompiler:
+    """Returns a thread/process-exclusive jsonCompiler-singleton."""
     THREAD_LOCALS = access_thread_locals()
     try:
-        compiler = THREAD_LOCALS.readme_example_00000001_compiler_singleton
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     except AttributeError:
-        THREAD_LOCALS.readme_example_00000001_compiler_singleton = readme_exampleCompiler()
-        compiler = THREAD_LOCALS.readme_example_00000001_compiler_singleton
+        THREAD_LOCALS.json_00000001_compiler_singleton = jsonCompiler()
+        compiler = THREAD_LOCALS.json_00000001_compiler_singleton
     return compiler
 
 
@@ -188,7 +268,7 @@ def get_compiler() -> readme_exampleCompiler:
 #
 #######################################################################
 
-def compile_src(source: str):
+def compile_src(source):
     """Compiles ``source`` and returns (result, errors, ast).
     """
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
@@ -224,7 +304,7 @@ if __name__ == "__main__":
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a readme_example-file and shows its syntax-tree.")
+    parser = ArgumentParser(description="Parses a json-file and shows its syntax-tree.")
     parser.add_argument('files', nargs=1)
     parser.add_argument('-d', '--debug', action='store_const', const='debug')
     parser.add_argument('-x', '--xml', action='store_const', const='xml')
