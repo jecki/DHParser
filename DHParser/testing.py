@@ -1027,7 +1027,8 @@ def runner(tests, namespace, profile=False):
 
 
 def run_file(fname):
-    if fname.lower().startswith('test_') and fname.endswith('.py'):
+    f_lower = fname.lower()
+    if f_lower.startswith('test_') and f_lower.endswith('.py'):
         print("RUNNING " + fname)
         # print('\nRUNNING UNIT TESTS IN: ' + fname)
         exec('import ' + fname[:-3])
@@ -1043,7 +1044,9 @@ def run_path(path):
         with instantiate_executor(get_config_value('test_parallelization') and len(files) > 1,
                                   concurrent.futures.ProcessPoolExecutor) as pool:
             for f in files:
-                results.append(pool.submit(run_file, f))
+                f_lower = f.lower()
+                if f_lower.startswith('test_') and f_lower.endswith('.py'):
+                    results.append(pool.submit(run_file, f))
                 # run_file(f)  # for testing!
             concurrent.futures.wait(results)
             for r in results:
