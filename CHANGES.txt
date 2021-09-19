@@ -1,6 +1,8 @@
 DHParser Version 0.9.8
 ......................
 
+- Language Server Protocol support extended. DHParser/lsp.py now
+  contains TypedDict-definitions for all LSP-interfaces and enums.
 - support for local config-files.
 
 DHParser Version 0.9.7 (1.9.2021)
