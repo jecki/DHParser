@@ -32,7 +32,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, \
@@ -42,12 +42,11 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, XML_SERIALIZATION, SXPRESSION_SERIALIZATION, node_maker, any_of, \
-    INDENTED_SERIALIZATION, JSON_SERIALIZATION, access_thread_locals, access_presets, \
+    get_config_value, node_maker, any_of, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent
+    has_attr, has_parent, set_preset_value, ThreadLocalSingletonFactory
 
 
 #######################################################################
@@ -56,12 +55,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def XML_W3C_SPECPreprocessor(text):
-    return text, lambda i: i
-
-
 def get_preprocessor() -> PreprocessorFunc:
-    return XML_W3C_SPECPreprocessor
+    return nil_preprocessor
 
 
 #######################################################################
@@ -73,139 +68,119 @@ def get_preprocessor() -> PreprocessorFunc:
 class XML_W3C_SPECGrammar(Grammar):
     r"""Parser for a XML_W3C_SPEC source file.
     """
-    AttValue = Forward()
-    Attribute = Forward()
-    CDSect = Forward()
-    Char = Forward()
-    CharData = Forward()
-    CharRef = Forward()
-    Comment = Forward()
-    DeclSep = Forward()
-    EntityValue = Forward()
-    Eq = Forward()
-    ExternalID = Forward()
-    Name = Forward()
-    NameChar = Forward()
-    NameStartChar = Forward()
-    Nmtoken = Forward()
-    PI = Forward()
-    PubidLiteral = Forward()
-    S = Forward()
-    SystemLiteral = Forward()
-    TextDecl = Forward()
-    VersionInfo = Forward()
     content = Forward()
     cp = Forward()
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    markupdecl = Forward()
-    source_hash__ = "09175b3165ddc1481814046dc639de56"
-    anonymous__ = re.compile('..(?<=^)')
+    source_hash__ = "41dd95a34fdc2f2da9989183c4b78568"
+    disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
-    WHITESPACE__ = r'\s*'
+    WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    PublicID = Series(Text('PUBLIC'), S, PubidLiteral)
-    NotationDecl = Series(Text('<!NOTATION'), S, Name, S, Alternative(ExternalID, PublicID), Option(S), Text('>'), RegExp('[VC: Unique Notation Name]'))
+    PubidChar = Alternative(RegExp('\x20'), RegExp('\x0D'), RegExp('\x0A'), RegExp('[a-zA-Z0-9]'), RegExp('[-\'()+,./:=?;!*#@$_%]'))
+    PubidLiteral = Alternative(Series(Text('"'), ZeroOrMore(PubidChar), Text('"')), Series(Text("\'"), ZeroOrMore(Series(NegativeLookahead(Text("\'")), PubidChar)), Text("\'")))
     EncName = Series(RegExp('[A-Za-z]'), ZeroOrMore(Alternative(RegExp('[A-Za-z0-9._]'), Text('-'))))
+    S = OneOrMore(Alternative(RegExp('\x20'), RegExp('\x09'), RegExp('\x0D'), RegExp('\x0A')))
+    Eq = Series(Option(S), Text('='), Option(S))
+    VersionNum = Series(Text('1.'), OneOrMore(RegExp('[0-9]')))
+    NameStartChar = Alternative(Text(":"), RegExp('[A-Z]'), Text("_"), RegExp('[a-z]'), RegExp('[\xC0-\xD6]'), RegExp('[\xD8-\xF6]'), RegExp('[\xF8-\u02FF]'), RegExp('[\u0370-\u037D]'), RegExp('[\u037F-\u1FFF]'), RegExp('[\u200C-\u200D]'), RegExp('[\u2070-\u218F]'), RegExp('[\u2C00-\u2FEF]'), RegExp('[\u3001-\uD7FF]'), RegExp('[\uF900-\uFDCF]'), RegExp('[\uFDF0-\uFFFD]'), RegExp('[\U00010000-\U000EFFFF]'))
+    SystemLiteral = Alternative(Series(Text('"'), ZeroOrMore(RegExp('[^"]')), Text('"')), Series(Text("\'"), ZeroOrMore(RegExp('[^\']')), Text("\'")))
     EncodingDecl = Series(S, Text('encoding'), Eq, Alternative(Series(Text('"'), EncName, Text('"')), Series(Text("\'"), EncName, Text("\'"))))
-    extParsedEnt = Series(Option(TextDecl), content)
-    TextDecl.set(Series(Text('<?xml'), Option(VersionInfo), EncodingDecl, Option(S), Text('?>')))
+    NameChar = Alternative(NameStartChar, Text("-"), Text("."), RegExp('[0-9]'), RegExp('\xB7'), RegExp('[\u0300-\u036F]'), RegExp('[\u203F-\u2040]'))
+    CharRef = Alternative(Series(Text('&#'), OneOrMore(RegExp('[0-9]')), Text(';')), Series(Text('&#x'), OneOrMore(RegExp('[0-9a-fA-F]')), Text(';')))
+    PublicID = Series(Text('PUBLIC'), S, PubidLiteral)
+    ExternalID = Alternative(Series(Text('SYSTEM'), S, SystemLiteral), Series(Text('PUBLIC'), S, PubidLiteral, S, SystemLiteral))
+    Name = Series(NameStartChar, ZeroOrMore(NameChar))
     NDataDecl = Series(S, Text('NDATA'), S, Name)
-    ExternalID.set(Alternative(Series(Text('SYSTEM'), S, SystemLiteral), Series(Text('PUBLIC'), S, PubidLiteral, S, SystemLiteral)))
-    PEDef = Alternative(EntityValue, ExternalID)
-    EntityDef = Alternative(EntityValue, Series(ExternalID, Option(NDataDecl)))
-    PEDecl = Series(Text('<!ENTITY'), S, Text('%'), S, Name, S, PEDef, Option(S), Text('>'))
-    GEDecl = Series(Text('<!ENTITY'), S, Name, S, EntityDef, Option(S), Text('>'))
-    EntityDecl = Alternative(GEDecl, PEDecl)
-    PEReference = Series(Text('%'), Name, Text(';'))
     EntityRef = Series(Text('&'), Name, Text(';'))
     Reference = Alternative(EntityRef, CharRef)
-    CharRef.set(Alternative(Series(Text('&#'), OneOrMore(RegExp('[0-9]')), Text(';')), Series(Text('&#x'), OneOrMore(RegExp('[0-9a-fA-F]')), Text(';'))))
-    Ignore = Series(NegativeLookahead(Series(ZeroOrMore(Char), Alternative(Text('<!['), Text(']]>')), ZeroOrMore(Char))), ZeroOrMore(Char))
-    ignoreSectContents.set(Series(Ignore, ZeroOrMore(Series(Text('<!['), ignoreSectContents, Text(']]>'), Ignore))))
+    Char = Alternative(RegExp('\x09'), RegExp('\x0A'), RegExp('\x0D'), RegExp('[\x20-\uD7FF]'), RegExp('[\uE000-\uFFFD]'), RegExp('[\U00010000-\U0010FFFF]'))
+    PEReference = Series(Text('%'), Name, Text(';'))
+    NotationDecl = Series(Text('<!NOTATION'), S, Name, S, Alternative(ExternalID, PublicID), Option(S), Text('>'), RegExp('[VC: Unique Notation Name]'))
     ignoreSect = Series(Text('<!['), Option(S), Text('IGNORE'), Option(S), Text('['), ZeroOrMore(ignoreSectContents), Text(']]>'))
     includeSect = Series(Text('<!['), Option(S), Text('INCLUDE'), Option(S), Text('['), extSubsetDecl, Text(']]>'))
+    EntityValue = Alternative(Series(Text('"'), ZeroOrMore(Alternative(RegExp('[^%&"]'), PEReference, Reference)), Text('"')), Series(Text("\'"), ZeroOrMore(Alternative(RegExp('[^%&\']'), PEReference, Reference)), Text("\'")))
+    PEDef = Alternative(EntityValue, ExternalID)
     conditionalSect = Alternative(includeSect, ignoreSect)
-    DefaultDecl = Alternative(Text('#REQUIRED'), Text('#IMPLIED'), Series(Option(Series(Text('#FIXED'), S)), AttValue))
-    Enumeration = Series(Text('('), Option(S), Nmtoken, ZeroOrMore(Series(Option(S), Text('|'), Option(S), Nmtoken)), Option(S), Text(')'))
-    NotationType = Series(Text('NOTATION'), S, Text('('), Option(S), Name, ZeroOrMore(Series(Option(S), Text('|'), Option(S), Name)), Option(S), Text(')'))
-    EnumeratedType = Alternative(NotationType, Enumeration)
+    AttValue = Alternative(Series(Text('"'), ZeroOrMore(Alternative(RegExp('[^<&"]'), Reference)), Text('"')), Series(Text("\'"), ZeroOrMore(Alternative(RegExp('[^<&\']'), Reference)), Text("\'")))
     TokenizedType = Alternative(Text('IDREFS'), Text('IDREF'), Text('ID'), Text('ENTITY'), Text('ENTITIES'), Text('NMTOKENS'), Text('NMTOKEN'))
     StringType = Text('CDATA')
-    AttType = Alternative(StringType, TokenizedType, EnumeratedType)
-    AttDef = Series(S, Name, S, AttType, S, DefaultDecl)
-    AttlistDecl = Series(Text('<!ATTLIST'), S, Name, ZeroOrMore(AttDef), Option(S), Text('>'))
+    Nmtoken = OneOrMore(NameChar)
+    NotationType = Series(Text('NOTATION'), S, Text('('), Option(S), Name, ZeroOrMore(Series(Option(S), Text('|'), Option(S), Name)), Option(S), Text(')'))
+    Enumeration = Series(Text('('), Option(S), Nmtoken, ZeroOrMore(Series(Option(S), Text('|'), Option(S), Nmtoken)), Option(S), Text(')'))
+    DefaultDecl = Alternative(Text('#REQUIRED'), Text('#IMPLIED'), Series(Option(Series(Text('#FIXED'), S)), AttValue))
     Mixed = Alternative(Series(Text('('), Option(S), Text('#PCDATA'), ZeroOrMore(Series(Option(S), Text('|'), Option(S), Name)), Option(S), Text(')*')), Series(Text('('), Option(S), Text('#PCDATA'), Option(S), Text(')')))
     seq = Series(Text('('), Option(S), cp, ZeroOrMore(Series(Option(S), Text(','), Option(S), cp)), Option(S), Text(')'))
+    EnumeratedType = Alternative(NotationType, Enumeration)
     choice = Series(Text('('), Option(S), cp, OneOrMore(Series(Option(S), Text('|'), Option(S), cp)), Option(S), Text(')'))
-    cp.set(Series(Alternative(Name, choice, seq), Option(Alternative(Text('?'), Text('*'), Text('+')))))
     children = Series(Alternative(choice, seq), Option(Alternative(Text('?'), Text('*'), Text('+'))))
     contentspec = Alternative(Text('EMPTY'), Text('ANY'), Mixed, children)
     elementdecl = Series(Text('<!ELEMENT'), S, Name, S, contentspec, Option(S), Text('>'))
-    EmptyElemTag = Series(Text('<'), Name, ZeroOrMore(Series(S, Attribute)), Option(S), Text('/>'))
-    content.set(Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData)))))
+    AttType = Alternative(StringType, TokenizedType, EnumeratedType)
+    VersionInfo = Series(S, Text('version'), Eq, Alternative(Series(Text("\'"), VersionNum, Text("\'")), Series(Text('"'), VersionNum, Text('"'))))
+    AttDef = Series(S, Name, S, AttType, S, DefaultDecl)
     ETag = Series(Text('</'), Name, Option(S), Text('>'))
-    Attribute.set(Series(Name, Eq, AttValue))
-    STag = Series(Text('<'), Name, ZeroOrMore(Series(S, Attribute)), Option(S), Text('>'))
-    element.set(Alternative(EmptyElemTag, Series(STag, content, ETag)))
+    Attribute = Series(Name, Eq, AttValue)
+    EmptyElemTag = Series(Text('<'), Name, ZeroOrMore(Series(S, Attribute)), Option(S), Text('/>'))
+    Ignore = Series(NegativeLookahead(Series(ZeroOrMore(Char), Alternative(Text('<!['), Text(']]>')), ZeroOrMore(Char))), ZeroOrMore(Char))
+    TextDecl = Series(Text('<?xml'), Option(VersionInfo), EncodingDecl, Option(S), Text('?>'))
+    AttlistDecl = Series(Text('<!ATTLIST'), S, Name, ZeroOrMore(AttDef), Option(S), Text('>'))
+    PEDecl = Series(Text('<!ENTITY'), S, Text('%'), S, Name, S, PEDef, Option(S), Text('>'))
+    DeclSep = Alternative(PEReference, S)
+    EntityDef = Alternative(EntityValue, Series(ExternalID, Option(NDataDecl)))
+    Comment = Series(Text('<!--'), ZeroOrMore(Alternative(Series(NegativeLookahead(Text('-')), Char), Series(Text('-'), Series(NegativeLookahead(Text('-')), Char)))), Text('-->'))
+    extParsedEnt = Series(Option(TextDecl), content)
     SDDecl = Series(S, Text('standalone'), Eq, Alternative(Series(Text("\'"), Alternative(Text('yes'), Text('no')), Text("\'")), Series(Text('"'), Alternative(Text('yes'), Text('no')), Text('"'))))
-    extSubsetDecl.set(ZeroOrMore(Alternative(markupdecl, conditionalSect, DeclSep)))
     extSubset = Series(Option(TextDecl), extSubsetDecl)
-    markupdecl.set(Alternative(elementdecl, AttlistDecl, EntityDecl, NotationDecl, PI, Comment))
-    intSubset = ZeroOrMore(Alternative(markupdecl, DeclSep))
-    DeclSep.set(Alternative(PEReference, S))
-    doctypedecl = Series(Text('<!DOCTYPE'), S, Name, Option(Series(S, ExternalID)), Option(S), Option(Series(Text('['), intSubset, Text(']'), Option(S))), Text('>'))
-    Misc = Alternative(Comment, PI, S)
-    VersionNum = Series(Text('1.'), OneOrMore(RegExp('[0-9]')))
-    Eq.set(Series(Option(S), Text('='), Option(S)))
-    VersionInfo.set(Series(S, Text('version'), Eq, Alternative(Series(Text("\'"), VersionNum, Text("\'")), Series(Text('"'), VersionNum, Text('"')))))
     XMLDecl = Series(Text('<?xml'), VersionInfo, Option(EncodingDecl), Option(SDDecl), Option(S), Text('?>'))
-    prolog = Series(Option(XMLDecl), ZeroOrMore(Misc), Option(Series(doctypedecl, ZeroOrMore(Misc))))
+    GEDecl = Series(Text('<!ENTITY'), S, Name, S, EntityDef, Option(S), Text('>'))
     CDEnd = Text(']]>')
     CData = Series(NegativeLookahead(Series(ZeroOrMore(Char), Text(']]>'), ZeroOrMore(Char))), ZeroOrMore(Char))
     CDStart = Text('<![CDATA[')
-    CDSect.set(Series(CDStart, CData, CDEnd))
+    CDSect = Series(CDStart, CData, CDEnd)
     PITarget = Series(NegativeLookahead(Series(Alternative(Text('X'), Text('x')), Alternative(Text('M'), Text('m')), Alternative(Text('L'), Text('l')))), Name)
-    PI.set(Series(Text('<?'), PITarget, Option(Series(S, Series(NegativeLookahead(Series(ZeroOrMore(Char), Text('?>'), ZeroOrMore(Char))), ZeroOrMore(Char)))), Text('?>')))
-    Comment.set(Series(Text('<!--'), ZeroOrMore(Alternative(Series(NegativeLookahead(Text('-')), Char), Series(Text('-'), Series(NegativeLookahead(Text('-')), Char)))), Text('-->')))
-    CharData.set(Series(NegativeLookahead(Series(ZeroOrMore(RegExp('[^<&]')), Text(']]>'), ZeroOrMore(RegExp('[^<&]')))), ZeroOrMore(RegExp('[^<&]'))))
-    PubidChar = Alternative(RegExp('\x20'), RegExp('\x0D'), RegExp('\x0A'), RegExp('[a-zA-Z0-9]'), RegExp('[-\'()+,./:=?;!*#@$_%]'))
-    PubidLiteral.set(Alternative(Series(Text('"'), ZeroOrMore(PubidChar), Text('"')), Series(Text("\'"), ZeroOrMore(Series(NegativeLookahead(Text("\'")), PubidChar)), Text("\'"))))
-    SystemLiteral.set(Alternative(Series(Text('"'), ZeroOrMore(RegExp('[^"]')), Text('"')), Series(Text("\'"), ZeroOrMore(RegExp('[^\']')), Text("\'"))))
-    AttValue.set(Alternative(Series(Text('"'), ZeroOrMore(Alternative(RegExp('[^<&"]'), Reference)), Text('"')), Series(Text("\'"), ZeroOrMore(Alternative(RegExp('[^<&\']'), Reference)), Text("\'"))))
-    EntityValue.set(Alternative(Series(Text('"'), ZeroOrMore(Alternative(RegExp('[^%&"]'), PEReference, Reference)), Text('"')), Series(Text("\'"), ZeroOrMore(Alternative(RegExp('[^%&\']'), PEReference, Reference)), Text("\'"))))
+    PI = Series(Text('<?'), PITarget, Option(Series(S, Series(NegativeLookahead(Series(ZeroOrMore(Char), Text('?>'), ZeroOrMore(Char))), ZeroOrMore(Char)))), Text('?>'))
+    Misc = Alternative(Comment, PI, S)
+    CharData = Series(NegativeLookahead(Series(ZeroOrMore(RegExp('[^<&]')), Text(']]>'), ZeroOrMore(RegExp('[^<&]')))), ZeroOrMore(RegExp('[^<&]')))
+    EntityDecl = Alternative(GEDecl, PEDecl)
+    markupdecl = Alternative(elementdecl, AttlistDecl, EntityDecl, NotationDecl, PI, Comment)
+    intSubset = ZeroOrMore(Alternative(markupdecl, DeclSep))
+    STag = Series(Text('<'), Name, ZeroOrMore(Series(S, Attribute)), Option(S), Text('>'))
+    doctypedecl = Series(Text('<!DOCTYPE'), S, Name, Option(Series(S, ExternalID)), Option(S), Option(Series(Text('['), intSubset, Text(']'), Option(S))), Text('>'))
+    prolog = Series(Option(XMLDecl), ZeroOrMore(Misc), Option(Series(doctypedecl, ZeroOrMore(Misc))))
     Nmtokens = Series(Nmtoken, ZeroOrMore(Series(RegExp('\x20'), Nmtoken)))
-    Nmtoken.set(OneOrMore(NameChar))
     Names = Series(Name, ZeroOrMore(Series(RegExp('\x20'), Name)))
-    Name.set(Series(NameStartChar, ZeroOrMore(NameChar)))
-    NameChar.set(Alternative(NameStartChar, Text("-"), Text("."), RegExp('[0-9]'), RegExp('\xB7'), RegExp('[\u0300-\u036F]'), RegExp('[\u203F-\u2040]')))
-    NameStartChar.set(Alternative(Text(":"), RegExp('[A-Z]'), Text("_"), RegExp('[a-z]'), RegExp('[\xC0-\xD6]'), RegExp('[\xD8-\xF6]'), RegExp('[\xF8-\u02FF]'), RegExp('[\u0370-\u037D]'), RegExp('[\u037F-\u1FFF]'), RegExp('[\u200C-\u200D]'), RegExp('[\u2070-\u218F]'), RegExp('[\u2C00-\u2FEF]'), RegExp('[\u3001-\uD7FF]'), RegExp('[\uF900-\uFDCF]'), RegExp('[\uFDF0-\uFFFD]'), RegExp('[\U00010000-\U000EFFFF]')))
-    S.set(OneOrMore(Alternative(RegExp('\x20'), RegExp('\x09'), RegExp('\x0D'), RegExp('\x0A'))))
-    Char.set(Alternative(RegExp('\x09'), RegExp('\x0A'), RegExp('\x0D'), RegExp('[\x20-\uD7FF]'), RegExp('[\uE000-\uFFFD]'), RegExp('[\U00010000-\U0010FFFF]')))
+    ignoreSectContents.set(Series(Ignore, ZeroOrMore(Series(Text('<!['), ignoreSectContents, Text(']]>'), Ignore))))
+    cp.set(Series(Alternative(Name, choice, seq), Option(Alternative(Text('?'), Text('*'), Text('+')))))
+    content.set(Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData)))))
+    element.set(Alternative(EmptyElemTag, Series(STag, content, ETag)))
+    extSubsetDecl.set(ZeroOrMore(Alternative(markupdecl, conditionalSect, DeclSep)))
     document = Series(prolog, element, ZeroOrMore(Misc))
     root__ = document
     
 
+_raw_grammar = ThreadLocalSingletonFactory(XML_W3C_SPECGrammar, ident=1)
+
 def get_grammar() -> XML_W3C_SPECGrammar:
-    """Returns a thread/process-exclusive XML_W3C_SPECGrammar-singleton."""
-    THREAD_LOCALS = access_thread_locals()
-    try:
-        grammar = THREAD_LOCALS.XML_W3C_SPEC_00000001_grammar_singleton
-    except AttributeError:
-        THREAD_LOCALS.XML_W3C_SPEC_00000001_grammar_singleton = XML_W3C_SPECGrammar()
-        if hasattr(get_grammar, 'python_src__'):
-            THREAD_LOCALS.XML_W3C_SPEC_00000001_grammar_singleton.python_src__ = get_grammar.python_src__
-        grammar = THREAD_LOCALS.XML_W3C_SPEC_00000001_grammar_singleton
+    grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
+    
+def parse_XML_W3C_SPEC(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
 
 
 #######################################################################
@@ -301,13 +276,13 @@ XML_W3C_SPEC_AST_transformation_table = {
 
 
 
-def CreateXML_W3C_SPECTransformer() -> TransformationFunc:
+def CreateXML_W3C_SPECTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=XML_W3C_SPEC_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformationFunc:
+def get_transformer() -> TransformerCallable:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:
@@ -606,6 +581,10 @@ if __name__ == "__main__":
     else:
         grammar_path = os.path.splitext(__file__)[0] + '.ebnf'
     parser_update = False
+
+    access_presets()
+    set_preset_value('syntax_variant', 'heuristic')
+    finalize_presets()
 
     def notify():
         global parser_update

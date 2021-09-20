@@ -32,7 +32,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_adjacent, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -55,12 +55,9 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def readme_examplePreprocessor(text):
-    return text, lambda i: i
-
 
 def get_preprocessor() -> PreprocessorFunc:
-    return readme_examplePreprocessor
+    return nil_preprocessor
 
 
 #######################################################################
@@ -72,7 +69,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example source file.
     """
-    source_hash__ = "ac94d19db5744d229fe6a6815c4471c5"
+    source_hash__ = "db751c3e0cde53e7661a01c0286415d8"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -97,6 +94,11 @@ def get_grammar() -> readme_exampleGrammar:
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
 def parse_readme_example(document, start_parser = "root_parser__", *, complete_match=True):
@@ -121,13 +123,13 @@ readme_example_AST_transformation_table = {
 
 
 
-def Createreadme_exampleTransformer() -> TransformationFunc:
+def Createreadme_exampleTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, processing_table=readme_example_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformationFunc:
+def get_transformer() -> TransformerCallable:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:

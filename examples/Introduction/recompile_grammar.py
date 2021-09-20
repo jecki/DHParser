@@ -28,7 +28,7 @@ flag = os.path.exists('LyrikParser.py')
 
 from DHParser.dsl import recompile_grammar
 
-if not recompile_grammar('.', force=True):
+if not recompile_grammar('Lyrik.ebnf', force=True):
     with open('Lyrik_ebnf_ERRORS.txt') as f:
         print(f.read())
     sys.exit(1)

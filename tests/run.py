@@ -80,6 +80,10 @@ if __name__ == "__main__":
         found.append('python3.8 ')
     elif run_cmd(['~/.local/bin/python3.8', '-V']):
         found.append('~/.local/bin/python3.8 ')
+    elif run_cmd(['~/.local/bin/python3.9', '-V']):
+        found.append('~/.local/bin/python3.9 ')
+    elif run_cmd(['~/.local/bin/python3.10', '-V']):
+        found.append('~/.local/bin/python3.10 ')        
     print('Interpreters found: ' + ''.join(found))
 
     arguments = [arg for arg in sys.argv[1:] if arg[:1] != '-']

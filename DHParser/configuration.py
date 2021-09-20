@@ -187,7 +187,8 @@ def read_local_config(ini_filename: str) -> str:
     """Reads a local config file and updates the presets
     accordingly. If the file is not found at the given path,
     the same base name will be tried in the current working
-    directory and then in the calling script's directory.
+    directory, then in the applications config-directory and,
+    ultimately, in the calling script's directory.
     This configuration file must be in the .ini-file format
     so that it can be parsed with "configparser" from the
     Python standard library. Any key,value-pair under the
@@ -213,11 +214,21 @@ def read_local_config(ini_filename: str) -> str:
     config.optionxform = lambda option: option
     if not os.path.exists(ini_filename):
         # try cfg-file in current working directory next
-        ini_filename = os.path.basename(ini_filename)
+        basename = os.path.basename(ini_filename)
+        ini_filename = basename
     if not os.path.exists(ini_filename):
-        # try cfg-file in script-direcotry next
+        # try cfg-file in the applications' config-directory
+        # TODO: use a more portable method
+        dirname = os.path.splitext(basename)[0]
+        cfg_filename = os.path.join(os.path.expanduser('~'), '.config', dirname, 'config.ini')
+        if os.path.exists(cfg_filename):
+            ini_filename = cfg_filename
+        else:
+            ini_filename = os.path.join(os.path.expanduser('~'), '.config', dirname, basename)
+    if not os.path.exists(ini_filename):
+        # try cfg-file in script-directory next
         script_path = os.path.abspath(sys.modules['__main__'].__file__)
-        ini_filename = os.path.join(os.path.dirname(script_path), ini_filename)
+        ini_filename = os.path.join(os.path.dirname(script_path), basename)
     if os.path.exists(ini_filename) and config.read(ini_filename):
         access_presets()
         for section in config.sections():
@@ -317,7 +328,7 @@ def get_config_values(key_pattern: str) -> Dict:
     return presets
 
 
-def set_config_value(key: str, value: Any):
+def set_config_value(key: str, value: Any, allow_new_key: bool = False):
     """
     Changes a configuration value thread-safely. The configuration
     value will be set only for the current thread. In order to
@@ -328,6 +339,10 @@ def set_config_value(key: str, value: Any):
     """
     with access_lock:
         cfg = _config_dict()
+        if not allow_new_key and key not in cfg and key not in CONFIG_PRESET:
+            raise ValueError(
+                '"%s" is not a valid config variable. Use "allow_new_key=True" to '
+                'add new variables or choose one of %s' % (key, list(cfg.keys())))
         validate_value(key, value)
         cfg[key] = value
 
@@ -444,7 +459,7 @@ ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fi
 # The concrete syntax tree, the abstract syntax tree or both.
 # Possible values are {'ast'}, {'cst'} or {'ast', 'cst'}
 # Default value: empty set
-CONFIG_PRESET['log_syntax_trees'] = set()
+CONFIG_PRESET['log_syntax_trees'] = frozenset()
 
 
 ########################################################################

@@ -55,12 +55,9 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def FixedEBNFPreprocessor(text):
-    return text, lambda i: i
-
 
 def get_preprocessor() -> PreprocessorFunc:
-    return FixedEBNFPreprocessor
+    return nil_preprocessor
 
 
 #######################################################################
@@ -75,7 +72,7 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "2a7080d665065a348ede8b21c6bb3448"
+    source_hash__ = "4fd9d26c0e35351df1903ccc5b03d2ca"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

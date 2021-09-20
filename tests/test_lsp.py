@@ -31,12 +31,14 @@ try:
 except ImportError:
     from DHParser.externallibs.typing_extensions import TypedDict
 
-from DHParser.lsp import RequestMessage, Message, ResponseMessage, Position, type_check, shortlist
+from DHParser.lsp import RequestMessage, Message, ResponseMessage, Position, type_check, \
+    shortlist, validate_type
 
 
 @type_check
 def type_checked_func(select_test: int, request: RequestMessage, position: Position) \
         -> ResponseMessage:
+    validate_type(position, Position)
     if select_test == 1:
         return {'jsonrpc': 'jsonrpc-string',
                 'id': request['id'],
@@ -70,6 +72,15 @@ class TestLSP:
         assert shortlist(long, 'BBC') == (6, 6)
         assert shortlist(long, 'ABBO') == (0, 1)
         assert shortlist(long, 'AA') == (0, 0)
+
+    def test_type_validation(self):
+        position = Position(line=1, character=2)
+        validate_type(position, Position)
+        try:
+            validate_type(position, Message)
+            assert False, "TypeError expected!"
+        except TypeError:
+            pass
 
     def test_type_check(self):
         response = type_checked_func(0, {'jsonrpc': '2.0', 'id': 21, 'method': 'check'},

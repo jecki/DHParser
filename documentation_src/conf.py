@@ -28,10 +28,10 @@ copyright = '2018, Eckhart Arnold'
 author = 'Eckhart Arnold'
 
 # The short X.Y version
-from DHParser import versionnumber
-version = re.match('\d+\.\d+(?:\.\d+)?', versionnumber.__version__).group(0)
+from DHParser import __version__
+version = re.match('\d+\.\d+(?:\.\d+)?', __version__).group(0)
 # The full version, including alpha/beta/rc tags
-release = versionnumber.__version__
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------

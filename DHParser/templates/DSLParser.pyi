@@ -135,9 +135,11 @@ if __name__ == "__main__":
 
     if args.debug is not None:
         log_dir = 'LOGS'
-        set_config_value('history_tracking', True)
-        set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
+        access_presets()
+        set_preset_value('history_tracking', True)
+        set_preset_value('resume_notices', True)
+        set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
+        finalize_presets()
     start_logging(log_dir)
 
     if args.singlethread:

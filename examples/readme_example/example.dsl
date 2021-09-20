@@ -1,1 +1,3 @@
-Life is but a walking shadow
+title = "Odysee 2001"
+director = "Stanley Kubrick"
+
