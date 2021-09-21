@@ -686,7 +686,8 @@ def has_content(context: TreeContext, regexp: str) -> bool:
 @transformation_factory(collections.abc.Set)
 def has_ancestor(context: TreeContext,
                  tag_name_set: AbstractSet[str],
-                 generations: int =-1) -> bool:
+                 generations: int = -1,
+                 until: Union[AbstractSet[str], str] = frozenset()) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the context before the last node in the context.
@@ -695,11 +696,22 @@ def has_ancestor(context: TreeContext,
         the ancestry. "1" means only the immediate parents wil be considered,
         "2" means also the grandparents, ans so on.
         A value smaller or equal zero means all ancestors will be considered.
+    :param until: tag_names which, when reached, will stop `has_ancestor`
+        from searching further, even if the `generations`-parameter would
+        allow a deeper search.
     """
+    if until:
+        if isinstance(until, str):  until = {until}
+        for i in range(len(context) - 1, -1, -1):
+            if context[i].tag_name in until:
+                break
+        ctx = context[i:]
+    else:
+        ctx = context
     if generations <= 0:
-        return any(nd.tag_name in tag_name_set for nd in context)
-    for i in range(2, min(generations + 2, len(context) + 1)):
-        if context[-i].tag_name in tag_name_set:
+        return any(nd.tag_name in tag_name_set for nd in ctx)
+    for i in range(2, min(generations + 2, len(ctx) + 1)):
+        if ctx[-i].tag_name in tag_name_set:
             return True
     return False
 
@@ -718,13 +730,23 @@ def has_children(context: TreeContext) -> bool:
 
 @transformation_factory(collections.abc.Set)
 def has_descendant(context: TreeContext, tag_name_set: AbstractSet[str],
-                   generations: int = -1) -> bool:
+                   generations: int = -1,
+                   until: Union[AbstractSet[str], str] = frozenset()) -> bool:
     assert generations != 0
+    if until:
+        if isinstance(until, str):  until = {until}
+    else:
+        until = frozenset()
+    if context[-1].tag_name in until:
+        for child in context[-1]._children:
+            if child.tag_name in tag_name_set:
+                return True
+        return False
     for child in context[-1]._children:
         if child.tag_name in tag_name_set:
             return True
         if (generations < 0 or generations > 1) \
-                and has_descendant(context + [child], tag_name_set, generations - 1):
+                and has_descendant(context + [child], tag_name_set, generations - 1, until):
             return True
     return False
 
