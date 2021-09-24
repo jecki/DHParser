@@ -76,12 +76,16 @@ if __name__ == "__main__":
         found.append('python3.7 ')
     elif run_cmd(['~/.local/bin/python3.7', '-V']):
         found.append('~/.local/bin/python3.7 ')
-    if run_cmd(['python3.9', '-V']):
+    if run_cmd(['python3.8', '-V']):
         found.append('python3.8 ')
     elif run_cmd(['~/.local/bin/python3.8', '-V']):
         found.append('~/.local/bin/python3.8 ')
+    if run_cmd(['python3.9', '-V']):
+        found.append('python3.9 ')
     elif run_cmd(['~/.local/bin/python3.9', '-V']):
         found.append('~/.local/bin/python3.9 ')
+    if run_cmd(['python3.10', '-V']):
+        found.append('python3.10 ')
     elif run_cmd(['~/.local/bin/python3.10', '-V']):
         found.append('~/.local/bin/python3.10 ')        
     print('Interpreters found: ' + ''.join(found))

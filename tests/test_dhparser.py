@@ -50,7 +50,33 @@ class TestDHParser:
         assert dhparser.selftest(silent=True)
 
 
-# TODO: make this code multiprocessing safe!
+TEST_GRAMMAR = """# Arithmetic-grammar
+
+@ whitespace  = vertical             # implicit whitespace, includes any number of line feeds
+@ literalws   = right                # literals have implicit whitespace on the right hand side
+@ comment     = /#.*/                # comments range from a '#'-character to the end of the line
+@ ignorecase  = False                # literals and regular expressions are case-sensitive
+@ drop        = whitespace, strings  # drop anonymous whitespace
+
+expression = term  { (PLUS | MINUS) term}
+term       = factor { (DIV | MUL) factor}
+factor     = [sign] (NUMBER | VARIABLE | group) { VARIABLE | group }
+sign       = POSITIVE | NEGATIVE
+group      = "(" expression ")"
+
+PLUS       = "+"
+MINUS      = "-"
+MUL        = "*"
+DIV        = "/"
+
+POSITIVE   = /[+]/      # no implicit whitespace after signs
+NEGATIVE   = /[-]/
+
+NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+VARIABLE   = /[A-Za-z]/~
+"""
+
+
 class TestDHParserCommandLineTool:
     def setup(self):
         self.cwd = os.getcwd()
@@ -73,8 +99,9 @@ class TestDHParserCommandLineTool:
     def teardown(self):
         # return
         name = self.dirname
-        if os.path.exists(name + '/%sServer.py' % name):
-            system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)
+        if os.path.exists(os.path.join(name, '%sServer.py' % name)):
+            system(self.python + os.path.join(name, '%sServer.py --stopserver' % name)
+                   + self.nulldevice)
         if os.path.exists(name) and os.path.isdir(name):
             shutil.rmtree(name)
         if os.path.exists(name) and not os.listdir(name):
@@ -90,26 +117,57 @@ class TestDHParserCommandLineTool:
         # if os.path.exists('out') and os.path.isdir('out'):
         #     os.rmdir('out')
 
-    def test_dhparser(self):
+    def test_dhparser_project_test(self):
         name = self.dirname
         # test compiler creation and execution
-        system(self.python + '../DHParser/scripts/dhparser.py ' + name + self.nulldevice)
-        system(self.python + name + '/tst_%s_grammar.py --singlethread ' % name + self.nulldevice)
-        system(self.python + name + '/%sParser.py ' % name + name + '/example.dsl >' + name + '/example.xml')
-        with open(name + '/example.xml', 'r', encoding='utf-8') as f:
+        system(self.python + os.path.join('..', 'DHParser', 'scripts', 'dhparser.py ')
+               + name + self.nulldevice)
+        system(self.python + os.path.join(name, 'tst_%s_grammar.py --singlethread ' % name)
+               + self.nulldevice)
+        system(self.python + os.path.join(name, '%sParser.py ' % name)
+               + os.path.join(name, 'example.dsl --xml >') + os.path.join(name, 'example.xml'))
+        with open(os.path.join(name, 'example.xml'), 'r', encoding='utf-8') as f:
             xml = f.read()
         assert xml.find('document') >= 0, xml
-        os.remove(name + '/%sParser.py' % name)
-        os.remove(name + '/example.xml')
+        os.remove(os.path.join(name, '%sParser.py' % name))
+        os.remove(os.path.join(name, 'example.xml'))
         # test server
-        system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)
-        system(self.python + name + '/%sServer.py ' % name + name + '/example.dsl >' + name + '/example.xml')
-        with open(name + '/example.xml', 'r', encoding='utf-8') as f:
+        # system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)
+        system(self.python + os.path.join(name, '%sServer.py ' % name)
+               + os.path.join(name, 'example.dsl >') + os.path.join(name, 'example.json'))
+        with open(os.path.join(name, 'example.json'), 'r', encoding='utf-8') as f:
             json = f.read()
         assert json.find('document') >= 0, name + ' ' + str(len(json))
-        system(self.python + name + '/%sServer.py ' % name + name + '/example.dsl ' + self.nulldevice)
-        system(self.python + name + '/%sServer.py ' % name + name + '/example.dsl ' + self.nulldevice)
-        system(self.python + name + '/%sServer.py --stopserver' % name+ self.nulldevice)
+        system(self.python + os.path.join(name, '%sServer.py ' % name) +
+               os.path.join(name, '/example.dsl ') + self.nulldevice)
+        system(self.python + os.path.join(name, '%sServer.py ' % name) +
+               os.path.join(name, '/example.dsl ') + self.nulldevice)
+        system(self.python + os.path.join(name, '%sServer.py --stopserver' % name)
+               + self.nulldevice)
+        os.remove(os.path.join(name, '%sServer.py' % name))
+
+    def test_dhparser_compiler_generation_and_batch_processing(self):
+        name = self.dirname
+        with open(os.path.join(name, 'Arithmetic.ebnf'), 'w', encoding='utf-8') as f:
+            f.write(TEST_GRAMMAR)
+        system(self.python + '../DHParser/scripts/dhparser.py '
+               + os.path.join(name, 'Arithmetic.ebnf') + self.nulldevice)
+        assert os.path.exists(os.path.join(name, 'ArithmeticParser.py'))
+        system(self.python + os.path.join(name, 'ArithmeticParser.py')
+               + ' "2 + 3 * 4" ' + self.nulldevice)
+        save = os.getcwd()
+        os.chdir(name.lstrip())
+        os.mkdir('in')
+        for i in range(10):
+            with open(os.path.join('in', f'data_{i}.txt'), 'w') as f:
+                f.write(f'2 / (4 * -5 + {i})\n')
+        system(self.python + ' ArithmeticParser.py' + ' in')
+        result_list = os.listdir('out')
+        result_list.sort()
+        assert result_list == ['data_0.sxpr', 'data_1.sxpr', 'data_2.sxpr', 'data_3.sxpr',
+                               'data_4.sxpr', 'data_5.sxpr', 'data_6.sxpr', 'data_7.sxpr',
+                               'data_8.sxpr', 'data_9.sxpr']
+        os.chdir(save)
 
 
 if __name__ == "__main__":
