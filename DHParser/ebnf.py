@@ -1459,7 +1459,44 @@ The location itself is determined by a regular expression, where the
 point for reentry is the location *after* the next match of the regular
 expression::
 
+    >>> grammar = grammar.replace('@ string_skip   = /(?=")/',
+    ...                           '@ string_resume = /("\s*)/')
+    >>> json_string = create_parser(grammar, 'json_string')
+    >>> tree = json_string('"al\\pha"')
+    >>> print(tree.content)
+    "al\pha"
+    >>> print(tree.errors[0])
+    1:4: Error (1010): Illegal escape sequence »\pha"...«
+    >>> print(tree.as_sxpr())
+    (string
+      (:Text '"')
+      (characters
+        (plain "al"))
+      (ZOMBIE__ `(1:4: Error (1010): Illegal escape sequence »\pha"...«) '\pha"'))
 
+Note, that this time, the zombie-node also contains the closing quotation marks.
+Also, it should be observed, that the regular expression of the resume-directives
+stops after the closing quotation marks as well as any ensuing whitespace. This is
+because parsing will continue with the calling parser of the string parser, so the
+resumption point must be at a reasonable place where the string parser might have
+returned, if no error had occurred.
+
+A simple rule for specifying the reentry point of an error is to find a location
+where the next structural entity after the errouneous entity.
+
+BEISPIEL ini-File-Parser
+
+It can become difficult to find a reentry point with regular expressions
+that is on the same level of the parser call chain (or one level higher up in
+the case of the resume-directive) when an error occurres in a syntactic structure
+that can be recursively nested. Because of this it is also possible to specify
+the re-entry point with a parser. In this case, the search term has a different
+semantics however. If a parser is specified, it must match all characters
+from the point where the error occured up to the reentry point. In the case
+of a simple string or a regular expression, DHParser searches for the first
+match of the expression and then picks the location after that match.
+
+BEISPIEL
 
 Semantic Actions and Storing Variables
 --------------------------------------

@@ -825,10 +825,10 @@ class TestCustomizedResumeParsing:
         document = alpha [beta] gamma "."
         alpha = "ALPHA" abc
             abc = §"a" "b" "c"
-          beta = "BETA" (bac | bca)
+        beta = "BETA" (bac | bca)
             bac = "b" "a" §"c"
             bca = "b" "c" §"a"
-          gamma = "GAMMA" §(cab | cba)
+        gamma = "GAMMA" §(cab | cba)
             cab = "c" "a" §"b"
             cba = "c" "b" §"a"
         GAMMA_RE = /(?=GA\w+)/
@@ -841,7 +841,7 @@ class TestCustomizedResumeParsing:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
         content = 'ALPHA acb BETA bad GAMMA cab .'
@@ -849,7 +849,7 @@ class TestCustomizedResumeParsing:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 2
 
         content = 'ALPHA acb GAMMA cab .'
@@ -895,10 +895,10 @@ class TestCustomizedResumeParsing_with_Parsers:
         document = alpha [beta] gamma "."
         alpha = "ALPHA" abc
             abc = §"a" "b" "c"
-          beta = "BETA" (bac | bca)
+        beta = "BETA" (bac | bca)
             bac = "b" "a" §"c"
             bca = "b" "c" §"a"
-          gamma = "GAMMA" §(cab | cba)
+        gamma = "GAMMA" §(cab | cba)
             cab = "c" "a" §"b"
             cba = "c" "b" §"a"
         GAMMA_RE = /(?=GA\w+)/
@@ -912,7 +912,7 @@ class TestCustomizedResumeParsing_with_Parsers:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
 
         content = 'ALPHA acb BETA bad GAMMA cab .'
@@ -920,7 +920,7 @@ class TestCustomizedResumeParsing_with_Parsers:
         assert cst.error_flag
         assert cst.content == content
         assert cst.pick('alpha').content.startswith('ALPHA')
-        # because of resuming, there should be only on error message
+        # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 2
 
         content = 'ALPHA acb GAMMA cab .'
