@@ -21,7 +21,8 @@ cdef (cython.int, cython.int) fast_real_indices(begin, end, int length)
 
 cdef class StringView:
     cdef public str _text
-    cdef public int _begin, _end
+    cdef public int _begin
+    cdef public int _end
     cdef readonly int _len
     cdef str _fullstring
 
