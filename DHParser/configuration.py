@@ -138,7 +138,7 @@ def remove_cfg_tempfile(filename: str):
     os.remove(filename)
 
 
-def finalize_presets():
+def finalize_presets(fail_on_error: bool=False):
     """
     Finalizes changes of the presets of the configuration values.
     This method should always be called after changing preset values to
@@ -155,9 +155,10 @@ def finalize_presets():
             import pickle
             syncfile_path = get_syncfile_path(os.getpid())
             existing_syncfile = CONFIG_PRESET['syncfile_path']
-            assert ((not existing_syncfile or existing_syncfile == syncfile_path)
-                    and (not os.path.exists((get_syncfile_path(os.getppid()))))), \
-                "finalize_presets() can only be called from the main process!"
+            if fail_on_error:
+                assert ((not existing_syncfile or existing_syncfile == syncfile_path)
+                        and (not os.path.exists((get_syncfile_path(os.getppid()))))), \
+                    "finalize_presets() can only be called from the main process!"
             with open(syncfile_path, 'wb') as f:
                 CONFIG_PRESET['syncfile_path'] = syncfile_path
                 if existing_syncfile != syncfile_path:
