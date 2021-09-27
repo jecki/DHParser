@@ -1482,7 +1482,7 @@ resumption point must be at a reasonable place where the string parser might hav
 returned, if no error had occurred.
 
 A simple rule for specifying the reentry point of an error is to find a location
-where the next structural entity after the errouneous entity.
+where the next structural entity after the errouneous entity starts.
 
 BEISPIEL ini-File-Parser
 
