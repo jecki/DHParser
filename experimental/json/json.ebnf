@@ -23,11 +23,13 @@
 
 json       = ~ _element _EOF
 _element   = object | array | string | number | _bool | null
-object     = "{" member { "," §member } §"}"
+object     = "{" [_members] §"}"
+_members   = member { "," §member }
 member     = string §":" _element
-array      = "[" [ _element { "," _element } ] §"]"
-string     = `"` §_CHARACTERS `"` ~
-number     = INT FRAC EXP ~
+array      = "[" [_elements] §"]"
+_elements  = _element { "," §_element }
+string     = `"` [_CHARACTERS] §`"` ~
+number     = INT [FRAC] [EXP] ~
 _bool      = true | false
 true       = `true` ~
 false      = `false` ~
@@ -40,7 +42,7 @@ null       = "null"
 #
 #######################################################################
 
-_CHARACTERS = { PLAIN | ESCAPE }
+_CHARACTERS = { PLAIN | ESCAPE }+
 PLAIN       = /[^"\\]+/
 ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
 UNICODE     = "\u" HEX HEX
@@ -48,8 +50,8 @@ HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
 INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
 NEG         = `-`
-FRAC        = [ DOT /[0-9]+/ ]
+FRAC        = DOT /[0-9]+/
 DOT         = `.`
-EXP         = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
+EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
 
 _EOF        =  !/./        # no more characters ahead, end of file reached

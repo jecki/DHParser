@@ -3448,7 +3448,7 @@ class EBNFCompiler(Compiler):
 
         def check_argnum(n: int = 1):
             if len(node.children) > n + 1:
-                self.tree.new_error(node, 'Directive "%s" can have at most %i values.' % (key, n))
+                self.tree.new_error(node, 'Directive "@%s" can have at most %i values.' % (key, n))
 
         if key in {'comment', 'whitespace'}:
             check_argnum()
@@ -3468,7 +3468,9 @@ class EBNFCompiler(Compiler):
 
         elif key == 'disposable':
             if node.children[1].tag_name == "regexp":
-                check_argnum()
+                if len(node.children) > 2:
+                    self.tree.new_error(node, 'Directive "@disposable" can only have one argument'
+                                        ' if specified as regexp and not as a list of symbols.')
                 re_pattern = node.children[1].content
                 if re.match(re_pattern, ''):
                     self.tree.new_error(
@@ -3482,7 +3484,7 @@ class EBNFCompiler(Compiler):
                     if child.tag_name != "symbol":
                         self.tree.new_error(
                             child, f'Non-symbol argument: {flatten_sxpr(child.as_sxpr())}'
-                            ' not allowed in @disposable-directive')
+                            ' cannot be mixed with symbols in @disposable-directive')
                 alist = [child.content for child in args]
                 for asym in alist:
                     self.symbols.setdefault(asym, []).append(node)

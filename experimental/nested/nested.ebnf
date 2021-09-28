@@ -1,0 +1,60 @@
+# nested-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+# Regular expression for implicit whitespace or one of: horizontal, linefeed, vertical
+# Implicit whitespace is denoted by the tilde-character: ~
+@ whitespace  = vertical
+
+# Implicit whitespace adjacent to literals: left, right, both, none
+# E.g. if @literalws = right then ")" means the same as `)`~
+@ literalws   = right
+
+# Regular expression for comments, e.g. /#.*(?:\n|$)/
+# Use: /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/ for C++-style comments: /* ... */ or // to EOL
+@ comment     = /#.*/
+
+# Case-sensitivity: True, False
+@ ignorecase  = False
+
+# Tree-simplification while parsing:  none, flatten, merge_treetops, merge
+@ reduction   = flatten         # anonymous nodes are being reduced where possible
+
+# Tags that may be replaced with their content while parsing
+@ disposable  = /_\w+/
+
+# Tags that will be dropped with all their content while parsing or any of
+# the special values: strings, backticked, whitespace, regexps
+# Here, EOF and insignificant whitespace (tilde) will be dropped
+@ drop        = _EOF, whitespace, strings
+
+
+#######################################################################
+#
+#:  Nested List
+#
+#######################################################################
+
+_document = ~ [ list ] §_EOF
+
+@list_skip = /(?=]|,|$)/
+list     = "[" [_items] § "]"
+
+@_items_skip = /(?=,)/, /(?=])/, /$/
+_items   = _item { "," §_item }
+
+_item    = number | list
+
+
+#######################################################################
+#
+#:  Basic Elements
+#
+#######################################################################
+
+number   = `0` | /[1-9][0-9]*/
+_EOF     =  !/./        # no more characters ahead, end of file reached
