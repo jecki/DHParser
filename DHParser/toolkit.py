@@ -299,7 +299,7 @@ def last(item_or_sequence: Union[Sequence, Any]) -> Any:
 
 
 DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
-DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/'))
+DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/').rstrip('\\'))
 
 
 def sane_parser_name(name) -> bool:

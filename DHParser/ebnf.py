@@ -263,7 +263,7 @@ only as placeholders to render the definition of the grammar a bit
 more readable, not because we are intested in the text that is
 captured by the production associated with them in their own right::
 
-    >>> disposable_symbols = '@disposable = /_\w+/ \\n'
+    >>> disposable_symbols = '@disposable = /_\\\\w+/ \\n'
 
 Instead of passing a comma-separated list of symbols to the directive,
 which would also have been possible, we have leveraged our convention
@@ -774,7 +774,7 @@ to at most a single linefeed::
     >>> testdata = '{"array": [1, 2.0, "a string"], \\n\\n\\n "number": -1.3e+25, "bool": false}'
     >>> syntax_tree = json_parser(testdata)
     >>> print(syntax_tree.errors[0])
-    1:32: Error (1010): 'member' expected by parser 'object', but » \\n \\n \\n  "numb...« found instead!
+    1:32: Error (1010): 'member' expected by parser 'object', but » \\n\\n\\n "numb...« found instead!
     >>> json_gr = '@whitespace = /\\\\s*/ \\n' + json_gr
     >>> json_parser = create_parser(json_gr, "JSON")
     >>> syntax_tree = json_parser(testdata)
@@ -1253,7 +1253,7 @@ deliver understandable error-messages::
     "alpha"
     >>> for e in json_string('"al\\pha"').errors:  print(e)
     1:4: Error (1010): Illegal character(s) »\pha"...« in string.
-    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"«  Terminating parser.
+    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 Customized error-messages must always be specified in the grammar
 before definition of the symbol, they are related to and they can
@@ -1270,7 +1270,7 @@ general or fallback conditions should be placed below these::
     >>> json_string = create_parser(grammar, 'json_string')
     >>> for e in json_string('"al\\pha"').errors:  print(e)
     1:4: Error (1010): Illegal escape sequence »\pha"...« Allowed values are b,n,r,t,u
-    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"«  Terminating parser.
+    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 Here, the more specific and more understandable error message
 has been selected. Careful readers might notice that the the
@@ -1482,9 +1482,52 @@ resumption point must be at a reasonable place where the string parser might hav
 returned, if no error had occurred.
 
 A simple rule for specifying the reentry point of an error is to find a location
-where the next structural entity after the errouneous entity starts.
+where the next structural entity after the errouneous entity starts. Let's try
+this for a (simplified) `config-file <https://docs.python.org/3/library/configparser.html>`
+parser::
 
-BEISPIEL ini-File-Parser
+    >>> config_grammar = '''@literalws = right
+    ... config     = ~ { section } EOF
+    ... section    = heading { entry }
+    ... heading    = "[" § identifier "]"
+    ... entry      = identifier § ":" value
+    ... identifier = /\\\\w+/~
+    ... value      = `"` § TEXTLINE '"'
+    ... TEXTLINE = /[^"\\\\n]*/
+    ... EOF      =  !/./ '''
+    >>> config_parser = create_parser(config_grammar)
+
+As of now, our parser is not fail-tolerant. This means it will stop parsing
+at the first error. Further errors are neither detected nor reported::
+
+    >>> cfg_data_with_errors = '''
+    ... [entities]
+    ... animal: "cat"
+    ... plant: rose"
+    ... Building: "Tour Eiffel"
+    ... [colors
+    ... red: "warm"
+    ... blue 1: "cold"
+    ... grey: "black and white" '''
+    >>> result = config_parser(cfg_data_with_errors)
+    >>> for error in result.errors_sorted:  print(error)
+    4:8: Error (1010): 'value' expected by parser 'entry', but »rose"\\nBuil...« found instead!
+    4:8: Error (1040): Parser "config" stopped before end, at: »rose"\\nBuil...« Terminating parser.
+
+After adding suitable `resume`-clauses for those symbols the definition
+of which contain the mantatory marker `§`, all errors are reported in
+a single pass::
+
+    >>> config_grammar = '''
+    ... @heading_resume = /\\\\n\\\\s*(?=\\\\w|\\\\[)/
+    ... @entry_resume = /\\\\n\\\\s*(?=\\\\w|\\\\[)/
+    ... ''' + config_grammar
+    >>> config_parser = create_parser(config_grammar)
+    >>> result = config_parser(cfg_data_with_errors)
+    >>> for error in result.errors_sorted:  print(error)
+    4:8: Error (1010): 'value' expected by parser 'entry', but »rose"\\nBuil...« found instead!
+    7:1: Error (1010): '`]` ~' expected by parser 'heading', but »red: "warm...« found instead!
+    8:6: Error (1010): '`:` ~' expected by parser 'entry', but »1: "cold"\\n...« found instead!
 
 It can become difficult to find a reentry point with regular expressions
 that is on the same level of the parser call chain (or one level higher up in
@@ -1575,7 +1618,7 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'{dhparser_parentdir}'))
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, {dhparser_parentdir}))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 if dhparser_parentdir not in sys.path:
@@ -2737,7 +2780,7 @@ class EBNFCompiler(Compiler):
         compilation process. It is used to name and annotate the output.
         Returns `self`.
         """
-        assert grammar_name == "" or re.match(r'\w+\Z', grammar_name)
+        assert grammar_name == "" or re.match(r'\w+\Z', grammar_name), grammar_name
         if not grammar_name and re.fullmatch(r'[\w/:\\]+', grammar_source):
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
         self.grammar_name = grammar_name or "NameUnknown"
@@ -3302,8 +3345,9 @@ class EBNFCompiler(Compiler):
                 any(e.code == MALFORMED_REGULAR_EXPRESSION for e in self.tree.errors):
             errors = []
             try:
+
                 grammar_class = compile_python_object(
-                    DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) +
+                    DHPARSER_IMPORTS.format(dhparser_parentdir=repr(DHPARSER_PARENTDIR)) +
                     python_src, (self.grammar_name or "DSL") + "Grammar")
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(

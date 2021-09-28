@@ -450,8 +450,9 @@ class TestBoundaryCases:
             assert not has_errors(messages), "Unconnected rules should result in a warning, " \
                 "not an error: " + str(messages)
             grammar_src = result
-            grammar = compile_python_object(DHPARSER_IMPORTS + grammar_src,
-                                            r'get_(?:\w+_)?grammar$')()
+            grammar = compile_python_object(
+                DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + grammar_src,
+                r'get_(?:\w+_)?grammar$')()
         else:
             assert False, "EBNF compiler should warn about unconnected rules."
 
@@ -1089,7 +1090,7 @@ class TestAlternativeEBNFSyntax:
         code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
         assert not ast.error_flag, str(ast.errors)
         arithmetic_grammer = compile_python_object(
-            DHPARSER_IMPORTS.format(dhparser_parentdir=DHPARSER_PARENTDIR) + code)
+            DHPARSER_IMPORTS.format(dhparser_parentdir=repr(DHPARSER_PARENTDIR)) + code)
         arithmetic_parser = arithmetic_grammer()
         st = arithmetic_parser('2 + 3 * (-4 + 1)')
         assert str(st) == "2+3*(-4+1)"

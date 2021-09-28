@@ -1619,8 +1619,8 @@ class Grammar:
                         max_parser_dropouts = -1  # no further retries!
                     else:
                         i = self.ff_pos__ or tail_pos(stitches)
-                        fs = self.document__[i:i + 10]
-                        if i + 10 < len(self.document__) - 1:  fs += ' ...'
+                        fs = self.document__[i:i + 10].replace('\n', '\\n')
+                        if i + 10 < len(self.document__) - 1:  fs += '...'
                         root_name = self.start_parser__.pname \
                                     or self.associated_symbol__(self.start_parser__).pname
                         error_msg = f'Parser "{root_name}" ' \
@@ -1630,7 +1630,7 @@ class Grammar:
                                if self.history_tracking__ else "..."))
                              if len(stitches) < self.max_parser_dropouts__
                              else " too often!" if self.max_parser_dropouts__ > 1 else " " +
-                             " Terminating parser.")
+                             "Terminating parser.")
                         error_code = PARSER_STOPPED_BEFORE_END
                 stitch = Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches))
                 stitches.append(stitch)
@@ -2827,7 +2827,7 @@ class MandatoryNary(NaryParser):
         location = grammar.document_length__ - len(text_)
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
         err_node.with_pos(location)  # for testing artifacts
-        found = text_[:10].replace('\n', '\\n ') + '...'
+        found = text_[:10].replace('\n', '\\n') + '...'
         sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
         for search, message in err_msgs:
