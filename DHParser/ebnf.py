@@ -450,10 +450,10 @@ delimiters would be merged with content. Therefore, the ``@reduction = merge`-
 directive should at best only be applied in conjunction with the ``@drop`` and
 ``@disposable``-directives.
 
-Applying any of the here described tree-reduction (or "simplification" for
+Applying any of the here described tree-reductions (or "simplifications" for
 that matter) requires a bit of careful planning concerning which nodes
 will be named and which nodes will be dropped. This, however, pays off in
-terms of speed and considerably simplified abtract-syntax-tree generation
+terms of speed and a considerably simplified abtract-syntax-tree generation
 stage, because most of the unnecessary structure of concrete-syntax-trees
 has already been eliminated at the parsing stage.
 
