@@ -6,23 +6,19 @@
 import os
 import sys
 
-LOGGING = 'LOGS'
-DEBUG = True
-TEST_DIRNAME = 'tests_grammar'
+LOGGING = ''
 
-scriptpath = os.path.dirname(__file__)
-dhparserdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
-if scriptpath not in sys.path:
-    sys.path.append(scriptpath)
-if dhparserdir not in sys.path:
-    sys.path.append(dhparserdir)
+scriptpath = os.path.dirname(__file__) or '.'
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 try:
-    from DHParser.configuration import access_presets, set_preset_value, \
-        finalize_presets
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
+    from DHParser.configuration import set_config_value, access_presets, set_preset_value, finalize_presets
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
           '"%s" manually' % __file__)
@@ -30,7 +26,7 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    grammar_tests_dir = os.path.join(scriptpath, TEST_DIRNAME)
+    grammar_tests_dir = os.path.join(scriptpath, 'test_grammar')
     testing.create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
     if not dsl.recompile_grammar(grammar_src, force=force,
@@ -43,27 +39,24 @@ def recompile_grammar(grammar_src, force):
     dsl.restore_server_script(grammar_src)
 
 
-def run_grammar_tests(fn_pattern, get_grammar, get_transformer):
-    testdir = os.path.join(scriptpath, TEST_DIRNAME)
-    DHParser.log.start_logging(os.path.join(testdir, LOGGING))
+def run_grammar_tests(glob_pattern, get_grammar, get_transformer):
+    DHParser.log.start_logging(LOGGING)
     error_report = testing.grammar_suite(
-        testdir, get_grammar, get_transformer,
-        fn_patterns=[fn_pattern], report='REPORT', verbose=True,
-        junctions=set(), show=set())
+        os.path.join(scriptpath, 'test_grammar'),
+        get_grammar, get_transformer,
+        fn_patterns=[glob_pattern], report='REPORT', verbose=True)
     return error_report
 
 
 if __name__ == '__main__':
     argv = sys.argv[:]
     if len(argv) > 1 and sys.argv[1] == "--debug":
-        DEBUG = True
+        LOGGING = 'LOGS'
         del argv[1]
-
-    access_presets()
-    # set_preset_value('test_parallelization', True)
-    if DEBUG:  set_preset_value('history_tracking', True)
-    finalize_presets()
-
+        access_presets()
+        set_preset_value('history_tracking', True)
+        finalize_presets()
+        DHParser.log.start_logging(LOGGING)
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
         os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
         # if called with a single filename that is either an EBNF file or a known
@@ -85,3 +78,4 @@ if __name__ == '__main__':
             print(error_report)
             sys.exit(1)
         print('ready.\n')
+

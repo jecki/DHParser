@@ -667,9 +667,10 @@ def restore_server_script(ebnf_filename: str,
     if not os.path.exists(server_name) or overwrite:
         template = read_template('DSLServer.pyi')
         reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
+        rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(reldhparserdir))
         serverscript = base + 'Server.py'
         with open(serverscript, 'w') as f:
-            f.write(template.replace('DSL', name).replace('RELDHPARSERDIR', reldhparserdir))
+            f.write(template.replace('DSL', name).replace('RELDHPARSERDIR', rel_dhpath_expr))
         if platform.system() != "Windows":
             # set file permissions so that the server-script can be executed
             st = os.stat(serverscript)
