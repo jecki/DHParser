@@ -34,7 +34,7 @@ from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 from DHParser.toolkit import cython, line_col
 
 __all__ = ('trace_history', 'all_descendants', 'set_tracer',
-           'resume_notices_on')
+           'resume_notices_on', 'resume_notices_off')
 
 
 @cython.locals(location=cython.int, loc=cython.int, delta=cython.int, cs_len=cython.int,
@@ -170,3 +170,8 @@ def resume_notices_on(grammar: Grammar):
     grammar.history_tracking__ = True
     grammar.resume_notices__ = True
     set_tracer(grammar, trace_history)
+
+
+def resume_notices_off(grammar: Grammar):
+    """Turns off resume-notices as well as history tracking!"""
+    set_tracer(grammar, None)

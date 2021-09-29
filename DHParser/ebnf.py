@@ -1539,7 +1539,87 @@ from the point where the error occured up to the reentry point. In the case
 of a simple string or a regular expression, DHParser searches for the first
 match of the expression and then picks the location after that match.
 
-BEISPIEL
+As an example, let's try this with a parser for arbitrarily nested lists
+of postive integers. First, we write our grammar without any re-entry rules::
+
+    >>> number_list_grammar = '''@ literalws   = right
+    ... @ disposable  = /_\w+/
+    ... @ drop        = _EOF, whitespace, strings
+    ... _document = ~ [ list ] §_EOF
+    ... list     = "[" [_items] § "]"
+    ... _items   = _item { "," §_item }
+    ... _item    = number | list
+    ... number   = `0` | /[1-9][0-9]*/
+    ... _EOF     =  !/./'''
+    >>> list_parser = create_parser(number_list_grammar)
+    >>> list_parser('[[1,2], [3,4]]').as_sxpr()
+    '(list (list (number "1") (number "2")) (list (number "3") (number "4")))'
+
+The following example containts three errors: The letter "A" in a place where a
+number should be and, a bit later, the wrong delimiter ";" instead of a comma,
+and finally a missing value (or a superfluous comma) right befor the end.
+Since there are no rule for resuming the parser after an error ocurred, the
+parser will stop after the first error and also report that only part of the
+document could be parsed::
+
+    >>> example_with_errors = '[1, 2, A, [5, 6; 7], 8, ]'
+    >>> result = list_parser(example_with_errors)
+    >>> for e in result.errors: print(e)
+    1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:6: Error (1040): Parser "_document" stopped before end, at: »A, [5, 6; ...« Terminating parser.
+
+Now, let's define some regular expression based rules to resume parsing after
+an error::
+
+    >>> resumption_rules = '''
+    ... @list_skip = /]|$/
+    ... @_items_skip = /(?=,)/, /(?=])/, /$/
+    ... '''
+
+Note, that for the "_items"-parser, several rules have been specified. DHParser
+will try all of these rules and resume at the closest of the locations these
+rules yield::
+
+    >>> list_parser = create_parser(resumption_rules + number_list_grammar)
+    >>> result = list_parser(example_with_errors)
+    >>> for e in result.errors: print(e)
+    1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; 7], 8, ]...« found instead!
+    1:25: Error (1010): '_item' expected by parser '_items', but »]...« found instead!
+
+All errors are located and reported properly in a single run and the parser continues
+right through until the end of the document as we'd expect from a fail-tolerant parser.
+However, the limitations of our regular-expression-based rules become apparent when
+nested structures are involved::
+
+    >>> example_with_errors_2 = '[1, 2, A, [5, 6; [7, 8], 9], 10, ]'
+    >>> result = list_parser(example_with_errors_2)
+    >>> for e in result.errors: print(e)
+    1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
+    1:15: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
+
+Here, the parser stopped befere the end of the document, which shows that our resumption
+rules have been either incomplete or inadequate. Let's turn on some debugging information
+to get a better insight into what went wrong::
+
+    >>> from DHParser.trace import resume_notices_on
+    >>> resume_notices_on(list_parser)
+    >>> result = list_parser(example_with_errors_2)
+    >>> for e in result.errors: print(e)
+    1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:9: Notice (50): Skipping from position 1:8 within parser _items->:ZeroOrMore->:Series: ', [5, 6...'
+    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:24: Notice (50): Skipping from position 1:16 within parser list: ', 9], 1...'
+    1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
+    1:15: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
+
+What is of interest here, is the second notice: It seems that the error was caught within
+the "list"-parser, but that the "list"-parser by moving on to the spot after closing
+bracket (as instructed by its @skip-directive) did not end up at a location after the
+list within which the error occured, as had been intended, but a the location after
+the contained list "[7, 8]".
 
 Semantic Actions and Storing Variables
 --------------------------------------

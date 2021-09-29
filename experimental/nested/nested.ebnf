@@ -41,8 +41,8 @@
 
 _document = ~ [ list ] §_EOF
 
-@list_skip = { list | /[^\[\],]*/ }
-# @list_skip = /(?=]|,|$)/
+@list_skip = { list | /[^\[\]]*/ }
+# @list_skip = /]|$/  # /(?=]|$)/
 list     = "[" [_items] § "]"
 
 @_items_skip = /(?=,)/, /(?=])/, /$/
