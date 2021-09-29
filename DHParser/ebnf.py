@@ -1669,8 +1669,19 @@ that resumption does not get caught on the nested structure, any more::
     1:34: Notice (50): Skipping from position 1:34 within parser _items->:ZeroOrMore: ']'
 
 Programming fail-tolerant parsers can be quite a challenge. DHParser's @skip-
-and @resume-directives allow to separate the code for fail-tolerance from the
-grammar proper.
+and @resume-directives help separating the code for fail-tolerance from the
+grammar proper. The only hooks that are needed within the grammar proper are
+the mandatory markers ("§"). Still, it is a good strategy, to start adding the
+fail-tolerance code only later in the development of a grammar and to keep
+things as simple as possible. This can best be done by chosing resumption
+points that are as unambiguous as possible (like keywords that introduce
+specific parts of the document), even if this means that larger
+parts of the document will be skipped and, consequently, some errors will
+remain undetected until errors earlier in the document have been fixed.
+If syntax errors are sparse - as can reasonably be assumed - the harm done
+by skipping larger portions of the text is probably negligble or at any
+rate smaller than the harm done by introducing consequential errors as
+a result of poorly choosen resumption rules.
 
 Semantic Actions and Storing Variables
 --------------------------------------
