@@ -677,7 +677,7 @@ from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
-    add_source_locations, SourceLocation, SourceMapFunc
+    add_source_locations, SourceMapFunc
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \

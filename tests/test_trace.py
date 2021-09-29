@@ -34,7 +34,7 @@ from DHParser import grammar_provider, all_descendants, \
     set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
     set_config_value, resume_notices_on, Error
 from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
-    MANDATORY_CONTINUATION_AT_EOF, WARNING
+    MANDATORY_CONTINUATION_AT_EOF, WARNING, RESUME_NOTICE, ERROR_WHILE_RECOVERING_FROM_ERROR
 from DHParser.testing import unique_name
 
 
@@ -158,9 +158,31 @@ class TestTrace:
         # test resume notice
         resume_notices_on(gr)
         cst = gr(content)
-        # there should be one error message and one resume notice
+        # there should be one error message and one resume notice:
+        err_codes = set([err.code for err in cst.errors])
+        assert err_codes == {1010, 50}
         set_tracer(gr, None)
         assert not gr.history_tracking__
+
+    def test_trace_resume_2(self):
+        lang = """@ whitespace  = vertical
+        @ literalws   = right
+        _document = ~ [ list ] §_EOF
+        @list_resume = { list | /[^\[\]]*/ } ["]"]
+        list     = "[" [_items] § "]"
+        @_items_skip = /(?=,)/, /(?=])/, /$/
+        _items   = _item { "," §_item }
+        _item    = number | list
+        number   = `0` | /[1-9][0-9]*/
+        _EOF     =  !/./
+        """
+        gr = grammar_provider(lang)()
+        resume_notices_on(gr)
+        cst = gr('[1, 2, A, [5, 6; [7, 8], 9], 10, ]')
+        note_pos = set([e.orig_pos for e in cst.errors if e.code == RESUME_NOTICE])
+        err_pos = set([e.orig_pos for e in cst.errors if e.code != RESUME_NOTICE])
+        assert note_pos == {8, 27, 33}
+        assert err_pos == {7, 15, 33}
 
     def test_trace_resume_message(self):
         lang = """

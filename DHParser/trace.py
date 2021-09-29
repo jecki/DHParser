@@ -41,6 +41,13 @@ __all__ = ('trace_history', 'all_descendants', 'set_tracer',
                i=cython.int, L=cython.int)
 def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], StringView]:
     grammar = self._grammar  # type: Grammar
+    if not grammar.history_tracking__:
+        try:
+            node, rest = self._parse(text)  # <===== call to the actual parser!
+        except ParserError as pe:
+            raise pe
+        return node, rest
+
     location = grammar.document_length__ - text._len  # type: int
 
     if grammar.most_recent_error__:

@@ -218,6 +218,8 @@ UNDEFINED_RETRIEVE                       = ErrorCode(1090)
 DIRECTIVE_FOR_NONEXISTANT_SYMBOL         = ErrorCode(1100)
 INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
 
+ERROR_WHILE_RECOVERING_FROM_ERROR        = ErrorCode(1301)
+
 # EBNF-specific static analysis errors
 
 CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
@@ -386,6 +388,7 @@ class Error:
         if self.related:
             diagnostic['relatedInformation'] = [relatedObj(err) for err in self.related]
         return diagnostic
+
 
 def is_warning(code: Union[Error, int]) -> bool:
     """Returns True, if error is merely a warning or a message."""
