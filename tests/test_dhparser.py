@@ -102,6 +102,7 @@ class TestDHParserCommandLineTool:
         if os.path.exists(os.path.join(name, '%sServer.py' % name)):
             system(self.python + os.path.join(name, '%sServer.py --stopserver' % name)
                    + self.nulldevice)
+        # time.sleep(0.1)
         if os.path.exists(name) and os.path.isdir(name):
             shutil.rmtree(name)
         if os.path.exists(name) and not os.listdir(name):
@@ -132,7 +133,6 @@ class TestDHParserCommandLineTool:
         os.remove(os.path.join(name, '%sParser.py' % name))
         os.remove(os.path.join(name, 'example.xml'))
         # test server
-        # system(self.python + name + '/%sServer.py --stopserver' % name + self.nulldevice)
         system(self.python + os.path.join(name, '%sServer.py ' % name)
                + os.path.join(name, 'example.dsl >') + os.path.join(name, 'example.json'))
         with open(os.path.join(name, 'example.json'), 'r', encoding='utf-8') as f:
@@ -145,6 +145,7 @@ class TestDHParserCommandLineTool:
         system(self.python + os.path.join(name, '%sServer.py --stopserver' % name)
                + self.nulldevice)
         os.remove(os.path.join(name, '%sServer.py' % name))
+        time.sleep(0.1)  # MS Windows needs a little break here...
 
     def test_dhparser_compiler_generation_and_batch_processing(self):
         name = self.dirname
