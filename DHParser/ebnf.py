@@ -2957,7 +2957,7 @@ class EBNFCompiler(Compiler):
             self.current_symbols = [node]
             self.rules[rule] = self.current_symbols
             defn = self.compile(nd)
-            assert defn.find("(") >= 0  # synonyms impossible here
+            assert defn.find("(") >= 0  # synonyms are impossible here
             self.definitions[rule] = defn
             self.referred_by_directive.add(rule)
             return unrepr(rule)
@@ -3340,7 +3340,7 @@ class EBNFCompiler(Compiler):
         if not self.definitions:
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
 
-        python_src = self.assemble_parser(definitions)
+        python_src = self.assemble_parser(list(self.definitions.items()))
         if get_config_value('static_analysis') == 'early' and not \
                 any(e.code == MALFORMED_REGULAR_EXPRESSION for e in self.tree.errors):
             errors = []
