@@ -1315,6 +1315,20 @@ compilation make possible by fail-tolerant parsers.
 A generic method for fail-tolerant parsing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Fail tolerant parsing means that:
+
+1. the parsing process continues after a syntax error has been
+   encountered, ideally until the end of the document
+
+2. that doing so the parser skips as little text as possible
+   and thus reports as many errors as possible on the first
+   run.
+
+3. that ideally no consequential errors (Folgefehler) are
+   introduced which are not original errors in the source
+   document, but merely artifacts of badly choosen locations
+   for the resumption of the parsing process.
+
 There are a number of techniques for fail-tolerant parsing. One
 technique that is not specific to DHParser but can be used with
 any parser-generator is to add junctions for possibly erroneous
@@ -1572,13 +1586,20 @@ Now, let's define some regular expression based rules to resume parsing after
 an error::
 
     >>> resumption_rules = '''
-    ... @list_skip = /]|$/
+    ... @list_resume = /]\s*|$/
     ... @_items_skip = /(?=,)/, /(?=])/, /$/
     ... '''
 
 Note, that for the "_items"-parser, several rules have been specified. DHParser
 will try all of these rules and resume at the closest of the locations these
-rules yield::
+rules yield. The `@list_resume`-rule moves to a point after the list, where the
+list parser might have returned, if no error had occured, which is after the
+closing square bracket plus any adjacent whitespace. The '@_items_skip`-rule
+moves to any point within the sequence of items where the `_items` could catch
+up (another comma "," followed by further items) or end, because the sequence
+is exhausted ("]" or the end of the document caught be the regular expression
+marker for the end of the string: /$/). See, how these rules play out in
+this particular example::
 
     >>> list_parser = create_parser(resumption_rules + number_list_grammar)
     >>> result = list_parser(example_with_errors)
@@ -1598,7 +1619,7 @@ nested structures are involved::
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:15: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
+    1:18: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 Here, the parser stopped befere the end of the document, which shows that our resumption
 rules have been either incomplete or inadequate. Let's turn on some debugging information
@@ -1611,15 +1632,56 @@ to get a better insight into what went wrong::
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:9: Notice (50): Skipping from position 1:8 within parser _items->:ZeroOrMore->:Series: ', [5, 6...'
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
-    1:24: Notice (50): Skipping from position 1:16 within parser list: ', 9], 1...'
+    1:24: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 9], 1...'
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:15: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
+    1:18: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 What is of interest here, is the second notice: It seems that the error was caught within
-the "list"-parser, but that the "list"-parser by moving on to the spot after closing
-bracket (as instructed by its @skip-directive) did not end up at a location after the
-list within which the error occured, as had been intended, but a the location after
-the contained list "[7, 8]".
+the "list"-parser. By moving on to the spot after closing bracket as determined by the
+`@list_resume`-directive, however, thar parsing-process did not end up at a location
+behind the grammatical structure where the error had occured, but at the location after
+a nested structure, which in this example is the inner list "[7, 8]".
+
+This problem can be remedied by using the full power of parsing expression grammars
+for determining the resumption-position::
+
+    >>> resumption_rules = '''
+    ... @list_resume = { list | /[^\\\\[\\\\]]*/ } ["]"]
+    ... @_items_skip = /(?=,)/, /(?=])/, /$/
+    ... '''
+    >>> list_parser = create_parser(resumption_rules + number_list_grammar)
+    >>> resume_notices_on(list_parser)
+    >>> result = list_parser(example_with_errors_2)
+    >>> from DHParser.error import RESUME_NOTICE
+    >>> for e in result.errors:
+    ...     if e.code != RESUME_NOTICE: print(e)
+    1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:34: Error (1010): '_item' expected by parser '_items', but »]...« found instead!
+
+This time, the parser does not terminate before the end. The resume-notices show
+that resumption does not get caught on the nested structure, any more::
+
+    >>> for e in result.errors:
+    ...     if e.code == RESUME_NOTICE: print(e)
+    1:9: Notice (50): Skipping from position 1:8 within parser _items->:ZeroOrMore->:Series: ', [5, 6...'
+    1:28: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 10, ]'
+    1:34: Notice (50): Skipping from position 1:34 within parser _items->:ZeroOrMore: ']'
+
+Programming fail-tolerant parsers can be quite a challenge. DHParser's @skip-
+and @resume-directives help separating the code for fail-tolerance from the
+grammar proper. The only hooks that are needed within the grammar proper are
+the mandatory markers ("§"). Still, it is a good strategy, to start adding the
+fail-tolerance code only later in the development of a grammar and to keep
+things as simple as possible. This can best be done by chosing resumption
+points that are as unambiguous as possible (like keywords that introduce
+specific parts of the document), even if this means that larger
+parts of the document will be skipped and, consequently, some errors will
+remain undetected until errors earlier in the document have been fixed.
+If syntax errors are sparse - as can reasonably be assumed - the harm done
+by skipping larger portions of the text is probably negligble or at any
+rate smaller than the harm done by introducing consequential errors as
+a result of poorly choosen resumption rules.
 
 Semantic Actions and Storing Variables
 --------------------------------------

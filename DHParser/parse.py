@@ -44,7 +44,8 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
-    AUTORETRIEVED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, SourceMapFunc
+    AUTORETRIEVED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, \
+    ERROR_WHILE_RECOVERING_FROM_ERROR, SourceMapFunc
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -165,11 +166,11 @@ class ParserError(Exception):
         >>> pe_derived.first_throw
         False
         """
-        args = { "parser": self.parser,
-                 "node": self.node,
-                 "rest": self.rest,
-                 "error": self.error,
-                 "first_throw": self.first_throw }
+        args = {"parser": self.parser,
+                "node": self.node,
+                "rest": self.rest,
+                "error": self.error,
+                "first_throw": self.first_throw}
         assert len(kwargs.keys() - args.keys()) == 0, str(kwargs.keys() - args.keys())
         args.update(kwargs)
         pe = ParserError(**args)
@@ -301,7 +302,19 @@ def reentry_point(rest: StringView,
     for rule in rules:
         comments = rest.finditer(comment_regex)
         if isinstance(rule, Parser):
-            _node, _text = cast(Parser, rule)(rest)
+            parser = cast(Parser, rule)
+            grammar = parser.grammar
+            save = grammar.history_tracking__
+            grammar.history_tracking__ = False
+            try:
+                _node, _text = parser(rest)
+            except ParserError as pe:
+                grammar.tree__.new_error(
+                    grammar.tree__,
+                    f"Error while searching re-entry point with parser {parser}: {pe}",
+                    ERROR_WHILE_RECOVERING_FROM_ERROR)
+                _node, _text = None, ''
+            grammar.history_tracking__ = save
             if _node:
                 pos = len(rest) - len(_text)
                 if pos < closest_match:
@@ -323,7 +336,7 @@ def reentry_point(rest: StringView,
     if closest_match == upper_limit:
         closest_match = -1
     if skip_node is None:
-        skip_node = Node(ZOMBIE_TAG, rest[:max(closest_match,0)])
+        skip_node = Node(ZOMBIE_TAG, rest[:max(closest_match, 0)])
     return closest_match, skip_node
 
 
@@ -1679,7 +1692,6 @@ class Grammar:
         self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
-        # self.history_tracking__ = save_history_tracking
         return self.tree__
 
 
@@ -2851,7 +2863,7 @@ class MandatoryNary(NaryParser):
         error = Error(msg, location,
                       MANDATORY_CONTINUATION_AT_EOF if (failed_on_lookahead and not text_)
                       else MANDATORY_CONTINUATION,
-                      length = max(self.grammar.ff_pos__ - location, 1))
+                      length=max(self.grammar.ff_pos__ - location, 1))
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
