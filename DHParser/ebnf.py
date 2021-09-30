@@ -3600,8 +3600,9 @@ class EBNFCompiler(Compiler):
                 if key == 'whitespace' and value in WHITESPACE_TYPES:
                     value = WHITESPACE_TYPES[value]  # replace whitespace-name by regex
                 else:
-                    self.tree.new_error(node, 'Value "%s" not allowed for directive "%s".'
-                                        % (value, key))
+                    self.tree.new_error(
+                        node, f'Value "{value}" not allowed for directive "{key}". '
+                        f'Expcted: {VALID_DIRECTIVES[key]}')
             else:
                 value = self.extract_regex(node.children[1])
                 if key == 'whitespace' and not re.match(value, ''):

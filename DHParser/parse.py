@@ -2153,6 +2153,7 @@ def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
         if isinstance(parser, Text):
             assert isinstance(t, str)
             cast(Text, parser).text = t
+            cast(Text, parser).len = len(t)
         elif isinstance(parser, RegExp):
             cast(RegExp, parser).regexp = re.compile(t) if isinstance(t, str) else t
         else:

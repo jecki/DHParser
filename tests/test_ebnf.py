@@ -1118,6 +1118,58 @@ class TestAlternativeEBNFSyntax:
         assert str(st) == "2+3*(-4+1)"
 
 
+class TestConfigurableEBNF:
+    def setup(self):
+        self.save_variant = get_config_value('syntax_variant')
+        self.save_delim = get_config_value('delimiter_set')
+        set_config_value('syntax_variant', 'configurable')
+
+    def teardown(self):
+        set_config_value('syntax_variant', self.save_variant)
+        set_config_value('delimiter_set', self.save_delim)
+
+    def test_alt_syntax_config(self):
+        set_config_value('delimiter_set', {
+            'DEF': '<-',
+            'OR': '/',
+            'AND': '',
+            'ENDL': '',
+            'RNG_OPEN': '{',
+            'RNG_CLOSE': '}',
+            'RNG_DELIM': ',',
+            'TIMES': '*',
+            'RE_LEADIN': '<',
+            'RE_LEADOUT': '>',
+            'RE_CORE': r'(?:(?<!\\)\\(?:>)|[^>])*',
+            'CH_LEADIN': '0x'
+        })
+        parser = create_parser(
+            r'''@literalws=none
+            @disposable = Spacing, EOL, EOF
+            @drop = Spacing, EOL, EOF
+            Start   <- Spacing Expr EOL? EOF
+            Expr    <- Term ((PLUS / MINUS) Term)*
+            Term    <- Factor ((TIMES / DIVIDE) Factor)*
+            Factor  <- Sign* (LPAR Expr RPAR
+                             / INTEGER )
+            Sign    <- NEG / POS
+            INTEGER <- ( '0' / <[1-9][0-9]*> ) Spacing
+            PLUS    <- '+' Spacing
+            MINUS   <- '-' Spacing
+            TIMES   <- '*' Spacing
+            DIVIDE  <- '/' Spacing
+            LPAR    <- '(' Spacing
+            RPAR    <- ')' Spacing
+            NEG     <- '-' Spacing
+            POS     <- '+' Spacing
+            Spacing <- <[ \t\n\f\v\r]*>
+            EOL     <- '\r\n' / <[\n\r]>
+            EOF     <- !<.>
+            ''')
+        result = parser('3 + 4 * 7')
+        assert not result.errors
+
+
 class TestSyntaxExtensions:
     def setup(self):
         self.save = get_config_value('syntax_variant')

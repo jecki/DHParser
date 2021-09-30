@@ -566,6 +566,8 @@ CONFIG_PRESET['delimiter_set'] = {
     'TIMES':      '*',
     'RE_LEADIN':  '/',
     'RE_LEADOUT': '/',
+    'RE_CORE': r'(?:(?<!\\)\\(?:/)|[^/])*',
+    # RE_LEADOUT:               ^    ^
     'CH_LEADIN':  '0x'
 }
 
