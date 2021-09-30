@@ -121,9 +121,6 @@ class Compiler:
     method which will pick the right `on_XXX`-method. It is not
     recommended to call the `on_XXX`-methods directly.
 
-    :ivar source: The source text of the AST to be compiled. This needs to be
-                assigned by the user of the Compiler object - as is done
-                by function `compile_source()`
     :ivar context:  A list of parent nodes that ends with the currently
                 compiled node.
     :ivar tree: The root of the abstract syntax tree.
@@ -153,7 +150,6 @@ class Compiler:
         self.reset()
 
     def reset(self):
-        self.source = ''  # type: str
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.context = []  # type: TreeContext
         self._None_check = True  # type: bool
@@ -189,7 +185,6 @@ class Compiler:
             self.reset()
         self._dirty_flag = True
         self.tree = root
-        # self.source = source  # type: str
         self.prepare(root)
         result = self.compile(root)
         while self.finalizers:
@@ -448,8 +443,6 @@ def compile_source(source: str,
     ast = None  # type: Optional[Node]
     original_text = load_if_file(source)  # type: str
     source_name = source if is_filename(source) else 'source'
-    if isinstance(compiler, Compiler):
-        compiler.source = original_text
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
         # log only for custom parser/transformer/compilers
