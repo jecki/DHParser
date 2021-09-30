@@ -1624,6 +1624,7 @@ the contained list "[7, 8]".
 Semantic Actions and Storing Variables
 --------------------------------------
 
+TO BE CONDINUED...
 
 """
 
@@ -3108,7 +3109,7 @@ class EBNFCompiler(Compiler):
 
 
     @cython.locals(N=cython.int, top=cython.int, pointer=cython.int,
-                   i=cython.int, k = cython.int, j=cython.int)
+                   i=cython.int, k=cython.int, j=cython.int)
     def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
         """Reorders the definitions so as to minimize the number of Forward
         declarations. Forward declarations remain inevitable only where

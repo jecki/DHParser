@@ -17,11 +17,90 @@ to analyse the parsing process and it offers facilities for unit-testing grammar
 support for fail-tolerant parsing so that the parser does not stop at the first syntax error
 it encounters. Finally, there is some support for writing language servers for DSLs
 in Python that adhere to editor-independent the
-`languag server-protocol <https://microsoft.github.io/language-server-protocol/>`_.
+`language server-protocol <https://microsoft.github.io/language-server-protocol/>`_.
 
 
-Adhoc-Parsers
--------------
+Generating a parser from a Grammar
+----------------------------------
+
+Generating a parser does not requires more than writing your grammar in EBNF
+and compiling it with the "dhparser"-command into a readily usable Python-script!
+To generate a json-Parser, just store the following EBNF-code in a file named "json.ebnf"::
+
+        @literalws  = right
+        @drop       = whitespace, strings
+        @disposable = /_\w+/
+
+        json        = ~ _element _EOF
+        _element    = object | array | string | number | _bool | null
+        object      = "{" member { "," §member } §"}"
+        member      = string §":" _element
+        array       = "[" [ _element { "," _element } ] §"]"
+        string      = `"` §_CHARACTERS `"` ~
+        number      = INT [ FRAC ] [ EXP ] ~
+        _bool       = true | false
+        true        = `true` ~
+        false       = `false` ~
+        null        = "null"
+
+        _CHARACTERS = { PLAIN | ESCAPE }
+        PLAIN       = /[^"\\]+/
+        ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+        UNICODE     = "\u" HEX HEX
+        HEX         = /[0-9a-fA-F][0-9a-fA-F]/
+
+        INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
+        FRAC        = `.` /[0-9]+/
+        EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
+
+        _EOF        =  !/./
+
+(The three lines starting with an ``@``-sign at the beginning of the
+grammar-string are not standard EBNF-code,  but DHParser-directives (see :py:mod:`ebnf`)
+which help to streamline the syntax-tree that the parser produces.)
+
+Then, run the "dhparser"-script to generate a parser::
+
+    $ dhparser json.ebnf
+
+This generates a script ``jsonParser.py`` that can be called with any
+text-file or string to produce a syntax-tree::
+
+    $ echo '{ "one": 1, "two": 2 }' >test.json
+    $ python jsonParser.py --xml test.json
+    <json>
+      <object>
+        <member>
+          <string>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <PLAIN>one</PLAIN>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+          </string>
+          <number>
+            <INT>1</INT>
+          </number>
+        </member>
+        <member>
+          <string>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <PLAIN>two</PLAIN>
+            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+          </string>
+          <number>
+            <INT>2</INT>
+          </number>
+        </member>
+      </object>
+    </json>
+
+
+Mind that the generated script does not yield the json data in form of a
+nested tree of python dictionaries and arrays but only the syntax tree
+of the json-data. However, it is easy to get from there to your json-objects.
+
+
+Creating parsers within a Python-script
+---------------------------------------
 
 In case you just need a parser for some very simple DSL, you can directly add a string
 with the EBNF-grammar of that DSL to you python code and compile if into an executable
@@ -71,45 +150,11 @@ parser much like you'd compile a regular expresseion. Let's do this for a
             # just a test
             json_text = '{ "one": 1, "two": 2 }'
         syntax_tree = json_parser(json_text)
-        print(syntax_tree.serialize(how='indented'))
+        print(syntax_tree.serialize(how='XML'))
 
 Mind that this little script does not yield the json data in form of a
 nested tree of python dictionaries and arrays but only the syntax tree
 of the string encoding that data::
-
-    $ python parse_json.py
-    json
-      json_object
-        member
-          string
-            :Text '"'
-            PLAIN "one"
-            :Text '"'
-          number
-            INT "1"
-        member
-          string
-            :Text '"'
-            PLAIN "two"
-            :Text '"'
-          number
-            INT "2"
-
-
-In order to retrieve the actual data
-from the syntax tree a few more transformations are necessary, but the
-example should suffice to show how a parser for a context-free grammar
-can be generated right inside a Python-program.
-
-Nodes, the name of which starts with a colon ":" are nodes that have
-been produced by an unnamed part of a parser, in this case the parts
-that parse the quotation marks within the string-parser. Usually, such
-nodes are either renamed or removed during abstract-syntax-tree-transformation.
-
-The three lines starting with an ``@``-sign at the beginning of the
-grammar-string are DHParser-directives (see :py:mod:`ebnf`) which
-in this case help to the syntax-tree which otherwise would can turn
-out to be rather verbose.
 
 Specifying a parser can also be done directly with Python-code
 instead of compiling an EBNF-grammar first::
@@ -171,42 +216,9 @@ a class definition::
     json_parser = Grammar(JSON.json)
     ...
 
-Usually, it is best to specify the grammar in EBNF, compile it and then copy and paste the
-compiled grammar into your script, in case you want to save the startup-time that is wasted
-when the grammar is compiled when running the script. This can by done by writing the EBNF
-grammar into a text file and then calling the "dhparser"-command with the EBNF-file::
-
-    $ dhparser json.ebnf
-
-This produces a script ``jsonParser.py`` from the EBNF-grammar that can be called with any
-text-file that adheres to the EBNF-grammar and outputs it as syntax-tree::
-
-    $ echo '{ "one": 1, "two": 2 }' >test.json
-    $ python jsonParser.py --xml test.json
-    <json>
-      <object>
-        <member>
-          <string>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
-            <PLAIN>one</PLAIN>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
-          </string>
-          <number>
-            <INT>1</INT>
-          </number>
-        </member>
-        <member>
-          <string>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
-            <PLAIN>two</PLAIN>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
-          </string>
-          <number>
-            <INT>2</INT>
-          </number>
-        </member>
-      </object>
-    </json>
+Usually, however, it is best to specify the grammar in EBNF, compile it and then copy and paste the
+compiled grammar into your script, because this saves startup time over compiling the
+grammar within the script.
 
 
 Full scale DSLs
