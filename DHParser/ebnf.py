@@ -1860,7 +1860,6 @@ class HeuristicEBNFGrammar(Grammar):
         @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
         @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
 
-
         # specialized error messages for certain cases
 
         @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
@@ -1875,7 +1874,9 @@ class HeuristicEBNFGrammar(Grammar):
         definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
 
         directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
-          component  = literals | procedure | expression
+          # component  = (regexp | literals | procedure | symbol !DEF)
+          component  = regexp | literals | procedure | symbol !_DEF
+                     | "(" expression ")"  | RAISE_EXPR_WO_BRACKETS expression
           literals   = { literal }+                       # string chaining, only allowed in directives!
           procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
@@ -1943,7 +1944,7 @@ class HeuristicEBNFGrammar(Grammar):
         char_range = `[` &char_range_heuristics
                          [`^`] (character | free_char) { [`-`] character | free_char } "]"
         character  = :CH_LEADIN HEXCODE
-        free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
+        free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
         any_char   = "."
         whitespace = /~/~                               # insignificant whitespace
 
@@ -1952,9 +1953,10 @@ class HeuristicEBNFGrammar(Grammar):
         EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
                    [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
-        DEF        = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!
+        DEF        = _DEF
+        _DEF       = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!
         OR         = `|` | `/` !regex_heuristics
-        AND        = `,` | ``
+        AND        =  `,` | ``
         ENDL       = `;` | ``
 
         RNG_BRACE  = :BRACE_SIGN
@@ -1969,9 +1971,10 @@ class HeuristicEBNFGrammar(Grammar):
 
         #: heuristics
 
-        char_range_heuristics  = ! ( /[\n\t ]/
+        char_range_heuristics  = ! ( /[\n]/ | more_than_one_blank
                                    | ~ literal_heuristics
-                                   | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+                                   | ~ [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+        more_than_one_blank    = /[^ \]]*[ ][^ \]]*[ ]/
         literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
                                | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
                                | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
@@ -1985,11 +1988,16 @@ class HeuristicEBNFGrammar(Grammar):
         RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
         SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
         HEXCODE    = /[A-Fa-f0-9]{1,8}/
+
+
+        #: error-markers
+
+        RAISE_EXPR_WO_BRACKETS = ``
     """
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "6e4f9f85bcdcdfc3105a6273c69f3131"
+    source_hash__ = "53a3fd3179fbfe74548b526a58def282"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -2006,7 +2014,8 @@ class HeuristicEBNFGrammar(Grammar):
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
     regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
-    char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n\\t ]'), Series(dwsp__, literal_heuristics), Series(Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
+    more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
+    char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
     CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")))
     RE_LEADOUT = Capture(Text("/"))
     RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")))
@@ -2022,7 +2031,7 @@ class HeuristicEBNFGrammar(Grammar):
     EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
-    free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
+    free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrtfv`´\'"(){}\\[\\]/\\\\]'))
     character = Series(Retrieve(CH_LEADIN), HEXCODE)
     char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)), Series(Text("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
@@ -2401,15 +2410,16 @@ def get_ebnf_grammar() -> HeuristicEBNFGrammar:
             if mode == "fixed":
                 # configure grammar once
                 update_scanner(grammar, get_config_value('delimiter_set'))
+            grammar.mode__ = mode
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
         else:
             grammar = HeuristicEBNFGrammar(static_analysis=False)
+            grammar.mode__ = mode
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
-    if mode == 'configurable':
+    if mode == 'configurable' or (mode == 'fixed' and grammar.mode__ != 'fixed'):
         # configure grammar on each request of the grammar object
         update_scanner(grammar, get_config_value('delimiter_set'))
-    elif mode != 'fixed':
-        grammar.mode = mode
+    grammar.mode__ = mode
     return grammar
 
 

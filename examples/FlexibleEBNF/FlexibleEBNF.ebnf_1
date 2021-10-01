@@ -118,7 +118,7 @@ regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 char_range = `[` &char_range_heuristics
                  [`^`] (character | free_char) { [`-`] character | free_char } "]"
 character  = :CH_LEADIN HEXCODE
-free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
+free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
 
@@ -145,10 +145,9 @@ CH_LEADIN  = `0x` | `#x`
 
 #: heuristics
 
-char_range_heuristics  = ! ( /[\n]/ | more_than_one_blank
+char_range_heuristics  = ! ( /[\n\t ]/
                            | ~ literal_heuristics
-                           | ~ [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
-more_than_one_blank    = /[^ \]]*[ ][^ \]]*[ ]/
+                           | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
 literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
                        | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
                        | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/

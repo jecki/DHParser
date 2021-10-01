@@ -1122,13 +1122,14 @@ class TestConfigurableEBNF:
     def setup(self):
         self.save_variant = get_config_value('syntax_variant')
         self.save_delim = get_config_value('delimiter_set')
-        set_config_value('syntax_variant', 'configurable')
 
     def teardown(self):
-        set_config_value('syntax_variant', self.save_variant)
+        set_config_value('syntax_variant', 'configurable')
         set_config_value('delimiter_set', self.save_delim)
+        set_config_value('syntax_variant', self.save_variant)
 
     def test_alt_syntax_config(self):
+        set_config_value('syntax_variant', 'configurable')
         set_config_value('delimiter_set', {
             'DEF': '<-',
             'OR': '/',
