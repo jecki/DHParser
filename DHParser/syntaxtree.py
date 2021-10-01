@@ -1898,6 +1898,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             new_ca.attr = common_ancestor.attr
         return new_ca
 
+    # evaluation ##############################################################
+
+    def evaluate(self, actions: Dict[str, Callable]) -> Any:
+        if self._children:
+            return actions[self.tag_name](*(child.evaluate(actions) for child in self._children))
+        else:
+            return actions[self.tag_name](self._result)
+
     # serialization ###########################################################
 
     @cython.locals(i=cython.int, k=cython.int, N=cython.int)

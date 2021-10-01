@@ -4220,7 +4220,7 @@ class EBNFCompiler(Compiler):
 
 
     def extract_free_char(self, node: Node) -> str:
-        assert len(node.content) == 1
+        assert len(node.content) == 1 or (node.content[0:1] == '\\' and len(node.content) == 2), node.content
         bytestr = node.content.encode('unicode-escape')
         return bytestr.decode()
 

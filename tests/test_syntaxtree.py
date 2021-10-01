@@ -36,7 +36,7 @@ from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_s
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
-from DHParser.dsl import grammar_provider
+from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar
 
@@ -864,6 +864,55 @@ class TestContextNavigation:
         ende = pick_context(start, LEAF_CONTEXT, include_root=True, reverse=True)
         assert anfang[-1].tag_name == 'B'
         assert ende[-1].tag_name == 'F'
+
+
+class TestEvaluation:
+    def setup(self):
+        self.save = get_config_value('syntax_variant')
+
+    def teardown(self):
+        set_config_value('syntax_variant', self.save)
+
+    def test_evaluate(self):
+        set_config_value('syntax_variant', 'peg-like')
+        parser = create_parser(
+            r'''@disposable = Spacing, EOL, EOF, LPAR, RPAR
+            @drop = Spacing, LPAR, RPAR, EOL, EOF
+            Start   <- Spacing Expr EOL? EOF
+            Expr    <- Term ((PLUS / MINUS) Term)*
+            Term    <- Factor ((TIMES / DIVIDE) Factor)*
+            Factor  <- Sign* (LPAR Expr RPAR
+                             / INTEGER )
+            Sign    <- NEG / POS
+            INTEGER <- ~( '0' / [1-9][0-9]* ) Spacing
+            PLUS    <- '+' Spacing
+            MINUS   <- '-' Spacing
+            TIMES   <- '*' Spacing
+            DIVIDE  <- '/' Spacing
+            LPAR    <- '(' Spacing
+            RPAR    <- ')' Spacing
+            NEG     <- '-' Spacing
+            POS     <- '+' Spacing
+            Spacing <- [ \t\n\f\v\r]*
+            EOL     <- '\r\n' / [\n\r]
+            EOF     <- !.
+            ''')
+        tree = parser('2 + 3 * -5')
+        from operator import add, sub, mul, truediv as div, neg
+        actions = {
+            'Start': lambda arg: arg,
+            'Expr': lambda *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
+            'Term': lambda *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
+            'Factor': lambda *args: mul(*args) if len(args) > 1 else args[0],
+            'Sign': lambda arg: arg,
+            'INTEGER': int,
+            'PLUS': lambda token: add,
+            'MINUS': lambda token: sub,
+            'TIMES': lambda token: mul,
+            'DIVIDE': lambda token: div,
+            'NEG': lambda token: -1,
+            'POS': lambda token: 1}
+        assert tree.evaluate(actions) == -13
 
 
 if __name__ == "__main__":
