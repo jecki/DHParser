@@ -152,9 +152,6 @@ parser much like you'd compile a regular expresseion. Let's do this for a
         syntax_tree = json_parser(json_text)
         print(syntax_tree.serialize(how='XML'))
 
-Mind that this little script does not yield the json data in form of a
-nested tree of python dictionaries and arrays but only the syntax tree
-of the string encoding that data::
 
 Specifying a parser can also be done directly with Python-code
 instead of compiling an EBNF-grammar first::
@@ -315,7 +312,7 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
 
    Thus, you'll never see an "_elment"-node in a JSON-syntaxtree produced
    by the above grammar, but only object-, array-, string-, number-, true-,
-   false- or null-nodes. (See :py:ref:`~ebnf.simplifying_syntax_trees`.)
+   false- or null-nodes. (See :py:func:`~ebnf.simplifying_syntax_trees`.)
 
 3. Insignificant whitespace is denoted with a the single character: ``~``.
 
@@ -325,7 +322,7 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
 
    Thus, you never need to worry about where to provide for
    comments in you grammar. It is as easy as it is intuitive.
-   (See :py:ref:`~ebnf.comments_and_whitespace`.)
+   (See :py:func:`~ebnf.comments_and_whitespace`.)
 
 5. To keep the grammar clean, delimiters like "," or "[", "]"
    can catch adjacent whitespace (and comments), automatically.
@@ -446,7 +443,7 @@ Serialization as you like it: XML, JSON, S-expressions
 DHParser makes it easy to visualize the various stages
 of tree-transformation (CST, AST, ...) by offering
 manifold serialization methods that output syntax-trees
-in either a nicely formatted or compact form::
+in either a nicely formatted or compact form.
 
 1. S-expressions::
 

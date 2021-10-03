@@ -217,10 +217,10 @@ def split_path(path: str) -> Tuple[str]:
     """Splits a filesystem path into its components. Other than
     os.path.split() it does not only split of the last part::
 
-    >>> split_path('a/b/c')
-    ('a', 'b', 'c')
-    >>> os.path.split('a/b/c')  # for comparison.
-    ('a/b', 'c')
+        >>> split_path('a/b/c')
+        ('a', 'b', 'c')
+        >>> os.path.split('a/b/c')  # for comparison.
+        ('a/b', 'c')
     """
     split = os.path.split(path)
     while split[0]:
