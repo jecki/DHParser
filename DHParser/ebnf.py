@@ -573,7 +573,7 @@ Let's just try our grammar on an example::
     >>> text_parser = create_parser(text_gr, 'Text')
     >>> text_as_data = text_parser(text_example)
     >>> sentence = text_as_data.pick(\
-            lambda nd: nd.tag_name == "sentence" and nd.content.startswith('First'))
+    lambda nd: nd.tag_name == "sentence" and nd.content.startswith('First'))
     >>> print(sentence.as_sxpr())
     (sentence
       (clause
@@ -759,7 +759,7 @@ it with square brackets.
 
 The default regular expression for the tilde-whitespace captures
 arbitraily many spaces and tabs and at most one linefeed, but
-not an empty line (``[ \t]*(?:\n[ \t]*)?(?!\n)``), as this is
+not an empty line (``[ \\t]*(?:\\n[ \\t]*)?(?!\\n)``), as this is
 the most convenient way to define whitespace for text-data.
 However, the tilde whitespace can also be definied with any
 other regular expression with the ``@whitespace``-directive.

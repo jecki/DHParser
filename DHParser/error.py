@@ -254,12 +254,22 @@ class Error:
     :ivar message:  the error message as text string
     :ivar pos:  the position where the error occurred in the preprocessed text
     :ivar code:  the error-code, which also indicates the severity of the
-        error. 0:        no error
-               < 100:    notice
-               < 1000:   warning
-               < 10000:  error
-               >= 10000: fatal error. syntax tree will not be passed on to
-                         the next compilation stage!
+        error::
+
+               ========= ===========
+               code      severity
+               ========= ===========
+               0         no error
+               < 100     notice
+               < 1000    warning
+               < 10000   error
+               >= 10000  fatal error
+               ========= ===========
+
+        In cas of a fatal error (error code >= 10000), no further compilation
+        stages will be processed, because it is assumed that the syntax tree
+        is too distorted for further processing.
+
     :ivar orig_pos:  the position of the error in the original source file,
         not in the preprocessed document. This is a write once value!
     :ivar orig_doc:  the name or path or url of the original source file to

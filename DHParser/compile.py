@@ -79,8 +79,8 @@ def visitor_name(node_name: str) -> str:
     """
     Returns the visitor_method name for `node_name`, e.g.::
 
-    >>> visitor_name('expression')
-    'on_expression'
+        >>> visitor_name('expression')
+        'on_expression'
     """
     # assert re.match(r'\w+$', node_name)
     return 'on_' + node_name
@@ -90,8 +90,8 @@ def attr_visitor_name(attr_name: str) -> str:
     """
     Returns the visitor_method name for `attr_name`, e.g.::
 
-    >>> attr_visitor_name('class')
-    'attr_class'
+        >>> attr_visitor_name('class')
+        'attr_class'
     """
     # assert re.match(r'\w+$', node_name)
     return 'attr_' + attr_name

@@ -294,11 +294,11 @@ def _config_dict():
 
 
 def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
-    """
-    Retrieves a configuration value thread-safely.
+    """Retrieves a configuration value thread-safely.
+
     :param key:  the key (an immutable, usually a string)
     :param default: a default value that is returned if no config-value
-                 exists for the key.
+        exists for the key.
     :return:     the value
     """
     with access_lock:
