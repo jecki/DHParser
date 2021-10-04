@@ -1901,6 +1901,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # evaluation ##############################################################
 
     def evaluate(self, actions: Dict[str, Callable]) -> Any:
+        """Simple tree evaluation: For each node the action associated with
+        the node's tag-name is called with either the tuple of the evaluated
+        children or, in case of a leaf-node, the result-string as parameters::
+
+        >>> tree = parse_sxpr('(plus (number 3) (mul (number 5) (number 4)))')
+        >>> from operator import add, mul
+        >>> actions = {'plus': add, 'mul': mul, 'number': int}
+        >>> tree.evaluate(actions)
+        23
+
+        :param actions: A dictionary that maps tag_names to action functions.
+        :return: the result of the evaluation
+        """
         if self._children:
             return actions[self.tag_name](*(child.evaluate(actions) for child in self._children))
         else:
