@@ -2949,9 +2949,10 @@ class Series(MandatoryNary):
                 if pos < mandatory:
                     return None, text
                 else:
+                    parser_str = parser.repr
                     reloc, node = self.get_reentry_point(text_)
                     error, text_ = self.mandatory_violation(
-                        text_, isinstance(parser, Lookahead), parser.repr, reloc, node)
+                        text_, isinstance(parser, Lookahead), parser_str, reloc, node)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
