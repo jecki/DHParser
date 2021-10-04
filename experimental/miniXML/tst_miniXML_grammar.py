@@ -55,11 +55,14 @@ def run_grammar_tests(fn_pattern, get_grammar, get_transformer):
 
 if __name__ == '__main__':
     argv = sys.argv[:]
-    if len(argv) > 1 and sys.argv[1] == "--debug":
-        DEBUG = True
-        del argv[1]
-
     access_presets()
+    if len(argv) > 1 and sys.argv[1] == "--debug":
+        del argv[1]
+        DEBUG = True
+        set_preset_value('history_tracking', True)
+        set_preset_value('resume_notices', True)
+        set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
+
     # set_preset_value('test_parallelization', True)
     if DEBUG:
         set_preset_value('history_tracking', True)

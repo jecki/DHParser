@@ -3098,6 +3098,7 @@ class EBNFCompiler(Compiler):
             self.referred_by_directive.add(referred_symbol)
             return unrepr(referred_symbol)
         else:
+            # create a parser-based search rule
             symbol = node[0].content.split('_')[0]
             stub = f"{symbol}_{kind}_"
             L = len(stub)
@@ -3475,8 +3476,6 @@ class EBNFCompiler(Compiler):
 
 
     def on_syntax(self, node: Node) -> str:
-        definitions = []  # type: List[Tuple[str, str]]
-
         # drop the wrapping sequence node
         if len(node.children) == 1 and node.children[0].anonymous:
             node = node.children[0]
@@ -3484,11 +3483,10 @@ class EBNFCompiler(Compiler):
         # compile definitions and directives and collect definitions
         for nd in node.children:
             if nd.tag_name == "definition":
-                definitions.append(self.compile(nd))
+                self.definitions.update([self.compile(nd)])
             else:
                 assert nd.tag_name == "directive", nd.as_sxpr()
                 self.compile(nd)
-        self.definitions.update(definitions)
 
         if not self.definitions:
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
@@ -4265,8 +4263,9 @@ def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool 
     """
     Compiles an `ebnf_source` (file_name or EBNF-string) and returns
     a tuple of the python code of the compiler, a list of warnings or errors
-    and the abstract syntax tree of the EBNF-source.
-    This function is merely syntactic sugar.
+    and the abstract syntax tree (if called with the keyword argument
+    ``preserve_AST=True``) of the EBNF-source. This function is merely
+    syntactic sugar.
     """
     return compile_source(ebnf_source,
                           get_ebnf_preprocessor(),

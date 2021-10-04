@@ -7,22 +7,13 @@
 #######################################################################
 
 @ whitespace  = /\s*/
-# @ literalws   = none
-# @ comment     = /<!--(?:[^-]|(?:-(?!->)))*-->/
-# Tree-simplification while parsing:  none, flatten, merge_treetops, merge
-# @ reduction   = flatten         # anonymous nodes are being reduced where possible
 @ disposable  = EOF
-# Tags that will be dropped with all their content while parsing or any of
-# the special values: strings, backticked, whitespace, regexps
-# Here, EOF and insignificant whitespace (tilde) will be dropped
 @ drop        = EOF, whitespace, strings
-
 
 document = ~ element ~ §EOF
 element  = STag content ETag
-#@STag_skip = /(?=>)/, /(?=<)/, /$/
 STag     = '<' TagName §'>'
-@ETag_skip = :?TagName /.*?>/
+@ETag_skip = /(?=>)/
 ETag     = '</' §::TagName '>'
 TagName  = /\w+/
 content  = [CharData] { (element | COMMENT__) [CharData] }

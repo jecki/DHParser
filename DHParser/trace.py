@@ -50,10 +50,10 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     location = grammar.document_length__ - text._len  # type: int
 
-    if grammar.most_recent_error__:
+    mre: ParserError = grammar.most_recent_error__
+    if mre and location >= mre.error.pos:
         # add resume notice (mind that skip notices are added by
         # `parse.MandatoryElementsParser.mandatory_violation()`
-        mre = grammar.most_recent_error__  # type: ParserError
         if mre.error.code == RECURSION_DEPTH_LIMIT_HIT:
             return mre.node, text
 
@@ -61,7 +61,6 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         errors = [mre.error]  # type: List[Error]
         text_ = grammar.document__[mre.error.pos:]
         lc = line_col(grammar.document_lbreaks__, mre.error.pos)
-        resume_pos = self.grammar.document_length__ - len(text)
         target = text if len(text) <= 10 else text[:7] + '...'
 
         resumers = [grammar.call_stack__[-1][0]]
@@ -78,11 +77,11 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             notice = Error(  # resume notice
                 'Resuming from parser "{}" at position {}:{} with parser "{}": {}'
                 .format(origin, *lc, resumer, repr(target)),
-                resume_pos, RESUME_NOTICE)
+                location, RESUME_NOTICE)
         else:
             notice = Error(  # skip notice
                 'Skipping from position {}:{} within parser {}: {}'
-                .format(*lc, resumer, repr(target)), resume_pos, RESUME_NOTICE)
+                .format(*lc, resumer, repr(target)), location, RESUME_NOTICE)
         if grammar.resume_notices__:
             grammar.tree__.add_error(mre.node, notice)
         errors.append(notice)
@@ -130,7 +129,6 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
                 or self == grammar.start_parser__):
             grammar.history__.append(record)
-            print(record)
 
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()

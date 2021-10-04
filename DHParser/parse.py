@@ -2805,6 +2805,10 @@ class MandatoryNary(NaryParser):
                                                    tuple()))
         if skip:
             gr = self._grammar
+            # location = gr.document_length__ - text_._len
+            # if location <= gr.last_rb__loc__ + 1:
+            #     gr.rollback_to__(location - 1)
+            #     print(gr.variables__)
             return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
         return -1, Node(ZOMBIE_TAG, '')
 
@@ -3565,7 +3569,7 @@ class ContextSensitive(UnaryParser):
 
         Usually, the rollback location is exactly the location, where the parser
         started parsing. However, the rollback-location must lie before the
-        location where the  parser stopped, because otherwise variable changes
+        location where the parser stopped, because otherwise variable changes
         would be always be rolled back for parsers that have captured or retrieved
         zero length data. In order to avoid this, the rollback location is
         artificially reduced by one in case the parser did not capture any text
