@@ -2805,10 +2805,10 @@ class MandatoryNary(NaryParser):
                                                    tuple()))
         if skip:
             gr = self._grammar
+            # print(gr.variables__)
             # location = gr.document_length__ - text_._len
             # if location <= gr.last_rb__loc__ + 1:
             #     gr.rollback_to__(location - 1)
-            #     print(gr.variables__)
             return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
         return -1, Node(ZOMBIE_TAG, '')
 
@@ -3803,9 +3803,9 @@ class Pop(Retrieve):
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
             self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
-        else:
-            # set last_rb__loc__ to avoid memoizing of retrieved results
-            self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
+        # else:
+        #     # set last_rb__loc__ to avoid memoizing of retrieved results
+        #     self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
         return node, text_
 
     def __repr__(self):
