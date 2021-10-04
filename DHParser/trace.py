@@ -130,6 +130,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
                 or self == grammar.start_parser__):
             grammar.history__.append(record)
+            print(record)
 
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()

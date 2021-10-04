@@ -37,6 +37,7 @@ cdef class Node:
     # cpdef _reconstruct_context_recursive(self, node)
     # cpdef reconstruct_context(self, node)
     # cpdef milestone_segment(self, begin, end)
+    # cdef evaluate(self, actions)
     # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
     # cpdef as_sxpr(self, src, indentation, compact)
     # cpdef as_xml(self, src, indentation, inline_tags, string_tags, empty_tags)

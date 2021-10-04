@@ -3723,7 +3723,6 @@ class Retrieve(ContextSensitive):
 
     def _parse(self, text: StringView) -> ParsingResult:
         # auto-capture on first use if symbol was not captured before
-        # ("or"-clause needed, because Forward parsers do not have a pname)
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
             node, text_ = self.parser(text)   # auto-capture value
             if node is None:
