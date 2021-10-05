@@ -404,7 +404,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         """
         if not get_config_value('test_suppress_lookahead_failures'):
             return False
-        raw_errors = cast(RootNode, syntax_tree).errors_sorted
+        raw_errors = cast(RootNode, syntax_tree).errors
         is_artifact = ({e.code for e in raw_errors}
                        <= {PARSER_LOOKAHEAD_FAILURE_ONLY,
                            AUTORETRIEVED_SYMBOL_NOT_CLEARED,
@@ -493,7 +493,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             tests.setdefault('__cst__', {})[test_name] = cst
             # errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
-                errors = [e for e in cst.errors_sorted if e.code not in POSSIBLE_ARTIFACTS]
+                errors = [e for e in cst.errors if e.code not in POSSIBLE_ARTIFACTS]
                 errata.append('Match test "%s" for parser "%s" failed:'
                               '\nExpr.:  %s\n\n%s\n\n' %
                               (test_name, parser_name, md_codeblock(test_code),
@@ -649,7 +649,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
             if cst.error_flag:
                 tests.setdefault('__msg__', {})[test_name] = \
-                    "\n".join(str(e) for e in cst.errors_sorted)
+                    "\n".join(str(e) for e in cst.errors)
             if verbose:
                 infostr = '    fail-test  "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))

@@ -3016,6 +3016,27 @@ class RootNode(Node):
             add_source_locations(self.errors, self.source_mapping)
         return self
 
+    def save_error_state(self) -> tuple:
+        """Saves the error state. Useful for when backtracking. See
+        :py:mod:`parse.Forward` """
+        if self.error_flag:
+            return (self.errors.copy(),
+                    {k: v.copy() for k, v in self.error_nodes.items()},
+                    {k: v.copy() for k, v in self.error_positions.items()},
+                    self.error_flag)
+        else:
+            return ()
+
+    def restore_error_state(self, error_state: tuple):
+        """Resotores a previously savced error state."""
+        if error_state:
+            self.errors, self.error_nodes, self.error_positions, self.error_flag = error_state
+        else:
+            self.errors = []
+            self.error_nodes = dict()
+            self.error_positions = dict()
+            self.error_flag = 0
+
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
         """
         Adds an Error object to the tree, locating it at a specific node.

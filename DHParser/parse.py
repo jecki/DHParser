@@ -187,7 +187,8 @@ ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
 
 
 # @cython.returns(cython.int)
-@functools.lru_cache()
+# must not use: @functools.lru_cache(), because resume-function may contain
+# context sensitive parsers!!!
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
 def reentry_point(rest: StringView,
                   rules: ResumeList,
@@ -506,13 +507,18 @@ class Parser:
         """Returns the parser's name if it has a name and self.__repr___() otherwise."""
         return self.pname if self.pname else self.__repr__()
 
+    def gen_momoization_dict(self) -> dict:
+        """Create and return an empty memoization dictionary. This allows to customize
+        momization dictionaries. The default is to just retrun a new plain dicitonary."""
+        return dict()
+
     def reset(self):
         """Initializes or resets any parser variables. If overwritten,
         the `reset()`-method of the parent class must be called from the
         `reset()`-method of the derived class."""
-        global _GRAMMAR_PLACEHOLDER
-        grammar = self._grammar
-        self.visited: MemoizationDict = grammar.get_memoization_dict__(self)
+        # global _GRAMMAR_PLACEHOLDER
+        # grammar = self._grammar
+        self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', text: StringView) -> ParsingResult:
@@ -1504,8 +1510,8 @@ class Grammar:
         """Returns the memoization dictionary for the parser's equivalence class.
         """
         try:
-            return self.memoization__.setdefault(parser.eq_class, {})
-        except AttributeError:  # happens when grammar object is the placeholder
+            return self.memoization__.setdefault(parser.eq_class, parser.gen_momoization_dict())
+        except AttributeError:  # happens when grammar object is the _GRAMMAR_PLACEHOLDER
             return dict()
 
 
@@ -1708,6 +1714,7 @@ class Grammar:
         self.suspend_memoization__ = True
         # memoization will be turned back on again in Parser.__call__ after
         # the parser that called push_rollback__() has returned.
+        # print("PUSH", self.document__[location:location+10].replace('\n', '\\n'), dict(self.variables__))
 
 
     @property
@@ -1731,7 +1738,7 @@ class Grammar:
             rollback_func()
         self.last_rb__loc__ = self.rollback__[-1][0] if self.rollback__ \
             else -2  # (self.document__.__len__() + 1)
-
+        # print("POP", self.document__[location:location + 10].replace('\n', '\\n'), dict(self.variables__))
 
     def as_ebnf__(self) -> str:
         """
@@ -2809,7 +2816,8 @@ class MandatoryNary(NaryParser):
             # location = gr.document_length__ - text_._len
             # if location <= gr.last_rb__loc__ + 1:
             #     gr.rollback_to__(location - 1)
-            return reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            reloc = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            return reloc
         return -1, Node(ZOMBIE_TAG, '')
 
     @cython.locals(location=cython.int)
@@ -3529,6 +3537,12 @@ class NegativeLookbehind(Lookbehind):
 ########################################################################
 
 
+class BlackHoleDict(dict):
+    def __setitem__(self, key, value):
+        return
+
+
+
 class ContextSensitive(UnaryParser):
     """Base class for context-sensitive parsers.
 
@@ -3550,6 +3564,9 @@ class ContextSensitive(UnaryParser):
     proportional to the size of the document, any more. Therefore,
     it is recommended to use context-sensitive-parsers sparingly.
     """
+
+    def gen_momoization_dict(self) -> dict:
+        return BlackHoleDict()
 
     @cython.returns(cython.int)
     @cython.locals(L=cython.int, rb_loc=cython.int)
@@ -3668,6 +3685,7 @@ def optional_last_value(text: Union[StringView, str], stack: List[str]) -> Optio
 
         Good Morning, Mrs. <emph>Smith</>!
     """
+    # print('SKIP', text.replace('\n', '\\n'))
     value = stack[-1]
     return value if text.startswith(value) else ""
 
@@ -3957,6 +3975,7 @@ class Forward(UnaryParser):
             memoization_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
             grammar.suspend_memoization__ = False
+            saved_error_state = grammar.tree__.save_error_state()
             result = self.parser(text)
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
@@ -3967,6 +3986,7 @@ class Forward(UnaryParser):
                     self.recursion_counter[location] = depth
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
+                    saved_error_state = grammar.tree__.save_error_state()
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match
@@ -3977,7 +3997,10 @@ class Forward(UnaryParser):
                             rb_func()
                             grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                                 if grammar.rollback__ else -2
-                        # Plus, overwrite the discarded result in the last history record with
+                        # Also, error messages should be rolled back to the last
+                        # but one stage:
+                        grammar.tree__.restore_error_state(saved_error_state)
+                        # Finally, overwrite the discarded result in the last history record with
                         # the accepted result, i.e. the longest match.
                         # TODO: Move this to trace.py, somehow... and make it less confusing
                         #       that the result is not the last but the longest match...

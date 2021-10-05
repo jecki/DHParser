@@ -1704,7 +1704,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
-    EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION
+    EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -2439,11 +2439,11 @@ def parse_ebnf(ebnf: str) -> Node:
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
-        [BLOCK_LEAVES, remove_children_if(all_of(not_one_of('regexp'), is_empty))],
+        [remove_children_if(all_of(not_one_of('regexp', "RAISE_EXPR_WO_BRACKETS"), is_empty))],
     "syntax":
         [],
     "directive":
-        [flatten, remove_tokens('@', '=', ',')],
+        [flatten, remove_tokens('@', '=', ',', '(', ')')],
     "procedure":
         [remove_tokens('()'), reduce_single_child],
     "literals":
@@ -2490,12 +2490,13 @@ EBNF_AST_transformation_table = {
     (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
         [reduce_single_child],
     "RAISE_EXPR_WO_BRACKETS":
-        [add_error("PEG Expressions in directives must be enclosed in barckets (...)")],
+        [add_error("PEG Expressions in directives must be enclosed in barckets (...)",
+                   PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS)],
     "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, RNG_OPEN, "
     "RNG_CLOSE, TIMES, RE_LEADIN, RE_CORE, RE_LEADOUT, CH_LEADIN":
         [],
     "*":
-        [replace_by_single_child]
+        [BLOCK_LEAVES, replace_by_single_child]
 }
 
 

@@ -98,6 +98,7 @@ __all__ = ('SourceMap',
            'UNDEFINED_RETRIEVE',
            'DIRECTIVE_FOR_NONEXISTANT_SYMBOL',
            'INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE',
+           'PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS',
            'CAPTURE_WITHOUT_PARSERNAME',
            'LOOKAHEAD_WITH_OPTIONAL_PARSER',
            'BADLY_NESTED_OPTIONAL_PARSER',
@@ -217,6 +218,7 @@ REDEFINED_DIRECTIVE                      = ErrorCode(1080)
 UNDEFINED_RETRIEVE                       = ErrorCode(1090)
 DIRECTIVE_FOR_NONEXISTANT_SYMBOL         = ErrorCode(1100)
 INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
+PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS  = ErrorCode(1120)
 
 ERROR_WHILE_RECOVERING_FROM_ERROR        = ErrorCode(1301)
 
@@ -315,6 +317,10 @@ class Error:
         self.end_line = -1        # type: int
         self.end_column = -1      # type: int
         self.related = tuple(related)   # type: Sequence['Error']
+
+    # def __eq__(self, other):
+    #     return self.message == other.message and self.code == other.code \
+    #            and self.pos == other.pos and self.length == other.length
 
     def __str__(self):
         prefix = ''

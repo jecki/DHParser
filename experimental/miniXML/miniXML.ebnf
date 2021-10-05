@@ -13,7 +13,7 @@
 document = ~ element ~ §EOF
 element  = STag content ETag
 STag     = '<' TagName §'>'
-@ETag_skip = :?TagName /[^>]*/
+@ETag_skip = ((`>` | :?TagName) /[^>]*/)
 ETag     = '</' §::TagName '>'
 TagName  = /\w+/
 content  = [CharData] { (element | COMMENT__) [CharData] }
