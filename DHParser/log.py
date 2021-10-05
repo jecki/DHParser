@@ -53,7 +53,6 @@ Example::
 
 import collections
 import contextlib
-import copy
 import html
 import os
 from typing import List, Tuple, Union, Optional
@@ -370,7 +369,8 @@ class HistoryRecord:
         if status in (self.MATCH, self.DROP):
             n = max(40 - len(excerpt), 0)
             dots = '...' if len(self.text) > n else ''
-            excerpt = excerpt + '<span class="unmatched">' + self.text[:n] + dots + '</span>'
+            excerpt = ''.join([excerpt, '<span class="unmatched">',
+                               html.escape(self.text[:n]), dots, '</span>'])
             i = stack.rfind('-&gt;')
             ch = stack[i + 12:i + 13]
             while not ch.isidentifier() and i >= 0:
@@ -380,10 +380,10 @@ class HistoryRecord:
                 i += 12
                 k = stack.find('<', i)
                 if k < 0:
-                    stack = stack[:i] + '<span class="matchstack">' + stack[i:]
+                    stack = ''.join([stack[:i], '<span class="matchstack">', stack[i:]])
                 else:
-                    stack = stack[:i] + '<span class="matchstack">' + stack[i:k] \
-                        + '</span>' + stack[k:]
+                    stack = ''.join([stack[:i], '<span class="matchstack">', stack[i:k],
+                                     '</span>', stack[k:]])
             else:
                 stack = '<span class="matchstack">{}</span>'.format(stack)
         elif status == self.FAIL:

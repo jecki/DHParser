@@ -3976,17 +3976,21 @@ class Forward(UnaryParser):
             self.recursion_counter[location] = 0  # fail on the first recursion
             grammar.suspend_memoization__ = False
             saved_error_state = grammar.tree__.save_error_state()
+            history_pointer = len(grammar.history__)
             result = self.parser(text)
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
                 # the recursion depth by 1 for each call as long as the length of
                 # the match increases.
+                last_error_state = grammar.tree__.save_error_state()
+                last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                 depth = 1
                 while True:
                     self.recursion_counter[location] = depth
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
-                    saved_error_state = grammar.tree__.save_error_state()
+                    grammar.history__ = grammar.history__[:history_pointer]
+                    grammar.tree__.restore_error_state(saved_error_state)
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match
@@ -3999,19 +4003,21 @@ class Forward(UnaryParser):
                                 if grammar.rollback__ else -2
                         # Also, error messages should be rolled back to the last
                         # but one stage:
-                        grammar.tree__.restore_error_state(saved_error_state)
+                        grammar.tree__.restore_error_state(last_error_state)
                         # Finally, overwrite the discarded result in the last history record with
                         # the accepted result, i.e. the longest match.
                         # TODO: Move this to trace.py, somehow... and make it less confusing
                         #       that the result is not the last but the longest match...
-                        if grammar.history__:
-                            record = grammar.history__[-1]
-                            if record.call_stack[-1] == (self.parser.pname, location):
-                                record.text = result[1]
-                                delta = len(text) - len(result[1])
-                                assert record.node.tag_name != ':None'
-                                record.node.result = text[:delta]
+                        grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+                            # record = grammar.history__[-1]
+                            # if record.call_stack[-1] == (self.parser.pname, location):
+                            #     record.text = result[1]
+                            #     delta = len(text) - len(result[1])
+                            #     assert record.node.tag_name != ':None'
+                            #     record.node.result = text[:delta]
                         break
+                    last_error_state = grammar.tree__.save_error_state()
+                    last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                     result = next_result
                     depth += 1
             # grammar.suspend_memoization__ = memoization_state \
