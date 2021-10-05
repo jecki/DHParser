@@ -1551,7 +1551,12 @@ the re-entry point with a parser. In this case, the search term has a different
 semantics however. If a parser is specified, it must match all characters
 from the point where the error occured up to the reentry point. In the case
 of a simple string or a regular expression, DHParser searches for the first
-match of the expression and then picks the location after that match.
+match of the expression and then picks the location after that match. In order
+to distinguish the two cases clearly, PEG-rules must always be enclosed in round
+brackets. Thus, a single regular expression or a singular string enclosed in
+round brackets will not be uesed as a search term but as a matching expression
+that determines the reentry-location by matching the complete text from the
+error location to the reentry-point.
 
 As an example, let's try this with a parser for arbitrarily nested lists
 of postive integers. First, we write our grammar without any re-entry rules::
@@ -1643,10 +1648,12 @@ behind the grammatical structure where the error had occured, but at the locatio
 a nested structure, which in this example is the inner list "[7, 8]".
 
 This problem can be remedied by using the full power of parsing expression grammars
-for determining the resumption-position::
+for determining the resumption-position. (Note, that in order to clearly distinguish
+PEG-rules unambiguously from plain regular expressions or simple strings, they must
+be enclosed in round rackets!)::
 
     >>> resumption_rules = '''
-    ... @list_resume = { list | /[^\\\\[\\\\]]*/ } ["]"]
+    ... @list_resume = ({ list | /[^\\\\[\\\\]]*/ } ["]"])
     ... @_items_skip = /(?=,)/, /(?=])/, /$/
     ... '''
     >>> list_parser = create_parser(resumption_rules + number_list_grammar)
@@ -2443,7 +2450,8 @@ EBNF_AST_transformation_table = {
     "syntax":
         [],
     "directive":
-        [flatten, remove_tokens('@', '=', ',', '(', ')')],
+        [flatten, remove_tokens('@', '=', ',', '(', ')'),
+         remove_children("RAISE_EXPR_WO_BRACKETS")],
     "procedure":
         [remove_tokens('()'), reduce_single_child],
     "literals":

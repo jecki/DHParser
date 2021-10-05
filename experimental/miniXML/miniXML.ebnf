@@ -11,9 +11,11 @@
 @ drop        = EOF, whitespace, strings
 
 document = ~ element ~ §EOF
-element  = STag content ETag
+element  = STag §content ETag
+# @Stag_skip = (/[^<>]/)
 STag     = '<' TagName §'>'
-@ETag_skip = ((`>` | :?TagName) /[^>]*/)
+@ETag_skip = ((/\s*(?=>)/ | :?TagName) /[^<>]*/), /$/
+# @ETag_resume = (`</` (/\s*>/ | :?TagName) /[^<>]*/ [`>`])
 ETag     = '</' §::TagName '>'
 TagName  = /\w+/
 content  = [CharData] { (element | COMMENT__) [CharData] }
