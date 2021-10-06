@@ -2778,15 +2778,49 @@ NO_MANDATORY = 2**30
 
 
 class MandatoryNary(NaryParser):
-    r"""
-    Attributes:
-        mandatory:  Number of the element starting at which the element
-                and all following elements are considered "mandatory". This
-                means that rather than returning a non-match an error message
-                is issued. The default value is NO_MANDATORY, which means that
-                no elements are mandatory. NOTE: The semantics of the mandatory-
-                parameter might change depending on the sub-class implementing
-                it.
+    """MandatoryNary is the parent class for N-ary parsers that can be
+    configured to fail with a parsing error rather than returning a non-match,
+    if all contained parsers from a specific subset of non-mandatory parsers
+    have already matched successfully, so that only "mandatory" parsers are
+    left for matching. The idea is that once all non-mandatory parsers have
+    been consumed it is clear that this parser is a match so that the failure
+    to match of any of the following mandatory parsers indicates a syntax
+    error in the processed document at the location were a mandatory parser
+    fails to match.
+
+    For the sake of simplicity, the division between the set of non-mandatory
+    parsers and mandatory parsers is realized by an index into the list
+    of contained parsers. All parsers from the mandatory-index onward are
+    considered mandatory once all parsers up to the index have been consumed.
+
+    In the following example, ``Series`` is a descendant of ``MandatoryNary``::
+
+        >>> fraction = Series(Text('.'), RegExp(r'[0-9]+'), mandatory=1).name('fraction')
+        >>> number = (RegExp(r'[0-9]+') + Option(fraction)).name('number')
+        >>> num_parser = Grammar(TreeReduction(number, CombinedParser.MERGE_TREETOPS))
+        >>> num_parser('25').as_sxpr()
+        '(number "25")'
+        >>> num_parser('3.1415').as_sxpr()
+        '(number (:RegExp "3") (fraction ".1415"))'
+        >>> str(num_parser('3.1415'))
+        '3.1415'
+        >>> str(num_parser('3.'))
+        '3. <<< Error on "" | \\'/[0-9]+/\\' expected by parser \\'fraction\\', but »...« found instead! >>> '
+
+    In this example, the first item of the fraction, i.e. the decimal dot,
+    is non-mandatory, because only the parser with an index of one or more
+    are mandatory (``mandator=1``). In this case this is only the regular
+    expression parser capturing the decimal digits after the dot. This means,
+    if there is no dot, the fraction parser simply will not match. However,
+    if there is a dot, it will fail with an error if the following mandatory
+    item, i.e. the decimal digits, are missing.
+
+    :ivar mandatory:  Number of the element starting at which the element
+        and all following elements are considered "mandatory". This means
+        that rather than returning a non-match an error message is issued.
+        The default value is NO_MANDATORY, which means that no elements
+        are mandatory. NOTE: The semantics of the mandatory-parameter
+        might change depending on the sub-class implementing it.
     """
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY) -> None:
