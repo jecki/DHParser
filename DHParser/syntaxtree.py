@@ -2921,9 +2921,10 @@ class RootNode(Node):
                  source: Union[str, StringView] = '',
                  source_mapping: Optional[SourceMapFunc] = None):
         super().__init__('__not_yet_ready__', '')
-        self.errors = []               # type: List[Error]
-        self.error_nodes = dict()      # type: Dict[int, List[Error]]  # id(node) -> error list
-        self.error_positions = dict()  # type: Dict[int, Set[int]]  # pos -> set of id(node)
+        self.errors: List[Error] = []
+        self._error_set: Set[Error] = set()
+        self.error_nodes: Dict[int, List[Error]] = dict()   # id(node) -> error list
+        self.error_positions: Dict[int, Set[int]] = dict()  # pos -> set of id(node)
         self.error_flag = 0
         # info on source code (to be carried along all stages of tree-processing)
         self.source = source           # type: str
@@ -2963,7 +2964,8 @@ class RootNode(Node):
         if self.has_attr():
             duplicate.attr.update(self._xml_attr)
             # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
-        duplicate.errors = copy.copy(self.errors)
+        duplicate.errors = copy.deepcopy(self.errors)
+        duplicate._error_set = {error for error in duplicate.errors}
         duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
         duplicate.error_positions = {pos: {map_id.get(i, i) for i in s}
                                      for pos, s in self.error_positions.items()}
@@ -3016,32 +3018,33 @@ class RootNode(Node):
             add_source_locations(self.errors, self.source_mapping)
         return self
 
-    def save_error_state(self) -> tuple:
-        """Saves the error state. Useful for when backtracking. See
-        :py:mod:`parse.Forward` """
-        if self.error_flag:
-            return (self.errors.copy(),
-                    {k: v.copy() for k, v in self.error_nodes.items()},
-                    {k: v.copy() for k, v in self.error_positions.items()},
-                    self.error_flag)
-        else:
-            return ()
-
-    def restore_error_state(self, error_state: tuple):
-        """Resotores a previously savced error state."""
-        if error_state:
-            self.errors, self.error_nodes, self.error_positions, self.error_flag = error_state
-        else:
-            self.errors = []
-            self.error_nodes = dict()
-            self.error_positions = dict()
-            self.error_flag = 0
+    # def save_error_state(self) -> tuple:
+    #     """Saves the error state. Useful for when backtracking. See
+    #     :py:mod:`parse.Forward` """
+    #     if self.error_flag:
+    #         return (self.errors.copy(),
+    #                 {k: v.copy() for k, v in self.error_nodes.items()},
+    #                 {k: v.copy() for k, v in self.error_positions.items()},
+    #                 self.error_flag)
+    #     else:
+    #         return ()
+    #
+    # def restore_error_state(self, error_state: tuple):
+    #     """Resotores a previously savced error state."""
+    #     if error_state:
+    #         self.errors, self.error_nodes, self.error_positions, self.error_flag = error_state
+    #     else:
+    #         self.errors = []
+    #         self.error_nodes = dict()
+    #         self.error_positions = dict()
+    #         self.error_flag = 0
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
         assert isinstance(error, Error)
+        if error in self._error_set:  return self  # prevent duplication of errors
         if not node:
             # find the first leaf-node from the left that could contain the error
             # judging from its position
@@ -3074,6 +3077,7 @@ class RootNode(Node):
         if self.source:
             add_source_locations([error], self.source_mapping)
         self.errors.append(error)
+        self._error_set.add(error)
         self.error_flag = max(self.error_flag, error.code)
         return self
 
@@ -3152,8 +3156,9 @@ class RootNode(Node):
         """
         Returns the list of errors, ordered bv their position.
         """
-        self.errors.sort(key=lambda e: e.pos)
-        return self.errors
+        errors = self.errors[:]
+        errors.sort(key=lambda e: e.pos)
+        return errors
 
     def did_match(self) -> bool:
         """

@@ -3490,9 +3490,19 @@ class EBNFCompiler(Compiler):
             node = node.children[0]
 
         # compile definitions and directives and collect definitions
+        first_def = True
         for nd in node.children:
             if nd.tag_name == "definition":
-                self.definitions.update([self.compile(nd)])
+                rule, defn = self.compile(nd)
+                if first_def:
+                    # make sure that any artificial definitions created by
+                    # directives don't appear before the first definition proper
+                    defs = self.definitions
+                    self.definitions = {rule: defn}
+                    self.definitions.update(defs)
+                    first_def = False
+                else:
+                    self.definitions[rule] = defn
             else:
                 assert nd.tag_name == "directive", nd.as_sxpr()
                 self.compile(nd)

@@ -3499,7 +3499,7 @@ def _negative_match(grammar, bool_value) -> bool:
     else:
         # invert farthest failure, because, due to negation, it's not
         # a failure any more and should be overwritten by any other failure
-        grammar.ff_pos__ = - grammar.ff_pos__
+        grammar.ff_pos__ = -grammar.ff_pos__
         return True
 
 
@@ -4008,14 +4008,14 @@ class Forward(UnaryParser):
             memoization_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
             grammar.suspend_memoization__ = False
-            saved_error_state = grammar.tree__.save_error_state()
+            # saved_error_state = grammar.tree__.save_error_state()
             history_pointer = len(grammar.history__)
             result = self.parser(text)
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
                 # the recursion depth by 1 for each call as long as the length of
                 # the match increases.
-                last_error_state = grammar.tree__.save_error_state()
+                # last_error_state = grammar.tree__.save_error_state()
                 last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                 depth = 1
                 while True:
@@ -4023,7 +4023,7 @@ class Forward(UnaryParser):
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
                     grammar.history__ = grammar.history__[:history_pointer]
-                    grammar.tree__.restore_error_state(saved_error_state)
+                    # grammar.tree__.restore_error_state(saved_error_state)
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match
@@ -4034,9 +4034,9 @@ class Forward(UnaryParser):
                             rb_func()
                             grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                                 if grammar.rollback__ else -2
-                        # Also, error messages should be rolled back to the last
-                        # but one stage:
-                        grammar.tree__.restore_error_state(last_error_state)
+                        # # Also, error messages should be rolled back to the last
+                        # # but one stage:
+                        # grammar.tree__.restore_error_state(last_error_state)
                         # Finally, overwrite the discarded result in the last history record with
                         # the accepted result, i.e. the longest match.
                         # TODO: Move this to trace.py, somehow... and make it less confusing
@@ -4049,7 +4049,7 @@ class Forward(UnaryParser):
                             #     assert record.node.tag_name != ':None'
                             #     record.node.result = text[:delta]
                         break
-                    last_error_state = grammar.tree__.save_error_state()
+                    # last_error_state = grammar.tree__.save_error_state()
                     last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                     result = next_result
                     depth += 1

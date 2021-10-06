@@ -318,9 +318,12 @@ class Error:
         self.end_column = -1      # type: int
         self.related = tuple(related)   # type: Sequence['Error']
 
-    # def __eq__(self, other):
-    #     return self.message == other.message and self.code == other.code \
-    #            and self.pos == other.pos and self.length == other.length
+    def __eq__(self, other):
+        return self.message == other.message and self.code == other.code \
+               and self._pos == other._pos  # and self.length == other.length
+
+    def __hash__(self):
+        return hash((self.message, self.code, self._pos))
 
     def __str__(self):
         prefix = ''
