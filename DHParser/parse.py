@@ -3201,6 +3201,7 @@ class Alternative(NaryParser):
         return errors
 
 
+@cython.locals(n=cython.int, i=cython.int)
 def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) -> str:
     """Returns the longest string from a given list of strings that
     matches the beginning of text.
@@ -3228,7 +3229,6 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
     if match:  return match
     if head == strings[i]:  return head
     return ''
-
 
 class TextAlternative(Alternative):
     r"""A faster Alternative-Parser for special cases where all alternatives
@@ -3513,7 +3513,6 @@ class NegativeLookahead(Lookahead):
 
     def match(self, bool_value) -> bool:
         return _negative_match(self.grammar, bool_value)
-
 
 
 class Lookbehind(FlowParser):

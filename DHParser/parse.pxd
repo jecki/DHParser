@@ -107,6 +107,13 @@ cdef class Series(MandatoryNary):
 cdef class Alternative(NaryParser):
     pass
 
+cpdef longest_match(strings, test, n)
+
+cdef class TextAlternative(Alternative):
+    cdef public object heads
+    cdef public object indices
+    cdef public int min_head_size
+
 cdef class Interleave(MandatoryNary):
     cdef public object repetitions
     cdef public object non_mandatory
