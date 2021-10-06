@@ -3249,7 +3249,7 @@ class EBNFCompiler(Compiler):
         self.forward = recursive
 
 
-    def assemble_parser(self, definitions: List[Tuple[str, str]]) -> str:
+    def assemble_parser(self, definitions: List[Tuple[str, str]], root_symbol: str) -> str:
         """
         Creates the Python code for the parser after compilation of
         the EBNF-Grammar
@@ -3285,7 +3285,7 @@ class EBNFCompiler(Compiler):
 
         # minimize the necessary number of forward declarations
         self.optimize_definitions_order(definitions)
-        self.root_symbol = definitions[0][0] if definitions else ""
+        self.root_symbol = root_symbol
 
         # provide for capturing of symbols that are variables, i.e. the
         # value of which will be retrieved at some point during the parsing process
@@ -3490,19 +3490,12 @@ class EBNFCompiler(Compiler):
             node = node.children[0]
 
         # compile definitions and directives and collect definitions
-        first_def = True
+        root_symbol = ''
         for nd in node.children:
             if nd.tag_name == "definition":
                 rule, defn = self.compile(nd)
-                if first_def:
-                    # make sure that any artificial definitions created by
-                    # directives don't appear before the first definition proper
-                    defs = self.definitions
-                    self.definitions = {rule: defn}
-                    self.definitions.update(defs)
-                    first_def = False
-                else:
-                    self.definitions[rule] = defn
+                self.definitions[rule] = defn
+                if not root_symbol:  root_symbol = rule
             else:
                 assert nd.tag_name == "directive", nd.as_sxpr()
                 self.compile(nd)
@@ -3510,7 +3503,7 @@ class EBNFCompiler(Compiler):
         if not self.definitions:
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
 
-        python_src = self.assemble_parser(list(self.definitions.items()))
+        python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
         if get_config_value('static_analysis') == 'early' and not \
                 any(e.code == MALFORMED_REGULAR_EXPRESSION for e in self.tree.errors):
             errors = []
