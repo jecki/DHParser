@@ -1716,12 +1716,13 @@ from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forwa
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
     Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
-from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, gen_find_include_func, \
+    preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
     flatten_sxpr
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
-    cython
+    cython, ThreadLocalSingletonFactory
 from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
@@ -1810,14 +1811,30 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 ########################################################################
 
+#
+# def get_ebnf_preprocessor() -> PreprocessorFunc:
+#     """
+#     Returns the preprocessor function for the EBNF compiler.
+#     As of now, no preprocessing is needed for EBNF-sources. Therefore,
+#     just a dummy function is returned.
+#     """
+#     return nil_preprocessor
 
-def get_ebnf_preprocessor() -> PreprocessorFunc:
-    """
-    Returns the preprocessor function for the EBNF compiler.
-    As of now, no preprocessing is needed for EBNF-sources. Therefore,
-    just a dummy function is returned.
-    """
-    return nil_preprocessor
+RE_INCLUDE = r'@[ \t]*include[ \t]*=[ \t]*"(?P<name>.*)"'
+
+
+def EBNFTokenizer(original_text) -> Tuple[str, List[Error]]:
+    return original_text, []
+
+
+def preprocessor_factory() -> PreprocessorFunc:
+    find_next_include = gen_find_include_func(RE_INCLUDE, HeuristicEBNFGrammar.comment_rx__)
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    LaTeXPreprocessor = make_preprocessor(EBNFTokenizer)
+    return chain_preprocessors(include_prep, LaTeXPreprocessor)
+
+
+get_ebnf_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 
 
 ########################################################################
@@ -2432,7 +2449,7 @@ def get_ebnf_grammar() -> HeuristicEBNFGrammar:
 
 def parse_ebnf(ebnf: str) -> Node:
     """Parses and EBNF-source-text and returns the concrete syntax tree
-    of the EBNF-code.."""
+    of the EBNF-code."""
     return get_ebnf_grammar()(ebnf)
 
 

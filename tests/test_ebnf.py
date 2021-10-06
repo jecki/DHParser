@@ -1607,6 +1607,56 @@ class TestRuleOrder:
         B = all_paths(compiler_obj)
         assert A == B, str(A) + str(B)
 
+class TestInclude:
+    number_ebnf = '''
+    NUMBER      = INT [FRAC] [EXP]
+    INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
+    NEG         = `-`
+    FRAC        = DOT /[0-9]+/
+    DOT         = `.`
+    EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/    
+    '''
+
+    arithmetic_ebnf = '''
+    @ whitespace  = vertical             
+    @ literalws   = right                
+    @ comment     = /#.*/                
+    @ ignorecase  = False                
+    @ drop        = whitespace, strings    
+    
+    expression = term  { (add | sub) term}
+    term       = factor { (div | mul) factor}
+    factor     = [NEG] (number | group)
+    group      = "(" expression ")"
+    
+    add        = "+"
+    sub       = "-"
+    mul        = "*"
+    div        = "/"
+    
+    number     = NUMBER ~
+    
+    @ include = "number.ebnf"    
+    '''
+
+    def setup(self):
+        self.number_path = "number.ebnf"
+        if not os.path.exists(self.number_path):
+            with open(self.number_path, 'w', encoding='utf-8') as f:
+                f.write(self.number_ebnf)
+        else:
+            self.number_path = ''
+
+    def teardown(self):
+        if self.number_path:
+            os.remove(self.number_path)
+
+    def test_include(self):
+        parser = create_parser(self.arithmetic_ebnf)
+        print(parser.python_src__)
+
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

@@ -286,7 +286,7 @@ def grammar_provider(ebnf_src: str,
         language defined by ``ebnf_src``.
     """
     grammar_src = compileDSL(
-        ebnf_src, nil_preprocessor, get_ebnf_grammar(), get_ebnf_transformer(),
+        ebnf_src, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(),
         get_ebnf_compiler(branding, ebnf_src), fail_when)
     log_name = get_config_value('compiled_EBNF_log')
     if log_name and is_logging():
