@@ -326,9 +326,11 @@ class Error:
         return hash((self.message, self.code, self._pos))
 
     def __str__(self):
-        prefix = ''
+        if self.orig_doc and self.orig_doc != 'UNKNOWN_FILE':
+            prefix = self.orig_doc + ':'
+        else:  prefix = ''
         if self.line > 0:
-            prefix = "%i:%i: " % (max(self.line, 0), max(self.column, 0))
+            prefix += "%i:%i: " % (max(self.line, 0), max(self.column, 0))
         return prefix + "%s (%i): %s" % (self.severity, self.code, self.message)
 
     def __repr__(self):
@@ -500,13 +502,15 @@ def canonical_error_strings(errors: List[Error]) -> List[str]:
         error_strings = []
         for err in errors:
             source_file_name = err.orig_doc
-            if is_filename(source_file_name):
+            if source_file_name and is_filename(source_file_name):
                 cwd = os.getcwd()
                 if source_file_name.startswith(cwd):
                     rel_path = source_file_name[len(cwd)]
                 else:
                     rel_path = source_file_name
-                error_strings.append(rel_path + ':' + str(err))
+                err_str = str(err)
+                err_str = err_str[err_str.find(':'):]
+                error_strings.append(rel_path + err_str)
             else:
                 error_strings.append(str(err))
     else:

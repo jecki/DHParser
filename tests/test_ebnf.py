@@ -36,12 +36,12 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
-    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING
+    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, canonical_error_strings
 from DHParser.syntaxtree import WHITESPACE_PTYPE
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
-from DHParser.testing import grammar_unit, clean_report
+from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
 
 
@@ -1609,6 +1609,7 @@ class TestRuleOrder:
 
 class TestInclude:
     number_ebnf = '''
+    @ disposable = DOT, EXP, FRAC, INT
     NUMBER      = INT [FRAC] [EXP]
     INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
     NEG         = `-`
@@ -1621,7 +1622,8 @@ class TestInclude:
     @ whitespace  = vertical             
     @ literalws   = right                
     @ comment     = /#.*/                
-    @ ignorecase  = False                
+    @ ignorecase  = False     
+    @ reduction   = merge_treetops           
     @ drop        = whitespace, strings    
     
     expression = term  { (add | sub) term}
@@ -1640,20 +1642,29 @@ class TestInclude:
     '''
 
     def setup(self):
-        self.number_path = "number.ebnf"
-        if not os.path.exists(self.number_path):
-            with open(self.number_path, 'w', encoding='utf-8') as f:
-                f.write(self.number_ebnf)
-        else:
-            self.number_path = ''
+        self.dirname = unique_name('test_ebnf_data')
+        os.mkdir(self.dirname)
+        self.number_path = os.path.join(self.dirname, "number.ebnf")
+        with open(self.number_path, 'w', encoding='utf-8') as f:
+            f.write(self.number_ebnf)
 
     def teardown(self):
-        if self.number_path:
-            os.remove(self.number_path)
+        os.remove(self.number_path)
+        os.rmdir(self.dirname)
 
     def test_include(self):
-        parser = create_parser(self.arithmetic_ebnf)
-        print(parser.python_src__)
+        arithmetic_ebnf = self.arithmetic_ebnf.replace('number.ebnf', self.number_path)
+        # print(arithmetic_ebnf)
+        src, errors, ast = compile_ebnf(arithmetic_ebnf)
+        assert not errors, str(errors)
+        # for e in errors:
+        #     print(str(e), e.orig_doc)
+        # print(canonical_error_strings(errors))
+        parser = create_parser(arithmetic_ebnf)
+        # print(parser.python_src__)
+        tree = parser('2 - (3 * -4.145E+5)')
+        assert not tree.errors
+        # print(tree.as_sxpr())
 
 
 

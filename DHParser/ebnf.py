@@ -1830,8 +1830,8 @@ def EBNFTokenizer(original_text) -> Tuple[str, List[Error]]:
 def preprocessor_factory() -> PreprocessorFunc:
     find_next_include = gen_find_include_func(RE_INCLUDE, HeuristicEBNFGrammar.comment_rx__)
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    LaTeXPreprocessor = make_preprocessor(EBNFTokenizer)
-    return chain_preprocessors(include_prep, LaTeXPreprocessor)
+    EBNFPreprocessor = make_preprocessor(EBNFTokenizer)
+    return chain_preprocessors(include_prep, EBNFPreprocessor)
 
 
 get_ebnf_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
@@ -3785,8 +3785,12 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(node, 'Directive "%s" must be used as postfix not prefix to '
                                     'the symbolname. Please, write: "%s"' % (kl[0], proper_usage))
             else:
-                self.tree.new_error(node, 'Unknown directive %s ! (Known directives: %s.)' %
-                                    (key, ', '.join(k for k in VALID_DIRECTIVES.keys())))
+                if key == 'include':
+                    self.tree.new_error(node, 'Badly formatted @include-directive. Should be: '
+                                        '@include = "FILEPATH"')
+                else:
+                    self.tree.new_error(node, 'Unknown directive %s ! (Known directives: %s.)' %
+                                        (key, ', '.join(k for k in VALID_DIRECTIVES.keys())))
 
         return ""
 
