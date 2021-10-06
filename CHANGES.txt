@@ -1,3 +1,9 @@
+DHParser Version 0.9.9
+......................
+
+- @include-directive added
+- bugfixes for context sensitive parsers (capture, retrieve, pop)
+
 DHParser Version 0.9.8
 ......................
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "DHParser"
-version = "0.9.8"
+version = "0.9.9"
 description = "Parser Generator and DSL-construction-kit"
 
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ keywords = [
 ]
 
 classifiers = [
-    'Development Status :: 4 - Beta',
+    'Development Status :: 5 - Stable',
     'Intended Audience :: Developers',
     'Environment :: Console',
     'License :: OSI Approved :: Apache Software License',
