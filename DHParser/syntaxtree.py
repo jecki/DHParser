@@ -2897,6 +2897,7 @@ class RootNode(Node):
 
     :ivar errors:  A list of all errors that have occurred so far during
         processing (i.e. parsing, AST-transformation, compiling) of this tree.
+        The errors are orded by the time of their being added to the list.
     :ivar errors_sorted: (read-only property) The list of errors orderd by
         their position.
     :ivar error_nodes: A mapping of node-ids to a list of errors that

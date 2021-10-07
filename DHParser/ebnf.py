@@ -1690,10 +1690,265 @@ by skipping larger portions of the text is probably negligble or at any
 rate smaller than the harm done by introducing consequential errors as
 a result of poorly choosen resumption rules.
 
-Semantic Actions and Storing Variables
---------------------------------------
+Context sensitive parsers and semantic actions
+----------------------------------------------
 
-TO BE CONDINUED...
+DHParser does by intention not contain support for semantic actions, because
+these can intrduce a context-sensitivity that can be hard to handle with a
+recursive descent parser and compiler-generation, where semtantiv actions
+might become useful is not the main domain of application for DHParser.
+(In case you are worried: There are a few documented but unadvertised loopholes
+that can be (mis-)used for semantic actions, though...)
+
+Sometimes, however, it would be ever so comfortable to break out of the
+paradigm of context free grammars - if only just a little bit. For example,
+when encoding data in XML or HTML, the closing tag must have the same tag-name
+as the opening tag::
+
+    <line>O Rose thou art sick.</line>
+
+If you encode the tag-name parser roughly following the `XML-specs <https://www.w3.org/TR/xml/>`
+as::
+
+    tag_name        = /(?![0-9][:\w][\w:.-]*/
+
+the following code would be accepted by the parser:
+
+    <line>O Rose thou art sick.</enil>
+
+In this case, the remedy is easy: When post-processing the syntax tree, check whether
+all end-tags have the same tag-name as the corresponbding start-tag and add an error
+message where this is not the case. However, this only works, because the tag-names
+have no influence on the structure of the syntax-tree of an XML-document.
+
+Therefore, the same remedy would not work in many other cases.
+In `CommonMark <https://commonmark.org/>`_, for example, a
+"`code fence <https://spec.commonmark.org/0.30/#fenced-code-blocks>`_ is a sequence
+of at least three [but possibly more] consecutive backtick characters (`) or tildes (~)"
+Now, this is a bit more complicated than the XML-example, because here the content of
+the closing marker needs to be known at the time of parsing already, because otherwise
+the structure could not be determined correctly. A smaller number of tildes or
+backticks than used at the opening of a code fence would be part of the content of
+the fenced code that needs to be distinguished from the closing delimiter. The purpose
+is to allow you to fence code that may contain fenced code itself.::
+
+    ~~~~~
+    In common mark code can be fenced with tilde-characters. You can just write:
+    ~~~
+    fenced code
+    ~~~
+    ~~~~~
+
+Here, a possible remedy is to employ a preprocessor, that distinguishes the fenced code
+from quoted fences and replaces the non-quoted fences by context-free opening and
+closing markers that can then be cpatured at parsing stage. Using preprocessors is often
+a clean and pragmatic solution and DHParser includes dedicated support for preprocessors.
+However, introducing preprocessors also hast some downsides. One disadvantage is that a
+preprocessor requires a makeshift parser of its own that must be strong enough not to
+stumble over the syntactic constructs that do not concern the preprocessor like comments
+for example.
+
+DHParser therefore also offers another alternative for occasional context sensitivity
+by allowing to retrieve and compare earlier values of a symbol. Any users of these
+features should be aware, however, that extensive use of context sensitive parsers
+may slow-down parsing, because it does not play well with the the memoizing
+optimization that is commonly used with parsing expression grammars and also employed
+by DHParser. Also, since these features are specific for DHParser, switching to
+another parser generator will require factoring the context-sensitive-parser out
+of your grammar and re-implementing the functionality for which they have been used
+with the more conventional approach of pre- and post-processors.
+
+Before explaining the full mechanism, let's have a look at an example.
+The following minimal pseudo-XML-parser captures the value of the tag-name so that
+it can compared with the tag-name of the ending-tag::
+
+    >>> miniXML = '''
+    ... @ disposable  = EOF
+    ... @ drop        = EOF, whitespace, strings
+    ... document = ~ element ~ §EOF
+    ... element  = STag §content ETag
+    ... STag     = '<' TagName §'>'
+    ... ETag     = '</' § ::TagName '>'
+    ... TagName  = /\\\\w+/
+    ... content  = [CharData] { (element | COMMENT__) [CharData] }
+    ... CharData = /(?:(?!\\\\]\\\\]>)[^<&])+/
+    ... EOF      =  !/./
+    ... '''
+    >>> parseXML = create_parser(miniXML)
+    >>> print(parseXML('<line>O Rose thou art sick.</line>').as_sxpr())
+    (document
+      (element
+        (STag
+          (TagName "line"))
+        (content
+          (CharData "O Rose thou art sick."))
+        (ETag
+          (TagName "line"))))
+    >>> result = parseXML('<line>O Rose thou art sick.</enil>')
+    >>> print(result.errors[0])
+    1:30: Error (1010): '::TagName "line"' expected by parser 'ETag', but »enil>...« found instead!
+
+Here, the TagName-parser in the definition has been prefixed with a double colon ``::``. This double
+colon is the "Pop"-operator and can be put in front of any symbol defined in the grammar. If a symbol is
+annoted with the operator, then its parsing-rule will not be executed, but the last value that has been
+parsed by the symbal will be retrieved and match against the following part of the document by simple
+text-comparison. If the last value matches the "Pop"-parser will remove that value from the stack of
+earlier values and report a match. Otherwise a non-match will be reported and the value will be
+left on the stack. In the example, since the Pop-parser ``::TagName`` follows a mandatory marker ``§``,
+the non-match causes a syntax error.
+
+Sometimes it is useful to compare the following text with a stored value without removing that
+value from the stack. For this purpose, there is the "Retrieve"-operator which is denoted by a
+single colon `:`::
+
+    >>> fencedTextEBNF =  '''@whitespace = vertical
+    ... @disposable = EOF, fence_re
+    ... @drop    = whitespace, EOF
+    ... document = ~ { text | fenced } EOF
+    ... text     = /[^\\\\~\\\\n]+/ ~  # /(?:[^\\\\~]+|\\\\n)+/
+    ... fenced   = fence ~ { text | no_fence } ::fence ~
+    ... no_fence = ! :fence fence_re ~
+    ... fence    = fence_re
+    ... fence_re = /\\\\~+/
+    ... EOF      = !/./
+    ... '''
+
+Here the Pop-operator ``::`` is used in the definition of ``fenced`` in just the same way
+as in the earlier example. The Retrieve-operator ``:`` is used in the definition of
+``no_fence`` in combination with a negative lookahead ``!``. This allows the no_fence-parsers
+to capture all "fences" which are not closing-fence of the current fenced enivronment::
+
+    >>> parseFenced = create_parser(fencedTextEBNF)
+    >>> fenced_test_1 = '''~~~
+    ... fenced code
+    ... ~~~'''
+    >>> print(parseFenced(fenced_test_1).as_sxpr())
+    (document (fenced (fence "~~~") (text "fenced code") (fence "~~~")))
+    >>> fenced_test_2 = '''~~~~~
+    ... In common mark code can be fenced with tilde-characters. You can just write:
+    ... ~~~
+    ... fenced code
+    ... ~~~
+    ... ~~~~~'''
+    >>> print(parseFenced(fenced_test_2).as_sxpr())
+    (document
+      (fenced
+        (fence "~~~~~")
+        (text "In common mark code can be fenced with tilde-characters. You can just write:")
+        (no_fence "~~~")
+        (text "fenced code")
+        (no_fence "~~~")
+        (fence "~~~~~")))
+
+But what if the opening and closing fence are not one and the same string, but complements of
+each other, like opening and closing brackets? Say, you'd like to enclose code-examples in
+curled braces "{" and "}" and since the code examples themselves may contain braces, you'd
+like to allow the markup-writer to use an arbitrary number of braces as opening and closing
+delimiters::
+
+    >>> markup = "This ist a code example: {{ mapping = { 'a': 1, 'b': 2} }} with braces."
+
+Here, the recalled value would need to be transformed or otherwise interpreted before the
+following text is either considered a match or a non-match. Since such a transformation
+can hardly be encoded in EBNF even an augmented EBNF, any more, one of DHParser's loopholes
+for semantic actions must be used. It is possible to assign Python filter-functions to
+symbols, the value of which is retrieved with yet another directive, which is the
+``@ XXXX_filter``-directive, where "XXXX" stands for the name of the symbol::
+
+    >>> bracesExampleEBNF = '''
+    ... @braces_filter = matching_bracket()
+    ... document       = { text | codeblock }
+    ... codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
+    ... braces         = opening_braces
+    ... opening_braces = /\{+/
+    ... closing_braces = /\}+/
+    ... text           = /[^{}]+/
+    ... '''
+
+The function name that is passed to the directive must be the name of a function that
+is within reach of the generated parser (by either defining it in the same module or
+importing it) and it must have the signature:
+
+     Callable[str, List[str]], Optional[str]]
+
+This function takes the following text as well as the stack of previous value of
+the symbol that is being retrieved as an argument and it must return either
+a strech of matched text of ``None`` to indicate a non-match. The function
+``matching_bracket()`` is already defined in :py:mod:`DHParser.parse`. Slightly
+simplifies to cover only the case of curly braces, it looks like this::
+
+    >>> def matching_bracket(text: str, stack: List[str]) -> Optional[str]:
+    ...     value = stack[-1]
+    ...     value = value.replace("{", "}")
+    ...     return value if text[:len(value)] == value else None
+
+    >>> markup_parser = create_parser(bracesExampleEBNF)
+    >>> result = markup_parser(markup)
+    >>> print(result.as_sxpr())
+    (document
+      (text "This ist a code example: ")
+      (codeblock
+        (braces
+          (opening_braces "{{"))
+        (text " mapping = ")
+        (opening_braces "{")
+        (text " 'a': 1, 'b': 2")
+        (closing_braces "}")
+        (text " ")
+        (braces "}}"))
+      (text " with braces."))
+
+Here, the outer double braces "{{" and "}}" open up and close a new code block and could be
+discarded as delimiters during the AST-transformation, while the opening and closing braces
+within the code block are simply that: opening and closing braces.
+
+Advanced context sensitive parsers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Apart from the Pop- and Retrieve-operator, DHParser offers a third retrieval operator that,
+like the Pop-operator, "pops" that last value from the stack and matches either this value
+or the empty strings. In other word, this operator always matches, but it captures the
+begining of the following text only if it matches the stored value.  This "Optional Pop"-operator
+is denoted by a colon followed by a question mark ``:?``.  Weird as this may sound,
+this operator has astonishingly manifold use cases. Think for exmple of a modifcation
+of our minimal pseudo-XML parser the allows coders to omit the tag name in closing tags
+to save them some typing::
+
+    >>> miniXML = miniXML.replace('::TagName', ':?TagName')
+    >>> parseXML = create_parser(miniXML)
+    >>> print(parseXML('<line>O Rose thou art sick.</>').as_sxpr())
+    (document
+      (element
+        (STag
+          (TagName "line"))
+        (content
+          (CharData "O Rose thou art sick."))
+        (ETag
+          (TagName))))
+
+Another, rather tricky, use case is to let the value of certain symbols be determined
+on first use by marking all appearances of theses symbols on the right hand side of
+the dfinitions wherein they appear with the single colon retrival operator ``:`` and
+clearing the stack with ``[:?symbol]`` after the end of file has been reached.
+This technique has been employed for the "FlexibleEBNF"-parser in the examples folder.
+The FlexibleEBNF-parser "magically" adjusts itself to different syntactical flavors of
+EBNF. Here is an abbreviated excerpt of the grammar of this parser, to see how this
+technique can be used in a grammar::
+
+    syntax     = ~ { definition } EOF
+    definition = symbol §:DEF~ expression :ENDL~
+    DEF        = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `
+    ENDL       = `;` | ``
+    EOF        = !/./ [:?DEF] [:?ENDL]
+
+This trick can also be used to parse indented blocks as they are used in python code::
+
+
+
+
+
+Error resumption with context sensitive parsers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 """
 
