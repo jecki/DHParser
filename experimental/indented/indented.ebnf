@@ -1,0 +1,52 @@
+# indented-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+# Regular expression for implicit whitespace or one of: horizontal, linefeed, vertical
+# Implicit whitespace is denoted by the tilde-character: ~
+@ whitespace  = horizontal
+
+# Implicit whitespace adjacent to literals: left, right, both, none
+# E.g. if @literalws = right then ")" means the same as `)`~
+@ literalws   = right
+
+# Regular expression for comments, e.g. /#.*(?:\n|$)/
+# Use: /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/ for C++-style comments: /* ... */ or // to EOL
+@ comment     = /#.*/
+
+# Case-sensitivity: True, False
+@ ignorecase  = False
+
+# Tree-simplification while parsing:  none, flatten, merge_treetops, merge
+@ reduction   = flatten         # anonymous nodes are being reduced where possible
+
+# Tags that may be replaced with their content while parsing
+@ disposable  = EOF
+
+# Tags that will be dropped with all their content while parsing or any of
+# the special values: strings, backticked, whitespace, regexps
+# Here, EOF and insignificant whitespace (tilde) will be dropped
+@ drop        = EOF, whitespace
+
+
+
+
+document     = ~ { LF ~ &LF } [§ZERO_INDENT (scope | statement)] { SAME_INDENT (scope | statement) } §EOF
+statement    = line_of_code
+scope        = line_of_code <-& `:`
+               § &DEEPER_INDENT INDENT (scope | statement)
+               {SAME_INDENT (scope | statement)}
+               [&:?INDENT]
+line_of_code = /(?![ \t])[^\n]*/
+
+INDENT        = LF / */
+ZERO_INDENT   = &LF !/ / INDENT
+DEEPER_INDENT = LF :INDENT / +/
+SAME_INDENT   = LF :INDENT § !/ /
+
+LF       =  /\n/
+EOF      =  !/./        # no more characters ahead, end of file reached
