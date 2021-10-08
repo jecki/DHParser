@@ -2162,23 +2162,32 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_tree(self) -> str:
         """Serialize as a simple indented text-tree."""
         sxpr = self.as_sxpr(flatten_threshold=0, compact=True)
-        if sxpr.find('\n') >= 0:
-            sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
-            sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
-            sxpr = re.sub(r'\)(?=\n)(?!\s*")', r'', sxpr)
-            # if sxpr.count('(') < sxpr.count(')'):
-            #     sxpr = sxpr.replace(')\n', '\n')
-            # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
-            sl = sxpr.split('\n')
-            for i in range(len(sl)):
-                if '`' in sl[i]:
-                    sl[i] = sl[i].replace('))', ')')
-                elif sl[i][-1:] != '"':
-                    sl[i] = sl[i].replace(')', '')
-            sxpr = '\n'.join(sl)
-            sxpr = re.sub(r'^\(', r'', sxpr)
-        sxpr = re.sub(r'\n\s*"(?=.*?(?:$|\n\s*\w))', r' "', sxpr)
-        return sxpr
+        lines = sxpr.split('\n')
+        for i, line in enumerate(lines):
+            line = re.sub(r'^(\s*)\(', r'\1', line)
+            line = re.sub(r'\)+$', r'', line)
+            line = line.replace(') `(', ' `')
+            line = line.replace('`(', '`')
+            line = line.replace('") "', '" "')
+            lines[i] = line
+        return '\n'.join(lines)
+        # if sxpr.find('\n') >= 0:
+        #     sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
+        #     sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
+        #     sxpr = re.sub(r'\)(?=\n)(?!\s*")', r'', sxpr)
+        #     # if sxpr.count('(') < sxpr.count(')'):
+        #     #     sxpr = sxpr.replace(')\n', '\n')
+        #     # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
+        #     sl = sxpr.split('\n')
+        #     for i in range(len(sl)):
+        #         if '`' in sl[i]:
+        #             sl[i] = sl[i].replace('))', ')')
+        #         elif sl[i][-1:] != '"':
+        #             sl[i] = sl[i].replace(')', '')
+        #     sxpr = '\n'.join(sl)
+        #     sxpr = re.sub(r'^\(', r'', sxpr)
+        # sxpr = re.sub(r'\n\s*"(?=.*?(?:$|\n\s*\w))', r' "', sxpr)
+        # return sxpr
 
 
     # JSON serialization ###

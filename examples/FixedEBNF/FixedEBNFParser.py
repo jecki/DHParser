@@ -72,7 +72,7 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "4fd9d26c0e35351df1903ccc5b03d2ca"
+    source_hash__ = "2bf7bcf6d88dff4d90f4a82f8d16e224"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -480,7 +480,11 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Parses a FixedEBNF-file and shows its syntax-tree.")
     parser.add_argument('files', nargs=1)
     parser.add_argument('-d', '--debug', action='store_const', const='debug')
-    parser.add_argument('-x', '--xml', action='store_const', const='xml')
+    outformat = parser.add_mutually_exclusive_group()
+    outformat.add_argument('-x', '--xml', action='store_const', const='xml')
+    outformat.add_argument('-s', '--sxpr', action='store_const', const='sxpr')
+    outformat.add_argument('-t', '--tree', action='store_const', const='tree')
+    outformat.add_argument('-j', '--json', action='store_const', const='json')
 
     args = parser.parse_args()
     file_name, log_dir = args.files[0], ''
@@ -508,5 +512,9 @@ if __name__ == "__main__":
             print(rel_path + ':' + str(error))
         sys.exit(1)
     else:
-        print(result.serialize(how='default' if args.xml is None else 'xml')
-              if isinstance(result, Node) else result)
+        if args.xml:  outfmt = 'xml'
+        elif args.sxpr:  outfmt = 'sxpr'
+        elif args.tree:  outfmt = 'tree'
+        elif args.json:  outfmt = 'json'
+        else:  outfmt = 'default'
+        print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
