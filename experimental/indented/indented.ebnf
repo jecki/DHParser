@@ -1,4 +1,5 @@
 # indented-tree-grammar
+
 @ whitespace   = horizontal
 @ comment      = /#.*/
 @ ignorecase   = False
