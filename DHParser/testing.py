@@ -90,7 +90,7 @@ RX_COMMENT = re.compile(r'\s*[#;].*(?:\n|$)')
 
 
 def normalize_code(testcode: str, full_normalization: bool=False) -> str:
-    """Removes leading and trailing empty lines (if full_normalization ist True)
+    """Removes leading and trailing empty lines (if full_normalization is True)
     and leading indentation (always) from multiline text. Single line text
     will be returned unchanged.
     """
