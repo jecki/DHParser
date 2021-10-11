@@ -37,7 +37,9 @@ def recompile_grammar(grammar_src, force):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('indented_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        error_path = os.path.join(os.path.dirname(grammar_src), 
+                                  'indented_ebnf_ERRORS.txt')      
+        with open(error_path, encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
     dsl.restore_server_script(grammar_src)

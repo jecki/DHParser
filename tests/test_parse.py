@@ -378,7 +378,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
-        parser = compile_python_object(DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + result, r'\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
         assert node.tag_name == "regex"
@@ -394,7 +394,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
-        parser = compile_python_object(DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + result, r'\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
         assert node.tag_name == "regex"
@@ -409,7 +409,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
-        parser = compile_python_object(DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + result, r'\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node, rest = parser.regex(StringView('Alpha'))
         assert node
         assert rest == ''
@@ -424,7 +424,7 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
-        parser = compile_python_object(DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + result, r'\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node, rest = parser.regex(StringView('Alpha'))
         assert node is None
 
@@ -445,7 +445,7 @@ class TestRegex:
             get_ebnf_compiler("TokenTest"))
         assert result
         assert not messages, str(messages)
-        parser = compile_python_object(DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + result, r'\w+Grammar$')()
+        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         result = parser(testdoc)
         # log_parsing_history(parser, "test.log")
         assert not result.error_flag, str(result.errors_sorted)
@@ -466,14 +466,15 @@ class TestGrammar:
     def test_pos_values_initialized(self):
         # checks whether pos values in the parsing result and in the
         # history record have been initialized
-        grammar = compile_python_object(DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + self.pyparser, r'\w+Grammar$')()
+        grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, r'\w+Grammar$')()
+                                        # .format(dhparser_parentdir=repr('.')) + self.pyparser, r'\w+Grammar$')()
         grammar("no_file_name*")
         for record in grammar.history__:
             assert not record.node or record.node.pos >= 0
 
     def test_select_parsing(self):
         grammar = compile_python_object(
-            DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + self.pyparser,
+            DHPARSER_IMPORTS + self.pyparser,
             r'\w+Grammar$')()
         grammar("wort", "WORT")
         grammar("eine Zeile", "textzeile")
@@ -938,7 +939,7 @@ class TestPopRetrieve:
         st = gr(case)
         # log_parsing_history(gr, 'test_cache_neutrality_3')
         # print(st.as_sxpr())
-        assert not st.errors, str(errors)
+        assert not st.errors, str(st.errors)
         case = 'AXXX!'
         st = gr(case)
         assert not st.errors

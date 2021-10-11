@@ -1976,7 +1976,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, gen_find_inc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
     flatten_sxpr
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
-    sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
+    sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     cython, ThreadLocalSingletonFactory
 from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
@@ -2024,11 +2024,8 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, {dhparser_parentdir}))
-if scriptpath not in sys.path:
+if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
-if dhparser_parentdir not in sys.path:
-    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
@@ -3782,8 +3779,7 @@ class EBNFCompiler(Compiler):
             try:
 
                 grammar_class = compile_python_object(
-                    DHPARSER_IMPORTS.format(dhparser_parentdir=repr(DHPARSER_PARENTDIR)) +
-                    python_src, (self.grammar_name or "DSL") + "Grammar")
+                    DHPARSER_IMPORTS + python_src, (self.grammar_name or "DSL") + "Grammar")
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',

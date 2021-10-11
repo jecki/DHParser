@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\di68kap\\AppData\\Local\\Programs\\Python\\Python39\\python.exe",
+    "python.pythonPath": "/bin/python",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.testing.nosetestArgs": [

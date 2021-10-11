@@ -266,13 +266,8 @@ def run_server(host, port, log_path=None):
     else:  set_start_method('spawn')
 
     grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
-    dhparserdir = os.path.abspath(os.path.join(scriptpath, RELDHPARSERDIR))
     if scriptpath not in sys.path:
         sys.path.append(scriptpath)
-    if dhparserdir not in sys.path:
-        sys.path.append(dhparserdir)
-    # from tst_DSL_grammar import recompile_grammar
-    # recompile_grammar(os.path.join(scriptpath, 'DSL.ebnf'), force=False)
     from DHParser.dsl import recompile_grammar
     if not recompile_grammar(grammar_src, force=False,
                              notify=lambda: print('recompiling ' + grammar_src)):

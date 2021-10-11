@@ -11,11 +11,8 @@ DEBUG = True
 TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)
-dhparserdir = os.path.abspath(os.path.join(scriptpath, {reldhparserdir}))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
-if dhparserdir not in sys.path:
-    sys.path.append(dhparserdir)
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
@@ -37,7 +34,9 @@ def recompile_grammar(grammar_src, force):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('{name}_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        error_path = os.path.join(os.path.dirname(grammar_src), 
+                                  'indented_ebnf_ERRORS.txt')      
+        with open(error_path, encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
     dsl.restore_server_script(grammar_src)
