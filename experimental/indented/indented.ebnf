@@ -1,38 +1,35 @@
 # indented-tree-grammar
-@ whitespace  = horizontal
-@ comment     = /#.*/
-@ ignorecase  = False
+@ whitespace   = horizontal
+@ comment      = /#.*/
+@ ignorecase   = False
 
 # Tree-simplification while parsing:  none, flatten, merge_treetops, merge
-@ reduction   = flatten
-@ disposable  = EOF
-@ drop        = EOF, whitespace
+@ reduction    = flatten
+@ disposable   = EOF, empty_line
+@ drop         = whitespace, strings, EOF, empty_line
 
+document       = { empty_line } [LF] INDENT { node }+ /\s*/ EOF
+node           = tag_name { attr } § content ~
+content        = (string
+               | { empty_line } &(LF HAS_DEEPER_INDENT) LF INDENT (string | node)
+                 { { empty_line } LF SAME_INDENT (string | node) } )
+               { empty_line }
+               § !(LF HAS_DEEPER_INDENT) DEDENT
 
+tag_name       = IDENTIFIER
+attr           = attribute value
+   attribute   = "`" IDENTIFIER
+   value       = '"' /[^"\n]*/ '"'~
+empty_line     = LF ~ &LF
+string = QUOTE { !:QUOTE /[^'"\n]*/ } ::QUOTE ~
 
+INDENT            = / */
+SAME_INDENT       = :INDENT § !/ /
+HAS_DEEPER_INDENT = :INDENT / +/
+DEDENT            = [&:?INDENT]
 
-document     = ~ { LF ~ &LF } [§ZERO_INDENT (scope | statement)] { SAME_INDENT (scope | statement) } §EOF
-statement    = line_of_code
-scope        = line_of_code <-& `:`
-               § &DEEPER_INDENT INDENT (scope | statement)
-               {SAME_INDENT (scope | statement)}
-               [&:?INDENT]
-line_of_code = /(?![ \t])[^\n]*/
+QUOTE    = `'` | `"`
 
-INDENT        = LF / */
-ZERO_INDENT   = &LF !/ / INDENT
-DEEPER_INDENT = LF :INDENT / +/
-SAME_INDENT   = LF :INDENT § !/ /
-DEDENT        = [&:?INDENT]
-
-node          = tag_name { attr } content
-content       = ( ~ QUOTE { !:QUOTE /[^'"\n]*/ } ::QUOTE ~
-                | {SAME_INDENT QUOTE { !:QUOTE /[^'"\n]*/ } ::QUOTE}+ ~
-                | {SAME_INDENT node }+
-                | empty_line+ ) § DEDENT
-empty_line    = [LF] ~
-
-QUOTE    = "'" | '"'
-
-LF       =  /\n/
-EOF      =  !/./        # no more characters ahead, end of file reached
+IDENTIFIER = /\w+/~
+LF         =  /\n/
+EOF        =  !/./        # no more characters ahead, end of file reached

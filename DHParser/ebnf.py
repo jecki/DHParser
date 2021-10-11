@@ -3934,7 +3934,8 @@ class EBNFCompiler(Compiler):
                     self.directives[key].add(content.lower())
                 else:
                     unmatched.append(content)
-                    if self.directives.disposable == NEVER_MATCH_PATTERN:
+                    if self.directives.disposable == NEVER_MATCH_PATTERN or \
+                            re.fullmatch(r'(?:\w+\$\|)*\w+\$', self.directives.disposable):
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
                                             'Should be one of %s or a disposable parser, where '
                                             'the "@disposable"-directive must precede the '

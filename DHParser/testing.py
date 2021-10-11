@@ -104,6 +104,8 @@ def normalize_code(testcode: str, full_normalization: bool=False) -> str:
             if line:
                 indent = min(indent, len(line) - len(line.lstrip()))
         if indent > 0 and indent != sys.maxsize:
+            if lines[0].strip() and lines[0][0:1] not in ('', ' ') and indent > 4:
+                indent = min(4, max(indent - 4, 4))
             for i in range(1, len(lines)):
                 lines[i] = lines[i][indent:]
         if full_normalization:

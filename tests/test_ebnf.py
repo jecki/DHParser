@@ -143,6 +143,25 @@ class TestDirectives:
         st = parser('* Hund*')
         assert str(st) == "*Hund"
 
+    def test_drop_error_messages(self):
+        lang = r'''
+        @disposable = A
+        @drop = A, B
+        A = { B }
+        B = 'x'
+        '''
+        _, errors, _ = compile_ebnf(lang)
+        assert len(errors) == 1
+        assert errors[0].message.startswith('''Illegal value "B" for Directive "@ drop"!''')
+        assert errors[0].message.endswith('''where the "@disposable"-directive must precede the @drop-directive.''')
+        lang = r'''
+        @disposable = /[A]/
+        @drop = A, B
+        A = { B }
+        B = 'x'
+        '''
+        _, errors, _ = compile_ebnf(lang)
+        assert errors[0].message.find('or a string matching') >= 0
 
 
 class TestReservedSymbols:
@@ -227,6 +246,19 @@ class TestEBNFParser:
     def test_list(self):
         grammar_unit(self.cases, get_ebnf_grammar, get_ebnf_transformer, 'REPORT_TestEBNFParser')
 
+    def test_regex_start_end_marker_usable(self):
+        """Regular expression begin and end-marker really match only at
+        the document start and ending!"""
+        lang = '''
+        doc = BEGIN !END A !BEGIN !END B !BEGIN END
+        A = "A"
+        B = "B"
+        BEGIN = /^/
+        END = /$/
+        '''
+        parser = create_parser(lang)
+        result = parser('AB')
+        print(result.as_sxpr())
 
 
 class TestParserNameOverwriteBug:
