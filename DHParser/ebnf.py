@@ -1916,15 +1916,16 @@ to save them some typing::
 
     >>> miniXML = miniXML.replace('::TagName', ':?TagName')
     >>> parseXML = create_parser(miniXML)
-    >>> print(parseXML('<line>O Rose thou art sick.</>').as_sxpr())
-    (document
-      (element
-        (STag
-          (TagName "line"))
-        (content
-          (CharData "O Rose thou art sick."))
-        (ETag
-          (TagName))))
+    >>> data_tree = parseXML('<line>O Rose thou art sick.</>').as_tree()
+    >>> print(data_tree)
+    document
+      element
+        STag
+          TagName "line"
+        content
+          CharData "O Rose thou art sick."
+        ETag
+          TagName
 
 Another, rather tricky, use case is to let the value of certain symbols be determined
 on first use by marking all appearances of theses symbols on the right hand side of
@@ -1941,8 +1942,14 @@ technique can be used in a grammar::
     ENDL       = `;` | ``
     EOF        = !/./ [:?DEF] [:?ENDL]
 
-This trick can also be used to parse indented blocks as they are used in python code::
+This trick can also be used to parse indentation::
 
+    >>> tree_grammar = '''@whitespace = horizontal
+    ... tree    = { INDENT node }+ /\s*/ EOF
+    ... node    = tag_name § content
+    ... content = string
+    ...         | &(LF HAS_DEEPER_INDENT) LF INDENT
+    ... '''
 
 
 

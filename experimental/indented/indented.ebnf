@@ -9,7 +9,7 @@
 @ disposable   = EOF, DEEPER_LEVEL, SAME_LEVEL, empty_line, DEDENT, single_quoted, double_quoted
 @ drop         = whitespace, strings, EOF, empty_line, DEEPER_LEVEL, SAME_LEVEL, DEDENT
 
-document       = { empty_line | ~ } { [LF] INDENT node }+ /\s*/ EOF
+tree           = { empty_line | ~ } { [LF] INDENT node }+ /\s*/ EOF
 node           = tag_name { attr } § content ~
 content        = (leaf_content | branch_content)
                { empty_line }
