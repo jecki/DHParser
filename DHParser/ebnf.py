@@ -1947,12 +1947,12 @@ This trick can also be used to parse indentation::
     >>> tree_grammar = '''@whitespace = horizontal
     ... tree     = { INDENT node }+ /\\\\s*/ EOF
     ... node     = tag_name § content
-    ... content  = string | children
+    ... content  = (string | children)
     ...            § !(LF HAS_DEEPER_INDENT) DEDENT
     ... children = &(LF HAS_DEEPER_INDENT) LF INDENT node
     ...            { LF SAME_INDENT § node }
     ... tag_name = /\\\\w+/~
-    ... string   = '"' /(?:\\\\\"|[^"\\\\n])*/ '"' ~
+    ... string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
     ... INDENT            = / */
     ... SAME_INDENT       = :INDENT § !/ /
     ... HAS_DEEPER_INDENT = :INDENT / +/

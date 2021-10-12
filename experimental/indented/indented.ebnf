@@ -6,17 +6,20 @@
 
 # Tree-simplification while parsing:  none, flatten, merge_treetops, merge
 @ reduction    = flatten
-@ disposable   = EOF, DEEPER_LEVEL, SAME_LEVEL, empty_line, DEDENT, single_quoted, double_quoted
-@ drop         = whitespace, strings, EOF, empty_line, DEEPER_LEVEL, SAME_LEVEL, DEDENT
+@ disposable   = EOF, LF, DEEPER_LEVEL, SAME_LEVEL, empty_line, DEDENT,
+                 single_quoted, double_quoted, continuation, empty_content,
+                 content
+@ drop         = whitespace, strings, EOF, DEEPER_LEVEL, empty_line, LF,
+                 SAME_LEVEL, DEDENT, continuation, empty_content
 
 tree           = { empty_line | ~ } { [LF] INDENT node }+ /\s*/ EOF
 node           = tag_name { attr } § content ~
-content        = (leaf_content | branch_content)
-               { empty_line }
-               § !(LF HAS_DEEPER_INDENT) DEDENT
-leaf_content   = string INDENT   # artificially added INDENT here
-               | DEEPER_LEVEL string { SAME_LEVEL § string }
-branch_content = DEEPER_LEVEL node { SAME_LEVEL § node }
+content        = (leaf_content | branch_content | empty_content)
+leaf_content   = string { empty_line }
+               | DEEPER_LEVEL string { SAME_LEVEL § string } continuation
+branch_content = DEEPER_LEVEL node { SAME_LEVEL § node } continuation
+continuation   = { empty_line } § !(LF HAS_DEEPER_INDENT) DEDENT
+empty_content  = ~ (LF | EOF) { empty_line }
 
 DEEPER_LEVEL   = { empty_line } &(LF HAS_DEEPER_INDENT) LF INDENT
 SAME_LEVEL     = { empty_line } LF SAME_INDENT
