@@ -37,7 +37,7 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
     PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, canonical_error_strings
-from DHParser.syntaxtree import WHITESPACE_PTYPE
+from DHParser.syntaxtree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
@@ -258,7 +258,7 @@ class TestEBNFParser:
         '''
         parser = create_parser(lang)
         result = parser('AB')
-        print(result.as_sxpr())
+        assert flatten_sxpr(result.as_sxpr()) == '(doc (BEGIN) (A "A") (B "B") (END))'
 
 
 class TestParserNameOverwriteBug:

@@ -1947,7 +1947,7 @@ This trick can also be used to parse indentation::
     >>> tree_grammar = '''@whitespace = horizontal
     ... @disposable = EOF, LF, SAME_INDENT
     ... @drop       = strings, whitespace, EOF, LF, SAME_INDENT
-    ... tree     = { INDENT node DEDENT }+ /\\\\s*/ EOF DEDENT
+    ... tree     = { INDENT node DEDENT }+ /\\\\s*/ EOF [DEDENT]
     ... node     = tag_name [content]
     ... content  = string | children
     ... children = &(LF HAS_DEEPER_INDENT)
@@ -1958,12 +1958,13 @@ This trick can also be used to parse indentation::
     ... INDENT            = / */
     ... SAME_INDENT       = :INDENT § !/ /
     ... HAS_DEEPER_INDENT = :INDENT / +/
-    ... DEDENT            = [&:?INDENT]
+    ... DEDENT            = &:?INDENT
     ... LF       = /\\\\n/
     ... EOF      = !/./
     ... '''
     >>> tree_parser = create_parser(tree_grammar)
     >>> ast = tree_parser(data_tree)
+    >>> for e in ast.errors: print(e)
     >>> print(ast.as_sxpr())
 
 
