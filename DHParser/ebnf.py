@@ -1945,12 +1945,14 @@ technique can be used in a grammar::
 This trick can also be used to parse indentation::
 
     >>> tree_grammar = '''@whitespace = horizontal
-    ... tree     = { INDENT node }+ /\\\\s*/ EOF
-    ... node     = tag_name § content
-    ... content  = (string | children)
+    ... @disposable = EOF, LF, SAME_INDENT
+    ... @drop       = strings, whitespace, EOF, LF, SAME_INDENT
+    ... tree     = { INDENT node DEDENT }+ /\\\\s*/ EOF DEDENT
+    ... node     = tag_name [content]
+    ... content  = string | children
+    ... children = &(LF HAS_DEEPER_INDENT)
+    ...            LF INDENT § node { LF SAME_INDENT § node }
     ...            § !(LF HAS_DEEPER_INDENT) DEDENT
-    ... children = &(LF HAS_DEEPER_INDENT) LF INDENT node
-    ...            { LF SAME_INDENT § node }
     ... tag_name = /\\\\w+/~
     ... string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
     ... INDENT            = / */
@@ -1962,7 +1964,7 @@ This trick can also be used to parse indentation::
     ... '''
     >>> tree_parser = create_parser(tree_grammar)
     >>> ast = tree_parser(data_tree)
-    >>> for error in ast.errors:  print(error)
+    >>> print(ast.as_sxpr())
 
 
 Error resumption with context sensitive parsers

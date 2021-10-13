@@ -1687,12 +1687,12 @@ class Grammar:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
-        if any(self.variables__.values()) \
-                and (start_parser is self.root_parser__ or start_parser == 'root_parser__'):
+        if any(self.variables__.values()) and parser is self.root_parser__:
                 # capture stack not empty will only be reported for root-parsers
                 # to avoid false negatives when testing
             error_msg = "Capture-stack not empty after end of parsing: " \
-                + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
+                + ', '.join(f'{k} {len(i)} {"items" if len(i) > 1 else "item"}'
+                            for k, i in self.variables__.items() if len(i) >= 1)
             if parser.apply(has_non_autocaptured_symbols):
                 error_code = CAPTURE_STACK_NOT_EMPTY
             else:
