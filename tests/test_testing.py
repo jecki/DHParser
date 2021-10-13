@@ -30,11 +30,11 @@ scriptpath = os.path.abspath(scriptpath)
 from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_whitespace, remove_empty, \
     replace_by_single_child, reduce_single_child, flatten, add_error
-from DHParser.dsl import grammar_provider
+from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
     MANDATORY_CONTINUATION_AT_EOF, ERROR, WARNING
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
-    clean_report, unique_name
+    unit_from_config, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
 
 
@@ -147,7 +147,6 @@ class TestTestfiles:
             assert False, "Same key used twice should raise a key error!!!"
         except KeyError as e:
             pass
-
 
 
 ARITHMETIC_EBNF = """
@@ -386,6 +385,47 @@ class TestLookahead:
                               'REPORT_TestLookahead')
         assert errata
 
+void_tests = """
+[match:empty_line]
+M1: '''
+
+    '''
+M2: '''
+        # comment
+    '''
+"""
+
+class TestLookaheadDroppedTokens:
+    def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptpath)
+
+    def teardown(self):
+        clean_report('REPORT_void')
+        os.chdir(self.save_dir)
+
+    def test_lookahead_dropped_tokens(self):
+        void_grammar = '''@ whitespace   = horizontal
+        @ comment      = /#[^\\n]*/
+        document       = { empty_line } /\s*/ EOF
+        empty_line     = LF ~ &LF
+        LF             = /\\n/
+        EOF            = !/./ '''
+        void_parser_provider = grammar_provider(void_grammar)
+        void_transformer_provider = lambda : lambda _: _
+        void_test_unit = unit_from_config(void_tests, 'void_tests.ini')
+        errata = grammar_unit(void_test_unit, void_parser_provider, void_transformer_provider,
+                              'REPORT_void')
+        assert not errata
+        drop_clause = '''@ disposable   = EOF, LF, empty_line
+        @ drop         = whitespace, strings, EOF, LF, empty_line
+        '''
+        void_parser_provider = grammar_provider(drop_clause + void_grammar)
+        void_transformer_provider = lambda : lambda _: _
+        void_test_unit = unit_from_config(void_tests, 'void_tests.ini')
+        errata = grammar_unit(void_test_unit, void_parser_provider, void_transformer_provider,
+                              'REPORT_void')
+        for e in errata: print(e)
 
 class TestSExpr:
     """
