@@ -600,7 +600,7 @@ class Parser:
                 if location > grammar.ff_pos__:
                     grammar.ff_pos__ = location
                     grammar.ff_parser__ = self
-            else:
+            elif node is not EMPTY_NODE:
                 node._pos = location
             if not grammar.suspend_memoization__:
                 visited[location] = (node, rest)
@@ -1327,6 +1327,38 @@ class Grammar:
         return duplicate
 
 
+    def _add_parser__(self, context: List[Parser]) -> None:
+        """
+        Adds the particular copy of the parser object to this
+        particular instance of Grammar.
+        """
+        parser = context[-1]
+        if parser not in self.all_parsers__:
+            if parser.pname:
+                # prevent overwriting instance variables or parsers of a different class
+                # assert (parser.pname not in self.__dict__
+                #         or isinstance(self.__dict__[parser.pname], parser.__class__)), \
+                #     ('Cannot add parser "%s" because a field with the same name '
+                #      'already exists in grammar object: %s!'
+                #      % (parser.pname, str(self.__dict__[parser.pname])))
+                if parser.pname in self.__dict__:
+                    assert (isinstance(self.__dict__[parser.pname], Forward)
+                            or isinstance(self.__dict__[parser.pname], parser.__class__)), \
+                        ('Cannot add parser "%s" because a field with the same name '
+                         'already exists in grammar object: %s!'
+                         % (parser.pname, str(self.__dict__[parser.pname])))
+                else:
+                    setattr(self, parser.pname, parser)
+            elif isinstance(parser, Forward):
+                setattr(self, cast(Forward, parser).parser.pname, parser)
+            if parser.disposable:
+                parser.tag_name = parser.ptype
+            else:
+                parser.tag_name = parser.pname
+            self.all_parsers__.add(parser)
+            parser.grammar = self
+
+
     def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
 
@@ -1483,28 +1515,6 @@ class Grammar:
             self._reversed__ = StringView(self.document__.get_text()[::-1])
         return self._reversed__
 
-    def _add_parser__(self, context: List[Parser]) -> None:
-        """
-        Adds the particular copy of the parser object to this
-        particular instance of Grammar.
-        """
-        parser = context[-1]
-        if parser not in self.all_parsers__:
-            if parser.pname:
-                # prevent overwriting instance variables or parsers of a different class
-                assert (parser.pname not in self.__dict__
-                        or isinstance(self.__dict__[parser.pname], parser.__class__)), \
-                    ('Cannot add parser "%s" because a field with the same name '
-                     'already exists in grammar object: %s!'
-                     % (parser.pname, str(self.__dict__[parser.pname])))
-                setattr(self, parser.pname, parser)
-            if parser.disposable:
-                parser.tag_name = parser.ptype
-            else:
-                parser.tag_name = parser.pname
-            self.all_parsers__.add(parser)
-            parser.grammar = self
-
 
     def get_memoization_dict__(self, parser: Parser) -> MemoizationDict:
         """Returns the memoization dictionary for the parser's equivalence class.
@@ -1572,7 +1582,7 @@ class Grammar:
         else:
             self._dirty_flag__ = True
 
-        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
+        self.start_parser__ = parser   # parser.parser if isinstance(parser, Forward) else parser
         assert isinstance(document, str)
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
@@ -1599,6 +1609,8 @@ class Grammar:
         max_parser_dropouts = self.max_parser_dropouts__
         while rest and len(stitches) < max_parser_dropouts:
             result, rest = parser(rest)
+            if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
+                result = Node(EMPTY_PTYPE, '').with_pos(0)
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
@@ -1626,12 +1638,14 @@ class Grammar:
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
-                        if h.node and h.node.tag_name != EMPTY_NODE.tag_name \
+                        if h.node and (h.node.tag_name != EMPTY_NODE.tag_name or h.node.result) \
                                 and any('Lookahead' in tag for tag, _ in h.call_stack):
                             break
                     else:
-                        h = HistoryRecord([], EMPTY_NODE, StringView(''), (0, 0))
-                    if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
+                        h = HistoryRecord([], Node(EMPTY_NODE.tag_name, '').with_pos(0),
+                                          StringView(''), (0, 0))
+                    if h.status in (h.MATCH, h.DROP) \
+                            and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
@@ -1693,8 +1707,6 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
-        if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
-            result = Node(EMPTY_PTYPE, '').with_pos(0)
         self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None

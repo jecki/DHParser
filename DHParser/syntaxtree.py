@@ -2830,6 +2830,10 @@ class FrozenNode(Node):
         else:
             self._xml_attr = attr_dict
 
+    @property
+    def pos(self):
+        return -1
+
     def with_pos(self, pos: int) -> 'Node':
         raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 

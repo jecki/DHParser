@@ -1528,7 +1528,9 @@ class TestRuleOrder:
             """
         # set_config_value('compiled_EBNF_log', 'auto_reorder_test.log')
         parser = create_parser(reverse_order)
-        assert parser.B.__class__.__name__ != "Forward"
+        assert parser.B.__class__.__name__ == "Forward"
+        assert not parser.B.pname
+        assert parser.B.parser.pname == 'B'
 
     def test_recursive_root_detached_root(self):
         reverse_order = """
