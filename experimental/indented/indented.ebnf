@@ -12,7 +12,7 @@
 @ drop         = whitespace, strings, EOF, DEEPER_LEVEL, empty_line, LF,
                  SAME_LEVEL, DEDENT, continuation, empty_content
 
-tree           = { empty_line | ~ } { [LF] INDENT node DEDENT }+ /\s*/ EOF DEDENT
+tree           = { empty_line | ~ LF } { [LF] INDENT node DEDENT }+ /\s*/ EOF DEDENT
 node           = tag_name { attr } § content ~
 content        = (leaf_content | branch_content | empty_content)
 leaf_content   = string { empty_line }
