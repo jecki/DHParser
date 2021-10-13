@@ -385,6 +385,7 @@ class TestLookahead:
                               'REPORT_TestLookahead')
         assert errata
 
+
 void_tests = """
 [match:empty_line]
 M1: '''
@@ -394,6 +395,7 @@ M2: '''
         # comment
     '''
 """
+
 
 class TestLookaheadDroppedTokens:
     def setup(self):
@@ -426,6 +428,7 @@ class TestLookaheadDroppedTokens:
         errata = grammar_unit(void_test_unit, void_parser_provider, void_transformer_provider,
                               'REPORT_void')
         for e in errata: print(e)
+
 
 class TestSExpr:
     """
