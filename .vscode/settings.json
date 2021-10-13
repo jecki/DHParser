@@ -1,5 +1,4 @@
 {
-    "python.pythonPath": "C:\\Users\\di68kap\\AppData\\Local\\Programs\\Python\\Python39\\python.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.testing.nosetestArgs": [
@@ -10,5 +9,7 @@
     "python.testing.nosetestsEnabled": false,
     "python.testing.pytestArgs": [
         "tests"
-    ]
+    ],
+    "python.envFile": "${workspaceFolder}/.env",
+    "terminal.integrated.env.windows": {"PYTHONPATH": "${workspaceFolder}"}
 }
