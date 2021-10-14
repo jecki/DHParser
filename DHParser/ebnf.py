@@ -1907,12 +1907,13 @@ Advanced context sensitive parsers
 
 Apart from the Pop- and Retrieve-operator, DHParser offers a third retrieval operator that,
 like the Pop-operator, "pops" that last value from the stack and matches either this value
-or the empty strings. In other word, this operator always matches, but it captures the
-begining of the following text only if it matches the stored value.  This "Optional Pop"-operator
-is denoted by a colon followed by a question mark ``:?``.  Weird as this may sound,
-this operator has astonishingly manifold use cases. Think for exmple of a modifcation
-of our minimal pseudo-XML parser the allows coders to omit the tag name in closing tags
-to save them some typing::
+or the empty strings. In other word, this operator always matches, as long as there is still
+a value on the stack, but it captures the begining of the following text only
+if it matches the stored value. A non-match only happens, when the stack has already been
+exhaustet. This "Optional Pop"-operator is denoted by a colon followed by a question mark ``:?``.
+Weird as this may sound, this operator has astonishingly manifold use cases. Think for
+exmple of a modifcation of our minimal pseudo-XML parser the allows coders to omit the
+tag name in closing tags to save them some typing::
 
     >>> miniXML = miniXML.replace('::TagName', ':?TagName')
     >>> parseXML = create_parser(miniXML)

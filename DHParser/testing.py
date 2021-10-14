@@ -325,7 +325,7 @@ POSSIBLE_ARTIFACTS = frozenset((
     PARSER_LOOKAHEAD_MATCH_ONLY,
     PARSER_LOOKAHEAD_FAILURE_ONLY,
     MANDATORY_CONTINUATION_AT_EOF,
-    AUTORETRIEVED_SYMBOL_NOT_CLEARED
+#    AUTORETRIEVED_SYMBOL_NOT_CLEARED
 ))
 
 TEST_ARTIFACT = "__TEST_ARTIFACT__"
@@ -407,10 +407,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         if not get_config_value('test_suppress_lookahead_failures'):
             return False
         raw_errors = cast(RootNode, syntax_tree).errors
-        is_artifact = ({e.code for e in raw_errors}
-                       <= {PARSER_LOOKAHEAD_FAILURE_ONLY,
-                           AUTORETRIEVED_SYMBOL_NOT_CLEARED,
-                           PARSER_LOOKAHEAD_MATCH_ONLY}
+        is_artifact = ({e.code for e in raw_errors} <= POSSIBLE_ARTIFACTS
                        or (len(raw_errors) == 1
                            and (raw_errors[-1].code == PARSER_LOOKAHEAD_MATCH_ONLY
                                 #  case 2:  mandatory lookahead failure at end of text

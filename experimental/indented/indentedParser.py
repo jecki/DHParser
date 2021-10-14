@@ -93,7 +93,7 @@ class indentedGrammar(Grammar):
     r"""Parser for an indented source file.
     """
     node = Forward()
-    source_hash__ = "70bbb0263309987866a80910fbb6a5d9"
+    source_hash__ = "19b7777c34ee9ea85470f923354b5f5a"
     disposable__ = re.compile('EOF$|LF$|DEEPER_LEVEL$|SAME_LEVEL$|empty_line$|DEDENT$|single_quoted$|double_quoted$|continuation$|empty_content$|content$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -107,7 +107,7 @@ class indentedGrammar(Grammar):
     LF = Drop(RegExp('\\n'))
     IDENTIFIER = Series(RegExp('\\w+'), dwsp__)
     INDENT = Capture(RegExp(' *'))
-    DEDENT = Drop(Option(Drop(Lookahead(Drop(Pop(INDENT, match_func=optional_last_value))))))
+    DEDENT = Drop(Lookahead(Drop(Pop(INDENT, match_func=optional_last_value))))
     HAS_DEEPER_INDENT = Series(Retrieve(INDENT), RegExp(' +'))
     SAME_INDENT = Series(Retrieve(INDENT), NegativeLookahead(RegExp(' ')), mandatory=1)
     double_quoted = Series(Drop(Text('"')), RegExp('(?:\\\\"|[^"\\n])*'), Drop(Text('"')), dwsp__)
@@ -126,7 +126,7 @@ class indentedGrammar(Grammar):
     leaf_content = Alternative(Series(string, ZeroOrMore(empty_line)), Series(DEEPER_LEVEL, string, ZeroOrMore(Series(SAME_LEVEL, string, mandatory=1)), continuation))
     content = Alternative(leaf_content, branch_content, empty_content)
     node.set(Series(tag_name, ZeroOrMore(attr), content, dwsp__, mandatory=2))
-    tree = Series(ZeroOrMore(Alternative(empty_line, Series(dwsp__, LF))), OneOrMore(Series(Option(LF), INDENT, node, DEDENT)), RegExp('\\s*'), EOF, DEDENT)
+    tree = Series(ZeroOrMore(Alternative(empty_line, Series(dwsp__, LF))), OneOrMore(Series(Option(LF), Retrieve(INDENT), node, DEDENT)), RegExp('\\s*'), EOF)
     root__ = tree
     
 
