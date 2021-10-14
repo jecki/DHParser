@@ -44,8 +44,9 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
-    AUTORETRIEVED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, \
-    ERROR_WHILE_RECOVERING_FROM_ERROR, SourceMapFunc
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, \
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, SourceMapFunc
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -586,7 +587,8 @@ class Parser:
                     # just fall through
                     # TODO: Is this case still needed with module "trace"?
                     raise pe.new_PE(first_throw=False)
-                elif grammar.tree__.errors[-1].code == MANDATORY_CONTINUATION_AT_EOF:
+                elif grammar.tree__.errors[-1].code in \
+                        (MANDATORY_CONTINUATION_AT_EOF, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT):
                     # try to create tree as faithful as possible
                     node = Node(self.tag_name, pe.node).with_pos(location)
                 else:
@@ -985,6 +987,10 @@ class GrammarError(Exception):
 
 
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
+
+
+def reset_parser(ctx):
+    return ctx[-1].reset()
 
 
 class Grammar:
@@ -1575,14 +1581,17 @@ class Grammar:
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
+
         if self._dirty_flag__:
+            if parser is not self.start_parser__:
+                for p in self.all_parsers__:  p.cycle_detection = set()
             self._reset__()
-            parser.apply(lambda ctx: ctx[-1].reset())
-            for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
+            parser.apply(reset_parser)
+            for p in self.unconnected_parsers__:  p.apply(reset_parser)
         else:
             self._dirty_flag__ = True
 
-        self.start_parser__ = parser   # parser.parser if isinstance(parser, Forward) else parser
+        self.start_parser__ = parser
         assert isinstance(document, str)
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
@@ -1592,7 +1601,10 @@ class Grammar:
         stitches = []  # type: List[Node]
         rest = self.document__
         if not rest:
-            result, _ = parser(rest)
+            try:
+                result, _ = parser(rest)
+            except ParserError as pe:
+                result = pe.node
             if result is None:
                 result = Node(ZOMBIE_TAG, '').with_pos(0)
                 if lookahead_failure_only(parser):
@@ -1608,7 +1620,10 @@ class Grammar:
         # copy to local variable, so break condition can be triggered manually
         max_parser_dropouts = self.max_parser_dropouts__
         while rest and len(stitches) < max_parser_dropouts:
-            result, rest = parser(rest)
+            try:
+                result, rest = parser(rest)
+            except ParserError as pe:
+                result, rest = pe.node, StringView('')
             if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
                 result = Node(EMPTY_PTYPE, '').with_pos(0)
             if rest and complete_match:
@@ -1687,16 +1702,22 @@ class Grammar:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
-        if any(self.variables__.values()) and parser is self.root_parser__:
+        if any(self.variables__.values()):
                 # capture stack not empty will only be reported for root-parsers
                 # to avoid false negatives when testing
             error_msg = "Capture-stack not empty after end of parsing: " \
                 + ', '.join(f'{k} {len(i)} {"items" if len(i) > 1 else "item"}'
                             for k, i in self.variables__.items() if len(i) >= 1)
             if parser.apply(has_non_autocaptured_symbols):
-                error_code = CAPTURE_STACK_NOT_EMPTY
+                if parser is self.root_parser__:
+                    error_code = CAPTURE_STACK_NOT_EMPTY
+                else:
+                    error_code = CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY
             else:
-                error_code = AUTORETRIEVED_SYMBOL_NOT_CLEARED
+                if parser is self.root_parser__:
+                    error_code = AUTOCAPTURED_SYMBOL_NOT_CLEARED
+                else:
+                    error_code = AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
@@ -2920,9 +2941,14 @@ class MandatoryNary(NaryParser):
         else:
             msg = '%s expected by parser %s, but »%s« found instead!' \
                   % (repr(expected), repr(sym), found)
-        error = Error(msg, location,
-                      MANDATORY_CONTINUATION_AT_EOF if (failed_on_lookahead and not text_)
-                      else MANDATORY_CONTINUATION,
+        if failed_on_lookahead and not text_:
+            if grammar.start_parser__ is grammar.root_parser__:
+                error_code = MANDATORY_CONTINUATION_AT_EOF
+            else:
+                error_code = MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
+        else:
+            error_code = MANDATORY_CONTINUATION
+        error = Error(msg, location, error_code,
                       length=max(self.grammar.ff_pos__ - location, 1))
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
@@ -3960,7 +3986,16 @@ class Forward(UnaryParser):
     def reset(self):
         super(Forward, self).reset()
         self.recursion_counter = dict()  # type: Dict[int, int]
-        # self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
+        assert not self.pname, "Forward-Parsers mustn't have a name!"
+
+    def name(self, pname: str, disposable: bool = False) -> 'Parser':
+        """Sets the parser name to `pname` and returns `self`."""
+        assert not pname, "Forward-parser mustn't have a name. "\
+            'Use pname="" when calling  Forward.name()'
+        self.pname = pname
+        self.tag_name = self.ptype
+        self.disposable = disposable
+        return self
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()

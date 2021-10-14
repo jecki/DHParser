@@ -1965,8 +1965,7 @@ This trick can also be used to parse indentation::
     ... '''
     >>> tree_parser = create_parser(tree_grammar)
     >>> ast = tree_parser(data_tree)
-    >>> for e in ast.errors: print(e)
-    >>> print(ast.as_sxpr())
+
 
 
 Error resumption with context sensitive parsers
