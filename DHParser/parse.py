@@ -3789,6 +3789,7 @@ class Retrieve(ContextSensitive):
     """
 
     def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
+        assert isinstance(symbol, Capture)
         super(Retrieve, self).__init__(symbol)
         self.match = match_func if match_func else last_value
 
@@ -3809,10 +3810,11 @@ class Retrieve(ContextSensitive):
         has a tag name, this overrides the tag name of the retrieved symbol's
         parser."""
         if self.disposable or not self.tag_name:
-            if self.parser.pname:
-                return self.parser.tag_name
-            # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
-            return cast(Forward, self.parser).parser.tag_name
+            return self.parser.pname or cast(Forward, self.parser).parser.pname
+            # if self.parser.pname:
+            #     return self.parser.tag_name
+            # # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
+            # return cast(Forward, self.parser).parser.tag_name
         return self.tag_name
 
     def _parse(self, text: StringView) -> ParsingResult:

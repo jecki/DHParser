@@ -1948,7 +1948,7 @@ This trick can also be used to parse indentation::
     >>> tree_grammar = '''@whitespace = horizontal
     ... @disposable = EOF, LF, SAME_INDENT
     ... @drop       = strings, whitespace, EOF, LF, SAME_INDENT
-    ... tree     = { INDENT node DEDENT }+ /\\\\s*/ EOF [DEDENT]
+    ... tree     = INDENT node DEDENT /\\\\s*/ EOF
     ... node     = tag_name [content]
     ... content  = string | children
     ... children = &(LF HAS_DEEPER_INDENT)
@@ -1964,8 +1964,107 @@ This trick can also be used to parse indentation::
     ... EOF      = !/./
     ... '''
     >>> tree_parser = create_parser(tree_grammar)
-    >>> ast = tree_parser(data_tree)
+    >>> syntax_tree = tree_parser(data_tree)
+    >>> print(syntax_tree.as_sxpr())
+    (tree
+      (INDENT)
+      (node
+        (tag_name "document")
+        (content
+          (children
+            (INDENT "  ")
+            (node
+              (tag_name "element")
+              (content
+                (children
+                  (INDENT "    ")
+                  (node
+                    (tag_name "STag")
+                    (content
+                      (children
+                        (INDENT "      ")
+                        (node
+                          (tag_name "TagName")
+                          (content
+                            (string "line")))
+                        (DEDENT))))
+                  (node
+                    (tag_name "content")
+                    (content
+                      (children
+                        (INDENT "      ")
+                        (node
+                          (tag_name "CharData")
+                          (content
+                            (string "O Rose thou art sick.")))
+                        (DEDENT))))
+                  (node
+                    (tag_name "ETag")
+                    (content
+                      (children
+                        (INDENT "      ")
+                        (node
+                          (tag_name "TagName"))
+                        (DEDENT))))
+                  (DEDENT))))
+            (DEDENT))))
+      (DEDENT))
 
+In case you are suprised by the size of the resulting syntax-tree,
+keep in mind that the syntax-tree or "parse-tree" of the
+serialization of a data structure is not the data-structure itself,
+even if it happens to be a tree. However, the data-structure can
+be retrieved from the tree.
+
+As can be seen the INDENT-elements have captured indentation of
+various increasing length. Also, observe the use of the
+"querying parser" HAS_DEEPER_INDENTATION. A "querying parser" is
+a parser that is meant to be used only inside a negative or
+positive lookahead. The first query with HAS_DEEPER_INDENTATION
+makes sure that the next call to INDENT will indeed capture
+a longer stretch of whitespace than represented by its present
+value, i.e. the last value on the "INDENT"-symbol's value-stack.
+
+DHParser makes sure that the value-stack of each captured
+variable will properly be unwinded when returning from a
+non-match to an earlier position in the document. However, there
+is one case where this does not work, namely, if a symbol has matched
+the empty string. Because value-stack unwinding is tied to the
+position in the text instead of the call stack (which DHParser
+only keeps track of when testing or debugging), it is impossible
+to decide where a zero-length capture must be unwinded or not
+in case DHParser returns exactly to the position of that capture.
+In this case DHParser does not unwind the capture. This can lead
+to a non-empty value stack at the end of the parsing process which
+will be reported as an error. There are three strategies to avoid
+this error:
+
+1. Make sure that all symbols for which values are retrieved
+   capture at least one character of text if they match.
+
+   In this example above, the symbol INDENT would have to be
+   defined as ``INDENT = / +/`` to achieve this. However, this
+   would have made the formulation of the tree-grammar of this
+   example more complicated.
+
+2. Make sure that in all cases where zero-length text could
+   possibly be captured a subsequent non-match cannot occur
+   before the zero-length value has been retrieved.
+
+   In the example above, this situation can only occur in the
+   parser ``tree`` and could be possibly avoided with a lookahead, e.g.
+   ``tree = &(/ /* tag_name) INDENT node DEDENT``. However,
+   since this avoidance strategy does not need to cover cases
+   where document is syntactically incorrect, anyway, we can
+   rely on the fact that - since a syntactically correct document
+   must contain a single root node at the very beginning - the
+   parser will never retreat to the first captured INDENT.
+
+3. As a last resort one could clear the stack with one or more
+   optional ``[DEDENT]`` parsers that can safely be added after
+   ``EOF``. A modification that allows the document to consist
+   of one or more top-level nodes would then look like:
+   ``tree = { INDENT node DEDENT }+ /\\s*/ EOF [DEDENT]``
 
 
 Error resumption with context sensitive parsers
