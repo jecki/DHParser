@@ -1948,6 +1948,7 @@ This trick can also be used to parse indentation::
     >>> tree_grammar = '''@whitespace = horizontal
     ... @disposable = EOF, LF, SAME_INDENT
     ... @drop       = strings, whitespace, EOF, LF, SAME_INDENT
+    ...
     ... tree     = INDENT node DEDENT /\\\\s*/ EOF
     ... node     = tag_name [content]
     ... content  = string | children
@@ -1956,16 +1957,18 @@ This trick can also be used to parse indentation::
     ...            !(LF HAS_DEEPER_INDENT) DEDENT
     ... tag_name = /\\\\w+/~
     ... string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
+    ...
     ... INDENT            = / */
     ... SAME_INDENT       = :INDENT § !/ /
     ... HAS_DEEPER_INDENT = :INDENT / +/
     ... DEDENT            = &:?INDENT
+    ...
     ... LF       = /\\\\n/
     ... EOF      = !/./
     ... '''
     >>> tree_parser = create_parser(tree_grammar)
     >>> syntax_tree = tree_parser(data_tree)
-    >>> # show but the first 22 lines:
+    >>> # show but the first 22 lines of the syntax-tree:
     >>> print('\\n'.join(syntax_tree.as_sxpr().split('\\n')[:22] + ['...']))
     (tree
       (INDENT)
