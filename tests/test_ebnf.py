@@ -36,7 +36,8 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
-    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, canonical_error_strings
+    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, \
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, canonical_error_strings
 from DHParser.syntaxtree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
@@ -851,6 +852,35 @@ class TestErrorCustomizationErrors:
         assert "several strings" in str(result.errors), str(result.errors)
 
 
+class TestVariableCapture:
+    tree_grammar = '''@whitespace = horizontal
+        @disposable = EOF, LF, SAME_INDENT
+        @drop       = strings, whitespace, EOF, LF, SAME_INDENT
+        tree     = INDENT node DEDENT /\\\\s*/ EOF
+        node     = tag_name [content]
+        content  = string | children
+        children = &(LF HAS_DEEPER_INDENT)
+                   LF INDENT § node { LF SAME_INDENT § node }
+                   !(LF HAS_DEEPER_INDENT) DEDENT
+        tag_name = /\\\\w+/~
+        string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
+        INDENT            = / */
+        SAME_INDENT       = :INDENT § !/ /
+        HAS_DEEPER_INDENT = :INDENT / +/
+        DEDENT            = &:?INDENT
+        LF       = /\\\\n/
+        EOF      = !/./
+        '''
+
+    def test_zero_length_capture_warning(self):
+        pysrc, errors, _ = compile_ebnf(self.tree_grammar)
+        assert errors and errors[0].code == ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING
+        alt_tree_grammar = self.tree_grammar.replace('INDENT            = / */',
+                                                     'INDENT            = / +/')
+        pysrc, errors, _ = compile_ebnf(alt_tree_grammar)
+        assert not errors
+
+
 class TestCustomizedResumeParsing:
     lang = r"""@ literalws = right
         @ alpha_resume = "BETA", "GAMMA"
@@ -1641,6 +1671,7 @@ class TestRuleOrder:
         B = all_paths(compiler_obj)
         assert A == B, str(A) + str(B)
 
+
 class TestInclude:
     number_ebnf = '''
     @ disposable = DOT, EXP, FRAC, INT
@@ -1699,7 +1730,6 @@ class TestInclude:
         tree = parser('2 - (3 * -4.145E+5)')
         assert not tree.errors
         # print(tree.as_sxpr())
-
 
 
 if __name__ == "__main__":

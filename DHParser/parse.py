@@ -46,7 +46,8 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
-    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, SourceMapFunc
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SourceMapFunc
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -3687,8 +3688,15 @@ class Capture(ContextSensitive):
     in a variable. A variable is a stack of values associated with the
     contained parser's name. This requires the contained parser to be named.
     """
-    def __init__(self, parser: Parser) -> None:
+    def __init__(self, parser: Parser, zero_length_warning: bool=True) -> None:
         super(Capture, self).__init__(parser)
+        self.zero_length_warning: bool = zero_length_warning
+
+    def __deepcopy__(self, memo):
+        symbol = copy.deepcopy(self.parser, memo)
+        duplicate = self.__class__(symbol, self.zero_length_warning)
+        copy_combined_parser_attrs(self, duplicate)
+        return duplicate
 
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
@@ -3721,6 +3729,14 @@ class Capture(ContextSensitive):
                 'which can lead to unintended results!' % (self.pname or str(self)),
                 0, CAPTURE_DROPPED_CONTENT_WARNING
             )))
+        if self.zero_length_warning:
+            node, _ = self.parser(StringView(''))
+            if node is not None:
+                errors.append(AnalysisError(self.pname, self, Error(
+                    'Content of variable "%s" can have zero length, which can lead to '
+                    'its remaining on the stack after backtracking!' % (self.pname or str(self)),
+                    0, ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING
+                )))
         return errors
 
 

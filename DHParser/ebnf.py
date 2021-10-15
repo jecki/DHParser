@@ -1953,7 +1953,7 @@ This trick can also be used to parse indentation::
     ... content  = string | children
     ... children = &(LF HAS_DEEPER_INDENT)
     ...            LF INDENT § node { LF SAME_INDENT § node }
-    ...            § !(LF HAS_DEEPER_INDENT) DEDENT
+    ...            !(LF HAS_DEEPER_INDENT) DEDENT
     ... tag_name = /\\\\w+/~
     ... string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
     ... INDENT            = / */
@@ -1965,7 +1965,8 @@ This trick can also be used to parse indentation::
     ... '''
     >>> tree_parser = create_parser(tree_grammar)
     >>> syntax_tree = tree_parser(data_tree)
-    >>> print(syntax_tree.as_sxpr())
+    >>> # show but the first 22 lines:
+    >>> print('\\n'.join(syntax_tree.as_sxpr().split('\\n')[:22] + ['...']))
     (tree
       (INDENT)
       (node
@@ -1988,27 +1989,8 @@ This trick can also be used to parse indentation::
                           (content
                             (string "line")))
                         (DEDENT))))
-                  (node
-                    (tag_name "content")
-                    (content
-                      (children
-                        (INDENT "      ")
-                        (node
-                          (tag_name "CharData")
-                          (content
-                            (string "O Rose thou art sick.")))
-                        (DEDENT))))
-                  (node
-                    (tag_name "ETag")
-                    (content
-                      (children
-                        (INDENT "      ")
-                        (node
-                          (tag_name "TagName"))
-                        (DEDENT))))
-                  (DEDENT))))
-            (DEDENT))))
-      (DEDENT))
+    ...
+
 
 In case you are suprised by the size of the resulting syntax-tree,
 keep in mind that the syntax-tree or "parse-tree" of the
@@ -3304,7 +3286,7 @@ class EBNFCompiler(Compiler):
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
-        self.variables = set()                 # type: Set[str]
+        self.variables = {}                    # type: Dict[str, List[Node]]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
         self.required_keywords = set()         # type: Set[str]
@@ -3684,9 +3666,14 @@ class EBNFCompiler(Compiler):
 
         if self.variables:
             for i in range(len(definitions)):
-                if definitions[i][0] in self.variables:
-                    definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
-                    self.definitions[definitions[i][0]] = definitions[i][1]
+                symbol, code = definitions[i]
+                if symbol in self.variables:
+                    if set(self.symbols[symbol]) - set(self.variables[symbol]):
+                        code = f'Capture({code}, zero_length_warning=True)'
+                    else:
+                        code = f'Capture({code}, zero_length_warning=False)'
+                    definitions[i] = (symbol, code)
+                    self.definitions[symbol] = code
 
         # add special fields for Grammar class
 
@@ -4410,7 +4397,8 @@ class EBNFCompiler(Compiler):
         assert node.children[0].tag_name == "retrieveop"
         assert node.children[1].tag_name == "symbol"
         prefix = node.children[0].content  # type: str
-        arg = node.children[1].content     # type: str
+        usage = node.children[1]
+        arg = usage.content     # type: str
         node.result = node.children[1:]
         assert prefix in {'::', ':?', ':'}
 
@@ -4429,7 +4417,7 @@ class EBNFCompiler(Compiler):
         if match_func != 'last_value':
             custom_args = ['match_func=%s' % match_func]
 
-        self.variables.add(arg)
+        self.variables.setdefault(arg, []).append(usage)
         parser_class = self.PREFIX_TABLE[prefix]
         return self.non_terminal(node, parser_class, custom_args)
 

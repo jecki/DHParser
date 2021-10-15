@@ -95,7 +95,7 @@ class indentedGrammar(Grammar):
     node = Forward()
     source_hash__ = "19b7777c34ee9ea85470f923354b5f5a"
     disposable__ = re.compile('EOF$|LF$|DEEPER_LEVEL$|SAME_LEVEL$|empty_line$|DEDENT$|single_quoted$|double_quoted$|continuation$|empty_content$|content$')
-    static_analysis_pending__ = []  # type: List[bool]
+    static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#[^\n]*'
     comment_rx__ = re.compile(COMMENT__)
@@ -106,7 +106,7 @@ class indentedGrammar(Grammar):
     EOF = Drop(NegativeLookahead(RegExp('.')))
     LF = Drop(RegExp('\\n'))
     IDENTIFIER = Series(RegExp('\\w+'), dwsp__)
-    INDENT = Capture(RegExp(' *'))
+    INDENT = Capture(RegExp(' *'), zero_length_warning=True)
     DEDENT = Drop(Lookahead(Drop(Pop(INDENT, match_func=optional_last_value))))
     HAS_DEEPER_INDENT = Series(Retrieve(INDENT), RegExp(' +'))
     SAME_INDENT = Series(Retrieve(INDENT), NegativeLookahead(RegExp(' ')), mandatory=1)
