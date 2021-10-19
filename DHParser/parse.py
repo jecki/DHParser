@@ -44,10 +44,10 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
-    AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, \
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
-    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SourceMapFunc
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SourceMapFunc, has_errors, ERROR
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -1447,19 +1447,23 @@ class Grammar:
             and (static_analysis
                  or (static_analysis is None
                      and get_config_value('static_analysis') in {'early', 'late'}))):
-            result = self.static_analysis__()
+            analysis_errors = self.static_analysis__()
             # clears any stored errors without overwriting the pointer
             while self.static_analysis_errors__:
                 self.static_analysis_errors__.pop()
-            self.static_analysis_errors__.extend(result)
+            self.static_analysis_errors__.extend(analysis_errors)
             self.static_analysis_pending__.pop()
             # raise a GrammarError even if result only contains warnings.
             # It is up to the caller to decide whether to ignore warnings
             # # has_errors = any(is_error(tpl[-1].code) for tpl in result)
             # # if has_errors
-            if result:
-                raise GrammarError(result)
-
+            if has_errors([ae.error for ae in analysis_errors], ERROR):
+                raise GrammarError(analysis_errors)
+                # else:
+                    # print(f'\nGrammar warnings in {self.__class__.__name__}!\n')
+                    # for ae in analysis_errors:
+                    #     print(f'{ae.symbol} -> {ae.parser}: {ae.error}')
+                    # print('\n\n')
 
     def __str__(self):
         return self.__class__.__name__
@@ -1667,7 +1671,7 @@ class Grammar:
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
-                        i = self.ff_pos__ or tail_pos(stitches)
+                        i = self.ff_pos__ if self.ff_pos__ >= 0 else tail_pos(stitches)
                         fs = self.document__[i:i + 10].replace('\n', '\\n')
                         if i + 10 < len(self.document__) - 1:  fs += '...'
                         root_name = self.start_parser__.pname \
@@ -2667,7 +2671,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "root" did not match: ».« >>> '
+        ' <<< Error on "." | Parser "root->/\\\\w+,?/" did not match: ».« >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
@@ -3010,7 +3014,7 @@ class Series(MandatoryNary):
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser "root" did not match: »1_variable« >>> '
+        ' <<< Error on "1_variable" | Parser "root->/(?!\\\\d)\\\\w/" did not match: »1_variable« >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
 
@@ -3691,12 +3695,20 @@ class Capture(ContextSensitive):
     def __init__(self, parser: Parser, zero_length_warning: bool=True) -> None:
         super(Capture, self).__init__(parser)
         self.zero_length_warning: bool = zero_length_warning
+        self._can_capture_zero_length: Optional[bool] = None
 
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.zero_length_warning)
         copy_combined_parser_attrs(self, duplicate)
+        duplicate._can_capture_zero_length = self._can_capture_zero_length
         return duplicate
+
+    @property
+    def can_capture_zero_length(self) -> bool:
+        if self._can_capture_zero_length is None:
+            self._can_capture_zero_length = self.parser._parse(StringView(""))[0] is not None
+        return cast(bool, self._can_capture_zero_length)
 
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
@@ -3730,13 +3742,16 @@ class Capture(ContextSensitive):
                 0, CAPTURE_DROPPED_CONTENT_WARNING
             )))
         if self.zero_length_warning:
-            node, _ = self.parser(StringView(''))
+            node, _ = self.parser._parse(StringView(''))
             if node is not None:
                 errors.append(AnalysisError(self.pname, self, Error(
-                    'Content of variable "%s" can have zero length, which can lead to '
+                    'Variable "%s" captures zero length strings, which can lead to '
                     'its remaining on the stack after backtracking!' % (self.pname or str(self)),
                     0, ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING
                 )))
+                self._can_capture_zero_length = True
+            else:
+                self._can_capture_zero_length = False
         return errors
 
 

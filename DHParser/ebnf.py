@@ -1020,7 +1020,7 @@ grammar of a definitions-DSL so as to exclude certain bad words::
     nice := nice word
     >>> syntax_tree = def_parser('sxxx := bad word')
     >>> print(str(syntax_tree).strip())
-    <<< Error on "sxxx := bad word" | Parser "definitions" did not match: »sxxx := bad word« >>>
+    <<< Error on "sxxx := bad word" | Parser "word->!forbidden" did not match: »sxxx := bad word« >>>
 
 The same effect can be achieved by using the subtraction operator "-". This
 is just syntactic sugar make the use of the negative lookahead operator
@@ -1034,7 +1034,7 @@ in the sense of "without" more intuitive::
     >>> def_parser = create_parser(def_DSL, "defDSL")
     >>> syntax_tree = def_parser('sxxx := bad word')
     >>> print(str(syntax_tree).strip())
-    <<< Error on "sxxx := bad word" | Parser "definitions" did not match: »sxxx := bad word« >>>
+    <<< Error on "sxxx := bad word" | Parser "word->!forbidden" did not match: »sxxx := bad word« >>>
 
 Next to the lookahead operators, there also exist lookback operators. Be warned,
 though, that look back operators are an **experimental** feature in DHParser
@@ -2072,7 +2072,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
-    STRUCTURAL_ERROR_IN_AST, FATAL
+    STRUCTURAL_ERROR_IN_AST, ERROR, FATAL, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -2363,8 +2363,14 @@ class HeuristicEBNFGrammar(Grammar):
                                | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
                                | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
                                | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-        regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
-
+        regex_heuristics       = ! ( / +`[^`]*` +\//
+                                   | / +´[^´]*´ +\//
+                                   | / +'[^']*' +\//
+                                   | / +"[^"]*" +\//
+                                   | / +\w+ +\// )
+                                 ( /[^\/\n*?+\\]*[*?+\\][^\/\n]*\//
+                                 | /[^\w]+\//
+                                 | /[^ ]/ )
 
         #: basic-regexes
 
@@ -2395,7 +2401,7 @@ class HeuristicEBNFGrammar(Grammar):
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
-    regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
+    regex_heuristics = Series(NegativeLookahead(Alternative(RegExp(' +`[^`]*` +/'), RegExp(' +´[^´]*´ +/'), RegExp(" +'[^']*' +/"), RegExp(' +"[^"]*" +/'), RegExp(' +\\w+ +/'))), Alternative(RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]*/'), RegExp('[^\\w]+/'), RegExp('[^ ]')))
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
@@ -3903,6 +3909,10 @@ class EBNFCompiler(Compiler):
                 pass  # undefined names in the grammar are already caught and reported
             except GrammarError as ge:
                 errors = ge.errors
+                if not has_errors([e.error for e in errors], ERROR):
+                    python_src = python_src.replace(
+                        'static_analysis_pending__ = [True]',
+                        'static_analysis_pending__ = []  # type: List[bool]', 1)
             for sym, _, err in errors:
                 symdef_node = self.rules[sym][0]
                 err.pos = self.rules[sym][0].pos

@@ -94,7 +94,7 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "698e99e5c4924dfeb0000e090251d2d1"
+    source_hash__ = "b54547b6fb174969afe3386f7d75182a"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -109,7 +109,7 @@ class FlexibleEBNFGrammar(Grammar):
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
-    regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
+    regex_heuristics = Series(NegativeLookahead(Alternative(RegExp(' +`[^`]*` +/'), RegExp(' +´[^´]*´ +/'), RegExp(" +'[^']*' +/"), RegExp(' +"[^"]*" +/'), RegExp(' +\\w+ +/'))), Alternative(RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]*/'), RegExp('[^\\w]+/'), RegExp('[^ ]')))
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))

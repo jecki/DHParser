@@ -13,7 +13,7 @@ cdef class Parser:
     cdef public object eq_class
     cdef public object _grammar
     cdef object visited
-    cdef object cycle_detection
+    cdef public object cycle_detection
     cdef public object _parse_proxy
     cdef str _symbol
 
@@ -107,7 +107,7 @@ cdef class Series(MandatoryNary):
 cdef class Alternative(NaryParser):
     pass
 
-cpdef longest_match(strings, test, n)
+# cpdef longest_match(strings, text, n)
 
 cdef class TextAlternative(Alternative):
     cdef public object heads
@@ -135,11 +135,15 @@ cdef class Lookbehind(FlowParser):
 cdef class NegativeLookbehind(Lookbehind):
     pass
 
+cdef class BlackHoleDict(dict):
+    pass
+
 cdef class ContextSensitive(UnaryParser):
     cpdef _rollback_location(self, text, rest)
 
 cdef class Capture(ContextSensitive):
-    pass
+    cdef public bint zero_length_warning
+    cdef public object _can_capture_zero_length
 
 cdef class Retrieve(ContextSensitive):
     cdef public object filter

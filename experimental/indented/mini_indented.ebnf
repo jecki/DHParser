@@ -1,8 +1,7 @@
 @whitespace = horizontal
 @disposable = EOF, LF, SAME_INDENT
 @drop       = strings, whitespace, EOF, LF, SAME_INDENT
-tree     = INDENT node DEDENT /\s*/ EOF
-INDENT   = / */
+tree     = { INDENT node DEDENT } /\s*/ EOF
 node     = tag_name [content]
 
 content  = string | children
@@ -10,8 +9,9 @@ children = &(LF HAS_DEEPER_INDENT)
            LF INDENT § node { LF SAME_INDENT § node }
            !(LF HAS_DEEPER_INDENT) DEDENT
 tag_name = /\w+/~
-string   = '"' § /(?:"|[^"\n])*/ '"' ~
+string   = '"' § /(?:\\"|[^"\n])*/ '"' ~
 
+INDENT            = / */
 SAME_INDENT       = :INDENT § !/ /
 HAS_DEEPER_INDENT = :INDENT / +/
 DEDENT            = &:?INDENT

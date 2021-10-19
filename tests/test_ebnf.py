@@ -1228,11 +1228,11 @@ class TestAlternativeEBNFSyntax:
         st = arithmetic_parser('2 + 3 * (-4 + 1)')
         assert str(st) == "2+3*(-4+1)"
 
-    def test_regex_heuristics(self):
-        gr = get_ebnf_grammar()
-        assert isinstance(gr, HeuristicEBNFGrammar)
-        result = gr(r' */', 'regex_heuristics')
-        print(result.as_sxpr())
+    # def test_regex_heuristics(self):
+    #     gr = get_ebnf_grammar()
+    #     assert isinstance(gr, HeuristicEBNFGrammar)
+    #     result = gr(r' */', 'regex_heuristics')
+    #     print(result.as_sxpr())
 
 
 class TestConfigurableEBNF:
@@ -1345,7 +1345,7 @@ class TestSyntaxExtensions:
         st = parser('marke_8')
         assert not st.errors
         st = parser('t3vp ')
-        assert not st.errors
+        assert not st.errors, str(st.errors)
         st = parser('3tvp ')
         assert st.errors
         set_config_value('syntax_variant', 'strict')

@@ -809,14 +809,18 @@ class TestPopRetrieve:
 
     def test_capture_assertions(self):
         try:
-            _ = Grammar(Capture(Drop(Whitespace(r'\s*'))))
-            assert False, "GrammarError expected"
+            gr = Grammar(Capture(Drop(Whitespace(r'\s*'))))
+            assert any(ae.error.code == CAPTURE_DROPPED_CONTENT_WARNING
+                       for ae in gr.static_analysis_errors__), \
+                "Dropped content warning expected"
         except GrammarError as ge:
             assert ge.errors and ge.errors[0][-1].code == CAPTURE_DROPPED_CONTENT_WARNING, \
                 "Capture-dropped-content-Warning expected"
         try:
             _ = Grammar(Capture(Series(Text(' '), Drop(Whitespace(r'\s*')))))
-            assert False, "GrammarError expected"
+            assert any(ae.error.code == CAPTURE_DROPPED_CONTENT_WARNING
+                       for ae in gr.static_analysis_errors__), \
+                "Dropped content warning expected"
         except GrammarError as ge:
             assert ge.errors and ge.errors[0][-1].code == CAPTURE_DROPPED_CONTENT_WARNING, \
                 "Capture-dropped-content-Warning expected"
@@ -1569,8 +1573,10 @@ class TestStaticAnalysis:
     def test_cannot_capture_dropped_content(self):
         p = Capture(Drop(Whitespace(" ")))
         try:
-            _ = Grammar(p)
-            assert False, "GrammarError expected"
+            gr = Grammar(p)
+            assert any(ae.error.code == CAPTURE_DROPPED_CONTENT_WARNING
+                       for ae in gr.static_analysis_errors__), \
+                "Dropped content warning expected"
         except GrammarError as ge:
             assert ge.errors and ge.errors[0][-1].code == CAPTURE_DROPPED_CONTENT_WARNING, \
                 "Capture-dropped-content-Warning expected"

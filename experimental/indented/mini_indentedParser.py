@@ -62,24 +62,24 @@ RE_INCLUDE = NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 
 
-def indentedTokenizer(original_text) -> Tuple[str, List[Error]]:
+def mini_indentedTokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 
 def preprocessor_factory() -> PreprocessorFunc:
-    # below, the second parameter must always be the same as indentedGrammar.COMMENT__!
-    find_next_include = gen_find_include_func(RE_INCLUDE, '#[^\\n]*')
+    # below, the second parameter must always be the same as mini_indentedGrammar.COMMENT__!
+    find_next_include = gen_find_include_func(RE_INCLUDE, NEVER_MATCH_PATTERN)
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor(indentedTokenizer)
+    tokenizing_prep = make_preprocessor(mini_indentedTokenizer)
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
 get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 
 
-def preprocess_indented(source):
+def preprocess_mini_indented(source):
     return get_preprocessor()(source)
 
 
@@ -89,50 +89,38 @@ def preprocess_indented(source):
 #
 #######################################################################
 
-class indentedGrammar(Grammar):
-    r"""Parser for an indented source file.
+class mini_indentedGrammar(Grammar):
+    r"""Parser for a mini_indented source file.
     """
     node = Forward()
-    source_hash__ = "19b7777c34ee9ea85470f923354b5f5a"
-    disposable__ = re.compile('EOF$|LF$|DEEPER_LEVEL$|SAME_LEVEL$|empty_line$|DEDENT$|single_quoted$|double_quoted$|continuation$|empty_content$|content$')
-    static_analysis_pending__ = [True]
+    source_hash__ = "87fecb27f336ed629995be62c08631d6"
+    disposable__ = re.compile('EOF$|LF$|SAME_INDENT$')
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'#[^\n]*'
-    comment_rx__ = re.compile(COMMENT__)
+    COMMENT__ = r''
+    comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'[\t ]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(NegativeLookahead(RegExp('.')))
     LF = Drop(RegExp('\\n'))
-    IDENTIFIER = Series(RegExp('\\w+'), dwsp__)
     INDENT = Capture(RegExp(' *'), zero_length_warning=True)
-    DEDENT = Drop(Lookahead(Drop(Pop(INDENT, match_func=optional_last_value))))
+    DEDENT = Lookahead(Pop(INDENT, match_func=optional_last_value))
     HAS_DEEPER_INDENT = Series(Retrieve(INDENT), RegExp(' +'))
-    SAME_INDENT = Series(Retrieve(INDENT), NegativeLookahead(RegExp(' ')), mandatory=1)
-    double_quoted = Series(Drop(Text('"')), RegExp('(?:\\\\"|[^"\\n])*'), Drop(Text('"')), dwsp__)
-    single_quoted = Series(Drop(Text("\'")), RegExp("(?:\\\\'|[^'\\n])*"), Drop(Text("\'")), dwsp__)
-    string = Alternative(single_quoted, double_quoted)
-    empty_line = Drop(Series(LF, dwsp__, Drop(Lookahead(LF))))
-    value = Series(Drop(Text('"')), RegExp('[^"\\n]*'), Drop(Text('"')), dwsp__)
-    attribute = Series(Drop(Text("`")), IDENTIFIER)
-    attr = Series(attribute, value)
-    tag_name = Synonym(IDENTIFIER)
-    SAME_LEVEL = Drop(Series(Drop(ZeroOrMore(empty_line)), LF, SAME_INDENT))
-    DEEPER_LEVEL = Drop(Series(Drop(ZeroOrMore(empty_line)), Drop(Lookahead(Drop(Series(LF, HAS_DEEPER_INDENT)))), LF, INDENT))
-    empty_content = Drop(Series(dwsp__, Drop(Alternative(LF, EOF)), Drop(ZeroOrMore(empty_line))))
-    continuation = Drop(Series(Drop(ZeroOrMore(empty_line)), Drop(NegativeLookahead(Drop(Series(LF, HAS_DEEPER_INDENT)))), DEDENT, mandatory=1))
-    branch_content = Series(DEEPER_LEVEL, node, ZeroOrMore(Series(SAME_LEVEL, node, mandatory=1)), continuation)
-    leaf_content = Alternative(Series(string, ZeroOrMore(empty_line)), Series(DEEPER_LEVEL, string, ZeroOrMore(Series(SAME_LEVEL, string, mandatory=1)), continuation))
-    content = Alternative(leaf_content, branch_content, empty_content)
-    node.set(Series(tag_name, ZeroOrMore(attr), content, dwsp__, mandatory=2))
-    tree = Series(ZeroOrMore(Alternative(empty_line, Series(dwsp__, LF))), OneOrMore(Series(Option(LF), Retrieve(INDENT), node, DEDENT)), RegExp('\\s*'), EOF)
+    SAME_INDENT = Drop(Series(Drop(Retrieve(INDENT)), Drop(NegativeLookahead(RegExp(' '))), mandatory=1))
+    string = Series(Drop(Text('"')), RegExp('(?:\\\\"|[^"\\n])*'), Drop(Text('"')), dwsp__, mandatory=1)
+    tag_name = Series(RegExp('\\w+'), dwsp__)
+    children = Series(Lookahead(Series(LF, HAS_DEEPER_INDENT)), LF, INDENT, node, ZeroOrMore(Series(LF, SAME_INDENT, node, mandatory=2)), NegativeLookahead(Series(LF, HAS_DEEPER_INDENT)), DEDENT, mandatory=3)
+    content = Alternative(string, children)
+    node.set(Series(tag_name, Option(content)))
+    tree = Series(ZeroOrMore(Series(INDENT, node, DEDENT)), RegExp('\\s*'), EOF)
     root__ = tree
     
 
-_raw_grammar = ThreadLocalSingletonFactory(indentedGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(mini_indentedGrammar, ident=1)
 
-def get_grammar() -> indentedGrammar:
+def get_grammar() -> mini_indentedGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
@@ -145,7 +133,7 @@ def get_grammar() -> indentedGrammar:
         pass
     return grammar
     
-def parse_indented(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_mini_indented(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -155,48 +143,36 @@ def parse_indented(document, start_parser = "root_parser__", *, complete_match=T
 #
 #######################################################################
 
-indented_AST_transformation_table = {
-    # AST Transformations for the indented-grammar
+mini_indented_AST_transformation_table = {
+    # AST Transformations for the mini_indented-grammar
     # "<": flatten
     # "*": replace_by_single_child
     # ">: []
     "tree": [],
+    "INDENT": [],
     "node": [],
     "content": [],
-    "leaf_content": [],
-    "branch_content": [],
-    "continuation": [],
-    "empty_content": [],
-    "DEEPER_LEVEL": [],
-    "SAME_LEVEL": [],
+    "children": [],
     "tag_name": [],
-    "attr": [],
-    "attribute": [],
-    "value": [],
-    "empty_line": [],
     "string": [],
-    "single_quoted": [],
-    "double_quoted": [],
-    "INDENT": [],
     "SAME_INDENT": [],
     "HAS_DEEPER_INDENT": [],
     "DEDENT": [],
-    "IDENTIFIER": [],
     "LF": [],
     "EOF": [],
 }
 
 
-def indentedTransformer() -> TransformerCallable:
+def mini_indentedTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=indented_AST_transformation_table.copy())
+    return partial(traverse, processing_table=mini_indented_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(indentedTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(mini_indentedTransformer, ident=1)
 
 
-def transform_indented(cst):
+def transform_mini_indented(cst):
     return get_transformer()(cst)
 
 
@@ -206,12 +182,12 @@ def transform_indented(cst):
 #
 #######################################################################
 
-class indentedCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a indented source file.
+class mini_indentedCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a mini_indented source file.
     """
 
     def __init__(self):
-        super(indentedCompiler, self).__init__()
+        super(mini_indentedCompiler, self).__init__()
 
     def reset(self):
         super().reset()
@@ -220,55 +196,22 @@ class indentedCompiler(Compiler):
     def on_tree(self, node):
         return self.fallback_compiler(node)
 
+    # def on_INDENT(self, node):
+    #     return node
+
     # def on_node(self, node):
     #     return node
 
     # def on_content(self, node):
     #     return node
 
-    # def on_leaf_content(self, node):
-    #     return node
-
-    # def on_branch_content(self, node):
-    #     return node
-
-    # def on_continuation(self, node):
-    #     return node
-
-    # def on_empty_content(self, node):
-    #     return node
-
-    # def on_DEEPER_LEVEL(self, node):
-    #     return node
-
-    # def on_SAME_LEVEL(self, node):
+    # def on_children(self, node):
     #     return node
 
     # def on_tag_name(self, node):
     #     return node
 
-    # def on_attr(self, node):
-    #     return node
-
-    # def on_attribute(self, node):
-    #     return node
-
-    # def on_value(self, node):
-    #     return node
-
-    # def on_empty_line(self, node):
-    #     return node
-
     # def on_string(self, node):
-    #     return node
-
-    # def on_single_quoted(self, node):
-    #     return node
-
-    # def on_double_quoted(self, node):
-    #     return node
-
-    # def on_INDENT(self, node):
     #     return node
 
     # def on_SAME_INDENT(self, node):
@@ -280,9 +223,6 @@ class indentedCompiler(Compiler):
     # def on_DEDENT(self, node):
     #     return node
 
-    # def on_IDENTIFIER(self, node):
-    #     return node
-
     # def on_LF(self, node):
     #     return node
 
@@ -290,10 +230,10 @@ class indentedCompiler(Compiler):
     #     return node
 
 
-get_compiler = ThreadLocalSingletonFactory(indentedCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(mini_indentedCompiler, ident=1)
 
 
-def compile_indented(ast):
+def compile_mini_indented(ast):
     return get_compiler()(ast)
 
 
@@ -415,7 +355,7 @@ if __name__ == "__main__":
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a indented-file and shows its syntax-tree.")
+    parser = ArgumentParser(description="Parses a mini_indented-file and shows its syntax-tree.")
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')

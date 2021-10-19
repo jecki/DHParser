@@ -51,6 +51,7 @@ cdef class FrozenNode(Node):
 
 cdef class RootNode(Node):
     cdef public list errors
+    cdef public object _error_set
     cdef public object error_nodes
     cdef public object error_positions
     cdef public int error_flag
