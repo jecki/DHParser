@@ -1505,7 +1505,7 @@ class Grammar:
         self.moving_forward__: bool = False
         self.most_recent_error__: Optional[ParserError] = None
         # farthest fail error reporting
-        self.ff_pos__: int = 0
+        self.ff_pos__: int = -1
         try:
             self.ff_parser__: Parser = self.root_parser__
         except AttributeError:
@@ -1701,7 +1701,7 @@ class Grammar:
                 rest = StringView('')
         if stitches:
             if rest:
-                stitches.append(Node(ZOMBIE_TAG, rest))
+                stitches.append(Node(ZOMBIE_TAG, rest).with_pos(tail_pos(stitches)))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
         if any(self.variables__.values()):
                 # capture stack not empty will only be reported for root-parsers

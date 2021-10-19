@@ -40,7 +40,8 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, canonical_error_strings
 from DHParser.syntaxtree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
+    transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -1226,6 +1227,12 @@ class TestAlternativeEBNFSyntax:
         arithmetic_parser = arithmetic_grammer()
         st = arithmetic_parser('2 + 3 * (-4 + 1)')
         assert str(st) == "2+3*(-4+1)"
+
+    def test_regex_heuristics(self):
+        gr = get_ebnf_grammar()
+        assert isinstance(gr, HeuristicEBNFGrammar)
+        result = gr(r' */', 'regex_heuristics')
+        print(result.as_sxpr())
 
 
 class TestConfigurableEBNF:

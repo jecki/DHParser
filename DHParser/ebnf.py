@@ -2071,7 +2071,8 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
-    EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS
+    EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
+    STRUCTURAL_ERROR_IN_AST, FATAL
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -2099,6 +2100,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'transform_ebnf',
            'compile_ebnf_ast',
            'HeuristicEBNFGrammar',
+           'ConfigurableEBNFGrammar',
            'EBNFTransform',
            'EBNFCompilerError',
            'EBNFDirectives',
@@ -3860,6 +3862,9 @@ class EBNFCompiler(Compiler):
         if node.children:
             result.append(' Fragments found: ')
             result.extend([str(self.compile(child)) for child in node.children])
+        src_dump = node.content.replace('\n', '\\n')
+        self.tree.new_error(node, f'Structural Error in AST, skipped source "{src_dump}"',
+                            STRUCTURAL_ERROR_IN_AST)
         return '\n'.join(result)
 
 
@@ -3884,10 +3889,10 @@ class EBNFCompiler(Compiler):
 
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
         if get_config_value('static_analysis') == 'early' and not \
-                any(e.code == MALFORMED_REGULAR_EXPRESSION for e in self.tree.errors):
+                any((e.code >= FATAL or e.code == MALFORMED_REGULAR_EXPRESSION)
+                    for e in self.tree.errors):
             errors = []
             try:
-
                 grammar_class = compile_python_object(
                     DHPARSER_IMPORTS + python_src, (self.grammar_name or "DSL") + "Grammar")
                 errors = grammar_class().static_analysis_errors__
@@ -3934,12 +3939,18 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             defn = self.compile(node.children[1])
-            if defn.find("(") < 0:
-                # assume it's a synonym, like 'page = REGEX_PAGE_NR'
-                defn = 'Synonym(%s)' % defn
-            if self.drop_flag and defn[:5] != "Drop(":
-                defn = 'Drop(%s)' % defn
-            # TODO: Recursively drop all contained parsers for optimization?
+            if isinstance(defn, str):
+                if defn.find("(") < 0:
+                    # assume it's a synonym, like 'page = REGEX_PAGE_NR'
+                    defn = 'Synonym(%s)' % defn
+                if self.drop_flag and defn[:5] != "Drop(":
+                    defn = 'Drop(%s)' % defn
+                # TODO: Recursively drop all contained parsers for optimization?
+            else:
+                assert isinstance(defn, Node)
+                self.tree.new_error(node, 'Structural Error in AST, unexpected node-type: '
+                                    + flatten_sxpr(defn.as_sxpr()), STRUCTURAL_ERROR_IN_AST)
+                defn = "Malformed AST"
         except TypeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list((extract_tb(error.__traceback__))))
@@ -4354,9 +4365,16 @@ class EBNFCompiler(Compiler):
 
 
     def on_lookaround(self, node: Node) -> str:
-        assert node.children
-        assert len(node.children) == 2
-        assert node.children[0].tag_name == 'flowmarker'
+        # assert node.children
+        # assert len(node.children) == 2, self.node.as_sxpr()
+        # assert node.children[0].tag_name == 'flowmarker'
+        if not node.children or len(node.children) != 2 \
+                or node.children[0].tag_name != 'flowmarker':
+            tree_dump = flatten_sxpr(node.as_sxpr())
+            self.tree.new_error(
+                node, 'Structural error in AST when compiling lookaround operator: '
+                + tree_dump, STRUCTURAL_ERROR_IN_AST)
+            return 'Structural Error in AST: ' + tree_dump
         prefix = node.children[0].content
         # arg_node = node.children[1]
         node.result = node.children[1:]
@@ -4468,7 +4486,7 @@ class EBNFCompiler(Compiler):
         if len(node.children) != 2:
             self.tree.new_error(node, f'Wrong number of arguments for repetition: ' 
                 f'{len(node.children)} (two expected)!')
-            return Node(ZOMBIE_TAG, ''), (0, 0)
+            return Node(ZOMBIE_TAG, '').with_pos(node.pos), (0, 0)
         rng = node.get('range', None)
         if rng:
             r = self.extract_range(rng)

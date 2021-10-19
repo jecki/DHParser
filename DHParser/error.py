@@ -109,6 +109,7 @@ __all__ = ('SourceMap',
            'BAD_REPETITION_COUNT',
            'MALFORMED_REGULAR_EXPRESSION',
            'EMPTY_GRAMMAR_ERROR',
+           'STRUCTURAL_ERROR_IN_AST',
            'TREE_PROCESSING_CRASH',
            'COMPILER_CRASH',
            'AST_TRANSFORM_CRASH',
@@ -227,7 +228,7 @@ PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS  = ErrorCode(1120)
 
 ERROR_WHILE_RECOVERING_FROM_ERROR        = ErrorCode(1301)
 
-# EBNF-specific static analysis errors
+# EBNF-specific and static analysis errors
 
 CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
 LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
@@ -245,6 +246,7 @@ TREE_PROCESSING_CRASH                    = ErrorCode(10100)
 COMPILER_CRASH                           = ErrorCode(10200)
 AST_TRANSFORM_CRASH                      = ErrorCode(10300)
 RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
+STRUCTURAL_ERROR_IN_AST                  = ErrorCode(10500)
 
 
 #######################################################################
