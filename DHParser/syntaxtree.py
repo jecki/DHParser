@@ -29,8 +29,58 @@ The Node-class
 Syntax trees are composed of Node-objects which are linked
 unidirectionally from parent to chilren. Nodes can contain either
 child-nodes, in which case they are informally called "branch-nodes" or
-test-strings, in which case they informally called "leaf nodes", but
+text-strings, in which case they informally called "leaf nodes", but
 not both at the same time. (There are is no mixed content as in XML!)
+
+Apart from their content, the most important property of a Node-object
+is its ``tag_name``. Nodes are initialized with their tag_name and
+content as arguments::
+
+    >>> number_1 = Node('number', "5")
+    >>> number_1.tag_name
+    'number'
+
+The Node-object ``number_1`` now has the tag-name "number" and the
+content "5". Since the content is a string and not a tuple of
+child-nodes, the node constructed is a leaf-node.
+
+(By convention,
+if the tag-name of a node starts with a colon ":", the node is
+considered "anonymous". This distinction is helpful when a tree of
+nodes is generated in a parsing process to distinguish nodes that
+contian important pieces of data from nodes that merely contain
+delimiters or structural information.))
+
+Several nodes can be connected to a tree::
+
+    >>> number_2 = Node('number', "4")
+    >>> addition = Node('add', (number_1, number_2))
+
+Trees spanned by a node can conveniently be be
+serialized as S-expressions (well-known from the computer languages
+"lisp" and "scheme")::
+
+    >>> print(addition.as_sxpr())
+    (add (number "5") (number "4"))
+
+It is also possible to serialize nodes as XML-snippet::
+
+    >>> print(addition.as_xml())
+    <add>
+      <number>5</number>
+      <number>4</number>
+    </add>
+
+or as indented tree::
+
+    >>> print(addition.as_tree())
+    add
+      number "5"
+      number "4"
+
+or as JSON-data (see further below). Trees can also be
+deserialized from any of these formats with the exception
+of the indented tree (see below).
 
 In order to test whether a Node is leaf-node one can check for the
 absence of children::
@@ -54,22 +104,8 @@ The `result`-property can be assigned to, in order to changae the data
 of a node::
 
     >>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
-
-More conveniently than printing the result-propery, nodes can be
-serialized as S-expressions (well-known from the computer languages
-"lisp" and "scheme")::
-
     >>> print(parent.as_sxpr())
     (phrase (word "Buckingham") (blank " ") (word "Palace"))
-
-It is also possible to serialize nodes as XML-snippet::
-
-    >>> print(parent.as_xml())
-    <phrase>
-      <word>Buckingham</word>
-      <blank> </blank>
-      <word>Palace</word>
-    </phrase>
 
 Content-equality of Nodes must be tested with the `equals()`-method.
 The equality operator `==` tests merely for the identity of the
