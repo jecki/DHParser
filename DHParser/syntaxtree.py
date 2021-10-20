@@ -189,7 +189,7 @@ Serializing and de-serializing syntax-trees
 -------------------------------------------
 
 Syntax trees can be serialized as S-expressions, XML, JSON and indented
-text. Module 'syntaxtree' also contains two simple parsers
+text. Module 'syntaxtree' also contains a few simple parsers
 (:py:func:`~syntaxtree.parse_sxpr()`, :py:func:`~syntaxtree.parse_xml()`)
 or :py:func:`~syntaxtree.parse_json()` to convert XML-snippets, S-expressions
 or json objects into trees composed of Node-objects.
@@ -199,7 +199,7 @@ or JSON into Node-trees that is used when serializing into these formats.
 There is no function to deserialize indented text.
 
 In order to make parameterizing serialization easier, the Node-class
-also defines a generic py:meth:`~syntaxtree.serialize()`-method next to
+also defines a generic :py:meth:`~syntaxtree.serialize()`-method next to
 the more specialized :py:meth:`~syntaxtree.Node.as_sxpr`-,
 :py:meth:`~syntaxtree.Node.as_json`- and :py:meth:`~syntaxtree.Node.as_xml()`-methods::
 
@@ -242,10 +242,12 @@ However, mixed-content can be simulated with `string_tags`-parameter of the
     >>> print(sentence.as_xml(inline_tags={'sentence'}, string_tags={'word', 'blank'}))
     <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
 
-The `inline_tags`-parameter that all listed tags and contained tags will be
+The `inline_tags`-parameter ensures that all listed tags and contained tags will be
 printed on a single line. This is helpful when opening the XML-serialization in
 an internet-browser in order to avoid spurios blanks when a linebreak occurs
-in the HTML/XML-source. Finally, empty tags that do not have a closing tag
+in the HTML/XML-source.
+
+Finally, empty tags that do not have a closing tag
 (e.g. <br />) can be declared as such with the `empty_tags`-parameter.
 
 Note that using `string_tags` can lead to a loss of information. A loss of
@@ -272,7 +274,7 @@ way to do so, would be to serialize the tree of
 :py:class:`~snytaxtree.Node`-objects, then use the XML-tools and,
 possibly, to deserialize the transformed XML again.
 
-A more efficient, however, is to utilize any of the various
+A more efficient method, however, is to utilize any of the various
 Python-libraries for XML. In order to make this as easy as possible
 trees of :py:class:`~snytaxtree.Node`-objects can be converted to
 `ElementTree <https://docs.python.org/3/library/xml.etree.elementtree.html>`_-objects 
@@ -405,7 +407,7 @@ a phrase and assume at the same time that words may occur in nested structures::
     >>> nested[0:i + 1]
     (Node('word', 'This'), Node('blank', ' '), Node('italic', (Node('word', 'is'))))
 
-No, in order to select all words on the level of the sentence, but excluding
+Now, in order to select all words on the level of the sentence, but excluding
 any sub-phrases, it would not be helpful to use methods based on the selection
 of children (i.e. immediate descendents), because the word nested in an
 'italic'-Node would be missed. For this purpose the various selection()-methods
@@ -420,10 +422,11 @@ set of tag names and the like)::
 Navigating "uptree" within the neighborhood and lineage of a node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is much more elegant to keep track of a node's ancestry by using a
+Instead of keeping a link within each node to its parent, it is much
+more elegant to keep track of a node's ancestry by using a
 "tree-context" which is a simple List of ancestors starting with the
 root-node and including the node itself as its last item. For most
-search methods such as select, there exists a pendant that returns
+search methods such as select() or pick(), there exists a pendant that returns
 this context instead of just the node itself::
 
     >>> last_context = sentence.pick_context('word', reverse=True)
@@ -437,7 +440,7 @@ this context instead of just the node itself::
 One can also think of a tree-context as a breadcrumb-trail that
 "points" to a particular part of text by marking the path from the root
 to the node, the content of which contains this text. This node does
-not need to be a leaf node, but can be any branching on the way from
+not need to be a leaf node, but can be any branch-node on the way from
 the root to the leaves of the tree. When analysing or
 transforming a tree-structured text, it is often helpful to "zoom" in
 and out of a particular part of text (pointed to by a context) or to
@@ -513,7 +516,7 @@ the other end of the tree rooted in `node`::
     ...      pointer, ANY_CONTEXT, include_root=True, reverse=True)]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
 
-Another important difference, besides the starting point is then the
+Another important difference, besides the starting point, is that the
 `select()`-generators of the `syntaxtree`-module traverse the tree
 post-order (or "depth first"), while the respective methods ot the
 Node-class traverse the tree pre-order. See the difference::
