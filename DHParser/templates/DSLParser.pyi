@@ -114,14 +114,21 @@ if __name__ == "__main__":
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')
-    parser.add_argument('-x', '--xml', action='store_const', const='xml',
-                        help='Store result as XML instead of S-expression')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
                         help='Run batch jobs in a single thread (recommended only for debugging)')
+    outformat = parser.add_mutually_exclusive_group()
+    outformat.add_argument('-x', '--xml', action='store_const', const='xml', 
+                           help='Format result as XML')
+    outformat.add_argument('-s', '--sxpr', action='store_const', const='sxpr',
+                           help='Format result as S-expression')
+    outformat.add_argument('-t', '--tree', action='store_const', const='tree',
+                           help='Format result as indented tree')
+    outformat.add_argument('-j', '--json', action='store_const', const='json',
+                           help='Format result as JSON')
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -185,5 +192,9 @@ if __name__ == "__main__":
             if has_errors(errors, ERROR):
                 sys.exit(1)
 
-        print(result.serialize(how='default' if args.xml is None else 'xml')
-              if isinstance(result, Node) else result)
+        if args.xml:  outfmt = 'xml'
+        elif args.sxpr:  outfmt = 'sxpr'
+        elif args.tree:  outfmt = 'tree'
+        elif args.json:  outfmt = 'json'
+        else:  outfmt = 'default'
+        print(result.serialize(how=outfmt) if isinstance(result, Node) else result)

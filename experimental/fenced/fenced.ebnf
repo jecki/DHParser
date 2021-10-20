@@ -1,0 +1,8 @@
+@whitespace = vertical
+@drop = whitespace
+document = ~ { text | fenced } EOF
+text     = /[^\~\n]+/ ~  # /(?:[^\\\\~]+|\\\\n)+/
+fenced   = fence ~ { text | no_fence } ::fence ~
+no_fence = !:fence /\~+/ ~
+fence    = /\~+/
+EOF      = !/./

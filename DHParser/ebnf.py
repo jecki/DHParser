@@ -1020,7 +1020,7 @@ grammar of a definitions-DSL so as to exclude certain bad words::
     nice := nice word
     >>> syntax_tree = def_parser('sxxx := bad word')
     >>> print(str(syntax_tree).strip())
-    <<< Error on "sxxx := bad word" | Parser "definitions" did not match: »sxxx := bad word« >>>
+    <<< Error on "sxxx := bad word" | Parser "word->!forbidden" did not match: »sxxx := bad word« >>>
 
 The same effect can be achieved by using the subtraction operator "-". This
 is just syntactic sugar make the use of the negative lookahead operator
@@ -1034,7 +1034,7 @@ in the sense of "without" more intuitive::
     >>> def_parser = create_parser(def_DSL, "defDSL")
     >>> syntax_tree = def_parser('sxxx := bad word')
     >>> print(str(syntax_tree).strip())
-    <<< Error on "sxxx := bad word" | Parser "definitions" did not match: »sxxx := bad word« >>>
+    <<< Error on "sxxx := bad word" | Parser "word->!forbidden" did not match: »sxxx := bad word« >>>
 
 Next to the lookahead operators, there also exist lookback operators. Be warned,
 though, that look back operators are an **experimental** feature in DHParser
@@ -1690,10 +1690,370 @@ by skipping larger portions of the text is probably negligble or at any
 rate smaller than the harm done by introducing consequential errors as
 a result of poorly choosen resumption rules.
 
-Semantic Actions and Storing Variables
---------------------------------------
+Context sensitive parsers and semantic actions
+----------------------------------------------
 
-TO BE CONDINUED...
+DHParser does by intention not contain support for semantic actions, because
+these can intrduce a context-sensitivity that can be hard to handle with a
+recursive descent parser and compiler-generation, where semtantiv actions
+might become useful is not the main domain of application for DHParser.
+(In case you are worried: There are a few documented but unadvertised loopholes
+that can be (mis-)used for semantic actions, though...)
+
+Sometimes, however, it would be ever so comfortable to break out of the
+paradigm of context free grammars - if only just a little bit. For example,
+when encoding data in XML or HTML, the closing tag must have the same tag-name
+as the opening tag::
+
+    <line>O Rose thou art sick.</line>
+
+If you encode the tag-name parser roughly following the `XML-specs <https://www.w3.org/TR/xml/>`
+as::
+
+    tag_name        = /(?![0-9][:\w][\w:.-]*/
+
+the following code would be accepted by the parser:
+
+    <line>O Rose thou art sick.</enil>
+
+In this case, the remedy is easy: When post-processing the syntax tree, check whether
+all end-tags have the same tag-name as the corresponbding start-tag and add an error
+message where this is not the case. However, this only works, because the tag-names
+have no influence on the structure of the syntax-tree of an XML-document.
+
+Therefore, the same remedy would not work in many other cases.
+In `CommonMark <https://commonmark.org/>`_, for example, a
+"`code fence <https://spec.commonmark.org/0.30/#fenced-code-blocks>`_ is a sequence
+of at least three [but possibly more] consecutive backtick characters (`) or tildes (~)"
+Now, this is a bit more complicated than the XML-example, because here the content of
+the closing marker needs to be known at the time of parsing already, because otherwise
+the structure could not be determined correctly. A smaller number of tildes or
+backticks than used at the opening of a code fence would be part of the content of
+the fenced code that needs to be distinguished from the closing delimiter. The purpose
+is to allow you to fence code that may contain fenced code itself.::
+
+    ~~~~~
+    In common mark code can be fenced with tilde-characters. You can just write:
+    ~~~
+    fenced code
+    ~~~
+    ~~~~~
+
+Here, a possible remedy is to employ a preprocessor, that distinguishes the fenced code
+from quoted fences and replaces the non-quoted fences by context-free opening and
+closing markers that can then be cpatured at parsing stage. Using preprocessors is often
+a clean and pragmatic solution and DHParser includes dedicated support for preprocessors.
+However, introducing preprocessors also hast some downsides. One disadvantage is that a
+preprocessor requires a makeshift parser of its own that must be strong enough not to
+stumble over the syntactic constructs that do not concern the preprocessor like comments
+for example.
+
+DHParser therefore also offers another alternative for occasional context sensitivity
+by allowing to retrieve and compare earlier values of a symbol. Any users of these
+features should be aware, however, that extensive use of context sensitive parsers
+may slow-down parsing, because it does not play well with the the memoizing
+optimization that is commonly used with parsing expression grammars and also employed
+by DHParser. Also, since these features are specific for DHParser, switching to
+another parser generator will require factoring the context-sensitive-parser out
+of your grammar and re-implementing the functionality for which they have been used
+with the more conventional approach of pre- and post-processors.
+
+Before explaining the full mechanism, let's have a look at an example.
+The following minimal pseudo-XML-parser captures the value of the tag-name so that
+it can compared with the tag-name of the ending-tag::
+
+    >>> miniXML = '''
+    ... @ disposable  = EOF
+    ... @ drop        = EOF, whitespace, strings
+    ... document = ~ element ~ §EOF
+    ... element  = STag §content ETag
+    ... STag     = '<' TagName §'>'
+    ... ETag     = '</' § ::TagName '>'
+    ... TagName  = /\\\\w+/
+    ... content  = [CharData] { (element | COMMENT__) [CharData] }
+    ... CharData = /(?:(?!\\\\]\\\\]>)[^<&])+/
+    ... EOF      =  !/./
+    ... '''
+    >>> parseXML = create_parser(miniXML)
+    >>> print(parseXML('<line>O Rose thou art sick.</line>').as_sxpr())
+    (document
+      (element
+        (STag
+          (TagName "line"))
+        (content
+          (CharData "O Rose thou art sick."))
+        (ETag
+          (TagName "line"))))
+    >>> result = parseXML('<line>O Rose thou art sick.</enil>')
+    >>> print(result.errors[0])
+    1:30: Error (1010): '::TagName "line"' expected by parser 'ETag', but »enil>...« found instead!
+
+Here, the TagName-parser in the definition has been prefixed with a double colon ``::``. This double
+colon is the "Pop"-operator and can be put in front of any symbol defined in the grammar. If a symbol is
+annoted with the operator, then its parsing-rule will not be executed, but the last value that has been
+parsed by the symbal will be retrieved and match against the following part of the document by simple
+text-comparison. If the last value matches the "Pop"-parser will remove that value from the stack of
+earlier values and report a match. Otherwise a non-match will be reported and the value will be
+left on the stack. In the example, since the Pop-parser ``::TagName`` follows a mandatory marker ``§``,
+the non-match causes a syntax error.
+
+Sometimes it is useful to compare the following text with a stored value without removing that
+value from the stack. For this purpose, there is the "Retrieve"-operator which is denoted by a
+single colon `:`::
+
+    >>> fencedTextEBNF =  '''@whitespace = vertical
+    ... @disposable = EOF, fence_re
+    ... @drop    = whitespace, EOF
+    ... document = ~ { text | fenced } EOF
+    ... text     = /[^\\\\~\\\\n]+/ ~  # /(?:[^\\\\~]+|\\\\n)+/
+    ... fenced   = fence ~ { text | no_fence } ::fence ~
+    ... no_fence = ! :fence fence_re ~
+    ... fence    = fence_re
+    ... fence_re = /\\\\~+/
+    ... EOF      = !/./
+    ... '''
+
+Here the Pop-operator ``::`` is used in the definition of ``fenced`` in just the same way
+as in the earlier example. The Retrieve-operator ``:`` is used in the definition of
+``no_fence`` in combination with a negative lookahead ``!``. This allows the no_fence-parsers
+to capture all "fences" which are not closing-fence of the current fenced enivronment::
+
+    >>> parseFenced = create_parser(fencedTextEBNF)
+    >>> fenced_test_1 = '''~~~
+    ... fenced code
+    ... ~~~'''
+    >>> print(parseFenced(fenced_test_1).as_sxpr())
+    (document (fenced (fence "~~~") (text "fenced code") (fence "~~~")))
+    >>> fenced_test_2 = '''~~~~~
+    ... In common mark code can be fenced with tilde-characters. You can just write:
+    ... ~~~
+    ... fenced code
+    ... ~~~
+    ... ~~~~~'''
+    >>> print(parseFenced(fenced_test_2).as_sxpr())
+    (document
+      (fenced
+        (fence "~~~~~")
+        (text "In common mark code can be fenced with tilde-characters. You can just write:")
+        (no_fence "~~~")
+        (text "fenced code")
+        (no_fence "~~~")
+        (fence "~~~~~")))
+
+But what if the opening and closing fence are not one and the same string, but complements of
+each other, like opening and closing brackets? Say, you'd like to enclose code-examples in
+curled braces "{" and "}" and since the code examples themselves may contain braces, you'd
+like to allow the markup-writer to use an arbitrary number of braces as opening and closing
+delimiters::
+
+    >>> markup = "This ist a code example: {{ mapping = { 'a': 1, 'b': 2} }} with braces."
+
+Here, the recalled value would need to be transformed or otherwise interpreted before the
+following text is either considered a match or a non-match. Since such a transformation
+can hardly be encoded in EBNF even an augmented EBNF, any more, one of DHParser's loopholes
+for semantic actions must be used. It is possible to assign Python filter-functions to
+symbols, the value of which is retrieved with yet another directive, which is the
+``@ XXXX_filter``-directive, where "XXXX" stands for the name of the symbol::
+
+    >>> bracesExampleEBNF = '''
+    ... @braces_filter = matching_bracket()
+    ... document       = { text | codeblock }
+    ... codeblock      = braces { text | opening_braces | (!:braces closing_braces) } ::braces
+    ... braces         = opening_braces
+    ... opening_braces = /\{+/
+    ... closing_braces = /\}+/
+    ... text           = /[^{}]+/
+    ... '''
+
+The function name that is passed to the directive must be the name of a function that
+is within reach of the generated parser (by either defining it in the same module or
+importing it) and it must have the signature:
+
+     Callable[str, List[str]], Optional[str]]
+
+This function takes the following text as well as the stack of previous value of
+the symbol that is being retrieved as an argument and it must return either
+a strech of matched text of ``None`` to indicate a non-match. The function
+``matching_bracket()`` is already defined in :py:mod:`DHParser.parse`. Slightly
+simplifies to cover only the case of curly braces, it looks like this::
+
+    >>> def matching_bracket(text: str, stack: List[str]) -> Optional[str]:
+    ...     value = stack[-1]
+    ...     value = value.replace("{", "}")
+    ...     return value if text[:len(value)] == value else None
+
+    >>> markup_parser = create_parser(bracesExampleEBNF)
+    >>> result = markup_parser(markup)
+    >>> print(result.as_sxpr())
+    (document
+      (text "This ist a code example: ")
+      (codeblock
+        (braces
+          (opening_braces "{{"))
+        (text " mapping = ")
+        (opening_braces "{")
+        (text " 'a': 1, 'b': 2")
+        (closing_braces "}")
+        (text " ")
+        (braces "}}"))
+      (text " with braces."))
+
+Here, the outer double braces "{{" and "}}" open up and close a new code block and could be
+discarded as delimiters during the AST-transformation, while the opening and closing braces
+within the code block are simply that: opening and closing braces.
+
+Advanced context sensitive parsers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Apart from the Pop- and Retrieve-operator, DHParser offers a third retrieval operator that,
+like the Pop-operator, "pops" that last value from the stack and matches either this value
+or the empty strings. In other word, this operator always matches, as long as there is still
+a value on the stack, but it captures the begining of the following text only
+if it matches the stored value. A non-match only happens, when the stack has already been
+exhaustet. This "Optional Pop"-operator is denoted by a colon followed by a question mark ``:?``.
+Weird as this may sound, this operator has astonishingly manifold use cases. Think for
+exmple of a modifcation of our minimal pseudo-XML parser the allows coders to omit the
+tag name in closing tags to save them some typing::
+
+    >>> miniXML = miniXML.replace('::TagName', ':?TagName')
+    >>> parseXML = create_parser(miniXML)
+    >>> data_tree = parseXML('<line>O Rose thou art sick.</>').as_tree()
+    >>> print(data_tree)
+    document
+      element
+        STag
+          TagName "line"
+        content
+          CharData "O Rose thou art sick."
+        ETag
+          TagName
+
+Another, rather tricky, use case is to let the value of certain symbols be determined
+on first use by marking all appearances of theses symbols on the right hand side of
+the dfinitions wherein they appear with the single colon retrival operator ``:`` and
+clearing the stack with ``[:?symbol]`` after the end of file has been reached.
+This technique has been employed for the "FlexibleEBNF"-parser in the examples folder.
+The FlexibleEBNF-parser "magically" adjusts itself to different syntactical flavors of
+EBNF. Here is an abbreviated excerpt of the grammar of this parser, to see how this
+technique can be used in a grammar::
+
+    syntax     = ~ { definition } EOF
+    definition = symbol §:DEF~ expression :ENDL~
+    DEF        = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `
+    ENDL       = `;` | ``
+    EOF        = !/./ [:?DEF] [:?ENDL]
+
+This trick can also be used to parse indentation::
+
+    >>> tree_grammar = '''@whitespace = horizontal
+    ... @disposable = EOF, LF, SAME_INDENT
+    ... @drop       = strings, whitespace, EOF, LF, SAME_INDENT
+    ...
+    ... tree     = INDENT node DEDENT /\\\\s*/ EOF
+    ... node     = tag_name [content]
+    ... content  = string | children
+    ... children = &(LF HAS_DEEPER_INDENT)
+    ...            LF INDENT § node { LF SAME_INDENT § node }
+    ...            !(LF HAS_DEEPER_INDENT) DEDENT
+    ... tag_name = /\\\\w+/~
+    ... string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
+    ...
+    ... INDENT            = / */
+    ... SAME_INDENT       = :INDENT § !/ /
+    ... HAS_DEEPER_INDENT = :INDENT / +/
+    ... DEDENT            = &:?INDENT
+    ...
+    ... LF       = /\\\\n/
+    ... EOF      = !/./
+    ... '''
+    >>> tree_parser = create_parser(tree_grammar)
+    >>> syntax_tree = tree_parser(data_tree)
+    >>> # show but the first 22 lines of the syntax-tree:
+    >>> print('\\n'.join(syntax_tree.as_sxpr().split('\\n')[:22] + ['...']))
+    (tree
+      (INDENT)
+      (node
+        (tag_name "document")
+        (content
+          (children
+            (INDENT "  ")
+            (node
+              (tag_name "element")
+              (content
+                (children
+                  (INDENT "    ")
+                  (node
+                    (tag_name "STag")
+                    (content
+                      (children
+                        (INDENT "      ")
+                        (node
+                          (tag_name "TagName")
+                          (content
+                            (string "line")))
+                        (DEDENT))))
+    ...
+
+
+In case you are suprised by the size of the resulting syntax-tree,
+keep in mind that the syntax-tree or "parse-tree" of the
+serialization of a data structure is not the data-structure itself,
+even if it happens to be a tree. However, the data-structure can
+be retrieved from the tree.
+
+As can be seen the INDENT-elements have captured indentation of
+various increasing length. Also, observe the use of the
+"querying parser" HAS_DEEPER_INDENTATION. A "querying parser" is
+a parser that is meant to be used only inside a negative or
+positive lookahead. The first query with HAS_DEEPER_INDENTATION
+makes sure that the next call to INDENT will indeed capture
+a longer stretch of whitespace than represented by its present
+value, i.e. the last value on the "INDENT"-symbol's value-stack.
+
+DHParser makes sure that the value-stack of each captured
+variable will properly be unwinded when returning from a
+non-match to an earlier position in the document. However, there
+is one case where this does not work, namely, if a symbol has matched
+the empty string. Because value-stack unwinding is tied to the
+position in the text instead of the call stack (which DHParser
+only keeps track of when testing or debugging), it is impossible
+to decide where a zero-length capture must be unwinded or not
+in case DHParser returns exactly to the position of that capture.
+In this case DHParser does not unwind the capture. This can lead
+to a non-empty value stack at the end of the parsing process which
+will be reported as an error. There are three strategies to avoid
+this error:
+
+1. Make sure that all symbols for which values are retrieved
+   capture at least one character of text if they match.
+
+   In this example above, the symbol INDENT would have to be
+   defined as ``INDENT = / +/`` to achieve this. However, this
+   would have made the formulation of the tree-grammar of this
+   example more complicated.
+
+2. Make sure that in all cases where zero-length text could
+   possibly be captured a subsequent non-match cannot occur
+   before the zero-length value has been retrieved.
+
+   In the example above, this situation can only occur in the
+   parser ``tree`` and could be possibly avoided with a lookahead, e.g.
+   ``tree = &(/ /* tag_name) INDENT node DEDENT``. However,
+   since this avoidance strategy does not need to cover cases
+   where document is syntactically incorrect, anyway, we can
+   rely on the fact that - since a syntactically correct document
+   must contain a single root node at the very beginning - the
+   parser will never retreat to the first captured INDENT.
+
+3. As a last resort one could clear the stack with one or more
+   optional ``[DEDENT]`` parsers that can safely be added after
+   ``EOF``. A modification that allows the document to consist
+   of one or more top-level nodes would then look like:
+   ``tree = { INDENT node DEDENT }+ /\\s*/ EOF [DEDENT]``
+
+
+Error resumption with context sensitive parsers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 """
 
@@ -1711,7 +2071,8 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
-    EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS
+    EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
+    STRUCTURAL_ERROR_IN_AST, ERROR, FATAL, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -1721,7 +2082,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, gen_find_inc
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
     flatten_sxpr
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
-    sane_parser_name, re, expand_table, unrepr, compile_python_object, DHPARSER_PARENTDIR, \
+    sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     cython, ThreadLocalSingletonFactory
 from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
@@ -1739,6 +2100,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'transform_ebnf',
            'compile_ebnf_ast',
            'HeuristicEBNFGrammar',
+           'ConfigurableEBNFGrammar',
            'EBNFTransform',
            'EBNFCompilerError',
            'EBNFDirectives',
@@ -1769,11 +2131,8 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, {dhparser_parentdir}))
-if scriptpath not in sys.path:
+if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
-if dhparser_parentdir not in sys.path:
-    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
@@ -2004,8 +2363,14 @@ class HeuristicEBNFGrammar(Grammar):
                                | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
                                | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
                                | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-        regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
-
+        regex_heuristics       = ! ( / +`[^`]*` +\//
+                                   | / +´[^´]*´ +\//
+                                   | / +'[^']*' +\//
+                                   | / +"[^"]*" +\//
+                                   | / +\w+ +\// )
+                                 ( /[^\/\n*?+\\]*[*?+\\][^\/\n]*\//
+                                 | /[^\w]+\//
+                                 | /[^ ]/ )
 
         #: basic-regexes
 
@@ -2036,7 +2401,7 @@ class HeuristicEBNFGrammar(Grammar):
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
-    regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
+    regex_heuristics = Series(NegativeLookahead(Alternative(RegExp(' +`[^`]*` +/'), RegExp(' +´[^´]*´ +/'), RegExp(" +'[^']*' +/"), RegExp(' +"[^"]*" +/'), RegExp(' +\\w+ +/'))), Alternative(RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]*/'), RegExp('[^\\w]+/'), RegExp('[^ ]')))
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
@@ -2932,7 +3297,7 @@ class EBNFCompiler(Compiler):
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
-        self.variables = set()                 # type: Set[str]
+        self.variables = {}                    # type: Dict[str, List[Node]]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
         self.required_keywords = set()         # type: Set[str]
@@ -3312,9 +3677,14 @@ class EBNFCompiler(Compiler):
 
         if self.variables:
             for i in range(len(definitions)):
-                if definitions[i][0] in self.variables:
-                    definitions[i] = (definitions[i][0], 'Capture(%s)' % definitions[i][1])
-                    self.definitions[definitions[i][0]] = definitions[i][1]
+                symbol, code = definitions[i]
+                if symbol in self.variables:
+                    if set(self.symbols[symbol]) - set(self.variables[symbol]):
+                        code = f'Capture({code}, zero_length_warning=True)'
+                    else:
+                        code = f'Capture({code}, zero_length_warning=False)'
+                    definitions[i] = (symbol, code)
+                    self.definitions[symbol] = code
 
         # add special fields for Grammar class
 
@@ -3498,6 +3868,9 @@ class EBNFCompiler(Compiler):
         if node.children:
             result.append(' Fragments found: ')
             result.extend([str(self.compile(child)) for child in node.children])
+        src_dump = node.content.replace('\n', '\\n')
+        self.tree.new_error(node, f'Structural Error in AST, skipped source "{src_dump}"',
+                            STRUCTURAL_ERROR_IN_AST)
         return '\n'.join(result)
 
 
@@ -3522,13 +3895,12 @@ class EBNFCompiler(Compiler):
 
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
         if get_config_value('static_analysis') == 'early' and not \
-                any(e.code == MALFORMED_REGULAR_EXPRESSION for e in self.tree.errors):
+                any((e.code >= FATAL or e.code == MALFORMED_REGULAR_EXPRESSION)
+                    for e in self.tree.errors):
             errors = []
             try:
-
                 grammar_class = compile_python_object(
-                    DHPARSER_IMPORTS.format(dhparser_parentdir=repr(DHPARSER_PARENTDIR)) +
-                    python_src, (self.grammar_name or "DSL") + "Grammar")
+                    DHPARSER_IMPORTS + python_src, (self.grammar_name or "DSL") + "Grammar")
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',
@@ -3537,6 +3909,10 @@ class EBNFCompiler(Compiler):
                 pass  # undefined names in the grammar are already caught and reported
             except GrammarError as ge:
                 errors = ge.errors
+                if not has_errors([e.error for e in errors], ERROR):
+                    python_src = python_src.replace(
+                        'static_analysis_pending__ = [True]',
+                        'static_analysis_pending__ = []  # type: List[bool]', 1)
             for sym, _, err in errors:
                 symdef_node = self.rules[sym][0]
                 err.pos = self.rules[sym][0].pos
@@ -3573,12 +3949,18 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             defn = self.compile(node.children[1])
-            if defn.find("(") < 0:
-                # assume it's a synonym, like 'page = REGEX_PAGE_NR'
-                defn = 'Synonym(%s)' % defn
-            if self.drop_flag and defn[:5] != "Drop(":
-                defn = 'Drop(%s)' % defn
-            # TODO: Recursively drop all contained parsers for optimization?
+            if isinstance(defn, str):
+                if defn.find("(") < 0:
+                    # assume it's a synonym, like 'page = REGEX_PAGE_NR'
+                    defn = 'Synonym(%s)' % defn
+                if self.drop_flag and defn[:5] != "Drop(":
+                    defn = 'Drop(%s)' % defn
+                # TODO: Recursively drop all contained parsers for optimization?
+            else:
+                assert isinstance(defn, Node)
+                self.tree.new_error(node, 'Structural Error in AST, unexpected node-type: '
+                                    + flatten_sxpr(defn.as_sxpr()), STRUCTURAL_ERROR_IN_AST)
+                defn = "Malformed AST"
         except TypeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list((extract_tb(error.__traceback__))))
@@ -3683,7 +4065,8 @@ class EBNFCompiler(Compiler):
                     self.directives[key].add(content.lower())
                 else:
                     unmatched.append(content)
-                    if self.directives.disposable == NEVER_MATCH_PATTERN:
+                    if self.directives.disposable == NEVER_MATCH_PATTERN or \
+                            re.fullmatch(r'(?:\w+\$\|)*\w+\$', self.directives.disposable):
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
                                             'Should be one of %s or a disposable parser, where '
                                             'the "@disposable"-directive must precede the '
@@ -3992,9 +4375,16 @@ class EBNFCompiler(Compiler):
 
 
     def on_lookaround(self, node: Node) -> str:
-        assert node.children
-        assert len(node.children) == 2
-        assert node.children[0].tag_name == 'flowmarker'
+        # assert node.children
+        # assert len(node.children) == 2, self.node.as_sxpr()
+        # assert node.children[0].tag_name == 'flowmarker'
+        if not node.children or len(node.children) != 2 \
+                or node.children[0].tag_name != 'flowmarker':
+            tree_dump = flatten_sxpr(node.as_sxpr())
+            self.tree.new_error(
+                node, 'Structural error in AST when compiling lookaround operator: '
+                + tree_dump, STRUCTURAL_ERROR_IN_AST)
+            return 'Structural Error in AST: ' + tree_dump
         prefix = node.children[0].content
         # arg_node = node.children[1]
         node.result = node.children[1:]
@@ -4038,7 +4428,8 @@ class EBNFCompiler(Compiler):
         assert node.children[0].tag_name == "retrieveop"
         assert node.children[1].tag_name == "symbol"
         prefix = node.children[0].content  # type: str
-        arg = node.children[1].content     # type: str
+        usage = node.children[1]
+        arg = usage.content     # type: str
         node.result = node.children[1:]
         assert prefix in {'::', ':?', ':'}
 
@@ -4057,7 +4448,7 @@ class EBNFCompiler(Compiler):
         if match_func != 'last_value':
             custom_args = ['match_func=%s' % match_func]
 
-        self.variables.add(arg)
+        self.variables.setdefault(arg, []).append(usage)
         parser_class = self.PREFIX_TABLE[prefix]
         return self.non_terminal(node, parser_class, custom_args)
 
@@ -4105,7 +4496,7 @@ class EBNFCompiler(Compiler):
         if len(node.children) != 2:
             self.tree.new_error(node, f'Wrong number of arguments for repetition: ' 
                 f'{len(node.children)} (two expected)!')
-            return Node(ZOMBIE_TAG, ''), (0, 0)
+            return Node(ZOMBIE_TAG, '').with_pos(node.pos), (0, 0)
         rng = node.get('range', None)
         if rng:
             r = self.extract_range(rng)

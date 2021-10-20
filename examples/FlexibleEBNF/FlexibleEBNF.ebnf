@@ -124,7 +124,7 @@ whitespace = /~/~                               # insignificant whitespace
 
 #: delimiters
 
-EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+EOF = !/./ [:?ENDL] [:?DEF] [:?OR] [:?AND]      # [:?DEF], [:?OR], ... clear stack by eating stored value
            [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
 DEF        = _DEF
@@ -154,8 +154,14 @@ literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
                        | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
                        | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
                        | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
-
+regex_heuristics       = ! ( / +`[^`]*` +\//
+                           | / +´[^´]*´ +\//
+                           | / +'[^']*' +\//
+                           | / +"[^"]*" +\//
+                           | / +\w+ +\// )
+                         ( /[^\/\n*?+\\]*[*?+\\][^\/\n]*\//
+                         | /[^\w]+\//
+                         | /[^ ]/ )
 
 #: basic-regexes
 

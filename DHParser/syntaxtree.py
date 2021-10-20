@@ -29,8 +29,58 @@ The Node-class
 Syntax trees are composed of Node-objects which are linked
 unidirectionally from parent to chilren. Nodes can contain either
 child-nodes, in which case they are informally called "branch-nodes" or
-test-strings, in which case they informally called "leaf nodes", but
+text-strings, in which case they informally called "leaf nodes", but
 not both at the same time. (There are is no mixed content as in XML!)
+
+Apart from their content, the most important property of a Node-object
+is its ``tag_name``. Nodes are initialized with their tag_name and
+content as arguments::
+
+    >>> number_1 = Node('number', "5")
+    >>> number_1.tag_name
+    'number'
+
+The Node-object ``number_1`` now has the tag-name "number" and the
+content "5". Since the content is a string and not a tuple of
+child-nodes, the node constructed is a leaf-node.
+
+(By convention,
+if the tag-name of a node starts with a colon ":", the node is
+considered "anonymous". This distinction is helpful when a tree of
+nodes is generated in a parsing process to distinguish nodes that
+contian important pieces of data from nodes that merely contain
+delimiters or structural information.))
+
+Several nodes can be connected to a tree::
+
+    >>> number_2 = Node('number', "4")
+    >>> addition = Node('add', (number_1, number_2))
+
+Trees spanned by a node can conveniently be be
+serialized as S-expressions (well-known from the computer languages
+"lisp" and "scheme")::
+
+    >>> print(addition.as_sxpr())
+    (add (number "5") (number "4"))
+
+It is also possible to serialize nodes as XML-snippet::
+
+    >>> print(addition.as_xml())
+    <add>
+      <number>5</number>
+      <number>4</number>
+    </add>
+
+or as indented tree::
+
+    >>> print(addition.as_tree())
+    add
+      number "5"
+      number "4"
+
+or as JSON-data (see further below). Trees can also be
+deserialized from any of these formats with the exception
+of the indented tree (see below).
 
 In order to test whether a Node is leaf-node one can check for the
 absence of children::
@@ -54,22 +104,8 @@ The `result`-property can be assigned to, in order to changae the data
 of a node::
 
     >>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
-
-More conveniently than printing the result-propery, nodes can be
-serialized as S-expressions (well-known from the computer languages
-"lisp" and "scheme")::
-
     >>> print(parent.as_sxpr())
     (phrase (word "Buckingham") (blank " ") (word "Palace"))
-
-It is also possible to serialize nodes as XML-snippet::
-
-    >>> print(parent.as_xml())
-    <phrase>
-      <word>Buckingham</word>
-      <blank> </blank>
-      <word>Palace</word>
-    </phrase>
 
 Content-equality of Nodes must be tested with the `equals()`-method.
 The equality operator `==` tests merely for the identity of the
@@ -189,7 +225,7 @@ Serializing and de-serializing syntax-trees
 -------------------------------------------
 
 Syntax trees can be serialized as S-expressions, XML, JSON and indented
-text. Module 'syntaxtree' also contains two simple parsers
+text. Module 'syntaxtree' also contains a few simple parsers
 (:py:func:`~syntaxtree.parse_sxpr()`, :py:func:`~syntaxtree.parse_xml()`)
 or :py:func:`~syntaxtree.parse_json()` to convert XML-snippets, S-expressions
 or json objects into trees composed of Node-objects.
@@ -199,7 +235,7 @@ or JSON into Node-trees that is used when serializing into these formats.
 There is no function to deserialize indented text.
 
 In order to make parameterizing serialization easier, the Node-class
-also defines a generic py:meth:`~syntaxtree.serialize()`-method next to
+also defines a generic :py:meth:`~syntaxtree.serialize()`-method next to
 the more specialized :py:meth:`~syntaxtree.Node.as_sxpr`-,
 :py:meth:`~syntaxtree.Node.as_json`- and :py:meth:`~syntaxtree.Node.as_xml()`-methods::
 
@@ -242,10 +278,12 @@ However, mixed-content can be simulated with `string_tags`-parameter of the
     >>> print(sentence.as_xml(inline_tags={'sentence'}, string_tags={'word', 'blank'}))
     <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
 
-The `inline_tags`-parameter that all listed tags and contained tags will be
+The `inline_tags`-parameter ensures that all listed tags and contained tags will be
 printed on a single line. This is helpful when opening the XML-serialization in
 an internet-browser in order to avoid spurios blanks when a linebreak occurs
-in the HTML/XML-source. Finally, empty tags that do not have a closing tag
+in the HTML/XML-source.
+
+Finally, empty tags that do not have a closing tag
 (e.g. <br />) can be declared as such with the `empty_tags`-parameter.
 
 Note that using `string_tags` can lead to a loss of information. A loss of
@@ -272,7 +310,7 @@ way to do so, would be to serialize the tree of
 :py:class:`~snytaxtree.Node`-objects, then use the XML-tools and,
 possibly, to deserialize the transformed XML again.
 
-A more efficient, however, is to utilize any of the various
+A more efficient method, however, is to utilize any of the various
 Python-libraries for XML. In order to make this as easy as possible
 trees of :py:class:`~snytaxtree.Node`-objects can be converted to
 `ElementTree <https://docs.python.org/3/library/xml.etree.elementtree.html>`_-objects 
@@ -405,7 +443,7 @@ a phrase and assume at the same time that words may occur in nested structures::
     >>> nested[0:i + 1]
     (Node('word', 'This'), Node('blank', ' '), Node('italic', (Node('word', 'is'))))
 
-No, in order to select all words on the level of the sentence, but excluding
+Now, in order to select all words on the level of the sentence, but excluding
 any sub-phrases, it would not be helpful to use methods based on the selection
 of children (i.e. immediate descendents), because the word nested in an
 'italic'-Node would be missed. For this purpose the various selection()-methods
@@ -420,10 +458,11 @@ set of tag names and the like)::
 Navigating "uptree" within the neighborhood and lineage of a node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is much more elegant to keep track of a node's ancestry by using a
+Instead of keeping a link within each node to its parent, it is much
+more elegant to keep track of a node's ancestry by using a
 "tree-context" which is a simple List of ancestors starting with the
 root-node and including the node itself as its last item. For most
-search methods such as select, there exists a pendant that returns
+search methods such as select() or pick(), there exists a pendant that returns
 this context instead of just the node itself::
 
     >>> last_context = sentence.pick_context('word', reverse=True)
@@ -437,7 +476,7 @@ this context instead of just the node itself::
 One can also think of a tree-context as a breadcrumb-trail that
 "points" to a particular part of text by marking the path from the root
 to the node, the content of which contains this text. This node does
-not need to be a leaf node, but can be any branching on the way from
+not need to be a leaf node, but can be any branch-node on the way from
 the root to the leaves of the tree. When analysing or
 transforming a tree-structured text, it is often helpful to "zoom" in
 and out of a particular part of text (pointed to by a context) or to
@@ -513,7 +552,7 @@ the other end of the tree rooted in `node`::
     ...      pointer, ANY_CONTEXT, include_root=True, reverse=True)]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
 
-Another important difference, besides the starting point is then the
+Another important difference, besides the starting point, is that the
 `select()`-generators of the `syntaxtree`-module traverse the tree
 post-order (or "depth first"), while the respective methods ot the
 Node-class traverse the tree pre-order. See the difference::
@@ -2162,24 +2201,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_tree(self) -> str:
         """Serialize as a simple indented text-tree."""
         sxpr = self.as_sxpr(flatten_threshold=0, compact=True)
-        if sxpr.find('\n') >= 0:
-            sxpr = re.sub(r'\n(\s*)\(', r'\n\1', sxpr)
-            sxpr = re.sub(r'\n\s*\)(?!")', r'', sxpr)
-            sxpr = re.sub(r'\)(?=\n)(?!\s*")', r'', sxpr)
-            # if sxpr.count('(') < sxpr.count(')'):
-            #     sxpr = sxpr.replace(')\n', '\n')
-            # sxpr = re.sub(r'(?<=\n[^`]*)\)[ \t]*\n', r'\n', sxpr)
-            sl = sxpr.split('\n')
-            for i in range(len(sl)):
-                if '`' in sl[i]:
-                    sl[i] = sl[i].replace('))', ')')
-                elif sl[i][-1:] != '"':
-                    sl[i] = sl[i].replace(')', '')
-            sxpr = '\n'.join(sl)
-            sxpr = re.sub(r'^\(', r'', sxpr)
-        sxpr = re.sub(r'\n\s*"(?=.*?(?:$|\n\s*\w))', r' "', sxpr)
-        return sxpr
-
+        lines = sxpr.split('\n')
+        for i, line in enumerate(lines):
+            # Admittedly, the following transformations are sloppy
+            # and my lead to wrong output, when there are strings
+            # that contain ") `(" and the like....
+            line = re.sub(r'^(\s*)\(', r'\1', line)
+            line = re.sub(r'\)+$', r'', line)
+            line = line.replace(') `(', ' `')
+            line = line.replace('`(', '`')
+            line = line.replace('") "', '" "')
+            lines[i] = line
+        return '\n'.join(lines)
 
     # JSON serialization ###
 
@@ -2836,6 +2869,10 @@ class FrozenNode(Node):
         else:
             self._xml_attr = attr_dict
 
+    @property
+    def pos(self):
+        return -1
+
     def with_pos(self, pos: int) -> 'Node':
         raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 
@@ -2897,6 +2934,7 @@ class RootNode(Node):
 
     :ivar errors:  A list of all errors that have occurred so far during
         processing (i.e. parsing, AST-transformation, compiling) of this tree.
+        The errors are orded by the time of their being added to the list.
     :ivar errors_sorted: (read-only property) The list of errors orderd by
         their position.
     :ivar error_nodes: A mapping of node-ids to a list of errors that

@@ -44,8 +44,10 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
     BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
-    AUTORETRIEVED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, \
-    ERROR_WHILE_RECOVERING_FROM_ERROR, SourceMapFunc
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SourceMapFunc, has_errors, ERROR
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -586,7 +588,8 @@ class Parser:
                     # just fall through
                     # TODO: Is this case still needed with module "trace"?
                     raise pe.new_PE(first_throw=False)
-                elif grammar.tree__.errors[-1].code == MANDATORY_CONTINUATION_AT_EOF:
+                elif grammar.tree__.errors[-1].code in \
+                        (MANDATORY_CONTINUATION_AT_EOF, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT):
                     # try to create tree as faithful as possible
                     node = Node(self.tag_name, pe.node).with_pos(location)
                 else:
@@ -600,7 +603,7 @@ class Parser:
                 if location > grammar.ff_pos__:
                     grammar.ff_pos__ = location
                     grammar.ff_parser__ = self
-            else:
+            elif node is not EMPTY_NODE:
                 node._pos = location
             if not grammar.suspend_memoization__:
                 visited[location] = (node, rest)
@@ -987,6 +990,10 @@ class GrammarError(Exception):
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
 
 
+def reset_parser(ctx):
+    return ctx[-1].reset()
+
+
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -1327,6 +1334,38 @@ class Grammar:
         return duplicate
 
 
+    def _add_parser__(self, context: List[Parser]) -> None:
+        """
+        Adds the particular copy of the parser object to this
+        particular instance of Grammar.
+        """
+        parser = context[-1]
+        if parser not in self.all_parsers__:
+            if parser.pname:
+                # prevent overwriting instance variables or parsers of a different class
+                # assert (parser.pname not in self.__dict__
+                #         or isinstance(self.__dict__[parser.pname], parser.__class__)), \
+                #     ('Cannot add parser "%s" because a field with the same name '
+                #      'already exists in grammar object: %s!'
+                #      % (parser.pname, str(self.__dict__[parser.pname])))
+                if parser.pname in self.__dict__:
+                    assert (isinstance(self.__dict__[parser.pname], Forward)
+                            or isinstance(self.__dict__[parser.pname], parser.__class__)), \
+                        ('Cannot add parser "%s" because a field with the same name '
+                         'already exists in grammar object: %s!'
+                         % (parser.pname, str(self.__dict__[parser.pname])))
+                else:
+                    setattr(self, parser.pname, parser)
+            elif isinstance(parser, Forward):
+                setattr(self, cast(Forward, parser).parser.pname, parser)
+            if parser.disposable:
+                parser.tag_name = parser.ptype
+            else:
+                parser.tag_name = parser.pname
+            self.all_parsers__.add(parser)
+            parser.grammar = self
+
+
     def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
 
@@ -1408,19 +1447,23 @@ class Grammar:
             and (static_analysis
                  or (static_analysis is None
                      and get_config_value('static_analysis') in {'early', 'late'}))):
-            result = self.static_analysis__()
+            analysis_errors = self.static_analysis__()
             # clears any stored errors without overwriting the pointer
             while self.static_analysis_errors__:
                 self.static_analysis_errors__.pop()
-            self.static_analysis_errors__.extend(result)
+            self.static_analysis_errors__.extend(analysis_errors)
             self.static_analysis_pending__.pop()
             # raise a GrammarError even if result only contains warnings.
             # It is up to the caller to decide whether to ignore warnings
             # # has_errors = any(is_error(tpl[-1].code) for tpl in result)
             # # if has_errors
-            if result:
-                raise GrammarError(result)
-
+            if has_errors([ae.error for ae in analysis_errors], ERROR):
+                raise GrammarError(analysis_errors)
+                # else:
+                    # print(f'\nGrammar warnings in {self.__class__.__name__}!\n')
+                    # for ae in analysis_errors:
+                    #     print(f'{ae.symbol} -> {ae.parser}: {ae.error}')
+                    # print('\n\n')
 
     def __str__(self):
         return self.__class__.__name__
@@ -1466,7 +1509,7 @@ class Grammar:
         self.moving_forward__: bool = False
         self.most_recent_error__: Optional[ParserError] = None
         # farthest fail error reporting
-        self.ff_pos__: int = 0
+        self.ff_pos__: int = -1
         try:
             self.ff_parser__: Parser = self.root_parser__
         except AttributeError:
@@ -1482,28 +1525,6 @@ class Grammar:
         if not self._reversed__:
             self._reversed__ = StringView(self.document__.get_text()[::-1])
         return self._reversed__
-
-    def _add_parser__(self, context: List[Parser]) -> None:
-        """
-        Adds the particular copy of the parser object to this
-        particular instance of Grammar.
-        """
-        parser = context[-1]
-        if parser not in self.all_parsers__:
-            if parser.pname:
-                # prevent overwriting instance variables or parsers of a different class
-                assert (parser.pname not in self.__dict__
-                        or isinstance(self.__dict__[parser.pname], parser.__class__)), \
-                    ('Cannot add parser "%s" because a field with the same name '
-                     'already exists in grammar object: %s!'
-                     % (parser.pname, str(self.__dict__[parser.pname])))
-                setattr(self, parser.pname, parser)
-            if parser.disposable:
-                parser.tag_name = parser.ptype
-            else:
-                parser.tag_name = parser.pname
-            self.all_parsers__.add(parser)
-            parser.grammar = self
 
 
     def get_memoization_dict__(self, parser: Parser) -> MemoizationDict:
@@ -1565,14 +1586,17 @@ class Grammar:
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
         assert parser.grammar == self, "Cannot run parsers from a different grammar object!" \
                                        " %s vs. %s" % (str(self), str(parser.grammar))
+
         if self._dirty_flag__:
+            if parser is not self.start_parser__:
+                for p in self.all_parsers__:  p.cycle_detection = set()
             self._reset__()
-            parser.apply(lambda ctx: ctx[-1].reset())
-            for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
+            parser.apply(reset_parser)
+            for p in self.unconnected_parsers__:  p.apply(reset_parser)
         else:
             self._dirty_flag__ = True
 
-        self.start_parser__ = parser.parser if isinstance(parser, Forward) else parser
+        self.start_parser__ = parser
         assert isinstance(document, str)
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
@@ -1582,7 +1606,10 @@ class Grammar:
         stitches = []  # type: List[Node]
         rest = self.document__
         if not rest:
-            result, _ = parser(rest)
+            try:
+                result, _ = parser(rest)
+            except ParserError as pe:
+                result = pe.node
             if result is None:
                 result = Node(ZOMBIE_TAG, '').with_pos(0)
                 if lookahead_failure_only(parser):
@@ -1598,7 +1625,12 @@ class Grammar:
         # copy to local variable, so break condition can be triggered manually
         max_parser_dropouts = self.max_parser_dropouts__
         while rest and len(stitches) < max_parser_dropouts:
-            result, rest = parser(rest)
+            try:
+                result, rest = parser(rest)
+            except ParserError as pe:
+                result, rest = pe.node, StringView('')
+            if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
+                result = Node(EMPTY_PTYPE, '').with_pos(0)
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
@@ -1626,18 +1658,20 @@ class Grammar:
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
-                        if h.node and h.node.tag_name != EMPTY_NODE.tag_name \
+                        if h.node and (h.node.tag_name != EMPTY_NODE.tag_name or h.node.result) \
                                 and any('Lookahead' in tag for tag, _ in h.call_stack):
                             break
                     else:
-                        h = HistoryRecord([], EMPTY_NODE, StringView(''), (0, 0))
-                    if h.status == h.MATCH and (h.node.pos + len(h.node) == len(self.document__)):
+                        h = HistoryRecord([], Node(EMPTY_NODE.tag_name, '').with_pos(0),
+                                          StringView(''), (0, 0))
+                    if h.status in (h.MATCH, h.DROP) \
+                            and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
                         error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
-                        i = self.ff_pos__ or tail_pos(stitches)
+                        i = self.ff_pos__ if self.ff_pos__ >= 0 else tail_pos(stitches)
                         fs = self.document__[i:i + 10].replace('\n', '\\n')
                         if i + 10 < len(self.document__) - 1:  fs += '...'
                         root_name = self.start_parser__.pname \
@@ -1671,18 +1705,25 @@ class Grammar:
                 rest = StringView('')
         if stitches:
             if rest:
-                stitches.append(Node(ZOMBIE_TAG, rest))
+                stitches.append(Node(ZOMBIE_TAG, rest).with_pos(tail_pos(stitches)))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
-        if any(self.variables__.values()) \
-                and (start_parser is self.root_parser__ or start_parser == 'root_parser__'):
+        if any(self.variables__.values()):
                 # capture stack not empty will only be reported for root-parsers
                 # to avoid false negatives when testing
             error_msg = "Capture-stack not empty after end of parsing: " \
-                + ', '.join(k for k, i in self.variables__.items() if len(i) >= 1)
+                + ', '.join(f'{v} {len(l)} {"items" if len(l) > 1 else "item"}'
+                            for v, l in self.variables__.items() if len(l) >= 1)
             if parser.apply(has_non_autocaptured_symbols):
-                error_code = CAPTURE_STACK_NOT_EMPTY
+                if all(cast(Capture, self[v]).can_capture_zero_length
+                       for v, l in self.variables__.items() if len(l) >= 1):
+                    error_code = CAPTURE_STACK_NOT_EMPTY_WARNING
+                elif parser is self.root_parser__:
+                    error_code = CAPTURE_STACK_NOT_EMPTY
+                else:
+                    error_code = CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY
             else:
-                error_code = AUTORETRIEVED_SYMBOL_NOT_CLEARED
+                error_code = AUTOCAPTURED_SYMBOL_NOT_CLEARED if parser is self.root_parser__ \
+                             else AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
@@ -1693,8 +1734,6 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
-        if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
-            result = Node(EMPTY_PTYPE, '').with_pos(0)
         self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
@@ -2633,7 +2672,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "root" did not match: ».« >>> '
+        ' <<< Error on "." | Parser "root->/\\\\w+,?/" did not match: ».« >>> '
         >>> forever = OneOrMore(RegExp(''))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
@@ -2908,9 +2947,14 @@ class MandatoryNary(NaryParser):
         else:
             msg = '%s expected by parser %s, but »%s« found instead!' \
                   % (repr(expected), repr(sym), found)
-        error = Error(msg, location,
-                      MANDATORY_CONTINUATION_AT_EOF if (failed_on_lookahead and not text_)
-                      else MANDATORY_CONTINUATION,
+        if failed_on_lookahead and not text_:
+            if grammar.start_parser__ is grammar.root_parser__:
+                error_code = MANDATORY_CONTINUATION_AT_EOF
+            else:
+                error_code = MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
+        else:
+            error_code = MANDATORY_CONTINUATION
+        error = Error(msg, location, error_code,
                       length=max(self.grammar.ff_pos__ - location, 1))
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
@@ -2971,7 +3015,7 @@ class Series(MandatoryNary):
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser "root" did not match: »1_variable« >>> '
+        ' <<< Error on "1_variable" | Parser "root->/(?!\\\\d)\\\\w/" did not match: »1_variable« >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
 
@@ -3649,8 +3693,23 @@ class Capture(ContextSensitive):
     in a variable. A variable is a stack of values associated with the
     contained parser's name. This requires the contained parser to be named.
     """
-    def __init__(self, parser: Parser) -> None:
+    def __init__(self, parser: Parser, zero_length_warning: bool=True) -> None:
         super(Capture, self).__init__(parser)
+        self.zero_length_warning: bool = zero_length_warning
+        self._can_capture_zero_length: Optional[bool] = None
+
+    def __deepcopy__(self, memo):
+        symbol = copy.deepcopy(self.parser, memo)
+        duplicate = self.__class__(symbol, self.zero_length_warning)
+        copy_combined_parser_attrs(self, duplicate)
+        duplicate._can_capture_zero_length = self._can_capture_zero_length
+        return duplicate
+
+    @property
+    def can_capture_zero_length(self) -> bool:
+        if self._can_capture_zero_length is None:
+            self._can_capture_zero_length = self.parser._parse(StringView(""))[0] is not None
+        return cast(bool, self._can_capture_zero_length)
 
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
@@ -3683,6 +3742,17 @@ class Capture(ContextSensitive):
                 'which can lead to unintended results!' % (self.pname or str(self)),
                 0, CAPTURE_DROPPED_CONTENT_WARNING
             )))
+        if self.zero_length_warning:
+            node, _ = self.parser._parse(StringView(''))
+            if node is not None:
+                errors.append(AnalysisError(self.pname, self, Error(
+                    'Variable "%s" captures zero length strings, which can lead to '
+                    'its remaining on the stack after backtracking!' % (self.pname or str(self)),
+                    0, ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING
+                )))
+                self._can_capture_zero_length = True
+            else:
+                self._can_capture_zero_length = False
         return errors
 
 
@@ -3751,6 +3821,7 @@ class Retrieve(ContextSensitive):
     """
 
     def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
+        assert isinstance(symbol, Capture)
         super(Retrieve, self).__init__(symbol)
         self.match = match_func if match_func else last_value
 
@@ -3771,10 +3842,11 @@ class Retrieve(ContextSensitive):
         has a tag name, this overrides the tag name of the retrieved symbol's
         parser."""
         if self.disposable or not self.tag_name:
-            if self.parser.pname:
-                return self.parser.tag_name
-            # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
-            return cast(Forward, self.parser).parser.tag_name
+            return self.parser.pname or cast(Forward, self.parser).parser.pname
+            # if self.parser.pname:
+            #     return self.parser.tag_name
+            # # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
+            # return cast(Forward, self.parser).parser.tag_name
         return self.tag_name
 
     def _parse(self, text: StringView) -> ParsingResult:
@@ -3948,7 +4020,16 @@ class Forward(UnaryParser):
     def reset(self):
         super(Forward, self).reset()
         self.recursion_counter = dict()  # type: Dict[int, int]
-        # self.recursion = dict()  # type: Dict[int, Tuple[int, int]]
+        assert not self.pname, "Forward-Parsers mustn't have a name!"
+
+    def name(self, pname: str, disposable: bool = False) -> 'Parser':
+        """Sets the parser name to `pname` and returns `self`."""
+        assert not pname, "Forward-parser mustn't have a name. "\
+            'Use pname="" when calling  Forward.name()'
+        self.pname = pname
+        self.tag_name = self.ptype
+        self.disposable = disposable
+        return self
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()

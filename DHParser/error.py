@@ -81,6 +81,7 @@ __all__ = ('SourceMap',
            'UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING',
            'CANNOT_VERIFY_TRANSTABLE_WARNING',
            'CAPTURE_DROPPED_CONTENT_WARNING',
+           'ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING',
            'OPTIONAL_REDUNDANTLY_NESTED_WARNING',
            'UNCONNECTED_SYMBOL_WARNING',
            'REORDERING_OF_ALTERNATIVES_REQUIRED',
@@ -91,7 +92,7 @@ __all__ = ('SourceMap',
            'PARSER_STOPPED_BEFORE_END',
            'PARSER_LOOKAHEAD_MATCH_ONLY',
            'CAPTURE_STACK_NOT_EMPTY',
-           'AUTORETRIEVED_SYMBOL_NOT_CLEARED',
+           'AUTOCAPTURED_SYMBOL_NOT_CLEARED',
            'MALFORMED_ERROR_STRING',
            'AMBIGUOUS_ERROR_HANDLING',
            'REDEFINED_DIRECTIVE',
@@ -108,6 +109,7 @@ __all__ = ('SourceMap',
            'BAD_REPETITION_COUNT',
            'MALFORMED_REGULAR_EXPRESSION',
            'EMPTY_GRAMMAR_ERROR',
+           'STRUCTURAL_ERROR_IN_AST',
            'TREE_PROCESSING_CRASH',
            'COMPILER_CRASH',
            'AST_TRANSFORM_CRASH',
@@ -197,8 +199,10 @@ LEFT_RECURSION_WARNING                   = ErrorCode(140)  # obsolete!
 UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
 CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)
 CAPTURE_DROPPED_CONTENT_WARNING          = ErrorCode(630)
-OPTIONAL_REDUNDANTLY_NESTED_WARNING      = ErrorCode(630)
-UNCONNECTED_SYMBOL_WARNING               = ErrorCode(640)
+CAPTURE_STACK_NOT_EMPTY_WARNING          = ErrorCode(640)
+ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING     = ErrorCode(650)
+OPTIONAL_REDUNDANTLY_NESTED_WARNING      = ErrorCode(660)
+UNCONNECTED_SYMBOL_WARNING               = ErrorCode(670)
 
 REORDERING_OF_ALTERNATIVES_REQUIRED      = ErrorCode(710)
 
@@ -206,12 +210,15 @@ REORDERING_OF_ALTERNATIVES_REQUIRED      = ErrorCode(710)
 
 MANDATORY_CONTINUATION                   = ErrorCode(1010)
 MANDATORY_CONTINUATION_AT_EOF            = ErrorCode(1015)
+MANDATORY_CONTINUATION_AT_EOF_NON_ROOT   = ErrorCode(1017)
 PARSER_NEVER_TOUCHES_DOCUMENT            = ErrorCode(1020)
 PARSER_LOOKAHEAD_FAILURE_ONLY            = ErrorCode(1030)
 PARSER_STOPPED_BEFORE_END                = ErrorCode(1040)
 PARSER_LOOKAHEAD_MATCH_ONLY              = ErrorCode(1045)
 CAPTURE_STACK_NOT_EMPTY                  = ErrorCode(1050)
-AUTORETRIEVED_SYMBOL_NOT_CLEARED         = ErrorCode(1055)
+CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY    = ErrorCode(1052)
+AUTOCAPTURED_SYMBOL_NOT_CLEARED          = ErrorCode(1055)
+AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT = ErrorCode(1057)
 MALFORMED_ERROR_STRING                   = ErrorCode(1060)
 AMBIGUOUS_ERROR_HANDLING                 = ErrorCode(1070)
 REDEFINED_DIRECTIVE                      = ErrorCode(1080)
@@ -222,7 +229,7 @@ PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS  = ErrorCode(1120)
 
 ERROR_WHILE_RECOVERING_FROM_ERROR        = ErrorCode(1301)
 
-# EBNF-specific static analysis errors
+# EBNF-specific and static analysis errors
 
 CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
 LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
@@ -240,6 +247,7 @@ TREE_PROCESSING_CRASH                    = ErrorCode(10100)
 COMPILER_CRASH                           = ErrorCode(10200)
 AST_TRANSFORM_CRASH                      = ErrorCode(10300)
 RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
+STRUCTURAL_ERROR_IN_AST                  = ErrorCode(10500)
 
 
 #######################################################################

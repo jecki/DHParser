@@ -28,7 +28,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 scriptpath = os.path.abspath(scriptpath)
 
-from DHParser.toolkit import compile_python_object, re, DHPARSER_PARENTDIR, \
+from DHParser.toolkit import compile_python_object, re, \
     normalize_circular_path
 from DHParser.preprocess import nil_preprocessor
 from DHParser import compile_source, INFINITE, Interleave
@@ -36,10 +36,12 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
-    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, canonical_error_strings
-from DHParser.syntaxtree import WHITESPACE_PTYPE
+    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, \
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, canonical_error_strings
+from DHParser.syntaxtree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, transform_ebnf
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
+    transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -143,6 +145,25 @@ class TestDirectives:
         st = parser('* Hund*')
         assert str(st) == "*Hund"
 
+    def test_drop_error_messages(self):
+        lang = r'''
+        @disposable = A
+        @drop = A, B
+        A = { B }
+        B = 'x'
+        '''
+        _, errors, _ = compile_ebnf(lang)
+        assert len(errors) == 1
+        assert errors[0].message.startswith('''Illegal value "B" for Directive "@ drop"!''')
+        assert errors[0].message.endswith('''where the "@disposable"-directive must precede the @drop-directive.''')
+        lang = r'''
+        @disposable = /[A]/
+        @drop = A, B
+        A = { B }
+        B = 'x'
+        '''
+        _, errors, _ = compile_ebnf(lang)
+        assert errors[0].message.find('or a string matching') >= 0
 
 
 class TestReservedSymbols:
@@ -227,6 +248,19 @@ class TestEBNFParser:
     def test_list(self):
         grammar_unit(self.cases, get_ebnf_grammar, get_ebnf_transformer, 'REPORT_TestEBNFParser')
 
+    def test_regex_start_end_marker_usable(self):
+        """Regular expression begin and end-marker really match only at
+        the document start and ending!"""
+        lang = '''
+        doc = BEGIN !END A !BEGIN !END B !BEGIN END
+        A = "A"
+        B = "B"
+        BEGIN = /^/
+        END = /$/
+        '''
+        parser = create_parser(lang)
+        result = parser('AB')
+        assert flatten_sxpr(result.as_sxpr()) == '(doc (BEGIN) (A "A") (B "B") (END))'
 
 
 class TestParserNameOverwriteBug:
@@ -452,7 +486,7 @@ class TestBoundaryCases:
                 "not an error: " + str(messages)
             grammar_src = result
             grammar = compile_python_object(
-                DHPARSER_IMPORTS.format(dhparser_parentdir=repr('.')) + grammar_src,
+                DHPARSER_IMPORTS + grammar_src, #.format(dhparser_parentdir=repr('.')) + grammar_src,
                 r'get_(?:\w+_)?grammar$')()
         else:
             assert False, "EBNF compiler should warn about unconnected rules."
@@ -819,6 +853,35 @@ class TestErrorCustomizationErrors:
         assert "several strings" in str(result.errors), str(result.errors)
 
 
+class TestVariableCapture:
+    tree_grammar = '''@whitespace = horizontal
+        @disposable = EOF, LF, SAME_INDENT
+        @drop       = strings, whitespace, EOF, LF, SAME_INDENT
+        tree     = INDENT node DEDENT /\\\\s*/ EOF
+        node     = tag_name [content]
+        content  = string | children
+        children = &(LF HAS_DEEPER_INDENT)
+                   LF INDENT § node { LF SAME_INDENT § node }
+                   !(LF HAS_DEEPER_INDENT) DEDENT
+        tag_name = /\\\\w+/~
+        string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
+        INDENT            = / */
+        SAME_INDENT       = :INDENT § !/ /
+        HAS_DEEPER_INDENT = :INDENT / +/
+        DEDENT            = &:?INDENT
+        LF       = /\\\\n/
+        EOF      = !/./
+        '''
+
+    def test_zero_length_capture_warning(self):
+        pysrc, errors, _ = compile_ebnf(self.tree_grammar)
+        assert errors and errors[0].code == ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING
+        alt_tree_grammar = self.tree_grammar.replace('INDENT            = / */',
+                                                     'INDENT            = / +/')
+        pysrc, errors, _ = compile_ebnf(alt_tree_grammar)
+        assert not errors
+
+
 class TestCustomizedResumeParsing:
     lang = r"""@ literalws = right
         @ alpha_resume = "BETA", "GAMMA"
@@ -1160,10 +1223,16 @@ class TestAlternativeEBNFSyntax:
         code, errors, ast = compile_ebnf(ArithmeticEBNF, preserve_AST=True)
         assert not ast.error_flag, str(ast.errors)
         arithmetic_grammer = compile_python_object(
-            DHPARSER_IMPORTS.format(dhparser_parentdir=repr(DHPARSER_PARENTDIR)) + code)
+            DHPARSER_IMPORTS + code)  # .format(dhparser_parentdir=repr(DHPARSER_PARENTDIR)) + code)
         arithmetic_parser = arithmetic_grammer()
         st = arithmetic_parser('2 + 3 * (-4 + 1)')
         assert str(st) == "2+3*(-4+1)"
+
+    # def test_regex_heuristics(self):
+    #     gr = get_ebnf_grammar()
+    #     assert isinstance(gr, HeuristicEBNFGrammar)
+    #     result = gr(r' */', 'regex_heuristics')
+    #     print(result.as_sxpr())
 
 
 class TestConfigurableEBNF:
@@ -1276,7 +1345,7 @@ class TestSyntaxExtensions:
         st = parser('marke_8')
         assert not st.errors
         st = parser('t3vp ')
-        assert not st.errors
+        assert not st.errors, str(st.errors)
         st = parser('3tvp ')
         assert st.errors
         set_config_value('syntax_variant', 'strict')
@@ -1496,7 +1565,9 @@ class TestRuleOrder:
             """
         # set_config_value('compiled_EBNF_log', 'auto_reorder_test.log')
         parser = create_parser(reverse_order)
-        assert parser.B.__class__.__name__ != "Forward"
+        assert parser.B.__class__.__name__ == "Forward"
+        assert not parser.B.pname
+        assert parser.B.parser.pname == 'B'
 
     def test_recursive_root_detached_root(self):
         reverse_order = """
@@ -1607,6 +1678,7 @@ class TestRuleOrder:
         B = all_paths(compiler_obj)
         assert A == B, str(A) + str(B)
 
+
 class TestInclude:
     number_ebnf = '''
     @ disposable = DOT, EXP, FRAC, INT
@@ -1665,7 +1737,6 @@ class TestInclude:
         tree = parser('2 - (3 * -4.145E+5)')
         assert not tree.errors
         # print(tree.as_sxpr())
-
 
 
 if __name__ == "__main__":

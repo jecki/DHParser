@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
+"""tst_fenced_grammar.py - runs the unit tests for the fenced-grammar
 """
 
 import os
@@ -11,8 +11,11 @@ DEBUG = True
 TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)
+dhparserdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
+if dhparserdir not in sys.path:
+    sys.path.append(dhparserdir)
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
@@ -34,9 +37,7 @@ def recompile_grammar(grammar_src, force):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        error_path = os.path.join(os.path.dirname(grammar_src), 
-                                  'indented_ebnf_ERRORS.txt')      
-        with open(error_path, encoding='utf-8') as f:
+        with open('fenced_ebnf_ERRORS.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
     dsl.restore_server_script(grammar_src)
@@ -74,10 +75,10 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, '{name}.ebnf'),
+        recompile_grammar(os.path.join(scriptpath, 'fenced.ebnf'),
                           force=False)
         sys.path.append('.')
-        from {name}Parser import get_grammar, get_transformer
+        from fencedParser import get_grammar, get_transformer
         error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')

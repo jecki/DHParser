@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
+"""tst_indented_grammar.py - runs the unit tests for the indented-grammar
 """
 
 import os
@@ -11,8 +11,11 @@ DEBUG = True
 TEST_DIRNAME = 'tests_grammar'
 
 scriptpath = os.path.dirname(__file__)
+dhparserdir = os.path.abspath(os.path.join(scriptpath, '..', '..'))
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
+if dhparserdir not in sys.path:
+    sys.path.append(dhparserdir)
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
@@ -74,10 +77,10 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, '{name}.ebnf'),
+        recompile_grammar(os.path.join(scriptpath, 'indented.ebnf'),
                           force=False)
         sys.path.append('.')
-        from {name}Parser import get_grammar, get_transformer
+        from indentedParser import get_grammar, get_transformer
         error_report = run_grammar_tests(arg, get_grammar, get_transformer)
         if error_report:
             print('\n')

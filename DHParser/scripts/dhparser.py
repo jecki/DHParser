@@ -100,8 +100,6 @@ def create_project(path: str):
     reldhparserdir = os.path.relpath(dhparserdir, os.path.abspath('.'))
     create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
         name=name, reldhparserdir=str(split_path(reldhparserdir))[1:-1]))
-    # create_file('%sServer.py' % name, SERVER_TEMPLATE.replace('DSL', name).replace(
-    #     'RELDHPARSERDIR', str(split_path(reldhparserdir))[1:-1]))
     create_file('example.dsl', 'Life is but a walking shadow\n')
     os.chmod('tst_%s_grammar.py' % name, 0o755)
     # os.chmod('%sServer.py' % name, 0o755)

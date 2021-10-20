@@ -94,6 +94,32 @@ class TestStringView:
         assert not sv.match(re.compile(r' '))
         assert sv[4:].match(re.compile(r'45'))
 
+    def test_sv_special_match(self):
+        """Difference of string- and StringView-slicing w.r.t regular expression matching."""
+        s = " 0123456789 "
+        RE_BEGIN = re.compile('^')
+        RE_END = re.compile('$')
+        assert re.match(RE_BEGIN, s)
+        assert not re.match(RE_END, s)
+        end = s[len(s):]
+        assert re.match(RE_END, end)
+        assert re.match(RE_BEGIN, end)              # string-sliced ending will be matched by /^/
+        middle = s[5:]
+        assert re.match(RE_BEGIN, middle)           # string-sliced middle will be matched by /^/
+        assert not re.match(RE_END, middle)
+
+        sv = StringView(s)
+        RE_BEGIN = re.compile('^')
+        RE_END = re.compile('$')
+        assert sv.match(RE_BEGIN)
+        assert not sv.match(RE_END)
+        end = sv[len(sv):]
+        assert end.match(RE_END)
+        assert not end.match(RE_BEGIN)              # StringView-sliced ending will not be matched by /^/
+        middle = sv[5:]
+        assert not middle.match(RE_BEGIN)           # String-sliced middle will not be matched by /^/
+        assert not middle.match(RE_END)
+
     def test_sv_search(self):
         s = " 0123456789 "
         sv = StringView(s, 1, -1)

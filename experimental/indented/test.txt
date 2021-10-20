@@ -1,0 +1,8 @@
+document
+  element
+    STag
+      TagName "line"
+    content
+      CharData "O Rose thou art sick."
+    ETag
+      TagName

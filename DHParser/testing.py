@@ -43,7 +43,9 @@ from typing import Dict, List, Union, Deque, cast
 from DHParser.configuration import get_config_value
 from DHParser.compile import run_pipeline
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
-    PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, AUTORETRIEVED_SYMBOL_NOT_CLEARED
+    PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, \
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
@@ -90,7 +92,7 @@ RX_COMMENT = re.compile(r'\s*[#;].*(?:\n|$)')
 
 
 def normalize_code(testcode: str, full_normalization: bool=False) -> str:
-    """Removes leading and trailing empty lines (if full_normalization ist True)
+    """Removes leading and trailing empty lines (if full_normalization is True)
     and leading indentation (always) from multiline text. Single line text
     will be returned unchanged.
     """
@@ -104,6 +106,8 @@ def normalize_code(testcode: str, full_normalization: bool=False) -> str:
             if line:
                 indent = min(indent, len(line) - len(line.lstrip()))
         if indent > 0 and indent != sys.maxsize:
+            if lines[0].strip() and lines[0][0:1] not in ('', ' ') and indent > 4:
+                indent = min(4, max(indent - 4, 4))
             for i in range(1, len(lines)):
                 lines[i] = lines[i][indent:]
         if full_normalization:
@@ -322,8 +326,9 @@ def get_report(test_unit) -> str:
 POSSIBLE_ARTIFACTS = frozenset((
     PARSER_LOOKAHEAD_MATCH_ONLY,
     PARSER_LOOKAHEAD_FAILURE_ONLY,
-    MANDATORY_CONTINUATION_AT_EOF,
-    AUTORETRIEVED_SYMBOL_NOT_CLEARED
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT,
+    CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY,
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT
 ))
 
 TEST_ARTIFACT = "__TEST_ARTIFACT__"
@@ -405,10 +410,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         if not get_config_value('test_suppress_lookahead_failures'):
             return False
         raw_errors = cast(RootNode, syntax_tree).errors
-        is_artifact = ({e.code for e in raw_errors}
-                       <= {PARSER_LOOKAHEAD_FAILURE_ONLY,
-                           AUTORETRIEVED_SYMBOL_NOT_CLEARED,
-                           PARSER_LOOKAHEAD_MATCH_ONLY}
+        is_artifact = ({e.code for e in raw_errors} <= POSSIBLE_ARTIFACTS
                        or (len(raw_errors) == 1
                            and (raw_errors[-1].code == PARSER_LOOKAHEAD_MATCH_ONLY
                                 #  case 2:  mandatory lookahead failure at end of text

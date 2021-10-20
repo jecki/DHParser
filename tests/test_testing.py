@@ -30,11 +30,11 @@ scriptpath = os.path.abspath(scriptpath)
 from DHParser.syntaxtree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_whitespace, remove_empty, \
     replace_by_single_child, reduce_single_child, flatten, add_error
-from DHParser.dsl import grammar_provider
-from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
-    MANDATORY_CONTINUATION_AT_EOF, ERROR, WARNING
+from DHParser.dsl import grammar_provider, create_parser
+from DHParser.error import PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
+    MANDATORY_CONTINUATION_AT_EOF, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, ERROR
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
-    clean_report, unique_name
+    unit_from_config, clean_report, unique_name, reset_unit
 from DHParser.trace import set_tracer, trace_history
 
 
@@ -149,7 +149,6 @@ class TestTestfiles:
             pass
 
 
-
 ARITHMETIC_EBNF = """
     @ whitespace = vertical
     @ literalws = right
@@ -241,11 +240,16 @@ class TestGrammarTest:
         trans_fac = lambda : ARITHMETIC_EBNFTransform
         # reset_unit(self.cases)
         errata = grammar_unit(self.cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
-        assert errata, "Unknown parser, but no error message!?"
+        assert len(errata) == 1
+        assert errata[0] == 'Unknown parser "no_match_tests_specified" in fail test "1"!', \
+            "Unknown parser, but no error message!?"
         report = get_report(self.cases)
         assert report.find('### CST') >= 0
         errata = grammar_unit(self.failure_cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
         assert len(errata) == 3, str(errata)
+        assert errata[0].find('Match test "1"') >= 0
+        assert errata[1].find('Abstract syntax tree test "3"') >= 0
+        assert errata[2].find('Fail test "4"') >= 0
 
     def test_fail_failtest(self):
         """Failure test should not pass if it failed because the parser is unknown."""
@@ -378,13 +382,59 @@ class TestLookahead:
                    for e in result.errors), str(result.errors)
         # Case 2: Lookahead string is not part of the test case; parser matches but for the mandatory continuation
         result = gr(self.cases['category']['match'][2], 'category')
-        assert any(e.code == MANDATORY_CONTINUATION_AT_EOF for e in result.errors)
+        # print(result.errors)
+        assert any(e.code in (MANDATORY_CONTINUATION_AT_EOF,
+                              MANDATORY_CONTINUATION_AT_EOF_NON_ROOT) for e in result.errors)
         errata = grammar_unit(self.cases, TestLookahead.grammar_fac, TestLookahead.trans_fac,
                               'REPORT_TestLookahead')
         assert not errata, str(errata)
         errata = grammar_unit(self.fail_cases, TestLookahead.grammar_fac, TestLookahead.trans_fac,
                               'REPORT_TestLookahead')
         assert errata
+
+
+void_tests = """
+[match:empty_line]
+M1: '''
+
+    '''
+M2: '''
+        # comment
+    '''
+"""
+
+
+class TestLookaheadDroppedTokens:
+    def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptpath)
+
+    def teardown(self):
+        clean_report('REPORT_void')
+        os.chdir(self.save_dir)
+
+    def test_lookahead_dropped_tokens(self):
+        void_grammar = '''@ whitespace   = horizontal
+        @ comment      = /#[^\\n]*/
+        document       = { empty_line } /\s*/ EOF
+        empty_line     = LF ~ &LF
+        LF             = /\\n/
+        EOF            = !/./ '''
+        void_parser_provider = grammar_provider(void_grammar)
+        void_transformer_provider = lambda : lambda _: _
+        void_test_unit = unit_from_config(void_tests, 'void_tests.ini')
+        errata = grammar_unit(void_test_unit, void_parser_provider, void_transformer_provider,
+                              'REPORT_void')
+        assert not errata
+        drop_clause = '''@ disposable   = EOF, LF, empty_line
+        @ drop         = whitespace, strings, EOF, LF, empty_line
+        '''
+        void_parser_provider = grammar_provider(drop_clause + void_grammar)
+        void_transformer_provider = lambda : lambda _: _
+        reset_unit(void_test_unit)
+        errata = grammar_unit(void_test_unit, void_parser_provider, void_transformer_provider,
+                              'REPORT_void')
+        assert not errata
 
 
 class TestSExpr:

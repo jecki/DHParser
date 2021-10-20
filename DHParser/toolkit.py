@@ -124,8 +124,7 @@ __all__ = ('typing',
            'json_rpc',
            'sane_parser_name',
            'normalize_circular_path',
-           'DHPARSER_DIR',
-           'DHPARSER_PARENTDIR')
+           'DHPARSER_DIR')
 
 
 #######################################################################
@@ -299,7 +298,7 @@ def last(item_or_sequence: Union[Sequence, Any]) -> Any:
 
 
 DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
-DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/').rstrip('\\'))
+# DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/').rstrip('\\'))
 
 
 def sane_parser_name(name) -> bool:

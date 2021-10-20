@@ -61,7 +61,7 @@ if __name__ == '__main__':
     arg = sys.argv[1] if len(sys.argv) > 1 else '*_test_*.ini'
     access_presets()
     # set_preset_value('ast_serialization', 'XML')
-    # set_preset_value('test_parallelization', False)
+    set_preset_value('test_parallelization', False)
     set_preset_value('history_tracking', True)
     finalize_presets()
     if arg.endswith('.ebnf'):

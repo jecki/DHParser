@@ -39,8 +39,8 @@ from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
 from DHParser.syntaxtree import Node
 from DHParser.transform import TransformerCallable, TransformationDict
-from DHParser.toolkit import DHPARSER_DIR, DHPARSER_PARENTDIR, load_if_file, is_python_code, \
-    compile_python_object, re, as_identifier, is_filename, relative_path, split_path
+from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
+    compile_python_object, re, as_identifier
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
     Callable, Sequence
 
@@ -162,8 +162,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             resume_logging(lg_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), grammar_src)
-        imports = DHPARSER_IMPORTS.format(
-            dhparser_parentdir=repr(relative_path('.', DHPARSER_PARENTDIR)))
+        imports = DHPARSER_IMPORTS  
         grammar_class = compile_python_object(imports + parser_py, r'\w+Grammar$')
         if inspect.isclass(grammar_class) and issubclass(grammar_class, Grammar):
             parser_root = grammar_class()
@@ -245,15 +244,10 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     Raises:
         CompilationError if any errors occurred during compilation
     """
-    if is_filename(ebnf_src):
-        relative_dhpath = relative_path(os.path.dirname(ebnf_src), DHPARSER_PARENTDIR)
-    else:
-        relative_dhpath = relative_path(os.path.dirname('.'), DHPARSER_PARENTDIR)
-    rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(relative_dhpath))
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
            SECTION_MARKER.format(marker=SYMBOLS_SECTION),
-           DHPARSER_IMPORTS.format(dhparser_parentdir=rel_dhpath_expr),
+           DHPARSER_IMPORTS,
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
@@ -291,8 +285,7 @@ def grammar_provider(ebnf_src: str,
     log_name = get_config_value('compiled_EBNF_log')
     if log_name and is_logging():
             append_log(log_name, grammar_src)
-    imports = DHPARSER_IMPORTS.format(
-        dhparser_parentdir=repr(relative_path('.', DHPARSER_PARENTDIR)))
+    imports = DHPARSER_IMPORTS  
     grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                             r'get_(?:\w+_)?grammar$')
     if callable(grammar_factory):
@@ -338,9 +331,7 @@ def load_compiler_suite(compiler_suite: str) -> \
     global RX_SECTION_MARKER
     assert isinstance(compiler_suite, str)
     source = load_if_file(compiler_suite)
-    dhpath = relative_path(os.path.dirname('.'), DHPARSER_PARENTDIR)
-    rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(dhpath))
-    imports = DHPARSER_IMPORTS.format(dhparser_parentdir=rel_dhpath_expr)
+    imports = DHPARSER_IMPORTS
     if is_python_code(compiler_suite):
         sections = split_source(compiler_suite, source)
         _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = sections
@@ -454,7 +445,7 @@ def compile_on_disk(source_file: str,
     f = None  # Optional[TextIO]
     with open(source_file, encoding="utf-8") as f:
         source = f.read()
-    dhpath = relative_path(os.path.dirname(rootname), DHPARSER_PARENTDIR)
+    # dhpath = relative_path(os.path.dirname(rootname), DHPARSER_PARENTDIR)
     compiler_name = as_identifier(os.path.basename(rootname))
     if compiler_suite:
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
@@ -488,7 +479,7 @@ def compile_on_disk(source_file: str,
             source = f.read()
             sections = split_source(parser_name, source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
-            ast_trans_python_src = imports + ast  # DHPARSER_IMPORTS.format(dhparser_parentdir=repr(dhpath))
+            ast_trans_python_src = imports + ast
             ast_trans_table = dict()  # type: TransformationDict
             try:
                 ast_trans_table = compile_python_object(ast_trans_python_src,
@@ -520,8 +511,7 @@ def compile_on_disk(source_file: str,
         if RX_WHITESPACE.fullmatch(outro):
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
-            dhpath_expr = ', '.join(f"'{p}'" for p in split_path(dhpath))
-            imports = DHParser.ebnf.DHPARSER_IMPORTS.format(dhparser_parentdir=dhpath_expr)
+            imports = DHParser.ebnf.DHPARSER_IMPORTS
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
@@ -666,11 +656,10 @@ def restore_server_script(ebnf_filename: str,
         parser_name = base + 'Parser.py'
     if not os.path.exists(server_name) or overwrite:
         template = read_template('DSLServer.pyi')
-        reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
-        rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(reldhparserdir))
+        # reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
+        # rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(reldhparserdir))
         serverscript = base + 'Server.py'
-        with open(serverscript, 'w') as f:
-            f.write(template.replace('DSL', name).replace('RELDHPARSERDIR', rel_dhpath_expr))
+        with open(serverscript, 'w') as f:  f.write(template.replace('DSL', name))
         if platform.system() != "Windows":
             # set file permissions so that the server-script can be executed
             st = os.stat(serverscript)
