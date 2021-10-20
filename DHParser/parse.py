@@ -1711,18 +1711,19 @@ class Grammar:
                 # capture stack not empty will only be reported for root-parsers
                 # to avoid false negatives when testing
             error_msg = "Capture-stack not empty after end of parsing: " \
-                + ', '.join(f'{k} {len(i)} {"items" if len(i) > 1 else "item"}'
-                            for k, i in self.variables__.items() if len(i) >= 1)
+                + ', '.join(f'{v} {len(l)} {"items" if len(l) > 1 else "item"}'
+                            for v, l in self.variables__.items() if len(l) >= 1)
             if parser.apply(has_non_autocaptured_symbols):
-                if parser is self.root_parser__:
+                if all(cast(Capture, self[v]).can_capture_zero_length
+                       for v, l in self.variables__.items() if len(l) >= 1):
+                    error_code = CAPTURE_STACK_NOT_EMPTY_WARNING
+                elif parser is self.root_parser__:
                     error_code = CAPTURE_STACK_NOT_EMPTY
                 else:
                     error_code = CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY
             else:
-                if parser is self.root_parser__:
-                    error_code = AUTOCAPTURED_SYMBOL_NOT_CLEARED
-                else:
-                    error_code = AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT
+                error_code = AUTOCAPTURED_SYMBOL_NOT_CLEARED if parser is self.root_parser__ \
+                             else AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT
             if result:
                 if result.children:
                     # add another child node at the end to ensure that the position
