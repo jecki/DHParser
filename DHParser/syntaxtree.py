@@ -339,6 +339,8 @@ in order to support mixed-content and empty-tags::
     <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
 
 
+.. Contexts:
+
 Navigating and searching nodes and tree-contexts
 ------------------------------------------------
 
@@ -703,7 +705,58 @@ Or, more generally, to strings containing whitespace-separated substrings:
 
     >>> add_token('Linda Paula', 'Peter Paula')
     'Linda Paula Peter'
+
+
+Classes and functions-Reference
+-------------------------------
+
+Below is the full documentation of all classes and functions in module
+:py:mod:`DHParser.syntaxtree`. The following table of contents list the
+most important of these:
+
+* :py:class:`~snytaxtree.Node`: the central building-block of syntaxtree
+    * :py:property:`~syntaxtree.Node.result`: either the child nodes or the node's string
+    * :py:property:`~syntaxtree.Node.children`: the node's immediate children or an empty tuple
+    * :py:property:`~syntaxtree.Node.content`: the concatenated string content of all descendants
+    * :py:property:`~syntaxtree.Node.attr`: the dictionary of the node's XML-attributes
+    * :py:property:`~syntaxtree.Node.pos`: the source-code position of this node, in
+       case the node stems from a parsing process. The source-code position is not
+       the same as the string-position which is the position of the node with in the
+       string-content of the whole tree in its current form.
+    * :py:meth:`~syntaxtree.Node.select`: selects nodes from the tree of descendants
+    * :py:meth:`~syntaxtree.Node.pick`: picks a particular node from the tree of descendants
+    * :py:meth:`~syntaxtree.Node.locate`: finds the leaf-node covering
+       a paraticular location of string content of the tree originating in a node
+    * :py:meth:`~syntaxtree.Node.select_context`: selects :ref:`contexts <Contexts>` from the tree of descendants
+    * :py:meth:`~syntaxtree.Node.pick_context`: picks a particular context from the tree of descendants
+    * :py:meth:`~syntaxtree.Node.locate_context`: finds the context of the leaf-node covering
+       a paraticular location of string content of the tree originating in a node
+    * :py:meth:`~syntaxtree.Node.evaluate`: "evaluates" a tree by running one of
+       a set of functions on each node depending on its tag-name.
+    * :py:meth:`~syntaxtree.Node.as_sxpr`: serializes the tree originating in a node
+       as S-expression
+    * :py:meth:`~syntaxtree.Node.as_xml`: serializes the tree as XML.
+    * :py:meth:`~syntaxtree.Node.as_json`: serializes the tree as JSON.
+    * :py:meth:`~syntaxtree.Node.as_etree`: converts the tree into an
+       `XML-Elementree <https://docs.python.org/3/library/xml.etree.elementtree.html>`_
+       as defined by the respective module of Python's standard library.
+    * :py:meth:`~syntaxtree.Node.from_etree`: converts an
+       `XML-Elementree <https://docs.python.org/3/library/xml.etree.elementtree.html>`_
+       into a tree of :py:class:`~syntaxtee.Node`-objects.
+
+* :py:func:`~syntaxtree.prev_context`: returns the :ref:`context <Contexts>`
+   preceeding a given context.
+* :py:func:`~syntaxtree.next_context`: returns the :ref:`context <Contexts>`
+   following a given context.
+* :py:func:`~syntaxtree.generate_context_mapping`: generates a context-mapping
+  for all leaf-nodes of a tree, i.e. a dictionary mapping the string-position
+  of each leaf-node (not the source-code position!) to the leaf-node itself.
+* :py:func:`~syntaxtree.map_pos_to_context`: returns the leaf-node for a
+  given string-position and the number of characters of this position
+  into the leaf-node.
+
 """
+
 
 from collections import OrderedDict
 import bisect
@@ -1944,11 +1997,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the node's tag-name is called with either the tuple of the evaluated
         children or, in case of a leaf-node, the result-string as parameters::
 
-        >>> tree = parse_sxpr('(plus (number 3) (mul (number 5) (number 4)))')
-        >>> from operator import add, mul
-        >>> actions = {'plus': add, 'mul': mul, 'number': int}
-        >>> tree.evaluate(actions)
-        23
+            >>> tree = parse_sxpr('(plus (number 3) (mul (number 5) (number 4)))')
+            >>> from operator import add, mul
+            >>> actions = {'plus': add, 'mul': mul, 'number': int}
+            >>> tree.evaluate(actions)
+            23
 
         :param actions: A dictionary that maps tag_names to action functions.
         :return: the result of the evaluation
