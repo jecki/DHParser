@@ -12,7 +12,7 @@ directory tree with the grammar, parser, test-runner each residing in a separate
 test and example code in dedicated sub-directories.
 
 DHParser uses `packrat parsing <https://bford.info/packrat/>`_ with full left-recursion support
-which allows to build parsers for any context-free-grammar. It's got a post-mortem debugger
+which allows to build parsers for any context-free grammar. It's got a post-mortem debugger
 to analyse the parsing process and it offers facilities for unit-testing grammars and some
 support for fail-tolerant parsing so that the parser does not stop at the first syntax error
 it encounters. Finally, there is some support for writing language servers for DSLs
