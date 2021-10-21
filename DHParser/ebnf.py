@@ -1913,7 +1913,7 @@ if it matches the stored value. A non-match only happens, when the stack has alr
 exhaustet. This "Optional Pop"-operator is denoted by a colon followed by a question mark ``:?``.
 Weird as this may sound, this operator has astonishingly manifold use cases. Think for
 exmple of a modifcation of our minimal pseudo-XML parser the allows coders to omit the
-tag name in closing tags to save them some typing::
+tag name in closing tags to save them some typing:
 
     >>> miniXML = miniXML.replace('::TagName', ':?TagName')
     >>> parseXML = create_parser(miniXML)
@@ -1939,7 +1939,7 @@ technique can be used in a grammar::
 
     syntax     = ~ { definition } EOF
     definition = symbol §:DEF~ expression :ENDL~
-    DEF        = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `
+    DEF        = `=` | `:=` | `::=` | `<-` | /:\\n/ | `: `
     ENDL       = `;` | ``
     EOF        = !/./ [:?DEF] [:?ENDL]
 
