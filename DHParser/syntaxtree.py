@@ -19,7 +19,7 @@
 """
 Module ``syntaxtree`` encapsulates the functionality for creating and handling
 syntax-trees. This includes serialization and deserialization of syntax-trees,
-navigating and serching syntax-trees as well as annotating sytanx trees with
+navigating and serching syntax-trees as well as annotating syntax trees with
 attributes and error messages.
 
 
@@ -27,9 +27,9 @@ The Node-Class
 --------------
 
 Syntax trees are composed of Node-objects which are linked unidirectionally from
-parent to chilren. Nodes can contain either child-nodes, in which case they are
-informally called "branch-nodes" or text-strings, in which case they informally
-called "leaf nodes", but not both at the same time. (There are is no mixed
+parent to children. Nodes can contain either child-nodes, in which case they are
+informally called "branch-nodes", or text-strings, in which case they informally
+called "leaf nodes", but not both at the same time. (There is no mixed
 content as in XML!)
 
 Apart from their content, the most important property of a Node-object is its
@@ -46,16 +46,16 @@ constructed is a leaf-node.
 
 (By convention, if the tag-name of a node starts with a colon ":", the node is
 considered "anonymous". This distinction is helpful when a tree of nodes is
-generated in a parsing process to distinguish nodes that contian important
+generated in a parsing process to distinguish nodes that contain important
 pieces of data from nodes that merely contain delimiters or structural
-information.))
+information.)
 
 Several nodes can be connected to a tree::
 
     >>> number_2 = Node('number', "4")
     >>> addition = Node('add', (number_1, number_2))
 
-Trees spanned by a node can conveniently be be serialized as S-expressions
+Trees spanned by a node can conveniently be serialized as S-expressions
 (well-known from the computer languages "lisp" and "scheme")::
 
     >>> print(addition.as_sxpr())
