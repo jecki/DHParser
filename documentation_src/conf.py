@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.abspath('../DHParser'))
 # -- Project information -----------------------------------------------------
 
 project = 'DHParser'
-copyright = '2018, Eckhart Arnold'
+copyright = '2018-2021, Eckhart Arnold'
 author = 'Eckhart Arnold'
 
 # The short X.Y version
