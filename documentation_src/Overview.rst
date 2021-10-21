@@ -2,7 +2,7 @@ Overview of DHParser
 ====================
 
 DHParser is a parser-generator and domain-specific-language (DSL) construction kit that
-is designed to make the process of designing, implementing and revising as DSL as
+is designed to make the process of designing, implementing and revising a DSL as
 simple as possible. It can be used in an adhoc-fashion for small projects and
 the grammar can be specified in Python like `pyparsing <https://pypi.org/project/pyparsing/>`_
 or in a slightly amended version of the
