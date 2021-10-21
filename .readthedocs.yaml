@@ -5,6 +5,10 @@
 # Required
 version: 2
 
+# Formats, htmlzip, pdf, epub
+formats:
+  - htmlzip
+
 # Set the version of Python and other tools you might need
 build:
   os: ubuntu-20.04
