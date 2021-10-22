@@ -83,6 +83,27 @@ several more facilities to restrain the verbosity of the concrete
 syntax tree, so that the outcome of the parsing stage comes close (or
 at least closer) to the intended abstract-syntax-tree, already.
 
+DHParser contains several extensions to the common EBNF foramlism,
+which will be explained in detail further below, but shall, for the
+sake of completness already be summarized here:
+
+==========================  ==================  ================
+lookahead operators         syntax              status
+==========================  ==================  ================
+positive lookahead          & ...               fully supported
+negative lookahead          ! ...               fully supported
+postivie lookbehind         <-&                 experimental
+negtive lookahead           <-!                 experimental
+==========================  ==================  ================
+
+==========================  ==================  ================
+constext sensitive parsers  syntax              status
+==========================  ==================  ================
+pop and match               :: ...              supported
+retrieve and match          : ...               supported
+pop and always match        :? ...              supported
+==========================  ==================  ================
+
 JSON consists of two complex data types, 1) associative arrays,
 called "object" and sequences of heterogeneous data, called array; and
 of four simple data types, 1) string, 2) number, 3) bool and 4) null.
