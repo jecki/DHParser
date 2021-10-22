@@ -104,6 +104,9 @@ retrieve and match          : ...               supported
 pop and always match        :? ...              supported
 ==========================  ==================  ================
 
+(Here "supported" means that the feature will stay in DHParser,
+but it's semantics might in the futrue.)
+
 JSON consists of two complex data types, 1) associative arrays,
 called "object" and sequences of heterogeneous data, called array; and
 of four simple data types, 1) string, 2) number, 3) bool and 4) null.
