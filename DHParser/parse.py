@@ -27,6 +27,9 @@ The different parsing functions are callable descendants of class
 ``Parser``. Usually, they are organized in a tree and defined
 within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
 for an example.
+
+>>> from DHParser.parse import * 
+
 """
 
 from bisect import bisect_left
@@ -159,14 +162,14 @@ class ParserError(Exception):
 
     def new_PE(self, **kwargs):
         """Returns a new ParserError object with the same attribute values
-        as `self`, except those that are reassigned in `**kwargs`.
+        as `self`, except those that are reassigned in `**kwargs`.::
 
-        >>> pe = ParserError(Parser(), Node('test', ""), StringView(""), Error("", 0), first_throw=True)
-        >>> pe_derived = pe.new_PE(first_throw = False)
-        >>> pe.first_throw
-        True
-        >>> pe_derived.first_throw
-        False
+            >>> pe = ParserError(Parser(), Node('test', ""), StringView(""), Error("", 0), first_throw=True)
+            >>> pe_derived = pe.new_PE(first_throw = False)
+            >>> pe.first_throw
+            True
+            >>> pe_derived.first_throw
+            False
         """
         args = {"parser": self.parser,
                 "node": self.node,

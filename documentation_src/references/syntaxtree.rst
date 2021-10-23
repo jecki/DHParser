@@ -1,0 +1,805 @@
+Module ``syntaxtree`` encapsulates the functionality for creating and handling
+syntax-trees. This includes serialization and deserialization of syntax-trees,
+navigating and serching syntax-trees as well as annotating syntax trees with
+attributes and error messages.
+
+
+The Node-Class
+--------------
+
+Syntax trees are composed of Node-objects which are linked unidirectionally from
+parent to children. Nodes can contain either child-nodes, in which case they are
+informally called "branch-nodes", or text-strings, in which case they informally
+called "leaf nodes", but not both at the same time. (There is no mixed
+content as in XML!)
+
+Apart from their content, the most important property of a Node-object is its
+``tag_name``. Nodes are initialized with their tag_name and content as
+arguments::
+
+    >>> from DHParser.syntaxtree import *
+    >>> number_1 = Node('number', "5")
+    >>> number_1.tag_name
+    'number'
+
+The Node-object ``number_1`` now has the tag-name "number" and the content "5".
+Since the content is a string and not a tuple of child-nodes, the node
+constructed is a leaf-node.
+
+(By convention, if the tag-name of a node starts with a colon ":", the node is
+considered "anonymous". This distinction is helpful when a tree of nodes is
+generated in a parsing process to distinguish nodes that contain important
+pieces of data from nodes that merely contain delimiters or structural
+information.)
+
+Several nodes can be connected to a tree::
+
+    >>> number_2 = Node('number', "4")
+    >>> addition = Node('add', (number_1, number_2))
+
+Trees spanned by a node can conveniently be serialized as S-expressions
+(well-known from the computer languages "lisp" and "scheme")::
+
+    >>> print(addition.as_sxpr())
+    (add (number "5") (number "4"))
+
+It is also possible to serialize nodes as XML-snippet::
+
+    >>> print(addition.as_xml())
+    <add>
+      <number>5</number>
+      <number>4</number>
+    </add>
+
+or as indented tree::
+
+    >>> print(addition.as_tree())
+    add
+      number "5"
+      number "4"
+
+or as JSON-data (see further below). Trees can also be deserialized from any of
+these formats with the exception of the indented tree (see below).
+
+In order to test whether a Node is leaf-node one can check for the absence of
+children::
+
+    >>> node = Node('word', 'Palace')
+    >>> assert not node.children
+
+The data of a node can be queried by reading the result-property::
+
+    >>> node.result
+    'Palace'
+
+The `result` is always a string or a tuple of Nodes, even if the node-object has
+been initialized with a single node::
+
+    >>> parent = Node('phrase', node)
+    >>> parent.result
+    (Node('word', 'Palace'),)
+
+The `result`-property can be assigned to, in order to changae the data of a
+node::
+
+    >>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
+    >>> print(parent.as_sxpr())
+    (phrase (word "Buckingham") (blank " ") (word "Palace"))
+
+Content-equality of Nodes must be tested with the `equals()`-method. The
+equality operator `==` tests merely for the identity of the node-object, not for
+the euqality of the content of two different node-objects::
+
+    >>> n1 = Node('dollars', '1')
+    >>> n2 = Node('dollars', '1')
+    >>> n1.equals(n2)
+    True
+    >>> n1 == n2
+    False
+
+An empty node is always a leaf-node, that is, if initialized with an empty
+tuple, the node's result will actually be the empty string::
+
+    >>> empty = Node('void', ())
+    >>> empty.result
+    ''
+    >>> assert empty.equals(Node('void', ''))
+
+Next to the `result`-property, a node's content can be queried with either its
+`children`-property or its `content`-property. The former yields the tuple of
+child-nodes. The latter yields the string-content of the node, which in the case
+of a "branch-node" is the (recursively generated) concatenated string-content of
+all of its children::
+
+    >>> node.content
+    'Palace'
+    >>> node.children
+    ()
+    >>> parent.content
+    'Buckingham Palace'
+    >>> parent.children
+    (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace'))
+
+Both the `content`-property and the `children`-propery are read-only-properties.
+In order to change the data of a node, its `result`-property must be assigned to
+(as shown above).
+
+Just like HTML- oder XML-tags, nodes can be annotated with attributes.
+Attributes are stored in an ordered dictionary that maps string identifiers,
+i.e. the attribute name, to the string-content of the attribute. This dictionary
+can be accessed via the `attr`-property::
+
+    >>> node.attr['price'] = 'very high'
+    >>> print(node.as_xml())
+    <word price="very high">Palace</word>
+
+When serializing as S-expressions attributes are shown as a nested list marked
+with a "tick"::
+
+    >>> print(node.as_sxpr())
+    (word `(price "very high") "Palace")
+
+Attributes can be queried via the `has_attr()` and `get_attr()`-methods. This is
+to be preferred over accessing the `attr`-property for querying, because the
+attribute dictionary is created lazily on the first access of the
+`attr`-property::
+
+    >>> node.has_attr('price')
+    True
+    >>> node.get_attr('price', '')
+    'very high'
+    >>> parent.get_attr('price', 'unknown')
+    'unknown'
+
+If called with no parameters or an empty string as attribute name, `has_attr()`
+returns True, if at least one attribute is present::
+
+    >>> parent.has_attr()
+    False
+
+Attributes can be deleted like dictionary entries::
+
+    >>> del node.attr['price']
+    >>> node.has_attr('price')
+    False
+
+Node-objects contain a special "write once, read afterwards"-property named
+`pos` that is meant to capture the source code position of the content
+represented by the Node. Usually, the `pos` values are initialized with the
+corresponding source code location by the parser.
+
+The main purpose of keeping source-code locations in the node-objects is to
+equip the messages of errors that are detected in later processing stages with
+source code locations. In later processing stages the tree may already have been
+reshaped and its string-content may have been changed, say, by normalising
+whitespace or dropping delimiters.
+
+Before the `pos`-field can be read, it must have been initialized with the
+`with_pos`-method, which recursively initializes the `pos`-field of the child
+nodes according to the offset of the string values from the main field::
+
+    >>> import copy; essentials = copy.deepcopy(parent)
+    >>> print(essentials.with_pos(0).as_xml(src=essentials.content))
+    <phrase line="1" col="1">
+      <word line="1" col="1">Buckingham</word>
+      <blank line="1" col="11"> </blank>
+      <word line="1" col="12">Palace</word>
+    </phrase>
+    >>> essentials[-1].pos, essentials.content.find('Palace')
+    (11, 11)
+    >>> essentials.result = tuple(child for child in essentials.children if child.tag_name != 'blank')
+    >>> print(essentials.as_xml(src=essentials.content))
+    <phrase line="1" col="1">
+      <word line="1" col="1">Buckingham</word>
+      <word line="1" col="12">Palace</word>
+    </phrase>
+    >>> essentials[-1].pos, essentials.content.find('Palace')
+    (11, 10)
+
+
+Serializing and De-Serializing Syntax-Trees
+-------------------------------------------
+
+Syntax trees can be serialized as S-expressions, XML, JSON and indented text.
+Module 'syntaxtree' also contains a few simple parsers
+(:py:func:`~syntaxtree.parse_sxpr()`, :py:func:`~syntaxtree.parse_xml()`) or
+:py:func:`~syntaxtree.parse_json()` to convert XML-snippets, S-expressions or
+json objects into trees composed of Node-objects. Only
+:py:func:`~syntaxtree.parse_xml()` can deserialize any XML-file. The other two
+functions can parse only the restricted subset of S-expressions or JSON into
+Node-trees that is used when serializing into these formats. There is no
+function to deserialize indented text.
+
+In order to make parameterizing serialization easier, the Node-class also
+defines a generic :py:meth:`~syntaxtree.serialize()`-method next to the more
+specialized :py:meth:`~syntaxtree.Node.as_sxpr`-,
+:py:meth:`~syntaxtree.Node.as_json`- and
+:py:meth:`~syntaxtree.Node.as_xml()`-methods::
+
+    >>> s = '(sentence (word "This") (blank " ") (word "is") (blank " ") (phrase (word "Buckingham") (blank " ") (word "Palace")))'
+    >>> sentence = parse_sxpr(s)
+    >>> print(sentence.serialize(how='indented'))
+    sentence
+      word "This"
+      blank " "
+      word "is"
+      blank " "
+      phrase
+        word "Buckingham"
+        blank " "
+        word "Palace"
+    >>> sxpr = sentence.serialize(how='sxpr')
+    >>> round_trip = parse_sxpr(sxpr)
+    >>> assert sentence.equals(round_trip)
+
+When serializing as XML, there will be no mixed-content and, likewise, no empty
+tags per default, because these do not exist in DHParser's data model::
+
+    >>> print(sentence.as_xml())
+    <sentence>
+      <word>This</word>
+      <blank> </blank>
+      <word>is</word>
+      <blank> </blank>
+      <phrase>
+        <word>Buckingham</word>
+        <blank> </blank>
+        <word>Palace</word>
+      </phrase>
+    </sentence>
+
+However, mixed-content can be simulated with `string_tags`-parameter of the
+:py:meth:`~syntaxtree.Node.as_xml`-method.::
+
+    >>> print(sentence.as_xml(inline_tags={'sentence'}, string_tags={'word', 'blank'}))
+    <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
+
+The `inline_tags`-parameter ensures that all listed tags and contained tags will
+be printed on a single line. This is helpful when opening the XML-serialization
+in an internet-browser in order to avoid spurios blanks when a linebreak occurs
+in the HTML/XML-source.
+
+Finally, empty tags that do not have a closing tag (e.g. <br />) can be declared
+as such with the `empty_tags`-parameter.
+
+Note that using `string_tags` can lead to a loss of information. A loss of
+information is inevitable if, like in the example above, more than one tag is
+listed in the `string_tags`-set passed to the
+:py:meth:`~syntaxtree.Node.as_xml`-method. Deserializing the XML-string yields::
+
+    >>> tree = parse_xml('<sentence>This is <phrase>Buckingham Palace</phrase></sentence>',
+    ...                  string_tag='MIXED')
+    >>> print(tree.serialize(how='indented'))
+    sentence
+      MIXED "This is "
+      phrase "Buckingham Palace"
+
+
+Connecting DHParser with XML-technology
+---------------------------------------
+
+Although DHParser offers rich support for tree-transformation, he whish may
+arise to use standard XML-tools for tree-transformation as an alternative or
+supplement to the tools DHParser offers. One way to do so, would be to serialize
+the tree of :py:class:`~snytaxtree.Node`-objects, then use the XML-tools and,
+possibly, to deserialize the transformed XML again.
+
+A more efficient method, however, is to utilize any of the various
+Python-libraries for XML. In order to make this as easy as possible trees of
+:py:class:`~snytaxtree.Node`-objects can be converted to `ElementTree
+<https://docs.python.org/3/library/xml.etree.elementtree.html>`_-objects either
+from the python standard library or from the `lxml <https://lxml.de/>`_-library
+
+    >>> import xml.etree.ElementTree as ET
+    >>> et = sentence.as_etree(ET)
+    >>> ET.dump(et)
+    <sentence><word>This</word><blank> </blank><word>is</word><blank> </blank><phrase><word>Buckingham</word><blank> </blank><word>Palace</word></phrase></sentence>
+    >>> tree = Node.from_etree(et)
+    >>> print(tree.equals(sentence))
+    True
+
+The first parameter of :py:meth:`~syntaxtree.Node.as_etree` is the
+ElementTree-library to be used. If omitted, the standard-library-ElementTree is
+used.
+
+Like the :py:meth:`~syntaxtree.Node.as_xml`-method, the
+:py:meth:`~syntaxtree.Node.as_etree` and :py:meth:`~syntaxtree.Node.from_etree`
+can be parameterized in order to support mixed-content and empty-tags::
+
+    >>> et = sentence.as_etree(ET, string_tags={'word', 'blank'})
+    >>> ET.dump(et)
+    <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
+
+
+.. _contexts:
+
+Navigating and Searching Nodes and Tree-contexts
+------------------------------------------------
+
+Transforming syntax trees is usually done by traversing the complete tree and
+applying specific transformation functions on each node. Modules "transform" and
+"compile" provide high-level interfaces and scaffolding classes for the
+traversal and transformation of syntax-trees.
+
+Module `syntaxtree` does not provide any functions for transforming trees, but
+it provides low-evel functions for navigating trees. These functions cover three
+different purposes:
+
+1. Downtree-navigation within the subtree spanned by a prticular node.
+2. Uptree- and horizontal navigation to the neigborhood ("siblinings") ancestry
+   of a given node.
+3. Navigation by looking at the string-representation of the tree.
+
+
+Navigating "downtree" within a tree spanned by a node
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are a number of useful functions to help navigating a tree and finding
+particular nodes within in a tree::
+
+    >>> list(sentence.select('word'))
+    [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'), Node('word', 'Palace')]
+    >>> list(sentence.select(lambda node: node.content == ' '))
+    [Node('blank', ' '), Node('blank', ' '), Node('blank', ' ')]
+
+The pick functions always picks the first node fulfilling the criterion::
+
+    >>> sentence.pick('word')
+    Node('word', 'This')
+
+Or, reversing the direction::
+
+    >>> last_match = sentence.pick('word', reverse=True)
+    >>> last_match
+    Node('word', 'Palace')
+
+While nodes contain references to their children, a node does not contain a
+references to its parent. As a last resort (because it is slow) the node's
+parent can be found by the `find_parent`-function which must be executed ony
+ancestor of the node::
+
+    >>> sentence.find_parent(last_match)
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+
+Sometimes, one only wants to select or pick particular children of a node. Apart
+from accessing these via `node.children`, there is a tuple-like access to the
+immediate children via indices and slices::
+
+    >>> sentence[0]
+    Node('word', 'This')
+    >>> sentence[-1]
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+    >>> sentence[0:3]
+    (Node('word', 'This'), Node('blank', ' '), Node('word', 'is'))
+    >>> sentence.index('blank')
+    1
+    >>> sentence.indices('word')
+    (0, 2)
+
+as well as a dictionary-like access, with the difference that a "key" may occur
+several times::
+
+    >>> sentence['word']
+    (Node('word', 'This'), Node('word', 'is'))
+    >>> sentence['phrase']
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+
+Be aware that always all matching values will be returned and that the return
+type can accordingly be either a tuple of Nodes or a single Node! An IndexError
+is raised in case the "key" does not exist or an index is out of range.
+
+It is also possible to delete children conveniently with Python's
+`del`-operator::
+
+    >>> s_copy = copy.deepcopy(sentence)
+    >>> del s_copy['blank'];  print(s_copy)
+    ThisisBuckingham Palace
+    >>> del s_copy[2][0:2]; print(s_copy.serialize())
+    (sentence (word "This") (word "is") (phrase (word "Palace")))
+
+One can also use the `Node.pick_child()` or `Node.select_children()`-method in
+order to select children with an arbitrary condition::
+
+    >>> tuple(sentence.select_children(lambda nd: nd.content.find('s') >= 0))
+    (Node('word', 'This'), Node('word', 'is'))
+    >>> sentence.pick_child(lambda nd: nd.content.find('i') >= 0, reverse=True)
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+
+Often, one is neither interested in selecting form the children of a node, nor
+from the entire subtree, but from a certain "depth-range" of a tree-structure.
+Say, you would like to pick all word's from the sentence that are not inside a
+phrase and assume at the same time that words may occur in nested structures::
+
+    >>> nested = copy.deepcopy(sentence)
+    >>> i = nested.index(lambda nd: nd.content == 'is')
+    >>> nested[i].result = Node('word', nested[i].result)
+    >>> nested[i].tag_name = 'italic'
+    >>> nested[0:i + 1]
+    (Node('word', 'This'), Node('blank', ' '), Node('italic', (Node('word', 'is'))))
+
+Now, in order to select all words on the level of the sentence, but excluding
+any sub-phrases, it would not be helpful to use methods based on the selection
+of children (i.e. immediate descendents), because the word nested in an
+'italic'-Node would be missed. For this purpose the various selection()-methods
+of class node have a `skip_subtree`-parameter which can be used to block
+subtrees from the iterator based on a criteria (which can be a function, a tag
+name or set of tag names and the like)::
+
+    >>> tuple(nested.select('word', skip_subtree='phrase'))
+    (Node('word', 'This'), Node('word', 'is'))
+
+
+Navigating "uptree" within the neighborhood and lineage of a node
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Instead of keeping a link within each node to its parent, it is much more
+elegant to keep track of a node's ancestry by using a "tree-context" which is a
+simple List of ancestors starting with the root-node and including the node
+itself as its last item. For most search methods such as select() or pick(),
+there exists a pendant that returns this context instead of just the node
+itself::
+
+    >>> last_context = sentence.pick_context('word', reverse=True)
+    >>> last_context[-1] == last_match
+    True
+    >>> last_context[0] == sentence
+    True
+    >>> serialize_context(last_context)
+    'sentence <- phrase <- word'
+
+One can also think of a tree-context as a breadcrumb-trail that "points" to a
+particular part of text by marking the path from the root to the node, the
+content of which contains this text. This node does not need to be a leaf node,
+but can be any branch-node on the way from the root to the leaves of the tree.
+When analysing or transforming a tree-structured text, it is often helpful to
+"zoom" in and out of a particular part of text (pointed to by a context) or to
+move forward and backward from a particular location (again represented by a
+context).
+
+The ``next_context()`` and ``prev_context()``-functions allow to move one step
+forward or backward from a given context::
+
+    >>> pointer = prev_context(last_context)
+    >>> serialize_context(pointer, with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- blank: '
+
+``prev_context()`` and ``next_context()`` automatically zoom out by one step, if
+they move past the first or last child of the last but one node in the list::
+
+    >>> pointer = prev_context(pointer)
+    >>> serialize_context(pointer, with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+    >>> serialize_context(prev_context(pointer), with_content=-1)
+    'sentence:This is Buckingham Palace <- blank: '
+
+Thus::
+
+    >>> next_context(prev_context(pointer)) == pointer
+    False
+    >>> pointer = prev_context(pointer)
+    >>> serialize_context(next_context(pointer), with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace'
+
+The reason for this beaviour is that ``prev_context()`` and ``next_context()``
+try to move to the context which contains the string content preeceding or
+succeeding that of the given context. Therefore, these functions move to the
+next sibling on the same branch, rather traversing the complete tree like the
+``select()`` and ``select_context()``- methods of the Node-class. However, when
+moving past the first or last sibling, it is not clear what the next node on the
+same level should be. To keep it easy, the function "zooms out" and returns the
+next sibling of the parent.
+
+It is, of course, possible to zoom back into a context::
+
+    >>> serialize_context(zoom_into_context(next_context(pointer), FIRST_CHILD, steps=1), with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+
+Often it is preferable to move through the leaf-nodes and their contexts right
+away. Functions like ``next_leaf_context()`` and ``prev_leaf_context()`` provide
+syntactic sugar for this case::
+
+    >>> pointer = next_leaf_context(pointer)
+    >>> serialize_context(pointer, with_content=-1)
+    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+
+It is also possible to inspect just the string content surrounding a context,
+rather than its structural environment::
+
+    >>> ensuing_str(pointer)
+    ' Palace'
+    >>> assert foregoing_str(pointer, length=1) == ' ', "Blank expected!"
+
+It is also possible to systematically iterate through the contexts forward or
+backward - just like the `node.select_context()`-method, but starting from an
+arbitraty context, instead of the one end or the other end of the tree rooted in
+`node`::
+
+    >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
+    >>> pointer = t.pick_context('G')
+    >>> [serialize_context(ctx, with_content=1)
+    ...  for ctx in select_context(pointer, ANY_CONTEXT, include_root=True)]
+    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7', 'A:1234567']
+    >>> [serialize_context(ctx, with_content=1)
+    ...  for ctx in select_context(
+    ...      pointer, ANY_CONTEXT, include_root=True, reverse=True)]
+    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
+
+Another important difference, besides the starting point, is that the
+`select()`-generators of the `syntaxtree`-module traverse the tree post-order
+(or "depth first"), while the respective methods ot the Node-class traverse the
+tree pre-order. See the difference::
+
+    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ANY_CONTEXT, include_root=True)]
+    >>> l[l.index('A <- G:4'):]
+    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
+    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ANY_CONTEXT, include_root=True, reverse=True)]
+    >>> l[l.index('A <- G:4'):]
+    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
+
+
+Navigating a tree via its flat-string-representation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes it may be more convenient to search for a specific feature in the
+string-content of a text, rather than in the structured tree. For example,
+finding matching brackets in tree-strcutured text can be quite cumbersome if
+brackets are not "tagged" individually. For theses cases it is possible to
+generate a context mapping that maps text position to the contexts of the
+leaf-nodes to which they belong. The context-mapping can be thought of as a
+"string-view" on the tree::
+
+    >>> flat_text = sentence.content
+    >>> ctx_mapping = generate_context_mapping(sentence)
+    >>> leaf_positions, contexts = ctx_mapping
+    >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in contexts))}
+    {0: '(word "This")', 4: '(blank " ")', 5: '(word "is")', 7: '(blank " ")', 8: '(word "Buckingham")', 18: '(blank " ")', 19: '(word "Palace")'}
+
+Now let's find all letters that are followed by a whitespace character::
+
+    >>> import re; locations = [m.start() for m in re.finditer(r'\w ', flat_text)]
+    >>> targets = [map_pos_to_context(loc, ctx_mapping) for loc in locations]
+
+The target returned by `map_pos_to_context()` is a tuple of the target context
+and the relative position of the location that falls within this context::
+
+    >>> [(serialize_context(ctx), relative_pos) for ctx, relative_pos in targets]
+    [('sentence <- word', 3), ('sentence <- word', 1), ('sentence <- phrase <- word', 9)]
+
+Now, the structured text can be manipulated at the precise locations where
+string search yielded a match. Let's turn our text into a little riddle by
+replacing the letters of the leaf-nodes before the match locations with three
+dots::
+
+    >>> for ctx, pos in targets: ctx[-1].result = '...' + ctx[-1].content[pos:]
+    >>> str(sentence)
+    '...s ...s ...m Palace'
+
+The positions resemble the text positions of the text represented by the tree at
+the very moment when the context mapping is generated, not the source positions
+captured by the `pos`-propery of the node-objects! This also means that the
+mapping becomes outdated the very moment, the tree is being restructured.
+
+
+Adding Error Messages
+---------------------
+
+Although errors are typically located at a particualr point or range of the
+source code, DHParser treats them as global properties of the syntax tree
+(albeit with a location), rather than attaching them to particular nodes. This
+has two advantages:
+
+1. When restructuring the tree and removing or adding nodes during the
+   abtract-syntax-tree-transformation and possibly further tree-transformation,
+   error messages do not accidently get lost.
+
+2. It is not necessary to add another slot to the Node class for keeping an
+   error list which most of the time would remain empty, anyway.
+
+In order to track errors and other global properties, Module `syntaxtree`
+provides the `RootNode`-class. The root-object of a syntax-tree produced by
+parsing is of type `RootNode`. If a root node needs to be created manually, it
+is necessary to create a `Node`-object and either pass it to `RootNode` as
+parameter on instantiation or, later, to the :py:meth:`swallow()`-method of the
+RootNode-object::
+
+    >>> document = RootNode(sentence, str(sentence))
+
+The second parameter is normally the source code. In this example we simply use
+the string representation of the syntax-tree originating in `sentence`. Before
+any errors can be added the source-position fields of the nodes of the tree must
+have be been initialized. Usually, this is done by the parser. Since the
+syntax-tree in this example does not stem from a parsing-process, we have to do
+it manually:
+
+    >>> _ = document.with_pos(0)
+
+Now, let's mark all "word"-nodes that contain non-letter characters with an
+error-message. There should be plenty of them, because, earlier, we have
+replaced some of the words partially with "..."::
+
+    >>> import re
+    >>> len([document.new_error(node, "word contains illegal characters") 
+    ...      for node in document.select('word') if re.fullmatch(r'\w*', node.content) is None])
+    3
+    >>> for error in document.errors_sorted:  print(error)
+    1:1: Error (1000): word contains illegal characters
+    1:6: Error (1000): word contains illegal characters
+    1:11: Error (1000): word contains illegal characters
+
+The format of the string representation of Error-objects resembles that of
+compilers and is understood by many Text-Editors which mark the errors in the
+source code.
+
+
+A Mini-API for Attribute-Handling
+---------------------------------
+
+One important use case of attributes is to add or remove css-classes to the
+"class"-attribute. The "class"-attribute understood as containg a set of
+whitespace delimited strings. Module "syntaxtree" provides a few functions to
+simplify class-handling::
+
+    >>> paragraph = Node('p', 'veni vidi vici')
+    >>> add_class(paragraph, 'smallprint')
+    >>> paragraph.attr['class']
+    'smallprint'
+
+Although the class-attribute is filled with a sequence of strings, it should
+behave like a set of strings. For example, one and the same class name should
+not appear twice in the class attribute::
+
+    >>> add_class(paragraph, 'smallprint justified')
+    >>> paragraph.attr['class']
+    'smallprint justified'
+
+Plus, the order of the class strings does not matter, when checking for
+elements::
+
+    >>> has_class(paragraph, 'justified smallprint')
+    True
+    >>> remove_class(paragraph, 'smallprint')
+    >>> has_class(paragraph, 'smallprint')
+    False
+    >>> has_class(paragraph, 'justified smallprint')
+    False
+    >>> has_class(paragraph, 'justified')
+    True
+
+The same logic of treating blank separated sequences of strings as sets can also
+be applied to other attributes:
+
+    >>> car = Node('car', 'Porsche')
+    >>> add_token_to_attr(car, "Linda Peter", 'owner')
+    >>> car.attr['owner']
+    'Linda Peter'
+
+Or, more generally, to strings containing whitespace-separated substrings:
+
+    >>> add_token('Linda Paula', 'Peter Paula')
+    'Linda Paula Peter'
+
+
+Classes and Functions-Reference
+-------------------------------
+
+Below is the full documentation of all classes and functions in module
+:py:mod:`DHParser.syntaxtree`. The following table of contents list the most
+important of these:
+
+The Node-class
+^^^^^^^^^^^^^^
+
+* :py:class:`~snytaxtree.Node`: the central building-block of syntaxtree
+
+  * :py:attr:`~syntaxtree.Node.result`: either the child nodes or the node's
+    string
+  * :py:attr:`~syntaxtree.Node.children`: the node's immediate children or an
+    empty tuple
+  * :py:attr:`~syntaxtree.Node.content`: the concatenated string content of
+    all descendants
+  * :py:attr:`~syntaxtree.Node.attr`: the dictionary of the node's
+    XML-attributes
+  * :py:attr:`~syntaxtree.Node.pos`: the source-code position of this node, in
+    case the node stems from a parsing process
+  * :py:meth:`~syntaxtree.Node.select`: Selects nodes from the tree of
+    descendants.
+  * :py:meth:`~syntaxtree.Node.pick`: Picks a particular node from the tree of
+    descendants.
+  * :py:meth:`~syntaxtree.Node.locate`: Finds the leaf-node covering a
+    paraticular location of string content of the tree originating in this node.
+  * :py:meth:`~syntaxtree.Node.select_context`: Selects :ref:`contexts <Contexts>`
+    from the tree of descendants.
+  * :py:meth:`~syntaxtree.Node.pick_context`: Picks a particular context from
+    the tree of descendants.
+  * :py:meth:`~syntaxtree.Node.locate_context`: Finds the context of the
+    leaf-node covering a paraticular location of string content of the tree
+    originating in this node.
+  * :py:meth:`~syntaxtree.Node.evaluate`: "Evaluates" a tree by running one of
+    a set of functions on each node depending on its tag-name.
+  * :py:meth:`~syntaxtree.Node.as_sxpr`: Serializes the tree originating in a
+    node as S-expression.
+  * :py:meth:`~syntaxtree.Node.as_xml`: Serializes the tree as XML.
+  * :py:meth:`~syntaxtree.Node.as_json`: Serializes the tree as JSON.
+  * :py:meth:`~syntaxtree.Node.as_etree`: Converts the tree to an
+    `XML-Elementree
+    <https://docs.python.org/3/library/xml.etree.elementtree.html>`_ as
+    defined by the respective module of Python's standard library-
+  * :py:meth:`~syntaxtree.Node.from_etree`: Converts an `XML-Elementree
+    <https://docs.python.org/3/library/xml.etree.elementtree.html>`_ into a
+    tree of :py:class:`~syntaxtee.Node`-objects.
+
+
+Reading trees from serial data types
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* :py:func:`~syntaxtree.parse_sxpr`: Converts any S-expression string
+  to a tree of nodes.
+* :py:func:`~syntaxtree.parse_xml`: Converts any XML-document to a
+  tree of nodes.
+* :py:func:`~syntaxtree.parse_json`: Converts a JSON-document that
+  has previously been created with :py:meth:`~syntaxtree.as_json`
+  from a tree of nodes back to a tree of nodes.
+* :py:func:`~syntaxtree.deserialize`: Tries to geues the data-type
+  of a string and then calls any of the above deserialization-functions
+  accordingly.
+
+
+Functions for traversing trees with a context "pointer"
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* :py:func:`~syntaxtree.prev_context`: Returns the :ref:`context <Contexts>`
+  preceeding a given context.
+* :py:func:`~syntaxtree.next_context`: Returns the :ref:`context <Contexts>`
+  following a given context.
+* :py:func:`~syntaxtree.generate_context_mapping`: Generates a context-mapping
+  for all leaf-nodes of a tree, i.e. a dictionary mapping the current text
+  position of each leaf-node (not the source-code position!) to the leaf-node
+  itself.
+* :py:func:`~syntaxtree.map_pos_to_context`: Returns the leaf-node for a given
+  text position and the number of characters of this position into the leaf-node.
+
+
+Helper-functions for attribute-handling
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* :py:func:`~syntaxtree.has_token_attr`: Checks wether an attribute of a node
+  contains one or more tokens, i.e. blank separeted sequences of letters.
+* :py:func:`~syntaxtree.ad_token_to_attr`: Adds a token to a particular
+  attribute of a node.
+* :py:func:`~syntaxtree.ad_token_to_attr`: Removes a token from a particular
+  attribute of a node.
+* :py:func:`~syntaxtree.has_class`, :py:func:`~syntaxtree.has_class`, :py:func:`~syntaxtree.has_class`: the same as above, only that these methods
+  manipulate the tokens specifically of the class-attribute
+
+
+The RootNode-class
+^^^^^^^^^^^^^^^^^^
+
+Any Node-object can be considered as the origin of a tree and none of
+the "navigation"-functions requires a tree of nodes to start with
+a RootNode-object. However, RootNode-objects provide support for certain
+"global" aspects of a tree like keeping track of the source code with line
+and column numbers and adding error messages. RootNode-objects can either
+be initialized with a code node that will then be replaced by the
+root-node or swallow a a tree originating in a common node later.
+
+* :py:class:`~snytaxtree.RootNode`: additional functionality for a tree of nodes
+
+  * :py:attr:`~syntaxtree.RootNode.errors`:  a list of errors
+  * :py:attr:`~syntaxtree.RootNode.errors_sorted`: the errors sorted by their
+    position in the source code instead of the time of their having been added
+  * :py:attr:`~syntaxtree.RootNode.inline_tags`: a set of tags that will
+    be printed on a single line with their content when serializing. (This
+    helps to avoid undesired whitespace when exporting to HTML!)
+  * :py:attr:`~syntaxtree.RootNode.string_tags`: a set of tags that will be
+    converted to simple strings that appear as mixed content inside their
+    parent when serializing as XML
+  * :py:attr:`~syntaxtree.RootNode.empty_tags`: a set of tags that
+    will be rendered as empty tags, e.g. ``<mytag />`` when serializing as XML
+  * :py:meth:`~syntaxtree.RootNode.swallow`: Can be called once in the
+    lifetime of the RootNode-object to assign this root-node to an existing
+    tree of nodes.
+  * :py:meth:`~syntaxtree.RootNode.new_error`: Creates and adds new error.
+  * :py:meth:`~syntaxtree.RootNode.customized_XML`: Serializes the tree as XML
+    taking into account the XML-customization attributes of the RootNode-object.
+
