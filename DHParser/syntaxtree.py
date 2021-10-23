@@ -812,7 +812,7 @@ root-node or swallow a a tree originating in a common node later.
   * :py:attr:`~syntaxtree.RootNode.string_tags`: a set of tags that will be
     converted to simple strings that appear as mixed content inside their
     parent when serializing as XML
-  * :py:attr:`~syntaxtree.RootNode.inline_tags`: a set of tags that
+  * :py:attr:`~syntaxtree.RootNode.empty_tags`: a set of tags that
     will be rendered as empty tags, e.g. ``<mytag />`` when serializing as XML
   * :py:meth:`~syntaxtree.RootNode.swallow`: Can be called once in the
     lifetime of the RootNode-object to assign this root-node to an existing
