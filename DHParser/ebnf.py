@@ -88,18 +88,23 @@ at least closer) to the intended abstract-syntax-tree, already.
 DHParser also contains a few experimental extensions to
 the common EBNF and PEG (Parsing-Expression-Grammar) foramlisms:
 
-============================== =======
-additional lookahead operators syntax
-============================== =======
+============================== ==========
+additional operators           syntax
+============================== ==========
+interleave                     A ° B
+repetition range               ... (i, k)
+------------------------------ ----------
+**lookbehind operators**
+------------------------------ ----------
 postivie lookbehind            <-&
 negtive lookahead              <-!
------------------------------- -------
+------------------------------ ----------
 **constext sensitive parsers**
------------------------------- -------
+------------------------------ ----------
 pop and match                  :: ...
 retrieve and match             : ...
 pop and always match           :? ...
-============================== =======
+============================== ==========
 
 JSON consists of two complex data types, 1) associative arrays,
 called "object" and sequences of heterogeneous data, called array; and
