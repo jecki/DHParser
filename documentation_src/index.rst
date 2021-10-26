@@ -26,7 +26,6 @@ DHParser offers:
 * extensive tree-processing facilities
 * support for building language servers (experimental)
 
-
 Install DHParser
 ----------------
 
@@ -34,18 +33,18 @@ Install DHParser
 
     $ python -m pip install --user DHParser
 
-
 Resources
 ---------
 
 .. toctree::
+   :glob:
    :maxdepth: 2
    :caption: Contents:
 
    Overview.rst
    StepByStepGuide.rst
    Manual.rst
-
+   Reference.rst
 
 Indices and tables
 ------------------

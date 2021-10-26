@@ -1,5 +1,5 @@
-Reference Manual
-================
+Manuals
+=======
 
 At the core of DHParser lies a parser generator for parsing expression grammars.
 As a parser generator it offers similar functionality as pyparsing_ or lark_.
@@ -16,13 +16,13 @@ for big projects. (The workflow for the latter is described in the
 with many examples in the doctrings of its various modules. The following
 reading-order is recommended to understand DHParser:
 
-:py:mod:`ebnf` - Although DHParser also offers a Python-interface for specifying
+:doc:`ebnf <manuals/ebnf>` - Although DHParser also offers a Python-interface for specifying
    grammers (similar to pyparsing_), the recommended way of using DHParser
    is by specifying the grammar in EBNF_. Here it is described how grammars
    are specified in EBNF_ and how parsers can be auto-generated from these
    grammars and how they are used to parse text.
 
-:py:mod:`syntaxtree` - Syntax-trees are the central data-structure of any
+:doc:`syntaxtree <manuals/syntaxtree>` - Syntax-trees are the central data-structure of any
    parsing system. The description to this modules explains how syntax-trees
    are represented within DHParser, how they can be manipulated, queried
    and serialized or deserialized as XML, S-expressions or json.
@@ -134,110 +134,9 @@ interact with the other modules directly.
 .. _`visitor pattern`: https://en.wikipedia.org/wiki/Visitor_pattern
 .. _pypy: https://www.pypy.org/
 
+.. toctree::
+   :glob:
+   :maxdepth: 2
+   :caption: Contents:
 
-Module ``ebnf``
----------------
-
-.. automodule:: ebnf
-   :members:
-
-Module ``syntaxtree``
----------------------
-
-.. automodule:: syntaxtree
-   :members:
-
-Module ``transform``
---------------------
-
-.. automodule:: transform
-   :members:
-
-Module ``compile``
---------------------
-
-.. automodule:: compile
-   :members:
-
-
-Module ``parse``
-----------------
-
-.. automodule:: parse
-   :members:
-
-
-Module ``dsl``
---------------
-
-.. automodule:: dsl
-   :members:
-
-
-Module ``preprocess``
----------------------
-
-.. automodule:: preprocess
-   :members:
-
-
-Module ``error``
-----------------
-
-.. automodule:: error
-   :members:
-
-Module ``testing``
-------------------
-
-.. automodule:: testing
-   :members:
-
-
-Module ``trace``
-------------------
-
-.. automodule:: trace
-   :members:
-
-Module ``log``
---------------
-
-.. automodule:: log
-   :members:
-
-Module ``configuration``
-------------------------
-
-.. automodule:: configuration
-   :members:
-
-Module ``server``
------------------
-
-.. automodule:: server
-   :members:
-
-Module ``lsp``
---------------
-
-.. automodule:: lsp
-   :members:
-
-Module ``stringview``
----------------------
-
-.. automodule:: stringview
-   :members:
-
-Module ``toolkit``
-------------------
-
-.. automodule:: toolkit
-   :members:
-
-Module ``versionnumber``
-------------------------
-
-.. automodule:: versionnumber
-   :members:
+   manuals/*

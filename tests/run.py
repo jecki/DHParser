@@ -3,7 +3,6 @@
 """Runs the dhparser test-suite with several installed interpreters"""
 
 import concurrent.futures
-import doctest
 import os
 import subprocess
 import sys
@@ -11,6 +10,7 @@ import time
 import threading
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
+doc_path = os.path.join(scriptdir, '..', 'documentation_src', 'manuals')
 sys.path.append(os.path.join(scriptdir, '../'))
 
 from DHParser.configuration import get_config_value
@@ -28,7 +28,17 @@ def run_cmd(parameters: list):
         return False
 
 
+def run_doctests_rst(rst_file):
+    import doctest
+    with lock:
+        print('DOCTEST ' + rst_file)
+        result = doctest.testfile(os.path.join(doc_path, rst_file))
+        assert not result.failed
+        return result.failed
+
+
 def run_doctests(module):
+    import doctest
     with lock:
         namespace = {}
         print('DOCTEST ' + module)
@@ -110,13 +120,19 @@ if __name__ == "__main__":
 
     timestamp = time.time()
 
-    run_doctests('toolkit')
+    # run_doctests('toolkit')
 
     with instantiate_executor(get_config_value('test_parallelization'),
                               concurrent.futures.ProcessPoolExecutor) as pool:
         results = []
 
-        # doctests
+        # documentation doctests
+        for filename in os.listdir(doc_path):
+            if filename.endswith('.rst'):
+                print(filename)
+                results.append(pool.submit(run_doctests_rst, filename))
+
+        # module doctests
         for filename in os.listdir('DHParser'):
             if filename.endswith('.py') and filename not in \
                     ("foreign_typing.py", "shadow_cython.py", "versionnumber.py",
