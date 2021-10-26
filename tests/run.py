@@ -28,6 +28,7 @@ def run_cmd(parameters: list):
         return False
 
 
+#TODO: No doctest-errors reported on Windows!?
 def run_doctests_rst(rst_file):
     import doctest
     with lock:
