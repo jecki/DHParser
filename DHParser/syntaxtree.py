@@ -827,6 +827,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             IndexError: if key was an integer index that did not exist
             ValueError: if the __getitem__ has been called on a leaf node.
         """
+        if not self._children:
+            raise ValueError('Item access is not possible on a leaf-node!')
         if isinstance(key, (int, slice)):
             return self._children[key]
         else:
@@ -835,6 +837,32 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if items:
                 return items if len(items) >= 2 else items[0]
             raise IndexError('index out of range') if isinstance(key, int) else KeyError(str(key))
+
+    def __setitem__(self, key: Union[CriteriaType, slice, int], value=Union['Node', Sequence['Node']]):
+        if not self._children:
+            raise ValueError('Setting items is not possible on a leaf-node!')
+        lchildren = list(self._children)
+        if isinstance(key, int):
+            if not isinstance(value, Node):
+                raise ValueError('Only nodes can be assigned to a single item!')
+            lchildren[key] = value
+        elif isinstance(key, slice):
+            if not isinstance(value, Sequence):
+                value = [value]
+            lchildren.__setitem__(key, value)
+        else:
+            mf = create_match_function(key)
+            indices = [i for i, item in enumerate(self.select_children(mf))]
+            if isinstance(value, Sequence):
+                if len(indices) != len(value):
+                    raise ValueError(f'Cannot assign {len(value)} values to {len(indices)} items!')
+            else:
+                if indices:
+                    for i in indices:
+                        lchildren[i] = value
+                else:
+                    raise IndexError(f'No item satisfying {str(key)} exists!')
+        self.result = lchildren
 
     def __delitem__(self, key: Union[int, slice, CriteriaType]):
         """
@@ -845,6 +873,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param key: An integer index of slice of child-nodes to be deleted
             or a criterion for selecting child-nodes for deletion.
         """
+        if not self._children:
+            raise ValueError('Item deletion is not possible on a leaf-node!')
         if isinstance(key, int):
             L = len(self._children)
             k = L + key if key < 0 else key
