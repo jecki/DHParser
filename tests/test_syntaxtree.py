@@ -518,7 +518,17 @@ class TestNode:
         del node[1:3]
         assert str(node) == "03"
 
-
+    def test_setitem(self):
+        sxpr = '(root (A "0") (B "1") (C "2") (D "3"))'
+        node = parse_sxpr(sxpr)
+        assert node['B'].content == '1'
+        node['B'] = Node('X', '-1')
+        assert flatten_sxpr(node.as_sxpr()) == '(root (A "0") (X "-1") (C "2") (D "3"))'
+        node[2] = Node('Y', '-2')
+        assert flatten_sxpr(node.as_sxpr()) == '(root (A "0") (X "-1") (Y "-2") (D "3"))'
+        subst = [Node('Z', '-7')]
+        node[1:3] = subst
+        assert flatten_sxpr(node.as_sxpr()) == '(root (A "0") (Z "-7") (D "3"))'
 
 
 class TestRootNode:

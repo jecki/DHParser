@@ -852,17 +852,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             lchildren.__setitem__(key, value)
         else:
             mf = create_match_function(key)
-            indices = [i for i, item in enumerate(self.select_children(mf))]
+            indices = [i for i in range(len(lchildren)) if mf(lchildren[i])]
             if isinstance(value, Sequence):
                 if len(indices) != len(value):
                     raise ValueError(f'Cannot assign {len(value)} values to {len(indices)} items!')
+                for k, i in enumerate(indices):
+                    lchildren[i] = value[k]
             else:
                 if indices:
                     for i in indices:
                         lchildren[i] = value
                 else:
                     raise IndexError(f'No item satisfying {str(key)} exists!')
-        self.result = lchildren
+        self.result = tuple(lchildren)
 
     def __delitem__(self, key: Union[int, slice, CriteriaType]):
         """
