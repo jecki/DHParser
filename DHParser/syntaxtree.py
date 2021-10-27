@@ -928,7 +928,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return items if isinstance(items, Sequence) else (items,)
             else:
                 return items[0] if isinstance(items, Sequence) else items
-        except KeyError:
+        except (KeyError, ValueError, IndexError):
             return surrogate
 
     def __contains__(self, what: CriteriaType) -> bool:
