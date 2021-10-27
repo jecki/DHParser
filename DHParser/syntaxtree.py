@@ -806,7 +806,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', Sequence['Node']]:
+    def __getitem__(self, key: Union[str, int, slice]) -> Union['Node', Tuple['Node']]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
@@ -817,8 +817,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> flatten_sxpr(tree["X"].as_sxpr())
             '(X (c "d"))'
 
-        :param key(str): A criterion (tag name(s), match function, node) or
-            an index of the child that shall be returned.
+        :param key(str): A tag-name (string) or an index or a slice of the 
+            child or children that shall be returned.
         :returns: The node with the given index (always type Node) or a
             tuple of all nodes which have a given tag name, if `key` was a
             tag-name and there is more than one child-node with this tag-name
@@ -827,18 +827,26 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             IndexError: if key was an integer index that did not exist
             ValueError: if the __getitem__ has been called on a leaf node.
         """
-        if not self._children:
+        if not self._children and self._result:
             raise ValueError('Item access is not possible on a leaf-node!')
         if isinstance(key, (int, slice)):
             return self._children[key]
         else:
-            mf = create_match_function(key)
-            items = tuple(child for child in self._children if mf(child))
+            items = tuple(child for child in self._children if child.tag_name == key)
             if items:
                 return items if len(items) >= 2 else items[0]
             raise IndexError('index out of range') if isinstance(key, int) else KeyError(str(key))
 
-    def __setitem__(self, key: Union[CriteriaType, slice, int], value=Union['Node', Sequence['Node']]):
+    def __setitem__(self, 
+                    key: Union[CriteriaType, slice, int], 
+                    value=Union['Node', Sequence['Node']]):
+        """
+        Changes one or more children of a branch-node.
+        :raises:
+            KeyError:   if no matching child was found.
+            IndexError: if key was an integer index that did not exist
+            ValueError: if the __getitem__ has been called on a leaf node.
+        """
         if not self._children:
             raise ValueError('Setting items is not possible on a leaf-node!')
         lchildren = list(self._children)
@@ -851,8 +859,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 value = [value]
             lchildren.__setitem__(key, value)
         else:
-            mf = create_match_function(key)
-            indices = [i for i in range(len(lchildren)) if mf(lchildren[i])]
+            assert isinstance(key, str)
+            indices = [i for i in range(len(lchildren)) if lchildren[i].tag_name == key]
             if isinstance(value, Sequence):
                 if len(indices) != len(value):
                     raise ValueError(f'Cannot assign {len(value)} values to {len(indices)} items!')
@@ -863,7 +871,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     for i in indices:
                         lchildren[i] = value
                 else:
-                    raise IndexError(f'No item satisfying {str(key)} exists!')
+                    raise KeyError(f'No item with tag-name "{str(key)}" found!')
         self.result = tuple(lchildren)
 
     def __delitem__(self, key: Union[int, slice, CriteriaType]):
@@ -873,9 +881,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         as comparison criterion.
 
         :param key: An integer index of slice of child-nodes to be deleted
-            or a criterion for selecting child-nodes for deletion.
+            or a tag name (string) for selecting child-nodes for deletion.
+        :raises:
+            KeyError:   if no matching child was found.
+            IndexError: if key was an integer index that did not exist
+            ValueError: if the __getitem__ has been called on a leaf node.
         """
-        if not self._children:
+        if not self._children and self.result:
             raise ValueError('Item deletion is not possible on a leaf-node!')
         if isinstance(key, int):
             L = len(self._children)
@@ -890,9 +902,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 children[i] = None
             self.result = tuple(child for child in children if child is not None)
         else:
-            assert not isinstance(self.result, str)
-            mf = create_match_function(key)
-            self.result = tuple(child for child in self._children if not mf(child))
+            before = self._result
+            after = tuple(child for child in self._children if not child.tag_name == key)
+            if len(before) == len(after):
+                raise KeyError(f'No child-node with tag-name {str(key)} found!')
+            self.result = after
 
     def get(self, key: Union[int, slice, CriteriaType],
             surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
