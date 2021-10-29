@@ -55,7 +55,7 @@ from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType
+    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, identity
 
@@ -1562,7 +1562,10 @@ class Grammar:
         def tail_pos(predecessors: Union[List[Node], Tuple[Node, ...], None]) -> int:
             """Adds the position after the last node in the list of
             predecessors to the node."""
-            return predecessors[-1].pos + len(predecessors[-1]) if predecessors else 0
+            if predecessors:
+                tail = predecessors[-1].pick(LEAF_NODE, reverse=True, include_root=True)
+                return tail.pos + len(tail)
+            return 0
 
         def lookahead_failure_only(parser):
             """EXPERIMENTAL!

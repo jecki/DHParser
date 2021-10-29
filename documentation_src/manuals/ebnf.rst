@@ -1631,7 +1631,7 @@ nested structures are involved::
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:18: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
+    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 Here, the parser stopped befere the end of the document, which shows that our resumption
 rules have been either incomplete or inadequate. Let's turn on some debugging information
@@ -1646,7 +1646,7 @@ to get a better insight into what went wrong::
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:24: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 9], 1...'
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:18: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
+    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 What is of interest here, is the second notice: It seems that the error was caught within
 the "list"-parser. By moving on to the spot after closing bracket as determined by the
@@ -1918,7 +1918,7 @@ like the Pop-operator, "pops" that last value from the stack and matches either 
 or the empty strings. In other word, this operator always matches, as long as there is still
 a value on the stack, but it captures the begining of the following text only
 if it matches the stored value. A non-match only happens, when the stack has already been
-exhaustet. This "Optional Pop"-operator is denoted by a colon followed by a question mark ``:?``.
+exhaustet. This "Pop anyways"-operator is denoted by a colon followed by a question mark ``:?``.
 Weird as this may sound, this operator has astonishingly manifold use cases. Think for
 exmple of a modifcation of our minimal pseudo-XML parser the allows coders to omit the
 tag name in closing tags to save them some typing:
@@ -2061,3 +2061,83 @@ this error:
 
 Error resumption with context sensitive parsers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Resuming parsing after an error has occurred is complicated
+because, if done bady, it can lead to consequential errors, i.e.
+errors that are artifacts of the resumption rule or algorithm
+but not really errors in source text. This can be quite
+confusing and if worst comes to worst one cannot trust any
+error message after the first error messages which in turn defies
+the whole point of resuming parsing rather than breaking off
+after the first error.
+
+Unfortunately, consequential errors are even harder to avoid
+when using context sensitive parsers. Say, we treat our
+XML-Parser with a little mistake::
+
+    >>> xmldoc = '''
+    ... <doc>
+    ...     <title>Heading</litle>
+    ...     A few lines of Text
+    ... </doc>'''
+    >>> result = parseXML(xmldoc)
+    >>> for e in result.errors_sorted: print(e)
+    3:19: Error (1040): Parser "document" stopped before end, at: »litle>\n   ...« Terminating parser.
+    3:21: Error (1010): '`>`' expected by parser 'ETag', but »litle>\n   ...« found instead!
+    5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+
+Since our original mini-XML-grammar did not contain any
+error-resumption-directives, this is what we'd expect.
+Now let's add a skip-directive to continue after misspelled
+tag-names::
+
+    >>> miniXML = '''
+    ... @ disposable  = EOF
+    ... @ drop        = EOF, whitespace, strings
+    ... document = ~ element ~ §EOF
+    ... element  = STag §content ETag
+    ... STag     = '<' TagName §'>'
+    ... @ETag_skip = /[^<>]*/
+    ... ETag     = '</' § ::TagName '>'
+    ... TagName  = /\\w+/
+    ... content  = [CharData] { (element | COMMENT__) [CharData] }
+    ... CharData = /(?:(?!\\]\\]>)[^<&])+/
+    ... EOF      =  !/./
+    ... '''
+    >>> parseXML = create_parser(miniXML)
+    >>> result = parseXML(xmldoc)
+    >>> for e in result.errors_sorted: print(e)
+    3:21: Error (1010): '::TagName "title"' expected by parser 'ETag', but »litle>\n   ...« found instead!
+    5:3: Error (1010): '::TagName "title"' expected by parser 'ETag', but »doc>...« found instead!
+    5:6: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+
+The last two errors are merely consequential errors. And one can imagine that,
+had the mistake of misspelling the ending tag occurrced deeper in the XML
+hierarchy then a consequential error for every closing tag after the erroneous
+would have been reported, because the name of the opening tag corresponging
+to the misspelled closing tag has - because of the misspelling - never been
+removed from the stack.
+
+We can try to avoid this problem by "popping" one element from the stack
+within our skip rule. This is of course only possible, if we specify our
+skip rule as full PEG-expression, not just a regular expression::
+
+    >>> new_skip_rule = "@ETag_skip = ((/\s*(?=>)/ | :?TagName) /[^<>]*/)"
+
+The regular expression ``/\s*(?=>)/`` merely has the purpose to cover
+enging-tags that fail to parse because of superfluous blanks before the
+closing ``>``. The important part is the "pop anyways"-operator
+``:?TagName``. Since this operator does not capture any text in case
+of a misspelled tag-name, but merely removes it value from the stack,
+it it followed by the ragular expression ``/\s*(?=>)/`` which moves the
+parser forward to the next angualar bracket.::
+
+    >>> i = miniXML.find('@ETag_skip')
+    >>> k = miniXML.find('\n', i)
+    >>> miniXML = miniXML[:i] + new_skip_rule + miniXML[k:]
+    >>> parseXML = create_parser(miniXML)
+    >>> result = parseXML(xmldoc)
+    >>> for e in result.errors_sorted: print(e)
+    3:21: Error (1010): '::TagName "title"' expected by parser 'ETag', but »litle>\n   ...« found instead!
+
+

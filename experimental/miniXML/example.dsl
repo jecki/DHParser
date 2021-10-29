@@ -1,1 +1,4 @@
-Life is but a walking shadow
+
+<doc>
+   <title>Heading <wrong></title>
+</doc>
