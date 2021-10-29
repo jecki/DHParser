@@ -193,6 +193,16 @@ class Compiler:
         result = self.finalize(result)
         return result
 
+    def visit_attributes(self, node) -> Node:
+        if node.has_attr():
+            for attribute, value in node.attr.items():
+                try:
+                    attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
+                    node = attribute_visitor(node, value) or node
+                except AttributeError:
+                    pass
+        return node
+
     def fallback_compiler(self, node: Node, block_attribute_visitors: bool=False) -> Any:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
@@ -220,13 +230,8 @@ class Compiler:
                     if nd is not None and nd.tag_name != EMPTY_PTYPE:
                         result.append(nd)
                 node.result = tuple(result)
-        if self.has_attribute_visitors and not block_attribute_visitors and node.has_attr():
-            for attribute, value in node.attr.items():
-                try:
-                    attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
-                    node = attribute_visitor(node, value) or node
-                except AttributeError:
-                    pass
+        if self.has_attribute_visitors and not block_attribute_visitors:
+            node = self.visit_attributes(node)
         return node
 
     def compile(self, node: Node) -> Any:

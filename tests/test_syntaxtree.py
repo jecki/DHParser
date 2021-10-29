@@ -72,6 +72,14 @@ class TestParseSxpression:
         assert str(tree) == "LIUTPR. leg. 21 ..."
         assert tree.attr['unterbedeutungstiefe'] == '0'
 
+    def test_parse_s_expression_grinder(self):
+        sxpr = '(B (A "abc :-)") (C "1"))'
+        s = parse_sxpr(sxpr)
+        assert flatten_sxpr(s.as_sxpr()) == sxpr
+        sxpr = '(B (A `(tic "abc :-)") "Z") (C "1"))'
+        s = parse_sxpr(sxpr)
+        assert flatten_sxpr(s.as_sxpr()) == sxpr
+
     def test_parse_s_expression_malformed(self):
         try:
             s = parse_sxpr('(A (B 1) (C (D (E 2) (F 3)) (G 4) (H (I 5) (J 6)) (K 7)')

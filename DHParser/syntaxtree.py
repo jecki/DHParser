@@ -2680,6 +2680,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         while sxpr[:2] == "`(":
             i = sxpr.find('"')
             k = sxpr.find(')')
+            if k > i:
+                k = sxpr.find(')', sxpr.find('"', i + 1))
             if i < 0:
                 i = k + 1
             if k < 0:

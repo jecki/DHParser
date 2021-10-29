@@ -26,7 +26,7 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.syntaxtree import parse_sxpr
+from DHParser.syntaxtree import parse_sxpr, Node
 from DHParser.compile import Compiler
 
 
@@ -59,6 +59,15 @@ class SerializingTestCompiler(Compiler):
 
     def on_F(self, node):
         return self.serialize(node)
+
+
+class AttrTestCompiler(Compiler):
+    def attr_tic(self, node, value):
+        if node.children:
+            node.result = node.children + (Node('tic', f' tic: {value}'),)
+        else:
+            node.result = node.content + f' tic: {value}'
+        del node.attr['tic']
 
 
 class TestCompilerClass:
@@ -101,6 +110,13 @@ class TestCompilerClass:
             assert "DHParser.compile.Compiler.fallback_compiler()" in str(e), \
                 "Incorrect Error Message: " + str(e)
             pass
+
+    def test_attribute_visitory(self):
+        attr_tree = parse_sxpr('(A (B `(tic "ticced :-)") "1") '
+                               '(C `(tic "ticced :-(") (D (E "2") (F "3"))))')
+        compiler = AttrTestCompiler()
+        s = compiler.compile(attr_tree)
+        assert str(s) == '1 tic: ticced :-)23 tic: ticced :-('
 
 
 if __name__ == "__main__":
