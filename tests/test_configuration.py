@@ -63,7 +63,7 @@ class TestConfigMultiprocessing:
             p.join()
             assert flag.value == 1
         except ImportError:
-            pass  # skip text, because import error most probably due to libffi not found...
+            print('Skipping Test, because libffi has wrong version or does not exist!')
 
 
 TEST_CFG = """

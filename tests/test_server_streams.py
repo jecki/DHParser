@@ -135,6 +135,13 @@ class TestServer:
             header, data, backlog = split_header(data)
             return data.decode()
             # assert data.decode() == "Test", data.decode()
+
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         p = None
         try:
             p = spawn_stream_server(self.readerA, self.writerB,

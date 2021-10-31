@@ -113,6 +113,13 @@ class TestServer:
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             assert data.decode() == "Test", data.decode()
+
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         p = None
         try:
             p = spawn_tcp_server('127.0.0.1', TEST_PORT,
@@ -150,6 +157,13 @@ class TestServer:
 
             main_writer.close()
             if sys.version_info >= (3, 7):  await main_writer.wait_closed()
+
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         p = None
         try:
             p = spawn_tcp_server('127.0.0.1', TEST_PORT)
@@ -169,16 +183,20 @@ class TestServer:
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             return data.decode()
-        p = None
         try:
-            from timeit import timeit
-            p = spawn_tcp_server('127.0.0.1', TEST_PORT, compiler_dummy)
-            result = asyncio_run(send_request(IDENTIFY_REQUEST))
-            assert isinstance(result, str) and result.startswith('DHParser'), result
-        finally:
-            stop_tcp_server('127.0.0.1', TEST_PORT)
-            if p is not None:
-                p.join()
+            from _ctypes import Union, Structure, Array
+            p = None
+            try:
+                from timeit import timeit
+                p = spawn_tcp_server('127.0.0.1', TEST_PORT, compiler_dummy)
+                result = asyncio_run(send_request(IDENTIFY_REQUEST))
+                assert isinstance(result, str) and result.startswith('DHParser'), result
+            finally:
+                stop_tcp_server('127.0.0.1', TEST_PORT)
+                if p is not None:
+                    p.join()
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
 
     def test_terminate(self):
         """Test different ways of sending a termination message to server:
@@ -190,6 +208,13 @@ class TestServer:
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
             assert data.find(expected_response) >= 0, str(data)
+
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         p = None
         try:
             # plain text stop request
@@ -241,6 +266,12 @@ class TestServer:
             writer.close()
             if sys.version_info >= (3, 7):  await writer.wait_closed()
 
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         if sys.version_info >= (3, 6):
             p = None
             try:
@@ -290,6 +321,12 @@ class TestSpawning:
         stop_tcp_server('127.0.0.1', TEST_PORT)
 
     def test_spawn(self):
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         spawn_tcp_server('127.0.0.1', TEST_PORT)
         async def identify():
             try:
@@ -302,6 +339,7 @@ class TestSpawning:
                 return data.decode()
             except ConnectionRefusedError:
                 return ''
+
         result = asyncio_run(identify())
         assert result.startswith('DHParser'), result
 
@@ -407,6 +445,12 @@ class TestLanguageServer:
         self.p = spawn_tcp_server('127.0.0.1', TEST_PORT, (lsp_table, frozenset(), frozenset()))
 
     def test_initialize(self):
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         self.start_server()
 
         async def sequence_test():
@@ -485,6 +529,12 @@ class TestLanguageServer:
         asyncio_run(sequence_test())
 
     def test_initialization_sequence(self):
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         self.start_server()
         async def initialization_sequence():
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
@@ -509,6 +559,12 @@ class TestLanguageServer:
         asyncio_run(initialization_sequence())
 
     def test_varying_data_chunk_sizes(self):
+        try:
+            from _ctypes import Union, Structure, Array
+        except ImportError:
+            print('Skipping Test, because libffi has wrong version or does not exist!')
+            return
+
         self.start_server()
         async def initialization_sequence():
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
