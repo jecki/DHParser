@@ -105,8 +105,7 @@ class TestErrorSupport:
             <title>Heading <wrong></title>
         </doc>'''
         parseXML = create_parser(miniXML)
-        result = parseXML(testdoc)
-        print(result.as_sxpr())
+        _ = parseXML(testdoc)
 
 
 if __name__ == "__main__":

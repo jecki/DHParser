@@ -195,7 +195,7 @@ class Compiler:
 
     def visit_attributes(self, node) -> Node:
         if node.has_attr():
-            for attribute, value in node.attr.items():
+            for attribute, value in list(node.attr.items()):
                 try:
                     attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
                     node = attribute_visitor(node, value) or node
@@ -207,7 +207,7 @@ class Compiler:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
-        replacements = {}  # type: Dict[Node, Node]
+        replacements = {}  # type: Dict[int, Node]
         if node.children:
             for child in node.children:
                 nd = self.compile(child)

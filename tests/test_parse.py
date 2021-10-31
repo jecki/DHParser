@@ -60,7 +60,7 @@ class TestWhitespace:
 
 class TestParserError:
     def test_parser_error_str(self):
-        pe = ParserError(Parser(), Node('TAG', 'test').with_pos(0),
+        pe = ParserError(Parser(), Node('TAG', 'test').with_pos(0), len('test'),
                          StringView('Beispiel'), None, first_throw=True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
@@ -1231,7 +1231,7 @@ class TestReentryAfterError:
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, cst.content
         assert cst.pick('alpha').content.startswith('ALPHA')
 
     def test_no_resume_rules_partial_parsing(self):
@@ -1259,7 +1259,7 @@ class TestReentryAfterError:
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, cst.content
         # assert cst.pick('alpha').content.startswith('ALPHA')
 
     def test_several_reentry_points(self):
