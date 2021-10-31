@@ -2140,4 +2140,15 @@ parser forward to the next angualar bracket.::
     >>> for e in result.errors_sorted: print(e)
     3:21: Error (1010): '::TagName "title"' expected by parser 'ETag', but »litle>\n   ...« found instead!
 
+If it only was so simple! Let's see what happens if we treat our
+parser with another, rather obvious or common mistake: Forgetting
+the closing tag (or, what leads to a similar confusion of the parser,
+ommiting the closing slash ``/`` in an empty tag)::
+
+    >>> xmldoc = '''
+    ... <doc>
+    ...    <title>Heading <wrong></title>
+    ... </doc>'''
+    >>> result = parseXML(xmldoc)
+    >>> for e in result.errors_sorted: print(e)
 

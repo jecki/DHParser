@@ -31,6 +31,7 @@ try:
 except ImportError:
     import re
 
+from DHParser.dsl import create_parser
 from DHParser.error import Error, ERROR, add_source_locations
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.toolkit import linebreaks, line_col
@@ -84,6 +85,28 @@ class TestErrorSupport:
             assert False, "Error-location outside text. ValueError was expected but not raised"
         except ValueError:
             pass
+
+    def test_error_locations_bug(self):
+        miniXML = '''
+        @ disposable  = EOF
+        @ drop        = EOF, whitespace, strings
+        document = ~ element ~ §EOF
+        element  = STag §content ETag
+        STag     = '<' TagName §'>'
+        @ETag_skip = /[^<>]*/
+        ETag     = '</' § ::TagName '>'
+        TagName  = /\\w+/
+        content  = [CharData] { (element | COMMENT__) [CharData] }
+        CharData = /(?:(?!\\]\\]>)[^<&])+/
+        EOF      =  !/./
+        '''
+        testdoc = '''
+        <doc>
+            <title>Heading <wrong></title>
+        </doc>'''
+        parseXML = create_parser(miniXML)
+        result = parseXML(testdoc)
+        print(result.as_sxpr())
 
 
 if __name__ == "__main__":
