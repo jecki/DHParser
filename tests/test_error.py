@@ -107,6 +107,33 @@ class TestErrorSupport:
         parseXML = create_parser(miniXML)
         _ = parseXML(testdoc)
 
+    def test_error_resumption(self):
+        miniXML = '''
+        @ whitespace  = /\s*/
+        @ disposable  = EOF
+        @ drop        = EOF, whitespace, strings
+        
+        document = ~ element ~ §EOF
+        @element_resume = /[^<>]*/
+        element  = STag §content ETag
+        @STag_skip = (/[^<>]*>/)
+        STag     = '<' TagName §'>'
+        @ETag_skip = (:?TagName !:TagName /[^<>]*/ | /\s*(?=>)/)
+        ETag     = '</' §::TagName '>'
+        TagName  = /\w+/
+        content  = [CharData] { (element | COMMENT__) [CharData] }
+        
+        CharData = /(?:(?!\]\]>)[^<&])+/
+        EOF      =  !/./        # no more characters ahead, end of file reached
+        '''
+        testdoc = '''
+        <doc>
+            <title>Heading <wrong></title>
+        </doc>'''
+        parseXML = create_parser(miniXML)
+        result = parseXML(testdoc)
+        assert len(result.errors) == 1
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

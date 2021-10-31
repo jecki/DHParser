@@ -2084,7 +2084,7 @@ XML-Parser with a little mistake::
     >>> for e in result.errors_sorted: print(e)
     3:19: Error (1040): Parser "document" stopped before end, at: »litle>\n   ...« Terminating parser.
     3:21: Error (1010): '`>`' expected by parser 'ETag', but »litle>\n   ...« found instead!
-    5:5: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+    5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 
 
 Since our original mini-XML-grammar did not contain any
@@ -2194,4 +2194,5 @@ following::
     >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
+    3:28: Error (1010): '::TagName "wrong"' expected by parser 'ETag', but »title>\n</d...« found instead!
 

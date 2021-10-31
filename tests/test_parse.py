@@ -1239,7 +1239,7 @@ class TestReentryAfterError:
         content = 'ALPHA acb'
         cst = gr(content, 'alpha')
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, str(cst.content)
         assert cst.pick('alpha').content.startswith('ALPHA')
 
     def test_simple_resume_rule(self):
@@ -1248,7 +1248,7 @@ class TestReentryAfterError:
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, str(cst.content)
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
@@ -1268,7 +1268,7 @@ class TestReentryAfterError:
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, str(cst.content)
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
@@ -1279,7 +1279,7 @@ class TestReentryAfterError:
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, str(cst.content)
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len(cst.errors_sorted) == 1
@@ -1295,7 +1295,7 @@ class TestReentryAfterError:
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
-        assert cst.content == content
+        assert cst.content == content, str(cst.content)
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1

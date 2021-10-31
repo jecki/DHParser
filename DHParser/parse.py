@@ -187,7 +187,7 @@ class ParserError(Exception):
 
 PatternMatchType = Union[RxPatternType, str, Callable, 'Parser']
 ErrorMessagesType = List[Tuple[PatternMatchType, str]]
-ResumeList = List[PatternMatchType]  # list of strings or regular expressions
+ResumeList = Sequence[PatternMatchType]  # list of strings or regular expressions
 ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
 # (text, start point, end point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
@@ -3065,7 +3065,7 @@ class Series(MandatoryNary):
         ret_node = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             raise ParserError(self, ret_node.with_pos(self.grammar.document_length__ - len(text_)),
-                              len(text) - len(text_),  # .with_pos(self.grammar.document_length__ - len(text_)),
+                              0 if len(ret_node) == 0 else (len(text) - len(text_)),  # TODO: Dangerous!
                               text, error, first_throw=True)
         return ret_node, text_
 
@@ -3414,7 +3414,8 @@ class Interleave(MandatoryNary):
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
-            raise ParserError(self, nd, len(text) - len(text_),   # .with_pos(self.grammar.document_length__ - len(text)),
+            raise ParserError(self, nd.with_pos(self.grammar.document_length__ - len(text)),
+                              0 if len(nd) == 0 else (len(text) - len(text_)),  # TODO: Dangerous!
                               text, error, first_throw=True)
         return nd, text_
 
