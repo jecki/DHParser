@@ -1466,7 +1466,7 @@ parser when an error was raised by the string-parser::
 After the error has occurred at the illegal escape-sequence, the
 skip-directive catches the error and skips to the location where the
 `"`-character lies just ahead and continues parsing with the string-parser.
-The skipped passage is stored in a ZOMBIE__-Node within the syntax-tree
+The skipped passage is stored in a ``ZOMBIE__``-Node within the syntax-tree
 and parsing can continue through to the end of the text.
 
 In contrast to the skip-directive the resume-directive leaves the parser
@@ -2084,7 +2084,8 @@ XML-Parser with a little mistake::
     >>> for e in result.errors_sorted: print(e)
     3:19: Error (1040): Parser "document" stopped before end, at: »litle>\n   ...« Terminating parser.
     3:21: Error (1010): '`>`' expected by parser 'ETag', but »litle>\n   ...« found instead!
-    5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+    5:5: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+
 
 Since our original mini-XML-grammar did not contain any
 error-resumption-directives, this is what we'd expect.
@@ -2112,9 +2113,9 @@ tag-names::
     5:6: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 
 The last two errors are merely consequential errors. And one can imagine that,
-had the mistake of misspelling the ending tag occurrced deeper in the XML
+had the mistake of misspelling the ending tag occurred deeper in the XML
 hierarchy then a consequential error for every closing tag after the erroneous
-would have been reported, because the name of the opening tag corresponging
+would have been reported, because the name of the opening tag corresponding
 to the misspelled closing tag has - because of the misspelling - never been
 removed from the stack.
 
@@ -2143,12 +2144,54 @@ parser forward to the next angualar bracket.::
 If it only was so simple! Let's see what happens if we treat our
 parser with another, rather obvious or common mistake: Forgetting
 the closing tag (or, what leads to a similar confusion of the parser,
-ommiting the closing slash ``/`` in an empty tag)::
+omiting the closing slash ``/`` in an empty tag)::
 
     >>> xmldoc = '''
     ... <doc>
     ...    <title>Heading <wrong></title>
     ... </doc>'''
+    >>> result = parseXML(xmldoc)
+    >>> for e in result.errors_sorted: print(e)
+    3:28: Error (1010): '::TagName "wrong"' expected by parser 'ETag', but »title>\n</d...« found instead!
+    4:3: Error (1010): '::TagName "title"' expected by parser 'ETag', but »doc>...« found instead!
+    4:7: Error (1010): 'ETag' expected by parser 'element', but »...« found instead!
+    4:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+
+In this case the removal of the last value from the stack in the
+``@ETag_skip``-rule results in a cascade of consecutive errors
+(or "error-artifacts"), one for every outer closing tag.
+
+Avoiding error-artifacts such as this is an art in itself and
+requires to look at the whole picture. As of now, there does not
+exist any comprehensive theory, how to do this. A good starting
+point might be to take a look at the errors, users of the
+domain specific language make most frequently, as well as on
+those error messages that confuse them most. (Bug-reports,
+help-desk questions or tele-metric data might yield the
+required empirical information for this approach.)
+
+A more robust rule-set for our mini-XML-grammar might be the
+following::
+
+    >>> miniXML = '''
+    ... @ whitespace  = /\s*/
+    ... @ disposable  = EOF
+    ... @ drop        = EOF, whitespace, strings
+    ...
+    ... document = ~ element ~ §EOF
+    ... @element_resume = /[^<>]*/
+    ... element  = STag §content ETag
+    ... @STag_skip = (/[^<>]*>/)
+    ... STag     = '<' TagName §'>'
+    ... @ETag_skip = ((/\s*(?=>)/ | :?TagName !:TagName) /[^<>]*/)
+    ... ETag     = '</' §::TagName '>'
+    ... TagName  = /\w+/
+    ... content  = [CharData] { (element | COMMENT__) [CharData] }
+    ...
+    ... CharData = /(?:(?!\]\]>)[^<&])+/
+    ... EOF      =  !/./        # no more characters ahead, end of file reached
+    ... '''
+    >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
 
