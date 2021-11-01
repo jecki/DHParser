@@ -1645,7 +1645,7 @@ class Grammar:
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
-                if result is None or result.tag_name == ZOMBIE_TAG:
+                if result is None or (result.tag_name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
                     err_pname = self.ff_parser__.pname \
                                 or self.associated_symbol__(self.ff_parser__).pname \
