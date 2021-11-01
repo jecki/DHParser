@@ -1655,16 +1655,18 @@ class Grammar:
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
                     if lookahead_failure_only(parser):
+                        # error_msg = # f'Parser "{parser.tag_name}" stopped before end, because ' \
                         error_msg = f'Parser "{err_pname}" did not match: »{err_text}« ' \
                                     f'- but only because of lookahead.'
                         error_code = PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
+                        # error_msg = f'Parser "{parser.tag_name}" stopped before end, because' \
                         error_msg = f'Parser "{err_pname}" did not match: »{err_text}«'
                         error_code = PARSER_STOPPED_BEFORE_END
                     if self.history_tracking__:
                         error_msg += '\n    Most advanced fail: %s\n    Last match:    %s;' % \
                                      (str(HistoryRecord.most_advanced_fail(self.history__)),
-                                     str(HistoryRecord.last_match(self.history__)))
+                                      str(HistoryRecord.last_match(self.history__)))
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
@@ -1701,17 +1703,20 @@ class Grammar:
                 stitches.append(stitch)
                 if stitch.pos > 0:
                     if self.ff_pos__ > err_pos:
-                        l, c = line_col(linebreaks(self.document__), self.ff_pos)
+                        l, c = line_col(linebreaks(self.document__), self.ff_pos__)
                         error_msg = f'Farthest Fail at {l}:{c}, ' + error_msg
-                    err_pos = stitch.pos
+                    err_pos = max(err_pos, stitch.pos)
                 if len(stitches) > 2:
                     error_msg = f'Error after {len(stitches) - 2}. reentry: ' + error_msg
-                error = Error(error_msg, err_pos, error_code)
-                self.tree__.add_error(stitch, error)
-                if self.history_tracking__:
-                    lc = line_col(self.document_lbreaks__, error.pos)
-                    self.history__.append(HistoryRecord([(stitch.tag_name, stitch.pos)], stitch,
-                                                        self.document__[error.pos:], lc, [error]))
+                if error_code in {PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_LOOKAHEAD_FAILURE_ONLY} \
+                        or not any(e.pos == err_pos for e in self.tree__.errors):
+                    error = Error(error_msg, err_pos, error_code)
+                    self.tree__.add_error(stitch, error)
+                    if self.history_tracking__:
+                        lc = line_col(self.document_lbreaks__, error.pos)
+                        self.history__.append(HistoryRecord(
+                            [(stitch.tag_name, stitch.pos)], stitch,
+                            self.document__[error.pos:], lc, [error]))
             else:
                 # if complete_match is False, ignore the rest and leave while loop
                 rest = StringView('')

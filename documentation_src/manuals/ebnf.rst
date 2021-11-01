@@ -1260,7 +1260,6 @@ deliver understandable error-messages::
     "alpha"
     >>> for e in json_string('"al\\pha"').errors:  print(e)
     1:4: Error (1010): Illegal character(s) »\pha"...« in string.
-    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 Customized error-messages must always be specified in the grammar
 before definition of the symbol, they are related to and they can
@@ -1277,7 +1276,6 @@ general or fallback conditions should be placed below these::
     >>> json_string = create_parser(grammar, 'json_string')
     >>> for e in json_string('"al\pha"').errors:  print(e)
     1:4: Error (1010): Illegal escape sequence »\pha"...« Allowed values are b,n,r,t,u
-    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 Here, the more specific and more understandable error message
 has been selected. Careful readers might notice that the the
@@ -1460,7 +1458,7 @@ parser when an error was raised by the string-parser::
       (:Text '"')
       (characters
         (plain "al"))
-      (ZOMBIE__ `(1:4: Error (1010): Illegal escape sequence »\pha"...«) "\pha")
+      (ZOMBIE__ `(parser "string") `(1:4: Error (1010): Illegal escape sequence »\pha"...«) "\pha")
       (:Text '"'))
 
 After the error has occurred at the illegal escape-sequence, the
@@ -1489,11 +1487,10 @@ expression::
     >>> print(tree.errors[0])
     1:4: Error (1010): Illegal escape sequence »\pha"...«
     >>> print(tree.as_sxpr())
-    (string
-      (:Text '"')
-      (characters
-        (plain "al"))
-      (ZOMBIE__ `(1:4: Error (1010): Illegal escape sequence »\pha"...«) '\pha"'))
+    (ZOMBIE__
+      (ZOMBIE__ `(parser "string") `(1:4: Error (1010): Illegal escape sequence »\pha"...«)
+        (ZOMBIE__ '"'))
+      (ZOMBIE__ 'al\pha"'))
 
 Note, that this time, the zombie-node also contains the closing quotation marks.
 Also, it should be observed, that the regular expression of the resume-directives
@@ -1533,7 +1530,6 @@ at the first error. Further errors are neither detected nor reported::
     >>> result = config_parser(cfg_data_with_errors)
     >>> for error in result.errors_sorted:  print(error)
     4:8: Error (1010): 'value' expected by parser 'entry', but »rose"\nBuil...« found instead!
-    4:8: Error (1040): Parser "config" stopped before end, at: »rose"\nBuil...« Terminating parser.
 
 After adding suitable `resume`-clauses for those symbols the definition
 of which contain the mantatory marker `§`, all errors are reported in
@@ -1592,7 +1588,6 @@ document could be parsed::
     >>> result = list_parser(example_with_errors)
     >>> for e in result.errors: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:6: Error (1040): Parser "_document" stopped before end, at: »A, [5, 6; ...« Terminating parser.
 
 Now, let's define some regular expression based rules to resume parsing after
 an error::
@@ -1631,7 +1626,6 @@ nested structures are involved::
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 Here, the parser stopped befere the end of the document, which shows that our resumption
 rules have been either incomplete or inadequate. Let's turn on some debugging information
@@ -1646,7 +1640,6 @@ to get a better insight into what went wrong::
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:24: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 9], 1...'
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 What is of interest here, is the second notice: It seems that the error was caught within
 the "list"-parser. By moving on to the spot after closing bracket as determined by the
@@ -1660,7 +1653,7 @@ PEG-rules unambiguously from plain regular expressions or simple strings, they m
 be enclosed in round rackets!)::
 
     >>> resumption_rules = '''
-    ... @list_resume = ({ list | /[^\\[\\]]*/ } ["]"])
+    ... @list_resume = ("[" [_items] { list | /[^\\[\\]]*/ } ["]"])
     ... @_items_skip = /(?=,)/, /(?=])/, /$/
     ... '''
     >>> list_parser = create_parser(resumption_rules + number_list_grammar)
@@ -1681,6 +1674,16 @@ that resumption does not get caught on the nested structure, any more::
     1:9: Notice (50): Skipping from position 1:8 within parser _items->:ZeroOrMore->:Series: ', [5, 6...'
     1:28: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 10, ]'
     1:34: Notice (50): Skipping from position 1:34 within parser _items->:ZeroOrMore: ']'
+
+It should be observed that that part of the definition of
+``list     = "[" [_items] § "]"`` which stands before the ``$``
+has been repeated at the begining of the ``@list_resume``-rule.
+This is because when the missing of the mandatory closing
+bracket ``]`` has caused an error, the list parser retreats
+back to the very beginning just as in the cause of a simple
+non-match. It does not stop short at the location of the error
+as might be assumed! Therefore, the resume-rule has to pass the
+beginning of the list before the error occurred, again.
 
 Programming fail-tolerant parsers can be quite a challenge. DHParser's @skip-
 and @resume-directives help separating the code for fail-tolerance from the
@@ -2082,7 +2085,6 @@ XML-Parser with a little mistake::
     ... </doc>'''
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:19: Error (1040): Parser "document" stopped before end, at: »litle>\n   ...« Terminating parser.
     3:21: Error (1010): '`>`' expected by parser 'ETag', but »litle>\n   ...« found instead!
     5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 

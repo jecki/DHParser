@@ -134,6 +134,19 @@ class TestErrorSupport:
         result = parseXML(testdoc)
         assert len(result.errors) == 1
 
+    def test_error_location(self):
+        grammar = r'''
+            @ string_error  = /\\/, 'Illegal escape sequence »{1}«'
+            @ string_error  = '', 'Illegal character "{1}" in string.'
+            @ string_resume = /("\s*)/
+            string          = `"` §characters `"` ~
+            characters      = { plain | escape }
+            plain           = /[^"\\]+/
+            escape          = /\[\/bnrt\\]/'''
+        json_string = create_parser(grammar, 'json_string')
+        tree = json_string('"al\\pha"')
+        assert len(tree.errors) == 1
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

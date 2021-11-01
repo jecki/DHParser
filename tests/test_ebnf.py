@@ -1170,10 +1170,10 @@ class TestInterleaveResume:
         st = gr('AB_CDEFG.')
         # mandatory continuation error kicks in only, if the parsers before
         # the §-sign have been exhausted!
-        assert len(st.errors) == 2 and st.errors_sorted[0].code == MANDATORY_CONTINUATION
+        assert len(st.errors) == 1 and st.errors_sorted[0].code == MANDATORY_CONTINUATION
         st = gr('EXY EXYZ.')
-        assert len(st.errors) == 2
-        assert {e.code for e in st.errors} == {MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END}
+        assert len(st.errors) == 1
+        assert st.errors[0].code == MANDATORY_CONTINUATION
 
     def test_interleave_groups(self):
         def mini_suite(gr):
