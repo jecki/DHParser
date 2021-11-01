@@ -387,6 +387,7 @@ class TestLookahead:
                               MANDATORY_CONTINUATION_AT_EOF_NON_ROOT) for e in result.errors)
         errata = grammar_unit(self.cases, TestLookahead.grammar_fac, TestLookahead.trans_fac,
                               'REPORT_TestLookahead')
+        for e in errata:  print(e)
         assert not errata, str(errata)
         errata = grammar_unit(self.fail_cases, TestLookahead.grammar_fac, TestLookahead.trans_fac,
                               'REPORT_TestLookahead')

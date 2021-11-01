@@ -1677,11 +1677,13 @@ class Grammar:
                     if h.status in (h.MATCH, h.DROP) \
                             and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
+                        err_pos = h.node.pos
                         error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
                         i = self.ff_pos__ if self.ff_pos__ >= 0 else tail_pos(stitches)
+                        err_pos = i
                         fs = self.document__[i:i + 10].replace('\n', '\\n')
                         if i + 10 < len(self.document__) - 1:  fs += '...'
                         root_name = self.start_parser__.pname \
@@ -1698,8 +1700,8 @@ class Grammar:
                 stitch = Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches))
                 stitches.append(stitch)
                 if stitch.pos > 0:
-                    if err_pos > 0:
-                        l, c = line_col(linebreaks(self.document__), err_pos)
+                    if self.ff_pos__ > err_pos:
+                        l, c = line_col(linebreaks(self.document__), self.ff_pos)
                         error_msg = f'Farthest Fail at {l}:{c}, ' + error_msg
                     err_pos = stitch.pos
                 if len(stitches) > 2:
@@ -2905,7 +2907,7 @@ class MandatoryNary(NaryParser):
 
     @cython.locals(location=cython.int)
     def mandatory_violation(self,
-                            text_: StringView,
+                            text, text_: StringView,
                             failed_on_lookahead: bool,
                             expected: str,
                             reloc: int,
@@ -2918,8 +2920,9 @@ class MandatoryNary(NaryParser):
         This is a helper function that abstracts functionality that is
         needed by the Interleave- as well as the Series-parser.
 
-        :param text_: the point, where the mandatory violation. As usual the
-                string view represents the remaining text from this point.
+        :param text_: the point, where the mandatory violation occured.
+                As usual the string view represents the remaining text
+                from this point.
         :param failed_on_lookahead: True if the violating parser was a
                 Lookahead-Parser.
         :param expected:  the expected (but not found) text at this point.
@@ -2933,9 +2936,10 @@ class MandatoryNary(NaryParser):
                 continuation the parsing process
         """
         grammar = self._grammar
-        location = grammar.document_length__ - len(text_)
+        error_location = grammar.document_length__ - len(text_)
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
-        err_node.with_pos(location)  # for testing artifacts
+        err_node.with_pos(error_location if reloc >= 0
+                          else (grammar.document_length__ - len(text)))  # for testing artifacts
         found = text_[:10].replace('\n', '\\n') + '...'
         sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
@@ -2952,7 +2956,7 @@ class MandatoryNary(NaryParser):
                 except (ValueError, KeyError, IndexError) as e:
                     error = Error("Malformed error format string »{}« leads to »{}«"
                                   .format(message, str(e)),
-                                  location, MALFORMED_ERROR_STRING)
+                                  error_location, MALFORMED_ERROR_STRING)
                     grammar.tree__.add_error(err_node, error)
         else:
             msg = '%s expected by parser %s, but »%s« found instead!' \
@@ -2964,8 +2968,8 @@ class MandatoryNary(NaryParser):
                 error_code = MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
         else:
             error_code = MANDATORY_CONTINUATION
-        error = Error(msg, location, error_code,
-                      length=max(self.grammar.ff_pos__ - location, 1))
+        error = Error(msg, error_location, error_code,
+                      length=max(self.grammar.ff_pos__ - error_location, 1))
         grammar.tree__.add_error(err_node, error)
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
@@ -3048,7 +3052,7 @@ class Series(MandatoryNary):
                     parser_str = parser.repr
                     reloc, node = self.get_reentry_point(text_)
                     error, text_ = self.mandatory_violation(
-                        text_, isinstance(parser, Lookahead), parser_str, reloc, node)
+                        text, text_, isinstance(parser, Lookahead), parser_str, reloc, node)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         nd, text_ = parser(text_)  # try current parser again
@@ -3062,11 +3066,10 @@ class Series(MandatoryNary):
                 results.append(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        ret_node = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
-            raise ParserError(self, ret_node.with_pos(self.grammar.document_length__ - len(text_)),
-                              0 if len(ret_node) == 0 else (len(text) - len(text_)),  # TODO: Dangerous!
-                              text, error, first_throw=True)
+            raise ParserError(self, results[-1],  # .with_pos(self.grammar.document_length__ - len(text)),
+                              0,  text, error, first_throw=True)
+        ret_node = self._return_values(results)  # type: Node
         return ret_node, text_
 
     def __repr__(self):
@@ -3404,7 +3407,7 @@ class Interleave(MandatoryNary):
                     return None, text
                 reloc, err_node = self.get_reentry_point(text_)
                 expected = ' ° '.join([parser.repr for parser in self.parsers])
-                error, text_ = self.mandatory_violation(text_, False, expected, reloc, err_node)
+                error, text_ = self.mandatory_violation(text, text_, False, expected, reloc, err_node)
                 results += (err_node,)
                 if reloc < 0:
                     break
@@ -3414,8 +3417,8 @@ class Interleave(MandatoryNary):
                 break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
-            raise ParserError(self, nd.with_pos(self.grammar.document_length__ - len(text)),
-                              0 if len(nd) == 0 else (len(text) - len(text_)),  # TODO: Dangerous!
+            raise ParserError(self, results[-1], # nd.with_pos(self.grammar.document_length__ - len(text)),
+                              0, # if len(nd) == 0 else (len(text) - len(text_)),  # TODO: Dangerous!
                               text, error, first_throw=True)
         return nd, text_
 

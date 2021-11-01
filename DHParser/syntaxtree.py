@@ -1466,7 +1466,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 elif src is not None:
                     txt.append(' `(pos %i)' % node.pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(" `(%s)" % ';  '.join(str(err) for err in root.node_errors(node)))
+                txt.append(" `(err %s)" % ';  '.join(str(err) for err in root.node_errors(node)))
             return "".join(txt)
 
         def closing(node: Node) -> str:
@@ -2484,8 +2484,8 @@ class RootNode(Node):
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, len(node) - 1))
             assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
         self.error_nodes.setdefault(id(node), []).append(error)
-        if node.pos == error.pos:
-            self.error_positions.setdefault(error.pos, set()).add(id(node))
+        # if node.pos <= error.pos < node.pos + max(1, len(node)):
+        self.error_positions.setdefault(error.pos, set()).add(id(node))
         if self.source:
             add_source_locations([error], self.source_mapping)
         self.errors.append(error)
@@ -2522,7 +2522,7 @@ class RootNode(Node):
         end_pos = node.pos + max(len(node), 1)
         error_node_ids = set()
         for pos, ids in self.error_positions.items():   # TODO: use bisect here...
-            if start_pos <= pos < end_pos:
+            if start_pos <= pos < end_pos or node_id in ids:
                 error_node_ids.update(ids)
         for nid in error_node_ids:
             if nid == node_id:

@@ -746,15 +746,18 @@ class TestErrorRecovery:
         st = parser('_ABC')
         assert st.equals(parse_sxpr('(document "_ABC")'))
         st = parser('A_CD')
-        assert st['allof'].content == "A_CD"
+        # for nid, e in st.error_nodes.items():  print(nid, e)
+        # for n in st.select(lambda nd: True):  print(id(n))
+        # print(st.as_sxpr())
+        assert st.content == "A_CD"
         st = parser('AB_D')
-        assert st['allof'].content == "AB_D"
+        assert st.content == "AB_D"
         st = parser('A__D')
-        assert st['allof'].content == "A__D"
+        assert st.content == "A__D"
         st = parser('CA_D')
-        assert st['allof'].content == "CA_D"
+        assert st.content == "CA_D"
         st = parser('A_CB')
-        assert st['allof'].content == "A_CB"
+        assert st.content == "A_CB"
         st = parser('BC_A')
         assert 'allof' not in st
 
@@ -1386,7 +1389,7 @@ def next_valid_letter(text, start, end):
         for error in cst.errors_sorted:
             locations.append((error.line, error.column))
         assert locations == [(36, 37), (37, 1), (47, 19), (51, 1), (53, 5),
-                             (57, 1), (59, 27), (60, 1), (65, 1), (66, 1)]
+                             (57, 1), (59, 27), (60, 1), (65, 1), (66, 1)], str(locations)
 
 
 
