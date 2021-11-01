@@ -1684,6 +1684,9 @@ back to the very beginning just as in the cause of a simple
 non-match. It does not stop short at the location of the error
 as might be assumed! Therefore, the resume-rule has to pass the
 beginning of the list before the error occurred, again.
+With skip-directives this is different, because skip-directives
+try to catch up within a series-parser and not after
+a series-parser has failed.
 
 Programming fail-tolerant parsers can be quite a challenge. DHParser's @skip-
 and @resume-directives help separating the code for fail-tolerance from the
