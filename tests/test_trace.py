@@ -168,7 +168,7 @@ class TestTrace:
         lang = """@ whitespace  = vertical
         @ literalws   = right
         _document = ~ [ list ] §_EOF
-        @list_resume = ({ list | /[^\[\]]*/ } ["]"])
+        @list_resume = ("[" [_items] { list | /[^\[\]]*/ } ["]"])
         list     = "[" [_items] § "]"
         @_items_skip = /(?=,)/, /(?=])/, /$/
         _items   = _item { "," §_item }
@@ -251,7 +251,8 @@ class TestErrorReporting:
         _ = gr('AB_D')
         for record in gr.history__:
             if record.status.startswith(record.ERROR):
-                assert record.excerpt == '_D'
+                # assert record.excerpt == 'AB_D', record.excerpt
+                assert record.excerpt in {'_D', 'AB_D'}
                 if record.errors[0].code == PARSER_STOPPED_BEFORE_END:
                     break
         else:

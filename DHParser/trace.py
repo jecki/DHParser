@@ -28,7 +28,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
+from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc
 from DHParser.toolkit import cython, line_col
@@ -72,6 +72,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
         if mre.first_throw:
             origin = mre.node.tag_name
+            if origin == ZOMBIE_TAG:
+                origin = mre.node.get_attr('parser', ZOMBIE_TAG)
             if origin[:1] == ':':
                 origin = grammar.associated_symbol__(mre.parser).tag_name + '->' + origin
             notice = Error(  # resume notice

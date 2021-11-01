@@ -1584,12 +1584,13 @@ class Grammar:
             def is_lookahead(tag_name: str) -> bool:
                 return (tag_name in self and isinstance(self[tag_name], Lookahead)
                         or tag_name[0] == ':' and issubclass(eval(tag_name[1:]), Lookahead))
+
             last_record = self.history__[-2] if len(self.history__) > 1 \
                 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
-                and any(h.status == HistoryRecord.MATCH  # or was it HistoryRecord.MATCH !?
-                        and any(is_lookahead(tn) and location >= len(self.document__)
-                                for tn, location in h.call_stack)
+                and any(# h.status == HistoryRecord.MATCH and
+                        any(is_lookahead(tn) and location >= len(self.document__)
+                            for tn, location in h.call_stack)
                         for h in self.history__[:-1])
 
         # assert isinstance(document, str), type(document)
@@ -1644,8 +1645,7 @@ class Grammar:
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
-                err_pos = 0
-                if result is None:
+                if result is None or result.tag_name == ZOMBIE_TAG:
                     err_pos = self.ff_pos__
                     err_pname = self.ff_parser__.pname \
                                 or self.associated_symbol__(self.ff_parser__).pname \
@@ -2902,8 +2902,10 @@ class MandatoryNary(NaryParser):
             # if location <= gr.last_rb__loc__ + 1:
             #     gr.rollback_to__(location - 1)
             reloc = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            if reloc[1].tag_name == ZOMBIE_TAG:
+                reloc[1].attr['parser'] = self.symbol
             return reloc
-        return -1, Node(ZOMBIE_TAG, '')
+        return -1, Node(ZOMBIE_TAG, '').with_attr({'parser': self.symbol})
 
     @cython.locals(location=cython.int)
     def mandatory_violation(self,
