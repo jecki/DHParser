@@ -50,7 +50,8 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
-    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SourceMapFunc, has_errors, ERROR
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, \
+    SourceMapFunc, has_errors
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -1588,7 +1589,7 @@ class Grammar:
             last_record = self.history__[-2] if len(self.history__) > 1 \
                 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
-                and any(# h.status == HistoryRecord.MATCH and
+                and any(h.status == HistoryRecord.MATCH and
                         any(is_lookahead(tn) and location >= len(self.document__)
                             for tn, location in h.call_stack)
                         for h in self.history__[:-1])
@@ -1708,7 +1709,8 @@ class Grammar:
                     err_pos = max(err_pos, stitch.pos)
                 if len(stitches) > 2:
                     error_msg = f'Error after {len(stitches) - 2}. reentry: ' + error_msg
-                    err_pos = stitch.pos
+                    err_cde = PARSER_STOPPED_ON_RETRY
+                    err_pos = stitch.pos  # in this case stich.pos is more important than ff_pos
                 if error_code in {PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_LOOKAHEAD_FAILURE_ONLY} \
                         or not any(e.pos == err_pos for e in self.tree__.errors):
                     error = Error(error_msg, err_pos, error_code)
@@ -3072,12 +3074,18 @@ class Series(MandatoryNary):
                         break
             if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results.append(node)
-        # assert len(results) <= len(self.parsers) \
-        #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
-        if error and reloc < 0:  # no worry: reloc is always defined when error is True
-            raise ParserError(self, results[-1],  # .with_pos(self.grammar.document_length__ - len(text)),
-                              0,  text, error, first_throw=True)
         ret_node = self._return_values(results)  # type: Node
+        if error and reloc < 0:  # no worry: reloc is always defined when error is True
+            if isinstance(parser, Lookahead) and parser == self.parsers[-1]:
+                # if series merely failed because of a trailing lookahead,
+                # assume that it is a local test and preserve the structure
+                position = self.grammar.document_length__ - len(text)
+                length = len(text) - len(text_)
+                raise ParserError(self,ret_node.with_pos(position), length,
+                                  text, error, first_throw=True)
+            else:
+                raise ParserError(self, results[-1],  # .with_pos(self.grammar.document_length__ - len(text)),
+                                  0,  text, error, first_throw=True)
         return ret_node, text_
 
     def __repr__(self):

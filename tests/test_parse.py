@@ -33,7 +33,8 @@ from DHParser.toolkit import compile_python_object, re
 from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
 from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
-    PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING
+    PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING, \
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
@@ -1665,6 +1666,26 @@ class TestStringAlternative:
         assert longest_match(l, 'ax12345', 2) == ''
         assert longest_match(l, 'a', 2) == ''
 
+
+class TestStructurePreservationOnLookahead:
+    def test_structure_preservation_on_lookahead(self):
+        bib_grammar = r'''@literalws = right
+        @whitespace = horizontal
+        biliography = author ":" work { /\s*/ author ":" work } EOF 
+        author = name § { ~ name}+ &`:`
+        work = word § { ~ word} &(/\n/ | EOF)
+        name = word
+        word = /\w+/
+        EOF = !/./
+        '''
+        document = "Bertrand Russel: Principia Mathematica"
+        gr = create_parser(bib_grammar)
+        bib = gr(document)
+        assert bib['author'].content == "Bertrand Russel"
+        assert bib['work'].content == "Principia Mathematica"
+        author = gr('Bertrand Russell', 'author')
+        assert author.tag_name == "author" and author.content == "Bertrand Russell"
+        assert author.errors[0].code == MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
 
 
 if __name__ == "__main__":
