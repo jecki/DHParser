@@ -1260,7 +1260,6 @@ deliver understandable error-messages::
     "alpha"
     >>> for e in json_string('"al\\pha"').errors:  print(e)
     1:4: Error (1010): Illegal character(s) »\pha"...« in string.
-    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 Customized error-messages must always be specified in the grammar
 before definition of the symbol, they are related to and they can
@@ -1277,7 +1276,6 @@ general or fallback conditions should be placed below these::
     >>> json_string = create_parser(grammar, 'json_string')
     >>> for e in json_string('"al\pha"').errors:  print(e)
     1:4: Error (1010): Illegal escape sequence »\pha"...« Allowed values are b,n,r,t,u
-    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 Here, the more specific and more understandable error message
 has been selected. Careful readers might notice that the the
@@ -1533,7 +1531,6 @@ at the first error. Further errors are neither detected nor reported::
     >>> result = config_parser(cfg_data_with_errors)
     >>> for error in result.errors_sorted:  print(error)
     4:8: Error (1010): 'value' expected by parser 'entry', but »rose"\nBuil...« found instead!
-    4:8: Error (1040): Parser "config" stopped before end, at: »rose"\nBuil...« Terminating parser.
 
 After adding suitable `resume`-clauses for those symbols the definition
 of which contain the mantatory marker `§`, all errors are reported in
@@ -1592,7 +1589,6 @@ document could be parsed::
     >>> result = list_parser(example_with_errors)
     >>> for e in result.errors: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:6: Error (1040): Parser "_document" stopped before end, at: »A, [5, 6; ...« Terminating parser.
 
 Now, let's define some regular expression based rules to resume parsing after
 an error::
@@ -1631,7 +1627,6 @@ nested structures are involved::
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 Here, the parser stopped befere the end of the document, which shows that our resumption
 rules have been either incomplete or inadequate. Let's turn on some debugging information
@@ -1646,7 +1641,6 @@ to get a better insight into what went wrong::
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:24: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 9], 1...'
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
-    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 What is of interest here, is the second notice: It seems that the error was caught within
 the "list"-parser. By moving on to the spot after closing bracket as determined by the
@@ -2082,7 +2076,6 @@ XML-Parser with a little mistake::
     ... </doc>'''
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:19: Error (1040): Parser "document" stopped before end, at: »litle>\n   ...« Terminating parser.
     3:21: Error (1010): '`>`' expected by parser 'ETag', but »litle>\n   ...« found instead!
     5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 

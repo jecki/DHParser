@@ -10,6 +10,7 @@ import time
 import threading
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
+reldoc_path = os.path.join('..', 'documentation_src', 'manuals')
 doc_path = os.path.join(scriptdir, '..', 'documentation_src', 'manuals')
 sys.path.append(os.path.join(scriptdir, '../'))
 
@@ -33,9 +34,13 @@ def run_doctests_rst(rst_file):
     import doctest
     with lock:
         print('DOCTEST ' + rst_file)
-        result = doctest.testfile(os.path.join(doc_path, rst_file))
-        assert not result.failed
-        return result.failed
+        try:
+            result = doctest.testfile(os.path.join(reldoc_path, rst_file))
+            return result.failed
+        except Exception as e:
+            print("**********************************************************************")
+            print(f"Exception while procesing {rst_file}", e)
+            print("**********************************************************************")
 
 
 def run_doctests(module):
@@ -50,7 +55,6 @@ def run_doctests(module):
 
 
 def run_unittests(command):
-    # print('>>>>>>>> ', command)
     args = command.split(' ')
     filename = args[1]
     print('\nUNITTEST ' + args[0] + ' ' + filename)
@@ -130,7 +134,6 @@ if __name__ == "__main__":
         # documentation doctests
         for filename in os.listdir(doc_path):
             if filename.endswith('.rst'):
-                print(filename)
                 results.append(pool.submit(run_doctests_rst, filename))
 
         # module doctests
