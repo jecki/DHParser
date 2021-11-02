@@ -249,13 +249,12 @@ class TestErrorReporting:
         gr = grammar_provider(lang)()
         set_tracer(all_descendants(gr.root_parser__), trace_history)
         _ = gr('AB_D')
+        assert any(record.status.startswith(record.ERROR) for record in gr.history__), \
+            "Missing Error!"
         for record in gr.history__:
             if record.status.startswith(record.ERROR):
-                assert record.excerpt == '_D'
-                if record.errors[0].code == PARSER_STOPPED_BEFORE_END:
-                    break
-        else:
-            assert False, "Missing Error!"
+                # assert record.excerpt == 'AB_D', record.excerpt
+                assert record.excerpt in {'_D'}
         reveal(gr, 'trace_noskip')
 
     def test_trace_skip_clause(self):
