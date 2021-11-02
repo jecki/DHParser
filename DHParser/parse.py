@@ -3078,10 +3078,11 @@ class Series(MandatoryNary):
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             if isinstance(parser, Lookahead) and parser == self.parsers[-1]:
                 # if series merely failed because of a trailing lookahead,
-                # assume that it is a local test and preserve the structure
+                # assume that it is a test of a local parser, preserve the structure
+                # and do not retreat to the starting point of the Series parser on return
                 position = self.grammar.document_length__ - len(text)
                 length = len(text) - len(text_)
-                raise ParserError(self,ret_node.with_pos(position), length,
+                raise ParserError(self, ret_node.with_pos(position), length,
                                   text, error, first_throw=True)
             else:
                 raise ParserError(self, results[-1],  # .with_pos(self.grammar.document_length__ - len(text)),
