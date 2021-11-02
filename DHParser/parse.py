@@ -50,7 +50,8 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
-    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SourceMapFunc, has_errors, ERROR
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, \
+    SourceMapFunc, has_errors
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -1584,10 +1585,11 @@ class Grammar:
             def is_lookahead(tag_name: str) -> bool:
                 return (tag_name in self and isinstance(self[tag_name], Lookahead)
                         or tag_name[0] == ':' and issubclass(eval(tag_name[1:]), Lookahead))
+
             last_record = self.history__[-2] if len(self.history__) > 1 \
                 else None  # type: Optional[HistoryRecord]
             return last_record and parser != self.root_parser__ \
-                and any(h.status == HistoryRecord.MATCH  # or was it HistoryRecord.MATCH !?
+                and any(h.status == HistoryRecord.MATCH
                         and any(is_lookahead(tn) and location >= len(self.document__)
                                 for tn, location in h.call_stack)
                         for h in self.history__[:-1])
@@ -1644,8 +1646,7 @@ class Grammar:
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
-                err_pos = 0
-                if result is None:
+                if result is None or (result.tag_name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
                     err_pname = self.ff_parser__.pname \
                                 or self.associated_symbol__(self.ff_parser__).pname \
@@ -1655,16 +1656,18 @@ class Grammar:
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
                     if lookahead_failure_only(parser):
+                        # error_msg = # f'Parser "{parser.tag_name}" stopped before end, because ' \
                         error_msg = f'Parser "{err_pname}" did not match: »{err_text}« ' \
                                     f'- but only because of lookahead.'
                         error_code = PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
+                        # error_msg = f'Parser "{parser.tag_name}" stopped before end, because' \
                         error_msg = f'Parser "{err_pname}" did not match: »{err_text}«'
                         error_code = PARSER_STOPPED_BEFORE_END
                     if self.history_tracking__:
                         error_msg += '\n    Most advanced fail: %s\n    Last match:    %s;' % \
                                      (str(HistoryRecord.most_advanced_fail(self.history__)),
-                                     str(HistoryRecord.last_match(self.history__)))
+                                      str(HistoryRecord.last_match(self.history__)))
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
@@ -1677,11 +1680,13 @@ class Grammar:
                     if h.status in (h.MATCH, h.DROP) \
                             and (h.node.pos + len(h.node) == len(self.document__)):
                         # TODO: this case still needs unit-tests and support in testing.py
+                        err_pos = h.node.pos
                         error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
                         i = self.ff_pos__ if self.ff_pos__ >= 0 else tail_pos(stitches)
+                        err_pos = i
                         fs = self.document__[i:i + 10].replace('\n', '\\n')
                         if i + 10 < len(self.document__) - 1:  fs += '...'
                         root_name = self.start_parser__.pname \
@@ -1698,18 +1703,23 @@ class Grammar:
                 stitch = Node(ZOMBIE_TAG, skip).with_pos(tail_pos(stitches))
                 stitches.append(stitch)
                 if stitch.pos > 0:
-                    if err_pos > 0:
-                        l, c = line_col(linebreaks(self.document__), err_pos)
+                    if self.ff_pos__ > err_pos:
+                        l, c = line_col(linebreaks(self.document__), self.ff_pos__)
                         error_msg = f'Farthest Fail at {l}:{c}, ' + error_msg
-                    err_pos = stitch.pos
+                    err_pos = max(err_pos, stitch.pos)
                 if len(stitches) > 2:
                     error_msg = f'Error after {len(stitches) - 2}. reentry: ' + error_msg
-                error = Error(error_msg, err_pos, error_code)
-                self.tree__.add_error(stitch, error)
-                if self.history_tracking__:
-                    lc = line_col(self.document_lbreaks__, error.pos)
-                    self.history__.append(HistoryRecord([(stitch.tag_name, stitch.pos)], stitch,
-                                                        self.document__[error.pos:], lc, [error]))
+                    err_code = PARSER_STOPPED_ON_RETRY
+                    err_pos = stitch.pos  # in this case stich.pos is more important than ff_pos
+                if error_code in {PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_LOOKAHEAD_FAILURE_ONLY} \
+                        or not any(e.pos == err_pos for e in self.tree__.errors):
+                    error = Error(error_msg, err_pos, error_code)
+                    self.tree__.add_error(stitch, error)
+                    if self.history_tracking__:
+                        lc = line_col(self.document_lbreaks__, error.pos)
+                        self.history__.append(HistoryRecord(
+                            [(stitch.tag_name, stitch.pos)], stitch,
+                            self.document__[error.pos:], lc, [error]))
             else:
                 # if complete_match is False, ignore the rest and leave while loop
                 rest = StringView('')

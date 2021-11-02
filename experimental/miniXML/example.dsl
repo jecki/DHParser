@@ -1,4 +1,5 @@
-
 <doc>
-   <title>Heading <wrong></litle>
+   begin
+   <title>Heading <wrong> heading continued</litle>
+   end
 </doc>
