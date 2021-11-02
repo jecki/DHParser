@@ -1708,6 +1708,7 @@ class Grammar:
                     err_pos = max(err_pos, stitch.pos)
                 if len(stitches) > 2:
                     error_msg = f'Error after {len(stitches) - 2}. reentry: ' + error_msg
+                    err_pos = stitch.pos
                 if error_code in {PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_LOOKAHEAD_FAILURE_ONLY} \
                         or not any(e.pos == err_pos for e in self.tree__.errors):
                     error = Error(error_msg, err_pos, error_code)
