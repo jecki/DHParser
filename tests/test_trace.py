@@ -211,7 +211,8 @@ class TestTrace:
         assert len(notices) == 1, str(notices)
         notice = str(notices[0])
         assert notice.find('Skip') < 0, 'Not a resume-notice: ' + notice
-        assert notice.find('"abc') >= 0, "Wrong parser reported: " + notice
+        assert notice.find('"abc') >= 0 or notice.find('->abc->') >= 0, \
+            "Wrong parser reported: " + notice
         set_tracer(gr, None)
         assert not gr.history_tracking__
 

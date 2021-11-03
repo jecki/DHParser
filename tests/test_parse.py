@@ -1709,8 +1709,11 @@ class TestErrorLocations:
         <doc>
             <title>Heading <wrong></title>
         </doc>'''
+        # set_config_value('resume_notices', True)
         parseXML = create_parser(miniXML)
         result = parseXML(testdoc)
+        # set_config_value('resume_notices', False)
+        # for e in result.errors: print(e)
         assert len(result.errors) == 1
 
     def test_error_location(self):
