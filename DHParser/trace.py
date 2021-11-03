@@ -38,8 +38,8 @@ __all__ = ('trace_history', 'all_descendants', 'set_tracer',
 
 
 def symbol_name(parser: Parser, grammar: Grammar) -> str:
-    # name = str(parser) if isinstance(parser, ContextSensitive) else parser.tag_name
-    name = parser.tag_name
+    name = str(parser) if isinstance(parser, ContextSensitive) else parser.tag_name
+    # name = parser.tag_name
     if name[:1] == ':':
         name = grammar.associated_symbol__(parser).tag_name + '->' + name
     return name
@@ -77,10 +77,10 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # target = text if len(text) <= 10 else text[:7] + '...'
 
         if mre.first_throw:
-            # origin = callstack_as_str(mre.callstack_snapshot, depth=3)
-            # resumer = callstack_as_str(grammar.call_stack__, depth=3)
-            origin = symbol_name(mre.parser, grammar)
-            resumer = symbol_name(self, grammar)
+            origin = callstack_as_str(mre.callstack_snapshot, depth=3)
+            resumer = callstack_as_str(grammar.call_stack__, depth=3)
+            # origin = symbol_name(mre.parser, grammar)
+            # resumer = symbol_name(self, grammar)
             notice = Error(  # resume notice
                 'Resuming from "{}" at {}:{} {} with parser "{}" at {}:{} {}'
                 .format(origin, *orig_lc, repr(orig_snippet),
