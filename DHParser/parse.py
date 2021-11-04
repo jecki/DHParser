@@ -4158,8 +4158,9 @@ class Forward(UnaryParser):
                     # happen because of memoization. (This is a downside of global error-reporting
                     # in contrast to attaching error-messages locally to the node where they
                     # occurred. Big topic...)
-
+                    # don't carry error/resumption-messages over to the next iteration
                     grammar.most_recent_error__ = None
+
                     next_result = self.parser(text)
 
                     # discard next_result if it is not the longest match and return
