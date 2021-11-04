@@ -1726,6 +1726,7 @@ class TestErrorLocations:
         parseXML = create_parser(miniXML)
         resume_notices_on(parseXML)
         result = parseXML(testdoc)
+        # for e in result.errors:  print(e)
         assert len(result.errors) == 2
 
     def test_error_location(self):

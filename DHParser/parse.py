@@ -4134,8 +4134,8 @@ class Forward(UnaryParser):
                 result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
-            save_suspend_memoization = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
+            save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
             history_pointer = len(grammar.history__)
 
@@ -4160,7 +4160,6 @@ class Forward(UnaryParser):
                     # occurred. Big topic...)
                     # don't carry error/resumption-messages over to the next iteration
                     # grammar.most_recent_error__ = None
-
                     next_result = self.parser(text)
 
                     # discard next_result if it is not the longest match and return
