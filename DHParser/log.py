@@ -408,7 +408,7 @@ class HistoryRecord:
         elif status == self.FAIL:
             classes[idx['text']] = 'failtext'
         else:  # ERROR
-            stack += '<br/>\n"%s"' % self.err_msg()
+            stack += '<br/>\n"%s"' % self.err_msg().replace('<', '&lt;').replace('>', '&gt;')
             classes[idx['text']] = 'errortext'
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]),
                             stack, status, excerpt)  # type: Tuple[str, str, str, str, str]
