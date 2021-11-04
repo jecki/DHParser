@@ -2084,7 +2084,7 @@ XML-Parser with a little mistake::
 
 Since our original mini-XML-grammar did not contain any
 error-resumption-directives, this is what we'd expect.
-Now let's add a skip-directive to continue after misspelled
+Now let's add a resume-directive to continue after misspelled
 tag-names::
 
     >>> miniXML = '''
@@ -2114,8 +2114,8 @@ to the misspelled closing tag has - because of the misspelling - never been
 removed from the stack.
 
 We can try to avoid this problem by "popping" one element from the stack
-within our skip rule. This is of course only possible, if we specify our
-skip rule as full PEG-expression, not just a regular expression::
+within our resume rule. This is of course only possible, if we specify our
+resume rule as full PEG-expression, not just a regular expression::
 
     >>> new_resume_rule = "@element_resume = (:?TagName '</' /\w+/ '>')"
 
@@ -2151,7 +2151,7 @@ omiting the closing slash ``/`` in an empty tag)::
     4:7: Error (1010): 'ETag = `</` ::TagName "doc" § `>`' expected by parser 'element', but »...« found instead!
 
 In this case the removal of the last value from the stack in the
-``@ETag_skip``-rule results in a cascade of consecutive errors
+``@element_resume``-rule results in a cascade of consecutive errors
 (or "error-artifacts"), one for every outer closing tag.
 
 Avoiding error-artifacts such as this is an art in itself and
@@ -2163,8 +2163,7 @@ those error messages that confuse them most. (Bug-reports,
 help-desk questions or tele-metric data might yield the
 required empirical information for this approach.)
 
-A more robust rule-set for our mini-XML-grammar might be the
-following::
+A more robust rule-set for our mini-XML-grammar might be::
 
     >>> miniXML = '''
     ... @ whitespace  = /\s*/
@@ -2172,7 +2171,7 @@ following::
     ... @ drop        = EOF, whitespace, strings
     ...
     ... document = ~ element ~ §EOF
-    ... @element_resume = /[^<>]*/
+    ... @element_resume = (:?TagName (&('</' :TagName '>') | '</' /\w+/ '>'))
     ... element  = STag §content ETag
     ... STag     = '<' TagName §'>'
     ... ETag     = '</' ::TagName §'>'
@@ -2187,4 +2186,22 @@ following::
     >>> for e in result.errors_sorted: print(e)
     3:26: Error (1010): 'ETag = `</` ::TagName "wrong" § `>`' expected by parser 'element', but »</title>\n<...« found instead!
 
+This rule has been designed to cover both of the previous cases. However,
+if we combine both errors, its limitations begin to show::
+
+    >>> xmldoc = '''
+    ... <doc>
+    ...     <title>Heading<wrong></litle>
+    ...     A few lines of Text
+    ... </doc>'''
+    >>> result = parseXML(xmldoc)
+    >>> for e in result.errors_sorted: print(e)
+    3:26: Error (1010): 'ETag = `</` ::TagName "wrong" § `>`' expected by parser 'element', but »</litle>\n ...« found instead!
+    5:1: Error (1010): 'ETag = `</` ::TagName "title" § `>`' expected by parser 'element', but »</doc>...« found instead!
+
+Here, it seems almost impossible to avoid an error-cascade in combination with
+context-sensitive parser if met with a combination of different errors. In this
+particular case of an XML-parser, the best way out might be not to use
+context-sensitive parsers at all and check the matching XML-tags at a later
+processing stage.
 
