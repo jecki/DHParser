@@ -3055,7 +3055,7 @@ class Series(MandatoryNary):
                 if pos < mandatory:
                     return None, text
                 else:
-                    parser_str = parser.repr
+                    parser_str = str(parser)
                     reloc, node = self.get_reentry_point(text_)
                     error, text_ = self.mandatory_violation(
                         text_, isinstance(parser, Lookahead), parser_str, reloc, node)
@@ -3076,7 +3076,7 @@ class Series(MandatoryNary):
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
             raise ParserError(self, ret_node.with_pos(self.grammar.document_length__ - len(text_)),
-                              0 if len(ret_node) == 0 else (len(text) - len(text_)),
+                              len(text) - len(text_),
                               text, error, first_throw=True)
         return ret_node, text_
 
@@ -3427,7 +3427,7 @@ class Interleave(MandatoryNary):
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
             raise ParserError(self, nd.with_pos(self.grammar.document_length__ - len(text)),
-                              0 if len(nd) == 0 else (len(text) - len(text_)),
+                              len(text) - len(text_),
                               text, error, first_throw=True)
         return nd, text_
 
@@ -3951,9 +3951,9 @@ class Pop(Retrieve):
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
             self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
-        # else:
-        #     # set last_rb__loc__ to avoid memoizing of retrieved results
-        #     self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
+        else:
+            # set last_rb__loc__ to avoid memoizing of retrieved results
+            self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
         return node, text_
 
     def __repr__(self):
@@ -4115,6 +4115,7 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             # TODO: Bug in error restoration!
             error_restoration = grammar.resume_notices__  # otherwise reduplication of errors prevented by RootNode.add_error
+            error_restoration = False
             if error_restoration:  saved_error_state = grammar.tree__.save_error_state()
 
             history_pointer = len(grammar.history__)
@@ -4134,7 +4135,6 @@ class Forward(UnaryParser):
                     grammar.history__ = grammar.history__[:history_pointer]
 
                     if error_restoration:  grammar.tree__.restore_error_state(saved_error_state)
-
                     next_result = self.parser(text)
                     # discard next_result if it is not the longest match and return
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match

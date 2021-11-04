@@ -69,11 +69,12 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         errors = [mre.error]  # type: List[Error]
         text_ = grammar.document__[mre.error.pos:]
         orig_lc = line_col(grammar.document_lbreaks__, mre.error.pos)
-        orig_rest = text if len(text) <= 10 else text[:7] + '...'
-        orig_snippet = orig_rest if len(orig_rest) <= 10 else orig_rest[:7] + '...'
-        target_pos = grammar.document_length__ - len(mre.rest) + mre.node_orig_len
+        orig_snippet= text_ if len(text_) <= 10 else text_[:7] + '...'
+        # orig_snippet = orig_rest if len(orig_rest) <= 10 else orig_rest[:7] + '...'
+        target_pos = grammar.document_length__ - len(text)
         target_lc = line_col(grammar.document_lbreaks__, target_pos)
-        target_snippet = mre.rest if len(mre.rest) <= 10 else mre.rest[:7] + '...'
+        text_ = grammar.document__[target_pos:]
+        target_snippet = text_ if len(text_) <= 10 else text_[:7] + '...'
         # target = text if len(text) <= 10 else text[:7] + '...'
 
         if mre.first_throw:
@@ -82,9 +83,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             # origin = symbol_name(mre.parser, grammar)
             # resumer = symbol_name(self, grammar)
             notice = Error(  # resume notice
-                'Resuming from "{}" at {}:{} {} with parser "{}" at {}:{} {}'
+                'Resuming from "{}" at {}:{} {}\n        with parser "{}" at {}:{} {}'
                 .format(origin, *orig_lc, repr(orig_snippet),
-                        resumer, *target_lc, repr(target_snippet)),
+                        resumer, *target_lc, repr(target_snippet)) + f'\n{grammar.variables__}',
                 location, RESUME_NOTICE)
         else:
             origin = symbol_name(mre.parser, grammar)  # mre.node.tag_name
