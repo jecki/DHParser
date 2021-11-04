@@ -4152,6 +4152,12 @@ class Forward(UnaryParser):
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
                     grammar.history__ = grammar.history__[:history_pointer]
+                    # reduplication of error messages will be caught by syntaxtree.RootNode.add_error()
+                    # saving and restoring the errors-messages state on each iterations presupposes
+                    # that error messages will be recreated every time, which, however, does not
+                    # happen because of memoization. (This is a downside of global error-reporting
+                    # in contrast to attaching error-messages locally to the node where they
+                    # occurred. Big topic...)
 
                     grammar.most_recent_error__ == None
                     next_result = self.parser(text)
