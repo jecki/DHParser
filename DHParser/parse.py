@@ -4159,7 +4159,7 @@ class Forward(UnaryParser):
                     # in contrast to attaching error-messages locally to the node where they
                     # occurred. Big topic...)
 
-                    grammar.most_recent_error__ == None
+                    grammar.most_recent_error__ = None
                     next_result = self.parser(text)
 
                     # discard next_result if it is not the longest match and return
