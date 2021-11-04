@@ -3059,7 +3059,7 @@ class Series(MandatoryNary):
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
 
-    @lru_cache
+    @lru_cache(maxsize=8)
     def _is_context_sensitive(self, parser: Parser) -> bool:
         for p in parser.descendants():
             if isinstance(p, ContextSensitive):
