@@ -41,7 +41,7 @@ def symbol_name(parser: Parser, grammar: Grammar) -> str:
     name = str(parser) if isinstance(parser, ContextSensitive) else parser.tag_name
     # name = parser.tag_name
     if name[:1] == ':':
-        name = grammar.associated_symbol__(parser).tag_name + '->' + name
+        name = grammar.associated_symbol__(parser).pname + '->' + name
     return name
 
 
@@ -73,22 +73,22 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # orig_snippet = orig_rest if len(orig_rest) <= 10 else orig_rest[:7] + '...'
         target_pos = grammar.document_length__ - len(text)
         target_lc = line_col(grammar.document_lbreaks__, target_pos)
-        text_ = grammar.document__[target_pos:]
-        target_snippet = text_ if len(text_) <= 10 else text_[:7] + '...'
+        target_text_ = grammar.document__[target_pos:]
+        target_snippet = target_text_ if len(target_text_) <= 10 else target_text_[:7] + '...'
         # target = text if len(text) <= 10 else text[:7] + '...'
 
         if mre.first_throw:
-            origin = callstack_as_str(mre.callstack_snapshot, depth=3)
-            resumer = callstack_as_str(grammar.call_stack__, depth=3)
-            # origin = symbol_name(mre.parser, grammar)
-            # resumer = symbol_name(self, grammar)
+            # origin = callstack_as_str(mre.callstack_snapshot, depth=3)
+            # resumer = callstack_as_str(grammar.call_stack__, depth=3)
+            origin = symbol_name(mre.parser, grammar)
+            resumer = symbol_name(self, grammar)
             notice = Error(  # resume notice
-                'Resuming from "{}" at {}:{} {}\n        with parser "{}" at {}:{} {}'
+                'Resuming from {} at {}:{} {} with {} at {}:{} {}'
                 .format(origin, *orig_lc, repr(orig_snippet),
-                        resumer, *target_lc, repr(target_snippet)) + f'\n{grammar.variables__}',
+                        resumer, *target_lc, repr(target_snippet)),
                 location, RESUME_NOTICE)
         else:
-            origin = symbol_name(mre.parser, grammar)  # mre.node.tag_name
+            origin = symbol_name(self, grammar)
             notice = Error(  # skip notice
                 'Skipping from {}:{} {} within {} to {}:{} {}'
                 .format(*orig_lc, repr(orig_snippet), origin,

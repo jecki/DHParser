@@ -1637,10 +1637,11 @@ to get a better insight into what went wrong::
     >>> result = list_parser(example_with_errors_2)
     >>> for e in result.errors: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:9: Notice (50): Skipping from position 1:8 within parser _items->:ZeroOrMore->:Series: ', [5, 6...'
+    1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:Alternative to 1:9 ', [5, 6...'
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
-    1:24: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 9], 1...'
+    1:24: Notice (50): Resuming from list at 1:16 '; [7, 8...' with _items->:Series at 1:24 ', 9], 1...'
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
+
 
 What is of interest here, is the second notice: It seems that the error was caught within
 the "list"-parser. By moving on to the spot after closing bracket as determined by the
@@ -1672,9 +1673,10 @@ that resumption does not get caught on the nested structure, any more::
 
     >>> for e in result.errors:
     ...     if e.code == RESUME_NOTICE: print(e)
-    1:9: Notice (50): Skipping from position 1:8 within parser _items->:ZeroOrMore->:Series: ', [5, 6...'
-    1:28: Notice (50): Resuming from parser "list" at position 1:16 with parser "_items->:ZeroOrMore": ', 10, ]'
-    1:34: Notice (50): Skipping from position 1:34 within parser _items->:ZeroOrMore: ']'
+    1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:Alternative to 1:9 ', [5, 6...'
+    1:28: Notice (50): Resuming from list at 1:16 '; [7, 8...' with _items->:Series at 1:28 ', 10, ]'
+    1:34: Notice (50): Skipping from 1:34 ']' within _items->:Series to 1:34 ']'
+
 
 Programming fail-tolerant parsers can be quite a challenge. DHParser's @skip-
 and @resume-directives help separating the code for fail-tolerance from the
@@ -1769,7 +1771,7 @@ it can compared with the tag-name of the ending-tag::
     ... document = ~ element ~ §EOF
     ... element  = STag §content ETag
     ... STag     = '<' TagName §'>'
-    ... ETag     = '</' § ::TagName '>'
+    ... ETag     = '</' ::TagName §'>'
     ... TagName  = /\\w+/
     ... content  = [CharData] { (element | COMMENT__) [CharData] }
     ... CharData = /(?:(?!\\]\\]>)[^<&])+/
@@ -1787,7 +1789,7 @@ it can compared with the tag-name of the ending-tag::
           (TagName "line"))))
     >>> result = parseXML('<line>O Rose thou art sick.</enil>')
     >>> print(result.errors[0])
-    1:30: Error (1010): '::TagName "line"' expected by parser 'ETag', but »enil>...« found instead!
+    1:28: Error (1010): 'ETag = `</` ::TagName "line" § `>`' expected by parser 'element', but »</enil>...« found instead!
 
 Here, the TagName-parser in the definition has been prefixed with a double colon ``::``. This double
 colon is the "Pop"-operator and can be put in front of any symbol defined in the grammar. If a symbol is
@@ -2077,7 +2079,7 @@ XML-Parser with a little mistake::
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
     3:21: Error (1010): '`>`' expected by parser 'ETag', but »litle>\n   ...« found instead!
-    5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+    5:5: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 
 
 Since our original mini-XML-grammar did not contain any
@@ -2089,10 +2091,10 @@ tag-names::
     ... @ disposable  = EOF
     ... @ drop        = EOF, whitespace, strings
     ... document = ~ element ~ §EOF
+    ... @element_resume = ('</' /\w+/ '>')
     ... element  = STag §content ETag
     ... STag     = '<' TagName §'>'
-    ... @ETag_skip = /[^<>]*/
-    ... ETag     = '</' § ::TagName '>'
+    ... ETag     = '</' ::TagName §'>'
     ... TagName  = /\\w+/
     ... content  = [CharData] { (element | COMMENT__) [CharData] }
     ... CharData = /(?:(?!\\]\\]>)[^<&])+/
@@ -2101,11 +2103,10 @@ tag-names::
     >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:21: Error (1010): '::TagName "title"' expected by parser 'ETag', but »litle>\n   ...« found instead!
-    5:3: Error (1010): '::TagName "title"' expected by parser 'ETag', but »doc>...« found instead!
-    5:6: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+    3:19: Error (1010): 'ETag = `</` ::TagName "title" § `>`' expected by parser 'element', but »</litle>\n ...« found instead!
+    5:1: Error (1010): 'ETag = `</` ::TagName "title" § `>`' expected by parser 'element', but »</doc>...« found instead!
 
-The last two errors are merely consequential errors. And one can imagine that,
+The second error is merely a consequential error. One can imagine that,
 had the mistake of misspelling the ending tag occurred deeper in the XML
 hierarchy then a consequential error for every closing tag after the erroneous
 would have been reported, because the name of the opening tag corresponding
@@ -2116,7 +2117,7 @@ We can try to avoid this problem by "popping" one element from the stack
 within our skip rule. This is of course only possible, if we specify our
 skip rule as full PEG-expression, not just a regular expression::
 
-    >>> new_skip_rule = "@ETag_skip = ((/\s*(?=>)/ | :?TagName) /[^<>]*/)"
+    >>> new_resume_rule = "@element_resume = (:?TagName '</' /\w+/ '>')"
 
 The regular expression ``/\s*(?=>)/`` merely has the purpose to cover
 enging-tags that fail to parse because of superfluous blanks before the
@@ -2126,13 +2127,13 @@ of a misspelled tag-name, but merely removes it value from the stack,
 it it followed by the ragular expression ``/\s*(?=>)/`` which moves the
 parser forward to the next angualar bracket.::
 
-    >>> i = miniXML.find('@ETag_skip')
+    >>> i = miniXML.find('@element_resume')
     >>> k = miniXML.find('\n', i)
-    >>> miniXML = miniXML[:i] + new_skip_rule + miniXML[k:]
+    >>> miniXML = miniXML[:i] + new_resume_rule + miniXML[k:]
     >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:21: Error (1010): '::TagName "title"' expected by parser 'ETag', but »litle>\n   ...« found instead!
+    3:19: Error (1010): 'ETag = `</` ::TagName "title" § `>`' expected by parser 'element', but »</litle>\n ...« found instead!
 
 If it only was so simple! Let's see what happens if we treat our
 parser with another, rather obvious or common mistake: Forgetting
@@ -2145,10 +2146,9 @@ omiting the closing slash ``/`` in an empty tag)::
     ... </doc>'''
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:28: Error (1010): '::TagName "wrong"' expected by parser 'ETag', but »title>\n</d...« found instead!
-    4:3: Error (1010): '::TagName "title"' expected by parser 'ETag', but »doc>...« found instead!
-    4:7: Error (1010): 'ETag' expected by parser 'element', but »...« found instead!
-    4:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+    3:26: Error (1010): 'ETag = `</` ::TagName "wrong" § `>`' expected by parser 'element', but »</title>\n<...« found instead!
+    4:1: Error (1010): 'ETag = `</` ::TagName "title" § `>`' expected by parser 'element', but »</doc>...« found instead!
+    4:7: Error (1010): 'ETag = `</` ::TagName "doc" § `>`' expected by parser 'element', but »...« found instead!
 
 In this case the removal of the last value from the stack in the
 ``@ETag_skip``-rule results in a cascade of consecutive errors
@@ -2174,10 +2174,8 @@ following::
     ... document = ~ element ~ §EOF
     ... @element_resume = /[^<>]*/
     ... element  = STag §content ETag
-    ... @STag_skip = (/[^<>]*>/)
     ... STag     = '<' TagName §'>'
-    ... @ETag_skip = ((/\s*(?=>)/ | :?TagName !:TagName) /[^<>]*/)
-    ... ETag     = '</' §::TagName '>'
+    ... ETag     = '</' ::TagName §'>'
     ... TagName  = /\w+/
     ... content  = [CharData] { (element | COMMENT__) [CharData] }
     ...
@@ -2187,5 +2185,6 @@ following::
     >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:28: Error (1010): '::TagName "wrong"' expected by parser 'ETag', but »title>\n</d...« found instead!
+    3:26: Error (1010): 'ETag = `</` ::TagName "wrong" § `>`' expected by parser 'element', but »</title>\n<...« found instead!
+
 

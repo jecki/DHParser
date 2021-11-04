@@ -1055,10 +1055,11 @@ class TestPopRetrieve:
         """
         parser = grammar_provider(lang_variant)()
         st = parser("X := 1")
-        assert not st.errors
+        assert not st.errors, str(st.errors)
         assert st.equals(st1)
         st = parser('')
-        assert "'EOF' expected" in str(st.errors), st.as_sxpr()
+        for e in st.errors: print(e)
+        assert "'EOF = !/./ :?defsign' expected" in str(st.errors), st.as_sxpr()
 
 
 class TestWhitespaceHandling:
@@ -1713,8 +1714,38 @@ class TestErrorLocations:
         resume_notices_on(parseXML)
         result = parseXML(testdoc)
         # print(result.as_sxpr())
-        for e in result.errors: print(e)
-        # assert len(result.errors) == 1
+        # for e in result.errors: print(e)
+        assert len(result.errors) == 2
+
+    def test_error_resumption_2(self):
+        miniXML = '''
+        @ whitespace  = /\s*/
+        @ disposable  = EOF
+        @ drop        = EOF, whitespace, strings
+
+        document = ~ element ~ §EOF
+        @element_resume = /[^<>]*/
+        element  = STag §content ETag
+        @STag_skip = (/[^<>]*>/)
+        STag     = '<' TagName §'>'
+        @ETag_skip = (/[^<>]*/)
+        ETag     = '</' ::TagName §'>'
+        TagName  = /\w+/
+        content  = [CharData] { (element | COMMENT__) [CharData] }
+
+        CharData = /(?:(?!\]\]>)[^<&])+/
+        EOF      =  !/./        # no more characters ahead, end of file reached
+        '''
+        testdoc = '''
+        <doc>
+            <title>Heading <wrong></title>
+        </doc>'''
+        parseXML = create_parser(miniXML)
+        resume_notices_on(parseXML)
+        result = parseXML(testdoc)
+        # print(result.as_sxpr())
+        # for e in result.errors: print(e)
+        assert len(result.errors) == 2
 
     def test_error_location(self):
         grammar = r'''

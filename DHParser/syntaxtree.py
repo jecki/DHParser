@@ -2458,7 +2458,7 @@ class RootNode(Node):
         Adds an Error object to the tree, locating it at a specific node.
         """
         assert isinstance(error, Error)
-        # if error in self._error_set:  return self  # prevent duplication of errors
+        if error in self._error_set:  return self  # prevent duplication of errors
         if not node:
             # find the first leaf-node from the left that could contain the error
             # judging from its position
