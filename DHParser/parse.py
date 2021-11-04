@@ -4159,7 +4159,7 @@ class Forward(UnaryParser):
                     # in contrast to attaching error-messages locally to the node where they
                     # occurred. Big topic...)
                     # don't carry error/resumption-messages over to the next iteration
-                    grammar.most_recent_error__ = None
+                    # grammar.most_recent_error__ = None
 
                     next_result = self.parser(text)
 
@@ -4188,7 +4188,7 @@ class Forward(UnaryParser):
                     last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                     result = next_result
                     depth += 1
-            # grammar.suspend_memoization__ = memoization_state \
+            # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
             grammar.suspend_memoization__ = save_suspend_memoization
             if not grammar.suspend_memoization__:

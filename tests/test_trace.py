@@ -181,8 +181,9 @@ class TestTrace:
         cst = gr('[1, 2, A, [5, 6; [7, 8], 9], 10, ]')
         note_pos = set([e.orig_pos for e in cst.errors if e.code == RESUME_NOTICE])
         err_pos = set([e.orig_pos for e in cst.errors if e.code != RESUME_NOTICE])
-        assert note_pos == {8, 27, 33}
-        assert err_pos == {7, 15, 33}
+        for e in cst.errors:  print(e)
+        assert note_pos == {8, 27, 33}, str(note_pos)
+        assert err_pos == {7, 15, 33}, str(err_pos)
 
     def test_trace_resume_message(self):
         lang = """
