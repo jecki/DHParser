@@ -617,6 +617,7 @@ class Parser:
                     grammar.ff_parser__ = self
             elif node is not EMPTY_NODE:
                 node._pos = location
+            # grammar.suspend_memoization__ = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
                 visited[location] = (node, rest)
                 grammar.suspend_memoization__ = save_suspend_memoization
@@ -4195,7 +4196,7 @@ class Forward(UnaryParser):
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            grammar.suspend_memoization__ = save_suspend_memoization
+            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
                 visited[location] = result
         return result
