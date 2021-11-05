@@ -105,6 +105,11 @@ __all__ = ('ParserError',
            'NegativeLookahead',
            'Lookbehind',
            'NegativeLookbehind',
+           'is_context_sensitive',
+           'ContextSensitive',
+           'Capture',
+           'Retrieve',
+           'Pop',
            'last_value',
            'optional_last_value',
            'matching_bracket',
@@ -3059,14 +3064,6 @@ class Series(MandatoryNary):
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
 
-    @lru_cache(maxsize=8)
-    def _is_context_sensitive(self, parser: Parser) -> bool:
-        for p in parser.descendants():
-            if isinstance(p, ContextSensitive):
-                return True
-        return False
-        # return any(isinstance(p, ContextSensitive) for p in parser.descendants())
-
     @cython.locals(pos=cython.int, reloc=cython.int, mandatory=cython.int)
     def _parse(self, text: StringView) -> ParsingResult:
         results = []  # type: List[Node]
@@ -3079,7 +3076,7 @@ class Series(MandatoryNary):
                 if pos < mandatory:
                     return None, text
                 else:
-                    parser_str = str(parser) if self._is_context_sensitive(parser) else parser.repr
+                    parser_str = str(parser) if is_context_sensitive(parser) else parser.repr
                     reloc, node = self.get_reentry_point(text_)
                     error, text_ = self.mandatory_violation(
                         text_, isinstance(parser, Lookahead), parser_str, reloc, node)
@@ -3661,11 +3658,20 @@ class NegativeLookbehind(Lookbehind):
 #
 ########################################################################
 
+@lru_cache(maxsize=256)
+def is_context_sensitive(parser: Parser) -> bool:
+    """Returns True, is ``parser`` is a context-sensitive parser
+    or calls a context-sensitive parser."""
+    return any(isinstance(p, ContextSensitive) for p in parser.descendants())
+    # for p in parser.descendants():
+    #     if isinstance(p, ContextSensitive):
+    #         return True
+    # return False
+
 
 class BlackHoleDict(dict):
     def __setitem__(self, key, value):
         return
-
 
 
 class ContextSensitive(UnaryParser):
