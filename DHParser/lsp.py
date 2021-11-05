@@ -338,7 +338,13 @@ _TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
 TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
 
 # up to this point all functions have been copied and adapted from
-# the typing.py module of the Pyhton-STL
+# the typing.py module of the Python-STL
+
+
+def strdata(data: Any) -> str:
+    datastr = str(data)
+    return datastr[:10] + '...' if len(datastr) > 10 else datastr
+
 
 def validate_type(val: Any, typ):
     if isinstance(typ, _TypedDictMeta):
@@ -429,13 +435,15 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
                 elif isinstance(value, union_typ):
                     break
             else:
-                type_errors.append(f"Field {field} is not of {field_type}")
+                type_errors.append(f"Field {field}: '{strdata(D[field])}' is not of {field_type}, "
+                                   f"but of type {type(D[field])}")
         elif hasattr(field_type, '__args__'):
             validate_compound_type(D[field], field_type)
         elif isinstance(field_type, TypeVar):
             pass  # for now
         elif not isinstance(D[field], field_type):
-            type_errors.append(f"Field {field} is not a {field_type}")
+            type_errors.append(f"Field {field}: '{strdata(D[field])}' is not a {field_type}, "
+                               f"but a {type(D[field])}")
     if type_errors:
         if len(type_errors) == 1:
             raise TypeError(f"Type error in dictionary of type {T}: "
