@@ -119,96 +119,36 @@ class TestLSP:
 
 class TestDataValidation:
     documentSymbols = [{
-        "name": "LEMMA",
-        "detail": "*satinus",
-        "kind": 5,
-        "range": {
-            "start": {
-                "line": 0,
-                "character": 0},
-            "end": {
-                "line": 0,
-                "character": 15}},
-        "selectionRange": {
-            "start": {
-                "line": 0,
-                "character": 0},
-            "end": {
-                "line": 0,
-                "character": 15}},
-        "children": [{
-            "name": "GRAMMATIK",
-            "detail": "",
-            "kind": 8,
-            "range": {
-                "start": {
-                    "line": 2,
-                    "character": 0},
-                "end": {
-                    "line": 2,
-                    "character": 9}},
-            "selectionRange": {
-                "start": {
-                    "line": 2,
-                    "character": 0},
-                "end": {
-                    "line": 2,
-                    "character": 9}},
-            "children": []}, {
-            "name": "GRAMMATIK",
-            "detail": "",
-            "kind": 8,
-            "range": {
-                "start": {
-                    "line": 7,
-                    "character": 0},
-                "end": {
-                    "line": 7,
-                    "character": 9}},
-            "selectionRange": {
-                "start": {
-                    "line": 7,
-                    "character": 0},
-                "end": {
-                    "line": 7,
-                    "character": 9}},
-            "children": []}, {
-            "name": "ETYMOLOGIE",
-            "detail": "",
-            "kind": 8,
-            "range": {
-                "start": {
-                    "line": 10,
-                    "character": 0},
-                "end": {
-                    "line": 10,
-                    "character": 123}},
-            "selectionRange": {
-                "start": {
-                    "line": 10,
-                    "character": 0},
-                "end": {
-                    "line": 10,
-                    "character": 123}},
-            "children": []}, {
-            "name": "BEDEUTUNG",
-            "detail": "pars tricesima secunda ponderis -- der zweiunddreißigste Teil eines Gewichtes, 'Satin'; de nummo ((* {de re cf.} B. Hilliger, Studien zu mittelalterlichen Maßen und Gewichten. HistVjSchr. 3. 1900.; p. 191sq.)):",
+            "name": "LEMMA",
+            "detail": "*satinus",
             "kind": 5,
             "range": {
-                "start": {
-                    "line": 12,
-                    "character": 0},
-                "end": {
-                    "line": 12,
-                    "character": 220}},
+                "start": {"line": 0, "character": 0},
+                "end": {"line": 0, "character": 15}},
             "selectionRange": {
-                "start": {
-                    "line": 12,
-                    "character": 0},
-                "end": {
-                    "line": 12,
-                    "character": 220}},
-            "children": []}]}]
+                "start": {"line": 0, "character": 0},
+                "end": {"line": 0, "character": 15}},
+            "children": [{
+                "name": "GRAMMATIK",
+                "detail": "",
+                "kind": 8,
+                "range": {
+                    "start": {"line": 2, "character": 0},
+                    "end": {"line": 2, "character": 9}},
+                "selectionRange": {
+                    "start": {"line": 2, "character": 0},
+                    "end": {"line": 2, "character": 9}},
+                "children": []}, {
+                "name": "BEDEUTUNG",
+                "detail": "pars tricesima secunda ponderis -- der zweiunddreißigste Teil eines Gewichtes, 'Satin'; de nummo ((* {de re cf.} B. Hilliger, Studien zu mittelalterlichen Maßen und Gewichten. HistVjSchr. 3. 1900.; p. 191sq.)):",
+                "kind": 5,
+                "range": {
+                    "start": {"line": 12, "character": 0},
+                    "end": {"line": 12, "character": 220}},
+                "selectionRange": {
+                    "start": {"line": 12, "character": 0},
+                    "end": {"line": 12, "character": 220}},
+                "children": []}]}]
 
     def test_documentSymbols(self):
         validate_uniform_sequence(self.documentSymbols, DocumentSymbol)
