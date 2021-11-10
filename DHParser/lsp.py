@@ -379,8 +379,8 @@ def validate_type(val: Any, typ):
     ...     validate_type(bad_json_data, Position)
     ... except TypeError as e:
     ...     print(e)
-    Type error(s) in dictionary of type <class 'json_validator.Position'>:
-    Field "character" is not a <class 'int'>
+    Type error(s) in dictionary of type <class 'lsp.Position'>:
+    Field character: 'A' is not a <class 'int'>, but a <class 'str'>
     """
     if isinstance(typ, _TypedDictMeta):
         if not isinstance(val, Dict):
@@ -485,7 +485,7 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
     ...     validate_TypedDict(p, Position)
     ... except TypeError as e:
     ...     print(e)
-    Type error(s) in dictionary of type <class 'json_validator.Position'>:
+    Type error(s) in dictionary of type <class 'lsp.Position'>:
     Missing required keys: {'character'}
 
     :param D: the dictionary to be validated
@@ -576,9 +576,9 @@ def type_check(func: Callable) -> Callable:
     ... except TypeError as e:
     ...     print(e)
     Parameter "rng" of function "middle_line" failed the type-check, because:
-    Type error(s) in dictionary of type <class 'validation.Range'>:
-    Field start: '1' is not of <class 'validation.Position'>, but of type <class 'int'>
-    Field end: '8' is not of <class 'validation.Position'>, but of type <class 'int'>
+    Type error(s) in dictionary of type <class 'lsp.Range'>:
+    Field start: '1' is not of <class 'lsp.Position'>, but of type <class 'int'>
+    Field end: '8' is not of <class 'lsp.Position'>, but of type <class 'int'>
 
     :param func: The function, the parameters and return value of which shall
         be type-checked during runtime.
