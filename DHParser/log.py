@@ -55,7 +55,7 @@ import collections
 import contextlib
 import html
 import os
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Union, Optional, Sequence
 
 from DHParser.configuration import access_presets, finalize_presets, get_config_value, \
     set_config_value, get_preset_value, set_preset_value
@@ -76,6 +76,7 @@ __all__ = ('CallItem',
            'clear_logs',
            'NONE_TAG',
            'NONE_NODE',
+           'callstack_as_str',
            'HistoryRecord',
            'log_ST',
            'log_parsing_history')
@@ -272,6 +273,24 @@ NONE_TAG = ":None"
 NONE_NODE = NoneNode(NONE_TAG, '')
 
 
+def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
+    """Returns a string representation of the callstack!"""
+    # return "->".join(tag_name for tag_name, _ in self.call_stack)
+    short_stack = []
+    anonymous_tail = True
+    for tag_name, _ in reversed(callstack):
+        if tag_name[:1] == ':':
+            if anonymous_tail and tag_name != ":Forward":
+                short_stack.append(tag_name)
+        else:
+            short_stack.append(tag_name)
+            anonymous_tail = False
+    if depth <= 0:  depth = len(short_stack)
+    s = "->".join(reversed(short_stack[:depth]))
+    omitted = len(short_stack) - depth
+    return f'[{omitted}]->' + s if omitted > 0 else s
+
+
 class HistoryRecord:
     """
     Stores debugging information about one completed step in the
@@ -389,7 +408,7 @@ class HistoryRecord:
         elif status == self.FAIL:
             classes[idx['text']] = 'failtext'
         else:  # ERROR
-            stack += '<br/>\n"%s"' % self.err_msg()
+            stack += '<br/>\n"%s"' % self.err_msg().replace('<', '&lt;').replace('>', '&gt;')
             classes[idx['text']] = 'errortext'
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]),
                             stack, status, excerpt)  # type: Tuple[str, str, str, str, str]
@@ -401,17 +420,7 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        # return "->".join(tag_name for tag_name, _ in self.call_stack)
-        short_stack = []
-        anonymous_tail = True
-        for tag_name, _ in reversed(self.call_stack):
-            if tag_name[:1] == ':':
-                if anonymous_tail and tag_name != ":Forward":
-                    short_stack.append(tag_name)
-            else:
-                short_stack.append(tag_name)
-                anonymous_tail = False
-        return "->".join(reversed(short_stack))
+        return callstack_as_str(self.call_stack)
 
     @property
     def status(self) -> str:

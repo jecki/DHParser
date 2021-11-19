@@ -840,7 +840,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def __setitem__(self, 
                     key: Union[CriteriaType, slice, int], 
-                    value=Union['Node', Sequence['Node']]):
+                    value: Union['Node', Sequence['Node']]):
         """
         Changes one or more children of a branch-node.
         :raises:
@@ -2442,11 +2442,13 @@ class RootNode(Node):
     #         return ()
     #
     # def restore_error_state(self, error_state: tuple):
-    #     """Resotores a previously savced error state."""
+    #     """Resotores a previously saved error state."""
     #     if error_state:
     #         self.errors, self.error_nodes, self.error_positions, self.error_flag = error_state
+    #         self._error_set = set(self.errors)
     #     else:
     #         self.errors = []
+    #         self._error_set = set()
     #         self.error_nodes = dict()
     #         self.error_positions = dict()
     #         self.error_flag = 0

@@ -48,7 +48,8 @@ def run_doctests(module):
     with lock:
         namespace = {}
         print('DOCTEST ' + module)
-        exec('import DHParser.' + module, namespace)
+        # exec('import DHParser.' + module, namespace)
+        exec('from DHParser import ' + module, namespace)
         mod = getattr(namespace['DHParser'], module)
         result = doctest.testmod(mod)
         return result.failed

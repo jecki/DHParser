@@ -32,7 +32,7 @@ except ImportError:
     from DHParser.externallibs.typing_extensions import TypedDict
 
 from DHParser.lsp import RequestMessage, Message, ResponseMessage, Position, type_check, \
-    shortlist, validate_type
+    shortlist, validate_type, validate_uniform_sequence, DocumentSymbol
 
 
 @type_check
@@ -116,6 +116,43 @@ class TestLSP:
         except TypeError:
             pass
 
+
+class TestDataValidation:
+    documentSymbols = [{
+            "name": "LEMMA",
+            "detail": "*satinus",
+            "kind": 5,
+            "range": {
+                "start": {"line": 0, "character": 0},
+                "end": {"line": 0, "character": 15}},
+            "selectionRange": {
+                "start": {"line": 0, "character": 0},
+                "end": {"line": 0, "character": 15}},
+            "children": [{
+                "name": "GRAMMATIK",
+                "detail": "",
+                "kind": 8,
+                "range": {
+                    "start": {"line": 2, "character": 0},
+                    "end": {"line": 2, "character": 9}},
+                "selectionRange": {
+                    "start": {"line": 2, "character": 0},
+                    "end": {"line": 2, "character": 9}},
+                "children": []}, {
+                "name": "BEDEUTUNG",
+                "detail": "pars tricesima secunda ponderis -- der zweiunddreißigste Teil eines Gewichtes, 'Satin'; de nummo ((* {de re cf.} B. Hilliger, Studien zu mittelalterlichen Maßen und Gewichten. HistVjSchr. 3. 1900.; p. 191sq.)):",
+                "kind": 5,
+                "range": {
+                    "start": {"line": 12, "character": 0},
+                    "end": {"line": 12, "character": 220}},
+                "selectionRange": {
+                    "start": {"line": 12, "character": 0},
+                    "end": {"line": 12, "character": 220}},
+                "children": []}]}]
+
+    def test_documentSymbols(self):
+        validate_uniform_sequence(self.documentSymbols, DocumentSymbol)
+        pass
 
 if __name__ == "__main__":
     from DHParser.testing import runner

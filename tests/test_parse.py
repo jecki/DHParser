@@ -148,7 +148,6 @@ class TestInfiLoopsAndRecursion:
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()
-        # print(raw_compileEBNF(minilang).result)
         assert parser
         syntax_tree = parser(snippet)
         if is_logging():
@@ -182,7 +181,6 @@ class TestInfiLoopsAndRecursion:
             Sum     = Expr { ('+' | '-') Expr }+
             Value   = /[0-9.]+/~ | '(' §Expr ')'
             """
-        # print(raw_compileEBNF(minilang).result)
         parser = grammar_provider(minilang)()
         snippet = "8 * 4"
         syntax_tree = parser(snippet)
@@ -857,10 +855,6 @@ class TestPopRetrieve:
         assert not syntax_tree.error_flag, str(syntax_tree.errors_sorted)
 
     def test_optional_match(self):
-        # from DHParser.dsl import compileEBNF
-        # src = compileEBNF(self.mini_lang4)
-        # print(src)
-        # return
         test1 = '<info>Hey, you</info>'
         st = self.minilang_parser4(test1)
         assert not st.error_flag, str(st.errors_sorted)
@@ -873,7 +867,6 @@ class TestPopRetrieve:
         # start_logging('LOGS')
         st = self.minilang_parser4(test2)
         # log_parsing_history(self.minilang_parser4, "optional_match")
-        # print(st.as_sxpr())
         assert not st.error_flag
         test3 = '<info>Hey, <emph>you</></>'
         st = self.minilang_parser4(test3)
@@ -925,7 +918,6 @@ class TestPopRetrieve:
         # set_tracer(gr, trace_history)
         st = gr(case)
         # log_parsing_history(gr, 'test_cache_neutrality_2')
-        # print(st.as_sxpr())
         assert not st.errors
         assert str(st) == "AXX!"
 
@@ -943,7 +935,6 @@ class TestPopRetrieve:
         # set_tracer(gr, trace_history)
         st = gr(case)
         # log_parsing_history(gr, 'test_cache_neutrality_3')
-        # print(st.as_sxpr())
         assert not st.errors, str(st.errors)
         case = 'AXXX!'
         st = gr(case)
@@ -1018,8 +1009,6 @@ class TestPopRetrieve:
             value      = /\d+/~
             EOF        = !/./ [ :?defsign ]   # eat up captured defsigns
         """
-        # print(raw_compileEBNF(lang).result)
-        # set_config_value('compiled_EBNF_log', 'mylog.txt')
         parser = grammar_provider(lang)()
         st = parser("X := 1")
         assert not st.error_flag, str(st.errors)
@@ -1055,10 +1044,11 @@ class TestPopRetrieve:
         """
         parser = grammar_provider(lang_variant)()
         st = parser("X := 1")
-        assert not st.errors
+        assert not st.errors, str(st.errors)
         assert st.equals(st1)
         st = parser('')
-        assert "'EOF' expected" in str(st.errors), st.as_sxpr()
+        # for e in st.errors: print(e)
+        assert "'EOF = !/./ :?defsign' expected" in str(st.errors), st.as_sxpr()
 
 
 class TestWhitespaceHandling:
@@ -1497,7 +1487,6 @@ class TestMetaParser:
         self.mp.pname = "named"
         self.mp.tag_name = self.mp.pname
         rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
-        # print(rv.as_sxpr())
         assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
 
     def test_in_context(self):
@@ -1597,8 +1586,6 @@ class TestStaticAnalysis:
         assert any(e.code == PARSER_NEVER_TOUCHES_DOCUMENT for e in errors)
         code, errors, ast = compile_ebnf(lang2, preserve_AST=True)
         assert any(e.code == PARSER_NEVER_TOUCHES_DOCUMENT for e in errors)
-        # for e in errors:
-        #     print(e)
 
 
 class TestMemoization:
@@ -1612,7 +1599,6 @@ class TestMemoization:
         EOF = /$/'''
         grammar = create_parser(words, 'words')
 
-        # print(grammar.python_src__)
         p1 = grammar.wordC.parsers[0]
         p2 = grammar.wordB.parsers[0]
         p3 = grammar.wordA.parsers[0]
@@ -1693,12 +1679,12 @@ class TestErrorLocations:
         @ drop        = EOF, whitespace, strings
 
         document = ~ element ~ §EOF
-        @element_resume = /[^<>]*/
+        @element_resume = (:?TagName)
         element  = STag §content ETag
         @STag_skip = (/[^<>]*>/)
         STag     = '<' TagName §'>'
-        @ETag_skip = (:?TagName !:TagName /[^<>]*/ | /\s*(?=>)/)
-        ETag     = '</' §::TagName '>'
+        @ETag_skip = (/[^<>]*/)
+        ETag     = '</' ::TagName §'>'
         TagName  = /\w+/
         content  = [CharData] { (element | COMMENT__) [CharData] }
 
@@ -1710,8 +1696,38 @@ class TestErrorLocations:
             <title>Heading <wrong></title>
         </doc>'''
         parseXML = create_parser(miniXML)
+        resume_notices_on(parseXML)
         result = parseXML(testdoc)
-        assert len(result.errors) == 1
+        assert len(result.errors) == 2
+
+    def test_error_resumption_2(self):
+        miniXML = '''
+        @ whitespace  = /\s*/
+        @ disposable  = EOF
+        @ drop        = EOF, whitespace, strings
+
+        document = ~ element ~ §EOF
+        @element_resume = /[^<>]*/
+        element  = STag §content ETag
+        @STag_skip = (/[^<>]*>/)
+        STag     = '<' TagName §'>'
+        @ETag_skip = (/[^<>]*/)
+        ETag     = '</' ::TagName §'>'
+        TagName  = /\w+/
+        content  = [CharData] { (element | COMMENT__) [CharData] }
+
+        CharData = /(?:(?!\]\]>)[^<&])+/
+        EOF      =  !/./        # no more characters ahead, end of file reached
+        '''
+        testdoc = '''
+        <doc>
+            <title>Heading <wrong></title>
+        </doc>'''
+        parseXML = create_parser(miniXML)
+        resume_notices_on(parseXML)
+        result = parseXML(testdoc)
+        # for e in result.errors:  print(e)
+        assert len(result.errors) == 2
 
     def test_error_location(self):
         grammar = r'''

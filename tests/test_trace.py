@@ -181,8 +181,9 @@ class TestTrace:
         cst = gr('[1, 2, A, [5, 6; [7, 8], 9], 10, ]')
         note_pos = set([e.orig_pos for e in cst.errors if e.code == RESUME_NOTICE])
         err_pos = set([e.orig_pos for e in cst.errors if e.code != RESUME_NOTICE])
-        assert note_pos == {8, 27, 33}
-        assert err_pos == {7, 15, 33}
+        # for e in cst.errors:  print(e)
+        assert note_pos == {8, 27, 33}, str(note_pos)
+        assert err_pos == {7, 15, 33}, str(err_pos)
 
     def test_trace_resume_message(self):
         lang = """
@@ -211,10 +212,30 @@ class TestTrace:
         assert len(notices) == 1, str(notices)
         notice = str(notices[0])
         assert notice.find('Skip') < 0, 'Not a resume-notice: ' + notice
-        assert notice.find('"abc') >= 0, "Wrong parser reported: " + notice
+        assert notice.find('abc->') >= 0 or notice.find('->abc->') >= 0, \
+            "Wrong parser reported: " + notice
         set_tracer(gr, None)
         assert not gr.history_tracking__
 
+    def test_resume_messag_2(self):
+        number_list_grammar = '''
+            @ list_resume = /]\\s*|$/
+            @ _items_skip = /(?=,)/, /(?=])/, /$/
+            @ literalws   = right
+            @ disposable  = /_\w+/
+            @ drop        = _EOF, whitespace, strings
+            _document = ~ [ list ] §_EOF
+            list     = "[" [_items] § "]"
+            _items   = _item { "," §_item }
+            _item    = number | list
+            number   = `0` | /[1-9][0-9]*/
+            _EOF     =  !/./'''
+        example_with_errors = '[1, 2, A, [5, 6; 7], 8, ]'
+        parser = grammar_provider(number_list_grammar)()
+        resume_notices_on(parser)
+        tree = parser(example_with_errors)
+        for e in tree.errors:
+            assert e.code != RESUME_NOTICE or e.message.find('_item') >= 0
 
 class TestErrorReporting:
     lang = """
@@ -269,7 +290,7 @@ class TestErrorReporting:
         assert 'Skipping' in str(st.errors_sorted[1])
         for record in gr.history__:
             if record.status.startswith(record.ERROR):
-                assert record.excerpt == '_D'
+                assert record.excerpt == '_D', record.excerpt
                 break
         else:
             assert False, "Missing Error!"

@@ -33,9 +33,9 @@ for an example.
 """
 
 from bisect import bisect_left
-import functools
 from collections import defaultdict, namedtuple
 import copy
+from functools import lru_cache
 from typing import Callable, cast, List, Tuple, Set, AbstractSet, Dict, \
     DefaultDict, Sequence, Union, Optional, Iterator, Hashable, NamedTuple
 
@@ -105,6 +105,11 @@ __all__ = ('ParserError',
            'NegativeLookahead',
            'Lookbehind',
            'NegativeLookbehind',
+           'is_context_sensitive',
+           'ContextSensitive',
+           'Capture',
+           'Retrieve',
+           'Pop',
            'last_value',
            'optional_last_value',
            'matching_bracket',
@@ -550,7 +555,7 @@ class Parser:
                 # no history recording in case of memoized results!
                 return visited[location]
 
-            memoization_state = grammar.suspend_memoization__
+            save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
 
             # now, the actual parser call!
@@ -612,9 +617,10 @@ class Parser:
                     grammar.ff_parser__ = self
             elif node is not EMPTY_NODE:
                 node._pos = location
+            # grammar.suspend_memoization__ = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
                 visited[location] = (node, rest)
-                grammar.suspend_memoization__ = memoization_state
+                grammar.suspend_memoization__ = save_suspend_memoization
 
         except RecursionError:
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
@@ -718,6 +724,22 @@ class Parser:
         Overridden by Unary, Nary and Forward.
         """
         return tuple()
+
+
+    def descendants(self) -> Iterator['Parser']:
+        """Returns an iterator over self and all descendant parsers,
+        avoiding of circles."""
+        visited = set()
+
+        def descendants_(parser: Parser) -> Iterator['Parser']:
+            if parser not in visited:
+                visited.add(parser)
+                yield parser
+                for p in parser.sub_parsers():
+                    yield from descendants_(p)
+
+        yield from descendants_(self)
+
 
     def _apply(self, func: ApplyFunc, context: List['Parser'], flip: FlagFunc) -> bool:
         """
@@ -3055,7 +3077,7 @@ class Series(MandatoryNary):
                 if pos < mandatory:
                     return None, text
                 else:
-                    parser_str = parser.repr
+                    parser_str = str(parser) if is_context_sensitive(parser) else parser.repr
                     reloc, node = self.get_reentry_point(text_)
                     error, text_ = self.mandatory_violation(
                         text_, isinstance(parser, Lookahead), parser_str, reloc, node)
@@ -3076,7 +3098,7 @@ class Series(MandatoryNary):
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
             raise ParserError(self, ret_node.with_pos(self.grammar.document_length__ - len(text_)),
-                              0 if len(ret_node) == 0 else (len(text) - len(text_)),
+                              len(text) - len(text_),
                               text, error, first_throw=True)
         return ret_node, text_
 
@@ -3427,7 +3449,7 @@ class Interleave(MandatoryNary):
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
             raise ParserError(self, nd.with_pos(self.grammar.document_length__ - len(text)),
-                              0 if len(nd) == 0 else (len(text) - len(text_)),
+                              len(text) - len(text_),
                               text, error, first_throw=True)
         return nd, text_
 
@@ -3637,11 +3659,20 @@ class NegativeLookbehind(Lookbehind):
 #
 ########################################################################
 
+@lru_cache(maxsize=256)
+def is_context_sensitive(parser: Parser) -> bool:
+    """Returns True, is ``parser`` is a context-sensitive parser
+    or calls a context-sensitive parser."""
+    return any(isinstance(p, ContextSensitive) for p in parser.descendants())
+    # for p in parser.descendants():
+    #     if isinstance(p, ContextSensitive):
+    #         return True
+    # return False
+
 
 class BlackHoleDict(dict):
     def __setitem__(self, key, value):
         return
-
 
 
 class ContextSensitive(UnaryParser):
@@ -3951,9 +3982,9 @@ class Pop(Retrieve):
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
             self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
-        # else:
-        #     # set last_rb__loc__ to avoid memoizing of retrieved results
-        #     self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
+        else:
+            # set last_rb__loc__ to avoid memoizing of retrieved results
+            self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
         return node, text_
 
     def __repr__(self):
@@ -4110,17 +4141,17 @@ class Forward(UnaryParser):
                 result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
-            memoization_state = grammar.suspend_memoization__
             self.recursion_counter[location] = 0  # fail on the first recursion
+            save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
-            # saved_error_state = grammar.tree__.save_error_state()
             history_pointer = len(grammar.history__)
+
             result = self.parser(text)
+
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
                 # the recursion depth by 1 for each call as long as the length of
                 # the match increases.
-                # last_error_state = grammar.tree__.save_error_state()
                 last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                 depth = 1
                 while True:
@@ -4128,8 +4159,16 @@ class Forward(UnaryParser):
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
                     grammar.history__ = grammar.history__[:history_pointer]
-                    # grammar.tree__.restore_error_state(saved_error_state)
+                    # reduplication of error messages will be caught by syntaxtree.RootNode.add_error()
+                    # saving and restoring the errors-messages state on each iterations presupposes
+                    # that error messages will be recreated every time, which, however, does not
+                    # happen because of memoization. (This is a downside of global error-reporting
+                    # in contrast to attaching error-messages locally to the node where they
+                    # occurred. Big topic...)
+                    # don't carry error/resumption-messages over to the next iteration
+                    # grammar.most_recent_error__ = None
                     next_result = self.parser(text)
+
                     # discard next_result if it is not the longest match and return
                     if len(next_result[1]) >= len(result[1]):  # also true, if no match
                         # Since the result of the last parser call (`next_result`) is discarded,
@@ -4139,9 +4178,6 @@ class Forward(UnaryParser):
                             rb_func()
                             grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                                 if grammar.rollback__ else -2
-                        # # Also, error messages should be rolled back to the last
-                        # # but one stage:
-                        # grammar.tree__.restore_error_state(last_error_state)
                         # Finally, overwrite the discarded result in the last history record with
                         # the accepted result, i.e. the longest match.
                         # TODO: Move this to trace.py, somehow... and make it less confusing
@@ -4154,13 +4190,13 @@ class Forward(UnaryParser):
                             #     assert record.node.tag_name != ':None'
                             #     record.node.result = text[:delta]
                         break
-                    # last_error_state = grammar.tree__.save_error_state()
+
                     last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                     result = next_result
                     depth += 1
-            # grammar.suspend_memoization__ = memoization_state \
+            # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            grammar.suspend_memoization__ = memoization_state
+            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
                 visited[location] = result
         return result

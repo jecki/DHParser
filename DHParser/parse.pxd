@@ -23,6 +23,8 @@ cdef class Parser:
     # def __or__(self, other)
     cpdef _parse(self, text)
     cpdef set_proxy(self, proxy)
+    # cpdef sub_parsers(self)
+    # cpdef descendants(self)
     cpdef _apply(self, func, context, flip)
     cpdef apply(self, func)
 
