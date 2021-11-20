@@ -462,7 +462,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
             self._result = result        # type: Union[Tuple['Node', ...], StringView, str]
-            self._children = tuple()     # type: Tuple[Node, ...]
+            self._children = tuple()     # type: Tuple['Node', ...]
         else:
             self._set_result(result)
         self.tag_name = tag_name         # type: str
@@ -806,7 +806,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', Tuple['Node']]:
+    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', Tuple['Node', ...]]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
@@ -1120,7 +1120,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         by `self`. If the tree does not contain `node`, the value `None`
         is returned.
         """
-        for nd in self.select_if(lambda nd: nd._children, include_root=True):
+        for nd in self.select_if(lambda nd: bool(nd._children), include_root=True):
             if node in nd._children:
                 return nd
         return None
@@ -1137,7 +1137,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
         receives the complete context as argument, rather than just the last node!
         """
-        def recursive(ctx, include_root):
+        def recursive(ctx, include_root) -> Iterator[TreeContext]:
             nonlocal match_function, reverse, skip_subtree
             if include_root and match_function(ctx):
                 yield ctx
@@ -1259,10 +1259,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     return i
             raise ValueError
 
-        def left_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node', ...]:
+        def left_cut(result: Tuple['Node', ...], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return (subst,) + result[index + 1:]
 
-        def right_cut(result: Tuple['Node'], index: int, subst: 'Node') -> Tuple['Node', ...]:
+        def right_cut(result: Tuple['Node', ...], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return result[:index] + (subst,)
 
         def cut(ctx: TreeContext, cut_func: Callable) -> 'Node':
@@ -1750,7 +1750,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return node
 
 
-def content(segment: Union[Node, Tuple[Node]]) -> str:
+def content(segment: Union[Node, Tuple[Node, ...]]) -> str:
     """Returns the string content from a single node or a tuple of Nodes.
     """
     if isinstance(segment, Node):
@@ -1904,7 +1904,7 @@ def select_context_if(start_context: TreeContext,
                       match_function: ContextMatchFunction,
                       include_root: bool = False,
                       reverse: bool = False,
-                      skip_subtree: CriteriaType = NO_CONTEXT) -> Iterator[TreeContext]:
+                      skip_subtree: ContextMatchFunction = NO_CONTEXT) -> Iterator[TreeContext]:
     """
     Creates an Iterator yielding all `contexts` for which the
     `match_function` is true, starting from `context`.
@@ -1971,7 +1971,7 @@ def select_context(start_context: TreeContext,
     the matching nodes.
     """
     return select_context_if(start_context, create_context_match_function(criterion),
-                             include_root, reverse, skip_subtree)
+                             include_root, reverse, create_context_match_function(skip_subtree))
 
 
 def pick_context(start_context: TreeContext,
@@ -2339,7 +2339,7 @@ class RootNode(Node):
         self.error_positions: Dict[int, Set[int]] = dict()  # pos -> set of id(node)
         self.error_flag = 0
         # info on source code (to be carried along all stages of tree-processing)
-        self.source = source           # type: str
+        self.source = source           # type: Union[str, StringView]
         if source_mapping is None:
             self.source_mapping = gen_neutral_srcmap_func(source)
         else:
@@ -2626,7 +2626,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     >>> tree['C'].pos
     1
     """
-    remaining = sxpr  # type: StringView
+    remaining = sxpr  # type: Union[str, StringView]
 
     @cython.locals(level=cython.int, k=cython.int)
     def next_block(s: StringView) -> Iterator[StringView]:

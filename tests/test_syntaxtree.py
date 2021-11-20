@@ -365,6 +365,11 @@ class TestNode:
         B_indices = tree.indices('B')
         assert B_indices == (0, 2)
 
+    def test_del_children(self):
+        tree = parse_sxpr('(A (B 1) (C 2) (D 3) (E 4) (F 5) (G 6))')
+        del tree[2:6:2]
+        assert tree.as_sxpr() == '(A (B "1") (C "2") (E "4") (G "6"))'
+
     def test_single_child_selection(self):
         tree = parse_sxpr('(A (B 1) (C 1) (B 2))')
         assert 'B' in tree

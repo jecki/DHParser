@@ -278,7 +278,7 @@ def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
             return [obj.serialized_json]
         elif isinstance(obj, JSONnull) or obj is JSONnull:
             return ['null']
-        return serialize(custom_encoder.default(obj))
+        return serialize(custom_encoder.default(obj), indent)
 
     return ''.join(serialize(obj, ''))
 
@@ -325,7 +325,7 @@ async def asyncio_connect(
     delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
     connected = False
     reader, writer = None, None
-    save_error = ConnectionError  # type: Union[Type[ConnectionError], ConnectionRefusedError]
+    save_error = ConnectionError  # type: Union[Type[ConnectionError], ConnectionRefusedError, OSError]
     OSError_countdown = 10
     while not connected and delay < retry_timeout:
         try:
@@ -373,8 +373,8 @@ def http_response(html: str) -> bytes:
     if isinstance(html, str):
         encoded_html = html.encode()
     else:
-        encoded_html = "Illegal type %s for response %s. Only str allowed!" \
-                       % (str(type(html)), str(html))
+        encoded_html = ("Illegal type %s for response %s. Only str allowed!" \
+                        % (str(type(html)), str(html))).encode()
     response = HTTP_RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
     return response.encode() + encoded_html
 
@@ -461,7 +461,7 @@ class ExecutionEnvironment:
         self._process_executor = None                  # type: Optional[ProcessPoolExecutor]
         self._thread_executor = None                   # type: Optional[ThreadPoolExecutor]
         self._submit_pool = None                       # type: Optional[ProcessPoolExecutor]
-        self.submit_pool_lock = threading.Lock()       # type: multiprocessing.Lock
+        self.submit_pool_lock = threading.Lock()       # type: threading.Lock
         self.loop = event_loop                         # type: asyncio.AbstractEventLoop
         self.log_file = ''                             # type: str
         self._closed = False                           # type: bool
@@ -542,7 +542,7 @@ class ExecutionEnvironment:
             try:
                 # restart process pool and try again once
                 self.process_executor.shutdown(wait=True)
-                self.process_executor = ProcessPoolExecutor()
+                self._process_executor = ProcessPoolExecutor()
                 result = await self.loop.run_in_executor(executor, executable)
             except BrokenProcessPool as e:
                 rpc_error = -32050, str(e)
@@ -553,7 +553,7 @@ class ExecutionEnvironment:
             try:
                 # restart thread pool and try again once
                 self.thread_executor.shutdown(wait=True)
-                self.thread_executor = ThreadPoolExecutor()
+                self._thread_executor = ThreadPoolExecutor()
                 result = await self.loop.run_in_executor(executor, executable)
             except BrokenThreadPool as e:
                 rpc_error = -32060, str(e)
@@ -568,7 +568,7 @@ class ExecutionEnvironment:
         Other than `execute()` this works synchronously and thread-safe.
         """
         if self.submit_pool is None:
-            self.submit_pool = ProcessPoolExecutor()
+            self._submit_pool = ProcessPoolExecutor()
         with self.submit_pool_lock:
             future = self.submit_pool.submit(func, *args)
         return future
@@ -603,7 +603,7 @@ class StreamReaderProxy:
         except AttributeError:
             self.buffered_io = io_reader
         self.loop = None    # type: Optional[asyncio.AbstractEventLoop]
-        self.exec = None    # type: Optional[concurrent.futures.Executor]
+        self.exec = None    # type: Optional[Executor]
         self.max_data_size = get_config_value('max_rpc_size')
         self._eof = False   # type: bool
 
@@ -706,7 +706,7 @@ class StreamWriterProxy:
             self.buffered_io = io_writer
         self.buffer = []
         self.loop = None    # type: Optional[asyncio.AbstractEventLoop]
-        self.exec = None    # type: Optional[concurrent.futures.Executor]
+        self.exec = None    # type: Optional[Executor]
 
     def write(self, data: bytes):
         assert isinstance(data, bytes)
@@ -1143,7 +1143,7 @@ class Server:
         else:
             return self.start_logging()
 
-    async def run(self, method_name: str, method: Callable, params: Union[Dict, Sequence]) \
+    async def run(self, method_name: str, method: Callable, params: Union[Dict, List, Tuple]) \
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
         """Picks the right execution method (process, thread or direct execution) and
         runs it in the respective executor. In case of a broken ProcessPoolExecutor it
@@ -1395,8 +1395,8 @@ class Server:
 
         def connection_alive() -> bool:
             """-> `False` if connection is dead or shall be shut down."""
-            return not self.kill_switch and self.connection and self.connection.alive \
-                   and not reader.at_eof()  # and not reader.closed
+            return not self.kill_switch and self.connection is not None \
+                   and self.connection.alive and not reader.at_eof()  # and not reader.closed
 
         buffer = bytearray()  # type: bytearray
         while connection_alive():
@@ -1780,13 +1780,13 @@ def _run_tcp_server(host, port, rpc_functions: RPC_Type,
     server.run_tcp_server(host, port)
 
 
-ConcurrentType = TypeVar('Concurrent', Thread, Process)
+ConcurrentType = TypeVar('ConcurrentType', Thread, Process)
 
 
 def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
                      port: int = USE_DEFAULT_PORT,
                      parameters: Union[Tuple, Dict, Callable] = echo_requests,
-                     Concurrent: Generic[ConcurrentType] = Process) -> ConcurrentType:
+                     Concurrent: ConcurrentType = Process) -> ConcurrentType:
     """
     Starts DHParser-Server that communicates via tcp in a separate process
     or thread. Can be used for writing test code.

@@ -140,7 +140,7 @@ __all__ = ('TransformationDict',
 
 
 class Filter:
-    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+    def __call__(self, children: Tuple[Node, ...]) -> Tuple[Node, ...]:
         raise NotImplementedError
 
 
@@ -286,16 +286,16 @@ def key_tag_name(node: Node) -> str:
 
 
 class BlockChildren(Filter):
-    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+    def __call__(self, children: Tuple[Node, ...]) -> Tuple[Node, ...]:
         return ()
 
 class BlockLeaves(Filter):
-    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+    def __call__(self, children: Tuple[Node, ...]) -> Tuple[Node, ...]:
         return tuple(child for child in children if child._children)
 
 
 class BlockAnonymousLeaves(Filter):
-    def __call__(self, children: Tuple[Node]) -> Tuple[Node]:
+    def __call__(self, children: Tuple[Node, ...]) -> Tuple[Node, ...]:
         try:
             return tuple(child for child in children
                          if child._children or not child.tag_name[0] == ':')
@@ -348,7 +348,7 @@ def traverse(root_node: Node,
 
     """
 
-    # Is this optimazation really needed?
+    # Is this optimization really needed?
     if '__cache__' in processing_table:
         # assume that processing table has already been expanded
         table = processing_table               # type: ProcessingTableType
@@ -496,7 +496,9 @@ def apply_transformations(context: TreeContext, transformation: Union[Callable, 
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_if(context: TreeContext, transformation: Union[Callable, Tuple[Callable]], condition: Callable):
+def apply_if(context: TreeContext, 
+             transformation: Union[Callable, Tuple[Callable, ...]], 
+             condition: Callable):
     """Applies a transformation only if a certain condition is met."""
     if condition_guard(condition(context)):
         apply_transformations(context, transformation)
@@ -504,8 +506,8 @@ def apply_if(context: TreeContext, transformation: Union[Callable, Tuple[Callabl
 
 @transformation_factory(collections.abc.Callable, tuple)
 def apply_ifelse(context: TreeContext,
-                 if_transformation: Union[Callable, Tuple[Callable]],
-                 else_transformation: Union[Callable, Tuple[Callable]],
+                 if_transformation: Union[Callable, Tuple[Callable, ...]],
+                 else_transformation: Union[Callable, Tuple[Callable, ...]],
                  condition: Callable):
     """Applies a one particular transformation if a certain condition is met
     and another transformation otherwise."""
@@ -516,7 +518,9 @@ def apply_ifelse(context: TreeContext,
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_unless(context: TreeContext, transformation: Union[Callable, Tuple[Callable]], condition: Callable):
+def apply_unless(context: TreeContext, 
+                 transformation: Union[Callable, Tuple[Callable, ...]], 
+                 condition: Callable):
     """Applies a transformation if a certain condition is *not* met."""
     if not condition_guard(condition(context)):
         apply_transformations(context, transformation)
@@ -577,7 +581,7 @@ def is_named(context: TreeContext) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
     # return not context[-1].anonymous
     tn = context[-1].tag_name
-    return tn and tn[0] != ':'
+    return bool(tn) and tn[0] != ':'
 
 
 def is_anonymous(context: TreeContext) -> bool:
@@ -1595,7 +1599,7 @@ def node_maker(tag_name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(context: TreeContext, tag_names: AbstractSet[str] = frozenset()) -> Tuple[int]:
+def positions_of(context: TreeContext, tag_names: AbstractSet[str] = frozenset()) -> Tuple[int, ...]:
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `tag_names`.
     """
@@ -1611,7 +1615,7 @@ def delimiter_positions(context: TreeContext):
 PositionType = Union[int, tuple, Callable]
 
 
-def normalize_position_representation(context: TreeContext, position: PositionType) -> Tuple[int]:
+def normalize_position_representation(context: TreeContext, position: PositionType) -> Tuple[int, ...]:
     """Converts a position-representation in any of the forms that `PositionType`
     allows into a (possibly empty) tuple of integers."""
     if callable(position):

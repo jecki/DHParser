@@ -430,6 +430,8 @@ class HeuristicEBNFGrammar(Grammar):
         self.free_char_parsefunc__ = self.free_char._parse
         self.char_range_heuristics_parsefunc__ = self.char_range_heuristics._parse
         self.regex_heuristics_parserfunc__ = self.regex_heuristics._parse
+        self.mode__ = 'fixed'
+
 
     @property
     def mode(self) -> str:
@@ -467,6 +469,7 @@ class HeuristicEBNFGrammar(Grammar):
 
         always = Always._parse
         never = Never._parse
+
         if mode == 'heuristic':
             set_parsefunc(self.free_char, self.free_char_parsefunc__)
             set_parsefunc(self.regex_heuristics, self.regex_heuristics_parserfunc__)
@@ -713,6 +716,10 @@ class ConfigurableEBNFGrammar(Grammar):
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
 
+    def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
+        Grammar.__init__(self, root, static_analysis)
+        self.mode__ = 'fixed'
+
 
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """
@@ -748,7 +755,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         return chksum != grammar_class.source_hash__
 
 
-def get_ebnf_grammar() -> HeuristicEBNFGrammar:
+def get_ebnf_grammar() -> Union[HeuristicEBNFGrammar, ConfigurableEBNFGrammar]:
     """Returns a thread-local EBNF-Grammar-object for parsing EBNF sources."""
     THREAD_LOCALS = access_thread_locals()
     mode = get_config_value('syntax_variant')
@@ -1388,14 +1395,13 @@ class EBNFCompiler(Compiler):
                                       0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
         return messages
 
-    def verify_compiler(self, compiler):
-        """
-        Checks for on_XXXX()-methods that occur in the compiler, although XXXX
-        has never been defined in the grammar. Usually, this kind of
-        inconsistency results from an error like a typo in the compiler-code.
-        """
-        pass  # TODO: add verification code here
-
+    # def verify_compiler(self, compiler):
+    #     """
+    #     Checks for on_XXXX()-methods that occur in the compiler, although XXXX
+    #     has never been defined in the grammar. Usually, this kind of
+    #     inconsistency results from an error like a typo in the compiler-code.
+    #     """
+    #     pass  # TODO: add verification code here
 
     def check_rx(self, node: Node, rx: str) -> str:
         """
@@ -1457,7 +1463,7 @@ class EBNFCompiler(Compiler):
             return unrepr(referred_symbol)
         else:
             # create a parser-based search rule
-            symbol = node[0].content.split('_')[0]
+            symbol = node.children[0].content.split('_')[0]
             stub = f"{symbol}_{kind}_"
             L = len(stub)
             nr = 1
@@ -1518,12 +1524,12 @@ class EBNFCompiler(Compiler):
         return result
 
 
-    def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str]]:
+    def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
         """Returns the recursive paths from symbol to itself. If
         sym is not recursive, the returned tuple (of paths) will be empty.
         This method exists only for debugging (so far...)."""
         path = []  # type: List[str]
-        recursive_paths = set()  # type: Set[Tuple[str]]
+        recursive_paths = set()  # type: Set[Tuple[str, ...]]
 
         def gather(sym: str):
             nonlocal path, recursive_paths
@@ -2106,11 +2112,11 @@ class EBNFCompiler(Compiler):
                     node, 'Directive "%s" requires message string or a pair ' % key
                     + '(regular expression or search string, message string) as argument!')
             if len(node.children) == 2:
-                error_msgs.append(('', unrepr(node[1].content)))
+                error_msgs.append(('', unrepr(node.children[1].content)))
             elif len(node.children) == 3:
-                rule = self.make_search_rule(node, node[1], 'error')
-                error_msgs.append((rule if rule else unrepr(node[1].content),
-                                   unrepr(node[2].content)))
+                rule = self.make_search_rule(node, node.children[1], 'error')
+                error_msgs.append((rule if rule else unrepr(node.children[1].content),
+                                   unrepr(node.children[2].content)))
             else:
                 self.tree.new_error(node, 'Directive "%s" allows at most two parameters' % key)
             self.directives.error[symbol] = error_msgs
@@ -2121,12 +2127,12 @@ class EBNFCompiler(Compiler):
             #     self.tree.new_error(node, 'Skip list for resuming in series for symbol "{}"'
             #                         ' must be defined before the symbol!'.format(symbol))
             self.directives.skip[symbol] = [self.make_search_rule(node, nd, 'skip')
-                                            for nd in node[1:]]
+                                            for nd in node.children[1:]]
 
         elif key.endswith('_resume'):
             symbol = key[:-7]
             self.directives.resume[symbol] = [self.make_search_rule(node, nd, 'resume')
-                                              for nd in node[1:]]
+                                              for nd in node.children[1:]]
 
         else:
             if any(key.startswith(directive) for directive in ('skip', 'error', 'resume')):
@@ -2201,7 +2207,7 @@ class EBNFCompiler(Compiler):
                 literals.append([i, content])
 
         move = []          # type: List[Tuple[int, int]]
-        snapshots = set()  # type: Set[Tuple[int]]
+        snapshots = set()  # type: Set[Tuple[int, ...]]
         start_over = True  # type: bool
         while start_over:
             start_over = False
@@ -2225,7 +2231,7 @@ class EBNFCompiler(Compiler):
                     break
             if start_over:
                 move_items(literals, k, i)
-                snapshot = tuple(item[1] for item in literals)
+                snapshot: Tuple[int, ...] = tuple(item[1] for item in literals)
                 if snapshot in snapshots:
                     self.tree.new_error(
                         node, 'Reordering of alternatives "%s" and "%s" required but not possible!'
@@ -2360,7 +2366,7 @@ class EBNFCompiler(Compiler):
         parser_class = self.PREFIX_TABLE[prefix]
         result = self.non_terminal(node, parser_class)
         if prefix[:2] == '<-':
-            def verify(node: Optional[Node]):
+            def verify(node: Node):
                 nd = node
                 if len(nd.children) >= 1:
                     nd = nd.children[0]

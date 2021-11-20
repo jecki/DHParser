@@ -152,7 +152,7 @@ class ParserError(Exception):
         self.error = error    # type: Error
         self.first_throw = first_throw   # type: bool
         self.attributes_locked = frozenset({'parser', 'node', 'rest', 'error', 'first_throw'})
-        self.callstack_snapshot = []  # type: List[CallItem, ...]  # tag_name, location
+        self.callstack_snapshot = []  # type: List[CallItem]  # tag_name, location
 
     def __setattr__(self, name, value):
         if name == "attributes_locked":
@@ -367,7 +367,7 @@ MemoizationDict = Dict[int, ParsingResult]
 ApplyFunc = Callable[[List['Parser']], Optional[bool]]
 # The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
-ParseFunc = Callable[[StringView], ParsingResult]
+ParseFunc = Callable[['Parser', StringView], ParsingResult]
 
 
 class Parser:
@@ -783,7 +783,7 @@ class Parser:
         worrying about forgetting the return value of procedure, because a
         return value of `None` means "carry on".
         """
-        def positive_flip(f: ApplyFunc, flagged: AbstractSet[ApplyFunc]) -> bool:
+        def positive_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == True`
             as meaning that `f` has already been applied."""
@@ -793,7 +793,7 @@ class Parser:
                 flagged.add(f)
                 return False
 
-        def negative_flip(f: ApplyFunc, flagged: AbstractSet[ApplyFunc]) -> bool:
+        def negative_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
             """Returns True, if function `f` has already been applied to this
             parser and sets the flag accordingly. Interprets `f in flagged == False`
             as meaning that `f` has already been applied."""
@@ -1121,7 +1121,7 @@ class Grammar:
                 and error messages. If a mandatory violation error occurs on a
                 specific symbol (i.e. parser name) and any of the regular expressions
                 matches the error message of the first matching expression is used
-                instead of the generic manadtory violation error messages. This
+                instead of the generic mandatory violation error messages. This
                 allows to answer typical kinds of errors (say putting a colon ","
                 where a semi-colon ";" is expected) with more informative error
                 messages.
@@ -3308,7 +3308,7 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
     if n > len(text):  return ''
     if len(strings) == 1:
         return strings[0] if text.startswith(strings[0]) else ''
-    head = text[:n]
+    head = str(text[:n])
     if not head:  return ''
     i = bisect_left(strings, head)
     if i >= len(strings) or (i == 0 and not strings[0].startswith(head)):

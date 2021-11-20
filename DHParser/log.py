@@ -389,7 +389,7 @@ class HistoryRecord:
             n = max(40 - len(excerpt), 0)
             dots = '...' if len(self.text) > n else ''
             excerpt = ''.join([excerpt, '<span class="unmatched">',
-                               html.escape(self.text[:n]), dots, '</span>'])
+                               html.escape(str(self.text[:n])), dots, '</span>'])
             i = stack.rfind('-&gt;')
             ch = stack[i + 12:i + 13]
             while not ch.isidentifier() and i >= 0:
@@ -537,7 +537,7 @@ def log_ST(syntax_tree, log_file_name) -> bool:
     return False
 
 
-def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> bool:
+def log_parsing_history(grammar, log_file_name: str = '', as_html: bool = True) -> bool:
     """
     Writes a log of the parsing history of the most recently parsed document, if
     logging is turned on. Returns True, if that was the case and writing the
@@ -549,19 +549,19 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
         log_file_name (str):  The (base-)name of the log file to be written.
             If no name is given (default), then the class name of the grammar
             object will be used.
-        html (bool):  If true (default), the log will be output as html-Table,
+        as_html (bool):  If true (default), the log will be output as html-Table,
             otherwise as plain test. (Browsers might take a few seconds or
             minutes to display the table for long histories.)
     """
     def write_log(history: List[str], log_name: str) -> None:
-        htm = '.html' if html else ''
+        htm = '.html' if as_html else ''
         path = os.path.join(log_dir(), log_name + "_parser.log" + htm)
         if os.path.exists(path):
             os.remove(path)
             # print('WARNING: Log-file "%s" already existed and was deleted.' % path)
         if history:
             with open(path, "w", encoding="utf-8") as f:
-                if html:
+                if as_html:
                     f.write(HistoryRecord.HTML_LEAD_IN + '\n')
                     f.writelines(history)
                     f.write('\n</table>\n' + HistoryRecord.HTML_LEAD_OUT)
@@ -573,7 +573,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
         table every 100 rows to allow browser to speed up rendering.
         Does this really work...?"""
         log.append(line)
-        if html and len(log) % 50 == 0:
+        if as_html and len(log) % 50 == 0:
             log.append('\n'.join(['</table>\n<table>', HistoryRecord.COLGROUP]))
 
     if not is_logging():
@@ -598,7 +598,7 @@ def log_parsing_history(grammar, log_file_name: str = '', html: bool = True) -> 
     history.append(lead_in)
 
     for record in grammar.history__[-LOG_SIZE_THRESHOLD:]:
-        line = record.as_html_tr() if html else (str(record) + '\n')
+        line = record.as_html_tr() if as_html else (str(record) + '\n')
         append_line(history, line)
 
     write_log(history, log_file_name)

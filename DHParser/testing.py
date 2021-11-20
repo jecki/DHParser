@@ -360,10 +360,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     output = []
 
     def write(s):
-        nonlocal output
         """Append string `s` to output. The purpose is to defer printing to
         stdout in order to avoid muddled output when several unit tests run
         at the same time."""
+        nonlocal output
         output.append(s)
 
     def clean_key(k):

@@ -58,8 +58,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     location = grammar.document_length__ - text._len  # type: int
 
-    mre: ParserError = grammar.most_recent_error__
-    if mre and location >= mre.error.pos:
+    mre: Optional[ParserError] = grammar.most_recent_error__
+    if mre is not None and location >= mre.error.pos:
         # add resume notice (mind that skip notices are added by
         # `parse.MandatoryElementsParser.mandatory_violation()`
         if mre.error.code == RECURSION_DEPTH_LIMIT_HIT:

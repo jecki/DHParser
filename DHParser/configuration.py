@@ -29,7 +29,6 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
-import os
 import sys
 import threading
 from typing import Dict, Any
@@ -211,11 +210,12 @@ def read_local_config(ini_filename: str) -> str:
         script's path.
     """
     import configparser
+    import os
     config = configparser.RawConfigParser()
-    config.optionxform = lambda option: option
+    config.optionxform = lambda optionstr: optionstr
+    basename = os.path.basename(ini_filename)
     if not os.path.exists(ini_filename):
         # try cfg-file in current working directory next
-        basename = os.path.basename(ini_filename)
         ini_filename = basename
     if not os.path.exists(ini_filename):
         # try cfg-file in the applications' config-directory
@@ -228,7 +228,7 @@ def read_local_config(ini_filename: str) -> str:
             ini_filename = os.path.join(os.path.expanduser('~'), '.config', dirname, basename)
     if not os.path.exists(ini_filename):
         # try cfg-file in script-directory next
-        script_path = os.path.abspath(sys.modules['__main__'].__file__)
+        script_path = os.path.abspath(sys.modules['__main__'].__file__ or '.')
         ini_filename = os.path.join(os.path.dirname(script_path), basename)
     if os.path.exists(ini_filename) and config.read(ini_filename):
         access_presets()
@@ -278,12 +278,12 @@ def access_thread_locals() -> Any:
     """
     global THREAD_LOCALS
     if THREAD_LOCALS is None:
-        import threading
         THREAD_LOCALS = threading.local()
     return THREAD_LOCALS
 
 
 def _config_dict():
+    global THREAD_LOCALS
     THREAD_LOCALS = access_thread_locals()
     try:
         cfg = THREAD_LOCALS.config

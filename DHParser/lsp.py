@@ -39,7 +39,7 @@ except ImportError:
     _GenericAlias = GenericMeta
     _SpecialForm = Any
 try:
-   from DHParser.externallibs.typing_extensions import get_origin
+    from DHParser.externallibs.typing_extensions import get_origin
 except ImportError:
     def get_origin(typ):
         try:

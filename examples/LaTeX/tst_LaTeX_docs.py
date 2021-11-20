@@ -95,7 +95,7 @@ def tst_func():
                 with open(logs + file[:-4] + '.cst', 'w', encoding='utf-8') as f:
                     f.write(result.as_sxpr(compact=False))
                 print('Saving parsing history')
-                log_parsing_history(parser, os.path.basename(file), html=True)
+                log_parsing_history(parser, os.path.basename(file), as_html=True)
 
             print('\nTransforming document: "%s"' % file)
             fail_on_error(doc, result)

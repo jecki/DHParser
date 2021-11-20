@@ -11,5 +11,12 @@
         "tests"
     ],
     "python.envFile": "${workspaceFolder}/.env",
-    "terminal.integrated.env.windows": {"PYTHONPATH": "${workspaceFolder}"}
+    "terminal.integrated.env.windows": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "cSpell.words": [
+        "badw",
+        "DHPARSER",
+        "EBNF"
+    ]
 }

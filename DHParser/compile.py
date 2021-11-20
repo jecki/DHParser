@@ -184,7 +184,7 @@ class Compiler:
         if self._dirty_flag:
             self.reset()
         self._dirty_flag = True
-        self.tree = root
+        self.tree = cast(RootNode, root) if isinstance(root, RootNode) else RootNode(root)
         self.prepare(root)
         result = self.compile(root)
         while self.finalizers:
@@ -333,7 +333,8 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
             try:
                 result = tp(tree)
             except Exception as e:
-                node = tp.context[-1] if tp.context else tree
+                # node = tp.context[-1] if hasattr(tp, 'context') and tp.context else tree
+                node = getattr(tp, 'context', [tree])[-1]
                 st = traceback.format_list(traceback.extract_tb(e.__traceback__))
                 trace = ''.join(st)  # filter_stacktrace(st)
                 tree.new_error(

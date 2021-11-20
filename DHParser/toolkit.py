@@ -148,7 +148,7 @@ def identity(x):
 
 
 if __name__ == "__main__":
-  global_id_counter = multiprocessing.Value('L', 0)
+    global_id_counter = multiprocessing.Value('L', 0)
 
 
 def gen_id() -> int:
@@ -212,7 +212,7 @@ def relative_path(from_path: str, to_path: str) -> str:
     return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
 
 
-def split_path(path: str) -> Tuple[str]:
+def split_path(path: str) -> Tuple[str, ...]:
     """Splits a filesystem path into its components. Other than
     os.path.split() it does not only split of the last part::
 
@@ -310,8 +310,8 @@ def sane_parser_name(name) -> bool:
     return name and name[:2] != '__' and name[-2:] != '__'
 
 
-def normalize_circular_path(path: Union[Tuple[str], AbstractSet[Tuple[str]]]) \
-        -> Union[Tuple[str], Set[Tuple[str]]]:
+def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, ...]]]) \
+        -> Union[Tuple[str, ...], Set[Tuple[str, ...]]]:
     """Returns a normalized version of a `circular path` represented as
     a tuple or - if called with a set of paths instead of a single path
     - a set of normalized paths.
@@ -361,14 +361,14 @@ def re_find(s, r, pos=0, endpos=9223372036854775807):
     """
     if isinstance(r, (str, bytes)):
         if (pos, endpos) != (0, 9223372036854775807):
-            rx = re.compile(r)
+            r = re.compile(r)
         else:
             try:
                 m = next(re.finditer(r, s))
                 return m
             except StopIteration:
                 return None
-    elif r:
+    if r:
         try:
             m = next(r.finditer(s, pos, endpos))
             return m

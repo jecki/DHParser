@@ -25,6 +25,8 @@ import inspect
 import os
 import platform
 import stat
+from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
+    Callable, Sequence
 
 import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source
@@ -41,8 +43,6 @@ from DHParser.syntaxtree import Node
 from DHParser.transform import TransformerCallable, TransformationDict
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
     compile_python_object, re, as_identifier
-from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
-    Callable, Sequence
 
 
 __all__ = ('DefinitionError',
@@ -93,6 +93,7 @@ class DSLException(Exception):
     Base class for DSL-exceptions.
     """
     def __init__(self, errors: Union[Sequence[Error], Iterator[Error]]):
+        Exception.__init__(self)
         assert isinstance(errors, Iterator) or isinstance(errors, list) \
             or isinstance(errors, tuple)
         self.errors = list(errors)
@@ -283,8 +284,7 @@ def grammar_provider(ebnf_src: str,
         ebnf_src, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(),
         get_ebnf_compiler(branding, ebnf_src), fail_when)
     log_name = get_config_value('compiled_EBNF_log')
-    if log_name and is_logging():
-            append_log(log_name, grammar_src)
+    if log_name and is_logging():  append_log(log_name, grammar_src)
     imports = DHPARSER_IMPORTS  
     grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                             r'get_(?:\w+_)?grammar$')
@@ -600,7 +600,7 @@ def recompile_grammar(ebnf_filename: str,
         success = True
         for entry in os.listdir(ebnf_filename):
             if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
-                success = success and recompile_grammar(entry, force)
+                success = success and recompile_grammar(entry, parser_name, force)
         return success
 
     base, _ = os.path.splitext(ebnf_filename)
@@ -659,7 +659,8 @@ def restore_server_script(ebnf_filename: str,
         # reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
         # rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(reldhparserdir))
         serverscript = base + 'Server.py'
-        with open(serverscript, 'w') as f:  f.write(template.replace('DSL', name))
+        with open(serverscript, 'w', encoding='utf-8') as f:  
+            f.write(template.replace('DSL', name))
         if platform.system() != "Windows":
             # set file permissions so that the server-script can be executed
             st = os.stat(serverscript)

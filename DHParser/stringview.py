@@ -375,7 +375,7 @@ class StringView:  # collections.abc.Sized
         return self if end == self._len else self[:end]
 
     @cython.locals(length=cython.int, i=cython.int, k=cython.int)
-    def split(self, sep=None) -> Sequence[Union['StringView', str]]:
+    def split(self, sep=None) -> List[Union['StringView', str]]:
         """Returns a list of the words in `self`, using `sep` as the
         delimiter string.  If `sep` is not specified or is None, any
         whitespace string is a separator and empty strings are
