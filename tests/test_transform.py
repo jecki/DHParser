@@ -29,12 +29,12 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, PLACEHOLDER, \
     tree_sanity_check, flatten_sxpr, WHITESPACE_PTYPE
-from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_adjacent, \
+from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_fringes, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes, \
-    merge_leaves, BLOCK_ANONYMOUS_LEAVES
+    merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -255,21 +255,40 @@ class TestComplexTransformations:
         assert tree.as_xml(inline_tags={'Stelle'}) == \
                "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"
 
+    def test_collapse_children_if_with_attributes(self):
+        sxpr = '(place (abbreviation `(unabbr "page") "p.") (page `(numbered "arabic") "26") ' \
+               '(superscript "b") (mark ",") (page "18"))'
+        tree = parse_sxpr(sxpr)
+        collapse_children_if([tree], not_one_of({'superscript', 'subscript'}), 'text')
+        s = flatten_sxpr(tree.as_sxpr())
+        assert s == '(place (text `(unabbr "page") `(numbered "arabic") "p.26") (superscript "b") (text ",18"))'
+
+    def test_collapse_merge_rules(self):
+        sxpr = '(Article (TEXT "Hello") (L " ") (L `(spatium "4") "    ") (L " ") (Text "World"))'
+        tree = parse_sxpr(sxpr)
+        collapse_children_if([tree], is_one_of('L'), 'L', pick_longest_content)
+        s = flatten_sxpr(tree.as_sxpr())
+        assert s == '(Article (TEXT "Hello") (L `(spatium "4") "    ") (Text "World"))'
+        tree = parse_sxpr(sxpr)
+        collapse_children_if([tree], is_one_of('L'), 'L', fix_content(" "))
+        s = flatten_sxpr(tree.as_sxpr())
+        assert s == '(Article (TEXT "Hello") (L `(spatium "4") " ") (Text "World"))'
+
 
 class TestWhitespaceTransformations:
-    def test_move_adjacent(self):
+    def test_move_fringes(self):
         sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
                               '(WORD (LETTERS "be") (:Whitespace " ")) '
                               '(WORD (LETTERS "or") (:Whitespace " ")) '
                               '(WORD (LETTERS "not") (:Whitespace " ")) '
                               '(WORD (LETTERS "to") (:Whitespace " "))'
                               '(WORD (LETTERS "be") (:Whitespace " ")))')
-        transformations = {'WORD': move_adjacent(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
+        transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
 
-    def test_move_adjacent2(self):
+    def test_move_fringes2(self):
         sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")) '
                               '(WORD (:Whitespace " ") (LETTERS "or") (:Whitespace " ")) '
@@ -277,7 +296,7 @@ class TestWhitespaceTransformations:
                               '(:Whitespace "c")'
                               '(WORD (:Whitespace "d") (:Whitespace "e") (LETTERS "to") (:Whitespace " "))'
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
-        transformations = {'WORD': move_adjacent(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
+        transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert sentence.content.find('abcde') >= 0
@@ -285,10 +304,10 @@ class TestWhitespaceTransformations:
         assert all(i % 2 != 0 or (node.tag_name == "WORD" and ":Whitespace" not in node)
                    for i, node in enumerate(sentence))
 
-    def test_move_adjacent3(self):
+    def test_move_fringes3(self):
         sentence = parse_sxpr('(SENTENCE  (:Whitespace " ") (:Whitespace " ")  '
                               '(TEXT (PHRASE "Guten Tag") (:Whitespace " ")))')
-        transformations = {'TEXT': move_adjacent(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
+        transformations = {'TEXT': move_fringes(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
 
     def test_merge_adjacent(self):

@@ -67,6 +67,9 @@ __all__ = ('TransformationDict',
            'change_tag_name',
            'replace_tag_names',
            'collapse',
+           'join_content',
+           'pick_longest_content',
+           'fix_content',
            'collapse_children_if',
            'transform_content',
            'replace_content_with',
@@ -76,7 +79,7 @@ __all__ = ('TransformationDict',
            'merge_leaves',
            'merge_connected',
            'merge_results',
-           'move_adjacent',
+           'move_fringes',
            'left_associative',
            'lean_left',
            'apply_if',
@@ -888,7 +891,7 @@ def replace_by_children(context: TreeContext):
     the root-note (i.e. len(context) == 1), it will only be eliminated, if
     there is but one child.
 
-    WARNING: This should never be followed by move_adjacent() in the transformation list!!!
+    WARNING: This should never be followed by move_fringes() in the transformation list!!!
     """
     try:
         parent = context[-2]
@@ -1022,8 +1025,37 @@ def collapse(context: TreeContext):
     node.result = node.content
 
 
+MergeRule = Callable[[Sequence[Node]], Node]
+
+
+def join_content(package: Sequence[Node]) -> Node:
+    return Node('joined', "".join(nd.content for nd in package), True)
+
+
+def pick_longest_content(package: Sequence[Node]) -> Node:
+    longest = ''
+    L = 0
+    for nd in package:
+        content = nd.content
+        ndL = len(content)
+        if ndL > L:
+            longest = content
+            L = ndL
+    return Node('joined', longest, True)
+
+
+def fix_content(fixed_content: str) -> MergeRule:
+    def fix(package: Sequence[Node]) -> Node:
+        nonlocal fixed_content
+        return Node('joined', fixed_content)
+    return fix
+
+
 @transformation_factory(collections.abc.Callable)
-def collapse_children_if(context: TreeContext, condition: Callable, target_tag: str):
+def collapse_children_if(context: TreeContext,
+                         condition: Callable,
+                         target_tag: str,
+                         merge_rule: MergeRule=join_content):
     """
     (Recursively) merges the content of all adjacent child nodes that
     fulfill the given `condition` into a single leaf node with the tag-name
@@ -1035,7 +1067,7 @@ def collapse_children_if(context: TreeContext, condition: Callable, target_tag: 
     >>> print(flatten_sxpr(tree.as_sxpr()))
     (place (text "p.26") (superscript "b") (text ",18"))
 
-    See `test_transform.TestComplexTransformations` for examples.
+    See `test_transform.TestComplexTransformations` for more examples.
     """
     assert isinstance(target_tag, str)  # TODO: Delete this when safe
 
@@ -1045,26 +1077,16 @@ def collapse_children_if(context: TreeContext, condition: Callable, target_tag: 
     package = []  # type: List[Node]
     result = []  # type: List[Node]
 
-    # def find_tag_name() -> str:
-    #     nonlocal package, target_tag
-    #     favorite = ''
-    #     tag_count = {'': 0}
-    #     for nd in package:
-    #         if not nd.tag_name.startswith(':'):
-    #             tag_count[nd.tag_name] = tag_count.get(nd.tag_name, 0) + 1
-    #             if tag_count[nd.tag_name] > tag_count[favorite]:
-    #                 favorite = nd.tag_name
-    #     return favorite or target_tag
-
     def close_package():
-        nonlocal package, target_tag
+        nonlocal package, target_tag, merge_rule
         if package:
-            # tag_name = package[0].tag_name
-            # if tag_name.startswith(':') or any(nd.tag_name != tag_name for nd in package):
-            #     tag_name = target_tag
-            s = "".join(nd.content for nd in package)
-            # TODO: update attributes
-            result.append(Node(target_tag, s, True))
+            merged_node = merge_rule(package)
+            merged_node.tag_name = target_tag
+            attrs = dict()
+            for nd in package:
+                if nd.has_attr():
+                    attrs.update(nd.attr)
+            result.append(merged_node.with_attr(attrs))
             package = []
 
     for child in node._children:
@@ -1248,10 +1270,10 @@ def merge_results(dest: Node, src: Tuple[Node, ...], root: RootNode) -> bool:
 
 @transformation_factory(collections.abc.Callable)
 @cython.locals(a=cython.int, b=cython.int, i=cython.int)
-def move_adjacent(context: TreeContext, condition: Callable, merge: bool = True):
+def move_fringes(context: TreeContext, condition: Callable, merge: bool = True):
     """
-    Moves adjacent nodes that fulfill the given condition to the parent node.
-    If the `merge`-flag is set, a moved node will be merged with its
+    Moves adjacent nodes on the left and right fringe that fulfill the given condition
+    to the parent node. If the `merge`-flag is set, a moved node will be merged with its
     predecessor (or successor, respectively) in the parent node in case it
     also fulfills the given `condition`.
 

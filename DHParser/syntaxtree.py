@@ -275,7 +275,14 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     assert RX_IS_SXPR.match(sxpr)
     if threshold == 0:
         return sxpr
-    flat = re.sub(r'\s(?=\))', '', re.sub(r'(?<!")\s+', ' ', sxpr).replace('\n', '')).strip()
+    flat = re.sub(r'\s(?=\))', '', re.sub('\n\s*', ' ', sxpr)).strip()
+    l = flat.split('"')
+    if len(l) > 1:
+        for i in range(0, len(l), 2):
+            l[i] = re.sub(r'  +', ' ', l[i])
+        flat = '"'.join(l)
+    else:
+        flat =  re.sub(r'  +', ' ', flat)
     if len(flat) > threshold > 0:
         return sxpr.strip()
     return flat
@@ -781,7 +788,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # assert all(isinstance(a, str) and isinstance(v, str) for a, v in attr_dict.items())
             if dictionary:  # do not update with an empty dictionary
                 self.attr.update(dictionary)
-        elif attributes:
+        if attributes:
             # assert all(isinstance(a, str) and isinstance(v, str) for a, v in attributes.items())
             self.attr.update(attributes)
         return self
@@ -957,7 +964,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def insert(self, index: int, node: 'Node'):
         """Inserts a node at position `index`"""
-        if not self.children and self.content:
+        if not self.children and self._result:
             raise ValueError('Node.insert(i, node): Called on a leaf-node')
         result = list(self.children)
         result.insert(index, node)
