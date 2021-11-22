@@ -50,7 +50,7 @@ column-number
 from collections import namedtuple
 import functools
 import os
-from typing import Iterable, Iterator, Union, List, Sequence, NamedTuple, Dict, Callable
+from typing import Iterable, Iterator, Union, List, Sequence, Dict, Callable
 
 from DHParser.stringview import StringView
 from DHParser.toolkit import linebreaks, line_col, is_filename
@@ -161,7 +161,7 @@ SourceLocation = namedtuple('SourceLocation',
     ['original_name',  # type: str
      'original_text',  # type: Union[str, StringView]
      'pos',  # type: int
-    ], module = __name__)
+    ], module=__name__)
 
 SourceMapFunc = Union[Callable[[int], SourceLocation],
                       functools.partial]
@@ -486,8 +486,6 @@ def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
     Args:
         errors:  The list of errors as returned by the method
             ``errors()`` of a Node object
-        original_text:  The source text in which the errors occurred.
-            (Needed in order to determine the line and column numbers.)
         source_mapping:  A function that maps error positions to their
             positions in the original source file.
     """
@@ -526,4 +524,3 @@ def canonical_error_strings(errors: List[Error]) -> List[str]:
     else:
         error_strings = []
     return error_strings
-

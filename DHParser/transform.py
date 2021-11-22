@@ -28,10 +28,10 @@ for CST -> AST transformations.
 
 
 import collections.abc
-from functools import partial, singledispatch, reduce, wraps
+from functools import partial, singledispatch, reduce
 import inspect
 import operator
-from typing import AbstractSet, Any, ByteString, Callable, cast, Container, Dict, \
+from typing import AbstractSet, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Text
 
 from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
@@ -52,6 +52,7 @@ __all__ = ('TransformationDict',
            'BLOCK_ANONYMOUS_LEAVES',
            'BLOCK_CHILDREN',
            'traverse',
+           'merge_treetops',
            'always',
            'never',
            'neg',
@@ -292,6 +293,7 @@ class BlockChildren(Filter):
     def __call__(self, children: Tuple[Node, ...]) -> Tuple[Node, ...]:
         return ()
 
+
 class BlockLeaves(Filter):
     def __call__(self, children: Tuple[Node, ...]) -> Tuple[Node, ...]:
         return tuple(child for child in children if child._children)
@@ -409,7 +411,7 @@ def traverse(root_node: Node,
             all_filters = filters + more_filters
             if BLOCK_CHILDREN in all_filters:
                 all_filters = [BLOCK_CHILDREN]
-            cache[key] = (filters + more_filters, sequence)
+            cache[key] = (all_filters, sequence)
 
         children = node._children
         for filter in filters:
@@ -1055,7 +1057,7 @@ def fix_content(fixed_content: str) -> MergeRule:
 def collapse_children_if(context: TreeContext,
                          condition: Callable,
                          target_tag: str,
-                         merge_rule: MergeRule=join_content):
+                         merge_rule: MergeRule = join_content):
     """
     (Recursively) merges the content of all adjacent child nodes that
     fulfill the given `condition` into a single leaf node with the tag-name
@@ -1224,7 +1226,7 @@ def merge_connected(context: TreeContext, content: Callable, delimiter: Callable
                 i += 1
                 while i < L and (content([children[i]]) or delimiter([children[i]])):
                     i += 1
-                if delimiter([children[i-1]]):
+                if delimiter([children[i - 1]]):
                     i -= 1
                 if i > k:
                     adjacent = children[k:i]
@@ -1585,7 +1587,7 @@ AT_THE_END = 2**32   # VERY VERY last position in a tuple of childe nodes
 
 def node_maker(tag_name: str,
                result: DynamicResultType,
-               attributes: dict={}) -> Callable:
+               attributes: dict = {}) -> Callable:
     """
     Returns a parameter-free function that upon calling returns a freshly
     instantiated node with the given result, where `result` can again
@@ -1672,7 +1674,7 @@ def insert(context: TreeContext, position: PositionType, node_factory: Callable)
     pos_tuple = sorted(tuple((p if p >= 0 else (p + L)) for p in pos_tuple), reverse=True)
     for n in pos_tuple:
         n = min(L, n)
-        text_pos = (children[n-1].pos + len(children[n-1])) if n > 0 else node.pos
+        text_pos = (children[n - 1].pos + len(children[n - 1])) if n > 0 else node.pos
         children.insert(n, node_factory().with_pos(text_pos))
     node.result = tuple(children)
 
@@ -1718,7 +1720,6 @@ def error_on(context: TreeContext,
     """
     Checks for `condition`; adds an error or warning message if condition is not met.
     """
-    node = context[-1]
     if condition(context):
         if not error_msg:
             cond_name = condition.__name__ if hasattr(condition, '__name__') \

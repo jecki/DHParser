@@ -6,8 +6,11 @@ EBNF-Grammar into Python-code that can be executed to parse source text
 conforming to this grammar into concrete syntax trees.
 
 
+Writing Grammar-Deifnitions
+---------------------------
+
 Specifying Grammars with EBNF
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With DHParser, Grammars can be specified either directly in Python-code
 (see :py:mod:`parse`) or in one of several EBNF-dialects. (Yes,
@@ -55,7 +58,7 @@ regular expr.             /.../               /.../
 sequences                 A B C               A B C
 alternatives              A | B | C           A | B | C
 options                   [ ... ]             ...?
-repetions                 { ... }             ...*
+repetitions               { ... }             ...*
 one or more                                   ...+
 grouping                  (...)               (...)
 positive lookahead        & ...               & ...
@@ -71,7 +74,7 @@ syntax tree, so that the outcome of the parsing stage comes close (or
 at least closer) to the intended abstract-syntax-tree, already.
 
 DHParser also contains a few experimental extensions to
-the common EBNF and PEG (Parsing-Expression-Grammar) foramlisms:
+the common EBNF and PEG (Parsing-Expression-Grammar) formalisms:
 
 ============================== ==========
 additional operators           syntax
@@ -186,6 +189,66 @@ components of a prduction receive the name of of the parser-type
 that has created the node (see :py:mod:`parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
 because they lack the name of a proper grammatical component.
+
+Chaining Grammars with @include
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While it is always advisable to keep a grammar definition short and concise,
+so that it neatly fits within one file, the need might arise to reuse parts
+of a grammar definition in different grammar. While this can be done with
+copy & paste, using copy & past has the disadvantage that if the part that
+has been copied will be changed later (if only because an error has been
+detected and needs to be corrected), it must be copied to all places where
+it is used, once again.
+
+In order to avoid such complications, DHParser supports a modest kind of
+modularization of grammar-definitions via a simple include mechanism.
+Simply add ``@include = "FILENAME"``-directive at the place where
+you'd like to include another grammar file.
+
+Say, we'd like to make the grammar-definition of floating-point numbers
+in our JSON-grammar reusable. In order to do so, we can write it to
+a dedicated file::
+
+    >>> number_ebnf = '''
+    ...     number   = _INT _FRAC? _EXP? ~
+    ...     _INT     = `-`? ( /[1-9][0-9]+/ | /[0-9]/ )
+    ...     _FRAC    = `.` /[0-9]+/
+    ...     _EXP     = (`E`|`e`) [`+`|`-`] /[0-9]+/   '''
+    >>> with open('number_include.ebnf', 'w', encoding='utf-8') as f:  _ = f.write(number_ebnf)
+
+Now, we can simply include this file an any grammar::
+
+    >>> json_grammar_with_include = '''
+    ...     json     = ~ _element _EOF
+    ...     _EOF     = /$/
+    ...     _element = object | array | string | number | bool | null
+    ...     object   = "{" ~ member ( "," ~ §member )* "}" ~
+    ...     member   = string ":" ~ _element
+    ...     array    = "[" ~ ( _element ( "," ~ _element )* )? "]" ~
+    ...     string   = `"` _CHARS `"` ~
+    ...     _CHARS   = /[^"\\\\]+/ | /\\[\\/bnrt\\]/
+    ...     @include = "number_include.ebnf"
+    ...     bool     = "true" ~ | "false" ~
+    ...     null     = "null" ~                                   '''
+    >>> parser = create_parser(json_grammar_with_include, branding="JSON")
+    >>> syntax_tree = parser(testdata)
+    >>> syntax_tree.content
+    '{"array": [1, 2.0, "a string"], "number": -1.3e+25, "bool": false}'
+
+The following command merely removes the grammar on the hard-disk, so that
+our doctest-run does not leave any trails::
+
+    >>> import os;  os.remove('number_include.ebnf')
+
+It should be noted that DHParser's include-mechanism does not (yet) support
+any kind of namespaces, so you have to make sure yourself that the same
+symbol names are not accidentally defined both in the including and included
+file(s).
+
+Using DHParser's include-mechanism for modularizing your EBNF-grammar(s) is
+a different thing than adding an include mechanism to your domain specific
+language. For the latter, see the manual of the ``DHParser.preprocess``-module.
 
 .. _simplifying_syntax_trees:
 
@@ -629,10 +692,10 @@ view, adding comments to a DSL raises two questions:
    symbols in so many places. And speaking of comments at the end of
    the line: If linefeeds aren't important for us - as in our toy-grammar
    for prose-text, above - we probably wouldn't want to reframe our
-   grammar jsut to allow for at the end of the line comments.
+   grammar just to allow for at the end of the line comments.
 
 Luckily, there exists a simple and highly intuitive solution that takes
-care of both of these concerns: We admitt comments, whereever whitespace
+care of both of these concerns: We admitt comments, wherever whitespace
 is allowed. And we code this by defining a symbol that means: "whitespace
 and, optionally, a comment".
 
@@ -712,8 +775,8 @@ near paragraph breaks works as well::
 
 The last result might look surprising at first, but since a paragraph
 break requires at least one empty line as a separator, the input text
-is correctly understood by the parser as a sinlge paragrpah with
-two sentence interspersed by a sinlge whitespace which, incidently,
+is correctly understood by the parser as a single paragraph with
+two sentence interspersed by a single whitespace which, incidentally,
 contains a comment::
 
     >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('paragraph').children))
@@ -729,22 +792,22 @@ contains a comment::
         ""))
 
 A common problem with whitespace is that it tends to pollute
-the Grammar, because whereever you'd like to allow whitespace,
+the Grammar, because wherever you'd like to allow whitespace,
 you'd have to insert a symbol for whitespace. The same problem
-existis when it comes to allowing comments, because you'd
+exists when it comes to allowing comments, because you'd
 probably allow to insert comments in as many places as possible.
 
 DHParser's support for insignificant whitespace and comments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Coding insignificant whitespace and comments is exactly the
-same as coding siginificant whitespace and comments and does not
+same as coding significant whitespace and comments and does not
 need to be repeated, here. (The combination of insignificant
 whitespace and significant comments, is slightly more complicated,
 and probably best outsourced to some degree to the post-parsing
 processing stages. It will not be discussed here.) However,
 DHParser offers some special support for insignificant
-whitesapce and comments, which can make working with these
+whitespace and comments, which can make working with these
 easier in some cases.
 
 First of all, DHParser has a special dedicated token for

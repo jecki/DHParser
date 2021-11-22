@@ -275,7 +275,7 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     assert RX_IS_SXPR.match(sxpr)
     if threshold == 0:
         return sxpr
-    flat = re.sub(r'\s(?=\))', '', re.sub('\n\s*', ' ', sxpr)).strip()
+    flat = re.sub(r'\s(?=\))', '', re.sub(r'\n\s*', ' ', sxpr)).strip()
     l = flat.split('"')
     if len(l) > 1:
         for i in range(0, len(l), 2):
