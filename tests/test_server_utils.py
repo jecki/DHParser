@@ -34,7 +34,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import pp_json, ExecutionEnvironment, asyncio_run
-from DHParser.toolkit import json_dumps, json_encode_string
+from DHParser.toolkit import json_encode_string
 
 
 class TestExecutionEnvironment:
