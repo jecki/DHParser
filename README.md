@@ -31,8 +31,18 @@ Features
 Ease of use
 -----------
 
+DHParser recognizes various dialects of EBNF or PEG-syntax. If
+you already have a grammar-specification in EBNF, chances are good
+that you can directly compile with the `dhaparser`-command into
+a Python script that is able to parse documents with this grammar.
+
+
+
+Small grammars can also directly be compiled from Python-code.
+
 key_value_store.py:
-python 
+
+    #!/usr/bin/env python 
     # A mini-DSL for a key value store
     from DHParser import *
 

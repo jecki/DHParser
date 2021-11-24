@@ -1334,10 +1334,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param actions: A dictionary that maps tag_names to action functions.
         :return: the result of the evaluation
         """
+        ignore = "invalid result"
+
+        def dummy(*args):
+            nonlocal ignore
+            return ignore
+
+        def pass_through(*args):
+            assert len(args) == 1
+            return args[0]
+
         if self._children:
-            return actions[self.tag_name](*(child.evaluate(actions) for child in self._children))
+            return actions.get(self.tag_name, pass_through)(
+                *(arg for arg in (child.evaluate(actions) for child in self._children)
+                  if arg is not ignore))
         else:
-            return actions[self.tag_name](self._result)
+            return actions.get(self.tag_name, dummy)(self._result)
 
     # serialization ###########################################################
 

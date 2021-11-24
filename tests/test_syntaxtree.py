@@ -947,6 +947,46 @@ class TestEvaluation:
             'POS': lambda token: 1}
         assert tree.evaluate(actions) == -13
 
+    def test_evaluate_2(self):
+        set_config_value('syntax_variant', 'peg-like')
+        parser = create_parser(
+            r'''
+            Start   <- Spacing Expr EOL? EOF
+            Expr    <- Term ((PLUS / MINUS) Term)*
+            Term    <- Factor ((TIMES / DIVIDE) Factor)*
+            Factor  <- Sign* (LPAR Expr RPAR
+                             / INTEGER )
+            Sign    <- NEG / POS
+            INTEGER <- Spacing ( '0' / [1-9][0-9]* ) Spacing
+            PLUS    <- '+' Spacing
+            MINUS   <- '-' Spacing
+            TIMES   <- '*' Spacing
+            DIVIDE  <- '/' Spacing
+            LPAR    <- '(' Spacing
+            RPAR    <- ')' Spacing
+            NEG     <- '-' Spacing
+            POS     <- '+' Spacing
+            Spacing <- [ \t\n\f\v\r]*
+            EOL     <- '\r\n' / [\n\r]
+            EOF     <- !.
+            ''')
+        tree = parser('2 + 3 * -5')
+        from operator import add, sub, mul, truediv as div, neg
+        actions = {
+            'Start': lambda arg: arg,
+            'Expr': lambda *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
+            'Term': lambda *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
+            'Factor': lambda *args: mul(*args) if len(args) > 1 else args[0],
+            'Sign': lambda arg: arg,
+            'INTEGER': int,
+            'PLUS': lambda token: add,
+            'MINUS': lambda token: sub,
+            'TIMES': lambda token: mul,
+            'DIVIDE': lambda token: div,
+            'NEG': lambda token: -1,
+            'POS': lambda token: 1}
+        assert tree.evaluate(actions) == -13
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

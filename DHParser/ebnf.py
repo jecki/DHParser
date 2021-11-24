@@ -2467,7 +2467,7 @@ class EBNFCompiler(Compiler):
         """
         assert node.tag_name == 'counted'
         if len(node.children) != 2:
-            self.tree.new_error(node, f'Wrong number of arguments for repetition: ' 
+            self.tree.new_error(node, f'Wrong number of arguments for repetition: '
                                       f'{len(node.children)} (two expected)!')
             return Node(ZOMBIE_TAG, '').with_pos(node.pos), (0, 0)
         rng = node.get('range', None)
