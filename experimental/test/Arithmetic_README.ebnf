@@ -1,0 +1,20 @@
+@disposable = Spacing, LPAR, RPAR, EOL, EOF
+@drop = Spacing, LPAR, RPAR, EOL, EOF
+Start   <- Spacing Expr EOL? EOF
+Expr    <- Term ((PLUS / MINUS) Term)*
+Term    <- Factor ((TIMES / DIVIDE) Factor)*
+Factor  <- Sign* (LPAR Expr RPAR
+                 / INTEGER )
+Sign    <- NEG / POS
+INTEGER <- Spacing ( '0' / [1-9][0-9]* ) Spacing
+PLUS    <- '+' Spacing
+MINUS   <- '-' Spacing
+TIMES   <- '*' Spacing
+DIVIDE  <- '/' Spacing
+LPAR    <- '(' Spacing
+RPAR    <- ')' Spacing
+NEG     <- '-' Spacing
+POS     <- '+' Spacing
+Spacing <- [ \t\n\f\v\r]*
+EOL     <- '\r\n' / [\n\r]
+EOF     <- !.

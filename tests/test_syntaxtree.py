@@ -909,7 +909,7 @@ class TestEvaluation:
     def test_evaluate(self):
         set_config_value('syntax_variant', 'peg-like')
         parser = create_parser(
-            r'''@disposable = Spacing, EOL, EOF, LPAR, RPAR
+            r'''@disposable = Spacing, LPAR, RPAR, EOL, EOF
             @drop = Spacing, LPAR, RPAR, EOL, EOF
             Start   <- Spacing Expr EOL? EOF
             Expr    <- Term ((PLUS / MINUS) Term)*
@@ -917,7 +917,7 @@ class TestEvaluation:
             Factor  <- Sign* (LPAR Expr RPAR
                              / INTEGER )
             Sign    <- NEG / POS
-            INTEGER <- ~( '0' / [1-9][0-9]* ) Spacing
+            INTEGER <- Spacing ( '0' / [1-9][0-9]* ) Spacing
             PLUS    <- '+' Spacing
             MINUS   <- '-' Spacing
             TIMES   <- '*' Spacing
@@ -930,7 +930,7 @@ class TestEvaluation:
             EOL     <- '\r\n' / [\n\r]
             EOF     <- !.
             ''')
-        tree = parser('2 + 3 * -5')
+        tree = parser('2 + 3 * -(7 - 2)')
         from operator import add, sub, mul, truediv as div, neg
         actions = {
             'Start': lambda arg: arg,
@@ -946,48 +946,6 @@ class TestEvaluation:
             'NEG': lambda token: -1,
             'POS': lambda token: 1}
         assert tree.evaluate(actions) == -13
-
-    def test_evaluate_2(self):
-        set_config_value('syntax_variant', 'peg-like')
-        parser = create_parser(
-            r'''
-            Start   <- Spacing Expr EOL? EOF
-            Expr    <- Term ((PLUS / MINUS) Term)*
-            Term    <- Factor ((TIMES / DIVIDE) Factor)*
-            Factor  <- Sign* (LPAR Expr RPAR / INTEGER )
-            ParExppr <- LPAR Expr RPAR
-            Sign    <- NEG / POS 
-            INTEGER <- Spacing ( '0' / [1-9][0-9]* ) Spacing
-            PLUS    <- '+' Spacing
-            MINUS   <- '-' Spacing
-            TIMES   <- '*' Spacing
-            DIVIDE  <- '/' Spacing
-            LPAR    <- '(' Spacing
-            RPAR    <- ')' Spacing
-            NEG     <- '-' Spacing
-            POS     <- '+' Spacing
-            Spacing <- [ \t\n\f\v\r]*
-            EOL     <- '\r\n' / [\n\r]
-            EOF     <- !.
-            ''')
-        tree = parser('2 + 3 * -5')
-        print(tree.as_sxpr())
-        from operator import add, sub, mul, truediv as div, neg
-        actions = {
-            'Start': lambda *args: args[1],
-            'Expr': lambda *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
-            'Term': lambda *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
-            'Factor': lambda *args: mul(*args) if len(args) > 1 else args[0],
-            'Sign': lambda arg: arg,
-            'INTEGER': lambda *args: int(''.join(args)),
-            'PLUS': lambda *args: add,
-            'MINUS': lambda *args: sub,
-            'TIMES': lambda *args: mul,
-            'DIVIDE': lambda *args: div,
-            'NEG': lambda *args: -1,
-            'POS': lambda *args: 1}
-        print(tree.evaluate(actions))
-        # assert tree.evaluate(actions) == -13, str(tree.evaluate(actions))
 
 
 if __name__ == "__main__":

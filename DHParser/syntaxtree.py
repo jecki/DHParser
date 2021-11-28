@@ -1334,17 +1334,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param actions: A dictionary that maps tag_names to action functions.
         :return: the result of the evaluation
         """
-        if self._children:
-            args = tuple(child.evaluate(actions) for child in self._children)
-        else:
-            args = (self._result,)
+        args = tuple(child.evaluate(actions) for child in self._children) if self._children \
+               else (self._result,)
         try:
             return actions[self.tag_name](*args)
         except KeyError:
             return self.content
-        except TypeError:  # TODO:  as e
+        except TypeError as e:
             raise AssertionError(f'Evaluation function for tag "{self.tag_name}" cannot handle '
-                                 f'arguments: {tuple(args)}')
+                                 f'arguments: {args}. Error raised: {e}')
 
     # serialization ###########################################################
 
