@@ -8,35 +8,52 @@ construction kit for the Digital Humanities
 Features
 --------
 
-* *Based on parsings expression grammars; handles all context-free
-  grammers including left-recursive grammars*
+* Handles all context-free grammers; based on Parsing Expression Grammars,
+  but with added support for left-recursive grammars
 
-* full unicode support
+* Full unicode support
 
-* *Unit testing framework and post-mortem debugger for grammars*
+* Unit testing framework and post-mortem debugger for grammars
 
-* *Customizable error reporting*
+* Customizable error reporting
 
-* *supports for fail-tolerant parsing*
+* Customizable recovery after syntax errors and support for fail-tolerant parsers
 
-* *Language-server-support* (https://microsoft.github.io/language-server-protocol/)
+* Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
 
-* *Beginner friendly*
+* Digital Humanities features, like support for XML-workflows
 
-* *Digital Humanities oriented* (optional XML-workflows!), but open for any application domain
-
-* *Python-based*
+* Soon to come: Extensive documentation and documented examples
 
 
 Ease of use
 -----------
 
+**Directly compile existing EBNF-grammars:**
+
 DHParser recognizes various dialects of EBNF or PEG-syntax for specifying
 grammars. For any already given grammar-specification in EBNF or PEG, 
-it is likely that DHParser can generate a parser either right a away or 
-after only minor changes or additions.
+it is not unlikely that DHParser can generate a parser either right away or 
+with only minor changes or additions.
 
+You can try this by compiling the file `XML_W3C_SPEC.ebnf` in the `examples/XML`
+of the source-tree which contains the official XML-grammar directly extracted
+from [www.w3.org/TR/xml/](https://www.w3.org/TR/xml/):
 
+    $ dhparser examples/XML/XML_W3C_SPEC.ebnf
+
+This command produces a Python-Skript `XML_W3C_SPECParser.py` in the same
+directory as the EBNF-file. This file can be run on any XML-file and will
+yield its concrete syntax tree, e.g.:
+
+    $ python examples/XML/XML_W3C_SPECParser.py examples/XML/example.xml
+
+Note, that the concrete syntax tree of an XML file as returned by the generated
+parser is not the same as the data-tree encoded by that very XML-file. In 
+order to receive the data tree, further transformations are necessary. See
+`examples/XML/XMLParser.py` for an example of how this can be done.
+
+**Use (small) grammars on the fly in Python code:**
 
 Small grammars can also directly be compiled from Python-code. (Here, we
 use DHParser's preferred syntax which does not require trailing semicolons
@@ -87,16 +104,25 @@ Or, serialize as XML:
       </entry>
     </key_store>
 
+**Set up DSL-projects with unit-tests for long-term-development:** 
+
+For larger projects that require testing and incremental grammar development,
+use:
+  
+  $ dhparser NEW_PROJECT_NAME 
+
+to setup a project-directory with all the scaffolding for a new DSL-project,
+including the full unit-testing-framework.
 
 Installation
 ------------
 
-You can install DHParser from the Python package index (https://pypi.org)*:
+You can install DHParser from the Python package index [pypi.org](https://pypi.org):
 
     python -m pip install --user DHParser
 
-However, as the software is still in an early beta stage, it is
-recommended that you pull it directly from gitlab (see below).
+Alternatively you can clone the latest version from 
+[gitlab.lrz.de/badw-it/DHParser](https://gitlab.lrz.de/badw-it/DHParser)
 
 
 Getting Started

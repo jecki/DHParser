@@ -117,6 +117,6 @@ extParsedEnt   ::=   	TextDecl? content
 EncodingDecl   ::= S 'encoding' Eq ('"' EncName '"' | "'" EncName "'" )
 EncName	       ::= [A-Za-z] ([A-Za-z0-9._] | '-')* 	/* Encoding name contains only Latin characters */
 
-NotationDecl   ::= '<!NOTATION' S Name S (ExternalID | PublicID) S? '>'	[VC: Unique Notation Name]
+NotationDecl   ::= '<!NOTATION' S Name S (ExternalID | PublicID) S? '>'
 PublicID	   ::= 'PUBLIC' S PubidLiteral
 

@@ -42,6 +42,7 @@ packages = [
     { include = "DHParser" },
     { include = "tests", format = "sdist" },
     { include = "documentation_src", format = "sdist" },
+    { include = "examples", format = "sdist" }
 ]
 
 
