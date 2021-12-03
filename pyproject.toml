@@ -3,13 +3,14 @@ name = "DHParser"
 version = "0.9.9"
 description = "Parser Generator and DSL-construction-kit"
 
-license = "Apache-2.0"
+license = "Apache-2"
 
 authors = ["Eckhart Arnold <eckhart.arnold@posteo.de>"]
 
 readme = "README.md"
 repository = "https://gitlab.lrz.de/badw-it/DHParser"
 homepage = "https://gitlab.lrz.de/badw-it/DHParser"
+documentation = "https://dhparser.readthedocs.io/en/latest/"
 
 keywords = [
     'parser generator',

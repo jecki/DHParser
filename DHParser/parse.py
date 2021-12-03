@@ -471,7 +471,6 @@ class Parser:
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
-        # self.proxied = None           # type: Optional[ParseFunc]
         try:
             self._grammar = get_grammar_placeholder()  # type: Grammar
         except NameError:
