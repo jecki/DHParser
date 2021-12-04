@@ -43,7 +43,7 @@ Resources
 
    Overview.rst
    StepByStepGuide.rst
-   Manual.rst
+   Manuals.rst
    Reference.rst
 
 Indices and tables

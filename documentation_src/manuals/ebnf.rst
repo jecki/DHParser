@@ -6,7 +6,7 @@ EBNF-Grammar into Python-code that can be executed to parse source text
 conforming to this grammar into concrete syntax trees.
 
 
-Writing Grammar-Deifnitions
+Writing Grammar-Definitions
 ---------------------------
 
 Specifying Grammars with EBNF
