@@ -1,0 +1,13 @@
+div.body {
+    max-width: 1200px;
+}
+
+div.body p {
+    max-width: 960px;
+}
+
+pre {
+    font-size: 0.8em;
+    line-height: 1.5em;
+    width: 800px;
+}
