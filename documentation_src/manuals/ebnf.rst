@@ -517,7 +517,7 @@ further by merging adjacent anonymous leaf-nodes::
 Merging adjacent anonymous leaf-nodes takes place after the @drop-directive
 comes into effect. It should be observed that merging only produces the desired
 result, if any delimiters have been dropped previously, because otherwise
-delimiters would be merged with content. Therefore, the ``@reduction = merge`-
+delimiters would be merged with content. Therefore, the ``@reduction = merge``-
 directive should at best only be applied in conjunction with the ``@drop`` and
 ``@disposable``-directives.
 
@@ -1202,17 +1202,17 @@ at least when we keep in mind that the computer cannot guess where
 we would have placed the forgotton closing bracket. It can only
 report the point where the mistake becomes aparant.
 
-However, the reported fact that it was the sub-parser \\`*\\` of
+However, the reported fact that it was the sub-parser \`*\` of
 parser term that failed at this location does little to enlighten
 us with respect to the cause of the failure. The "farthest fail"-method
 as implemented by DHParser yields the
 first parser (of possibly several) that has been tried at the
 position where the farthest fail occurred. Thus, in this case,
-a failure of the parser capturing \\`*\\` is reporeted rather than
-of the parser expression->\\`+\\`. Changing this by reporting the
+a failure of the parser capturing \`*\` is reported rather than
+of the parser expression->\`+\`. Changing this by reporting the
 last parser or all parsers that failed at this location would
 do little to remedy this situation, however. In this example,
-it would just be as confusing to learn that expression->\\`+\\` failed
+it would just be as confusing to learn that expression->\`+\` failed
 at the end of the parsed string.
 
 Marking mandatory items with "§"
