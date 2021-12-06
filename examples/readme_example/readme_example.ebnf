@@ -21,6 +21,6 @@
 
 key_store   = ~ { entry }
 entry       = key "=" value
-key         = /\w+/~                  # Scannerless parsing: Use regular
-value       = /\"[^"\n]*\"/~          # expressions wherever you like'''
+key         = /\w+/~                  # Scannerless parsing: Use regular expressions
+value       = /\"[^"\n]*\"/~          # expressions wherever you like
 

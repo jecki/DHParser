@@ -189,6 +189,7 @@ class TestUtils:
         # print(expected)
         assert ppjsn == expected, '\n\n' + ppjsn + '\n\n' + expected
 
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

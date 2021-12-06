@@ -53,7 +53,7 @@ elements are denoted in classical and regex-like EBNF-syntax:
 element                   classical EBNF      regex-like
 ========================  ==================  ================
 insignificant whitespace  ~                   ~
-string literal            "..." or \\`...\\`    "..." or \\`...\\`
+string literal            "..." or \`...\`    "..." or \`...\`
 regular expr.             /.../               /.../
 sequences                 A B C               A B C
 alternatives              A | B | C           A | B | C
@@ -2263,7 +2263,7 @@ if we combine both errors, its limitations begin to show::
     5:1: Error (1010): 'ETag = `</` ::TagName "title" § `>`' expected by parser 'element', but »</doc>...« found instead!
 
 Here, it seems almost impossible to avoid an error-cascade in combination with
-context-sensitive parser if met with a combination of different errors. In this
+context-sensitive parsers if met with a combination of different errors. In this
 particular case of an XML-parser, the best way out might be not to use
 context-sensitive parsers at all and check the matching XML-tags at a later
 processing stage.
