@@ -21,7 +21,7 @@ Module ``transform``
    :members:
 
 Module ``compile``
---------------------
+------------------
 
 .. automodule:: compile
    :members:
@@ -62,7 +62,7 @@ Module ``testing``
 
 
 Module ``trace``
-------------------
+----------------
 
 .. automodule:: trace
    :members:

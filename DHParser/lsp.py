@@ -1907,5 +1907,5 @@ class LSPBase:
     def lsp_shutdown(self) -> Dict:
         self.lsp_data['processId'] = 0
         self.lsp_data['rootUri'] = ''
-        self.lsp_data['clientCapabilities'] = {}
+        self.lsp_data['clientCapabilities'] = dict()
         return {}

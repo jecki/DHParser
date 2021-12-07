@@ -291,9 +291,8 @@ possibly, to deserialize the transformed XML again.
 
 A more efficient method, however, is to utilize any of the various
 Python-libraries for XML. In order to make this as easy as possible trees of
-:py:class:`~snytaxtree.Node`-objects can be converted to `ElementTree
-<https://docs.python.org/3/library/xml.etree.elementtree.html>`_-objects either
-from the python standard library or from the `lxml <https://lxml.de/>`_-library
+:py:class:`~snytaxtree.Node`-objects can be converted to `ElementTree`_-objects
+either from the python standard library or from the `lxml <https://lxml.de/>`_-library
 
     >>> import xml.etree.ElementTree as ET
     >>> et = sentence.as_etree(ET)
@@ -732,13 +731,10 @@ The Node-class
 
     **XML-exchange**
 
-  * :py:meth:`~syntaxtree.Node.as_etree`: Converts the tree to an
-    `XML-Elementree
-    <https://docs.python.org/3/library/xml.etree.elementtree.html>`_ as
-    defined by the respective module of Python's standard library-
-  * :py:meth:`~syntaxtree.Node.from_etree`: Converts an `XML-Elementree
-    <https://docs.python.org/3/library/xml.etree.elementtree.html>`_ into a
-    tree of :py:class:`~syntaxtee.Node`-objects.
+  * :py:meth:`~syntaxtree.Node.as_etree`: Converts the tree to an XML-`ElementTree`_
+    as defined by the respective module of Python's standard library.
+  * :py:meth:`~syntaxtree.Node.from_etree`: Converts an XML-`ElementTree`_
+    into a tree of :py:class:`~syntaxtee.Node`-objects.
 
     **Evaluation**
 
@@ -820,3 +816,5 @@ root-node or swallow a a tree originating in a common node later.
   * :py:meth:`~syntaxtree.RootNode.customized_XML`: Serializes the tree as XML
     taking into account the XML-customization attributes of the RootNode-object.
 
+
+.. _ElementTree: https://docs.python.org/3/library/xml.etree.elementtree.html

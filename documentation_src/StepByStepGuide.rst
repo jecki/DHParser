@@ -28,7 +28,7 @@ System-Requirements
 
 DHParser runs on Linux, MacOS and Windows. The following step by step guide
 assumes that you already have a Python-interpreter installed on your system and
-added the `python`-command to your PATH-variable. (The latter is usually done
+added the ``python``-command to your PATH-variable. (The latter is usually done
 automatically when installing Python.) Furthermore, DHParser only works with
 Python Version 3.5.3 and above. In order to verify this, open a shell or command line
 and type::
@@ -36,8 +36,8 @@ and type::
     $ python --version
     Python 3.7.7
 
-If `Python` plus a version number greater or equal 3.5.3 does not appear, you'll
-need to install Python from https://python.org .
+If ``Python`` plus a version number greater or equal 3.5.3 does not appear, you'll
+need to install Python from `python.org <https://python.org>`_.
 
 
 Setting up a new DHParser project
@@ -82,7 +82,7 @@ files and directories for sure, but those will not concern us for now::
     Introduction.md      - An introduction and appetizer for DHParser
 
 In order to verify that the installation works, you can run the
-`dhparser.py`-script and, when asked, chose "3" for the self-test::
+``dhparser.py``-script and, when asked, chose "3" for the self-test::
 
     $ python DHParser/scripts/dhparser.py
     Usage:
@@ -102,10 +102,10 @@ In order to verify that the installation works, you can run the
 
 If the self-test runs through without error, the installation has succeeded.
 
-.. note:: On Microsoft Windows Systems you'll have to use the backslash `\`
-    instead of the forward slash `/` as a delimiter for file paths. Thus,
+.. note:: On Microsoft Windows Systems you'll have to use the backslash ``\``
+    instead of the forward slash ``/`` as a delimiter for file paths. Thus,
     if you are not working on MacOS oder Linux (which I recommend), you'll
-    have to type `python DHParser\scripts\dhparser.py` on the command line
+    have to type ``python DHParser\scripts\dhparser.py`` on the command line
     ("Eingabeaufforderung") to run the script.
 
 
@@ -360,7 +360,7 @@ the parser simply would not match, which in itself is not considered an error.
    insignificant whitespace should be denoted by DHParser's default sign for
    whitespace, that is a tilde "~", while significant whitespace should be
    explicitely defined in the grammar, for example by introducing a
-   definition like `S = /\s+/` into the grammar.
+   definition like ``S = /\s+/`` into the grammar.
 
    Here is a little exercise: Can you rewrite the grammar of this example
    so as to distinguish between significant whitespace between words and
@@ -372,8 +372,9 @@ the parser simply would not match, which in itself is not considered an error.
 
 Now, let's look at our two matching rules. Both of these rules contain regular
 expressions. If you do not know about regular expressions yet, you should head
-over to an explanation or tutorial on regular expressions, like
-https://docs.python.org/3/library/re.html, before continuing, because we are
+over to an explanation or tutorial on
+`regular expressions <https://docs.python.org/3/library/re.html>`_
+before continuing, because we are
 not going to discuss them here. In DHParser-Grammars regular expressions are
 enclosed by simple forward slashes "/". Everything between two forward slashes
 is a regular expression as it would be understood by Python's "re"-module.
@@ -492,7 +493,7 @@ code above?) For all less intelligent people, like me: Let's be prudent and -
 since the grammar has become more complex - add a few test cases. This should
 make it easier to locate any errors. So open up an editor with a new file in
 the tests subdirectory, say ``grammar_tests/03_test_sentence.ini`` (Test files
-should always contain the component `test_` in the filename, otherwise they
+should always contain the component ``test_`` in the filename, otherwise they
 will be overlooked by DHParser's unit testing subsystem) and enter a few
 test-cases like these::
 
@@ -797,7 +798,7 @@ Running the "poetryParser.py"-script on "macbeth.dsl" again, yields::
     ...
 
 It starts to become more readable and concise. The same trick can of course
-be done with the Whitespace inside the `part`- and `sentence`-nodes,
+be done with the Whitespace inside the ``part``- and ``sentence``-nodes,
 only here it does not make sence to reduce a single child::
 
     "part": [remove_whitespace],
@@ -824,10 +825,10 @@ Now that everything is set, let's have a look at the result::
 
 That is much better. There is but one slight blemish in the output: While all
 nodes left a named nodes, i.e. nodes associated with a named parser, there are a
-few anonymous `<ANONYMOUS_Text__>`-nodes. Here is a little exercise: Do away with those
-`<ANONYMOUS_Text__>`-nodes by replacing them by something semantically more meaningful.
+few anonymous ``<ANONYMOUS_Text__>``-nodes. Here is a little exercise: Do away with those
+``<ANONYMOUS_Text__>``-nodes by replacing them by something semantically more meaningful.
 Hint: Add a new symbol "delimiter" in the grammar definition "poetry.ebnf". (An
 alternative strategy to extending the grammar would be to use the
 ``replace_parser`` operator. In the AST-transformation-table ANONYMOUS nodes are
 indicated by a leading ':', thus ins the AST-transformation-table you have to write
-`:Text` instead pf `ANONYMOUS_Text__` which is merely the XML-compatible name.)
+``:Text`` instead pf ``ANONYMOUS_Text__`` which is merely the XML-compatible name.)
