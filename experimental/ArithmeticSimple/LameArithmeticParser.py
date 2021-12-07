@@ -122,7 +122,7 @@ LameArithmetic_AST_transformation_table = {
 def CreateLameArithmeticTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=LameArithmetic_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=LameArithmetic_AST_transformation_table.copy())
 
 
 def get_transformer() -> TransformationFunc:

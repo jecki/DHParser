@@ -315,12 +315,12 @@ BLOCK_ANONYMOUS_LEAVES = BlockAnonymousLeaves()
 
 
 def traverse(root_node: Node,
-             processing_table: ProcessingTableType,
+             transformation_table: ProcessingTableType,
              key_func: KeyFunc = key_tag_name) -> Node:
     """
     Traverses the syntax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
-    in the ``processing_table``-dictionary.
+    in the ``transformation_table``-dictionary.
 
     The most important use case is the transformation of a concrete
     syntax tree into an abstract tree (AST). But it is also imaginable
@@ -338,7 +338,7 @@ def traverse(root_node: Node,
 
     Args:
         root_node (Node): The root-node of the syntax tree to be traversed
-        processing_table (dict): node key -> sequence of functions that
+        transformation_table (dict): node key -> sequence of functions that
             will be applied to matching nodes in order. This dictionary
             is interpreted as a ``compact_table``. See
             :func:`expand_table` or :func:`EBNFCompiler.EBNFTransTable`
@@ -354,15 +354,15 @@ def traverse(root_node: Node,
     """
 
     # Is this optimization really needed?
-    if '__cache__' in processing_table:
+    if '__cache__' in transformation_table:
         # assume that processing table has already been expanded
-        table = processing_table               # type: ProcessingTableType
-        cache = cast(TransformationDict, processing_table['__cache__'])  # type: TransformationDict
+        table = transformation_table               # type: ProcessingTableType
+        cache = cast(TransformationDict, transformation_table['__cache__'])  # type: TransformationDict
     else:
-        # normalize processing_table entries by turning single values
+        # normalize transformation_table entries by turning single values
         # into lists with a single value
         table = {name: cast(Sequence[Callable], smart_list(call))
-                 for name, call in list(processing_table.items())}
+                 for name, call in list(transformation_table.items())}
         table = expand_table(table)
         # substitute key for insiginificant whitespace
         assert '+' not in table, 'Symbol "+" in processing table is obsolete, use "<" instead'
@@ -379,8 +379,8 @@ def traverse(root_node: Node,
         cache = cast(TransformationDict,
                      table.setdefault('__cache__', cast(TransformationDict, dict())))
         # change processing table in place, so its already expanded and cache filled next time
-        processing_table.clear()
-        processing_table.update(table)
+        transformation_table.clear()
+        transformation_table.update(table)
 
     def split_filter(callables: Sequence[Callable]) -> Tuple[List[Filter], List[Callable]]:
         i = 0
@@ -432,7 +432,7 @@ def traverse(root_node: Node,
 
     traverse_recursive([root_node])
     return root_node
-    # assert processing_table['__cache__']
+    # assert transformation_table['__cache__']
 
 
 #######################################################################
@@ -468,15 +468,15 @@ def merge_treetops(node: Node):
 
 @transformation_factory(dict)
 def traverse_locally(context: TreeContext,
-                     processing_table: Dict,              # actually: ProcessingTableType
+                     transformation_table: Dict,              # actually: ProcessingTableType
                      key_func: Callable = key_tag_name):  # actually: KeyFunc
     """
     Transforms the syntax tree starting from the last node in the context
-    according to the given processing table. The purpose of this function is
+    according to the given transformation table. The purpose of this function is
     to apply certain transformations locally, i.e. only for those nodes that
     have the last node in the context as their parent node.
     """
-    traverse(context[-1], processing_table, key_func)
+    traverse(context[-1], transformation_table, key_func)
 
 
 def transformation_guard(value) -> None:

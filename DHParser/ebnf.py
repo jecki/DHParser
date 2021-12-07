@@ -871,7 +871,7 @@ EBNF_AST_transformation_table = {
 
 
 def EBNFTransform() -> TransformerCallable:
-    return partial(traverse, processing_table=EBNF_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=EBNF_AST_transformation_table.copy())
 
 
 def get_ebnf_transformer() -> TransformerCallable:
@@ -958,7 +958,7 @@ TRANSFORMER_FACTORY = '''
 def {NAME}Transformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table={NAME}_AST_transformation_table.copy())
+    return partial(traverse, transformation_table={NAME}_AST_transformation_table.copy())
 
 
 get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, ident={ID})

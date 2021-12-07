@@ -120,7 +120,7 @@ ArithmeticSimple_AST_transformation_table = {
 
 
 def ArithmeticSimpleTransform() -> TransformationFunc:
-    return partial(traverse, processing_table=ArithmeticSimple_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=ArithmeticSimple_AST_transformation_table.copy())
 
 
 def get_transformer() -> TransformationFunc:

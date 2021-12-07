@@ -170,7 +170,7 @@ ARITHMETIC_EBNF_transformation_table = {
 }
 
 
-ARITHMETIC_EBNFTransform = partial(traverse, processing_table=ARITHMETIC_EBNF_transformation_table)
+ARITHMETIC_EBNFTransform = partial(traverse, transformation_table=ARITHMETIC_EBNF_transformation_table)
 
 
 class TestGrammarTest:
@@ -296,7 +296,7 @@ class TestASTErrors:
 
     def test_errors_added_during_AST_transformation(self):
         parser_fac = grammar_provider(ARITHMETIC_EBNF)
-        trans_fac = lambda : partial(traverse, processing_table=self.trans_table)
+        trans_fac = lambda : partial(traverse, transformation_table=self.trans_table)
         errata = grammar_unit(self.cases1, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
         assert "marked with error" in str(errata)
         errata = grammar_unit(self.cases2, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
@@ -347,7 +347,7 @@ class TestLookahead:
     }
 
     grammar_fac = grammar_provider(EBNF)
-    trans_fac = lambda: partial(traverse, processing_table={"*": [flatten, remove_empty]})
+    trans_fac = lambda: partial(traverse, transformation_table={"*": [flatten, remove_empty]})
 
     def setup(self):
         self.save_dir = os.getcwd()

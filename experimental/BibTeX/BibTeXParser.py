@@ -132,7 +132,7 @@ BibTeX_AST_transformation_table = {
 
 
 def BibTeXTransform() -> TransformationFunc:
-    return partial(traverse, processing_table=BibTeX_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=BibTeX_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     global thread_local_BibTeX_transformer_singleton

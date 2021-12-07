@@ -126,7 +126,7 @@ readme_example_AST_transformation_table = {
 def Createreadme_exampleTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=readme_example_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=readme_example_AST_transformation_table.copy())
 
 
 def get_transformer() -> TransformerCallable:

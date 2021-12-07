@@ -303,7 +303,7 @@ XML_W3C_SPEC_AST_transformation_table = {
 def XML_W3C_SPECTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=XML_W3C_SPEC_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=XML_W3C_SPEC_AST_transformation_table.copy())
 
 
 get_transformer = ThreadLocalSingletonFactory(XML_W3C_SPECTransformer, ident=1)

@@ -132,7 +132,7 @@ Arithmetic_AST_transformation_table = {
 def CreateArithmeticTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=Arithmetic_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=Arithmetic_AST_transformation_table.copy())
 
 
 def get_transformer() -> TransformerCallable:

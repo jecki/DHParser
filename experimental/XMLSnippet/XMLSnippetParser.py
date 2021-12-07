@@ -208,7 +208,7 @@ XMLSnippet_AST_transformation_table = {
 def CreateXMLSnippetTransformer() -> TransformationFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, processing_table=XMLSnippet_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=XMLSnippet_AST_transformation_table.copy())
 
 def get_transformer() -> TransformationFunc:
     """Returns a thread/process-exclusive transformation function."""
