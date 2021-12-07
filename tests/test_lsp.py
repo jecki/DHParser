@@ -31,8 +31,9 @@ try:
 except ImportError:
     from DHParser.externallibs.typing_extensions import TypedDict
 
-from DHParser.lsp import RequestMessage, Message, ResponseMessage, Position, type_check, \
-    shortlist, validate_type, validate_uniform_sequence, DocumentSymbol
+from DHParser.json_validation import type_check, validate_type, validate_uniform_sequence
+from DHParser.lsp import RequestMessage, Message, ResponseMessage, Position, \
+    shortlist, DocumentSymbol
 
 
 @type_check

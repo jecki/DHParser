@@ -43,3 +43,9 @@ manner. Let's take a parser for simple arithmetic formulas as an example:
     >>> print(formula_cst.as_sxpr(flatten_threshold=0))
 
 
+*Functions-Reference*
+---------------------
+
+The full documentation of all functions can be found in module
+:py:mod:`DHParser.transform`. The following table of contents list the most
+important of these:

@@ -2268,3 +2268,15 @@ particular case of an XML-parser, the best way out might be not to use
 context-sensitive parsers at all and check the matching XML-tags at a later
 processing stage.
 
+
+*Classes and Functions-Reference*
+---------------------------------
+
+Usually, the functions and classes of module :py:mod:`DHParser.ebnf` are not
+called directly, but the helper functions from module :py:mod:`DHParser.dsl`
+like :py:func:`DHParser.dsl.create_parser` will be called or the
+`dhparser`-script will be used from the command line. Therefore, no
+commented abbreviated reference of the most important functions of
+module ``ebnf`` will be provided here. See the source code documentation
+of module :py:mod:`DHParser.ebnf` for a full references of all functions and
+classes.

@@ -36,7 +36,7 @@ def recompile_grammar(grammar_src, force):
               '\n--------------------------------------\n\n')
         error_path = os.path.join(os.path.dirname(grammar_src), 
                                   'indented_ebnf_ERRORS.txt')      
-        with open(error_path, encoding='utf-8') as f:
+        with open(error_path, 'r', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
     dsl.restore_server_script(grammar_src)

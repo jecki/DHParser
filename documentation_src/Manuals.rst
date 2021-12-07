@@ -27,7 +27,7 @@ reading-order is recommended to understand DHParser:
    are represented within DHParser, how they can be manipulated, queried
    and serialized or deserialized as XML, S-expressions or json.
 
-:py:mod:`transform` - It is not untypical for digital humanities applications
+:doc:`transform <manuals/transform>` - It is not untypical for digital humanities applications
    that document tress are transformed again and again to produce different
    representations of research data or various output forms. DHParser
    supplies the scaffolding for two different types of tree transformations,
@@ -45,8 +45,8 @@ reading-order is recommended to understand DHParser:
    for the `visitor pattern`_ that is more suitable for complex
    transformations that make heavy use of algorithms as well as
    transformations from trees to non-tree objects like program code.
-   (An example for the latter kind of transformation is the ``EBNFCompiler``-class
-   of DHParser's ebnf-module.)
+   (An example for the latter kind of transformation is the
+   :py:class`~ebnf.EBNFCompiler`-class of DHParser's ebnf-module.)
 
 With the documentation of these four modules you should have enough
 knowledge to realize projects that follow the workflow described

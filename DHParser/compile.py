@@ -180,6 +180,22 @@ class Compiler:
         the compiler to determine the format of the returned data.
         (This very much depends on the kind and purpose of the
         implemented compiler.)
+
+        The ``__call__``-method is also responsible for initializations
+        required before the compilation and the finalization the compilation
+        has been finished by taking the following steps::
+
+            1. reset all variables and initalize ``self.tree`` with ``root``
+            2. call the :py:meth:`Compiler.prepare()`-method.
+            3. compile the syntax-tree originating in ``root`` by calling
+               :py:meth:`Compiler.compile()` on the root-node.
+            4. call all finalizers in the ``self.finalizers``-list.
+            5. call the :py:meth:`Compiler.finalize()`-method.
+
+        :param root: The root-node of the syntax tree to be compiled. ``root``
+            does not need to be of type :py:class:`~syntaxtree.RootNode` in order
+            to allow compiling parts of a syntaxtree.
+        :returns: The resulting object of the compilation.
         """
         if self._dirty_flag:
             self.reset()

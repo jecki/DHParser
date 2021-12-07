@@ -44,7 +44,7 @@ from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forwa
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
     Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
-from DHParser.preprocess import PreprocessorFunc, gen_find_include_func, \
+from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
     flatten_sxpr
@@ -63,6 +63,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
+           'preprocess_ebnf',
            'parse_ebnf',
            'transform_ebnf',
            'compile_ebnf_ast',
@@ -161,6 +162,11 @@ def preprocessor_factory() -> PreprocessorFunc:
 
 
 get_ebnf_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+
+
+def preprocess_ebnf(ebnf: str, source_name="source") -> PreprocessorResult:
+    """Preprocesses the @include-directives of an EBNF-source."""
+    return get_ebnf_preprocessor()(ebnf, source_name)
 
 
 ########################################################################

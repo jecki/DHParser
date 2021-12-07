@@ -46,7 +46,7 @@ def echo(msg: str):
     elif CONNECTION_TYPE == 'streams':
         if echo_file is None or echo_file.closed:
             new_file_flag = echo_file is None
-            echo_file = open('print.txt', 'a')
+            echo_file = open('print.txt', 'a', encoding='utf-8')
             if new_file_flag:
                 import atexit
                 atexit.register(echo_file.close)
@@ -100,7 +100,7 @@ def retrieve_host_and_port():
     port = DEFAULT_PORT
     cfg_filename = get_config_filename()
     try:
-        with open(cfg_filename) as f:
+        with open(cfg_filename, 'r', encoding='utf-8') as f:
             host, ports = f.read().strip(' \n').split(' ')
             port = int(ports)
             if (host, port) != (KNOWN_HOST, KNOWN_PORT):
@@ -273,7 +273,7 @@ def run_server(host, port, log_path=None):
                              notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('DSL_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        with open('DSL_ebnf_ERRORS.txt', 'r', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
 
@@ -326,7 +326,7 @@ def run_server(host, port, log_path=None):
                     sys.exit(1)
         if overwrite:
             try:
-                with open(cfg_filename, 'w') as f:
+                with open(cfg_filename, 'w', encoding='utf-8') as f:
                     verbose('Storing host and port value %s:%i in file "%s".'
                           % (host, port, cfg_filename))
                     f.write(host + ' ' + str(port))

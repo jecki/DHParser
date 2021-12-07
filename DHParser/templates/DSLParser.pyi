@@ -14,6 +14,8 @@ def serialize_result(result: Any) -> Union[str, bytes]:
     """
     if isinstance(result, Node):
         return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
+    elif isinstance(result, str):
+        return result
     else:
         return repr(result)
 
@@ -30,7 +32,7 @@ def process_file(source: str, result_filename: str = '') -> str:
     result, errors = compile_src(source)
     if not has_errors(errors, FATAL):
         if os.path.abspath(source_filename) != os.path.abspath(result_filename):
-            with open(result_filename, 'w') as f:
+            with open(result_filename, 'w', encoding='utf-8') as f:
                 f.write(serialize_result(result))
         else:
             errors.append(Error('Source and destination have the same name "%s"!'
@@ -38,7 +40,7 @@ def process_file(source: str, result_filename: str = '') -> str:
     if errors:
         err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
         err_filename = os.path.splitext(result_filename)[0] + err_ext
-        with open(err_filename, 'w') as f:
+        with open(err_filename, 'w', encoding='utf-8') as f:
             f.write('\n'.join(canonical_error_strings(errors)))
         return err_filename
     return ''
@@ -98,7 +100,7 @@ if __name__ == "__main__":
     if os.path.exists(grammar_path) and os.path.isfile(grammar_path):
         if not recompile_grammar(grammar_path, script_path, force=False, notify=notify):
             error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
-            with open(error_file, encoding="utf-8") as f:
+            with open(error_file, 'r', encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
         elif parser_update:
