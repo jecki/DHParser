@@ -6,6 +6,29 @@ a focus of transforming concrete syntax trees to abstract syntax trees or, more 
 simplifying and streamlining syntax trees in a much for fine-grained manner than is
 possible at the parsing stage (see :ref:`simplifying_syntax_trees`).
 
+A "concrete syntax tree" is a data tree, the structure of which represents the grammatical
+structure of a text according to a given grammar. If unabridged, the concatenated content of
+all leaf-nodes of the concrete syntax tree yields the text original document. Thus, the shape
+and the content of the concrete syntax tree is precisely determined by the grammar and the
+text-document which must be written in a language adhering to this grammar.
+
+There does not exist and cannot exist any precise definition of what an abstract syntax tree
+(AST) is. Roughly put, an abstract syntax tree is a tree, the structure of which represents the
+structure of the contained data. However, it very much depends on what you'd like to do with
+the data what this structure is. Most oft the time there a several reasonable alternatives, anyway.
+Because, *the* abstract syntax tree does not exist and neither is their a single algorithm that
+could derive the abstract syntax tree from the concrete syntax tree for any given grammar.
+
+However, the transformations from concrete to abstract syntax trees are typically, fairly
+streamlined and can often be composed of the same recurring building-blocks. Or,
+put differently, the AST-transformations (i.e. transformations from the concrete to an
+abstract syntax tree) of different grammars or different parts of the same grammar, differ
+merely, or at least mostly, in the the rearrangement of the same transformation functions.
+
+This is the basic idea that motivates the declarative tree-transformation technique
+provided by DHParser for AST-transformations.
+
+
 
 Declarative Tree-Transformation
 -------------------------------
@@ -15,7 +38,18 @@ as argument and which are organized in a dictionary that maps tag-names to seque
 transformation functions which are called on every node with that tag-name. The tree as whole
 is traversed depth-first. Module :py:mod:`DHParser.transform` provides a large number of
 predefined transformation functions that can be combined to transform the tree in the desired
-manner. Let's take a parser for simple arithmetic formulas as an example:
+manner.
+
+Essentially, the whole process works like the well known `visitor pattern <https://en.wikipedia.org/wiki/Visitor_pattern>`_,
+only in a more functional than object-oriented fashion. DHParser employs an object-oriented scaffolding for
+the visitor pattern for as well. See :py:mod:`DHParser.compile`. The assumption is that for the transformation
+of concrete syntax trees into abstract syntax trees the leaner functional style is preferable, while for
+more complex tree-transformations or the transformation of a syntax-tree into something else the more
+powerful object-oriented version of the visitor pattern is to be preferred, because it allows to exchange
+data between the visiting methods via the :py:class`~compile.Compiler`-object to which they are attached.
+
+To demonstrate how declarative tree-transformations via the functional-style visitor pattern work,
+we'll take a parser for simple arithmetic formulas as an example:
 
     >>> arithmetic_ebnf = '''
     ... @ whitespace  = vertical             # implicit whitespace, includes any number of line feeds
@@ -57,7 +91,7 @@ manner. Let's take a parser for simple arithmetic formulas as an example:
                 (factor
                   (NUMBER "5"))))))))
 
-This syntax tree is already devoid of superflous characters such as the brackets
+This syntax tree is already devoid of superfluous characters such as the brackets
 to delimit groups or the insignificant whitespace between the numbers and operators.
 (The whitespace has been removed by the ``@drop = whitespace`` directive, while any
 string that has not directly been assigned to a symbol has been removed by the
@@ -82,7 +116,9 @@ we shall call it henceforth, "transformation table"::
 Note, that the transformation table is an ordinary Python-dictionary, only that
 a string-key that contains a comma-separated list of tag_names will be interpreted
 as so many different keys that are mapped onto the same sequence of
-transformations. Next, we traverse the tree and call each of the transformations
+transformations.
+
+Next, we traverse the tree and call each of the transformations
 in the list (which in this case is only one, namely, ``replace_by_single_child``)
 on every node that has one of the tag-names in the key::
 
@@ -108,14 +144,14 @@ Two things are important to know about :py:func:`~transform.traverse`:
 2. As any other tree transformation method in DHParser, function
    :py:func:`~transform.traverse` transforms trees *in place*.
    So, if for some reason you need to preserve earlier states of the
-   tree, you'll have to make a deep copy first.
+   tree, you'll have to make a `deep copy <https://docs.python.org/3/library/copy.html#copy.deepcopy>`_ first.
 
 The resulting tree looks much closer to the syntax tree of an arithmetic formula we had in mind.
 Every one-term "expression", "term", "factor" etc. has essentially been replaced by
 what it is. Now, we'd still like to do this for the two-term expressions. Since this
 is an operation which is specific to our arithmetic example, we would not expect
 module :py:mod:`DHParser.transform` to already contain such an operation (although
-in this particlar case, in fact, it does). But we can write a suitable transformation
+in this particular case, in fact, it does). But we can write a suitable transformation
 on our own, easily::
 
    >>> from DHParser.syntaxtree import Node, TreeContext
@@ -144,8 +180,21 @@ function only in order to enable it to query the parents or siblings in order to
 the transformation to make choices depending on the context. This said, it sometimes
 makes sense to deviate from this rule, none the less.
 
-This function can only be meaningfully applied to "term" and "expression"-nodes. So
-we have to split our transformation table up a little bit in order to apply it only
+The just defined function does nothing if the last node in the context-list (which is
+the node that is just being visited during the tree-traversal and which
+the transformation-function should operate on) has three or more children. If so, it
+is assumed that the children form a sequence of value interspersed with dyadic
+operators, e.g. "3 + 4 - 5 + 2". These will then be rearranged as (binary) tree assuming that
+the operators are `left-associative <https://en.wikipedia.org/wiki/Operator_associativity>`_.
+The nodes containing the operators will then be eliminated, but their tag-names will be
+kept as tag-names of the nodes of the generated tree, so that the tag-name of each node
+indicates the kind of operator while the children are the argument of the operation. For
+example, ``(expression (NUMBER "4") (PLUS "+") (NUMBER "5"))`` will become
+``(PLUS (NUMBER "4") (NUMBER "5"))``. Thus, in the resultant abstract syntax tree,
+the structure of the formula is expressed by the structure of the tree.
+
+The function ``left_associative()`` can only be meaningfully applied to "term" and "expression"-nodes. So,
+we have to split our transformation table up in order to apply it only
 to nodes with these tag names::
 
     >>> transformation_table = { "term, expression":
@@ -174,9 +223,38 @@ calculate the result of the formula becomes a breeze::
             ...            'MINUS': sub,
             ...            'MUL': mul,
             ...            'DIV': truediv,
-            ...            'NUMBER': float}
+            ...            'NUMBER': float,
+            ...            'VARIABLE': eval }
             >>> formula_cst.evaluate(actions)
             27.0
+
+See :py:meth:`~syntaxtree.Node.evaluate` in case you wonder what the last statement does.
+(The ``evaluate()``-method of the :py:class:`~syntaxtree.Node`-class is actually the third
+and most trivial installment of the visitor-pattern in DHParser.)
+
+
+
+The Transformation Table
+------------------------
+
+(You could think of the transformation table as a simple "embedded" or
+`internal DSL (Domain Specific Languag) <https://martinfowler.com/bliki/DomainSpecificLanguage.html>`_
+realized within Python, if you liked.)
+
+
+Transformation Functions
+------------------------
+
+Parameterized Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Conditional Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Writing Custom Functions
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 *Functions-Reference*
