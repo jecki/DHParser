@@ -779,7 +779,7 @@ def has_sibling(context: TreeContext, tag_name_set: AbstractSet[str]):
 
 #######################################################################
 #
-# utility functions (private)
+# utility functions
 #
 #######################################################################
 
@@ -816,7 +816,7 @@ def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: RootNode):
 def swap_attributes(node: Node, other: Node):
     """
     Exchanges the attributes between node and other. This might be
-    needed when rearanging trees.
+    needed when re-aranging trees.
     """
     NA = node.has_attr()
     OA = other.has_attr()
