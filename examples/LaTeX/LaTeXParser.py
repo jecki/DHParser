@@ -128,7 +128,7 @@ class LaTeXGrammar(Grammar):
     _FRAC = RegExp('\\.[0-9]+')
     _INTEGER = RegExp('-?(?:(?:[1-9][0-9]+)|[0-9])')
     _NAME = RegExp('(?!\\d)\\w+\\*?')
-    NAME = Capture(Synonym(_NAME))
+    NAME = Capture(Synonym(_NAME), zero_length_warning=True)
     IDENTIFIER = Synonym(_NAME)
     _QUALIFIED = Series(IDENTIFIER, ZeroOrMore(Series(NegativeLookbehind(_BACKSLASH), Drop(RegExp('[:.-]')), IDENTIFIER)))
     LINEFEED = RegExp('[\\\\][\\\\]')

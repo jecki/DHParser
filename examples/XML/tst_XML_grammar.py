@@ -25,10 +25,12 @@ except ModuleNotFoundError:
 
 def recompile_grammar(grammar_src, force):
     # recompiles Grammar only if it has changed
+
     if not dsl.recompile_grammar(grammar_src, force=force):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('XML_ebnf_ERRORS.txt') as f:
+        error_path = os.path.join(grammar_src[:-5] + '_ebnf_ERRORS.txt')
+        with open(error_path) as f:
             print(f.read())
         sys.exit(1)
 
@@ -44,6 +46,8 @@ def run_grammar_tests(glob_pattern):
 if __name__ == '__main__':
     arg = sys.argv[1] if len(sys.argv) > 1 else '*_test_*.ini'
     if arg.endswith('.ebnf'):
+        from DHParser.configuration import set_config_value
+        set_config_value('syntax_variant', 'heuristic')
         recompile_grammar(arg, force=True)
     else:
         recompile_grammar(os.path.join(scriptpath, 'XML.ebnf'), force=False)

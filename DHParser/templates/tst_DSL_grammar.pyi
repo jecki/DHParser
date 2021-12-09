@@ -34,8 +34,7 @@ def recompile_grammar(grammar_src, force):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        error_path = os.path.join(os.path.dirname(grammar_src), 
-                                  'indented_ebnf_ERRORS.txt')      
+        error_path = os.path.join(grammar_src[:-5] + '_ebnf_ERRORS.txt')
         with open(error_path, 'r', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
