@@ -35,12 +35,16 @@ Both are different installments of the well known `visitor pattern <https://en.w
 However, the former is only suitable for in place tree transformations which yield another tree structure as its
 result, while the latter can also be used
 to transform the tree into a different kind of object, like for example program-code. (Thus, the name "compile"
-for this module.) The assumption is that for the transformation
+for this module.)
+
+The assumption behind this is that for the transformation
 of concrete syntax trees into abstract syntax trees or, more generally, the streamlining of syntax trees,
 the leaner functional style is preferable, while for more complex tree-transformations or the
 transformation of a syntax tree into something else the more
 powerful object-oriented version of the visitor pattern is to be preferred, because it allows to exchange
 data between the visiting methods via the :py:class`~compile.Compiler`-object to which they are attached.
+There is of course not "must" to use the ``transform`` and the ``compile``-module for their envisioned
+purposes, but you can choose freely which transformation-scaffolding to use for which of your tree-transformations.
 
 In the following the functional and declarative scaffolding for tree transformations provided
 by the module :py:mod:`DHParser.transform` will be described.
