@@ -6,28 +6,44 @@ a focus of transforming concrete syntax trees to abstract syntax trees or, more 
 simplifying and streamlining syntax trees in a much for fine-grained manner than is
 possible at the parsing stage (see :ref:`simplifying_syntax_trees`).
 
-A "concrete syntax tree" is a data tree, the structure of which represents the grammatical
+A "concrete syntax tree" (CST) is a data tree, the structure of which represents the grammatical
 structure of a text according to a given grammar. If unabridged, the concatenated content of
 all leaf-nodes of the concrete syntax tree yields the text original document. Thus, the shape
 and the content of the concrete syntax tree is precisely determined by the grammar and the
 text-document which must be written in a language adhering to this grammar.
 
-There does not exist and cannot exist any precise definition of what an abstract syntax tree
-(AST) is. Roughly put, an abstract syntax tree is a tree, the structure of which represents the
-structure of the contained data. However, it very much depends on what you'd like to do with
-the data what this structure is. Most oft the time there a several reasonable alternatives, anyway.
-Because, *the* abstract syntax tree does not exist and neither is their a single algorithm that
-could derive the abstract syntax tree from the concrete syntax tree for any given grammar.
+The structure of the "abstract syntax tree" (AST) is a tree structure that represents the data of
+the parsed document in a form that is suitable for a given purpose. In the context of a
+programming language the AST often represents a structure that can be executed by an interpreter
+or compiled into a machine language, or more generally, a lower level language by a compiler.
+Because the shape of the AST depends on its purpose, the abstract syntax tree cannot logically
+be derived from the concrete syntax tree, but the transformation of the CST to the
+AST must be specified (or programmed) separately from the grammar.
 
-However, the transformations from concrete to abstract syntax trees are typically, fairly
-streamlined and can often be composed of the same recurring building-blocks. Or,
-put differently, the AST-transformations (i.e. transformations from the concrete to an
-abstract syntax tree) of different grammars or different parts of the same grammar, differ
-merely, or at least mostly, in the the rearrangement of the same transformation functions.
+In pure data-processing contexts, the concept of the the abstract syntax tree is of much less import
+than in the field of compiler building. Typically, the data passes through several
+stages of tree-transformation after being parsed. This can be stages like "data tree" and
+"output tree", after which the transformation pipeline may even be split up to
+yield a "print-output tree" and "screen-output-tree" both of which are directly derived
+from the "output tree". Here, the abstract syntax tree, if that notion is used at all,
+merely signifies the a further streamlined version of the concrete syntax tree.
 
-This is the basic idea that motivates the declarative tree-transformation technique
-provided by DHParser for AST-transformations.
+DHParser offers two different kinds of scaffolding for for tree-transformation, one contained
+in the module :py:mod:`DHParser.transform` which follows a functional and declarative style,
+and one contained in module :py:mod:`DHParser.compile` which follows a classical object-oriented style.
+Both are different installments of the well known `visitor pattern <https://en.wikipedia.org/wiki/Visitor_pattern>`_.
+However, the former is only suitable for in place tree transformations which yield another tree structure as its
+result, while the latter can also be used
+to transform the tree into a different kind of object, like for example program-code. (Thus, the name "compile"
+for this module.) The assumption is that for the transformation
+of concrete syntax trees into abstract syntax trees or, more generally, the streamlining of syntax trees,
+the leaner functional style is preferable, while for more complex tree-transformations or the
+transformation of a syntax tree into something else the more
+powerful object-oriented version of the visitor pattern is to be preferred, because it allows to exchange
+data between the visiting methods via the :py:class`~compile.Compiler`-object to which they are attached.
 
+In the following the functional and declarative scaffolding for tree transformations provided
+by the module :py:mod:`DHParser.transform` will be described.
 
 
 Declarative Tree-Transformation
@@ -39,14 +55,6 @@ transformation functions which are called on every node with that tag-name. The 
 is traversed depth-first. Module :py:mod:`DHParser.transform` provides a large number of
 predefined transformation functions that can be combined to transform the tree in the desired
 manner.
-
-Essentially, the whole process works like the well known `visitor pattern <https://en.wikipedia.org/wiki/Visitor_pattern>`_,
-only in a more functional than object-oriented fashion. DHParser employs an object-oriented scaffolding for
-the visitor pattern for as well. See :py:mod:`DHParser.compile`. The assumption is that for the transformation
-of concrete syntax trees into abstract syntax trees the leaner functional style is preferable, while for
-more complex tree-transformations or the transformation of a syntax-tree into something else the more
-powerful object-oriented version of the visitor pattern is to be preferred, because it allows to exchange
-data between the visiting methods via the :py:class`~compile.Compiler`-object to which they are attached.
 
 To demonstrate how declarative tree-transformations via the functional-style visitor pattern work,
 we'll take a parser for simple arithmetic formulas as an example:
@@ -229,7 +237,7 @@ calculate the result of the formula becomes a breeze::
             27.0
 
 See :py:meth:`~syntaxtree.Node.evaluate` in case you wonder what the last statement does.
-(The ``evaluate()``-method of the :py:class:`~syntaxtree.Node`-class is actually the third
+(The ``evaluate()``-method of the :py:class:`~syntaxtree.Node`-class is actually a third
 and most trivial installment of the visitor-pattern in DHParser.)
 
 
