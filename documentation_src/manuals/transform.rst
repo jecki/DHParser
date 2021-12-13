@@ -68,7 +68,7 @@ we'll take a parser for simple arithmetic formulas as an example:
     ... @ literalws   = right                # literals have implicit whitespace on the right hand side
     ... @ comment     = /#.*/                # comments range from a '#'-character to the end of the line
     ... @ ignorecase  = False                # literals and regular expressions are case-sensitive
-    ... @ drop        = whitespace, strings  # drop anonymous whitespace
+    ... @ drop        = whitespace, strings  # drop insignificant whitespace and unnamed string literals
     ...
     ... expression = term  { (PLUS | MINUS) term}
     ... term       = factor { (DIV | MUL) factor}
