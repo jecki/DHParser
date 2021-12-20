@@ -42,6 +42,7 @@ from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list,
 
 __all__ = ('TransformationDict',
            'TransformationProc',
+           'TransformationTableType',
            'ConditionFunc',
            'KeyFunc',
            'TransformerCallable',
@@ -151,7 +152,7 @@ class Filter:
 TransformationProc = Callable[[TreeContext], None]
 TransformationDict = Dict[str, Union[Callable, Sequence[Callable]]]
 TransformationCache = Dict[str, Tuple[Sequence[Filter], Sequence[Callable]]]
-ProcessingTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
+TransformationTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
 ConditionFunc = Callable  # Callable[[TreeContext], bool]
 KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
@@ -315,7 +316,7 @@ BLOCK_ANONYMOUS_LEAVES = BlockAnonymousLeaves()
 
 
 def traverse(root_node: Node,
-             transformation_table: ProcessingTableType,
+             transformation_table: TransformationTableType,
              key_func: KeyFunc = key_tag_name) -> Node:
     """
     Traverses the syntax tree starting with the given ``node`` depth
@@ -356,7 +357,7 @@ def traverse(root_node: Node,
     # Is this optimization really needed?
     if '__cache__' in transformation_table:
         # assume that processing table has already been expanded
-        table = transformation_table               # type: ProcessingTableType
+        table = transformation_table               # type: TransformationTableType
         cache = cast(TransformationDict, transformation_table['__cache__'])  # type: TransformationDict
     else:
         # normalize transformation_table entries by turning single values
@@ -468,7 +469,7 @@ def merge_treetops(node: Node):
 
 @transformation_factory(dict)
 def traverse_locally(context: TreeContext,
-                     transformation_table: Dict,              # actually: ProcessingTableType
+                     transformation_table: Dict,              # actually: TransformationTableType
                      key_func: Callable = key_tag_name):  # actually: KeyFunc
     """
     Transforms the syntax tree starting from the last node in the context
