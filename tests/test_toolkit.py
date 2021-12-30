@@ -29,7 +29,7 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.toolkit import has_fenced_code, load_if_file, re, lstrip_docstring, \
+from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
     issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
@@ -160,13 +160,13 @@ class TestStringHelpers:
             indented line
         line
         """
-        assert lstrip_docstring(str1) == 'line\n\n    indented line\nline\n'
+        assert normalize_docstring(str1) == 'line\n\n    indented line\nline'
         str2 = """
             line
             line
                 indented line
                     indented indented line"""
-        assert lstrip_docstring(str2) == '\nline\nline\n    indented line\n        indented ' \
+        assert normalize_docstring(str2) == 'line\nline\n    indented line\n        indented ' \
                                          'indented line'
 
 

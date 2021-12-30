@@ -38,7 +38,7 @@ from DHParser.preprocess import make_token, tokenized_to_original_mapping, sourc
     BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, chain_preprocessors, \
     strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor
 from DHParser.error import SourceMap, Error
-from DHParser.toolkit import lstrip_docstring, typing, re
+from DHParser.toolkit import normalize_docstring, typing, re
 from DHParser.testing import unique_name
 from typing import Tuple, Dict, List
 
@@ -152,13 +152,13 @@ class TestTokenParsing:
         """
     set_config_value('max_parser_dropouts', 3)
     grammar = grammar_provider(ebnf)()
-    code = lstrip_docstring("""
+    code = '\n' + normalize_docstring("""
         def func(x, y):
             if x > 0:         # a comment
                 if y > 0:
                     print(x)  # another comment
                     print(y)
-        """)
+        """) + '\n'
     tokenized, _ = tokenize_indentation(code)
     srcmap = tokenized_to_original_mapping(tokenized, code)
 

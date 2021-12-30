@@ -337,7 +337,7 @@ def run_server(host, port, log_path=None):
             echo('Configuration file "%s" already existed and was not overwritten. '
                   'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
-            verbose('Starting server on %s:%i' % (host, port))
+            echo('Starting server on %s:%i' % (host, port))
             DSL_server.run_tcp_server(host, port)  # returns only after server has stopped!
             ports = []
         except OSError as e:

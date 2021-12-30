@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-"""test_server_utils.py - tests for utility-functions in the,
-    server-module of DHParse.
+"""test_server_utils.py - tests for utility-functions in the
+    server-module of DHParser.
 
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -33,7 +33,8 @@ import traceback
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.server import pp_json, ExecutionEnvironment, asyncio_run
+from DHParser.server import pp_json, ExecutionEnvironment, asyncio_run, Server,\
+    rpc_table_info
 from DHParser.toolkit import json_encode_string
 
 
@@ -181,13 +182,24 @@ class TestUtils:
         ppjsn = pp_json({'error' : tb}).replace('\\\\', '/')
         expected = '{"error": "Traceback (most recent call last):"\n' \
             '  "  File \\"$SCRIPTPATH/test_server_utils.py\\", ' \
-            'line 178, in test_pp_json_stacktrace"\n' \
+            'line 179, in test_pp_json_stacktrace"\n' \
             '  "    raise AssertionError()"\n' \
             '  "AssertionError"\n  ""}'.\
             replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1).replace('./', '')
         # print(ppjsn)
         # print(expected)
         assert ppjsn == expected, '\n\n' + ppjsn + '\n\n' + expected
+
+
+class TestRPCTable:
+    def test_rpc_table_info(self):
+        s = Server({'default': lambda *args, **kwargs: 'dummy'})
+        info_str = rpc_table_info(s.rpc_table)
+        assert info_str.find('identify(') >= 0
+        assert info_str.find('logging(') >= 0
+        info_html = rpc_table_info(s.rpc_table, html=True)
+        assert info_html.find('<b>identify(') >= 0
+        assert info_html.find('<b>logging(') >= 0
 
 
 if __name__ == "__main__":

@@ -79,7 +79,7 @@ from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
-    json_encode_string, json_rpc, json_dumps, identify_python
+    json_encode_string, json_rpc, json_dumps, identify_python, normalize_docstring
 from DHParser.versionnumber import __version__
 
 
@@ -103,6 +103,7 @@ __all__ = ('RPC_Table',
            'LOGGING_REQUEST',
            'SERVER_REPLY_TIMEOUT',
            'ALL_RPCs',
+           'rpc_table_info',
            'pp_json',
            'pp_json_str',
            'asyncio_run',
@@ -173,7 +174,7 @@ ONELINER_HTML = '''<!DOCTYPE html>
 '''
 
 UNKNOWN_FUNC_HTML = ONELINER_HTML.format(
-    line="DHParser Error: Function {func} unknown or not registered!")
+    line="DHParser Error: Function &ldquo;{func}&rdquo; unknown or not registered!")
 
 USE_DEFAULT_HOST = ''
 USE_DEFAULT_PORT = -1
@@ -359,6 +360,25 @@ def GMT_timestamp() -> str:
 
 
 ALL_RPCs = set('*')  # Magic value denoting all remote procedures
+
+
+def rpc_table_info(rpc_table: RPC_Table, html: bool=False) -> str:
+    """Returns the names, function signatures and doc-string of all
+    functions in the `rpc_table` as a (more or less) well-formatted
+    string or as html-snippet."""
+    import inspect
+    info = []
+    for name, func in rpc_table.items():
+        info.append(name + str(inspect.signature(func)))
+        if html:  info[-1] = '<b>' + info[-1] + '</b>'
+        docstr = normalize_docstring(getattr(func, '__doc__', '') or '')
+        if html:  docstr = '<br/>\n'.join(docstr.split('\n'))
+        if docstr:  info.extend(['', docstr, '', ''])
+        else: info.append('')
+    while info and not info[-1]:  info.pop()
+    if html:
+        return '\n'.join(['<samp>', '<br/>\n'.join(info), '</samp>'])
+    return '\n'.join(info)
 
 
 def default_fallback(*args, **kwargs) -> str:
@@ -1122,8 +1142,8 @@ class Server:
 
     def rpc_logging(self, *args, **kwargs) -> str:
         """Starts logging with either a) the default filename, if args is
-         empty or the empty string b) the given log file name if `args[0]`
-         is a non-empty string c) stops logging if `args[0]` is `None`.
+         empty or the empty string; or b) the given log file name if `args[0]`
+         is a non-empty string; or c) stops logging if `args[0]` is `None`.
          """
         if len(args) > 0:
             log_name = args[0]
@@ -1273,7 +1293,8 @@ class Server:
                     self.kill_switch = True
                     reader.feed_eof()
                 else:
-                    err_func = lambda _: UNKNOWN_FUNC_HTML.format(func=func_name)
+                    err_func = lambda *args, **kwargs: UNKNOWN_FUNC_HTML.format(func=func_name)
+                    print(self.rpc_table)
                     func = self.rpc_table.get(func_name, err_func)
                     if service_call:
                         func, argument = self.amend_service_call(

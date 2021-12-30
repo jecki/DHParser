@@ -106,7 +106,7 @@ __all__ = ('typing',
            'linebreaks',
            'line_col',
            'text_pos',
-           'lstrip_docstring',
+           'normalize_docstring',
            'issubtype',
            'isgenerictype',
            'load_if_file',
@@ -404,20 +404,30 @@ def escape_ctrl_chars(strg: str) -> str:
     return s
 
 
-def lstrip_docstring(docstring: str) -> str:
+def normalize_docstring(docstring: str) -> str:
     """
-    Strips leading whitespace from a docstring.
+    Strips leading indentation as well as leading
+    and trailing empty lines from a docstring.
     """
-
     lines = docstring.replace('\t', '    ').split('\n')
+    # determine indentation
     indent = 255  # highest integer value
     for line in lines[1:]:
         stripped = line.lstrip()
         if stripped:  # ignore empty lines
             indent = min(indent, len(line) - len(stripped))
-    if indent >= 255:
-        indent = 0
-    return '\n'.join([lines[0]] + [line[indent:] for line in lines[1:]])
+    if indent >= 255:  indent = 0
+    # remove trailing empty lines
+    while lines and not lines[-1].strip(): lines.pop()
+    if lines:
+        if lines[0].strip():
+            lines = [lines[0]] + [line[indent:] for line in lines[1:]]
+        else:
+            lines = [line[indent:] for line in lines[1:]]
+        # remove any empty lines at the beginning
+        while lines and not lines[0].strip(): del lines[0]
+        return '\n'.join(lines)
+    return ''
 
 
 @cython.locals(max_length=cython.int, length=cython.int, a=cython.int, b=cython.int)

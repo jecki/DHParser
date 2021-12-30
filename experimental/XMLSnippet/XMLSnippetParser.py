@@ -64,7 +64,7 @@ class XMLSnippetGrammar(Grammar):
     r"""Parser for a XMLSnippet source file.
     """
     element = Forward()
-    source_hash__ = "ebb52cf647bba2d2f543c86dd3590dbe"
+    source_hash__ = "1edec7815be77499dae5c1c100d99f50"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -106,7 +106,7 @@ class XMLSnippetGrammar(Grammar):
     EntityValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), Drop(Text("\'"))))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
-    TagName = Capture(Synonym(Name))
+    TagName = Capture(Synonym(Name), zero_length_warning=True)
     emptyElement = Series(Drop(Text('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('/>')))
     ETag = Series(Drop(Text('</')), Pop(TagName), dwsp__, Drop(Text('>')), mandatory=1)
     STag = Series(Drop(Text('<')), TagName, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('>')))
@@ -135,6 +135,11 @@ def get_grammar() -> XMLSnippetGrammar:
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
 def parse_XMLSnippet(document, start_parser = "root_parser__", *, complete_match=True):
