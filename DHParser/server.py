@@ -711,7 +711,6 @@ async def read_full_block(reader: StreamReaderType) -> Tuple[int, bytes, bytes]:
     return header_size, data, backlog
 
 
-
 class StreamWriterProxy:
     """StreamWriterProxy simulates an asyncio.StreamWriter that sends
     and receives data through an io.IOBase-Stream.
@@ -944,7 +943,7 @@ class Server:
     Language-Server-Protocol-Server. Class Server should be
     considered final, i.e. do not derive from this class to add
     LSP-functionality, rather implement the lsp_functionality in
-    a dedicated class (or set of cuntions) and pass the
+    a dedicated class (or set of functions) and pass the
     LSP-functionality via the rpc_functions-parameter to the
     constructor of this class.
 
@@ -988,7 +987,7 @@ class Server:
     :var connection: An instance of the connection class representing the
         data of the current connection or None, if there is no connection at
         the moment. There can be only one connection to the server at a time!
-    :var kill_switch: If True the, the server will be shut down.
+    :var kill_switch: If True, the server will be shut down.
     :var loop: The asyncio event loop within which the asyncio stream server
         is run.
     """
