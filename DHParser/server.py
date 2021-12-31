@@ -61,9 +61,9 @@ except ImportError:
         pass
 from datetime import datetime
 from functools import partial
+import inspect
 import io
 import json
-import multiprocessing
 from multiprocessing import Process, Value, Array
 import os
 import subprocess
@@ -73,7 +73,7 @@ from threading import Thread
 import time
 import traceback
 from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, Sequence, \
-    Set, Any, cast, Type, TypeVar, Generic
+    Set, Any, cast, Type, TypeVar
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
@@ -103,6 +103,7 @@ __all__ = ('RPC_Table',
            'LOGGING_REQUEST',
            'SERVER_REPLY_TIMEOUT',
            'ALL_RPCs',
+           'rpc_entry_info',
            'rpc_table_info',
            'pp_json',
            'pp_json_str',
@@ -362,23 +363,47 @@ def GMT_timestamp() -> str:
 ALL_RPCs = set('*')  # Magic value denoting all remote procedures
 
 
-def rpc_table_info(rpc_table: RPC_Table, html: bool=False) -> str:
-    """Returns the names, function signatures and doc-string of all
-    functions in the `rpc_table` as a (more or less) well-formatted
-    string or as html-snippet."""
-    import inspect
+def _func_info(name: str, func: Callable, html: bool) -> List[str]:
+    """Internal function to extract signature and docstring from
+    a function."""
     info = []
-    for name, func in rpc_table.items():
-        info.append(name + str(inspect.signature(func)))
-        if html:  info[-1] = '<b>' + info[-1] + '</b>'
-        docstr = normalize_docstring(getattr(func, '__doc__', '') or '')
-        if html:  docstr = '<br/>\n'.join(docstr.split('\n'))
-        if docstr:  info.extend(['', docstr, '', ''])
-        else: info.append('')
+    if not name:  name = func.__name__
+    info.append(name + str(inspect.signature(func)))
+    if html:  info[-1] = '<b>' + info[-1] + '</b>'
+    docstr = normalize_docstring(getattr(func, '__doc__', '') or '')
+    if html:  docstr = '<br/>\n'.join(docstr.split('\n'))
+    if docstr:
+        info.extend(['', docstr, '', ''])
+    else:
+        info.append('')
+    return info
+
+
+def _merge_info(info: List[str], html: bool) -> str:
+    """Interrnal function to merge function infos into
+    a string, omitting trailing empty lines."""
     while info and not info[-1]:  info.pop()
     if html:
         return '\n'.join(['<samp>', '<br/>\n'.join(info), '</samp>'])
     return '\n'.join(info)
+
+
+def rpc_entry_info(name: str, rpc_table: RPC_Table, html: bool=False) -> str:
+    """Returns the name, signature and doc-string of a function in the
+    rpc-table as string or HTML-snippet."""
+    info = _func_info(name, rpc_table[name], html)
+    return _merge_info(info, html)
+
+
+def rpc_table_info(rpc_table: RPC_Table, html: bool=False) -> str:
+    """Returns the names, function signatures and doc-string of all
+    functions in the `rpc_table` as a (more or less) well-formatted
+    string or as HTML-snippet."""
+    info = []
+    for name, func in rpc_table.items():
+        info.extend(_func_info(name, func, html))
+    while info and not info[-1]:  info.pop()
+    return _merge_info(info, html)
 
 
 def default_fallback(*args, **kwargs) -> str:
@@ -1164,6 +1189,9 @@ class Server:
                 return self.stop_logging()
         else:
             return self.start_logging()
+
+    def rpc_inspect(self, func_name: str = '', service_call: bool = False, *args, **kwargs):
+        """"""
 
     async def run(self, method_name: str, method: Callable, params: Union[Dict, List, Tuple]) \
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
