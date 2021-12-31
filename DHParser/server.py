@@ -584,7 +584,7 @@ class ExecutionEnvironment:
         return result, rpc_error
 
     def submit_as_process(self, func, *args) -> Future:
-        """Submits a running long running function to the secondary process-pool.
+        """Submits long running function to the secondary process-pool.
         Other than `execute()` this works synchronously and thread-safe.
         """
         if self.submit_pool is None:
@@ -1019,8 +1019,8 @@ class Server:
         assert STOP_SERVER_REQUEST not in self.rpc_table
 
         # see: https://docs.python.org/3/library/asyncio-eventloop.html#executing-code-in-thread-or-process-pools
-        self.cpu_bound = frozenset(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
-        self.blocking = frozenset(self.rpc_table.keys()) if blocking == ALL_RPCs else blocking
+        self.cpu_bound = set(self.rpc_table.keys()) if cpu_bound == ALL_RPCs else cpu_bound
+        self.blocking = set(self.rpc_table.keys()) if blocking == ALL_RPCs else blocking
         self.blocking -= self.cpu_bound  # cpu_bound property takes precedence
 
         assert not (self.cpu_bound - self.rpc_table.keys())
@@ -1087,7 +1087,10 @@ class Server:
 
 
     def register_service_rpc(self, name, method):
-        """Registers a service request """
+        """Registers a service request, i.e. a call that will be accepted from
+        a second connection. Otherwise, requests coming from a new connection
+        if a connection has already been established, will be rejected, because
+        language servers only accept one client at a time."""
         name = name[:name.find('(')]
         if name in self.rpc_table:
             self.log('Service {} is shadowed by an rpc-call with the same name.'.format(name))
