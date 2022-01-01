@@ -101,6 +101,7 @@ __all__ = ('RPC_Table',
            'IDENTIFY_REQUEST',
            'IDENTIFY_REQUEST_BYTES',
            'LOGGING_REQUEST',
+           'INFO_REQUEST',
            'SERVER_REPLY_TIMEOUT',
            'ALL_RPCs',
            'rpc_entry_info',
@@ -162,20 +163,21 @@ X-Pad: avoid browser bug
 JSONRPC_HEADER_BYTES = b'''Content-Length: %i\r\n\r\n'''
 JSONRPC_HEADER = '''Content-Length: %i\r\n\r\n'''
 
-ONELINER_HTML = '''<!DOCTYPE html>
+HTML_TEMPLATE = '''<!DOCTYPE html>
 <html lang="en" xml:lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
 </head>
 <body>
-<h1>{line}</h1>
+<h1>{heading}</h1>
+{content}
 </body>
 </html>
-
 '''
 
-UNKNOWN_FUNC_HTML = ONELINER_HTML.format(
-    line="DHParser Error: Function &ldquo;{func}&rdquo; unknown or not registered!")
+UNKNOWN_FUNC_HTML = HTML_TEMPLATE.format(
+    heading="DHParser Error: Function &ldquo;{func}&rdquo; unknown or not registered!",
+    content='')
 
 USE_DEFAULT_HOST = ''
 USE_DEFAULT_PORT = -1
@@ -184,6 +186,7 @@ STOP_SERVER_REQUEST = "__STOP_SERVER__"
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"
 IDENTIFY_REQUEST = "identify()"
 IDENTIFY_REQUEST_BYTES = b"identify()"
+INFO_REQUEST = "info()"
 LOGGING_REQUEST = "logging('')"
 
 SERVER_REPLY_TIMEOUT = 3  # seconds
@@ -999,6 +1002,9 @@ class Server:
     :var serving_task: The task in which the asyncio.Server is run.
     :var stop_response:  The response string that is written to the stream
         as answer to a stop request.
+    :var service_calls:  A set of names of functions that can be called
+        as "service calls" from a second connection, even if another
+        connection is still open.
     :var echo_log: Read from the global configuration. If True, any log
         message will also be echoed on the console.
     :var log_file: The file-name of the server-log.
@@ -1063,17 +1069,19 @@ class Server:
 
         # if the server is run in a separate process, the following variables
         # should only be accessed from the server process
-        self.server = None        # type: Optional[asyncio.AbstractServer]
-        self.serving_task = None  # type: Optional[asyncio.Task]
-        self.stop_response = ''   # type: str
+        self.server = None          # type: Optional[asyncio.AbstractServer]
+        self.serving_task = None    # type: Optional[asyncio.Task]
+        self.stop_response = ''     # type: str
+        self.service_calls = set()  # type: Set[str]
 
         self.register_service_rpc(IDENTIFY_REQUEST, self.rpc_identify_server)
         self.register_service_rpc(LOGGING_REQUEST, self.rpc_logging)
+        self.register_service_rpc(INFO_REQUEST, self.rpc_info)
 
-        self.exec = None          # type: Optional[ExecutionEnvironment]
-        self.connection = None    # type: Optional[Connection]
-        self.kill_switch = False  # type: bool
-        self.loop = None          # type: Optional[asyncio.AbstractEventLoop]
+        self.exec = None            # type: Optional[ExecutionEnvironment]
+        self.connection = None      # type: Optional[Connection]
+        self.kill_switch = False    # type: bool
+        self.loop = None            # type: Optional[asyncio.AbstractEventLoop]
 
         self.known_methods = set(self.rpc_table.keys()) | \
             {'initialize', 'initialized', 'shutdown', 'exit'}  # see self.verify_initialization()
@@ -1121,7 +1129,7 @@ class Server:
             self.log('Service {} is shadowed by an rpc-call with the same name.'.format(name))
         else:
             self.rpc_table[name] = method
-            # self.known_methods.add(name)
+            self.service_calls.add(name)
 
     def start_logging(self, filename: str = "") -> str:
         """Starts logging to a file. If `filename` is void or a directory
@@ -1161,7 +1169,7 @@ class Server:
         if self.log_file:
             append_log(self.log_file, *args, echo=self.echo_log)
 
-    def rpc_identify_server(self, service_call: bool = False, *args, **kwargs):
+    def rpc_identify_server(self, service_call: bool = False, html: bool = False, *args, **kwargs):
         """Returns an identification string for the server."""
         identify = "DHParser %s %s under %s" \
                    % (__version__, self.server_name, identify_python())
@@ -1190,8 +1198,19 @@ class Server:
         else:
             return self.start_logging()
 
-    def rpc_inspect(self, func_name: str = '', service_call: bool = False, *args, **kwargs):
-        """"""
+    def rpc_info(self, service_call: bool = False, html: bool = False,
+                 *args, **kwargs) -> str:
+        """Returns information on the implemented LSP- and service-functions."""
+        info = rpc_table_info(self.rpc_table, html)
+        if html:
+            return HTML_TEMPLATE.format(heading=f'{self.server_name} API:', content=info)
+        return info
+
+    def rpc_serve_page(self, file_path: str,
+                       service_call: bool = False, html: bool = False,
+                       *args, **kwargs) -> str:
+        """Loads and returns the HTML page stored in file `file_path`"""
+        pass
 
     async def run(self, method_name: str, method: Callable, params: Union[Dict, List, Tuple]) \
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
@@ -1235,16 +1254,16 @@ class Server:
                 self.connection.alive = False
 
     def amend_service_call(self, func_name: str, func: Callable, argument: Union[Tuple, Dict],
-                           err_func: Callable) -> Tuple[Callable, Union[Tuple, Dict]]:
+                           err_func: Callable, html: bool = False) -> Tuple[Callable, Union[Tuple, Dict]]:
         if argument is None:
             argument = ()
         if getattr(func, '__self__', None) == self:
             if isinstance(argument, Dict):
                 params = argument.copy()
-                params.update({'service_call': True})
+                params.update({'service_call': True, 'html': html})
                 return func, params
             else:
-                return func, argument + (True,)
+                return func, argument + (True, html)
         else:
             return err_func, {} if isinstance(argument, Dict) else ()
 
@@ -1289,9 +1308,15 @@ class Server:
             err_func = lambda *args, **kwargs: \
                 'No function named "%s" known to server %s !' % (func_name, self.server_name)
             func = self.rpc_table.get(func_name, err_func)  # type: Callable
+            rpc_error = None
             if service_call:
-                func, argument = self.amend_service_call(func_name, func, argument, err_func)
-            result, rpc_error = await self.run(func_name, func, argument)
+                if func_name in self.service_calls:
+                    func, argument = self.amend_service_call(func_name, func, argument, err_func)
+                else:
+                    rpc_error = ('', f'Functions "{func_name}" has been requested from a "'
+                                     f'second connection although it is not a service call!')
+            if rpc_error is None:
+                result, rpc_error = await self.run(func_name, func, argument)
             if rpc_error is None:
                 if isinstance(result, str):
                     await respond(result)
@@ -1316,21 +1341,24 @@ class Server:
         else:
             m = re.match(RE_GREP_URL, data)
             if m:
-                func_name, argument = m.group(1).decode().strip('/').split('/', 1) + [None]
+                # TODO: use urllib to parse parameters
+                func_name, argument = (m.group(1).decode().strip('/').split('/', 1) + [None])[:2]
+                argument = (argument,) if argument else ()
                 if func_name.encode() == STOP_SERVER_REQUEST_BYTES:
                     await self.respond(
-                        writer, http_response(ONELINER_HTML.format(line=self.stop_response)))
+                        writer, http_response(HTML_TEMPLATE.format(heading=self.stop_response,
+                                                                   content='')))
                     self.kill_switch = True
                     reader.feed_eof()
                 else:
                     err_func = lambda *args, **kwargs: UNKNOWN_FUNC_HTML.format(func=func_name)
-                    print(self.rpc_table)
                     func = self.rpc_table.get(func_name, err_func)
                     if service_call:
                         func, argument = self.amend_service_call(
-                            func_name, func, argument, err_func)
-                    result, rpc_error = await self.run(func.__name__, func,
-                                                       (argument,) if argument else ())
+                            func_name, func, argument, err_func, html=True)
+                    elif func_name in self.service_calls:
+                        argument += (False, True)  # service_call = False, html = True
+                    result, rpc_error = await self.run(func.__name__, func, argument)
                     if rpc_error is None:
                         if result is None:
                             result = ''
