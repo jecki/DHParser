@@ -1210,7 +1210,20 @@ class Server:
                        service_call: bool = False, html: bool = False,
                        *args, **kwargs) -> str:
         """Loads and returns the HTML page stored in file `file_path`"""
-        pass
+        def error(err_desc: str, details: str = '') -> str:
+            return HTML_TEMPLATE.format(heading=err_desc, content=details)
+
+        i = file_path.find(':')
+        if i >= 0:
+            chksum = file_path[:i]
+            file_path = file_path[i + 1:]
+        else:
+            chksum = ''
+        dirname, basename = os.path.split(file_path)
+        if not os.path.isfile(os.path.join(dirname, 'DHParser.allow')):
+            return error(f'Access to "{file_path}" forbidden!',
+                         '"DHParser.allow not found.')
+
 
     async def run(self, method_name: str, method: Callable, params: Union[Dict, List, Tuple]) \
             -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
