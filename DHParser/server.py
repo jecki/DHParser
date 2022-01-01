@@ -79,7 +79,8 @@ from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.syntaxtree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
-    json_encode_string, json_rpc, json_dumps, identify_python, normalize_docstring
+    json_encode_string, json_rpc, json_dumps, identify_python, normalize_docstring, md5, \
+    is_html_name
 from DHParser.versionnumber import __version__
 
 
@@ -102,6 +103,7 @@ __all__ = ('RPC_Table',
            'IDENTIFY_REQUEST_BYTES',
            'LOGGING_REQUEST',
            'INFO_REQUEST',
+           'SERVE_REQUEST',
            'SERVER_REPLY_TIMEOUT',
            'ALL_RPCs',
            'rpc_entry_info',
@@ -155,7 +157,7 @@ Server: DHParser
 Accept-Ranges: none
 Content-Length: {length}
 Connection: close
-Content-Type: text/html; charset=utf-8
+Content-Type: {mime}; charset=utf-8
 X-Pad: avoid browser bug
 
 '''
@@ -187,6 +189,7 @@ STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"
 IDENTIFY_REQUEST = "identify()"
 IDENTIFY_REQUEST_BYTES = b"identify()"
 INFO_REQUEST = "info()"
+SERVE_REQUEST = "serve()"
 LOGGING_REQUEST = "logging('')"
 
 SERVER_REPLY_TIMEOUT = 3  # seconds
@@ -413,17 +416,20 @@ def default_fallback(*args, **kwargs) -> str:
     return 'No default RPC-function defined!'
 
 
-def http_response(html: str) -> bytes:
-    """Embeds an html-string in a http header and returns the http-package
+def http_response(html: Union[str, bytes], mime_type: str = 'text/html') -> bytes:
+    """Embeds an HTML-string in a http header and returns the http-package
     as byte-string.
     """
     gmt = GMT_timestamp()
     if isinstance(html, str):
         encoded_html = html.encode()
+    elif isinstance(html, bytes):
+        encoded_html = html
     else:
         encoded_html = ("Illegal type %s for response %s. Only str allowed!" \
                         % (str(type(html)), str(html))).encode()
-    response = HTTP_RESPONSE_HEADER.format(date=gmt, length=len(encoded_html))
+        mime_type = 'text/html'
+    response = HTTP_RESPONSE_HEADER.format(date=gmt, length=len(encoded_html), mime=mime_type)
     return response.encode() + encoded_html
 
 
@@ -544,7 +550,7 @@ class ExecutionEnvironment:
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
                       params: Union[dict, tuple, list])\
-            -> Tuple[JSON_Type, Optional[RPC_Error_Type]]:
+            -> Tuple[Union[JSON_Type, BytesType], Optional[RPC_Error_Type]]:
         """Executes a method with the given parameters in a given executor
         (``ThreadPoolExcecutor`` or ``ProcessPoolExecutor``). ``execute()`` waits
         for the completion and returns the JSON result and an RPC error tuple (see
@@ -557,7 +563,7 @@ class ExecutionEnvironment:
                           "Server Error: Execution environment has already been shut down! "
                           "Cannot process method {} with parameters {} any more."
                           .format(method, params))
-        result = None      # type: Optional[JSON_Type]
+        result = None      # type: Optional[Union[JSON_Type, BytesType]]
         rpc_error = None   # type: Optional[RPC_Error_Type]
         if params is None:
             params = tuple()
@@ -1077,6 +1083,7 @@ class Server:
         self.register_service_rpc(IDENTIFY_REQUEST, self.rpc_identify_server)
         self.register_service_rpc(LOGGING_REQUEST, self.rpc_logging)
         self.register_service_rpc(INFO_REQUEST, self.rpc_info)
+        self.register_service_rpc(SERVE_REQUEST, self.rpc_serve_page)
 
         self.exec = None            # type: Optional[ExecutionEnvironment]
         self.connection = None      # type: Optional[Connection]
@@ -1208,8 +1215,8 @@ class Server:
 
     def rpc_serve_page(self, file_path: str,
                        service_call: bool = False, html: bool = False,
-                       *args, **kwargs) -> str:
-        """Loads and returns the HTML page stored in file `file_path`"""
+                       *args, **kwargs) -> Union[str, bytes]:
+        """Loads and returns the HTML page or other files stored in file `file_path`"""
         def error(err_desc: str, details: str = '') -> str:
             return HTML_TEMPLATE.format(heading=err_desc, content=details)
 
@@ -1220,13 +1227,32 @@ class Server:
         else:
             chksum = ''
         dirname, basename = os.path.split(file_path)
-        if not os.path.isfile(os.path.join(dirname, 'DHParser.allow')):
+        allow_file = os.path.join(dirname, 'DHParser.allow')
+        if not os.path.isfile(allow_file):
             return error(f'Access to "{file_path}" forbidden!',
                          '"DHParser.allow not found.')
-
+        if not os.path.isfile(file_path):
+            return error(f'Page "{file_path}" not found on.', '')
+        with open(allow_file, 'r', encoding='utf-8') as f:
+            lines = [l.split('=') for l in f.read().split('\n') if l.strip()]
+        allow = { l[0].strip(): l[1].strip() for l in lines if len(l) == 2}
+        if not chksum or allow[basename] != chksum:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:  page = f.read()
+                if is_html_name(basename):
+                    chksum = md5(page)
+                    allow[basename] = chksum
+                    with open(allow_file, 'w', encoding='utf-8') as f:
+                        f.writelines(''.join([name, '=', chk, '\n'])
+                                     for name, chk in allow.items())
+                    page = re.sub('<body.*?>', f'<body chksum="{chksum}">', page)
+            except UnicodeDecodeError:
+                with open(file_path, 'rb') as f:  page = f.read()
+            return page
+        return ''  # empty string means that page has not changed
 
     async def run(self, method_name: str, method: Callable, params: Union[Dict, List, Tuple]) \
-            -> Tuple[Optional[JSON_Type], Optional[RPC_Error_Type]]:
+            -> Tuple[Optional[Union[JSON_Type, BytesType]], Optional[RPC_Error_Type]]:
         """Picks the right execution method (process, thread or direct execution) and
         runs it in the respective executor. In case of a broken ProcessPoolExecutor it
         restarts the ProcessPoolExecutor and tries to execute the method again.
@@ -1241,7 +1267,7 @@ class Server:
         result, rpc_error = await self.exec.execute(executor, method, params)
         return result, rpc_error
 
-    async def respond(self, writer: StreamWriterType, response: Union[str, bytes]):
+    async def respond(self, writer: StreamWriterType, response: Union[str, BytesType]):
         """Sends a response to the given writer. Depending on the configuration,
         the response will be logged. If the response appears to be a json-rpc
         response a JSONRPC_HEADER will be added depending on
@@ -1291,9 +1317,10 @@ class Server:
         except ValueError:
             header = b''
 
-        async def respond(response: str):
+        async def respond(response: Union[str, bytes, bytearray]):
             if header:
-                await self.respond(writer, JSONRPC_HEADER % len(response) + response)
+                HEADER = JSONRPC_HEADER if isinstance(response, str) else JSONRPC_HEADER_BYTES
+                await self.respond(writer, HEADER % len(response) + response)
             else:
                 await self.respond(writer, response)
 
@@ -1331,7 +1358,7 @@ class Server:
             if rpc_error is None:
                 result, rpc_error = await self.run(func_name, func, argument)
             if rpc_error is None:
-                if isinstance(result, str):
+                if isinstance(result, (str, bytes, bytearray)):
                     await respond(result)
                 elif result is not None:
                     try:
@@ -1356,6 +1383,11 @@ class Server:
             if m:
                 # TODO: use urllib to parse parameters
                 func_name, argument = (m.group(1).decode().strip('/').split('/', 1) + [None])[:2]
+                # really bad hack to determine mime-type of response
+                mime = 'text/html'
+                if argument:
+                    if argument[-4:].lower() == '.css':  mime = 'text/css'
+                    elif argument[-3:].lower() == '.js':  mime = 'text/javascript'
                 argument = (argument,) if argument else ()
                 if func_name.encode() == STOP_SERVER_REQUEST_BYTES:
                     await self.respond(
@@ -1367,24 +1399,26 @@ class Server:
                     err_func = lambda *args, **kwargs: UNKNOWN_FUNC_HTML.format(func=func_name)
                     func = self.rpc_table.get(func_name, err_func)
                     if service_call:
+                        print('ServiceCall: ' + func_name + str(argument))
                         func, argument = self.amend_service_call(
                             func_name, func, argument, err_func, html=True)
                     elif func_name in self.service_calls:
+                        print('Pseudo ServiceCall: ' + func_name + str(argument))
                         argument += (False, True)  # service_call = False, html = True
                     result, rpc_error = await self.run(func.__name__, func, argument)
                     if rpc_error is None:
                         if result is None:
                             result = ''
-                        if isinstance(result, str):
-                            await self.respond(writer, http_response(result))
+                        if isinstance(result, (str, bytes, bytearray)):
+                            await self.respond(writer, http_response(result, mime))
                         else:
                             try:
                                 await self.respond(writer, http_response(
-                                    pp_json(result, cls=DHParser_JSONEncoder)))
+                                    pp_json(result, cls=DHParser_JSONEncoder), 'text/plain'))
                             except TypeError as err:
-                                await self.respond(writer, http_response(str(err)))
+                                await self.respond(writer, http_response(str(err), 'text/plain'))
                     else:
-                        await self.respond(writer, http_response(rpc_error[1]))
+                        await self.respond(writer, http_response(rpc_error[1], 'text/plain'))
         assert self.connection
         self.connection.task_done(task_id)
 
@@ -1443,8 +1477,13 @@ class Server:
                 pass  # no errors in result
             if json_id is not None and result is not None:
                 try:
-                    json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
-                    await self.respond(writer, json_dumps(json_result, cls=DHParser_JSONEncoder))
+                    if isinstance(result, (bytes, bytearray)):
+                        # assume that result is a json-format byte-string!
+                        response = b'{"jsonrpc": "2.0", "result": %s, "id": %i}' % (result, json_id)
+                    else:
+                        json_result = {"jsonrpc": "2.0", "result": result, "id": json_id}
+                        response = json_dumps(json_result, cls=DHParser_JSONEncoder)
+                    await self.respond(writer, response)
                 except TypeError as err:
                     rpc_error = -32070, str(err)
 

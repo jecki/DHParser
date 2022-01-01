@@ -91,6 +91,7 @@ __all__ = ('typing',
            'escape_re',
            'escape_ctrl_chars',
            'is_filename',
+           'is_html_name',
            'relative_path',
            'split_path',
            'concurrent_ident',
@@ -189,6 +190,11 @@ def is_filename(strg: str) -> bool:
     return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
     #   and strg.select_if('*') < 0 and strg.select_if('?') < 0
+
+
+def is_html_name(url: str) -> bool:
+    """Returns True, if url ends with .htm or .html"""
+    return url[-5:].lower() == '.html' or url[-4:].lower() == '.htm'
 
 
 @cython.locals(i=cython.int, L=cython.int)
