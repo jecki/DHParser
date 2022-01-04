@@ -46,7 +46,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory
+    has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
+    TreeContext, apply_unless
 
 
 #######################################################################
@@ -73,8 +74,8 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "c0d3e9b0546b148cb8e0e1cd4f6abd8e"
-    disposable__ = re.compile('..(?<=^)')
+    source_hash__ = "8e811d6f76efb98d20d7d18dc8acb352"
+    disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -94,7 +95,7 @@ class XMLGrammar(Grammar):
     CDSect = Series(Drop(Text('<![CDATA[')), CData, Drop(Text(']]>')))
     NameStartChar = RegExp('(?x)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
     NameChars = RegExp('(?x)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
-    Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), Drop(Text('-->')))
+    Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), dwsp__, Drop(Text('-->')))
     Name = Series(NameStartChar, Option(NameChars))
     PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
     PI = Series(Drop(Text('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(Text('?>')))
@@ -106,10 +107,9 @@ class XMLGrammar(Grammar):
     AttValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Text("\'"))))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
-    TagName = Capture(Synonym(Name), zero_length_warning=True)
     emptyElement = Series(Drop(Text('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('/>')))
-    ETag = Series(Drop(Text('</')), Pop(TagName), dwsp__, Drop(Text('>')), mandatory=1)
-    STag = Series(Drop(Text('<')), TagName, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('>')))
+    ETag = Series(Drop(Text('</')), Name, dwsp__, Drop(Text('>')), mandatory=1)
+    STag = Series(Drop(Text('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('>')))
     VersionNum = RegExp('[0-9]+\\.[0-9]+')
     ExternalID = Alternative(Series(Drop(Text('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
     doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(Text('>')), mandatory=2)
@@ -123,7 +123,7 @@ class XMLGrammar(Grammar):
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     document = Series(prolog, element, Option(Misc), EOF)
-    root__ = document
+    root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
     
 
 _raw_grammar = ThreadLocalSingletonFactory(XMLGrammar, ident=1)
@@ -151,9 +151,26 @@ def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
 #
 #######################################################################
 
+
+ERROR_TAG_NAME_MISMATCH = ErrorCode(2000)
+
+
+def validate_matches_STag(context: TreeContext):
+    etag = context[-1]
+    assert etag.tag_name == 'ETag'
+    if len(context) > 1:
+        element = context[-2]
+        assert element.tag_name == 'element'
+        if element['STag']['Name'].content != etag['Name'].content:
+            add_error(context,
+                      f'Closing tag name "{etag["Name"].content}" does not match '
+                      f'opening tag name "{element["STag"]["Name"].content}"!',
+                      ERROR_TAG_NAME_MISMATCH)
+
+
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
-    "<": [flatten, remove_empty, remove_anonymous_tokens, remove_whitespace, remove_children("S")],
+    # "<": [flatten, remove_empty, remove_anonymous_tokens, remove_whitespace, remove_children("S")],
     "document": [flatten(lambda context: context[-1].tag_name == 'prolog', recursive=False)],
     "prolog": [],
     "XMLDecl": [],
@@ -165,57 +182,9 @@ XML_AST_transformation_table = {
     "Yes": [],
     "No": [],
     "doctypedecl": [],
-    "intSubset": [],
-    "DeclSep": [replace_or_reduce],
-    "markupdecl": [replace_or_reduce],
-    "extSubset": [],
-    "extSubsetDecl": [],
-    "conditionalSect": [replace_or_reduce],
-    "includeSect": [],
-    "ignoreSect": [],
-    "ignoreSectContents": [],
-    "extParsedEnt": [],
-    "TextDecl": [],
-    "elementdecl": [],
-    "contentspec": [replace_or_reduce],
-    "EMPTY": [],
-    "ANY": [],
-    "Mixed": [replace_or_reduce],
-    "children": [],
-    "choice": [],
-    "cp": [],
-    "seq": [],
-    "AttlistDecl": [],
-    "AttDef": [],
-    "AttType": [replace_or_reduce],
-    "StringType": [],
-    "TokenizedType": [replace_or_reduce],
-    "ID": [],
-    "IDREF": [],
-    "IDREFS": [],
-    "ENTITY": [],
-    "ENTITIES": [],
-    "NMTOKEN": [],
-    "NMTOKENS": [],
-    "EnumeratedType": [replace_or_reduce],
-    "NotationType": [],
-    "Enumeration": [],
-    "DefaultDecl": [replace_or_reduce],
-    "REQUIRED": [],
-    "IMPLIED": [],
-    "FIXED": [],
-    "EntityDecl": [replace_or_reduce],
-    "GEDecl": [],
-    "PEDecl": [],
-    "EntityDef": [replace_or_reduce],
-    "PEDef": [replace_or_reduce],
-    "NotationDecl": [],
-    "ExternalID": [],
-    "PublicID": [],
-    "NDataDecl": [],
     "element": [flatten, replace_by_single_child],
     "STag": [],
-    "ETag": [reduce_single_child],
+    "ETag": [validate_matches_STag],
     "emptyElement": [],
     "TagName": [replace_by_single_child],
     "Attribute": [],

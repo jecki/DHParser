@@ -10,6 +10,9 @@
 @ literalws   = none                 # literals have no implicit whitespace
 @ comment     = //                   # no implicit comments
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
+@ reduction   = merge_treetops       # merge anonymous leaf-nodes
+@ disposable  = Misc, NameStartChar, NameChars, CommentChars, PubidChars,
+                PubidCharsSingleQuoted, EOF
 @ drop        = strings, whitespace  # drop anonymous tokens and whitespace
 
 
@@ -51,12 +54,11 @@ ExternalID      = 'SYSTEM' §~ SystemLiteral
 #######################################################################
 
 element         = emptyElement | STag §content ETag
-STag            = '<' TagName { ~ Attribute } ~ '>'
-ETag            = '</' §::TagName ~ '>'
+STag            = '<' Name { ~ Attribute } ~ '>'
+ETag            = '</' §Name ~ '>'
 
 emptyElement    = '<' Name { ~ Attribute } ~ '/>'
 
-TagName         = Name
 Attribute       = Name ~ §'=' ~ AttValue
 
 content         = [ CharData ]
@@ -116,7 +118,7 @@ NameChars       = /(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]
 #######################################################################
 
 Misc            = { Comment | PI | ~ }+
-Comment         = '<!--' { CommentChars | /-(?!-)/ } '-->'
+Comment         = '<!--' { CommentChars | /-(?!-)/ } ~ '-->'
 PI              = '<?' PITarget [~ PIChars] '?>'
 PITarget        = !/X|xM|mL|l/ Name
 CDSect          = '<![CDATA[' CData ']]>'
