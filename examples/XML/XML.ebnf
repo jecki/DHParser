@@ -12,7 +12,7 @@
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops       # merge anonymous leaf-nodes
 @ disposable  = Misc, NameStartChar, NameChars, CommentChars, PubidChars,
-                PubidCharsSingleQuoted, EOF
+                PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF
 @ drop        = strings, whitespace  # drop anonymous tokens and whitespace
 
 
@@ -32,9 +32,7 @@ VersionNum      = /[0-9]+\.[0-9]+/
 EncodingDecl    = ~ 'encoding' ~ '=' ~ ("'" EncName "'" | '"' EncName '"')
 EncName         = /[A-Za-z][A-Za-z0-9._\-]*/
 
-SDDecl          = ~ 'standalone' ~ '=' ~ (("'" Yes | No "'") | ('"' Yes | No '"'))
-Yes             = 'yes'
-No              = 'no'
+SDDecl          = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))
 
 
 #######################################################################
@@ -91,7 +89,7 @@ EntityRef       = '&' Name ';'
 
 #######################################################################
 #
-#  Names and Tokens
+#  Names
 #
 #######################################################################
 

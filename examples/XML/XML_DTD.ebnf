@@ -29,10 +29,7 @@ VersionNum      = /[0-9]+\.[0-9]+/
 EncodingDecl    = ~ 'encoding' ~ '=' ~ ("'" EncName "'" | '"' EncName '"')
 EncName         = /[A-Za-z][A-Za-z0-9._\-]*/
 
-SDDecl          = ~ 'standalone' ~ '=' ~ (("'" Yes | No "'") | ('"' Yes | No '"'))
-Yes             = 'yes'
-No              = 'no'
-
+SDDecl          = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))
 
 #######################################################################
 #

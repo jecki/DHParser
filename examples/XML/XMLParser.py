@@ -11,6 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
+from typing import List
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -47,7 +48,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
-    TreeContext, apply_unless
+    TreeContext, apply_unless, ERROR
 
 
 #######################################################################
@@ -74,8 +75,8 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "8e811d6f76efb98d20d7d18dc8acb352"
-    disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|EOF$')
+    source_hash__ = "0adc4a6df61ae6a925c93fcc6c382002"
+    disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -113,9 +114,7 @@ class XMLGrammar(Grammar):
     VersionNum = RegExp('[0-9]+\\.[0-9]+')
     ExternalID = Alternative(Series(Drop(Text('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
     doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(Text('>')), mandatory=2)
-    No = Text('no')
-    Yes = Text('yes')
-    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Alternative(Series(Drop(Text("\'")), Yes), Series(No, Drop(Text("\'")))), Alternative(Series(Drop(Text('"')), Yes), Series(No, Drop(Text('"'))))))
+    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), Alternative(Text("yes"), Text("no")), Drop(Text("\'"))), Series(Drop(Text('"')), Alternative(Text("yes"), Text("no")), Drop(Text('"')))))
     EncName = RegExp('[A-Za-z][A-Za-z0-9._\\-]*')
     EncodingDecl = Series(dwsp__, Drop(Text('encoding')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), EncName, Drop(Text("\'"))), Series(Drop(Text('"')), EncName, Drop(Text('"')))))
     VersionInfo = Series(dwsp__, Drop(Text('version')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), VersionNum, Drop(Text("\'"))), Series(Drop(Text('"')), VersionNum, Drop(Text('"')))))
@@ -152,76 +151,26 @@ def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
 #######################################################################
 
 
-ERROR_TAG_NAME_MISMATCH = ErrorCode(2000)
-
-
-def validate_matches_STag(context: TreeContext):
-    etag = context[-1]
-    assert etag.tag_name == 'ETag'
-    if len(context) > 1:
-        element = context[-2]
-        assert element.tag_name == 'element'
-        if element['STag']['Name'].content != etag['Name'].content:
-            add_error(context,
-                      f'Closing tag name "{etag["Name"].content}" does not match '
-                      f'opening tag name "{element["STag"]["Name"].content}"!',
-                      ERROR_TAG_NAME_MISMATCH)
-
-
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
     # "<": [flatten, remove_empty, remove_anonymous_tokens, remove_whitespace, remove_children("S")],
     "document": [flatten(lambda context: context[-1].tag_name == 'prolog', recursive=False)],
-    "prolog": [],
-    "XMLDecl": [],
     "VersionInfo": [reduce_single_child],
-    "VersionNum": [],
     "EncodingDecl": [reduce_single_child],
-    "EncName": [],
-    "SDDecl": [],
-    "Yes": [],
-    "No": [],
-    "doctypedecl": [],
     "element": [flatten, replace_by_single_child],
-    "STag": [],
-    "ETag": [validate_matches_STag],
-    "emptyElement": [],
-    "TagName": [replace_by_single_child],
-    "Attribute": [],
     "content": [flatten],
-    "EntityValue": [replace_or_reduce],
-    "AttValue": [replace_or_reduce],
-    "SystemLiteral": [replace_or_reduce],
-    "PubidLiteral": [replace_or_reduce],
-    "Reference": [replace_or_reduce],
-    "EntityRef": [],
-    "PEReference": [],
-    "Nmtokens": [],
-    "Nmtoken": [reduce_single_child],
-    "Names": [],
+    "SystemLiteral": [reduce_single_child],
+    "PubidLiteral": [reduce_single_child],
+    "Reference": [replace_by_single_child],
+    "EntityRef": [reduce_single_child],
     "Name": [collapse],
-    "NameStartChar": [],
-    "NameChars": [],
-    "Misc": [],
+    "Misc": [replace_by_single_child],
     "Comment": [collapse],
-    "PI": [],
     "PITarget": [reduce_single_child],
-    "CDSect": [],
-    "PubidCharsSingleQuoted": [],
-    "PubidChars": [],
-    "CharData": [],
-    "CData": [],
-    "IgnoreChars": [],
-    "PIChars": [],
-    "CommentChars": [],
+    "CDSect": [reduce_single_child],
     "CharRef": [replace_or_reduce],
-    "Chars": [],
-    "Char": [],
-    "S": [],
-    "EOF": [],
-    "*": replace_by_single_child
+    # "*": replace_by_single_child
 }
-
 
 
 def CreateXMLTransformer() -> TransformerCallable:
@@ -247,24 +196,11 @@ def get_transformer() -> TransformerCallable:
 #
 #######################################################################
 
-# def internalize(context):
-#     """Sets the node's parser type to the tag name and internalizes
-#     XML attr."""
-#     node = context[-1]
-#     if node.parser.name == 'element':
-#         node.parser = MockParser(node['STag']['Name'].content, ':element')
-#         node.result = node.result[1:-1]
-#     elif node.parser.name == 'emptyElement':
-#         node.parser = MockParser(node['Name'].content, ':emptyElement')
-#         node.result = node.result[1:]
-#     else:
-#         assert node.parser.ptype in [':element', ':emptyElement'], \
-#             "Tried to internalize tag name and attr for non element component!"
-#         return
-#     for nd in node.result:
-#         if nd.parser.name == 'Attribute':
-#             node.attr[nd['Name'].content] = nd['AttValue'].content
-#     remove_children(context, {'Attribute'})
+
+ERROR_TAG_NAME_MISMATCH = ErrorCode(2000)
+ERROR_VALUE_CONSTRAINT_VIOLATION = ErrorCode(2010)
+ERROR_VALIDITY_CONSTRAINT_VIOLATION = ErrorCode(2020)
+ERROR_WELL_FORMEDNESS_CONSTRAINT_VIOLATION = ErrorCode(2030)
 
 
 class XMLCompiler(Compiler):
@@ -277,7 +213,7 @@ class XMLCompiler(Compiler):
 
     def reset(self):
         super().reset()
-        self.mock_parsers = dict()
+        self.preserve_whitespace = False
 
     def extract_attributes(self, node_sequence):
         attributes = collections.OrderedDict()
@@ -288,24 +224,21 @@ class XMLCompiler(Compiler):
                 attributes[node[0].content] = node[1].content
         return attributes
 
-    def get_parser(self, tag_name):
-        """Returns a mock parser with the given tag_name as parser name."""
-        return self.mock_parsers.setdefault(tag_name, MockParser(tag_name))
-
-    def validity_constraint(self, node, condition, err_msg):
+    def constraint(self, node, condition, err_msg, error_code = ERROR):
         """If `condition` is False an error is issued."""
         if not condition:
-            self.tree.add_error(node, err_msg)
+            self.tree.new_error(node, err_msg, error_code)
 
     def value_constraint(self, node, value, allowed):
         """If value is not in allowed, an error is issued."""
-        self.constraint(node, value in allowed,
-            'Invalid value "%s" for "standalone"! Must be one of %s.' % (value, str(allowed)))
+        self.constraint(
+            node,
+            value in allowed,
+            'Invalid value "%s" for "standalone"! Must be one of %s.' % (value, str(allowed)),
+            ERROR_VALUE_CONSTRAINT_VIOLATION)
 
     def on_document(self, node):
         self.tree.string_tags.update({'CharData', 'document'})
-        # TODO: Remove the following line. It is specific for testing with example.xml!
-        self.tree.inline_tags.update({'to', 'from', 'heading', 'body', 'remark'})
         return self.fallback_compiler(node)
 
     # def on_prolog(self, node):
@@ -329,309 +262,43 @@ class XMLCompiler(Compiler):
         node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
-    # def on_VersionInfo(self, node):
-    #     return node
-
-    # def on_VersionNum(self, node):
-    #     return node
-
-    # def on_EncodingDecl(self, node):
-    #     return node
-
-    # def on_EncName(self, node):
-    #     return node
-
-    # def on_SDDecl(self, node):
-    #     return node
-
-    # def on_Yes(self, node):
-    #     return node
-
-    # def on_No(self, node):
-    #     return node
-
-    # def on_doctypedecl(self, node):
-    #     return node
-
-    # def on_intSubset(self, node):
-    #     return node
-
-    # def on_DeclSep(self, node):
-    #     return node
-
-    # def on_markupdecl(self, node):
-    #     return node
-
-    # def on_extSubset(self, node):
-    #     return node
-
-    # def on_extSubsetDecl(self, node):
-    #     return node
-
-    # def on_conditionalSect(self, node):
-    #     return node
-
-    # def on_includeSect(self, node):
-    #     return node
-
-    # def on_ignoreSect(self, node):
-    #     return node
-
-    # def on_ignoreSectContents(self, node):
-    #     return node
-
-    # def on_extParsedEnt(self, node):
-    #     return node
-
-    # def on_TextDecl(self, node):
-    #     return node
-
-    # def on_elementdecl(self, node):
-    #     return node
-
-    # def on_contentspec(self, node):
-    #     return node
-
-    # def on_EMPTY(self, node):
-    #     return node
-
-    # def on_ANY(self, node):
-    #     return node
-
-    # def on_Mixed(self, node):
-    #     return node
-
-    # def on_children(self, node):
-    #     return node
-
-    # def on_choice(self, node):
-    #     return node
-
-    # def on_cp(self, node):
-    #     return node
-
-    # def on_seq(self, node):
-    #     return node
-
-    # def on_AttlistDecl(self, node):
-    #     return node
-
-    # def on_AttDef(self, node):
-    #     return node
-
-    # def on_AttType(self, node):
-    #     return node
-
-    # def on_StringType(self, node):
-    #     return node
-
-    # def on_TokenizedType(self, node):
-    #     return node
-
-    # def on_ID(self, node):
-    #     return node
-
-    # def on_IDREF(self, node):
-    #     return node
-
-    # def on_IDREFS(self, node):
-    #     return node
-
-    # def on_ENTITY(self, node):
-    #     return node
-
-    # def on_ENTITIES(self, node):
-    #     return node
-
-    # def on_NMTOKEN(self, node):
-    #     return node
-
-    # def on_NMTOKENS(self, node):
-    #     return node
-
-    # def on_EnumeratedType(self, node):
-    #     return node
-
-    # def on_NotationType(self, node):
-    #     return node
-
-    # def on_Enumeration(self, node):
-    #     return node
-
-    # def on_DefaultDecl(self, node):
-    #     return node
-
-    # def on_REQUIRED(self, node):
-    #     return node
-
-    # def on_IMPLIED(self, node):
-    #     return node
-
-    # def on_FIXED(self, node):
-    #     return node
-
-    # def on_EntityDecl(self, node):
-    #     return node
-
-    # def on_GEDecl(self, node):
-    #     return node
-
-    # def on_PEDecl(self, node):
-    #     return node
-
-    # def on_EntityDef(self, node):
-    #     return node
-
-    # def on_PEDef(self, node):
-    #     return node
-
-    # def on_NotationDecl(self, node):
-    #     return node
-
-    # def on_ExternalID(self, node):
-    #     return node
-
-    # def on_PublicID(self, node):
-    #     return node
-
-    # def on_NDataDecl(self, node):
-    #     return node
-
     def on_element(self, node):
         stag = node['STag']
         tag_name = stag['Name'].content
+        self.constraint(
+            node,
+            tag_name == node['ETag']['Name'].content,
+            f'Starting tag name "{tag_name}" does not match ending '
+            f'tag name "{node["ETag"]["Name"].content}"',
+            ERROR_WELL_FORMEDNESS_CONSTRAINT_VIOLATION)
+        save_preserve_ws = self.preserve_whitespace
+        self.preserve_whitespace |= tag_name in self.tree.inline_tags
         attributes = self.extract_attributes(stag.children)
-        preserve_whitespace = tag_name in self.tree.inline_tags
         if attributes:
             node.attr.update(attributes)
-            preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
+            self.preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
         node.tag_name = tag_name
-        content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children)
-        if len(content) == 1:
-            if content[0].tag_name == "CharData":
+        xml_content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children)
+        if len(xml_content) == 1:
+            if xml_content[0].tag_name == "CharData":
                 # reduce single CharData children
-                content = content[0].content
-        elif self.cleanup_whitespace and not preserve_whitespace:
+                xml_content = xml_content[0].content
+        elif self.cleanup_whitespace and not self.preserve_whitespace:
             # remove CharData that consists only of whitespace from mixed elements
-            content = tuple(child for child in content
-                            if child.tag_name != "CharData" or child.content.strip() != '')
-        node.result = content
+            xml_content = tuple(child for child in xml_content
+                                if child.tag_name != "CharData" or child.content.strip() != '')
+        self.preserve_whitespace = save_preserve_ws
+        node.result = xml_content
         return node
-
-    # def on_STag(self, node):
-    #     return node
-
-    # def on_ETag(self, node):
-    #     return node
 
     def on_emptyElement(self, node):
         attributes = self.extract_attributes(node.children)
         if attributes:
             node.attr.update(attributes)
-        node.tag_name = node['Name'].content  # node.parser = self.get_parser(node['Name'].content)
+        node.tag_name = node['Name'].content
         node.result = ''
         self.tree.empty_tags.add(node.tag_name)
         return node
-
-    # def on_TagName(self, node):
-    #     return node
-
-    # def on_Attribute(self, node):
-    #     return node
-
-    # def on_content(self, node):
-    #     return node
-
-    # def on_EntityValue(self, node):
-    #     return node
-
-    # def on_AttValue(self, node):
-    #     return node
-
-    # def on_SystemLiteral(self, node):
-    #     return node
-
-    # def on_PubidLiteral(self, node):
-    #     return node
-
-    # def on_Reference(self, node):
-    #     return node
-
-    # def on_EntityRef(self, node):
-    #     return node
-
-    # def on_PEReference(self, node):
-    #     return node
-
-    # def on_Nmtokens(self, node):
-    #     return node
-
-    # def on_Nmtoken(self, node):
-    #     return node
-
-    # def on_Names(self, node):
-    #     return node
-
-    # def on_Name(self, node):
-    #     return node
-
-    # def on_NameStartChar(self, node):
-    #     return node
-
-    # def on_NameChars(self, node):
-    #     return node
-
-    # def on_Misc(self, node):
-    #     return node
-
-    # def on_Comment(self, node):
-    #     return node
-
-    # def on_PI(self, node):
-    #     return node
-
-    # def on_PITarget(self, node):
-    #     return node
-
-    # def on_CDSect(self, node):
-    #     return node
-
-    # def on_PubidCharsSingleQuoted(self, node):
-    #     return node
-
-    # def on_PubidChars(self, node):
-    #     return node
-
-    # def on_CharData(self, node):
-    #     return node
-
-    # def on_CData(self, node):
-    #     return node
-
-    # def on_IgnoreChars(self, node):
-    #     return node
-
-    # def on_PIChars(self, node):
-    #     return node
-
-    # def on_CommentChars(self, node):
-    #     return node
-
-    # def on_CharRef(self, node):
-    #     return node
-
-    # def on_Chars(self, node):
-    #     return node
-
-    # def on_Char(self, node):
-    #     return node
-
-    # def on_S(self, node):
-    #     return node
-
-    # def on_EOF(self, node):
-    #     return node
-
 
 
 def get_compiler() -> XMLCompiler:
@@ -706,7 +373,7 @@ if __name__ == "__main__":
         log_dir = 'LOGS'
         set_config_value('history_tracking', True)
         set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', set(('cst', 'ast')))
+        set_config_value('log_syntax_trees', {'cst', 'ast'})
     start_logging(log_dir)
 
     result, errors, _ = compile_src(file_name)

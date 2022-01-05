@@ -344,7 +344,6 @@ def restore_tag_name(tag_name: str) -> str:
 #
 #######################################################################
 
-
 ChildrenType = Tuple['Node', ...]
 StrictResultType = Union[ChildrenType, StringView, str]
 ResultType = Union[StrictResultType, 'Node']
@@ -490,9 +489,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self.content
 
     def __repr__(self):
-        # mpargs = {'name': self.parser.name, 'ptype': self.parser.ptype}
-        # name, ptype = (self._tag_name.split(':') + [''])[:2]
-        # parg = "MockParser({name}, {ptype})".format(name=name, ptype=ptype)
         rarg = ("'%s'" % str(self)) if not self._children else \
             "(" + ", ".join(child.__repr__() for child in self._children) + ")"
         return "Node('%s', %s)" % (self.tag_name, rarg)
@@ -1496,9 +1492,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_xml(self, src: str = None,
                indentation: int = 2,
-               inline_tags: Set[str] = set(),
-               string_tags: Set[str] = set(),
-               empty_tags: Set[str] = set()) -> str:
+               inline_tags: Set[str] = frozenset(),
+               string_tags: Set[str] = frozenset(),
+               empty_tags: Set[str] = frozenset()) -> str:
         """Serializes the tree of nodes as XML.
 
         :param src: The source text or `None`. In case the source text is
@@ -2299,6 +2295,9 @@ def tree_sanity_check(tree: Node) -> bool:
 #######################################################################
 
 
+_EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
+
+
 class RootNode(Node):
     """The root node for the syntax tree is a special kind of node that keeps
     and manages global properties of the tree as a whole. These are first and
@@ -2320,8 +2319,8 @@ class RootNode(Node):
 
     :ivar errors:  A list of all errors that have occurred so far during
         processing (i.e. parsing, AST-transformation, compiling) of this tree.
-        The errors are orded by the time of their being added to the list.
-    :ivar errors_sorted: (read-only property) The list of errors orderd by
+        The errors are ordered by the time of their being added to the list.
+    :ivar errors_sorted: (read-only property) The list of errors ordered by
         their position.
     :ivar error_nodes: A mapping of node-ids to a list of errors that
         occurred on the node with the respective id.
@@ -2601,12 +2600,28 @@ class RootNode(Node):
         return self.tag_name != '__not_yet_ready__' \
             and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
 
+    def as_xml(self, src: str = None,
+               indentation: int = 2,
+               inline_tags: Set[str] = _EMPTY_SET_SENTINEL,
+               string_tags: Set[str] = _EMPTY_SET_SENTINEL,
+               empty_tags: Set[str] = _EMPTY_SET_SENTINEL) -> str:
+        return super().as_xml(
+            src, indentation,
+            inline_tags = self.inline_tags if inline_tags is _EMPTY_SET_SENTINEL else inline_tags,
+            string_tags = self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
+            empty_tags = self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags)
+
     def customized_XML(self):
         """
+        DEPRECATED!!!
+
         Returns a customized XML representation of the tree.
         See the docstring of `Node.as_xml()` for an explanation of the
         customizations.
         """
+        import warnings
+        warnings.warn('RootNode.customized_XML is deprecated, use RootNode.as_xml() instead!',
+                      DeprecationWarning)
         return self.as_xml(inline_tags=self.inline_tags,
                            string_tags=self.string_tags,
                            empty_tags=self.empty_tags)
@@ -2775,8 +2790,6 @@ def parse_xml(xml: Union[str, StringView],
     """
 
     xml = StringView(str(xml))
-    # PlainText = MockParser('', TOKEN_PTYPE)
-    # mock_parsers = {TOKEN_PTYPE: PlainText}
 
     def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
         """

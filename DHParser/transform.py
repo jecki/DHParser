@@ -843,9 +843,6 @@ def _replace_by(node: Node, child: Node, root: RootNode):
     ch_tn = child.tag_name
     if not nd_tn or nd_tn[0] == ':' or (ch_tn and ch_tn[0] != ':'):
         node.tag_name = ch_tn
-        # name, ptype = (node.tag_name.split(':') + [''])[:2]
-        # child.parser = MockParser(name, ptype)
-        # parser names must not be overwritten, else: child.parser.name = node.parser.name
     node._set_result(child._result)
     update_attr(node, (child,), root)
 

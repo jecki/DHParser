@@ -113,7 +113,7 @@ def tst_func():
             print('\nCompiling document: "%s"' % file)
             output = compiler(result)
             with open(os.path.splitext(filepath)[0] + '.xml', 'w', encoding='utf-8') as f:
-                f.write(output.customized_XML())
+                f.write(output.as_xml())
             with open(os.path.splitext(filepath)[0] + '.sxpr', 'w', encoding='utf-8') as f:
                 f.write(output.serialize('S-expression'))
 
