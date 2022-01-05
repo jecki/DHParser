@@ -13,7 +13,7 @@
 @ reduction   = merge_treetops       # merge anonymous leaf-nodes
 @ disposable  = Misc, NameStartChar, NameChars, CommentChars, PubidChars,
                 PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF
-@ drop        = strings, whitespace  # drop anonymous tokens and whitespace
+@ drop        = strings, whitespace, EOF  # drop anonymous tokens, whitespace and EOF
 
 
 #######################################################################
