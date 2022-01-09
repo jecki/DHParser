@@ -782,6 +782,8 @@ def grammar_suite(directory, parser_factory, transformer_factory,
 RX_DEFINITION_OR_SECTION = re.compile(r'(?:^|\n)[ \t]*(\w+(?=[ \t]*=)|#:.*(?=\n|$|#))')
 SymbolsDictType = Dict[str, List[str]]
 
+ALL_SYMBOLS = 'ALL_SYMBOLS'
+
 
 def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
     r"""
@@ -830,7 +832,7 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
             deflist = '#: ALL'
     symbols = collections.OrderedDict()  # type: SymbolsDictType
     if deflist[0][:2] != '#:':
-        curr_section = ''
+        curr_section = ALL_SYMBOLS
         symbols[curr_section] = []
     for df in deflist:
         if df[:2] == '#:':
@@ -870,7 +872,7 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
         save = os.getcwd()
         os.chdir(path)
         keys = reversed(list(symbols.keys()))
-        existing_tests = {fname[3:]: fname for fname in os.listdir()}
+        existing_tests = {fname[3:]: fname for fname in os.listdir() if os.path.isfile(fname)}
         for i, k in enumerate(keys):
             filename = '{num:0>2}_test_{section}'.format(num=i + 1, section=k) + fmt
             if not os.path.exists(filename):
@@ -879,7 +881,7 @@ def create_test_templates(symbols_or_ebnf: Union[str, SymbolsDictType],
                     print(f'Renaming test file "{old_name}" to "{filename}"')
                     os.rename(old_name, filename)
                     existing_tests[filename[3:]] = filename
-                else:
+                elif k is not ALL_SYMBOLS or not existing_tests:
                     print('Creating test file template "{name}".'.format(name=filename))
                     with open(filename, 'w', encoding='utf-8') as f:
                         for sym in symbols[k]:
