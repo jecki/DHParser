@@ -168,33 +168,6 @@ def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
 #
 #######################################################################
 
-XML_AST_transformation_table = {
-    # AST Transformations for the XML-grammar
-    # "<": flatten
-    # "*": replace_by_single_child
-    # ">: []
-    "element": replace_by_single_child
-}
-
-
-def XMLTransformer() -> TransformerCallable:
-    """Creates a transformation function that does not share state with other
-    threads or processes."""
-    return partial(traverse, transformation_table=XML_AST_transformation_table.copy())
-
-
-get_transformer = ThreadLocalSingletonFactory(XMLTransformer, ident=1)
-
-
-def transform_XML(cst):
-    return get_transformer()(cst)
-
-
-#######################################################################
-#
-# COMPILER SECTION - Can be edited. Changes will be preserved.
-#
-#######################################################################
 
 XML_PTYPE = ":XML"
 
@@ -204,13 +177,18 @@ ERROR_VALIDITY_CONSTRAINT_VIOLATION = ErrorCode(2020)
 ERROR_WELL_FORMEDNESS_CONSTRAINT_VIOLATION = ErrorCode(2030)
 
 
-class XMLCompiler(Compiler):
+class XMLTransformer(Compiler):
     """Compiler for the abstract-syntax-tree of a XML source file.
+
+    As of now, the prolog, and any processsing instructions, CDATA-sections and
+    comments will simply be dropped from the tree. References (CharRef and EntityRef)
+    will be passed through on serialization.
     """
 
     def __init__(self):
-        super(XMLCompiler, self).__init__()
+        super(XMLTransformer, self).__init__()
         self.cleanup_whitespace = True  # remove empty CharData from mixed elements
+        self.expendables = {'prolog', 'PI', 'CDSect', 'Comment', }
 
     def reset(self):
         super().reset()
@@ -239,9 +217,15 @@ class XMLCompiler(Compiler):
             ERROR_VALUE_CONSTRAINT_VIOLATION)
 
     def on_document(self, node):
-        self.tag_name = XML_PTYPE
-        self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE})
+        node.tag_name = XML_PTYPE
+        self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE, 'CharRef', 'EntityRef'})
+        if 'prolog' in node and 'prolog' in self.expendables:
+            del node['prolog']
         return self.fallback_compiler(node)
+
+    def on_CharData(self, node):
+        node.tag_name = TOKEN_PTYPE
+        return node
 
     # def on_prolog(self, node):
     #     return node
@@ -265,6 +249,8 @@ class XMLCompiler(Compiler):
         return node
 
     def on_element(self, node):
+        if len(node.children) == 1:
+            return self.on_emptyElement(node['emptyElement'])
         stag = node['STag']
         tag_name = stag['Name'].content
         self.constraint(
@@ -280,15 +266,16 @@ class XMLCompiler(Compiler):
             node.attr.update(attributes)
             self.preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
         node.tag_name = tag_name
-        xml_content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children)
+        xml_content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children
+                            if nd.tag_name not in self.expendables)
         if len(xml_content) == 1:
-            if xml_content[0].tag_name == "CharData":
+            if xml_content[0].tag_name == TOKEN_PTYPE:
                 # reduce single CharData children
                 xml_content = xml_content[0].content
         elif self.cleanup_whitespace and not self.preserve_whitespace:
             # remove CharData that consists only of whitespace from mixed elements
             xml_content = tuple(child for child in xml_content
-                                if child.tag_name != "CharData" or child.content.strip() != '')
+                                if child.tag_name != TOKEN_PTYPE or child.content.strip() != '')
         self.preserve_whitespace = save_preserve_ws
         node.result = xml_content
         return node
@@ -302,12 +289,31 @@ class XMLCompiler(Compiler):
         self.tree.empty_tags.add(node.tag_name)
         return node
 
-    def on_CharData(self, node):
-        self.tag_name = TOKEN_PTYPE
+    def on_Reference(self, node):
+        replace_by_single_child(self.context)
+        return node
 
 
-get_compiler = ThreadLocalSingletonFactory(XMLCompiler, ident=1)
+get_transformer = ThreadLocalSingletonFactory(XMLTransformer, ident=1)
 
+
+def transform_XML(cst):
+    return get_transformer()(cst)
+
+
+
+#######################################################################
+#
+# COMPILER SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+# get_compiler = ThreadLocalSingletonFactory(XMLCompiler, ident=1)
+
+def get_compiler() -> Callable:
+    def nop(ast: Node) -> Node:
+        return ast
+    return nop
 
 def compile_XML(ast):
     return get_compiler()(ast)
