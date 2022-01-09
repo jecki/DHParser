@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Artikel unterbedeutungstiefe="0" stadium="semantischer Baum -> Ausgabebaum" generator="MLW-DSL Version: Mon Mar  1 12:47:30 2021">
+  <LemmaPosition>
+    <LemmaBlock>
+      <Lemma id="SALINACINUS">
+        <nicht_klassisch title="sechszackig fett">✱</nicht_klassisch>
+        <LemmaWort>salinacinus</LemmaWort>
+        <TEXT>,</TEXT>
+      </Lemma>
+      <L>  </L>
+      <GrammatikPosition>
+        <Grammatik>
+          <wortart klasse="I" verdichtung="adi." title="Klasse: I" wortart="adiectivum" class="kursiv"></wortart>
+          <flexion>
+            <FLEX>-a</FLEX>
+            <Text>,</Text>
+            <L> </L>
+            <FLEX>-um</FLEX>
+          </flexion>
+        </Grammatik>
+      </GrammatikPosition>
+    </LemmaBlock>
+    <L> </L>
+    <vel>vel </vel>
+    <LemmaBlock>
+      <Lemma id="SALMACINUS">
+        <nicht_klassisch title="sechszackig fett">✱</nicht_klassisch>
+        <LemmaWort>salmacinus</LemmaWort>
+      </Lemma>
+      <L> </L>
+      <LemmaVarianten>
+        <TEXT>(</TEXT>
+        <LemmaVariante>
+          <TEXT>-agi-</TEXT>
+        </LemmaVariante>
+        <TEXT>, </TEXT>
+        <LemmaVariante>
+          <TEXT>-ati-</TEXT>
+        </LemmaVariante>
+        <TEXT>),</TEXT>
+      </LemmaVarianten>
+      <L> </L>
+      <GrammatikPosition>
+        <Grammatik>
+          <wortart klasse="I" verdichtung="adi." title="Klasse: I" wortart="adiectivum" class="kursiv"></wortart>
+          <flexion>
+            <FLEX>-a</FLEX>
+            <Text>,</Text>
+            <L> </L>
+            <FLEX>-um</FLEX>
+            <TEXT>.</TEXT>
+          </flexion>
+        </Grammatik>
+      </GrammatikPosition>
+    </LemmaBlock>
+  </LemmaPosition>
+  <L spatium="3+1">    </L>
+  <EtymologiePosition>
+    <TEXT>(</TEXT>
+    <EtymologieAngabe>
+      <Etymon>salina</Etymon>
+    </EtymologieAngabe>
+    <TEXT>) </TEXT>
+  </EtymologiePosition>
+  <L spatium="3+1">    </L>
+  <ArtikelKopf>
+    <SchreibweisenPosition>
+      <Besonderheiten>
+        <Besonderheit>
+          <Beschreibung>script.:</Beschreibung>
+          <L spatium="3+1">    </L>
+          <Variante>
+            <Beschreibung>salivatin(us): </Beschreibung>
+            <L> </L>
+            <Beleg>
+              <Verweise>
+                <a href="#salinacinus_3" alias="⇒" globaleReferenz="salinacinus.salinacinus-3"></a>
+              </Verweise>
+              <TEXT>.</TEXT>
+            </Beleg>
+          </Variante>
+          <L spatium="3+1">    </L>
+          <Variante>
+            <Beschreibung>salviacin(us): </Beschreibung>
+            <L> </L>
+            <Beleg>
+              <Verweise>
+                <a href="#salinacinus_2" alias="⇒" globaleReferenz="salinacinus.salinacinus-2"></a>
+              </Verweise>
+              <TEXT>. </TEXT>
+            </Beleg>
+          </Variante>
+        </Besonderheit>
+      </Besonderheiten>
+    </SchreibweisenPosition>
+  </ArtikelKopf>
+  <L spatium="4">    </L>
+  <BedeutungsPosition>
+    <Bedeutung class="kein_linker_rand">
+      <Zähler>1</Zähler>
+      <Bedeutungsangabe>
+        <Interpretamente>
+          <LateinischeBedeutung>
+            <LateinischerAusdruck>ad salinam pertinens</LateinischerAusdruck>
+          </LateinischeBedeutung>
+          <TEXT> — </TEXT>
+          <DeutscheBedeutung>
+            <DeutscherAusdruck>
+              <DeutschesWort>zum Salzgarten gehörig</DeutschesWort>
+              <L> </L>
+              <Zusatz>
+                <TEXT>(in iunctura</TEXT>
+                <L> </L>
+                <Grade class="grade">
+                  <TEXT>aqua</TEXT>
+                  <L> </L>
+                  <Lemmawort verdichtung="-a" id="salina" globaleId="salinacinus.salina" lemma="salina">-a</Lemmawort>
+                  <TEXT>;</TEXT>
+                </Grade>
+                <L> </L>
+                <TEXT>ellipt.:</TEXT>
+                <L> </L>
+                <Verweise>
+                  <a href="#salinacinus_1" alias="⇒" globaleReferenz="salinacinus.salinacinus-1"></a>
+                </Verweise>
+                <TEXT>)</TEXT>
+              </Zusatz>
+            </DeutscherAusdruck>
+          </DeutscheBedeutung>
+        </Interpretamente>
+        <TEXT>:</TEXT>
+      </Bedeutungsangabe>
+      <L> </L>
+      <Beleg>
+        <Quellenangabe autor="Compos." werk="Luc.">
+          <Quelle>
+            <Autor>Compos.</Autor>
+            <L> </L>
+            <Werk>Luc.</Werk>
+          </Quelle>
+          <L> </L>
+          <BelegStelle>
+            <Stellenangabe>
+              <Stelle autor="Compos." werk="Luc." stelle="Η 29">
+                <GRI_WORT class="gerade">Η</GRI_WORT>
+                <TEXT> 29</TEXT>
+              </Stelle>
+            </Stellenangabe>
+            <L> </L>
+            <BelegText>
+              <TEXT>aqua negra, aqua </TEXT>
+              <BelegLemma verdichtung="-magina[s]" id="salmaginas" globaleId="salinacinus.salmaginas" lemma="salmagina[s]">-magina[s]</BelegLemma>
+              <TEXT> </TEXT>
+              <Zusatz>eqs.</Zusatz>
+            </BelegText>
+          </BelegStelle>
+        </Quellenangabe>
+      </Beleg>
+      <L> </L>
+      <Beleg>
+        <Quellenangabe autor="Matth. Platear." werk="(?) gloss.">
+          <Quelle>
+            <Autor>Matth. Platear.</Autor>
+            <L> </L>
+            <Werk>(?) gloss.</Werk>
+          </Quelle>
+          <L> </L>
+          <BelegStelle>
+            <Stellenangabe>
+              <Stelle autor="Matth. Platear." werk="(?) gloss." stelle="p. 371A">
+                <TEXT>p. 371</TEXT>
+                <HOCHGESTELLT>A</HOCHGESTELLT>
+              </Stelle>
+            </Stellenangabe>
+            <L> </L>
+            <BelegText>
+              <TEXT>colicam patientibus ... iniiciatur adrianum cum aqua </TEXT>
+              <BelegLemma verdichtung="-matina" id="salmatina" globaleId="salinacinus.salmatina" lemma="salmatina">-matina</BelegLemma>
+              <TEXT> per clyster.</TEXT>
+            </BelegText>
+          </BelegStelle>
+          <L> </L>
+          <BelegStelle>
+            <Stellenangabe>
+              <Stelle autor="Matth. Platear." werk="(?) gloss." stelle="p. 394D">
+                <TEXT>p. 394</TEXT>
+                <HOCHGESTELLT>D</HOCHGESTELLT>
+              </Stelle>
+            </Stellenangabe>
+            <L> </L>
+            <BelegText>
+              <TEXT>thapsiam contritam cum melle et cum </TEXT>
+              <BelegLemma verdichtung="-macina" id="salinacinus_1" globaleId="salinacinus.salinacinus-1" lemma="salmacina">-macina</BelegLemma>
+              <TEXT> optime decoquebat </TEXT>
+              <Zusatz>(sc. pater)</Zusatz>
+              <TEXT>.</TEXT>
+            </BelegText>
+          </BelegStelle>
+        </Quellenangabe>
+      </Beleg>
+      <L> </L>
+      <Beleg>
+        <Quellenangabe autor="Tract." werk="de aegr. cur.">
+          <Quelle>
+            <Autor>Tract.</Autor>
+            <L> </L>
+            <Werk>de aegr. cur.</Werk>
+          </Quelle>
+          <L> </L>
+          <BelegStelle>
+            <Stellenangabe>
+              <Stelle autor="Tract." werk="de aegr. cur." stelle="p. 134,42">p. 134,42</Stelle>
+            </Stellenangabe>
+            <L> </L>
+            <BelegText>
+              <TEXT>in aqua marina vel </TEXT>
+              <BelegLemma verdichtung="-inacina" id="salinacina" globaleId="salinacinus.salinacina" lemma="salinacina">-inacina</BelegLemma>
+              <TEXT> bullire </TEXT>
+              <Einschub>
+                <TEXT class="grade">(</TEXT>
+                <FesterZusatz>sim.</FesterZusatz>
+                <L> </L>
+                <Belege>
+                  <Beleg>
+                    <Quellenangabe autor="Bernh. Prov." werk="comm." class="kein_rechter_rand">
+                      <Quelle>
+                        <Autor>Bernh. Prov.</Autor>
+                        <L> </L>
+                        <Werk>comm.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle autor="Bernh. Prov." werk="comm." stelle="3,1 p. 281,9">3,1 p. 281,9</Stelle>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>cum aqua marina vel </TEXT>
+                          <BelegLemma verdichtung="-inacina" lemma="salinacina">-inacina</BelegLemma>
+                          <TEXT id="salinacinus_2" globaleId="salinacinus.salinacinus-2"> [salviacina </TEXT>
+                          <Zusatz>ed.</Zusatz>
+                          <TEXT>].</TEXT>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                  <L> </L>
+                  <Beleg>
+                    <Quellenangabe autor="Ioh. Iamat." werk="chirurg." class="kein_rechter_rand">
+                      <Quelle>
+                        <Autor>Ioh. Iamat.</Autor>
+                        <L> </L>
+                        <Werk>chirurg.</Werk>
+                      </Quelle>
+                      <L> </L>
+                      <BelegStelle>
+                        <Stellenangabe>
+                          <Stelle autor="Ioh. Iamat." werk="chirurg." stelle="8,10">8,10</Stelle>
+                        </Stellenangabe>
+                        <L> </L>
+                        <BelegText>
+                          <TEXT>in marina aqua vel </TEXT>
+                          <BelegLemma verdichtung="-inacina" lemma="salinacina">-inacina</BelegLemma>
+                          <TEXT id="salinacinus_3" globaleId="salinacinus.salinacinus-3"> [salivatina </TEXT>
+                          <Zusatz>ed.</Zusatz>
+                          <TEXT>])</TEXT>
+                        </BelegText>
+                      </BelegStelle>
+                    </Quellenangabe>
+                  </Beleg>
+                </Belege>
+              </Einschub>
+              <TEXT>.</TEXT>
+            </BelegText>
+          </BelegStelle>
+          <L> </L>
+          <BelegErgänzung>
+            <FesterZusatz>al.</FesterZusatz>
+          </BelegErgänzung>
+        </Quellenangabe>
+      </Beleg>
+    </Bedeutung>
+    <L spatium="4">    </L>
+    <Bedeutung>
+      <Zähler>2</Zähler>
+      <Bedeutungsangabe>
+        <Interpretamente>
+          <LateinischeBedeutung>
+            <LateinischerAusdruck>aquae salsae concoctus</LateinischerAusdruck>
+          </LateinischeBedeutung>
+          <TEXT> — </TEXT>
+          <DeutscheBedeutung>
+            <DeutscherAusdruck>mit Salzwasser zusammengekocht</DeutscherAusdruck>
+          </DeutscheBedeutung>
+        </Interpretamente>
+        <TEXT>:</TEXT>
+      </Bedeutungsangabe>
+      <L>  </L>
+      <Beleg>
+        <Quellenangabe autor="Tract." werk="de aegr. cur.">
+          <Quelle>
+            <Autor>Tract.</Autor>
+            <L> </L>
+            <Werk>de aegr. cur.</Werk>
+          </Quelle>
+          <L> </L>
+          <BelegStelle>
+            <Stellenangabe>
+              <Stelle autor="Tract." werk="de aegr. cur." stelle="p. 253,27">p. 253,27</Stelle>
+            </Stellenangabe>
+            <L> </L>
+            <BelegText>
+              <TEXT>quod </TEXT>
+              <Zusatz>(mel asarinum)</Zusatz>
+              <TEXT> si non habueris, habeas mel </TEXT>
+              <BelegLemma verdichtung="-macinum" id="salmacinum" globaleId="salinacinus.salmacinum" lemma="salmacinum">-macinum</BelegLemma>
+              <TEXT>, in quo bullias aquam salsam, quod valde bonum est. </TEXT>
+            </BelegText>
+          </BelegStelle>
+        </Quellenangabe>
+      </Beleg>
+    </Bedeutung>
+  </BedeutungsPosition>
+  <L spatium="4">    </L>
+  <ArtikelVerfasser>Clementi</ArtikelVerfasser>
+</Artikel>
