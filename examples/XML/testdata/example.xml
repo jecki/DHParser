@@ -6,4 +6,5 @@
   <body> Don't forget me this weekend! </body>
   <priority level="high" />
   <remark></remark>
+  <!-- a comment -->
 </note>

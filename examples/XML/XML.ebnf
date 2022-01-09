@@ -11,7 +11,7 @@
 @ comment     = //                   # no implicit comments
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops       # merge anonymous leaf-nodes
-@ disposable  = Misc, NameStartChar, NameChars, CommentChars, PubidChars,
+@ disposable  = Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
                 PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF
 @ drop        = strings, whitespace, EOF  # drop anonymous tokens, whitespace and EOF
 

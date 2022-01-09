@@ -1408,7 +1408,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             res = res.strip()  # WARNING: This changes the data in subtle ways
         if density & 1 and res.find('\n') < 0:
             # except for XML, add a gap between opening statement and content
-            gap = ' ' if not inline and head and head[-1:] != '>' else ''
+            if not inline and head and (head[-1:] != '>' and head != '<!--'):
+                gap = ' '
+            else:  gap = ''
             return [''.join((head, gap, data_fn(res), tail))]
         else:
             lines = [data_fn(s) for s in res.split('\n')]
@@ -1547,9 +1549,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 #             for err in root.node_errors(node))))
                 txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
             if node.tag_name in empty_tags:
-                assert not node.result, ("Node %s with content %s is not an empty element!" %
-                                         (node.tag_name, str(node)))
-                ending = "/>" if not node.tag_name[0] == '?' else "?>"
+                assert node.tag_name[0] == '?' or not node.result, \
+                    f"Node {node.tag_name} with content {str(node)} is not an empty element!"
+                if node.tag_name[0] == '?':  ending = '?>'
+                else:  ending = '/>'
+            elif node.tag_name == '!--':
+                ending = ""
             else:
                 ending = ">"
             return "".join(txt + [ending])
@@ -1558,6 +1563,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if node.tag_name in empty_tags or (node.tag_name in string_tags and not node.has_attr()):
                 return ''
+            elif node.tag_name == '!--':
+                return '-->'
             return '</' + xml_tag_name(node.tag_name) + '>'
 
         def sanitizer(content: str) -> str:

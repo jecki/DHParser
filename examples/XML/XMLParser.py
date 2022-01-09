@@ -93,8 +93,8 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "be1800d1ae79fe65b6bec72844794b20"
-    disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
+    source_hash__ = "0fa485e2e9dc9dc76e9e512e004b7926"
+    disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -179,16 +179,12 @@ ERROR_WELL_FORMEDNESS_CONSTRAINT_VIOLATION = ErrorCode(2030)
 
 class XMLTransformer(Compiler):
     """Compiler for the abstract-syntax-tree of a XML source file.
-
-    As of now, the prolog, and any processsing instructions, CDATA-sections and
-    comments will simply be dropped from the tree. References (CharRef and EntityRef)
-    will be passed through on serialization.
     """
 
     def __init__(self):
         super(XMLTransformer, self).__init__()
         self.cleanup_whitespace = True  # remove empty CharData from mixed elements
-        self.expendables = {'prolog', 'PI', 'CDSect', 'Comment', }
+        self.expendables = {'PI', 'CDSect' }
 
     def reset(self):
         super().reset()
@@ -219,16 +215,12 @@ class XMLTransformer(Compiler):
     def on_document(self, node):
         node.tag_name = XML_PTYPE
         self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE, 'CharRef', 'EntityRef'})
-        if 'prolog' in node and 'prolog' in self.expendables:
-            del node['prolog']
+        self.tree.empty_tags.update({'?xml'})
         return self.fallback_compiler(node)
 
     def on_CharData(self, node):
         node.tag_name = TOKEN_PTYPE
         return node
-
-    # def on_prolog(self, node):
-    #     return node
 
     def on_XMLDecl(self, node):
         attributes = dict()
@@ -244,7 +236,7 @@ class XMLTransformer(Compiler):
         if attributes:
             node.attr.update(attributes)
         node.result = ''
-        self.tree.empty_tags.add('?xml')
+        # self.tree.empty_tags.add('?xml')
         node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
@@ -291,6 +283,10 @@ class XMLTransformer(Compiler):
 
     def on_Reference(self, node):
         replace_by_single_child(self.context)
+        return node
+
+    def on_Comment(self, node):
+        node.tag_name = '!--'
         return node
 
 
