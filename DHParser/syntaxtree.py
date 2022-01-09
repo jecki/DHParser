@@ -1386,7 +1386,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # first_child = self._children[0]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                                           density, inline, inline_fn)
+                                           density, inline, inline_fn, allow_ommissions)
                 if subtree:
                     if inline:
                         content[-1] += '\n'.join(subtree)
@@ -1404,7 +1404,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         res = self.content
         if not inline and not head and allow_ommissions:
-            # strip whitespace for omitted non inline node, e.g. CharData in mixed elements
+            # strip whitespace for omitted non-inline node, e.g. CharData in mixed elements
             res = res.strip()  # WARNING: This changes the data in subtle ways
         if density & 1 and res.find('\n') < 0:
             # except for XML, add a gap between opening statement and content
@@ -1572,8 +1572,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             printed on several lines to avoid unwanted gaps in the output.
             """
             return node.tag_name in inline_tags \
-                or (node.has_attr()
-                    and node.attr.get('xml:space', 'default') == 'preserve')
+                   or (node.has_attr() and node.attr.get('xml:space', 'default') == 'preserve')
+                   # or (node.tag_name in string_tags and not node.children)
 
         line_breaks = linebreaks(src) if src else []
         return '\n'.join(self._tree_repr(

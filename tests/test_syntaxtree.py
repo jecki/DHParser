@@ -98,6 +98,17 @@ class TestParseSxpression:
         assert flat == '(a (b "  ") (d (e "f") (h "i")))'
 
 
+XML_EXAMPLE = '''<?xml version="1.0" encoding="UTF-8"?>
+<note date="2018-06-14">
+  <to>Tove</to>
+  <from>Jani</from>
+  <heading>Reminder</heading>
+  <body> Don't forget me this weekend! </body>
+  <priority level="high"/>
+  Some Mixed Content...
+</note>'''
+
+
 class TestParseXML:
     def test_roundtrip(self):
         tree = parse_sxpr('(a (b c) (d (e f) (h i)))')
@@ -157,6 +168,12 @@ class TestParseXML:
         assert author and author.content == "Eckhart Arnold"
         description = tree.pick('rdf:Description')
         assert description.has_attr('bibtex:title')
+
+    def test_serialize_xml(self):
+        root = RootNode(parse_xml(XML_EXAMPLE))
+        root.string_tags.update({':Text'})
+        root.empty_tags.update({'priority'})
+        assert root.as_xml() == XML_EXAMPLE[XML_EXAMPLE.find('\n') + 1:]
 
 
 class TestParseJSON:
