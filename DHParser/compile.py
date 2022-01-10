@@ -50,7 +50,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename
+from DHParser.toolkit import load_if_file, is_filename, re
 
 
 __all__ = ('CompilerError',
@@ -75,15 +75,24 @@ class CompilerError(Exception):
     pass
 
 
-def visitor_name(node_name: str) -> str:
+def visitor_name(tag_name: str) -> str:
     """
-    Returns the visitor_method name for `node_name`, e.g.::
+    Returns the visitor_method name for `tag_name`, e.g.::
 
         >>> visitor_name('expression')
         'on_expression'
+        >>> visitor_name('!--')
+        'on_212d2d'
     """
-    # assert re.match(r'\w+$', node_name)
-    return 'on_' + node_name
+    if re.match(r'\w+$', tag_name):
+        return 'on_' + tag_name
+    else:
+        letters = []
+        for ch in tag_name:
+            if not re.match(r'\w', ch):
+                ch = hex(ord(ch))[2:]
+            letters.append(ch)
+        return 'on_' + ''.join(letters)
 
 
 def attr_visitor_name(attr_name: str) -> str:
@@ -93,12 +102,12 @@ def attr_visitor_name(attr_name: str) -> str:
         >>> attr_visitor_name('class')
         'attr_class'
     """
-    # assert re.match(r'\w+$', node_name)
     return 'attr_' + attr_name
 
 
 
 ROOTNODE_PLACEHOLDER = RootNode()
+CompilerFunc = Callable[[Node], Any]
 
 
 class Compiler:
@@ -157,6 +166,7 @@ class Compiler:
         self._debug = get_config_value('debug_compiler')  # type: bool
         self._debug_already_compiled = set()              # type: Set[Node]
         self.finalizers = []  # type: List[Tuple[Callable, Tuple]]
+        self.method_dict = {}  # type: Dict[str, CompilerFunc]
 
     def prepare(self, root: Node) -> None:
         """
@@ -250,6 +260,18 @@ class Compiler:
             node = self.visit_attributes(node)
         return node
 
+    def get_compiler(self, tag_name: str) -> CompilerFunc:
+        try:
+            method = self.method_dict[tag_name]
+        except KeyError:
+            method_name = visitor_name(tag_name)
+            try:
+                method = self.__getattribute__(method_name)
+            except AttributeError:
+                method = self.fallback_compiler
+            self.method_dict[tag_name] = method
+        return method
+
     def compile(self, node: Node) -> Any:
         """
         Calls the compilation method for the given node and returns the
@@ -270,11 +292,7 @@ class Compiler:
         elem = node.tag_name
         if elem[:1] == ':':
             elem = elem[1:] + '__'
-        try:
-            compiler = self.__getattribute__(visitor_name(elem))
-            # print(self.__class__.__name__, elem, str(node)[:80])
-        except AttributeError:
-            compiler = self.fallback_compiler
+        compiler = self.get_compiler(elem)
         self.context.append(node)
         result = compiler(node)
         self.context.pop()
@@ -529,28 +547,6 @@ def compile_source(source: str,
 
             result = process_tree(compiler, syntax_tree)
 
-            # if is_error(syntax_tree.error_flag):
-            #     # assume Python crashes are merely a consequence of earlier
-            #     # errors, so let's catch them
-            #     try:
-            #         result = compiler(syntax_tree)
-            #     except Exception as e:
-            #         # raise e
-            #         node = syntax_tree  # type: Node
-            #         if isinstance(compiler, Compiler) and compiler.context:
-            #             node = compiler.context[-1]
-            #         st = traceback.format_list(traceback.extract_tb(e.__traceback__))
-            #         trace = ''.join(filter_stacktrace(st))
-            #         syntax_tree.new_error(
-            #             node, "Compilation failed, most likely, due to errors earlier "
-            #                   "in the processing pipeline. Crash Message: %s: %s\n%s"
-            #                   % (e.__class__.__name__, str(e), trace),
-            #             COMPILER_CRASH)
-            # else:
-            #     # assume Python crashes are programming mistakes, so let
-            #     # the exceptions through
-            #     result = compiler(syntax_tree)
-
     messages = syntax_tree.errors_sorted  # type: List[Error]
     # Obsolete, because RootNode adjusts error locations whenever an error is added:
     # adjust_error_locations(messages, original_text, source_mapping)
@@ -559,4 +555,5 @@ def compile_source(source: str,
 
 # TODO: Verify compiler against grammar,
 #       i.e. make sure that for all on_X()-methods, `X` is the name of a parser
+#       Does that make sense? Tag names could change during AST-Transformation!
 # TODO: AST validation against an ASDL-Specification
