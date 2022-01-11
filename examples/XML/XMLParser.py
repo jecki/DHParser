@@ -179,12 +179,15 @@ ERROR_WELL_FORMEDNESS_CONSTRAINT_VIOLATION = ErrorCode(2030)
 
 class XMLTransformer(Compiler):
     """Compiler for the abstract-syntax-tree of a XML source file.
+
+    As of now, processing instructions, cdata-sections an document-type definition
+    declarations are simply dropped.
     """
 
     def __init__(self):
         super(XMLTransformer, self).__init__()
         self.cleanup_whitespace = True  # remove empty CharData from mixed elements
-        self.expendables = {'PI', 'CDSect' }
+        self.expendables = {'PI', 'CDSect', 'doctypedecl'}
 
     def reset(self):
         super().reset()
@@ -216,7 +219,14 @@ class XMLTransformer(Compiler):
         node.tag_name = XML_PTYPE
         self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE, 'CharRef', 'EntityRef'})
         self.tree.empty_tags.update({'?xml'})
-        return self.fallback_compiler(node)
+        node.result = tuple(self.compile(nd) for nd in node.children
+                            if nd.tag_name not in self.expendables)
+        return node
+
+    def on_prolog(self, node):
+        node.result = tuple(self.compile(nd) for nd in node.children
+                            if nd.tag_name not in self.expendables)
+        return node
 
     def on_CharData(self, node):
         node.tag_name = TOKEN_PTYPE
