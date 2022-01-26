@@ -666,3 +666,5 @@ def restore_server_script(ebnf_filename: str,
             st = os.stat(serverscript)
             os.chmod(serverscript, st.st_mode | stat.S_IEXEC)
     if not os.path.exists(parser_name):  recompile_grammar(ebnf_filename, parser_name)
+
+
