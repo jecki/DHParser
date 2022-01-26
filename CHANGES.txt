@@ -1,3 +1,9 @@
+DHParser Versions 1.0.0
+.......................
+
+- Module syntaxtree has been renamed to nodetree
+
+
 DHParser Version 0.9.9
 ......................
 
