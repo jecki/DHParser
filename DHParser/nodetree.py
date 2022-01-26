@@ -1,4 +1,4 @@
-# syntaxtree.py - syntax tree classes for DHParser
+# nodetree.py - node-tree classes for DHParser
 #
 # Copyright 2016  by Eckhart Arnold (arnold@badw.de)
 #                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -17,15 +17,15 @@
 
 
 """
-Module ``syntaxtree`` encapsulates the functionality for creating and handling
-syntax-trees. This includes serialization and deserialization of syntax-trees,
-navigating and serching syntax-trees as well as annotating syntax trees with
-attributes and error messages.
+Module ``nodetree`` encapsulates the functionality for creating and handling
+trees of nodes, in particular, syntax-trees. This includes serialization
+and deserialization of node-trees, navigating and searching node-trees as well
+as annotating node-trees with attributes and error messages.
 
-Despite the name, syntaxtree can also be seen as a documenttree-library
+``nodetree`` can also be seen as a document-tree-library
 for handling any kind of XML-data. In contrast to
 `Elementtree <https://docs.python.org/3/library/xml.etree.elementtree.html>`_
-and `lxml <https://lxml.de/>`_, syntaxtree maps mixed content to dedicated nodes,
+and `lxml <https://lxml.de/>`_, nodetree maps mixed content to dedicated nodes,
 which simplifies the programming of algorithms that run on the data stored
 in the (XML-)tree.
 """
@@ -351,7 +351,9 @@ ResultType = Union[StrictResultType, 'Node']
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
     """
-    Represents a node in the concrete or abstract syntax tree.
+    Represents a node in a tree data structure. This can, for example, be
+    the concrete or abstract syntax tree that is produced by a recursive
+    descent parser.
 
     There are three different kinds of nodes:
 
@@ -363,7 +365,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
        The conversion to and from XML works by enclosing strings
        in a mixed-content tag with some, freely chosen tag name, and
        dropping the tag name again when serializing to XML. Since
-       this is easily done, there is not serious restriction involved
+       this is easily done, there is no serious restriction involved
        when not allowing mixed-content nodes. See `Node.as_xml()`
        (parameter `string_tags`) as `parse_xml`.
 
@@ -2279,8 +2281,8 @@ EMPTY_NODE = FrozenNode(EMPTY_PTYPE, '')
 
 def tree_sanity_check(tree: Node) -> bool:
     """
-    Sanity check for syntax trees: One and the same node must never appear
-    twice in the syntax tree. Frozen Nodes (EMTPY_NODE, PLACEHOLDER)
+    Sanity check for node-trees: One and the same node must never appear
+    twice in the node-tree. Frozen Nodes (EMTPY_NODE, PLACEHOLDER)
     should only exist temporarily and must have been dropped or eliminated
     before any kind of tree generation (i.e. parsing) or transformation
     is finished.
@@ -2306,7 +2308,7 @@ _EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
 
 
 class RootNode(Node):
-    """The root node for the syntax tree is a special kind of node that keeps
+    """The root node for the node-tree is a special kind of node that keeps
     and manages global properties of the tree as a whole. These are first and
     foremost the list off errors that occurred during tree generation
     (i.e. parsing) or any transformation of the tree. Other properties concern
@@ -2416,10 +2418,10 @@ class RootNode(Node):
 
         This is done by the parse.Grammar object after
         parsing has finished, so that the Grammar object always
-        returns a syntax tree rooted in a RootNode object.
+        returns a node-tree rooted in a RootNode object.
 
         It is possible to add errors to a RootNode object, before it
-        has actually swallowed the root of the syntax tree.
+        has actually swallowed the root of the node-tree.
         """
         if source and source != self.source:
             self.source = source
@@ -2596,7 +2598,7 @@ class RootNode(Node):
         """
         Returns True, if the parser that has generated this tree did
         match, False otherwise. Depending on wether the Grammar-object that
-        that generated the syntax tree was called with `complete_match=True`
+        that generated the node-tree was called with `complete_match=True`
         or not this requires either the complete document to have been
         matched or only the beginning.
 
@@ -2906,7 +2908,7 @@ def parse_xml(xml: Union[str, StringView],
 
 
 class DHParser_JSONEncoder(json.JSONEncoder):
-    """A JSON-encoder that also encodes syntaxtree.Node- as valid json objects.
+    """A JSON-encoder that also encodes ``nodetree.Node`` as valid json objects.
     Node-objects are encoded using Node.as_json.
     """
     def default(self, obj):
@@ -2919,10 +2921,10 @@ class DHParser_JSONEncoder(json.JSONEncoder):
 
 def parse_json(json_str: str) -> Node:
     """
-    Parses a JSON-representation of a syntax tree. Other than
-    and parse_xml, this function does not convert any json-text into
-    a syntax tree, but only json-text that represents a syntax tree, e.g.
-    that has been produced by `Node.as_json()`!
+    Parses a JSON-representation of a node-tree. Other than
+    and parse_xml, this function does not convert any json-document into
+    a node-tree, but only json-documents that represents a node-tree, e.g.
+    a json-document that has been produced by `Node.as_json()`!
     """
     json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: OrderedDict(pairs))
     return Node.from_json_obj(json_obj)

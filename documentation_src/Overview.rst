@@ -310,7 +310,7 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
 
 2. Symbols can, however, be marked as "disposable", too.
 
-   Thus, you'll never see an "_elment"-node in a JSON-syntaxtree produced
+   Thus, you'll never see an "_elment"-node in a JSON-syntax-tree produced
    by the above grammar, but only object-, array-, string-, number-, true-,
    false- or null-nodes. (See :py:func:`~ebnf.simplifying_syntax_trees`.)
 
@@ -430,7 +430,7 @@ In specific application cases it is often desirable
 to model the abstract syntax-tree as a tree of
 objects of different classes. However, since DHParser
 is a generic Parser-generator, DHParser's syntax-trees
-are composed of a single :py:class:`~syntaxtree.Node`-type.
+are composed of a single :py:class:`~nodetree.Node`-type.
 Nodes contain either text-data or have one or more other nodes
 as children (but not both). The "kind" or "type"
 of a node is indicated by its "tag-name". It should be
@@ -509,9 +509,9 @@ in either a nicely formatted or compact form.
             INT "2"
 
 All but the last serialization-formats can be de-serialized into
-a tree of nodes with the functions: :py:func:`~syntaxtree.parse_sxpr`,
-:py:func:`~syntaxtree.parse_xml`, :py:func:`~syntaxtree.parse_json`.
-The :py:func:`~syntaxtree.parse_xml` is not restricted to de-serialization but
+a tree of nodes with the functions: :py:func:`~nodetree.parse_sxpr`,
+:py:func:`~nodetree.parse_xml`, :py:func:`~nodetree.parse_json`.
+The :py:func:`~nodetree.parse_xml` is not restricted to de-serialization but
 can parse any XML into a tree of nodes.
 
 XML-connection
@@ -519,7 +519,7 @@ XML-connection
 
 Since DHParser has been build with Digital-Humanities-applications in mind,
 it offers to further methods to connect to X-technologies. The methods
-:py:meth:`~syntaxtree.Node.as_etree` and :py:meth:`~syntaxtree.Node.from_etree`
+:py:meth:`~nodetree.Node.as_etree` and :py:meth:`~nodetree.Node.from_etree`
 allow direct transfer to and from the xml-ElementTrees of either the
 Python standard-library or the lxml-package which offers full support for
 XPath, XQuery and XSLT.

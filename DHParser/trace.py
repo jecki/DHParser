@@ -28,7 +28,7 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
+from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord, callstack_as_str
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive
 from DHParser.toolkit import cython, line_col

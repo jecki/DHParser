@@ -38,7 +38,7 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
     PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, canonical_error_strings
-from DHParser.syntaxtree import WHITESPACE_PTYPE, flatten_sxpr
+from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
     transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar

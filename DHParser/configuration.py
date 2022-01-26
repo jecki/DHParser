@@ -395,7 +395,7 @@ CONFIG_PRESET['left_recursion'] = True
 
 ########################################################################
 #
-# syntaxtree configuration
+# nodetree configuration
 #
 ########################################################################
 
@@ -421,7 +421,7 @@ ALLOWED_PRESET_VALUES['default_serialization'] = _serializations
 
 # Defines the maximum line length for flattened S-expressions.
 # Below this threshold S-expressions will be returned in flattened
-# form by DhParser.syntaxtree.serialize() and other functions
+# form by DHParser.nodetree.serialize() and other functions
 # that use serialize(), like, for example, the reporting functions
 # in DHParser.testing.
 # Default value: 120

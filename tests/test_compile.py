@@ -26,7 +26,7 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.syntaxtree import parse_sxpr, Node
+from DHParser.nodetree import parse_sxpr, Node
 from DHParser.compile import Compiler
 
 

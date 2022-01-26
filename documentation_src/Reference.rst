@@ -8,10 +8,10 @@ Module ``ebnf``
 .. automodule:: ebnf
    :members:
 
-Module ``syntaxtree``
+Module ``nodetree``
 ---------------------
 
-.. automodule:: syntaxtree
+.. automodule:: nodetree
    :members:
 
 Module ``transform``

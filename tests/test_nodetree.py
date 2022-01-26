@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""test_syntaxtree.py - test of syntaxtree-module of DHParser
+"""test_nodetree.py - test of nodetree-module of DHParser
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -28,7 +28,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.syntaxtree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
+from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_context, \
     prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
     select_context_if, select_context, create_context_match_function, pick_context, \

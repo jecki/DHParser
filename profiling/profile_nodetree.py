@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""test_syntaxtree.py - profiling of syntaxtree-module of DHParser
+"""test_nodetree.py - profiling of the nodetree-module of DHParser
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -25,7 +25,7 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser.syntaxtree import parse_xml
+from DHParser.nodetree import parse_xml
 from DHParser.toolkit import json_dumps
 
 def cpu_profile(func, repetitions=1):

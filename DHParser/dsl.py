@@ -39,7 +39,7 @@ from DHParser.error import Error, is_error, has_errors, only_errors, \
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.syntaxtree import Node
+from DHParser.nodetree import Node
 from DHParser.transform import TransformerCallable, TransformationDict
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
     compile_python_object, re, as_identifier

@@ -142,7 +142,7 @@ def mem_profile(func):
 
 if __name__ == "__main__":
     cpu_profile(tst_func)
-    from DHParser import syntaxtree
-#    for k, v in syntaxtree.CALLERS.items():
+    from DHParser import nodetree
+#    for k, v in nodetree.CALLERS.items():
 #        print(k, v)
 

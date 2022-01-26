@@ -43,7 +43,7 @@ from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc
-from DHParser.syntaxtree import Node, RootNode, EMPTY_PTYPE, TreeContext
+from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, TreeContext
 from DHParser.transform import TransformerCallable
 from DHParser.parse import Grammar
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -203,8 +203,8 @@ class Compiler:
             5. call the :py:meth:`Compiler.finalize()`-method.
 
         :param root: The root-node of the syntax tree to be compiled. ``root``
-            does not need to be of type :py:class:`~syntaxtree.RootNode` in order
-            to allow compiling parts of a syntaxtree.
+            does not need to be of type :py:class:`~nodetree.RootNode` in order
+            to allow compiling parts of a syntax tree.
         :returns: The resulting object of the compilation.
         """
         if self._dirty_flag:
@@ -299,7 +299,7 @@ class Compiler:
         if result is None and self._None_check:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
-                 'result! It is recommended to use `syntaxtree.EMPTY_NODE as a '
+                 'result! It is recommended to use `nodetree.EMPTY_NODE` s a '
                  'void value. This Error can be turn off by adding '
                  '`self._None_check = False` to the reset()-Method of your'
                  'compiler class, in case on_%s actually SHOULD be allowed to '

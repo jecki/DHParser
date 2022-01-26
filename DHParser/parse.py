@@ -55,7 +55,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.syntaxtree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
+from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, cython, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, identity
@@ -4158,7 +4158,7 @@ class Forward(UnaryParser):
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
                     grammar.history__ = grammar.history__[:history_pointer]
-                    # reduplication of error messages will be caught by syntaxtree.RootNode.add_error()
+                    # reduplication of error messages will be caught by nodetree.RootNode.add_error()
                     # saving and restoring the errors-messages state on each iterations presupposes
                     # that error messages will be recreated every time, which, however, does not
                     # happen because of memoization. (This is a downside of global error-reporting

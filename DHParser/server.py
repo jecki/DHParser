@@ -76,7 +76,7 @@ from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, 
     Set, Any, cast, Type, TypeVar
 
 from DHParser.configuration import access_thread_locals, get_config_value
-from DHParser.syntaxtree import DHParser_JSONEncoder
+from DHParser.nodetree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
     json_encode_string, json_rpc, json_dumps, identify_python, normalize_docstring, md5, \

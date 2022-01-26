@@ -22,7 +22,7 @@ reading-order is recommended to understand DHParser:
    are specified in EBNF_ and how parsers can be auto-generated from these
    grammars and how they are used to parse text.
 
-:doc:`syntaxtree <manuals/syntaxtree>` - Syntax-trees are the central data-structure of any
+:doc:`nodetree <manuals/nodetree>` - Syntax-trees are the central data-structure of any
    parsing system. The description to this modules explains how syntax-trees
    are represented within DHParser, how they can be manipulated, queried
    and serialized or deserialized as XML, S-expressions or json.

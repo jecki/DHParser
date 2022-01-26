@@ -61,7 +61,7 @@ from DHParser.configuration import access_presets, finalize_presets, get_config_
     set_config_value, get_preset_value, set_preset_value
 from DHParser.error import Error
 from DHParser.stringview import StringView
-from DHParser.syntaxtree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
+from DHParser.nodetree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
 from DHParser.toolkit import escape_ctrl_chars, abbreviate_middle, cython
 
 __all__ = ('CallItem',

@@ -46,7 +46,7 @@ from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forwa
     Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
-from DHParser.syntaxtree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
+from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
     flatten_sxpr
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \

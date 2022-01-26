@@ -32,7 +32,7 @@ from .parse import *
 from .preprocess import *
 # from .server import *
 from .stringview import *
-from .syntaxtree import *
+from .nodetree import *
 # from .testing import *
 from .toolkit import *
 from .trace import *
@@ -50,7 +50,7 @@ __all__ = (compile.__all__ +
            preprocess.__all__ +
            # server.__all__ +
            stringview.__all__ +
-           syntaxtree.__all__ +
+           nodetree.__all__ +
            # testing.__all__ +
            toolkit.__all__ +
            trace.__all__ +
@@ -66,5 +66,5 @@ __author__ = "Eckhart Arnold"
 __email__ = "eckhart.arnold@posteo.de"
 __license__ = "http://www.apache.org/licenses/LICENSE-2.0"
 __copyright__ = "Copyright (c) 2016-2021 Eckhart Arnold"
-# __all__ = ['toolkit', 'stringview', 'error', 'syntaxtree', 'preprocess', 'parse',
+# __all__ = ['toolkit', 'stringview', 'error', 'nodetree', 'preprocess', 'parse',
 # 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber', 'configuration']

@@ -166,7 +166,7 @@ module :py:mod:`DHParser.transform` to already contain such an operation (althou
 in this particular case, in fact, it does). But we can write a suitable transformation
 on our own, easily::
 
-   >>> from DHParser.syntaxtree import Node, TreeContext
+   >>> from DHParser.nodetree import Node, TreeContext
    >>> def left_associative(context: TreeContext):
    ...     "Re-arranges a flat node with infix operators into a left associative tree."
    ...     node = context[-1]
@@ -240,8 +240,8 @@ calculate the result of the formula becomes a breeze::
             >>> formula_cst.evaluate(actions)
             27.0
 
-See :py:meth:`~syntaxtree.Node.evaluate` in case you wonder what the last statement does.
-(The ``evaluate()``-method of the :py:class:`~syntaxtree.Node`-class is actually a third
+See :py:meth:`~nodetree.Node.evaluate` in case you wonder what the last statement does.
+(The ``evaluate()``-method of the :py:class:`~nodetree.Node`-class is actually a third
 and most trivial installment of the visitor-pattern in DHParser.)
 
 

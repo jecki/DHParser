@@ -44,7 +44,7 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.preprocess import gen_neutral_srcmap_func
-from DHParser.syntaxtree import Node, parse_sxpr
+from DHParser.nodetree import Node, parse_sxpr
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
 

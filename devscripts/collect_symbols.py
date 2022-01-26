@@ -24,7 +24,7 @@ import textwrap
 sys.path.append('../')
 
 from DHParser import toolkit
-from DHParser import syntaxtree
+from DHParser import nodetree
 from DHParser import parse
 from DHParser import transform
 from DHParser import ebnf

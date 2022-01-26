@@ -49,7 +49,7 @@ from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
-from DHParser.syntaxtree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG, EMPTY_PTYPE
+from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG, EMPTY_PTYPE
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
 from DHParser.toolkit import load_if_file, re, re_find, concurrent_ident, instantiate_executor

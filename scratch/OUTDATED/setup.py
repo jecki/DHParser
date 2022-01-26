@@ -13,7 +13,7 @@ cythonize_modules = [
     'DHParser/toolkit.py',
     'DHParser/error.py',
     'DHParser/preprocess.py',
-    'DHParser/syntaxtree.py',
+    'DHParser/nodetree.py',
     'DHParser/log.py',
     'DHParser/parse.py',
     'DHParser/trace.py',

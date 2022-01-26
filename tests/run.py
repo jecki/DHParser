@@ -163,5 +163,7 @@ if __name__ == "__main__":
     print('  1. Some doctests may fail on Windows, due to different file-separators.')
     print('  2. Some tests end with OSError("handle already closed") on pypy3.6, 3.7. '
           'This seems to be a python < 3.9 bug. See: pypy3 scratch/process_pool_doc_examples.py')
+    print('  3. Occasionally, notest_server_tcp.TestServer.test_long_running_task() will '
+          'raise the "AssertionError: [0.02, 0.001, 0.02, 0.001]" as a false negative.')
 
     os.chdir(cwd)

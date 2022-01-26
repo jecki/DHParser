@@ -35,7 +35,7 @@ from typing import AbstractSet, ByteString, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Text
 
 from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
-from DHParser.syntaxtree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode, parse_sxpr, flatten_sxpr, TreeContext
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
 
