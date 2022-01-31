@@ -103,7 +103,11 @@ if __name__ == "__main__":
     if run_cmd(['python3.10', '-V']):
         found.append('python3.10 ')
     elif run_cmd(['~/.local/bin/python3.10', '-V']):
-        found.append('~/.local/bin/python3.10 ')        
+        found.append('~/.local/bin/python3.10 ') 
+    if run_cmd(['python3.11', '-V']):
+        found.append('python3.11 ')
+    elif run_cmd(['~/.local/bin/python3.11', '-V']):
+        found.append('~/.local/bin/python3.11 ')                
     print('Interpreters found: ' + ''.join(found))
 
     arguments = [arg for arg in sys.argv[1:] if arg[:1] != '-']

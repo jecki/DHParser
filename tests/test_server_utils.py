@@ -186,9 +186,16 @@ class TestUtils:
             '  "    raise AssertionError()"\n' \
             '  "AssertionError"\n  ""}'.\
             replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1).replace('./', '')
+        expected_py311 = '{"error": "Traceback (most recent call last):"\n' \
+            '  "  File \\"$SCRIPTPATH/test_server_utils.py\\", ' \
+            'line 179, in test_pp_json_stacktrace"\n' \
+            '  "    raise AssertionError()"\n' \
+            '  "    ^^^^^^^^^^^^^^^^^^^^^^"\n' \
+            '  "AssertionError"\n  ""}'.\
+            replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1).replace('./', '')            
         # print(ppjsn)
         # print(expected)
-        assert ppjsn == expected, '\n\n' + ppjsn + '\n\n' + expected
+        assert ppjsn == expected or ppjsn == expected_py311, '\n\n' + ppjsn + '\n\n' + expected
 
 
 class TestRPCTable:
