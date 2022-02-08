@@ -18,4 +18,4 @@
 __all__ = ('__version__',)
 __version__ = '1.0.0'
 __version_info__ = tuple(int(part) for part in __version__.split('.'))
-__version__ += "rc1"
+__version__ += "rc2"
