@@ -139,6 +139,9 @@ See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introdu
 motivation and an overview how DHParser works or jump right into the
 [Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
 learn how to setup and use DHParser.
+Or have a look at the 
+[comprehensive overview of DHParser's features](https://gitlab.lrz.de/badw-it/DHParser/-/blob/master/documentation_src/Overview.rst) 
+to see how DHParser supports the construction of domain specific languages.
 
 Documentation
 -------------
