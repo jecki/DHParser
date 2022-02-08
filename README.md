@@ -1,6 +1,11 @@
 DHParser
 ========
 
+![](https://img.shields.io/pypi/v/DHParser) 
+![](https://img.shields.io/pypi/status/DHParser) 
+![](https://img.shields.io/pypi/pyversions/DHParser) 
+![](https://img.shields.io/pypi/l/DHParser)
+
 DHParser - A parser generator and domain specific language (DSL)
 construction kit for the Digital Humanities
 
@@ -22,6 +27,8 @@ Features
 * Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
 
 * Digital Humanities features, like support for XML-workflows
+
+* no mandatory dependencies other than the Python Standard Library
 
 * Soon to come: Extensive documentation and documented examples
 

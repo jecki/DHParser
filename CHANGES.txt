@@ -1,7 +1,11 @@
-DHParser Versions 1.0.0
-.......................
+DHParser Versions 1.0.0 (9.2.2022)
+..................................
 
-- Module syntaxtree has been renamed to nodetree
+- Module syntaxtree has been renamed to nodetree, because this expresses
+  the general character of this module better which can be used for
+  any kind of (XML-)tree-structure, not just syntax-trees
+- many bugfixes
+- Python3.11 compatibility
 
 
 DHParser Version 0.9.9

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "DHParser"
-version = "0.9.9"
+version = "1.0.0rc1"
 description = "Parser Generator and DSL-construction-kit"
 
 license = "Apache-2"
@@ -31,6 +31,8 @@ classifiers = [
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: Implementation :: CPython',
     'Programming Language :: Python :: Implementation :: PyPy',
     'Topic :: Text Processing :: Markup',

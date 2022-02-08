@@ -202,7 +202,7 @@ disposable (see :py:ref`~ebnf.simlpifying_syntax_trees`), they also must be assi
 explicitly with the :py:meth:`~parse.Parser.name`-method. Forward-declarations always need to be
 named explicitly, even if the declared parser is considered disposable.
 
-In order to avoid namespace pollution, the variables defining the parser could be encapsulated by
+In order to avoid namespace pollution, the variables defining the parser can be encapsulated in
 a class definition::
 
     class JSON:
