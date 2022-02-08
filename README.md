@@ -128,7 +128,7 @@ You can install DHParser from the Python package index [pypi.org](https://pypi.o
 
     python -m pip install --user DHParser
 
-Alternatively you can clone the latest version from 
+Alternatively, you can clone the latest version from 
 [gitlab.lrz.de/badw-it/DHParser](https://gitlab.lrz.de/badw-it/DHParser)
 
 
