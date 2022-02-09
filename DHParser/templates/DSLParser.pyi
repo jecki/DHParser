@@ -83,7 +83,7 @@ def batch_process(file_names: List[str], out_dir: str,
     return error_list
 
 
-if __name__ == "__main__":
+def main():
     # recompile grammar if needed
     script_path = os.path.abspath(__file__)
     if script_path.endswith('Parser.py'):
@@ -200,3 +200,7 @@ if __name__ == "__main__":
         elif args.json:  outfmt = 'json'
         else:  outfmt = 'default'
         print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+
+
+if __name__ == "__main__":
+    main()

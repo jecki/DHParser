@@ -503,7 +503,7 @@ def parse_logging_args(args):
         return None, ''
 
 
-if __name__ == "__main__":
+def main():
     from argparse import ArgumentParser, REMAINDER
     parser = ArgumentParser(description="Setup and Control of a Server for processing DSL-files.")
     action_group = parser.add_mutually_exclusive_group()
@@ -625,3 +625,7 @@ if __name__ == "__main__":
              + '    python DSLServer.py --logging [ON|LOG_PATH|OFF]\n'
              + '    python DSLServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
