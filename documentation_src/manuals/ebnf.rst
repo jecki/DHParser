@@ -752,7 +752,8 @@ comments work as expected::
     word S word S word
     >>> syntax_tree = extended_parser('What{check this again!}is work?')
     >>> print(syntax_tree.errors[0])
-    1:24: Error (1040): Parser "pure_S" did not match: »is work?«
+    1:24: Error (1040): Parser "pure_S = /(?=[ \\n\\t])[ \\t]*(?:\\n[ \\t]*)?(?!\\n)/" did not match: »is work?«
+
 
 The last error was to be expected, because we did not allow comments
 to serve a substitutes for whitespace. Let's check whether putting comments

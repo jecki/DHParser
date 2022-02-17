@@ -438,7 +438,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 if errata:  errata[-1] = errata[-1].rstrip('\n')
                 errata.append('\t' + '\n\t'.join(
                     str(msg).replace('\n', '\n\t\t') for msg in test_errors))
-                errata.append('\n\n')
+                # errata.append('\n\n')  # leads to wrong error count!!!
 
     for parser_name, tests in test_unit.items():
         # if not get_config_value('test_parallelization'):
@@ -497,9 +497,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errors = [e for e in cst.errors if e.code not in POSSIBLE_ARTIFACTS]
                 errata.append('Match test "%s" for parser "%s" failed:'
-                              '\nExpr.:  %s\n\n%s\n\n' %
+                              '\n\tExpr.:  %s\n\t%s' %
                               (test_name, parser_name, md_codeblock(test_code),
-                               '\n'.join(str(m).replace('\n', '\n') for m in errors)))
+                               '\n'.join(str(m) for m in errors)))
             if "ast" in tests or report or transformation_stages or show:
                 ast = copy.deepcopy(cst) if 'cst' in tests or str(test_name).find('*') >= 0 \
                       else cst
@@ -765,7 +765,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     if error_report:
         # if verbose:
         #     print("\nFAILURE! %i error%s found!\n" % (err_N, 's' if err_N > 1 else ''))
-        return ('Test suite "%s" revealed %s error%s:\n\n'
+        return ('Test suite "%s" revealed %s error%s:\n'
                 % (directory, err_N, 's' if err_N > 1 else '') + '\n'.join(error_report))
     if verbose:
         print("\nSUCCESS! All tests passed :-)\n")

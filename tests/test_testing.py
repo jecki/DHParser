@@ -298,6 +298,7 @@ class TestASTErrors:
         parser_fac = grammar_provider(ARITHMETIC_EBNF)
         trans_fac = lambda : partial(traverse, transformation_table=self.trans_table)
         errata = grammar_unit(self.cases1, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
+        assert len(errata) == 1
         assert "marked with error" in str(errata)
         errata = grammar_unit(self.cases2, parser_fac, trans_fac, 'REPORT_ASTFailureTest')
         assert not errata

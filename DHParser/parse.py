@@ -564,7 +564,7 @@ class Parser:
                 # catching up with parsing after an error occurred
                 gap = len(text) - len(pe.rest)
                 rules = tuple(grammar.resume_rules__.get(
-                    self.pname or grammar.associated_symbol__(self).pname, []))
+                    grammar.associated_symbol__(self).pname, []))
                 rest = pe.rest[pe.node_orig_len:]
                 i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
                                              grammar.reentry_search_window__)
@@ -1669,9 +1669,11 @@ class Grammar:
                 skip, rest = rest[:fwd], rest[fwd:]
                 if result is None or (result.tag_name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
-                    err_pname = self.ff_parser__.pname \
-                                or self.associated_symbol__(self.ff_parser__).pname \
-                                   + '->' + str(self.ff_parser__)
+                    associated_symbol = self.associated_symbol__(self.ff_parser__)
+                    if associated_symbol != self.ff_parser__:
+                        err_pname = associated_symbol.pname + '->' + str(self.ff_parser__)
+                    else:
+                        err_pname = str(associated_symbol)
                     err_text = self.document__[err_pos:err_pos + 20]
                     if err_pos + 20 < len(self.document__) - 1:  err_text += ' ...'
                     # Check if a Lookahead-Parser did match. Needed for testing, because
@@ -1710,8 +1712,7 @@ class Grammar:
                         err_pos = i
                         fs = self.document__[i:i + 10].replace('\n', '\\n')
                         if i + 10 < len(self.document__) - 1:  fs += '...'
-                        root_name = self.start_parser__.pname \
-                                    or self.associated_symbol__(self.start_parser__).pname
+                        root_name = self.associated_symbol__(self.start_parser__).pname
                         error_msg = f'Parser "{root_name}" ' \
                             f"stopped before end, at: »{fs}«" + \
                             (("Trying to recover" +
@@ -1862,7 +1863,9 @@ class Grammar:
                         return True  # stop searching
             return False  # continue searching
 
-        if parser.pname:
+        if isinstance(parser, Forward) and cast(Forward, parser).parser.pname:
+            symbol = cast(Forward, parser).parser
+        elif parser.pname:
             symbol = parser
         else:
             self.root_parser__.apply(find_symbol_for_parser)

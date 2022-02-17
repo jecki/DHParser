@@ -24,7 +24,7 @@ On the way we will learn:
 
 
 System-Requirements
--------------------
+===================
 
 DHParser runs on Linux, MacOS and Windows. The following step by step guide
 assumes that you already have a Python-interpreter installed on your system and
