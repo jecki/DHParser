@@ -3155,6 +3155,8 @@ def starting_string(parser: Parser) -> str:
 
     def find_starting_string(p: Parser) -> str:
         nonlocal been_there
+        if isinstance(p, (NegativeLookahead, Lookbehind, NegativeLookbehind)):
+            return ""
         if p in been_there:
             return been_there[p]
         else:
