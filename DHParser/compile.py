@@ -299,7 +299,7 @@ class Compiler:
         if result is None and self._None_check:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
-                 'result! It is recommended to use `nodetree.EMPTY_NODE` s a '
+                 'result! It is recommended to use `nodetree.EMPTY_NODE` as a '
                  'void value. This Error can be turn off by adding '
                  '`self._None_check = False` to the reset()-Method of your'
                  'compiler class, in case on_%s actually SHOULD be allowed to '

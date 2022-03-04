@@ -689,7 +689,7 @@ class Parser:
     def name(self, pname: str, disposable: bool = False) -> 'Parser':
         """Sets the parser name to `pname` and returns `self`."""
         self.pname = pname
-        self.tag_name = pname or self.ptype
+        self.tag_name = self.ptype if disposable else (pname or self.ptype)
         self.disposable = disposable
         return self
 

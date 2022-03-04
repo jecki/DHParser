@@ -26,7 +26,7 @@ def process_file(source: str, result_filename: str = '') -> str:
     written to a file with the same name as `result_filename` with an
     appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
     extension. Returns the name of the error-messages file or an empty
-    string, if no errors of warnings occurred.
+    string, if no errors or warnings occurred.
     """
     source_filename = source if is_filename(source) else ''
     result, errors = compile_src(source)
