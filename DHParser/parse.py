@@ -689,8 +689,11 @@ class Parser:
     def name(self, pname: str, disposable: bool = False) -> 'Parser':
         """Sets the parser name to `pname` and returns `self`."""
         self.pname = pname
-        self.tag_name = self.ptype if disposable else (pname or self.ptype)
         self.disposable = disposable
+        if disposable:
+            self.tag_name = (':' + pname) if pname else self.ptype
+        else:
+            self.tag_name = pname if pname else self.ptype
         return self
 
     @property
@@ -1341,11 +1344,13 @@ class Grammar:
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
-                            cast(Forward, parser).parser.pname = entry
-                            cast(Forward, parser).parser.disposable = anonymous
+                            cast(Forward, parser).parser.name(entry, anonymous)
+                            # cast(Forward, parser).parser.pname = entry
+                            # cast(Forward, parser).parser.disposable = anonymous
                     else:
-                        parser.pname = entry
-                        parser.disposable = anonymous
+                        parser.name(entry, anonymous)
+                        # parser.pname = entry
+                        # parser.disposable = anonymous
             if not is_parser_placeholder(cls.root__):
                 determine_eq_classes(cls.root__)
             if cls != Grammar:
@@ -1387,10 +1392,12 @@ class Grammar:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
                 setattr(self, cast(Forward, parser).parser.pname, parser)
-            if parser.disposable:
-                parser.tag_name = parser.ptype
-            else:
-                parser.tag_name = parser.pname
+            # # see Parser.name()
+            # if parser.disposable:
+            #     parser.tag_name = (':' + parser.pname) if parser.pname else parser.ptype
+            # else:
+            #     parser.tag_name = parser.pname
+            # parser.name(parser.pname, parser.disposable)
             self.all_parsers__.add(parser)
             parser.grammar = self
 
@@ -1439,8 +1446,10 @@ class Grammar:
             determine_eq_classes(root)
             self.root_parser__ = copy.deepcopy(root)
             if not self.root_parser__.pname:
-                self.root_parser__.pname = "root"
-                self.root_parser__.disposable = False
+                self.root_parser__.name("root", disposable=False)
+                # TODO: Reset name and tag_name after parsing has been finished
+                # self.root_parser__.pname = "root"
+                # self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
             self.static_analysis_errors__ = []       # type: List[AnalysisError]
         else:
@@ -4085,9 +4094,7 @@ class Forward(UnaryParser):
         """Sets the parser name to `pname` and returns `self`."""
         assert not pname, "Forward-parser mustn't have a name. "\
             'Use pname="" when calling  Forward.name()'
-        self.pname = pname
-        self.tag_name = self.ptype
-        self.disposable = disposable
+        super().name(pname, disposable)
         return self
 
     def __deepcopy__(self, memo):

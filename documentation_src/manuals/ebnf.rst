@@ -1701,7 +1701,7 @@ to get a better insight into what went wrong::
     >>> result = list_parser(example_with_errors_2)
     >>> for e in result.errors: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:Alternative to 1:9 ', [5, 6...'
+    1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:_item to 1:9 ', [5, 6...'
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:24: Notice (50): Resuming from list at 1:16 '; [7, 8...' with _items->:Series at 1:24 ', 9], 1...'
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
@@ -1737,7 +1737,7 @@ that resumption does not get caught on the nested structure, any more::
 
     >>> for e in result.errors:
     ...     if e.code == RESUME_NOTICE: print(e)
-    1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:Alternative to 1:9 ', [5, 6...'
+    1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:_item to 1:9 ', [5, 6...'
     1:28: Notice (50): Resuming from list at 1:16 '; [7, 8...' with _items->:Series at 1:28 ', 10, ]'
     1:34: Notice (50): Skipping from 1:34 ']' within _items->:Series to 1:34 ']'
 
