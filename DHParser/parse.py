@@ -1150,6 +1150,9 @@ class Grammar:
         static_analysis_errors__: A list of errors and warnings that were found in the
                 static analysis
 
+        parser_names__: The list of the names of all named parsers defined in the
+                grammar class
+
         python_src__:  For the purpose of debugging and inspection, this field can
                  take the python src of the concrete grammar class
                  (see `dsl.grammar_provider`).
@@ -1311,6 +1314,7 @@ class Grammar:
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)  # type: str
     static_analysis_pending__ = [True]  # type: List[bool]
     static_analysis_errors__ = []  # type: List[AnalysisError]
+    parser_names__ = []            # type: List[str]
 
     @classmethod
     def _assign_parser_names__(cls):
@@ -1338,6 +1342,8 @@ class Grammar:
         """
         if cls.parser_initialization__[0] != "done":
             cdict = cls.__dict__
+            cls.static_analysis_errors__ = []
+            cls.parser_names__ = []
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
                     anonymous = True if cls.disposable__.match(entry) else False
@@ -1351,6 +1357,7 @@ class Grammar:
                         parser.name(entry, anonymous)
                         # parser.pname = entry
                         # parser.disposable = anonymous
+                    cls.parser_names__.append(entry)
             if not is_parser_placeholder(cls.root__):
                 determine_eq_classes(cls.root__)
             if cls != Grammar:
@@ -1479,6 +1486,10 @@ class Grammar:
                     l[i] = self[l[i].pname]
                     if l[i] not in root_connected:
                         self.unconnected_parsers__.append(l[i])
+        for name in self.__class__.parser_names__:
+            parser = self[name]
+            if parser not in root_connected:
+                self.unconnected_parsers__.append(parser)
         for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
 
         if (self.static_analysis_pending__
@@ -1519,7 +1530,7 @@ class Grammar:
                 parser.apply(self._add_parser__)
                 assert self[key] == parser
                 return self[key]
-            raise AttributeError('Unknown parser "%s" !' % key)
+            raise AttributeError(f'Unknown parser "{key}" in grammar {self.__class__.__name__}!')
 
 
     def __contains__(self, key):
