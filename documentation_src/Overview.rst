@@ -755,7 +755,7 @@ Preprocessor-section - usually must be edited by hand in order to allow the
 
 Because for most typical DSL-projects, preprocessors are not needed, the
 Preprocessor-section will be not be discussed, here. The other two sections,
-AST and Compiler, contain skeletons for (different kinds of)
+AST (for **A**bstract **S**yntax **T**ree) and Compiler, contain skeletons for (different kinds of)
 tree-transformations that can be edited as will or even completely be substituted
 by custom code. All sections (including "Preprocessor") comprise a callable class
 or an "instantiation function" returning a transformation function that should be
@@ -768,6 +768,12 @@ about it, when filling in the transformation-function proper.
 
 In the case of our json-parser, the skeleton for the Compilation  looks
 like this::
+
+    #######################################################################
+    #
+    # COMPILER SECTION - Can be edited. Changes will be preserved.
+    #
+    #######################################################################
 
     class jsonCompiler(Compiler):
         """Compiler for the abstract-syntax-tree of a json source file.
@@ -804,6 +810,12 @@ the data of the json-file. We'll se below, how this could be done.
 
 Let's first look at the AST-transformation-skeleton::
 
+    #######################################################################
+    #
+    # PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!
+    #
+    #######################################################################
+
     json_AST_transformation_table = {
         # AST Transformations for the json-grammar
         "json": [],
@@ -824,12 +836,16 @@ Let's first look at the AST-transformation-skeleton::
 This may look slightly more complicated, because per default the AST-transformations
 are defined declaratively by a transformation-table. Of course, you are free to replace
 the table-definition and the ``jsonTransformer``-instantian function alltogether by
-class like in the compilation section. (See the XML-example in the examples-subdirectory
-of the DHParser-repository.) However, filling in the table, allows to define
-the abstract-syntax-tree-transformation to be described by sequences of simple rules
-that are applied to each node that simplify and streamline the syntax-tree coming from
-the parser, which is most of the time sufficient to distill an abstract-syntax-tree
-from a concrete syntax-tree::
+class like in the compilation section. (See the
+`XML-example <https://gitlab.lrz.de/badw-it/DHParser/-/tree/master/examples/XML>`_
+in the examples-subdirectory of the DHParser-repository, where this has been done to
+realize a more complicated AST-transformation.) However, filling in the table,
+allows to define the abstract-syntax-tree-transformation to be described by sequences
+of simple rules that are applied to each node that simplify and streamline the
+syntax-tree coming from the parser, which is most of the time sufficient to distill
+an abstract-syntax-tree from a concrete syntax-tree::
+
+
 
 Language Servers
 ----------------
