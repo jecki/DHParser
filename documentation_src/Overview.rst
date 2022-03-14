@@ -218,6 +218,8 @@ compiled grammar into your script, because this saves startup time over compilin
 grammar within the script.
 
 
+.. _full_scale_DSLs:
+
 Full scale DSLs
 ---------------
 
@@ -733,6 +735,101 @@ AST::
 Compiling DSLs
 --------------
 
+As explained earlier (see :ref:_full_scale_DSLs), full scale DSL-projects
+contain a test-script the name of which starts with ``tst_...`` that generates
+and updates (if the grammar has been changed) a parser-script the name of which
+ends with ``...Parser.py``. This parser script can be used to "compile" documents
+written in the DSL described by the ebnf-Grammar in the project directory. When
+running this script yields a concrete-syntax-tree. In almost all cases, you'll
+want to adjust the ``...Parser.py`` script, so that yields the data in contained
+in the compiled document. This, however, requires further processing steps than
+just parsing. The ``...Parser.py``-script contains four different sections,
+nameley, the **Preprocesser**-, **Parser**-, **AST**- and **Compiler**-sections.
+Once this script has been generated, only the Parser-section will be updated
+automatically when running the ``tst_...``-scripts. The Parser-section should
+therefore be left untouched, because any change might be overwritten without
+warning. For the same reason the comments demarking the different sections should
+be left intact. All other sections can and - with the exceptions of the
+Preprocessor-section - usually must be edited by hand in order to allow the
+``..Parser.py``-script to return the parsed data in the desired form.
+
+Because for most typical DSL-projects, preprocessors are not needed, the
+Preprocessor-section will be not be discussed, here. The other two sections,
+AST and Compiler, contain skeletons for (different kinds of)
+tree-transformations that can be edited as will or even completely be substituted
+by custom code. All sections (including "Preprocessor") comprise a callable class
+or an "instantiation function" returning a transformation function that should be
+edited as well as a ``get_...``-function
+that returns a thread-specific instance of this class or function and a function
+that passes a call through to this thread-specific instance. Only the
+transformation-function proper needs to be touched. The other two functions are
+merely scaffolding to ensure thread-safety so that you do not have to worry
+about it, when filling in the transformation-function proper.
+
+In the case of our json-parser, the skeleton for the Compilation  looks
+like this::
+
+    class jsonCompiler(Compiler):
+        """Compiler for the abstract-syntax-tree of a json source file.
+        """
+
+        def __init__(self):
+            super(jsonCompiler, self).__init__()
+
+        def reset(self):
+            super().reset()
+            # initialize your variables here, not in the constructor!
+
+        def on_json(self, node):
+            return self.fallback_compiler(node)
+
+        ...
+
+        # def on__EOF(self, node):
+        #     return node
+
+
+    get_compiler = ThreadLocalSingletonFactory(jsonCompiler, ident=1)
+
+    def compile_json(ast):
+        return get_compiler()(ast)
+
+
+Here, the ``get_compiler()``- and ``compile_json()``-functions do not need to be
+touched, while the ``jsonCompiler``-class should be edited at will or be replaced
+by a functions that returns a transformation functions, i.e. a function that
+takes a syntax tree as input and returns an arbitrary kind of output. In this example,
+it is reasonable to expect a nested Python-data-structure as output that contains
+the data of the json-file. We'll se below, how this could be done.
+
+Let's first look at the AST-transformation-skeleton::
+
+    json_AST_transformation_table = {
+        # AST Transformations for the json-grammar
+        "json": [],
+        ...
+        "_EOF": []
+    }
+
+    def jsonTransformer() -> TransformationFunc:
+        """Creates a transformation function that does not share state with other
+        threads or processes."""
+        return partial(traverse, transformation_table=json_AST_transformation_table.copy())
+
+    get_transformer = ThreadLocalSingletonFactory(jsonTransformer, ident=1)
+
+    def transform_json(cst):
+        get_transformer()(cst)
+
+This may look slightly more complicated, because per default the AST-transformations
+are defined declaratively by a transformation-table. Of course, you are free to replace
+the table-definition and the ``jsonTransformer``-instantian function alltogether by
+class like in the compilation section. (See the XML-example in the examples-subdirectory
+of the DHParser-repository.) However, filling in the table, allows to define
+the abstract-syntax-tree-transformation to be described by sequences of simple rules
+that are applied to each node that simplify and streamline the syntax-tree coming from
+the parser, which is most of the time sufficient to distill an abstract-syntax-tree
+from a concrete syntax-tree::
 
 Language Servers
 ----------------

@@ -150,7 +150,7 @@ on every node that has one of the tag-names in the key::
 Two things are important to know about :py:func:`~transform.traverse`:
 
 1. Trees are transformed depth first. So, when a transformation is called
-   on a particular node, or rather context (see :ref:contexts_), all
+   on a particular node, or rather context (see :ref:_contexts), all
    children of that node have already been transformed.
 
 2. As any other tree transformation method in DHParser, function

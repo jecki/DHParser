@@ -17,11 +17,8 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
-dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, r'../..'))
-if scriptpath not in sys.path:
+if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
-if dhparser_parentdir not in sys.path:
-    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re
@@ -30,10 +27,10 @@ except ImportError:
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformationFunc, TransformationDict, transformation_factory, traverse, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \
+    compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
+    remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, traverse, \
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -43,12 +40,13 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, node_maker, access_thread_locals, access_presets, \
+    get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
-    has_errors, ERROR, FATAL, set_preset_value, get_preset_value
+    has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
 
 #######################################################################
@@ -57,16 +55,32 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
 #
 #######################################################################
 
-def nop(arg):
-    return arg
 
 
-def jsonPreprocessor(text):
-    return text, nop
+RE_INCLUDE = NEVER_MATCH_PATTERN
+# To capture includes, replace the NEVER_MATCH_PATTERN 
+# by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 
 
-def get_preprocessor() -> PreprocessorFunc:
-    return jsonPreprocessor
+def jsonTokenizer(original_text) -> Tuple[str, List[Error]]:
+    # Here, a function body can be filled in that adds preprocessor tokens
+    # to the source code and returns the modified source.
+    return original_text, []
+
+
+def preprocessor_factory() -> PreprocessorFunc:
+    # below, the second parameter must always be the same as jsonGrammar.COMMENT__!
+    find_next_include = gen_find_include_func(RE_INCLUDE, '(?:\\/\\/|#).*')
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    tokenizing_prep = make_preprocessor(jsonTokenizer)
+    return chain_preprocessors(include_prep, tokenizing_prep)
+
+
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+
+
+def preprocess_json(source):
+    return get_preprocessor()(source)
 
 
 #######################################################################
@@ -79,7 +93,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "69d5b7e2833481a1db43787199960580"
+    source_hash__ = "3c85c6a40315c68ca820ee1dad555efa"
     disposable__ = re.compile('_[A-Za-z]+|[A-Z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -90,25 +104,27 @@ class jsonGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     _EOF = NegativeLookahead(RegExp('.'))
-    EXP = Option(Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+')))
+    EXP = Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+'))
     DOT = Text(".")
-    FRAC = Option(Series(DOT, RegExp('[0-9]+')))
+    FRAC = Series(DOT, RegExp('[0-9]+'))
     NEG = Text("-")
     INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
     HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
     UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
     ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
     PLAIN = RegExp('[^"\\\\]+')
-    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE))
+    _CHARACTERS = OneOrMore(Alternative(PLAIN, ESCAPE))
     null = Series(Text("null"), dwsp__)
     false = Series(Text("false"), dwsp__)
     true = Series(Text("true"), dwsp__)
     _bool = Alternative(true, false)
-    number = Series(INT, FRAC, EXP, dwsp__)
-    string = Series(Text('"'), _CHARACTERS, Text('"'), dwsp__, mandatory=1)
-    array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element)))), Series(Drop(Text("]")), dwsp__), mandatory=2)
+    number = Series(INT, Option(FRAC), Option(EXP), dwsp__)
+    string = Series(Text('"'), Option(_CHARACTERS), Text('"'), dwsp__, mandatory=2)
+    _elements = Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element, mandatory=1)))
+    array = Series(Series(Drop(Text("[")), dwsp__), Option(_elements), Series(Drop(Text("]")), dwsp__), mandatory=2)
     member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
-    object = Series(Series(Drop(Text("{")), dwsp__), member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)), Series(Drop(Text("}")), dwsp__), mandatory=3)
+    _members = Series(member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)))
+    object = Series(Series(Drop(Text("{")), dwsp__), Option(_members), Series(Drop(Text("}")), dwsp__), mandatory=2)
     _element.set(Alternative(object, array, string, number, _bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
@@ -122,6 +138,11 @@ def get_grammar() -> jsonGrammar:
         resume_notices_on(grammar)
     elif get_config_value('history_tracking'):
         set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = get_grammar.python_src__
+    except AttributeError:
+        pass
     return grammar
     
 def parse_json(document, start_parser = "root_parser__", *, complete_match=True):
@@ -136,11 +157,16 @@ def parse_json(document, start_parser = "root_parser__", *, complete_match=True)
 
 json_AST_transformation_table = {
     # AST Transformations for the json-grammar
+    # "<": flatten
+    # "*": replace_by_single_child
+    # ">: []
     "json": [],
     "_element": [],
     "object": [],
+    "_members": [],
     "member": [],
     "array": [],
+    "_elements": [],
     "string": [],
     "number": [],
     "_bool": [],
@@ -158,19 +184,20 @@ json_AST_transformation_table = {
     "DOT": [],
     "EXP": [],
     "_EOF": [],
-    "*": []
 }
 
 
-def jsonTransformer() -> TransformationFunc:
+def jsonTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, transformation_table=json_AST_transformation_table.copy())
 
+
 get_transformer = ThreadLocalSingletonFactory(jsonTransformer, ident=1)
 
+
 def transform_json(cst):
-    get_transformer()(cst)
+    return get_transformer()(cst)
 
 
 #######################################################################
@@ -188,7 +215,7 @@ class jsonCompiler(Compiler):
 
     def reset(self):
         super().reset()
-        # initialize your variables here, not in the constructor!
+        self._None_check = True  # set to False if any compilation is allowed to return None        # initialize your variables here, not in the constructor!
 
     def on_json(self, node):
         return self.fallback_compiler(node)
@@ -199,10 +226,16 @@ class jsonCompiler(Compiler):
     # def on_object(self, node):
     #     return node
 
+    # def on__members(self, node):
+    #     return node
+
     # def on_member(self, node):
     #     return node
 
     # def on_array(self, node):
+    #     return node
+
+    # def on__elements(self, node):
     #     return node
 
     # def on_string(self, node):
@@ -259,6 +292,7 @@ class jsonCompiler(Compiler):
 
 get_compiler = ThreadLocalSingletonFactory(jsonCompiler, ident=1)
 
+
 def compile_json(ast):
     return get_compiler()(ast)
 
@@ -273,7 +307,7 @@ RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
 
 def compile_src(source: str) -> Tuple[Any, List[Error]]:
-    """Compiles ``source`` and returns (result, errors, ast)."""
+    """Compiles ``source`` and returns (result, errors)."""
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
                                   get_compiler())
     return result_tuple[:2]  # drop the AST at the end of the result tuple
@@ -285,6 +319,8 @@ def serialize_result(result: Any) -> Union[str, bytes]:
     """
     if isinstance(result, Node):
         return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
+    elif isinstance(result, str):
+        return result
     else:
         return repr(result)
 
@@ -295,13 +331,13 @@ def process_file(source: str, result_filename: str = '') -> str:
     written to a file with the same name as `result_filename` with an
     appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
     extension. Returns the name of the error-messages file or an empty
-    string, if no errors of warnings occurred.
+    string, if no errors or warnings occurred.
     """
     source_filename = source if is_filename(source) else ''
     result, errors = compile_src(source)
     if not has_errors(errors, FATAL):
         if os.path.abspath(source_filename) != os.path.abspath(result_filename):
-            with open(result_filename, 'w') as f:
+            with open(result_filename, 'w', encoding='utf-8') as f:
                 f.write(serialize_result(result))
         else:
             errors.append(Error('Source and destination have the same name "%s"!'
@@ -309,8 +345,8 @@ def process_file(source: str, result_filename: str = '') -> str:
     if errors:
         err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
         err_filename = os.path.splitext(result_filename)[0] + err_ext
-        with open(err_filename, 'w') as f:
-            f.write('\n'.join(canonical_error_strings(errors, source_filename)))
+        with open(err_filename, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(canonical_error_strings(errors)))
         return err_filename
     return ''
 
@@ -352,12 +388,13 @@ def batch_process(file_names: List[str], out_dir: str,
     return error_list
 
 
-if __name__ == "__main__":
+def main():
     # recompile grammar if needed
-    if __file__.endswith('Parser.py'):
-        grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    script_path = os.path.abspath(__file__)
+    if script_path.endswith('Parser.py'):
+        grammar_path = script_path.replace('Parser.py', '.ebnf')
     else:
-        grammar_path = os.path.splitext(__file__)[0] + '.ebnf'
+        grammar_path = os.path.splitext(script_path)[0] + '.ebnf'
     parser_update = False
 
     def notify():
@@ -366,9 +403,9 @@ if __name__ == "__main__":
         print('recompiling ' + grammar_path)
 
     if os.path.exists(grammar_path) and os.path.isfile(grammar_path):
-        if not recompile_grammar(grammar_path, force=False, notify=notify):
+        if not recompile_grammar(grammar_path, script_path, force=False, notify=notify):
             error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
-            with open(error_file, encoding="utf-8") as f:
+            with open(error_file, 'r', encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
         elif parser_update:
@@ -384,14 +421,21 @@ if __name__ == "__main__":
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')
-    parser.add_argument('-x', '--xml', action='store_const', const='xml',
-                        help='Store result as XML instead of S-expression')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
-                        help='Sun batch jobs in a single thread (recommended only for debugging)')
+                        help='Run batch jobs in a single thread (recommended only for debugging)')
+    outformat = parser.add_mutually_exclusive_group()
+    outformat.add_argument('-x', '--xml', action='store_const', const='xml', 
+                           help='Format result as XML')
+    outformat.add_argument('-s', '--sxpr', action='store_const', const='sxpr',
+                           help='Format result as S-expression')
+    outformat.add_argument('-t', '--tree', action='store_const', const='tree',
+                           help='Format result as indented tree')
+    outformat.add_argument('-j', '--json', action='store_const', const='json',
+                           help='Format result as JSON')
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -405,10 +449,15 @@ if __name__ == "__main__":
 
     if args.debug is not None:
         log_dir = 'LOGS'
-        set_config_value('history_tracking', True)
-        set_config_value('resume_notices', True)
-        set_config_value('log_syntax_trees', set(['cst', 'ast']))  # don't use a set literal, here
+        access_presets()
+        set_preset_value('history_tracking', True)
+        set_preset_value('resume_notices', True)
+        set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
+        finalize_presets()
     start_logging(log_dir)
+
+    if args.singlethread:
+        set_config_value('batch_processing_parallelization', False)
 
     if args.xml:
         RESULT_FILE_EXTENSION = '.xml'
@@ -450,5 +499,13 @@ if __name__ == "__main__":
             if has_errors(errors, ERROR):
                 sys.exit(1)
 
-        print(result.serialize(how='default' if args.xml is None else 'xml')
-              if isinstance(result, Node) else result)
+        if args.xml:  outfmt = 'xml'
+        elif args.sxpr:  outfmt = 'sxpr'
+        elif args.tree:  outfmt = 'tree'
+        elif args.json:  outfmt = 'json'
+        else:  outfmt = 'default'
+        print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+
+
+if __name__ == "__main__":
+    main()
