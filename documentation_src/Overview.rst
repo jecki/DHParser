@@ -353,6 +353,8 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
    with a semicolon ``;`` as demanded by the ISO-norm for EBNF :-)
 
 
+.. _ast_building
+
 Declarative AST-building
 ------------------------
 
@@ -833,17 +835,60 @@ Let's first look at the AST-transformation-skeleton::
     def transform_json(cst):
         get_transformer()(cst)
 
-This may look slightly more complicated, because per default the AST-transformations
+This may look slightly more complicated, because - as explained earlier in
+:py:ref:`_ast_building` - per default the AST-transformations
 are defined declaratively by a transformation-table. Of course, you are free to replace
-the table-definition and the ``jsonTransformer``-instantian function alltogether by
-class like in the compilation section. (See the
+the table-definition and the ``jsonTransformer``-instantiation function alltogether by
+a class like in the compilation section. (See the
 `XML-example <https://gitlab.lrz.de/badw-it/DHParser/-/tree/master/examples/XML>`_
 in the examples-subdirectory of the DHParser-repository, where this has been done to
 realize a more complicated AST-transformation.) However, filling in the table,
 allows to define the abstract-syntax-tree-transformation to be described by sequences
-of simple rules that are applied to each node that simplify and streamline the
-syntax-tree coming from the parser, which is most of the time sufficient to distill
-an abstract-syntax-tree from a concrete syntax-tree::
+of simple rules that are applied to each node. Most of the time this suffices to distill
+an abstract-syntax-tree from a concrete syntax-tree. Therefore, we rewrite the
+table as follows::
+
+    json_AST_transformation_table = {
+        'string': [remove_brackets, reduce_single_child],
+        'number': [collapse]
+    }
+
+Just like shown above (:py:ref:`_ast_building`) we use the :py:func:`transform.remove_brackets`-transformation
+to get rid of the quotation marks surrounding string elements and, other than above, we also ad the
+:py:func:`transform.reduce_single_child` which eliminates a single dangling leaf-node.
+(The complement to :py:func:`transform.reduce_single_child` is the function
+:py:func:`transform.replace_by_single_child` which removes the parent node of a singe dangeling leaf-node.)
+For the ``number``-primitive we use the ``collapse``-transformation which replaces any substructure of
+child-nodes by its concatenated string-content.
+
+A great way to check if an AST-transformation works as expected is by adding an asterix "*" to the name
+of match-test. Usually, the test runner only outputs the abstract-syntax-tree of match-tests in the
+test-report. However, if marked with an asterix, the concrete syntax tree will be printed, too. So,
+adding this marker to a test within an ".ini"-file in the "tests_grammar"-subdirectory, say::
+
+    [match:number]
+    M1*: "-2.0E-10"
+
+yields the following in results in the respective markdown-file in "tests_grammar/REPORT"-subdirectory::
+
+    Test of parser: "number"
+    ========================
+
+
+    Match-test "M1*"
+    -----------------
+
+    ### Test-code:
+
+        -2.0E-10
+
+    ### CST
+
+        (number (INT (NEG "-") (:RegExp "2")) (FRAC (DOT ".") (:RegExp "0")) (EXP (:Text "E") (:Text "-") (:RegExp "10")))
+
+    ### AST
+
+        (number "-2.0E-10")
 
 
 

@@ -12,7 +12,7 @@
 @ comment     = /(?:\/\/|#).*/  # comments range from a '#' odr '//' sign to the end of the line
 @ ignorecase  = False           # literals and regular expressions are case-sensitive
 @ drop        = whitespace, strings  # drop tokens and whitespace early
-@ disposable  = /_[A-Za-z]+|[A-Z]+/
+@ disposable  = /_[A-Za-z]+/
 
 
 #######################################################################

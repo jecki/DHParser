@@ -93,8 +93,8 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "3c85c6a40315c68ca820ee1dad555efa"
-    disposable__ = re.compile('_[A-Za-z]+|[A-Z]+')
+    source_hash__ = "cc99ae674f394899cbfa7e4aadd6202e"
+    disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?:\/\/|#).*'
@@ -167,8 +167,8 @@ json_AST_transformation_table = {
     "member": [],
     "array": [],
     "_elements": [],
-    "string": [],
-    "number": [],
+    "string": [remove_brackets, reduce_single_child],
+    "number": [collapse],
     "_bool": [],
     "true": [],
     "false": [],
