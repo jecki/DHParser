@@ -1051,6 +1051,9 @@ this fashion, we'd call ``python jsonCompiler.py test.json`` from the command li
 would add ``import jsonCompiler`` or ``from jsonCompiler import compile_src`` at the beginning
 of a client script.
 
+In case you make use of the auto-generated Server-script (see below), you should also adjust
+any import-statements that refer to the parser-script, so that they refer to the compile-script
+instead.
 
 Language Servers
 ----------------
