@@ -261,12 +261,14 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
 
     #:  atomic expressions types
 
-    _CHARACTERS = { PLAIN | ESCAPE }
+    # string components
+    _CHARACTERS = { PLAIN | ESCAPE | UNICODE }
     PLAIN       = /[^"\\]+/
-    ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+    ESCAPE      = /\\[\/bnrt\\"]/
     UNICODE     = "\u" HEX HEX
     HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
+    # number components
     INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
     FRAC        = `.` /[0-9]+/
     EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
@@ -772,7 +774,9 @@ merely scaffolding to ensure thread-safety so that you do not have to worry
 about it, when filling in the transformation-function proper.
 
 In the case of our json-parser, the skeleton for the Compilation looks
-like this::
+like this:
+
+.. code-block:: python
 
     #######################################################################
     #
@@ -816,7 +820,9 @@ the data of the json-file. We'll se below, how this could be done.
 Streamlining the abstract-syntax-tree (AST)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let's first look at the AST-transformation-skeleton::
+Let's first look at the AST-transformation-skeleton:
+
+.. code-block:: python
 
     #######################################################################
     #
@@ -852,7 +858,9 @@ realize a more complicated AST-transformation.) However, filling in the table,
 allows to define the abstract-syntax-tree-transformation to be described by sequences
 of simple rules that are applied to each node. Most of the time this suffices to distill
 an abstract-syntax-tree from a concrete syntax-tree. Therefore, we rewrite the
-table as follows::
+table as follows:
+
+.. code-block:: python
 
     json_AST_transformation_table = {
         'string': [remove_brackets, reduce_single_child],
@@ -866,6 +874,15 @@ to get rid of the quotation marks surrounding string elements and, other than ab
 :py:func:`transform.replace_by_single_child` which removes the parent node of a singe dangeling leaf-node.)
 For the ``number``-primitive we use the ``collapse``-transformation which replaces any substructure of
 child-nodes by its concatenated string-content.
+
+.. note::
+    The ``collapse``-transformation is a bit like a bulldozer. You loose all information about the
+    substructure of the element to which it is applied.
+
+    In this case it is not possible, any more, to
+    determine whether a number is an integer or a floating point number by looking for the
+    FRAC- or EXP-nodes in the syntax-tree of the number element in the subsequent compilation
+    stage.
 
 A great way to check if an AST-transformation works as expected is by adding an asterix "*" to the name
 of match-test. Usually, the test runner only outputs the abstract-syntax-tree of match-tests in the
@@ -909,7 +926,131 @@ However, this is still not quite what we would expect from a JSON-parser. What w
 be a JSON-parser (or "compiler" for that matter) that returns a nested Python-data-structure
 that contains the data stored in a JSON-file - and not merely the concrete or abstract syntax-tree
 of that file. For this purpose, we need to fill in the Compiler-class-skeleton in the compiler-sections
-of the generated Parser script.
+of the generated Parser script:
+
+.. code-block:: python
+
+    class jsonCompiler(Compiler):
+        def __init__(self):
+            super(jsonCompiler, self).__init__()
+
+        def reset(self):
+            super().reset()
+            self._None_check = False  # set to False if any compilation is allowed to return None
+            # initialize your variables here, not in the constructor!
+
+        def on_json(self, node):
+            assert len(node.children) == 1
+            return self.compile(node[0])
+
+        def on_object(self, node):
+            return { k: v for k, v in (self.compile(child) for child in node)}
+
+        def on_member(self, node):
+            assert len(node.children) == 2
+            return (self.compile(node[0]), self.compile(node[1]))
+
+        def on_array(self, node):
+            return [self.compile(child) for child in node]
+
+        def on_string(self, node):
+            if node.children:
+                return ''.join(self.compile(child) for child in node)
+            else:
+                return node.content
+
+        def on_number(self, node):
+            num_str = node.content
+            if num_str.find('.') >= 0 or num_str.upper().find('E') >= 0:
+                return float(num_str)
+            else:
+                return int(num_str)
+
+        def on_true(self, node):
+            return True
+
+        def on_false(self, node):
+            return False
+
+        def on_null(self, node):
+            return None
+
+        def on_PLAIN(self, node):
+            return node.content
+
+        def on_ESCAPE(self, node):
+            assert len(node.content) == 2
+            code = node.content[1]
+            return {
+                '/': '/',
+                '\\': '\\',
+                '"': '"',
+                'b': '\b',
+                'f': '\f',
+                'n': '\n',
+                'r': '\r',
+                't': '\t'
+            }[code]
+
+        def on_UNICODE(self, node):
+            try:
+                return chr(int(node.content, 16))
+            except ValueError:
+                self.tree.new_error(node, f'Illegal unicode character: {node.content}')
+                return '?'
+
+The code should be self-explanatory: For each node-type (or tag name) that can occur in
+the abstract-syntax-tree the associated visitor-method converts the sub-tree to a Python
+data-structure which is returned to the calling method.
+
+After having added this compiler code to the
+Parser-skript, calling it with our trivial test-data set yields the expected Python-dictionary:
+``{'one': 1, 'two': 2}`` instead of the syntax-tree.
+
+Now, since our JSON-Parser is able to produce Python-objects from JSON-files, we will probably
+prefer to call it from Python in order to receive the data rather than running it on the command
+line. Instead of calling it, the generated parser-script can simply be imported as a module.
+The generated script contains a ``compile_src()``-function which allows to compile a DSL-string
+from within a python programm by running all four stages (preprocessing, parsing, AST-transformation
+and compiling) in sequence on the source string.
+
+.. code-block:: python
+
+    import jsonParser
+
+    json_string = '{"one": 1, "two":2}'
+    json_data, errors = jsonParser.compile_src(json_string)
+    assert len(errors) == 0
+    assert json_data == {'one': 1, 'two': 2}
+
+It is as simple as that!
+
+Splitting the Parser-script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For most real-world DSLs the compilation stage will be more complext than in our JSON-example. Also,
+there might be more than one transformation or compilation stage after the AST-transformation. Adding
+all this to the autogenerated parser-script would leave us with a rather large and unwieldy script.
+In order to avoid this, it is advisable to split the parser-script after the AST-transformation into a
+parser-script and a compiler-script while leaving its name (ending with "Parser.py") for the first part,
+i.e. the parser-script. DHParser is then still able to update the code in the parser-script in case
+the grammar hast changed. The second part should be given a different name, say "...Compiler.py".
+
+A simple import statement at the beginning of the compiler script suffices to connect both parts.
+In our example of the JSON-parser one would just add the following line at the beginning of
+the "jsonCompiler.py" script::
+
+    from jsonParser import get_preprocessor, get_grammar, get_transformer
+
+and everything works just the same, only that from now on the compiler-script takes the role
+of the parser script from the perspective of any client using the JSON-parser.
+This means that from now on, in order to use the parser/compiler either from the
+command line or from Python code, the second
+part, i.e. the compiler-script must be called or imported. Thus, if we split our JSON-parser in
+this fashion, we'd call ``python jsonCompiler.py test.json`` from the command line, and we
+would add ``import jsonCompiler`` or ``from jsonCompiler import compile_src`` at the beginning
+of a client script.
+
 
 Language Servers
 ----------------

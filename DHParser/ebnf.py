@@ -1370,7 +1370,7 @@ class EBNFCompiler(Compiler):
                     '',
                     '    def reset(self):',
                     '        super().reset()',
-                    '        self._None_check = True  # set to False if any compilation is allowed to return None'
+                    '        self._None_check = True  # set to False if any compilation is allowed to return None',
                     '        # initialize your variables here, not in the constructor!',
                     '']
         for name in self.rules:

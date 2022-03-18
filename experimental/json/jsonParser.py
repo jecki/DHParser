@@ -93,7 +93,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "cc99ae674f394899cbfa7e4aadd6202e"
+    source_hash__ = "2d8d8945a44f1bdb4e3f9fd72f2ecf4d"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -111,9 +111,9 @@ class jsonGrammar(Grammar):
     INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
     HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
     UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
-    ESCAPE = Alternative(RegExp('\\\\[/bnrt\\\\]'), UNICODE)
+    ESCAPE = RegExp('\\\\[/bnrt\\\\"]')
     PLAIN = RegExp('[^"\\\\]+')
-    _CHARACTERS = OneOrMore(Alternative(PLAIN, ESCAPE))
+    _CHARACTERS = OneOrMore(Alternative(PLAIN, ESCAPE, UNICODE))
     null = Series(Text("null"), dwsp__)
     false = Series(Text("false"), dwsp__)
     true = Series(Text("true"), dwsp__)
@@ -215,79 +215,68 @@ class jsonCompiler(Compiler):
 
     def reset(self):
         super().reset()
-        self._None_check = True  # set to False if any compilation is allowed to return None        # initialize your variables here, not in the constructor!
+        self._None_check = False  # set to False if any compilation is allowed to return None
+        # initialize your variables here, not in the constructor!
 
     def on_json(self, node):
-        return self.fallback_compiler(node)
+        assert len(node.children) == 1
+        return self.compile(node[0])
 
-    # def on__element(self, node):
-    #     return node
+    def on_object(self, node):
+        return { k: v for k, v in (self.compile(child) for child in node)}
 
-    # def on_object(self, node):
-    #     return node
+    def on_member(self, node):
+        assert len(node.children) == 2
+        return (self.compile(node[0]), self.compile(node[1]))
 
-    # def on__members(self, node):
-    #     return node
+    def on_array(self, node):
+        return [self.compile(child) for child in node]
 
-    # def on_member(self, node):
-    #     return node
+    def on_string(self, node):
+        if node.children:
+            return ''.join(self.compile(child) for child in node)
+        else:
+            return node.content
 
-    # def on_array(self, node):
-    #     return node
+    def on_number(self, node):
+        num_str = node.content
+        if num_str.find('.') >= 0 or num_str.upper().find('E') >= 0:
+            return float(num_str)
+        else:
+            return int(num_str)
 
-    # def on__elements(self, node):
-    #     return node
+    def on_true(self, node):
+        return True
 
-    # def on_string(self, node):
-    #     return node
+    def on_false(self, node):
+        return False
 
-    # def on_number(self, node):
-    #     return node
+    def on_null(self, node):
+        return None
 
-    # def on__bool(self, node):
-    #     return node
+    def on_PLAIN(self, node):
+        return node.content
 
-    # def on_true(self, node):
-    #     return node
+    def on_ESCAPE(self, node):
+        assert len(node.content) == 2
+        code = node.content[1]
+        return {
+            '/': '/',
+            '\\': '\\',
+            '"': '"',
+            'b': '\b',
+            'f': '\f',
+            'n': '\n',
+            'r': '\r',
+            't': '\t'
+        }[code]
 
-    # def on_false(self, node):
-    #     return node
-
-    # def on_null(self, node):
-    #     return node
-
-    # def on__CHARACTERS(self, node):
-    #     return node
-
-    # def on_PLAIN(self, node):
-    #     return node
-
-    # def on_ESCAPE(self, node):
-    #     return node
-
-    # def on_UNICODE(self, node):
-    #     return node
-
-    # def on_HEX(self, node):
-    #     return node
-
-    # def on_INT(self, node):
-    #     return node
-
-    # def on_NEG(self, node):
-    #     return node
-
-    # def on_FRAC(self, node):
-    #     return node
-
-    # def on_DOT(self, node):
-    #     return node
-
-    # def on_EXP(self, node):
-    #     return node
-
-    # def on__EOF(self, node):
-    #     return node
+    def on_UNICODE(self, node):
+        try:
+            return chr(int(node.content, 16))
+        except ValueError:
+            self.tree.new_error(node, f'Illegal unicode character: {node.content}')
+            return '?'
 
 
 get_compiler = ThreadLocalSingletonFactory(jsonCompiler, ident=1)

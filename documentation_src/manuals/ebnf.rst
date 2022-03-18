@@ -185,7 +185,7 @@ captures the first json-array within the syntax-tree::
 
 The nodes of the syntax-tree carry the names of the production rules
 by which they have been generated. Nodes, that have been created by
-components of a prduction receive the name of of the parser-type
+components of a production receive the name of of the parser-type
 that has created the node (see :py:mod:`parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
 because they lack the name of a proper grammatical component.
