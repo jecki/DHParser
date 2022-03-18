@@ -737,6 +737,9 @@ AST::
 Compiling DSLs
 --------------
 
+The auto-generated parser-script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 As explained earlier (see :ref:_full_scale_DSLs), full scale DSL-projects
 contain a test-script the name of which starts with ``tst_...`` that generates
 and updates (if the grammar has been changed) a parser-script the name of which
@@ -768,7 +771,7 @@ transformation-function proper needs to be touched. The other two functions are
 merely scaffolding to ensure thread-safety so that you do not have to worry
 about it, when filling in the transformation-function proper.
 
-In the case of our json-parser, the skeleton for the Compilation  looks
+In the case of our json-parser, the skeleton for the Compilation looks
 like this::
 
     #######################################################################
@@ -809,6 +812,9 @@ by a functions that returns a transformation functions, i.e. a function that
 takes a syntax tree as input and returns an arbitrary kind of output. In this example,
 it is reasonable to expect a nested Python-data-structure as output that contains
 the data of the json-file. We'll se below, how this could be done.
+
+Streamlining the abstract-syntax-tree (AST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Let's first look at the AST-transformation-skeleton::
 
@@ -890,7 +896,20 @@ yields the following in results in the respective markdown-file in "tests_gramma
 
         (number "-2.0E-10")
 
+The transformation rules specified above already greatly simplify the AST. For
+example, compilin our simple test data set ``{ "one": 1, "two": 2 }`` now yields::
 
+    (json (object (member (string "one") (number "1")) (member (string "two") (number "2"))))
+
+
+Compiling the AST to data
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+However, this is still not quite what we would expect from a JSON-parser. What we'd like would
+be a JSON-parser (or "compiler" for that matter) that returns a nested Python-data-structure
+that contains the data stored in a JSON-file - and not merely the concrete or abstract syntax-tree
+of that file. For this purpose, we need to fill in the Compiler-class-skeleton in the compiler-sections
+of the generated Parser script.
 
 Language Servers
 ----------------

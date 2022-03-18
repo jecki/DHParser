@@ -46,6 +46,8 @@ def build(setup_kwargs={}):
         else:
             dhparserdir = ''
 
+        print("assuming DHParser-directory: ", dhparserdir)
+
         save_cwd = os.getcwd()
         os.chdir(dhparserdir)
 
