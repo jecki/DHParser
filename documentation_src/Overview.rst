@@ -1058,6 +1058,84 @@ instead.
 Language Servers
 ----------------
 
+DHParser supports running parsers as local servers and includes includes boilerplate code for
+building editor support for your domain specific language via the `language server protocol`_.
+After creating a new project and running the test-runner script in the project directory, you
+will also find a "...Server.py"-script next to the "...Parser.py" in the project directory.
+The server-script can be used in a similar way as the parser-script. However, the server script
+will pass on any parsing requests to a server running in the background. The server will
+automatically be started when calling the script for the first time::
+
+    $ python jsonServer.py test.json
+    Starting server on 127.0.0.1:8890
+    [{"one":1,"two":2},[]]
+
+Other than the plain parser-script, the result the server returns is always a list of
+the result propper and any errors or warnings that haven been generated on the way.
+
+Running the parser in server-mode as several advantages:
+
+1. Once the server is running, there are no startup times any more. Not the least
+   because of the compilation of the (potentially very many) regular expressions
+   within a parser, the startup times can otherwise be considerable for complex
+   grammars.
+
+2. In particular, just-in-time compilers like `pypy`_ that typically trade startup
+   time for run-time speed, can profit in particular from the server mode.
+
+3. Serveral parsing/compilation can be run in parrallel and will automatically
+   use different processor cores. However, when calling the parser-script in
+
+   batch-mode by adding more than one filename to the command line or calling
+   it with the name of a cirectory containing source files, it will also try
+   to exploit multiple processor cores.
+
+4. Last not least, the server script can be extended to provide a language server
+   for an integrated development environment or programm-editor. In this
+   case the script would usually be startet from within the editor and with
+   the "--stream"-option which will allow connect to the server via streams
+   rather than a tcp port and address.
+
+In order to stop a running server, the server-script should be called with
+the "--stoperver"-option::
+
+    $ python jsonServer.py --stopserver
+    Server on 127.0.0.1:8890 stopped
+
+The language server protocol support that DHParser offers differs in several
+respects from the popular `pygls`_-module::
+
+* DHParser uses the more lightwight `TypedDict`_ -dictionaries instead
+  `pydantic`_-modules. The TypedDict-definitions in the
+  DHParser.lsp-module are auto-generated from the `language server protocol specification`_
+  with `ts2python`_, a package that has itself been build with DHParser.
+
+* The DHParser.server-module also provides some boilerplate code to support
+  parallel execution via multiprocessing.
+
+But, of course `pygls`_ can also be used together with DHParser, if you prefer
+`pygls`_ or already have some experience with this module.
+
+
 Performance
 -----------
 
+Maximun performance has never been a design goal of DHParser. Reliability and
+testability have been rather more important goals. This said, you can expect
+DHParser to have roundabout the same performance as other python parsers that
+are equally powerfull, i.e. DHParser is slower but more powerful than
+LALR-parsers and about as fast as the about equally powerful Earley-parsers.
+
+DHParser is a packrat-parser based on parsing expression grammars, that is,
+it uses memoizing to cache results, which allows it run in linear time. There
+will be no nasty runtime surprises as they can happen with regular-expression
+engines or uncached recursive-descent-parsers.
+
+
+.. _`language server protocol`: https://microsoft.github.io/language-server-protocol/
+.. _`language server protocol specification`: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
+.. _`pypy`: https://www.pypy.org/
+.. _`pygls`: https://github.com/openlawlibrary/pygls
+.. _`TypedDict`: https://peps.python.org/pep-0589/
+.. _`pydantic`: https://pydantic-docs.helpmanual.io/
+.. _`ts2python`: https://github.com/jecki/ts2python
