@@ -198,7 +198,7 @@ instead of compiling an EBNF-grammar first::
 
 There are few caveats when defining parsers directly within Python-code:
 Any parser that is referred to in other parsers must be assigned to a variable. Unless they are
-disposable (see :py:ref`~ebnf.simlpifying_syntax_trees`), they also must be assigned their name
+disposable (see :py:ref`~ebnf.simlpifying_syntax_trees`), their name must be assigned
 explicitly with the :py:meth:`~parse.Parser.name`-method. Forward-declarations always need to be
 named explicitly, even if the declared parser is considered disposable.
 
@@ -1117,25 +1117,60 @@ But, of course `pygls`_ can also be used together with DHParser, if you prefer
 `pygls`_ or already have some experience with this module.
 
 
-Performance
------------
+Performance optimization
+------------------------
 
-Maximun performance has never been a design goal of DHParser. Reliability and
-testability have been rather more important goals. This said, you can expect
+The most important design goals of DHParser have been reliability, flexibility and
+testability. There are some performance optimizations, most notably the early
+tree reduction during the parsing stage that is controlled with the
+``@drop``  and  ``@disposable``-directives (see :py:ref`~ebnf.simlpifying_syntax_trees`)
+and type-hint modules (.pxd) for
+compiling DHParser with `Cython`_. However, given that the whole project has been
+realized with Python, rather than a compiled language like `nim`_, top-performance
+has not been the most import design goal.
+
+This said, you can expect
 DHParser to have roundabout the same performance as other python parsers that
-are equally powerfull, i.e. DHParser is slower but more powerful than
+are equally powerful, i.e. DHParser is slower but more powerful than
 LALR-parsers and about as fast as the about equally powerful Earley-parsers.
 
-DHParser is a packrat-parser based on parsing expression grammars, that is,
-it uses memoizing to cache results, which allows it run in linear time. There
-will be no nasty runtime surprises as they can happen with regular-expression
-engines or uncached recursive-descent-parsers.
+If you feel that DHParser's performance is too slow, you can increase the
+roughly a factor of 2 by compiling with `Cython`_. In order to do so you
+need to have a c-ompiler installed on your system (gcc, clang on Linux
+or MacOs and msvc on Windows will all do. You can then install the
+`Cython`_-package with::
+
+    $ python -m pip install cython
+
+Compiling DHParser is simple. You just need to call the ``cythonize_dhparser.py``-script
+in the ``scripts``-subdirectory of DHParsers-installation-driectory::
+
+    $ python DHParser/scripts/dhparser_cythonize.py
+
+DHParser can also be run with any recent version of `pypy3`_. However, my own
+experience so far has been that while running DHParser with pypy over one and the
+same dataset over and over again produces a most impressive speedup, in real-world
+applications of DHParser (e.g. running a whole fascicle of different(!) medieval latin
+dictionary articles through DHParser in batch-mode), pypy is a even bit slower
+than the python-interpreter. So, presently, I'd recommend staying with `Cython`_ when
+trying to speed-up DHParser.
+
+DHParser uses a variant of a recursive descent parser, a so called "pack-rat-parser",
+which means that it employs memoizing to cache results. It has been proven that this
+kind of parser runs in linear time, although I am not sure if the proof also accounts for
+the "seed and grow"-algorithm that has been implemented to support left-recursive grammars.
+Other than that, you can rest assured that there will be no nasty runtime surprises
+as they can happen with regular-expression engines or uncached recursive-descent-parsers.
+
 
 
 .. _`language server protocol`: https://microsoft.github.io/language-server-protocol/
 .. _`language server protocol specification`: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
 .. _`pypy`: https://www.pypy.org/
+.. _`pypy3`: https://www.pypy.org/
 .. _`pygls`: https://github.com/openlawlibrary/pygls
 .. _`TypedDict`: https://peps.python.org/pep-0589/
 .. _`pydantic`: https://pydantic-docs.helpmanual.io/
 .. _`ts2python`: https://github.com/jecki/ts2python
+.. _`nim`: https://nim-lang.org/
+.. _`Cython`: https://cython.org/

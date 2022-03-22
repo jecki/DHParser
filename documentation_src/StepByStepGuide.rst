@@ -36,7 +36,7 @@ and type::
     $ python --version
     Python 3.7.7
 
-If ``Python`` plus a version number greater or equal 3.5.3 does not appear, you'll
+If ``Python`` plus a version number greater or equal 3.7 does not appear, you'll
 need to install Python from `python.org <https://python.org>`_.
 
 

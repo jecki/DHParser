@@ -249,9 +249,27 @@ and most trivial installment of the visitor-pattern in DHParser.)
 The Transformation Table
 ------------------------
 
-(You could think of the transformation table as a simple "embedded" or
+As shown by the examples earlier, the transformation table is a "smart" dictionary
+that maps tag-names to sequences of transformation functions. It is called "smart",
+because it allows to list serveral tag names within one and the same dictionary
+keys, thus assigning each one of them to one and the same sequences of transformation
+functions. (You could think of the transformation table as a simple "embedded" or
 `internal DSL (Domain Specific Languag) <https://martinfowler.com/bliki/DomainSpecificLanguage.html>`_
-realized within Python, if you liked.)
+realized within Python, if you liked.) This is quite useful, because it allows to cover similar idioms used at
+different places of a grammar (and with different tag-names) with the same sequence
+of transformation functions, without having to type the same list of functions
+over and over again.
+
+The transformation table has three special keys: ``<``, ``>``, ``*``. The asterix ``*`` is a joker,
+which means that the sequence of transformations assigned to the asterix will be called for
+every node, the tag-name of which does not occur in the table. The ``<``-key marks a sequence of functions
+that will be executed before any of the individual sequences assigned to particular tag-names (including the
+joker ``*``) will be executed. The ``>``-key takes a transformation-sequence that will be executed after
+every tag-specific transformation-sequence has been processed. Because of the time-penalty incurred, the
+``<``- and ``>``-keys should only be used when really needed. Most of the time the desired result can
+be achieved more effectively with the ``@disposable``- and ``@drop``-directives at the
+parsing-stage, already (see :ref:`simplifying_syntax_trees`)).
+
 
 
 Transformation Functions
