@@ -1170,8 +1170,10 @@ class Grammar:
                 is running.
 
         unconnected_parsers__: A list of parsers that is not connected to the
-                root parser. This list of parsers is collected during instantiation
-                from the ``resume_rules__`` and ``skip_rules__``-data.
+                root parser. This list of parsers is collected during instantiation.
+
+        resume_parsers__: A list of parsers that appear either in a resume-rule
+                or a skip-rule. This is a subset of ``unconnected_parsers__``
 
         _dirty_flag__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -1475,6 +1477,7 @@ class Grammar:
         self.ff_parser__ = self.root_parser__
         self.root_parser__.apply(lambda ctx: ctx[-1].reset())
         self.unconnected_parsers__: List[Parser] = []
+        self.resume_parsers__: List[Parser] = []
         resume_lists = []
         if hasattr(self, 'resume_rules__'):
             resume_lists.extend(self.resume_rules__.values())
@@ -1486,6 +1489,7 @@ class Grammar:
                     l[i] = self[l[i].pname]
                     if l[i] not in root_connected:
                         self.unconnected_parsers__.append(l[i])
+                        self.resume_parsers__.append(l[i])
         for name in self.__class__.parser_names__:
             parser = self[name]
             if parser not in root_connected:
@@ -1645,7 +1649,7 @@ class Grammar:
                 for p in self.all_parsers__:  p.cycle_detection = set()
             self._reset__()
             parser.apply(reset_parser)
-            for p in self.unconnected_parsers__:  p.apply(reset_parser)
+            for p in self.resume_parsers__:  p.apply(reset_parser)
         else:
             self._dirty_flag__ = True
 
