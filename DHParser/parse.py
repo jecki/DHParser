@@ -1864,7 +1864,7 @@ class Grammar:
         ebnf.append('')
         return '\n'.join(ebnf)
 
-
+    # TODO: Check for performance problems!!!
     def associated_symbol__(self, parser: Parser) -> Parser:
         r"""Returns the closest named parser that contains `parser`.
         If `parser` is a named parser itself, `parser` is returned.
