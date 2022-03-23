@@ -513,9 +513,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if self._children else len(self._result))
 
     def __len__(self):
-        raise AssertionError
-        return (sum(child.__len__() for child in self._children)
-                if self._children else len(self._result))
+        raise AssertionError(
+            "len() on Node-objects would be too mbiguous! Please use either "
+            "node.strlen() to query the string-length of the contained text, "
+            "or len(node.children) to query the number of child nodes.")
 
     def __bool__(self):
         """Returns the bool value of a node, which is always True. The reason
