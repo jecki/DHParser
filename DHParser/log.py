@@ -452,7 +452,7 @@ class HistoryRecord:
 
     @property
     def remaining(self) -> int:
-        return len(self.text) - len(self.node)
+        return len(self.text) - self.node.strlen()
 
     @staticmethod
     def last_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:

@@ -340,7 +340,7 @@ class TestFlowControl:
         assert cst.error_flag, cst.as_sxpr()
 
         cst = parser(self.t2, parser['ws'], complete_match=False)
-        assert cst.did_match() and len(cst) == 0 and not cst.errors
+        assert cst.did_match() and cst.strlen() == 0 and not cst.errors
         cst = parser(self.t2, parser['word'], complete_match=False)
         assert cst.did_match() and cst.content == "All" and not cst.errors
         cst = parser(self.t2, parser['end'], complete_match=False)

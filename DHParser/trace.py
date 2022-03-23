@@ -118,7 +118,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             # TODO: get the call stack from when the error occurred, here
             nd = fe.node
             grammar.history__.append(
-                HistoryRecord(grammar.call_stack__, nd, fe.rest[len(nd):], lc, [fe.error]))
+                HistoryRecord(grammar.call_stack__, nd, fe.rest[nd.strlen():], lc, [fe.error]))
         grammar.call_stack__.pop()
         raise pe
 

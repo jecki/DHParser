@@ -1672,7 +1672,7 @@ def insert(context: TreeContext, position: PositionType, node_factory: Callable)
     pos_tuple = sorted(tuple((p if p >= 0 else (p + L)) for p in pos_tuple), reverse=True)
     for n in pos_tuple:
         n = min(L, n)
-        text_pos = (children[n - 1].pos + len(children[n - 1])) if n > 0 else node.pos
+        text_pos = (children[n - 1].pos + children[n - 1].strlen()) if n > 0 else node.pos
         children.insert(n, node_factory().with_pos(text_pos))
     node.result = tuple(children)
 

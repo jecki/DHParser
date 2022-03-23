@@ -285,7 +285,7 @@ class TestNode:
         n2 = Node('C', '456')
         root = Node('root', (nd, n1, n2))
         root.with_pos(0)
-        assert len(root) == root.children[-1].pos + len(root.children[-1])
+        assert root.strlen() == root.children[-1].pos + root.children[-1].strlen()
 
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
@@ -472,11 +472,11 @@ class TestNode:
     def test_len_and_pos(self):
         """Test len-property of Node."""
         nd1 = Node(ZOMBIE_TAG, "123")
-        assert len(nd1) == 3, "Expected Node.len == 3, got %i" % len(nd1)
+        assert nd1.strlen() == 3, "Expected Node.len == 3, got %i" % len(nd1)
         nd2 = Node(ZOMBIE_TAG, "456")
-        assert len(nd2) == 3, "Expected Node.len == 3, got %i" % len(nd2)
+        assert nd2.strlen() == 3, "Expected Node.len == 3, got %i" % len(nd2)
         nd = Node(ZOMBIE_TAG, (nd1, nd2))
-        assert len(nd) == 6, "Expected Node.len == 6, got %i" % len(nd)
+        assert nd.strlen() == 6, "Expected Node.len == 6, got %i" % len(nd)
         nd.with_pos(0)
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
