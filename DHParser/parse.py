@@ -758,12 +758,16 @@ class Parser:
         calls is the method `apply()` without underscore!
         """
         if not flip(func, self.cycle_detection):
-            if func(context + [self]):
+            context.append(self)
+            if func(context):
+                context.pop()
                 return True
             else:
                 for parser in self.sub_parsers():
-                    if parser._apply(func, context + [self], flip):
+                    if parser._apply(func, context, flip):
+                        context.pop()
                         return True
+                context.pop()
                 return False
         return False
 
