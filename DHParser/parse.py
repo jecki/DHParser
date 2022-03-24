@@ -1173,7 +1173,7 @@ class Grammar:
                 was started (see method `__call__`) or `None` if no parsing process
                 is running.
 
-        unconnected_parsers__: A list of parsers that is not connected to the
+        unconnected_parsers__: A list of parsers that are not connected to the
                 root parser. This list of parsers is collected during instantiation.
 
         resume_parsers__: A list of parsers that appear either in a resume-rule
@@ -1490,15 +1490,17 @@ class Grammar:
         for l in resume_lists:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
-                    l[i] = self[l[i].pname]
-                    if l[i] not in root_connected:
-                        self.unconnected_parsers__.append(l[i])
-                        self.resume_parsers__.append(l[i])
+                    p = self[l[i].pname]
+                    l[i] = p
+                    if p not in root_connected:
+                        self.unconnected_parsers__.append(p)
+                        self.resume_parsers__.append(p)
+                        p.apply(self._add_parser__)
         for name in self.__class__.parser_names__:
             parser = self[name]
             if parser not in root_connected:
                 self.unconnected_parsers__.append(parser)
-        for p in self.unconnected_parsers__:  p.apply(lambda ctx: ctx[-1].reset())
+                parser.apply(self._add_parser__)
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1864,7 +1866,7 @@ class Grammar:
         ebnf.append('')
         return '\n'.join(ebnf)
 
-    # TODO: Check for performance problems!!!
+
     def associated_symbol__(self, parser: Parser) -> Parser:
         r"""Returns the closest named parser that contains `parser`.
         If `parser` is a named parser itself, `parser` is returned.
@@ -1907,6 +1909,30 @@ class Grammar:
         return symbol
 
 
+    def fill_associated_symbol_cache__(self):
+        """Pre-fills the associated symbol cache with an algorithm that
+        is more efficient than filling the cache by calling
+        ``associated_symbol__()`` on each parser individually.
+        """
+        symbol = get_parser_placeholder()
+
+        def add_anonymous_descendants(p: Parser):
+            nonlocal symbol
+            self.associated_symbol_cache__[p] = symbol
+            for d in p.sub_parsers():
+                if not d.pname and not (isinstance(d, Forward) and cast(Forward, d).parser.pname):
+                    add_anonymous_descendants(d)
+
+        for p in self.all_parsers__:
+            if isinstance(p, Forward) and cast(Forward, p).parser.pname:
+                symbol = cast(Forward, p).parser
+                self.associated_symbol_cache__[p] = symbol
+                add_anonymous_descendants(symbol)
+            elif p.pname:
+                symbol = p
+                add_anonymous_descendants(symbol)
+
+
     def static_analysis__(self) -> List[AnalysisError]:
         """
         Checks the parser tree statically for possible errors.
@@ -1945,6 +1971,7 @@ class Grammar:
             leaf_state[prsr] = result
             return result
 
+        self.fill_associated_symbol_cache__()
         # cache = dict()  # type: Dict[Parser, Set[Parser]]
         # for debugging: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
         for parser in self.all_parsers__:

@@ -93,7 +93,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "0fa485e2e9dc9dc76e9e512e004b7926"
+    source_hash__ = "50ecce375eeaf641efa2008e6f3263de"
     disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -250,6 +250,19 @@ class XMLTransformer(Compiler):
         node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
+    def on_content(self, node) -> Union[Tuple[Node], str]:
+        xml_content = tuple(self.compile(nd) for nd in node.children
+                            if nd.tag_name not in self.expendables)
+        if len(xml_content) == 1:
+            if xml_content[0].tag_name == TOKEN_PTYPE:
+                # reduce single CharData children
+                xml_content = xml_content[0].content
+        elif self.cleanup_whitespace and not self.preserve_whitespace:
+            # remove CharData that consists only of whitespace from mixed elements
+            xml_content = tuple(child for child in xml_content
+                                if child.tag_name != TOKEN_PTYPE or child.content.strip() != '')
+        return xml_content
+
     def on_element(self, node):
         if len(node.children) == 1:
             return self.on_emptyElement(node['emptyElement'])
@@ -268,18 +281,8 @@ class XMLTransformer(Compiler):
             node.attr.update(attributes)
             self.preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
         node.tag_name = tag_name
-        xml_content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children
-                            if nd.tag_name not in self.expendables)
-        if len(xml_content) == 1:
-            if xml_content[0].tag_name == TOKEN_PTYPE:
-                # reduce single CharData children
-                xml_content = xml_content[0].content
-        elif self.cleanup_whitespace and not self.preserve_whitespace:
-            # remove CharData that consists only of whitespace from mixed elements
-            xml_content = tuple(child for child in xml_content
-                                if child.tag_name != TOKEN_PTYPE or child.content.strip() != '')
+        node.result = self.compile(node['content']) if 'content' in node else tuple()
         self.preserve_whitespace = save_preserve_ws
-        node.result = xml_content
         return node
 
     def on_emptyElement(self, node):
