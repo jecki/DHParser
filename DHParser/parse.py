@@ -1346,9 +1346,9 @@ class Grammar:
         selected reference will be chosen. See PEP 520
         (www.python.org/dev/peps/pep-0520/) for an explanation of why.
         """
-        if cls.parser_initialization__[0] != "done":
+        if cls.parser_initialization__[0] != "done" and cls != Grammar:
             cdict = cls.__dict__
-            cls.static_analysis_errors__ = []
+            # cls.static_analysis_errors__ = []
             cls.parser_names__ = []
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
@@ -1366,10 +1366,8 @@ class Grammar:
                     cls.parser_names__.append(entry)
             if not is_parser_placeholder(cls.root__):
                 determine_eq_classes(cls.root__)
-            if cls != Grammar:
-                cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
-                # cls.parser_initialization__[0] = "done"
-                pass
+            # if cls != Grammar:
+            cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
 
     def __deepcopy__(self, memo):
@@ -1448,7 +1446,7 @@ class Grammar:
         self._reset__()
 
         # prepare parsers in the class, first
-        self._assign_parser_names__()
+        self.__class__._assign_parser_names__()
 
         # then deep-copy the parser tree from class to instance;
         # parsers not connected to the root object will be copied later
