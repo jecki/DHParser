@@ -648,7 +648,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 # write parsing-history log only in case of test-failure
                 if is_logging() and track_history:
                     with local_log_dir('./LOGS'):
-                        log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
+                        tname = test_name.replace('*', '')
+                        log_parsing_history(parser, f"fail_{parser_name}_{tname}.log")
             if cst.error_flag:
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors)
