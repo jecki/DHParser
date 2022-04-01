@@ -1809,6 +1809,31 @@ class Grammar:
         self.start_parser__ = None
         return self.tree__
 
+    def match(self,
+              parser: Union[str, Parser],
+              string: str,
+              source_mapping: Optional[SourceMapFunc] = None):
+        """Returns the matched string, if the parser matches the
+        beginning of a string or ``None`` if the parser does not match."""
+        result = self(string, parser, source_mapping, complete_match=False)
+        if has_errors(result.errors):
+            return None
+        else:
+            return str(result)
+
+
+    def fullmatch(self,
+              parser: Union[str, Parser],
+              string: str,
+              source_mapping: Optional[SourceMapFunc] = None):
+        """Returns the matched string, if the parser matches the
+        complete string or ``None`` if the parser does not match."""
+        result = self(string, parser, source_mapping, complete_match=True)
+        if has_errors(result.errors):
+            return None
+        else:
+            return str(result)
+
 
     def push_rollback__(self, location, func):
         """

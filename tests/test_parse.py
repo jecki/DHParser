@@ -526,6 +526,27 @@ class TestGrammar:
         st = gr('-3')
         assert str(gr['S']) == "S = ~", str(gr['S'])
 
+    def test_match_and_fullmatch(self):
+        lang = r"""
+            word = /[A-Za-z]+/
+            number = /[0-9]+/
+        """
+        gr = create_parser(lang)
+        assert gr.match('word', 'hallo123') == "hallo"
+        assert gr.match('word', '') is None
+        assert gr.match('word', '123') is None
+        assert gr.match('word', 'hallo') == "hallo"
+
+        assert gr.fullmatch('word', 'hallo123') is None
+        assert gr.fullmatch('word', '') is None
+        assert gr.fullmatch('word', '123') is None
+        assert gr.fullmatch('word', 'hallo') == 'hallo'
+
+        assert gr.match('number', 'hallo123') is None
+        assert gr.match('number', '') is None
+        assert gr.match('number', '123') == "123"
+        assert gr.match('number', 'hallo') is None
+
 
 class TestSeries:
     def test_non_mandatory(self):
