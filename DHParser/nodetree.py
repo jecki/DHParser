@@ -822,21 +822,29 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', Tuple['Node', ...]]:
+    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', List['Node']]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
 
-            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
-            >>> flatten_sxpr(tree[0].as_sxpr())
-            '(b "X")'
-            >>> flatten_sxpr(tree["X"].as_sxpr())
-            '(X (c "d"))'
+            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")) (b "Y"))')
+            >>> tree[0]
+            Node('b', 'X')
+            >>> tree['X']
+            Node('X', (Node('c', 'd')))
+            >>> tree['b']
+            [Node('b', 'X'), Node('b', 'Y')]
+
+            >>> from DHParser.toolkit import as_list
+            >>> as_list(tree['b'])
+            [Node('b', 'X'), Node('b', 'Y')]
+            >>> as_list(tree['e'])
+            [Node('e', (Node('X', 'F')))]
 
         :param key(str): A tag-name (string) or an index or a slice of the 
             child or children that shall be returned.
         :returns: The node with the given index (always type Node) or a
-            tuple of all nodes which have a given tag name, if `key` was a
+            list of all nodes which have a given tag name, if `key` was a
             tag-name and there is more than one child-node with this tag-name
         :raises:
             KeyError:   if no matching child was found.
@@ -849,10 +857,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self._children[key]
         else:
             mf = create_match_function(key)
-            items = tuple(child for child in self._children if mf(child))
+            items = [child for child in self._children if mf(child)]
             if items:
                 return items if len(items) >= 2 else items[0]
-            raise IndexError('index out of range') if isinstance(key, int) else KeyError(str(key))
+            raise KeyError(str(key))
 
     def __setitem__(self, 
                     key: Union[CriteriaType, slice, int], 

@@ -100,6 +100,7 @@ __all__ = ('typing',
            'escape_formatstr',
            'as_identifier',
            'as_list',
+           'as_tuple',
            'first',
            'last',
            'NOPE',
@@ -278,6 +279,14 @@ def as_list(item_or_sequence) -> List[Any]:
     if isinstance(item_or_sequence, Iterable):
         return list(item_or_sequence)
     return [item_or_sequence]
+
+
+def as_tuple(item_or_sequence) -> List[Any]:
+    """Turns an arbitrary sequence or a single item into a tuple. In case of
+    a single item, the tuple contains this element as its sole item."""
+    if isinstance(item_or_sequence, Iterable):
+        return tuple(item_or_sequence)
+    return (item_or_sequence,)
 
 
 def first(item_or_sequence: Union[Sequence, Any]) -> Any:
