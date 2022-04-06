@@ -795,7 +795,7 @@ def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: RootNode):
         src = (Node,)
     for s in src:
         # update attributes
-        if s != dest and hasattr(s, '_xml_attr'):
+        if s != dest and hasattr(s, '_attributes'):
             for k, v in s.attr.items():
                 if k in dest.attr and v != dest.attr[k]:
                     raise ValueError('Conflicting attribute values %s and %s for key %s '
@@ -822,15 +822,15 @@ def swap_attributes(node: Node, other: Node):
     NA = node.has_attr()
     OA = other.has_attr()
     if NA or OA:
-        save = node._xml_attr if NA else None
+        save = node._attributes if NA else None
         if OA:
-            node._xml_attr = other._xml_attr
+            node._attributes = other._attributes
         elif NA:
-            node._xml_attr = None
+            node._attributes = None
         if NA:
-            other._xml_attr = save
+            other._attributes = save
         elif OA:
-            other._xml_attr = None
+            other._attributes = None
 
 
 def _replace_by(node: Node, child: Node, root: RootNode):
@@ -855,7 +855,7 @@ def _reduce_child(node: Node, child: Node, root: RootNode):
     update_attr(node, (child,), root)
     # update_attr(child, (node,), root)
     # if child.has_attr():
-    #     node._xml_attr = child._xml_attr
+    #     node._attributes = child._attributes
 
 
 #######################################################################

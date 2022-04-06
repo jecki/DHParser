@@ -130,8 +130,13 @@ In order to change the data of a node, its `result`-property must be assigned to
 (as shown above).
 
 Just like HTML- oder XML-tags, nodes can be annotated with attributes.
+Unlike XML and HTML, however, the value of these attributes can be of any
+type, not only strings. The only requirement is that the value is serializable
+as string. Be aware, though of the possible loss of information when
+serializing nodes or converting nodes to ElementTree-elements, if there are
+attributes with non-string values!
 Attributes are stored in an ordered dictionary that maps string identifiers,
-i.e. the attribute name, to the string-content of the attribute. This dictionary
+i.e. the attribute name, to the content of the attribute. This dictionary
 can be accessed via the `attr`-property::
 
     >>> node.attr['price'] = 'very high'
@@ -384,7 +389,7 @@ as well as a dictionary-like access, with the difference that a "key" may occur
 several times::
 
     >>> sentence['word']
-    (Node('word', 'This'), Node('word', 'is'))
+    [Node('word', 'This'), Node('word', 'is')]
     >>> sentence['phrase']
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
 

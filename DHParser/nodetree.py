@@ -436,13 +436,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             correctly locating errors which might only be detected at
             later stages of the tree-transformation within the source text.
 
-    :ivar attr: An optional dictionary of XML-attr. This
-            dictionary is created lazily upon first usage. The attr
-            will only be shown in the XML-Representation, not in the
-            S-expression-output.
+    :ivar attr: An optional dictionary of attributes attached to the node.
+            This dictionary is created lazily upon first usage.
     """
 
-    __slots__ = '_result', '_children', '_pos', 'tag_name', '_xml_attr'
+    __slots__ = '_result', '_children', '_pos', 'tag_name', '_attributes'
 
     def __init__(self, tag_name: str,
                  result: Union[Tuple['Node', ...], 'Node', StringView, str],
@@ -481,9 +479,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             duplicate = self.__class__(self.tag_name, self.result, True)
         duplicate._pos = self._pos
         if self.has_attr():
-            duplicate.attr.update(self._xml_attr)
-            # duplicate.attr.update(copy.deepcopy(self._xml_attr))
-            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
+            duplicate.attr.update(self._attributes)
+            # duplicate.attr.update(copy.deepcopy(self._attributes))
+            # duplicate._attributes = copy.deepcopy(self._attributes)  # this is not cython compatible
         return duplicate
 
     def __str__(self):
@@ -713,7 +711,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         existence of any attributes.
         """
         try:
-            return attr in self._xml_attr if attr else bool(self._xml_attr)
+            return attr in self._attributes if attr else bool(self._attributes)
         except (AttributeError, TypeError):
             return False
 
@@ -742,15 +740,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         though it may never be needed, anymore.
         """
         try:
-            if self._xml_attr is None:          # cython compatibility
-                self._xml_attr = OrderedDict()  # type: Dict[str, str]
+            if self._attributes is None:          # cython compatibility
+                self._attributes = OrderedDict()  # type: Dict[str, Any]
         except AttributeError:
-            self._xml_attr = OrderedDict()
-        return self._xml_attr
+            self._attributes = OrderedDict()
+        return self._attributes
 
     @attr.setter
     def attr(self, attr_dict: Dict[str, str]):
-        self._xml_attr = attr_dict
+        self._attributes = attr_dict
 
     def get_attr(self, attribute: str, default: str) -> str:
         """
@@ -1488,7 +1486,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # s += " '(pos %i)" % node.add_pos
             # txt.append(str(id(node)))  # for debugging
             if node.has_attr():
-                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
+                txt.extend(' `(%s "%s")' % (k, str(v)) for k, v in node.attr.items())
             if node._pos >= 0:
                 if src:
                     line, col = line_col(lbreaks, node.pos)
@@ -1730,7 +1728,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if ET is None:
             import xml.etree.ElementTree as ET
         # import lxml.etree as ET
-        attributes = self.attr if self.has_attr() else {}
+        attributes = {k: str(v) for k, v in self.attr.items()} if self.has_attr() else {}
         tag_name = xml_tag_name(self.tag_name) if self.tag_name[:1] == ':' else self.tag_name
         if self.children:
             element = ET.Element(tag_name, attrib=attributes)
@@ -2267,16 +2265,16 @@ class FrozenNode(Node):
     @property
     def attr(self):
         try:
-            return self._xml_attr
+            return self._attributes
         except AttributeError:
             return OrderedDict()  # assignments will be void!
 
     @attr.setter
-    def attr(self, attr_dict: OrderedDict):
+    def attr(self, attr_dict: Dict[str, Any]):
         if self.has_attr():
             raise AssertionError("Frozen nodes' attributes can only be set once")
         else:
-            self._xml_attr = attr_dict
+            self._attributes = attr_dict
 
     @property
     def pos(self):
@@ -2412,8 +2410,8 @@ class RootNode(Node):
         new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
         map_id = dict(zip(old_node_ids, new_node_ids))
         if self.has_attr():
-            duplicate.attr.update(self._xml_attr)
-            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
+            duplicate.attr.update(self._attributes)
+            # duplicate._attributes = copy.deepcopy(self._attributes)  # this is blocked by cython
         duplicate.errors = copy.deepcopy(self.errors)
         duplicate._error_set = {error for error in duplicate.errors}
         duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
@@ -2460,7 +2458,7 @@ class RootNode(Node):
         self._pos = node._pos
         self.tag_name = node.tag_name
         if node.has_attr():
-            self._xml_attr = node._xml_attr
+            self._attributes = node._attributes
         # self._content = node._content
         if id(node) in self.error_nodes:
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
@@ -2730,7 +2728,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         tagname = sxpr[:end]
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
-        attributes = OrderedDict()  # type: OrderedDict[str, str]
+        attributes = OrderedDict()  # type: Dict[str, Any]
         pos = -1  # type: int
         # parse attr
         while sxpr[:2] == "`(":
@@ -2818,12 +2816,12 @@ def parse_xml(xml: Union[str, StringView],
 
     xml = StringView(str(xml))
 
-    def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
+    def parse_attributes(s: StringView) -> Tuple[StringView, Dict[str, Any]]:
         """
         Parses a sequence of XML-Attributes. Returns the string-slice
         beginning after the end of the attr.
         """
-        attributes = OrderedDict()  # type: OrderedDict[str, str]
+        attributes = OrderedDict()  # type: Dict[str, Any]
         eot = s.find('>')
         restart = 0
         for match in s.finditer(re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')):
