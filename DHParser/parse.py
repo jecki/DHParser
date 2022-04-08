@@ -743,7 +743,7 @@ class Parser:
         yield from descendants_(self)
 
 
-    def _apply(self, func: ApplyFunc, context: List['Parser'], flip: FlagFunc) -> bool:
+    def _apply(self, func: ApplyFunc, parent_context: List['Parser'], flip: FlagFunc) -> bool:
         """
         Applies function `func(parser)` recursively to this parser and all
         descendant parsers as long as `func()` returns `None` or `False`.
@@ -758,17 +758,13 @@ class Parser:
         calls is the method `apply()` without underscore!
         """
         if not flip(func, self.cycle_detection):
-            # context.append(self)
-            context = context + [self]
+            context = parent_context + [self]
             if func(context):
-                # context.pop()
                 return True
             else:
                 for parser in self.sub_parsers():
                     if parser._apply(func, context, flip):
-                        # context.pop()
                         return True
-                # context.pop()
                 return False
         return False
 
