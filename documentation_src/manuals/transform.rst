@@ -251,7 +251,7 @@ The Transformation Table
 
 As shown by the examples earlier, the transformation table is a "smart" dictionary
 that maps tag-names to sequences of transformation functions. It is called "smart",
-because it allows to list serveral tag names within one and the same dictionary
+because it allows to list several tag names within one and the same dictionary
 keys, thus assigning each one of them to one and the same sequences of transformation
 functions. (You could think of the transformation table as a simple "embedded" or
 `internal DSL (Domain Specific Languag) <https://martinfowler.com/bliki/DomainSpecificLanguage.html>`_
@@ -269,6 +269,11 @@ every tag-specific transformation-sequence has been processed. Because of the ti
 ``<``- and ``>``-keys should only be used when really needed. Most of the time the desired result can
 be achieved more effectively with the ``@disposable``- and ``@drop``-directives at the
 parsing-stage, already (see :ref:`simplifying_syntax_trees`)).
+
+To demonstrate what a transformation table looks like, here is an excerpt from the transformation-
+table of the LaTeX-Parser example::
+
+
 
 
 

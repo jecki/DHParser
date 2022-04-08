@@ -1140,7 +1140,7 @@ def add_attributes(context: TreeContext, attributes: dict):  # Dict[str, str]
 def normalize_whitespace(context):
     """
     Normalizes Whitespace inside a leaf node, i.e. any sequence of
-    whitespaces, tabs and linefeeds will be replaced by a single
+    whitespaces, tabs and line feeds will be replaced by a single
     whitespace. Empty (i.e. zero-length) Whitespace remains empty,
     however.
     """

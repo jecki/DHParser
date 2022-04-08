@@ -308,9 +308,9 @@ def streamline_whitespace(context):
 def watch(node):
     print(node.as_sxpr())
 
-flatten_structure = flatten(lambda context: is_one_of(
-    context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
-              "SubParagraphs", "sequence"}), recursive=True)
+# flatten_structure = flatten(lambda context: is_one_of(
+#     context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
+#               "SubParagraphs", "sequence"}), recursive=True)
 
 
 def transform_generic_command(context: List[Node]):
@@ -360,9 +360,9 @@ def show(context: List[Node]):
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "<": [flatten, flatten_structure, remove_children_if(is_expendable)],
+    "<": [flatten, remove_children_if(is_expendable)],
     "latexdoc": [],
-    "document": [flatten_structure],
+    "document": [],
     "pdfinfo": [],
     "_TEXT_NOPAR": [apply_unless(normalize_whitespace, has_children)],
     "info_assoc": [change_tag_name('association'), replace_by_single_child],
@@ -381,23 +381,22 @@ LaTeX_AST_transformation_table = {
     "_block_environment": replace_by_single_child,
     "_known_environment": replace_by_single_child,
     "generic_block": [transform_generic_block],
-    "generic_command": [transform_generic_command, reduce_single_child],  # [flatten],
+    "generic_command": [transform_generic_command, reduce_single_child],
     "begin_generic_block, end_generic_block": [],
-        # [remove_children({'NEW_LINE', 'LFF'}), replace_by_single_child],
-    "itemize, enumerate": [flatten],
+    "itemize, enumerate": [],
     "item": [],
     "figure": [],
     "quotation": [reduce_single_child, remove_brackets],
     "verbatim": [],
     "tabular": [],
     "tabular_config, block_of_paragraphs": [remove_brackets, reduce_single_child],
-    "tabular_row": [flatten, remove_tokens('&', '\\')],
-    "tabular_cell": [flatten, remove_whitespace],
+    "tabular_row": [remove_tokens('&', '\\')],
+    "tabular_cell": [remove_whitespace],
     "multicolumn": [remove_tokens('{', '}')],
     "hline": [remove_whitespace, reduce_single_child],
     "ref, label, url": reduce_single_child,
-    "sequence": [flatten],
-    "paragraph": [flatten, strip(is_one_of({'S'}))],
+    "sequence": [],
+    "paragraph": [strip(is_one_of({'S'}))],
     "_text_element": replace_by_single_child,
     "_line_element": replace_by_single_child,
     "_inline_environment": replace_by_single_child,
@@ -415,7 +414,7 @@ LaTeX_AST_transformation_table = {
     "caption": [],
     "config": [reduce_single_child],
     "cfg_text": [reduce_single_child],
-    "block": [flatten, reduce_single_child],
+    "block": [reduce_single_child],
     "flag": [reduce_single_child],
     "text": collapse,
     "path": collapse,
@@ -438,8 +437,8 @@ LaTeX_AST_transformation_table = {
     "_PARSEP": [replace_content_with('\n\n')],
     ":Whitespace, _WSPC, S": streamline_whitespace,
     "WARN_Komma": add_error('No komma allowed at the end of a list', WARNING),
-    "*": apply_unless(replace_by_single_child,
-                      lambda ctx: ctx[-1].tag_name[:4] not in ('cmd_', 'env_'))
+    "*": apply_if(replace_by_single_child,
+                  lambda ctx: ctx[-1].tag_name[:4] in ('cmd_', 'env_'))
 }
 
 
