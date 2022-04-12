@@ -42,7 +42,7 @@ of concrete syntax trees into abstract syntax trees or, more generally, the stre
 the leaner functional style is preferable, while for more complex tree-transformations or the
 transformation of a syntax tree into something else the more
 powerful object-oriented version of the visitor pattern is to be preferred, because it allows to exchange
-data between the visiting methods via the :py:class`~compile.Compiler`-object to which they are attached.
+data between the visiting methods via the :py:class:`~compile.Compiler`-object to which they are attached.
 There is of course not "must" to use the ``transform`` and the ``compile``-module for their envisioned
 purposes, but you can choose freely which transformation-scaffolding to use for which of your tree-transformations.
 
