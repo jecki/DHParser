@@ -701,13 +701,14 @@ The Node-class
 * :py:class:`~snytaxtree.Node`: the central building-block of a node-tree
 
   * :py:attr:`~nodetree.Node.result`: either the child nodes or the node's
-    string
+    string content
   * :py:attr:`~nodetree.Node.children`: the node's immediate children or an
     empty tuple
   * :py:attr:`~nodetree.Node.content`: the concatenated string content of
     all descendants
+  * :py:attr:`~nodetree.Node.tag_name`: the node's name
   * :py:attr:`~nodetree.Node.attr`: the dictionary of the node's
-    XML-attributes
+    attributes
   * :py:attr:`~nodetree.Node.pos`: the source-code position of this node, in
     case the node stems from a parsing process
 
