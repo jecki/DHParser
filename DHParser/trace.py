@@ -39,7 +39,7 @@ __all__ = ('trace_history', 'all_descendants', 'set_tracer',
 
 def symbol_name(parser: Parser, grammar: Grammar) -> str:
     name = str(parser) if isinstance(parser, ContextSensitive) else parser.tag_name
-    # name = parser.tag_name
+    # name = parser.name
     if name[:1] == ':':
         name = grammar.associated_symbol__(parser).pname + '->' + name
     return name
@@ -132,7 +132,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         # record history
         # TODO: Make dropping insignificant whitespace from history configurable
         delta = text._len - rest._len
-        hnd = Node(node.tag_name, text[:delta]).with_pos(location) if node else None
+        hnd = Node(node.name, text[:delta]).with_pos(location) if node else None
         lc = line_col(grammar.document_lbreaks__, location)
         record = HistoryRecord(grammar.call_stack__, hnd, rest, lc, [])
         cs_len = len(record.call_stack)

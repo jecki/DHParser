@@ -19,12 +19,12 @@ called "leaf nodes", but not both at the same time. (There is no mixed
 content as in XML!)
 
 Apart from their content, the most important property of a Node-object is its
-``tag_name``. Nodes are initialized with their tag_name and content as
+``name``. Nodes are initialized with their name and content as
 arguments::
 
     >>> from DHParser.nodetree import *
     >>> number_1 = Node('number', "5")
-    >>> number_1.tag_name
+    >>> number_1.name
     'number'
 
 The Node-object ``number_1`` now has the tag-name "number" and the content "5".
@@ -197,7 +197,7 @@ nodes according to the offset of the string values from the main field::
     </phrase>
     >>> essentials[-1].pos, essentials.content.find('Palace')
     (11, 11)
-    >>> essentials.result = tuple(child for child in essentials.children if child.tag_name != 'blank')
+    >>> essentials.result = tuple(child for child in essentials.children if child.name != 'blank')
     >>> print(essentials.as_xml(src=essentials.content))
     <phrase line="1" col="1">
       <word line="1" col="1">Buckingham</word>
@@ -422,7 +422,7 @@ phrase and assume at the same time that words may occur in nested structures::
     >>> nested = copy.deepcopy(sentence)
     >>> i = nested.index(lambda nd: nd.content == 'is')
     >>> nested[i].result = Node('word', nested[i].result)
-    >>> nested[i].tag_name = 'italic'
+    >>> nested[i].name = 'italic'
     >>> nested[0:i + 1]
     (Node('word', 'This'), Node('blank', ' '), Node('italic', (Node('word', 'is'))))
 

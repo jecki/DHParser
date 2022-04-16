@@ -153,7 +153,7 @@ mini_indented_AST_transformation_table = {
     "node": [],
     "content": [],
     "children": [],
-    "tag_name": [],
+    "name": [],
     "string": [],
     "SAME_INDENT": [],
     "HAS_DEEPER_INDENT": [],

@@ -255,7 +255,7 @@ class ts2dataclassCompiler(Compiler):
         result = super().compile(node)
         if isinstance(result, str):
             return result
-        raise TypeError(f"Compilation of {node.tag_name} yielded a result of "
+        raise TypeError(f"Compilation of {node.name} yielded a result of "
                         f"type {str(type(result))} and not str as expected!")
 
     def is_toplevel(self) -> bool:
@@ -335,7 +335,7 @@ class ts2dataclassCompiler(Compiler):
         raise ValueError('Malformed syntax-tree!')
 
     def on_document(self, node) -> str:
-        return '\n\n'.join(self.compile(child) for child in node.children if child.tag_name != 'declaration')
+        return '\n\n'.join(self.compile(child) for child in node.children if child.name != 'declaration')
 
     def render_local_classes(self) -> str:
         if self.local_classes[-1]:
@@ -385,7 +385,7 @@ class ts2dataclassCompiler(Compiler):
 
     def on_type_alias(self, node) -> str:
         alias = self.compile(node['identifier'])
-        if all(typ[0].tag_name in ('basic_type', 'literal') for typ in node.select('type')):
+        if all(typ[0].name in ('basic_type', 'literal') for typ in node.select('type')):
             self.basic_type_aliases.add(alias)
         self.obj_name.append(alias)
         if alias not in self.overloaded_type_names:
@@ -401,7 +401,7 @@ class ts2dataclassCompiler(Compiler):
 
     def on_declarations_block(self, node) -> str:
         declarations = '\n'.join(self.compile(nd) for nd in node
-                                 if nd.tag_name == 'declaration')
+                                 if nd.name == 'declaration')
         return declarations or "pass"
 
     def on_declaration(self, node) -> str:
@@ -473,8 +473,8 @@ class ts2dataclassCompiler(Compiler):
             else:
                 preface = ''
             if self.use_py308_literal_type and \
-                    any(nd[0].tag_name == 'literal' for nd in node.children):
-                assert all(nd[0].tag_name == 'literal' for nd in node.children)
+                    any(nd[0].name == 'literal' for nd in node.children):
+                assert all(nd[0].name == 'literal' for nd in node.children)
                 return f"Literal[{', '.join(union)}]"
             elif self.use_py310_type_union:
                 return preface + '| '.join(union)
@@ -486,15 +486,15 @@ class ts2dataclassCompiler(Compiler):
     def on_type(self, node) -> str:
         assert len(node.children) == 1
         typ = node[0]
-        if typ.tag_name == 'declarations_block':
+        if typ.name == 'declarations_block':
             self.local_classes.append([])
             decls = self.compile(typ)
             return ''.join([f"class {self.obj_name[-1]}:\n    ",
                              self.render_local_classes().replace('\n', '\n    '),
                              decls.replace('\n', '\n    ')])   # maybe add one '\n'?
             # return 'Dict'
-        elif typ.tag_name == 'literal':
-            literal_typ = typ[0].tag_name
+        elif typ.name == 'literal':
+            literal_typ = typ[0].name
             if self.use_py308_literal_type:
                 return self.compile(typ)
             elif literal_typ == 'array':
@@ -530,8 +530,8 @@ class ts2dataclassCompiler(Compiler):
         if name in self.known_types:  return ''
         self.known_types.add(name)
         save = self.strip_type_from_const
-        if all(child.tag_name == 'const' for child in node.children[1:]):
-            if all(nd['literal'][0].tag_name == 'integer'
+        if all(child.name == 'const' for child in node.children[1:]):
+            if all(nd['literal'][0].name == 'integer'
                    for nd in node.select_children('const') if 'literal' in nd):
                 namespace = [f'class {name}(IntEnum):']
             else:
@@ -546,7 +546,7 @@ class ts2dataclassCompiler(Compiler):
 
     def on_enum(self, node) -> str:
         if self.use_enums:
-            if all(nd['literal'][0].tag_name == 'integer' for
+            if all(nd['literal'][0].name == 'integer' for
                    nd in node.select_children('item')):
                 base_class = '(IntEnum)'
             else:
@@ -632,7 +632,7 @@ class ts2dataclassCompiler(Compiler):
     def on_array_of(self, node) -> str:
         assert len(node.children) == 1
         name = self.compile(node[0])
-        if node[0].tag_name == 'identifier' and name not in self.known_types:
+        if node[0].name == 'identifier' and name not in self.known_types:
             name = "'" + name + "'"
         return 'List[' + name + ']'
 

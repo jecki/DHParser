@@ -126,7 +126,7 @@ we shall call it henceforth, "transformation table"::
     ...                             [replace_by_single_child] }
 
 Note, that the transformation table is an ordinary Python-dictionary, only that
-a string-key that contains a comma-separated list of tag_names will be interpreted
+a string-key that contains a comma-separated list of node-names will be interpreted
 as so many different keys that are mapped onto the same sequence of
 transformations.
 
@@ -177,8 +177,8 @@ on our own, easily::
    ...         while rest:
    ...             infix, right, rest = rest[0], rest[1], rest[2:]
    ...             assert not infix._children
-   ...             assert infix.tag_name[0:1] != ":"
-   ...             left = Node(infix.tag_name, (left, right))
+   ...             assert infix.name[0:1] != ":"
+   ...             left = Node(infix.name, (left, right))
    ...         node.result = (left,)
 
 A transformation function is functions with the tree context as single argument and

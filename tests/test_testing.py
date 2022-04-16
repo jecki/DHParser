@@ -466,10 +466,10 @@ class TestSExpr:
     def test_mock_syntax_tree_with_classes(self):
         sexpr = '(a:class1 (b:class2 x) (:class3 y) (c z))'
         tree = parse_sxpr(sexpr)
-        assert tree.tag_name == 'a'
-        assert tree.result[0].tag_name == 'b'
-        assert tree.result[1].tag_name == ':class3'
-        assert tree.result[2].tag_name == 'c'
+        assert tree.name == 'a'
+        assert tree.result[0].name == 'b'
+        assert tree.result[1].name == ':class3'
+        assert tree.result[2].name == 'c'
 
 
 if __name__ == "__main__":

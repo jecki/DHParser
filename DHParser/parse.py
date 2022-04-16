@@ -152,7 +152,7 @@ class ParserError(Exception):
         self.error = error    # type: Error
         self.first_throw = first_throw   # type: bool
         self.attributes_locked = frozenset({'parser', 'node', 'rest', 'error', 'first_throw'})
-        self.callstack_snapshot = []  # type: List[CallItem]  # tag_name, location
+        self.callstack_snapshot = []  # type: List[CallItem]  # name, location
 
     def __setattr__(self, name, value):
         if name == "attributes_locked":
@@ -416,7 +416,7 @@ class Parser:
                 anonymous nodes. For performance
                 reasons this is implemented as an object variable rather
                 than a property. This property should always be equal to
-                `self.tag_name[0] == ":"`.
+                `self.name[0] == ":"`.
 
         drop_content: A property (for performance reasons implemented as
                 simple field) that, if set, induces the parser not to return
@@ -426,7 +426,7 @@ class Parser:
                 anonymous (or pseudo-anonymous) parsers are allowed to
                 drop content.
 
-        tag_name: The tag_name for the nodes that are created by
+        name: The name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
                 `pname`, otherwise it is the name of the parser's type
                 prefixed with a colon ":".
@@ -1402,9 +1402,9 @@ class Grammar:
                 setattr(self, cast(Forward, parser).parser.pname, parser)
             # # see Parser.name()
             # if parser.disposable:
-            #     parser.tag_name = (':' + parser.pname) if parser.pname else parser.ptype
+            #     parser.name = (':' + parser.pname) if parser.pname else parser.ptype
             # else:
-            #     parser.tag_name = parser.pname
+            #     parser.name = parser.pname
             # parser.name(parser.pname, parser.disposable)
             self.all_parsers__.add(parser)
             parser.grammar = self
@@ -1455,7 +1455,7 @@ class Grammar:
             self.root_parser__ = copy.deepcopy(root)
             if not self.root_parser__.pname:
                 self.root_parser__.name("root", disposable=False)
-                # TODO: Reset name and tag_name after parsing has been finished
+                # TODO: Reset name and name after parsing has been finished
                 # self.root_parser__.pname = "root"
                 # self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
@@ -1556,7 +1556,7 @@ class Grammar:
         # memoization dictionaries, one per parser equivalence class
         self.memoization__: Dict[int, MemoizationDict] = {}
         # support for call stack tracing
-        self.call_stack__: List[CallItem] = []  # tag_name, location
+        self.call_stack__: List[CallItem] = []  # name, location
         # snapshots of call stacks
         self.history__: List[HistoryRecord] = []
         # also needed for call stack tracing
@@ -1692,7 +1692,7 @@ class Grammar:
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
-                if result is None or (result.tag_name == ZOMBIE_TAG and len(result) == 0):
+                if result is None or (result.name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
                     associated_symbol = self.associated_symbol__(self.ff_parser__)
                     if associated_symbol != self.ff_parser__:
@@ -1704,12 +1704,12 @@ class Grammar:
                     # Check if a Lookahead-Parser did match. Needed for testing, because
                     # in a test case this is not necessarily an error.
                     if lookahead_failure_only(parser):
-                        # error_msg = # f'Parser "{parser.tag_name}" stopped before end, because ' \
+                        # error_msg = # f'Parser "{parser.name}" stopped before end, because ' \
                         error_msg = f'Parser "{err_pname}" did not match: »{err_text}« ' \
                                     f'- but only because of lookahead.'
                         error_code = PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
-                        # error_msg = f'Parser "{parser.tag_name}" stopped before end, because' \
+                        # error_msg = f'Parser "{parser.name}" stopped before end, because' \
                         error_msg = f'Parser "{err_pname}" did not match: »{err_text}«'
                         error_code = PARSER_STOPPED_BEFORE_END
                     if self.history_tracking__:
@@ -1719,11 +1719,11 @@ class Grammar:
                 else:
                     stitches.append(result)
                     for h in reversed(self.history__):
-                        if h.node and (h.node.tag_name != EMPTY_NODE.tag_name or h.node.result) \
+                        if h.node and (h.node.name != EMPTY_NODE.name or h.node.result) \
                                 and any('Lookahead' in tag for tag, _ in h.call_stack):
                             break
                     else:
-                        h = HistoryRecord([], Node(EMPTY_NODE.tag_name, '').with_pos(0),
+                        h = HistoryRecord([], Node(EMPTY_NODE.name, '').with_pos(0),
                                           StringView(''), (0, 0))
                     if h.status in (h.MATCH, h.DROP) \
                             and (h.node.pos + h.node.strlen() == len(self.document__)):
@@ -1765,7 +1765,7 @@ class Grammar:
                     if self.history_tracking__:
                         lc = line_col(self.document_lbreaks__, error.pos)
                         self.history__.append(HistoryRecord(
-                            [(stitch.tag_name, stitch.pos)], stitch,
+                            [(stitch.name, stitch.pos)], stitch,
                             self.document__[error.pos:], lc, [error]))
             else:
                 # if complete_match is False, ignore the rest and leave while loop
@@ -2380,7 +2380,7 @@ class CombinedParser(Parser):
                 if self.drop_content:
                     return EMPTY_NODE
                 return node
-            if node.tag_name[0] == ':':  # node.anonymous:
+            if node.name[0] == ':':  # node.anonymous:
                 return Node(self.tag_name, node._result)
             return Node(self.tag_name, node)
         elif self.disposable:
@@ -2409,7 +2409,7 @@ class CombinedParser(Parser):
             nr = []  # type: List[Node]
             # flatten parse tree
             for child in results:
-                c_anonymous = (child.tag_name[0] == ':')  # child.anonymous
+                c_anonymous = (child.name[0] == ':')  # child.anonymous
                 if child._children and c_anonymous:
                     nr.extend(child._children)
                 elif child._result or not c_anonymous:
@@ -2443,7 +2443,7 @@ class CombinedParser(Parser):
             # flatten and parse tree
             merge = True
             for child in results:
-                if child.tag_name[0] == ':':  # child.anonymous:
+                if child.name[0] == ':':  # child.anonymous:
                     grandchildren = child._children
                     if grandchildren:
                         nr.extend(grandchildren)
@@ -2451,7 +2451,7 @@ class CombinedParser(Parser):
                         #               for grandchild in grandchildren)
                         # cython compatibility:
                         for grandchild in grandchildren:
-                            if grandchild._children or not grandchild.tag_name[0] == ':':  # grandchild.anonymous:
+                            if grandchild._children or not grandchild.name[0] == ':':  # grandchild.anonymous:
                                 merge = False
                                 break
                     elif child._result:
@@ -2493,7 +2493,7 @@ class CombinedParser(Parser):
             nr = []  # type: List[Node]
             # flatten and parse tree
             for child in results:
-                if child.tag_name[0] == ':':  # child.anonymous:
+                if child.name[0] == ':':  # child.anonymous:
                     grandchildren = child._children
                     if grandchildren:
                         nr.extend(grandchildren)
@@ -2505,7 +2505,7 @@ class CombinedParser(Parser):
                 merged = []
                 tail_is_anonymous_leaf = False
                 for nd in nr:
-                    head_is_anonymous_leaf = not nd._children and nd.tag_name[0] == ':'  # nd.anonymous
+                    head_is_anonymous_leaf = not nd._children and nd.name[0] == ':'  # nd.anonymous
                     if tail_is_anonymous_leaf and head_is_anonymous_leaf:
                         merged[-1].result += nd._result
                     else:
@@ -2766,7 +2766,7 @@ class ZeroOrMore(Option):
             length = text.__len__()
             if node is None:
                 break
-            if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2812,7 +2812,7 @@ class OneOrMore(UnaryParser):
             if node is None:
                 break
             match_flag = True
-            if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
             if length == n:
                 break  # avoid infinite loop
@@ -2864,7 +2864,7 @@ class Counted(UnaryParser):
     '(ZOMBIE__ `(1:1: Error (1040): Parser did not match!))'
     >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
     >>> result = Grammar(moves)('AAABABB')
-    >>> result.tag_name, result.content
+    >>> result.name, result.content
     ('root', 'AAABABB')
     >>> moves = Counted(Text('A'), (2, 3)) * Counted(Text('B'), (2, 3))
     >>> moves
@@ -3166,10 +3166,10 @@ class Series(MandatoryNary):
                     else:
                         results.append(node)
                         break
-            if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results.append(node)
         # assert len(results) <= len(self.parsers) \
-        #        or len(self.parsers) >= len([p for p in results if p.tag_name != ZOMBIE_TAG])
+        #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
         ret_node = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
@@ -3283,7 +3283,7 @@ class Alternative(NaryParser):
             if node is not None:
                 return self._return_value(node), text_
                 # return self._return_value(node if node._result or parser.pname else None), text_
-                # return Node(self.tag_name,
+                # return Node(self.name,
                 #             node if node._result or parser.pname else ()), text_
         return None, text
 
@@ -3498,7 +3498,7 @@ class Interleave(MandatoryNary):
                 if parser not in consumed:
                     node, text__ = parser(text_)
                     if node is not None:
-                        if node._result or not node.tag_name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+                        if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                             results += (node,)
                             text_ = text__
                         counter[i] += 1
@@ -3978,9 +3978,9 @@ class Retrieve(ContextSensitive):
         if self.disposable or not self.tag_name:
             return self.parser.pname or cast(Forward, self.parser).parser.pname
             # if self.parser.pname:
-            #     return self.parser.tag_name
+            #     return self.parser.name
             # # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
-            # return cast(Forward, self.parser).parser.tag_name
+            # return cast(Forward, self.parser).parser.name
         return self.tag_name
 
     def _parse(self, text: StringView) -> ParsingResult:
@@ -4106,9 +4106,9 @@ class Synonym(UnaryParser):
             if not self.disposable:
                 if node is EMPTY_NODE:
                     return Node(self.tag_name, '', True), text
-                if node.tag_name[0] == ':':  # node.anonymous:
+                if node.name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
-                    node.tag_name = self.tag_name
+                    node.name = self.tag_name
                 else:
                     return Node(self.tag_name, (node,)), text
         return node, text
@@ -4264,7 +4264,7 @@ class Forward(UnaryParser):
                         # if record.call_stack[-1] == (self.parser.pname, location):
                         #     record.text = result[1]
                         #     delta = len(text) - len(result[1])
-                        #     assert record.node.tag_name != ':None'
+                        #     assert record.node.name != ':None'
                         #     record.node.result = text[:delta]
                         break
 

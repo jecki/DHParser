@@ -858,12 +858,12 @@ class TestVariableCapture:
         @disposable = EOF, LF, SAME_INDENT
         @drop       = strings, whitespace, EOF, LF, SAME_INDENT
         tree     = INDENT node DEDENT /\\\\s*/ EOF
-        node     = tag_name [content]
+        node     = name [content]
         content  = string | children
         children = &(LF HAS_DEEPER_INDENT)
                    LF INDENT § node { LF SAME_INDENT § node }
                    !(LF HAS_DEEPER_INDENT) DEDENT
-        tag_name = /\\\\w+/~
+        name = /\\\\w+/~
         string   = '"' § /(?:\\\\\\\\"|[^"\\\\n])*/ '"' ~
         INDENT            = / */
         SAME_INDENT       = :INDENT § !/ /
@@ -940,17 +940,17 @@ class TestCustomizedResumeParsing:
         grammar = grammar_provider(grammar_specification)()
         doc0 = """word no*word word"""
         st = grammar(doc0)
-        assert st.children and st.children[-1].tag_name == 'word'
+        assert st.children and st.children[-1].name == 'word'
         doc1 = """word no*word /* comment */ word"""
         st = grammar(doc1)
-        assert st.children and st.children[-1].tag_name == 'word'
+        assert st.children and st.children[-1].name == 'word'
         doc2 = """word no*word/* comment */word"""
         st = grammar(doc2)
-        assert st.children and st.children[-1].tag_name == 'word'
+        assert st.children and st.children[-1].name == 'word'
         doc3 = """word no*word/* comment1 */
                   /* comment2 */word"""
         st = grammar(doc3)
-        assert st.children and st.children[-1].tag_name == 'word'
+        assert st.children and st.children[-1].name == 'word'
 
 
 class TestCustomizedResumeParsing_with_Parsers:
@@ -1328,7 +1328,7 @@ class TestSyntaxExtensions:
     #     """
     #     parser = create_parser(lang)
     #     st = parser("A")
-    #     assert not st.errors and st.tag_name == "doc" and st.content == "A"
+    #     assert not st.errors and st.name == "doc" and st.content == "A"
     #     st = parser("E")
     #     assert st.errors and any(e.code == PARSER_STOPPED_BEFORE_END for e in st.errors)
     #

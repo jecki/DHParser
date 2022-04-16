@@ -289,10 +289,10 @@ def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True
 
 
 def streamline_whitespace(context):
-    # if context[-2].tag_name == TOKEN_PTYPE:
+    # if context[-2].name == TOKEN_PTYPE:
     #     return
     node = context[-1]
-    assert node.tag_name in ['WSPC', ':Whitespace', 'S']
+    assert node.name in ['WSPC', ':Whitespace', 'S']
     s = node.content
     if s.find('%') >= 0:
         node.result = '\n'
@@ -315,8 +315,8 @@ def watch(node):
 
 def transform_generic_command(context: List[Node]):
     node = context[-1]
-    if node.children[0].tag_name == 'CMDNAME':
-        node.tag_name = 'cmd_' + node.children[0].content.lstrip('\\')
+    if node.children[0].name == 'CMDNAME':
+        node.name = 'cmd_' + node.children[0].content.lstrip('\\')
         node.result = node.children[1:]
 
 
@@ -325,11 +325,11 @@ def transform_generic_block(context: List[Node]):
     if not node.children or not node.children[0].children:
         context[0].new_error(node, 'unknown kind of block: ' + flatten_sxpr(node.as_sxpr()))
     else:
-        # assert node.children[0].tag_name == "begin_generic_block"
-        # assert node.children[0].children[0].tag_name == "begin_environment"
-        # assert node.children[-1].tag_name == "end_generic_block"
-        # assert node.children[-1].children[0].tag_name == "end_environment"
-        node.tag_name = 'env_' + node.children[0].children[0].content.lstrip('\\')
+        # assert node.children[0].name == "begin_generic_block"
+        # assert node.children[0].children[0].name == "begin_environment"
+        # assert node.children[-1].name == "end_generic_block"
+        # assert node.children[-1].children[0].name == "end_environment"
+        node.name = 'env_' + node.children[0].children[0].content.lstrip('\\')
         node.result = node.children[1:-1]
 
 
@@ -351,7 +351,7 @@ def replace_quotationmark(context: List[Node]):
 
 def is_expendable(context: List[Node]):
     node = context[-1]
-    return not node._result and not node.tag_name[0:4] in ('cmd_', 'cfg_')
+    return not node._result and not node.name[0:4] in ('cmd_', 'cfg_')
 
 
 def show(context: List[Node]):
@@ -438,7 +438,7 @@ LaTeX_AST_transformation_table = {
     ":Whitespace, _WSPC, S": streamline_whitespace,
     "WARN_Komma": add_error('No komma allowed at the end of a list', WARNING),
     "*": apply_if(replace_by_single_child,
-                  lambda ctx: ctx[-1].tag_name[:4] in ('cmd_', 'env_'))
+                  lambda ctx: ctx[-1].name[:4] in ('cmd_', 'env_'))
 }
 
 
@@ -489,13 +489,13 @@ class LaTeXCompiler(Compiler):
 
     def fallback_generic_environment(self, node) -> Node:
         node = super().fallback_compiler(node)
-        node.tag_name = 'VOID'
+        node.name = 'VOID'
         return node
 
     def fallback_compiler(self, node: Node) -> Any:
-        if node.tag_name.startswith('cmd_'):
+        if node.name.startswith('cmd_'):
             node = self.fallback_generic_command(node)
-        elif node.tag_name.startswith('env_'):
+        elif node.name.startswith('env_'):
             node = self.fallback_generic_environment(node)
         else:
             node = super().fallback_compiler(node)
@@ -503,7 +503,7 @@ class LaTeXCompiler(Compiler):
         if node.children:
             result = [];  void_flag = False
             for child in node.children:
-                if child.tag_name == 'VOID' and child.children:
+                if child.name == 'VOID' and child.children:
                     result.extend(child.children);  void_flag = True
                 else:
                     result.append(child)

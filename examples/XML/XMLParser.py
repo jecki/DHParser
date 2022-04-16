@@ -196,9 +196,9 @@ class XMLTransformer(Compiler):
     def extract_attributes(self, node_sequence):
         attributes = collections.OrderedDict()
         for node in node_sequence:
-            if node.tag_name == "Attribute":
-                assert node[0].tag_name == "Name", node.as_sexpr()
-                assert node[1].tag_name == "AttValue", node.as_sxpr()
+            if node.name == "Attribute":
+                assert node[0].name == "Name", node.as_sexpr()
+                assert node[1].name == "AttValue", node.as_sxpr()
                 attributes[node[0].content] = node[1].content
         return attributes
 
@@ -216,51 +216,51 @@ class XMLTransformer(Compiler):
             ERROR_VALUE_CONSTRAINT_VIOLATION)
 
     def on_document(self, node):
-        node.tag_name = XML_PTYPE
+        node.name = XML_PTYPE
         self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE, 'CharRef', 'EntityRef'})
         self.tree.empty_tags.update({'?xml'})
         node.result = tuple(self.compile(nd) for nd in node.children
-                            if nd.tag_name not in self.expendables)
+                            if nd.name not in self.expendables)
         return node
 
     def on_prolog(self, node):
         node.result = tuple(self.compile(nd) for nd in node.children
-                            if nd.tag_name not in self.expendables)
+                            if nd.name not in self.expendables)
         return node
 
     def on_CharData(self, node):
-        node.tag_name = TOKEN_PTYPE
+        node.name = TOKEN_PTYPE
         return node
 
     def on_XMLDecl(self, node):
         attributes = dict()
         for child in node.children:
             s = child.content
-            if child.tag_name == "VersionInfo":
+            if child.name == "VersionInfo":
                 attributes['version'] = s
-            elif child.tag_name == "EncodingDecl":
+            elif child.name == "EncodingDecl":
                 attributes['encoding'] = s
-            elif child.tag_name == "SDDecl":
+            elif child.name == "SDDecl":
                 attributes['standalone'] = s
                 self.value_constraint(node, s, {'yes', 'no'})
         if attributes:
             node.attr.update(attributes)
         node.result = ''
         # self.tree.empty_tags.add('?xml')
-        node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
+        node.name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
     def on_content(self, node) -> Union[Tuple[Node], str]:
         xml_content = tuple(self.compile(nd) for nd in node.children
-                            if nd.tag_name not in self.expendables)
+                            if nd.name not in self.expendables)
         if len(xml_content) == 1:
-            if xml_content[0].tag_name == TOKEN_PTYPE:
+            if xml_content[0].name == TOKEN_PTYPE:
                 # reduce single CharData children
                 xml_content = xml_content[0].content
         elif self.cleanup_whitespace and not self.preserve_whitespace:
             # remove CharData that consists only of whitespace from mixed elements
             xml_content = tuple(child for child in xml_content
-                                if child.tag_name != TOKEN_PTYPE or child.content.strip() != '')
+                                if child.name != TOKEN_PTYPE or child.content.strip() != '')
         return xml_content
 
     def on_element(self, node):
@@ -280,7 +280,7 @@ class XMLTransformer(Compiler):
         if attributes:
             node.attr.update(attributes)
             self.preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
-        node.tag_name = tag_name
+        node.name = tag_name
         node.result = self.compile(node['content']) if 'content' in node else tuple()
         self.preserve_whitespace = save_preserve_ws
         return node
@@ -289,9 +289,9 @@ class XMLTransformer(Compiler):
         attributes = self.extract_attributes(node.children)
         if attributes:
             node.attr.update(attributes)
-        node.tag_name = node['Name'].content
+        node.name = node['Name'].content
         node.result = ''
-        self.tree.empty_tags.add(node.tag_name)
+        self.tree.empty_tags.add(node.name)
         return node
 
     def on_Reference(self, node):
@@ -299,7 +299,7 @@ class XMLTransformer(Compiler):
         return node
 
     def on_Comment(self, node):
-        node.tag_name = '!--'
+        node.name = '!--'
         return node
 
 

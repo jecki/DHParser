@@ -77,7 +77,7 @@ class CompilerError(Exception):
 
 def visitor_name(tag_name: str) -> str:
     """
-    Returns the visitor_method name for `tag_name`, e.g.::
+    Returns the visitor_method name for `name`, e.g.::
 
         >>> visitor_name('expression')
         'on_expression'
@@ -240,20 +240,20 @@ class Compiler:
                 if id(nd) != id(child):
                     replacements[id(child)] = nd
                 if nd is not None and not isinstance(nd, Node):
-                    tn = node.tag_name
+                    tn = node.name
                     raise TypeError(
                         'Fallback compiler for Node `%s` received a value of type '
                         '`%s` from child `%s` instead of the required return type `Node`. '
                         'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
                         'method `on_%s(self, node)` in class `%s` to avoid this error!'
-                        % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
+                        % (tn, str(type(nd)), child.name, tn, self.__class__.__name__))
             if replacements:
                 # replace Nodes the identity of which has been changed during transformation
                 # and drop any returned None-results
                 result = []
                 for child in node.children:
                     nd = replacements.get(id(child), child)
-                    if nd is not None and nd.tag_name != EMPTY_PTYPE:
+                    if nd is not None and nd.name != EMPTY_PTYPE:
                         result.append(nd)
                 node.result = tuple(result)
         if self.has_attribute_visitors and not block_attribute_visitors:
@@ -289,7 +289,7 @@ class Compiler:
             assert node not in self._debug_already_compiled
             self._debug_already_compiled.add(node)
 
-        elem = node.tag_name
+        elem = node.name
         if elem[:1] == ':':
             elem = elem[1:] + '__'
         compiler = self.get_compiler(elem)

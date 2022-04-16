@@ -145,8 +145,8 @@ ZOMBIE_TAG = "ZOMBIE__"
 
 # criteria for finding nodes:
 # - node itself (equality)
-# - tag_name
-# - one of several tag_names
+# - name
+# - one of several names
 # - a function Node -> bool
 re_pattern = Any
 CriteriaType = Union['Node', str, Container[str], Callable, int, re_pattern]
@@ -183,7 +183,7 @@ def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
     ==================== ===================================================
 
     :param criterion: Either a node, the id of a node, a frozen node,
-        a tag_name or a container (usually a set) of multiple tag names,
+        a name or a container (usually a set) of multiple tag names,
         a regular expression pattern or another match function.
 
     :returns: a match-function (Node -> bool) for the given criterion.
@@ -196,11 +196,11 @@ def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
         return lambda nd: nd == criterion
         # return lambda nd: nd.equals(criterion)  # may yield wrong results for Node.index()
     elif isinstance(criterion, str):
-        return lambda nd: nd.tag_name == criterion
+        return lambda nd: nd.name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
-        return lambda nd: nd.tag_name in cast(Container, criterion)
+        return lambda nd: nd.name in cast(Container, criterion)
     elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
         return lambda nd: criterion.fullmatch(nd.content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
@@ -217,7 +217,7 @@ def create_context_match_function(criterion: CriteriaType) -> ContextMatchFuncti
     criteria and their meaning.
 
     :param criterion: Either a node, the id of a node, a frozen node,
-        a tag_name or a container (usually a set) of multiple tag names,
+        a name or a container (usually a set) of multiple tag names,
         a regular expression pattern or another match function.
 
     :returns: a match-function (TreeContext -> bool) for the given criterion.
@@ -230,11 +230,11 @@ def create_context_match_function(criterion: CriteriaType) -> ContextMatchFuncti
         return lambda ctx: ctx[-1] == criterion
         # return lambda ctx[-1]: ctx[-1].equals(criterion)  # may yield wrong results for Node.ictx[-1]ex()
     elif isinstance(criterion, str):
-        return lambda ctx: ctx[-1].tag_name == criterion
+        return lambda ctx: ctx[-1].name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
-        return lambda ctx: ctx[-1].tag_name in cast(Container, criterion)
+        return lambda ctx: ctx[-1].name in cast(Container, criterion)
     elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
         return lambda ctx: criterion.fullmatch(ctx[-1].content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
@@ -319,7 +319,7 @@ def xml_tag_name(tag_name: str) -> str:
         'ANONYMOUS_Series__'
 
     :param tag_name: the original tag name
-    :returns: the XML-conform tag_name
+    :returns: the XML-conform name
     """
     if tag_name[:1] == ':':
         return 'ANONYMOUS_%s__' % tag_name[1:]
@@ -391,7 +391,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     of the node's content in the source code, but may also be left
     uninitialized.
 
-    :ivar tag_name: The name of the node, which is either its
+    :ivar name: The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name.
 
             By convention the parser's class name when used as tag name
@@ -440,9 +440,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             This dictionary is created lazily upon first usage.
     """
 
-    __slots__ = '_result', '_children', '_pos', 'tag_name', '_attributes'
+    __slots__ = '_result', '_children', '_pos', 'name', '_attributes'
 
-    def __init__(self, tag_name: str,
+    def __init__(self, name: str,
                  result: Union[Tuple['Node', ...], 'Node', StringView, str],
                  leafhint: bool = False) -> None:
         """
@@ -452,7 +452,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         considered to be a "branch-node", or a text-string, in which case
         the node is informally considered to be a "leaf-node".
 
-        :param tag_name: a tag_name for the node. If the node has been created
+        :param name: a name for the node. If the node has been created
             by a parser, this is either the parser's name, e.g. "phrase",
             or if the parser wasn't named the parser's type, i.e. name of the
             parser's class, preceded by a colon, e.g. ":Series"
@@ -470,13 +470,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._children = tuple()     # type: Tuple['Node', ...]
         else:
             self._set_result(result)
-        self.tag_name = tag_name         # type: str
+        self.name = name         # type: str
 
     def __deepcopy__(self, memo):
         if self._children:
-            duplicate = self.__class__(self.tag_name, copy.deepcopy(self._children), False)
+            duplicate = self.__class__(self.name, copy.deepcopy(self._children), False)
         else:
-            duplicate = self.__class__(self.tag_name, self.result, True)
+            duplicate = self.__class__(self.name, self.result, True)
         duplicate._pos = self._pos
         if self.has_attr():
             duplicate.attr.update(self._attributes)
@@ -490,7 +490,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __repr__(self):
         rarg = ("'%s'" % str(self)) if not self._children else \
             "(" + ", ".join(child.__repr__() for child in self._children) + ")"
-        return "Node('%s', %s)" % (self.tag_name, rarg)
+        return "Node('%s', %s)" % (self.name, rarg)
 
     @property
     def repr(self) -> str:
@@ -524,7 +524,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return True
 
     # def __hash__(self):
-    #     return hash(self.tag_name)  # very bad idea!
+    #     return hash(self.name)  # very bad idea!
+
+    @property
+    def tag_name(self) -> str:
+        print(DeprecationWarning('"Node.tag_name" is deprectaed. Use "Node.name" instead!'))
+        return self.name
+
+    @tag_name.setter
+    def tag_name(self, name: str):
+        print(DeprecationWarning('"Node.tag_name" is deprectaed. Use "Node.name" instead!'))
+        self.name = name
 
     def equals(self, other: 'Node', ignore_attr_order: bool = True) -> bool:
         """
@@ -542,7 +552,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :returns: True, if the tree originating in node `self` is equal by
             value to the tree originating in node `other`.
         """
-        if self.tag_name == other.tag_name and self.compare_attr(other, ignore_attr_order):
+        if self.name == other.name and self.compare_attr(other, ignore_attr_order):
             if self._children:
                 return (len(self._children) == len(other._children)
                         and all(a.equals(b, ignore_attr_order)
@@ -561,8 +571,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         practice to remove (or name) all anonymous nodes during the
         AST-transformation.
         """
-        tn = self.tag_name
-        return not tn or tn[0] == ':'  # self.tag_name.find(':') >= 0
+        tn = self.name
+        return not tn or tn[0] == ':'  # self.name.find(':') >= 0
 
     # node content ###
 
@@ -936,7 +946,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
         """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
-        child with the given index or tag_name exists, the ``surrogate`` is
+        child with the given index or name exists, the ``surrogate`` is
         returned instead. This mimics the behaviour of Python's dictionary's
         `get()`-method.
 
@@ -1244,7 +1254,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return ctx
         else:
             raise ValueError('Node "%s" does not occur in the tree %s '
-                             % (node.tag_name, flatten_sxpr(self.as_sxpr())))
+                             % (node.name, flatten_sxpr(self.as_sxpr())))
 
     # milestone support ### EXPERIMENTAL!!! ###
 
@@ -1295,7 +1305,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 k = index(parent, ctx[i])
                 segment = cut_func(parent.result, k, child)
                 if tainted or len(segment) != len(parent.result):
-                    parent_copy = Node(parent.tag_name, segment)
+                    parent_copy = Node(parent.name, segment)
                     if parent.has_attr():
                         parent_copy.attr = parent.attr
                     child = parent_copy
@@ -1328,7 +1338,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 i += 1
         except (IndexError, ValueError):
             pass
-        new_ca = Node(common_ancestor.tag_name, left_children[:i] + right_children[k + i:])
+        new_ca = Node(common_ancestor.name, left_children[:i] + right_children[k + i:])
         if common_ancestor.has_attr():
             new_ca.attr = common_ancestor.attr
         return new_ca
@@ -1346,17 +1356,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> tree.evaluate(actions)
             23
 
-        :param actions: A dictionary that maps tag_names to action functions.
+        :param actions: A dictionary that maps node-names to action functions.
         :return: the result of the evaluation
         """
         args = tuple(child.evaluate(actions) for child in self._children) if self._children \
                else (self._result,)
         try:
-            return actions[self.tag_name](*args)
+            return actions[self.name](*args)
         except KeyError:
             return self.content
         except TypeError as e:
-            raise AssertionError(f'Evaluation function for tag "{self.tag_name}" cannot handle '
+            raise AssertionError(f'Evaluation function for tag "{self.name}" cannot handle '
                                  f'arguments: {args}. Error raised: {e}')
 
     # serialization ###########################################################
@@ -1375,9 +1385,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         :param tab:  The indentation string, e.g. '\t' or '    '
         :param open_fn: A function (Node -> str) that returns an
-            opening string (e.g. an XML-tag_name) for a given node
+            opening string (e.g. an XML-name) for a given node
         :param close_fn:  A function (Node -> str) that returns a closing
-            string (e.g. an XML-tag_name) for a given node.
+            string (e.g. an XML-name) for a given node.
         :param data_fn:  A function (str -> str) that filters the data
             string before printing, e.g. to add quotation marks
 
@@ -1482,7 +1492,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            txt = [left_bracket, node.tag_name]
+            txt = [left_bracket, node.name]
             # s += " '(pos %i)" % node.add_pos
             # txt.append(str(id(node)))  # for debugging
             if node.has_attr():
@@ -1552,9 +1562,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             nonlocal attr_filter
-            if node.tag_name in string_tags and not node.has_attr():
+            if node.name in string_tags and not node.has_attr():
                 return ''
-            txt = ['<', xml_tag_name(node.tag_name)]
+            txt = ['<', xml_tag_name(node.name)]
             if node.has_attr():
                 txt.extend(' %s=%s' % (k, attr_filter(str(v))) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
@@ -1566,12 +1576,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 #     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
                 #             for err in root.node_errors(node))))
                 txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
-            if node.tag_name in empty_tags:
-                assert node.tag_name[0] == '?' or not node.result, \
-                    f"Node {node.tag_name} with content {str(node)} is not an empty element!"
-                if node.tag_name[0] == '?':  ending = '?>'
+            if node.name in empty_tags:
+                assert node.name[0] == '?' or not node.result, \
+                    f"Node {node.name} with content {str(node)} is not an empty element!"
+                if node.name[0] == '?':  ending = '?>'
                 else:  ending = '/>'
-            elif node.tag_name == '!--':
+            elif node.name == '!--':
                 ending = ""
             else:
                 ending = ">"
@@ -1579,11 +1589,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
-            if node.tag_name in empty_tags or (node.tag_name in string_tags and not node.has_attr()):
+            if node.name in empty_tags or (node.name in string_tags and not node.has_attr()):
                 return ''
-            elif node.tag_name == '!--':
+            elif node.name == '!--':
                 return '-->'
-            return '</' + xml_tag_name(node.tag_name) + '>'
+            return '</' + xml_tag_name(node.name) + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
@@ -1596,9 +1606,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             thereby signalling that the children of this node shall not be
             printed on several lines to avoid unwanted gaps in the output.
             """
-            return node.tag_name in inline_tags \
+            return node.name in inline_tags \
                    or (node.has_attr() and node.attr.get('xml:space', 'default') == 'preserve')
-                    # or (node.tag_name in string_tags and not node.children)
+                    # or (node.name in string_tags and not node.children)
 
         line_breaks = linebreaks(src) if src else []
         return '\n'.join(self._tree_repr(
@@ -1625,7 +1635,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def to_json_obj(self) -> list:
         """Converts the tree into a JSON-serializable nested list."""
-        jo = [self.tag_name,
+        jo = [self.name,
               [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
         pos = self._pos
         if pos >= 0:
@@ -1729,25 +1739,25 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             import xml.etree.ElementTree as ET
         # import lxml.etree as ET
         attributes = {k: str(v) for k, v in self.attr.items()} if self.has_attr() else {}
-        tag_name = xml_tag_name(self.tag_name) if self.tag_name[:1] == ':' else self.tag_name
+        tag_name = xml_tag_name(self.name) if self.name[:1] == ':' else self.name
         if self.children:
             element = ET.Element(tag_name, attrib=attributes)
             # element.extend([child.as_etree(text_tags, empty_tags) for child in self.children])
             children = self.children
             i = 0;  L = len(children);  text = []
-            while i < L and children[i].tag_name in string_tags:
+            while i < L and children[i].name in string_tags:
                 assert not children[i].children
                 text.append(children[i].content)
                 i += 1
             if text:  element.text = ''.join(text)
             last_element = None
             while i < L:
-                while i < L and children[i].tag_name not in string_tags:
+                while i < L and children[i].name not in string_tags:
                     last_element = children[i].as_etree(ET, string_tags, empty_tags)
                     element.append(last_element)
                     i += 1
                 text = []
-                while i < L and children[i].tag_name in string_tags:
+                while i < L and children[i].name in string_tags:
                     assert not children[i].children
                     text.append(children[i].content)
                     i += 1
@@ -1807,8 +1817,8 @@ def as_path(context: TreeContext) -> str:
     """Returns the context a pseudo filepath of tag-names."""
     tag_list = ['']
     for node in context:
-        assert not node.tag_name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
-        tag_list.append(node.tag_name)
+        assert not node.name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
+        tag_list.append(node.name)
     if context[-1].children:
         tag_list.append('')
     return '/'.join(tag_list)
@@ -2059,16 +2069,16 @@ def serialize_context(context: TreeContext, with_content: int = 0, delimiter: st
 
     :param context: the context to be serialized.
     :param with_content: the number of nodes from the end of the context for
-        which the content will be displayed next to the tag_name.
+        which the content will be displayed next to the name.
     :param delimiter: The delimiter separating the nodes in the returned string.
     :returns: the string-serialization of the given context.
     """
     if with_content == 0:
-        lines = [nd.tag_name for nd in context]
+        lines = [nd.name for nd in context]
     else:
         n = with_content if with_content > 0 else len(context)
-        lines = [nd.tag_name for nd in context[:-n]]
-        lines.extend(nd.tag_name + ':' + str(nd.content) for nd in context[-n:])
+        lines = [nd.name for nd in context[:-n]]
+        lines.extend(nd.name + ':' + str(nd.content) for nd in context[-n:])
     return delimiter.join(lines)
 
 
@@ -2246,13 +2256,13 @@ class FrozenNode(Node):
     a tree (see :py:func:`create_match_function()`).
     """
 
-    def __init__(self, tag_name: str, result: ResultType, leafhint: bool = True) -> None:
+    def __init__(self, name: str, result: ResultType, leafhint: bool = True) -> None:
         if isinstance(result, str) or isinstance(result, StringView):
             result = str(result)
         else:
             raise TypeError('FrozenNode only accepts string as result. '
                             '(Only leaf-nodes can be frozen nodes.)')
-        super(FrozenNode, self).__init__(tag_name, result, True)
+        super(FrozenNode, self).__init__(name, result, True)
 
     @property
     def result(self) -> Union[Tuple[Node, ...], StringView, str]:
@@ -2421,7 +2431,7 @@ class RootNode(Node):
         duplicate.inline_tags = self.inline_tags
         duplicate.string_tags = self.string_tags
         duplicate.empty_tags = self.empty_tags
-        duplicate.tag_name = self.tag_name
+        duplicate.name = self.name
         return duplicate
 
     def swallow(self, node: Optional[Node],
@@ -2446,17 +2456,17 @@ class RootNode(Node):
             self.source_mapping = gen_neutral_srcmap_func(source)
         else:
             self.source_mapping = source_mapping  # type: SourceMapFunc
-        if self.tag_name != '__not_yet_ready__':
+        if self.name != '__not_yet_ready__':
             raise AssertionError('RootNode.swallow() has already been called!')
         if node is None:
-            self.tag_name = ZOMBIE_TAG
+            self.name = ZOMBIE_TAG
             self.with_pos(0)
             self.new_error(self, 'Parser did not match!', PARSER_STOPPED_BEFORE_END)
             return self
         self._result = node._result
         self._children = node._children
         self._pos = node._pos
-        self.tag_name = node.tag_name
+        self.name = node.name
         if node.has_attr():
             self._attributes = node._attributes
         # self._content = node._content
@@ -2622,7 +2632,7 @@ class RootNode(Node):
         have matched without errors. It simply means the no
         PARSER_STOPPED_BEFORE_END-error has occurred.
         """
-        return self.tag_name != '__not_yet_ready__' \
+        return self.name != '__not_yet_ready__' \
             and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
 
     def as_xml(self, src: str = None,
@@ -2902,7 +2912,7 @@ def parse_xml(xml: Union[str, StringView],
                         res.append(child)
             s, closing_tagname = parse_closing_tag(s)
             assert tagname == closing_tagname, tagname + ' != ' + closing_tagname
-        if len(res) == 1 and res[0].tag_name == string_tag:
+        if len(res) == 1 and res[0].name == string_tag:
             result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
         else:
             result = tuple(res)

@@ -69,11 +69,15 @@ def get_preprocessor() -> PreprocessorFunc:
 #
 #######################################################################
 
-class XMLGrammar(Grammar):
-    r"""Parser for a XML source file.
+class XML_DTDGrammar(Grammar):
+    r"""Parser for a XML_DTD source file.
     """
+    choice = Forward()
+    cp = Forward()
     element = Forward()
-    source_hash__ = "c0d3e9b0546b148cb8e0e1cd4f6abd8e"
+    extSubsetDecl = Forward()
+    ignoreSectContents = Forward()
+    source_hash__ = "cdaaf1e7687896afa17fd153e278c70a"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -84,9 +88,13 @@ class XMLGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
+    S = RegExp('\\s+')
+    Char = RegExp('\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]')
+    Chars = RegExp('(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF])+')
     CharRef = Alternative(Series(Drop(Text('&#')), RegExp('[0-9]+'), Drop(Text(';'))), Series(Drop(Text('&#x')), RegExp('[0-9a-fA-F]+'), Drop(Text(';'))))
     CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
     PIChars = RegExp('(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
+    IgnoreChars = RegExp('(?:(?!(?:<!\\[)|(?:\\]\\]>))(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
     CData = RegExp('(?:(?!\\]\\]>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
     PubidChars = RegExp("(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
@@ -98,37 +106,87 @@ class XMLGrammar(Grammar):
     Name = Series(NameStartChar, Option(NameChars))
     PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
     PI = Series(Drop(Text('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(Text('?>')))
-    Misc = OneOrMore(Alternative(Comment, PI, dwsp__))
+    Misc = OneOrMore(Alternative(Comment, PI, S))
+    Names = Series(Name, ZeroOrMore(Series(RegExp(' '), Name)))
+    Nmtoken = Synonym(NameChars)
+    Nmtokens = Series(Nmtoken, ZeroOrMore(Series(RegExp(' '), Nmtoken)))
+    PEReference = Series(Drop(Text('%')), Name, Drop(Text(';')))
     EntityRef = Series(Drop(Text('&')), Name, Drop(Text(';')))
     Reference = Alternative(EntityRef, CharRef)
     PubidLiteral = Alternative(Series(Drop(Text('"')), Option(PubidChars), Drop(Text('"'))), Series(Drop(Text("\'")), Option(PubidCharsSingleQuoted), Drop(Text("\'"))))
     SystemLiteral = Alternative(Series(Drop(Text('"')), RegExp('[^"]*'), Drop(Text('"'))), Series(Drop(Text("\'")), RegExp("[^']*"), Drop(Text("\'"))))
     AttValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Text("\'"))))
+    EntityValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), Drop(Text("\'"))))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
     TagName = Capture(Synonym(Name), zero_length_warning=True)
     emptyElement = Series(Drop(Text('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('/>')))
     ETag = Series(Drop(Text('</')), Pop(TagName), dwsp__, Drop(Text('>')), mandatory=1)
     STag = Series(Drop(Text('<')), TagName, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('>')))
-    VersionNum = RegExp('[0-9]+\\.[0-9]+')
-    ExternalID = Alternative(Series(Drop(Text('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
-    doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(Text('>')), mandatory=2)
-    No = Text('no')
-    Yes = Text('yes')
-    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Alternative(Series(Drop(Text("\'")), Yes), Series(No, Drop(Text("\'")))), Alternative(Series(Drop(Text('"')), Yes), Series(No, Drop(Text('"'))))))
     EncName = RegExp('[A-Za-z][A-Za-z0-9._\\-]*')
-    EncodingDecl = Series(dwsp__, Drop(Text('encoding')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), EncName, Drop(Text("\'"))), Series(Drop(Text('"')), EncName, Drop(Text('"')))))
+    NDataDecl = Series(Drop(Text('NData')), S, Name, mandatory=1)
+    PublicID = Series(Drop(Text('PUBLIC')), S, PubidLiteral, mandatory=1)
+    ExternalID = Alternative(Series(Drop(Text('SYSTEM')), S, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), S, PubidLiteral, S, SystemLiteral, mandatory=1))
+    NotationDecl = Series(Drop(Text('<!NOTATION')), S, Name, dwsp__, Alternative(ExternalID, PublicID), dwsp__, Drop(Text('>')), mandatory=1)
+    PEDef = Alternative(EntityValue, ExternalID)
+    EntityDef = Alternative(EntityValue, Series(ExternalID, Option(NDataDecl)))
+    PEDecl = Series(Drop(Text('<!ENTITY')), S, Drop(Text('%')), S, Name, S, PEDef, dwsp__, Drop(Text('>')), mandatory=3)
+    GEDecl = Series(Drop(Text('<!ENTITY')), S, Name, S, EntityDef, dwsp__, Drop(Text('>')), mandatory=3)
+    EntityDecl = Alternative(GEDecl, PEDecl)
+    FIXED = Series(Option(Series(Drop(Text('#FIXED')), S)), AttValue)
+    IMPLIED = Text('#IMPLIED')
+    REQUIRED = Text('#REQUIRED')
+    DefaultDecl = Alternative(REQUIRED, IMPLIED, FIXED)
+    Enumeration = Series(Drop(Text('(')), dwsp__, Nmtoken, ZeroOrMore(Series(dwsp__, Drop(Text('|')), dwsp__, Nmtoken)), dwsp__, Drop(Text(')')))
+    NotationType = Series(Drop(Text('NOTATION')), S, Drop(Text('(')), dwsp__, Name, ZeroOrMore(Series(dwsp__, Drop(Text('|')), dwsp__, Name)), dwsp__, Drop(Text(')')))
+    EnumeratedType = Alternative(NotationType, Enumeration)
+    NMTOKENS = Text('NMTOKENS')
+    NMTOKEN = Text('NMTOKEN')
+    ENTITIES = Text('ENTITIES')
+    ENTITY = Text('ENTITY')
+    IDREFS = Text('IDREFS')
+    IDREF = Text('IDREF')
+    ID = Text('ID')
+    TokenizedType = Alternative(IDREFS, IDREF, ID, ENTITY, ENTITIES, NMTOKENS, NMTOKEN)
+    StringType = Text('CDATA')
+    AttType = Alternative(StringType, TokenizedType, EnumeratedType)
+    AttDef = Series(Name, dwsp__, AttType, S, DefaultDecl, mandatory=2)
+    AttlistDecl = Series(Drop(Text('<!ATTLIST')), S, Name, ZeroOrMore(Series(dwsp__, AttDef)), dwsp__, Drop(Text('>')), mandatory=1)
+    seq = Series(Drop(Text('(')), dwsp__, cp, ZeroOrMore(Series(dwsp__, Drop(Text(',')), dwsp__, cp)), dwsp__, Drop(Text(')')))
+    VersionNum = RegExp('[0-9]+\\.[0-9]+')
     VersionInfo = Series(dwsp__, Drop(Text('version')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), VersionNum, Drop(Text("\'"))), Series(Drop(Text('"')), VersionNum, Drop(Text('"')))))
+    children = Series(Alternative(choice, seq), Option(Alternative(Drop(Text('?')), Drop(Text('*')), Drop(Text('+')))))
+    Mixed = Alternative(Series(Drop(Text('(')), dwsp__, Drop(Text('#PCDATA')), ZeroOrMore(Series(dwsp__, Drop(Text('|')), dwsp__, Name)), dwsp__, Drop(Text(')*'))), Series(Drop(Text('(')), dwsp__, Drop(Text('#PCDATA')), dwsp__, Drop(Text(')'))))
+    ANY = Text('ANY')
+    EMPTY = Text('EMPTY')
+    contentspec = Alternative(EMPTY, ANY, Mixed, children)
+    elementdecl = Series(Drop(Text('<!ELEMENT')), S, Name, dwsp__, contentspec, dwsp__, Drop(Text('>')), mandatory=1)
+    EncodingDecl = Series(dwsp__, Drop(Text('encoding')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), EncName, Drop(Text("\'"))), Series(Drop(Text('"')), EncName, Drop(Text('"')))))
+    TextDecl = Series(Drop(Text('<?xml')), Option(VersionInfo), EncodingDecl, dwsp__, Drop(Text('?>')))
+    extParsedEnt = Series(Option(TextDecl), content)
+    ignoreSect = Series(Drop(Text('<![')), dwsp__, Drop(Text('IGNORE')), dwsp__, Drop(Text('[')), ignoreSectContents, Drop(Text(']]>')))
+    includeSect = Series(Drop(Text('<![')), dwsp__, Drop(Text('INCLUDE')), dwsp__, Drop(Text('[')), extSubsetDecl, Drop(Text(']]>')))
+    conditionalSect = Alternative(includeSect, ignoreSect)
+    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), Alternative(Text("yes"), Text("no")), Drop(Text("\'"))), Series(Drop(Text('"')), Alternative(Text("yes"), Text("no")), Drop(Text('"')))))
+    extSubset = Series(Option(TextDecl), extSubsetDecl)
+    markupdecl = Alternative(elementdecl, AttlistDecl, EntityDecl, NotationDecl, PI, Comment)
+    DeclSep = Alternative(PEReference, S)
+    intSubset = ZeroOrMore(Alternative(markupdecl, DeclSep))
+    doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Option(Series(Drop(Text('[')), intSubset, Drop(Text(']')), dwsp__)), Drop(Text('>')), mandatory=2)
     XMLDecl = Series(Drop(Text('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(Text('?>')))
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
+    cp.set(Series(Alternative(Name, choice, seq), Option(Alternative(Drop(Text('?')), Drop(Text('*')), Drop(Text('+'))))))
+    choice.set(Series(Drop(Text('(')), dwsp__, OneOrMore(Series(dwsp__, Drop(Text('|')), dwsp__, cp)), dwsp__, Drop(Text(')'))))
+    ignoreSectContents.set(Series(IgnoreChars, ZeroOrMore(Series(Drop(Text('<![')), ignoreSectContents, Drop(Text(']]>')), IgnoreChars))))
+    extSubsetDecl.set(ZeroOrMore(Alternative(markupdecl, conditionalSect, DeclSep)))
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
 
-_raw_grammar = ThreadLocalSingletonFactory(XMLGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(XML_DTDGrammar, ident=1)
 
-def get_grammar() -> XMLGrammar:
+def get_grammar() -> XML_DTDGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
@@ -141,7 +199,7 @@ def get_grammar() -> XMLGrammar:
         pass
     return grammar
     
-def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_XML_DTD(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -154,7 +212,7 @@ def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
     "<": [flatten, remove_empty, remove_anonymous_tokens, remove_whitespace, remove_children("S")],
-    "document": [flatten(lambda context: context[-1].tag_name == 'prolog', recursive=False)],
+    "document": [flatten(lambda context: context[-1].name == 'prolog', recursive=False)],
     "prolog": [],
     "XMLDecl": [],
     "VersionInfo": [reduce_single_child],
@@ -313,14 +371,14 @@ class XMLCompiler(Compiler):
     def extract_attributes(self, node_sequence):
         attributes = collections.OrderedDict()
         for node in node_sequence:
-            if node.tag_name == "Attribute":
-                assert node[0].tag_name == "Name", node.as_sexpr()
-                assert node[1].tag_name == "AttValue", node.as_sxpr()
+            if node.name == "Attribute":
+                assert node[0].name == "Name", node.as_sexpr()
+                assert node[1].name == "AttValue", node.as_sxpr()
                 attributes[node[0].content] = node[1].content
         return attributes
 
     def get_parser(self, tag_name):
-        """Returns a mock parser with the given tag_name as parser name."""
+        """Returns a mock parser with the given name as parser name."""
         return self.mock_parsers.setdefault(tag_name, MockParser(tag_name))
 
     def validity_constraint(self, node, condition, err_msg):
@@ -346,18 +404,18 @@ class XMLCompiler(Compiler):
         attributes = dict()
         for child in node.children:
             s = child.content
-            if child.tag_name == "VersionInfo":
+            if child.name == "VersionInfo":
                 attributes['version'] = s
-            elif child.tag_name == "EncodingDecl":
+            elif child.name == "EncodingDecl":
                 attributes['encoding'] = s
-            elif child.tag_name == "SDDecl":
+            elif child.name == "SDDecl":
                 attributes['standalone'] = s
                 self.value_constraint(node, s, {'yes', 'no'})
         if attributes:
             node.attr.update(attributes)
         node.result = ''
         self.tree.empty_tags.add('?xml')
-        node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
+        node.name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
     # def on_VersionInfo(self, node):
@@ -536,16 +594,16 @@ class XMLCompiler(Compiler):
         if attributes:
             node.attr.update(attributes)
             preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
-        node.tag_name = tag_name
+        node.name = tag_name
         content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children)
         if len(content) == 1:
-            if content[0].tag_name == "CharData":
+            if content[0].name == "CharData":
                 # reduce single CharData children
                 content = content[0].content
         elif self.cleanup_whitespace and not preserve_whitespace:
             # remove CharData that consists only of whitespace from mixed elements
             content = tuple(child for child in content
-                            if child.tag_name != "CharData" or child.content.strip() != '')
+                            if child.name != "CharData" or child.content.strip() != '')
         node.result = content
         return node
 
@@ -559,9 +617,9 @@ class XMLCompiler(Compiler):
         attributes = self.extract_attributes(node.children)
         if attributes:
             node.attr.update(attributes)
-        node.tag_name = node['Name'].content  # node.parser = self.get_parser(node['Name'].content)
+        node.name = node['Name'].content  # node.parser = self.get_parser(node['Name'].content)
         node.result = ''
-        self.tree.empty_tags.add(node.tag_name)
+        self.tree.empty_tags.add(node.name)
         return node
 
     # def on_TagName(self, node):
