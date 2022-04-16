@@ -35,6 +35,7 @@ import multiprocessing
 import os
 import sys
 import threading
+import traceback
 
 assert sys.version_info >= (3, 5, 3), "DHParser requires at least Python-Version 3.5.3!"
 
@@ -50,7 +51,7 @@ except ImportError:
 
 import typing
 from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
-    Optional, Type
+    Optional, Type, Callable
 try:
     from typing import Protocol
 except ImportError:
@@ -126,7 +127,9 @@ __all__ = ('typing',
            'json_rpc',
            'sane_parser_name',
            'normalize_circular_path',
-           'DHPARSER_DIR')
+           'DHPARSER_DIR',
+           'deprecated',
+           'deprecation_warning')
 
 
 #######################################################################
@@ -303,6 +306,44 @@ def last(item_or_sequence: Union[Sequence, Any]) -> Any:
         return item_or_sequence[-1]
     else:
         return item_or_sequence
+
+
+DEPRECATION_WARNINGS_ISSUED: Set[str] = set()
+
+
+def deprecation_warning(message: str):
+    """Issues a deprecation warning. Makes sure that each message is only
+    called once."""
+    if message not in DEPRECATION_WARNINGS_ISSUED:
+        DEPRECATION_WARNINGS_ISSUED.add(message)
+        try:
+            raise DeprecationWarning(message)
+        except DeprecationWarning as e:
+            if get_config_value('deprecation_policy') == 'warn':
+                stacktrace = traceback.format_exc()
+                print(stacktrace)
+            else:
+                raise e
+
+
+def deprecated(message: str) -> Callable:
+    """Marks a function as deprecated and emits a deprecation
+    message on its first use::
+
+        >>> @deprecated('This function is deprecated!')
+        ... def bad():
+        ...     pass
+        >>> bad()
+        This function is deprecated!
+    """
+    assert isinstance(message, str)
+    def decorator(f: Callable) -> Callable:
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            deprecation_warning(message)
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 #######################################################################

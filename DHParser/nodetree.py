@@ -46,7 +46,8 @@ from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
-    validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value
+    validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
+    deprecation_warning
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -528,12 +529,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     @property
     def tag_name(self) -> str:
-        print(DeprecationWarning('"Node.tag_name" is deprectaed. Use "Node.name" instead!'))
+        deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
+                            'Use "Node.name" instead!')
         return self.name
 
     @tag_name.setter
     def tag_name(self, name: str):
-        print(DeprecationWarning('"Node.tag_name" is deprectaed. Use "Node.name" instead!'))
+        deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
+                            'Use "Node.name" instead!')
         self.name = name
 
     def equals(self, other: 'Node', ignore_attr_order: bool = True) -> bool:
