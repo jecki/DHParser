@@ -745,19 +745,20 @@ class Parser:
                 self._closure[ctx[-1]] = ctx
             return self._closure
 
-    def descendants(self) -> Iterator['Parser']:
-        """Returns an iterator over self and all descendant parsers,
+    def descendants(self) -> Iterator[ParserContext]:
+        """Returns an iterator over the contexts of self and all descendant parsers,
         avoiding of circles."""
         visited = set()
 
-        def descendants_(parser: Parser) -> Iterator['Parser']:
+        def descendants_(parser: Parser, ctx: ParserContext) -> Iterator[ParserContext]:
             if parser not in visited:
                 visited.add(parser)
-                yield parser
+                ctx = ctx + [parser]
+                yield ctx
                 for p in parser.sub_parsers():
-                    yield from descendants_(p)
+                    yield from descendants_(p, ctx)
 
-        yield from descendants_(self)
+        yield from descendants_(self, [])
 
     def _apply(self, func: ApplyFunc, parent_context: List['Parser'], flip: FlagFunc) -> bool:
         """
@@ -826,8 +827,8 @@ class Parser:
         #     return self._apply(func, [], negative_flip)
         # else:
         #     return self._apply(func, [], positive_flip)
-        for p, ctx in self.closure.items():
-            if func(ctx):
+        for pctx in self.descendants():
+            if func(pctx):
                 return True
         return False
 
@@ -3762,7 +3763,7 @@ class NegativeLookbehind(Lookbehind):
 def is_context_sensitive(parser: Parser) -> bool:
     """Returns True, is ``parser`` is a context-sensitive parser
     or calls a context-sensitive parser."""
-    return any(isinstance(p, ContextSensitive) for p in parser.descendants())
+    return any(isinstance(pctx[-1], ContextSensitive) for pctx in parser.descendants())
     # for p in parser.descendants():
     #     if isinstance(p, ContextSensitive):
     #         return True
