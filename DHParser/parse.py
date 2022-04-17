@@ -368,6 +368,8 @@ ApplyFunc = Callable[[List['Parser']], Optional[bool]]
 # The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[['Parser', StringView], ParsingResult]
+ParserContext = List['Parser']
+ParserClosure = Dict['Parser', ParserContext]
 
 
 class Parser:
@@ -468,6 +470,7 @@ class Parser:
         self.drop_content = False     # type: bool
         self.node_name = self.ptype   # type: str
         self.eq_class = id(self)      # type: int
+        self._closure = dict()        # type: ParserClosure
         self.cycle_detection = set()  # type: Set[ApplyFunc]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
@@ -727,6 +730,20 @@ class Parser:
         """
         return tuple()
 
+    @property
+    def closure(self) -> ParserClosure:
+        def gather(parser: Parser, parent_ctx: ParserContext) -> Iterator[ParserContext]:
+            ctx = parent_ctx + [parser]
+            if parser not in self._closure:
+                yield ctx
+                for p in parser.sub_parsers():
+                    yield from gather(p, ctx)
+        if self._closure:
+            return self._closure
+        else:
+            for ctx in gather(self, []):
+                self._closure[ctx[-1]] = ctx
+            return self._closure
 
     def descendants(self) -> Iterator['Parser']:
         """Returns an iterator over self and all descendant parsers,
@@ -741,7 +758,6 @@ class Parser:
                     yield from descendants_(p)
 
         yield from descendants_(self)
-
 
     def _apply(self, func: ApplyFunc, parent_context: List['Parser'], flip: FlagFunc) -> bool:
         """
@@ -806,10 +822,14 @@ class Parser:
                 flagged.remove(f)
                 return False
 
-        if func in self.cycle_detection:
-            return self._apply(func, [], negative_flip)
-        else:
-            return self._apply(func, [], positive_flip)
+        # if func in self.cycle_detection:
+        #     return self._apply(func, [], negative_flip)
+        # else:
+        #     return self._apply(func, [], positive_flip)
+        for p, ctx in self.closure.items():
+            if func(ctx):
+                return True
+        return False
 
     def _signature(self) -> Hashable:
         """This method should be implemented by any non-abstract descendant
