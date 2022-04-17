@@ -369,7 +369,6 @@ ApplyFunc = Callable[[List['Parser']], Optional[bool]]
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[['Parser', StringView], ParsingResult]
 ParserContext = List['Parser']
-ParserClosure = Dict['Parser', ParserContext]
 
 
 class Parser:
@@ -445,11 +444,6 @@ class Parser:
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
-        cycle_detection:  The apply()-method uses this variable to make
-                sure that one and the same function will not be applied
-                (recursively) a second time, if it has already been
-                applied to this parser.
-
         proxied: The original `_parse()`-method is stored here, if a
                 proxy (e.g. a tracing debugger) is installed via the
                 `set_proxy()`-method.
@@ -470,8 +464,6 @@ class Parser:
         self.drop_content = False     # type: bool
         self.node_name = self.ptype   # type: str
         self.eq_class = id(self)      # type: int
-        self._closure = dict()        # type: ParserClosure
-        self.cycle_detection = set()  # type: Set[ApplyFunc]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
         try:
@@ -730,21 +722,6 @@ class Parser:
         """
         return tuple()
 
-    @property
-    def closure(self) -> ParserClosure:
-        def gather(parser: Parser, parent_ctx: ParserContext) -> Iterator[ParserContext]:
-            ctx = parent_ctx + [parser]
-            if parser not in self._closure:
-                yield ctx
-                for p in parser.sub_parsers():
-                    yield from gather(p, ctx)
-        if self._closure:
-            return self._closure
-        else:
-            for ctx in gather(self, []):
-                self._closure[ctx[-1]] = ctx
-            return self._closure
-
     def descendants(self) -> Iterator[ParserContext]:
         """Returns an iterator over the contexts of self and all descendant parsers,
         avoiding of circles."""
@@ -760,31 +737,6 @@ class Parser:
 
         yield from descendants_(self, [])
 
-    def _apply(self, func: ApplyFunc, parent_context: List['Parser'], flip: FlagFunc) -> bool:
-        """
-        Applies function `func(parser)` recursively to this parser and all
-        descendant parsers as long as `func()` returns `None` or `False`.
-        Otherwise, it stops the further application of `func` and returns `True`.
-
-        In order to break cycles, function `flip` is called, which should
-        return `True`, if this parser has already been visited. If not, it
-        flips the cycle detection flag and returns `False`.
-
-        This is a protected function and should not be called from outside
-        class Parser or any of its descendants. The entry point for external
-        calls is the method `apply()` without underscore!
-        """
-        if not flip(func, self.cycle_detection):
-            context = parent_context + [self]
-            if func(context):
-                return True
-            else:
-                for parser in self.sub_parsers():
-                    if parser._apply(func, context, flip):
-                        return True
-                return False
-        return False
-
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
         Applies function `func(parser)` recursively to this parser and all
@@ -799,34 +751,10 @@ class Parser:
         to issue tests on all descendant parsers (including self) which may be
         decided already after some parsers have been visited without any need
         to visit further parsers. At the same time `apply` can be used to simply
-        `apply` a procedure to all descendant parsers (including self) without
+        apply a procedure to all descendant parsers (including self) without
         worrying about forgetting the return value of procedure, because a
         return value of `None` means "carry on".
         """
-        def positive_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
-            """Returns True, if function `f` has already been applied to this
-            parser and sets the flag accordingly. Interprets `f in flagged == True`
-            as meaning that `f` has already been applied."""
-            if f in flagged:
-                return True
-            else:
-                flagged.add(f)
-                return False
-
-        def negative_flip(f: ApplyFunc, flagged: Set[ApplyFunc]) -> bool:
-            """Returns True, if function `f` has already been applied to this
-            parser and sets the flag accordingly. Interprets `f in flagged == False`
-            as meaning that `f` has already been applied."""
-            if f not in flagged:
-                return True
-            else:
-                flagged.remove(f)
-                return False
-
-        # if func in self.cycle_detection:
-        #     return self._apply(func, [], negative_flip)
-        # else:
-        #     return self._apply(func, [], positive_flip)
         for pctx in self.descendants():
             if func(pctx):
                 return True
@@ -1667,8 +1595,6 @@ class Grammar:
                                        " %s vs. %s" % (str(self), str(parser.grammar))
 
         if self._dirty_flag__:
-            if parser is not self.start_parser__:
-                for p in self.all_parsers__:  p.cycle_detection = set()
             self._reset__()
             parser.apply(reset_parser)
             for p in self.resume_parsers__:  p.apply(reset_parser)
