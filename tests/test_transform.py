@@ -33,7 +33,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
-    positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes, \
+    positions_of, insert, node_maker, apply_if, change_name, add_attributes, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -427,7 +427,7 @@ class TestConstructiveTransformations:
 class TestBoolean:
     def test_apply_if(self):
         tree = parse_sxpr('(A (B 1) (C 1) (B 2))').with_pos(0)
-        trans_table = { 'B': [apply_if((change_tag_name('X'),
+        trans_table = { 'B': [apply_if((change_name('X'),
                                         add_attributes({'renamed': 'True'})),
                                        is_one_of('B'))] }
         traverse(tree, trans_table)

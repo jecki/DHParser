@@ -75,7 +75,7 @@ class CompilerError(Exception):
     pass
 
 
-def visitor_name(tag_name: str) -> str:
+def visitor_name(node_name: str) -> str:
     """
     Returns the visitor_method name for `name`, e.g.::
 
@@ -84,11 +84,11 @@ def visitor_name(tag_name: str) -> str:
         >>> visitor_name('!--')
         'on_212d2d'
     """
-    if re.match(r'\w+$', tag_name):
-        return 'on_' + tag_name
+    if re.match(r'\w+$', node_name):
+        return 'on_' + node_name
     else:
         letters = []
-        for ch in tag_name:
+        for ch in node_name:
             if not re.match(r'\w', ch):
                 ch = hex(ord(ch))[2:]
             letters.append(ch)
@@ -260,16 +260,16 @@ class Compiler:
             node = self.visit_attributes(node)
         return node
 
-    def get_compiler(self, tag_name: str) -> CompilerFunc:
+    def get_compiler(self, node_name: str) -> CompilerFunc:
         try:
-            method = self.method_dict[tag_name]
+            method = self.method_dict[node_name]
         except KeyError:
-            method_name = visitor_name(tag_name)
+            method_name = visitor_name(node_name)
             try:
                 method = self.__getattribute__(method_name)
             except AttributeError:
                 method = self.fallback_compiler
-            self.method_dict[tag_name] = method
+            self.method_dict[node_name] = method
         return method
 
     def compile(self, node: Node) -> Any:

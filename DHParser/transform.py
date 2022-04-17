@@ -47,7 +47,7 @@ __all__ = ('TransformationDict',
            'KeyFunc',
            'TransformerCallable',
            'transformation_factory',
-           'key_tag_name',
+           'key_node_name',
            'Filter',
            'BLOCK_LEAVES',
            'BLOCK_ANONYMOUS_LEAVES',
@@ -66,8 +66,8 @@ __all__ = ('TransformationDict',
            'replace_by_children',
            'reduce_single_child',
            'replace_or_reduce',
-           'change_tag_name',
-           'replace_tag_names',
+           'change_name',
+           'replace_child_names',
            'collapse',
            'join_content',
            'pick_longest_content',
@@ -282,7 +282,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         return decorator
 
 
-def key_tag_name(node: Node) -> str:
+def key_node_name(node: Node) -> str:
     """
     Returns the tag name of the node as key for selecting transformations
     from the transformation table in function `traverse`.
@@ -317,7 +317,7 @@ BLOCK_ANONYMOUS_LEAVES = BlockAnonymousLeaves()
 
 def traverse(root_node: Node,
              transformation_table: TransformationTableType,
-             key_func: KeyFunc = key_tag_name) -> Node:
+             key_func: KeyFunc = key_node_name) -> Node:
     """
     Traverses the syntax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
@@ -469,8 +469,8 @@ def merge_treetops(node: Node):
 
 @transformation_factory(dict)
 def traverse_locally(context: TreeContext,
-                     transformation_table: Dict,              # actually: TransformationTableType
-                     key_func: Callable = key_tag_name):  # actually: KeyFunc
+                     transformation_table: Dict,  # actually: TransformationTableType
+                     key_func: Callable = key_node_name):  # actually: KeyFunc
     """
     Transforms the syntax tree starting from the last node in the context
     according to the given transformation table. The purpose of this function is
@@ -636,15 +636,15 @@ def is_token(context: TreeContext, tokens: AbstractSet[str] = frozenset()) -> bo
 
 
 @transformation_factory(collections.abc.Set)
-def is_one_of(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
+def is_one_of(context: TreeContext, name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's name is one of the given tag names."""
-    return context[-1].name in tag_name_set
+    return context[-1].name in name_set
 
 
 @transformation_factory(collections.abc.Set)
-def not_one_of(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
+def not_one_of(context: TreeContext, name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's name is not one of the given tag names."""
-    return context[-1].name not in tag_name_set
+    return context[-1].name not in name_set
 
 
 @transformation_factory(collections.abc.Set)
@@ -695,7 +695,7 @@ def has_content(context: TreeContext, regexp: str) -> bool:
 
 @transformation_factory(collections.abc.Set)
 def has_ancestor(context: TreeContext,
-                 tag_name_set: AbstractSet[str],
+                 name_set: AbstractSet[str],
                  generations: int = -1,
                  until: Union[AbstractSet[str], str] = frozenset()) -> bool:
     """
@@ -706,7 +706,7 @@ def has_ancestor(context: TreeContext,
         the ancestry. "1" means only the immediate parents wil be considered,
         "2" means also the grandparents, ans so on.
         A value smaller or equal zero means all ancestors will be considered.
-    :param until: tag_names which, when reached, will stop `has_ancestor`
+    :param until: node-names which, when reached, will stop `has_ancestor`
         from searching further, even if the `generations`-parameter would
         allow a deeper search.
     """
@@ -719,18 +719,18 @@ def has_ancestor(context: TreeContext,
     else:
         ctx = context
     if generations <= 0:
-        return any(nd.name in tag_name_set for nd in ctx)
+        return any(nd.name in name_set for nd in ctx)
     for i in range(2, min(generations + 2, len(ctx) + 1)):
-        if ctx[-i].name in tag_name_set:
+        if ctx[-i].name in name_set:
             return True
     return False
 
 
 @transformation_factory(collections.abc.Set)
-def has_parent(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
+def has_parent(context: TreeContext, name_set: AbstractSet[str]) -> bool:
     """Checks whether the immediate predecessor in the context has one of the
     given tags."""
-    return has_ancestor(context, tag_name_set, 1)
+    return has_ancestor(context, name_set, 1)
 
 
 def has_children(context: TreeContext) -> bool:
@@ -739,7 +739,7 @@ def has_children(context: TreeContext) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_descendant(context: TreeContext, tag_name_set: AbstractSet[str],
+def has_descendant(context: TreeContext, name_set: AbstractSet[str],
                    generations: int = -1,
                    until: Union[AbstractSet[str], str] = frozenset()) -> bool:
     assert generations != 0
@@ -749,31 +749,31 @@ def has_descendant(context: TreeContext, tag_name_set: AbstractSet[str],
         until = frozenset()
     if context[-1].name in until:
         for child in context[-1]._children:
-            if child.name in tag_name_set:
+            if child.name in name_set:
                 return True
         return False
     for child in context[-1]._children:
-        if child.name in tag_name_set:
+        if child.name in name_set:
             return True
         if (generations < 0 or generations > 1) \
-                and has_descendant(context + [child], tag_name_set, generations - 1, until):
+                and has_descendant(context + [child], name_set, generations - 1, until):
             return True
     return False
 
 
 @transformation_factory(collections.abc.Set)
-def has_child(context: TreeContext, tag_name_set: AbstractSet[str]) -> bool:
+def has_child(context: TreeContext, name_set: AbstractSet[str]) -> bool:
     """Checks whether at least one child (i.e. immediate descendant) has one of
     the given tags."""
-    return has_descendant(context, tag_name_set, 1)
+    return has_descendant(context, name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
-def has_sibling(context: TreeContext, tag_name_set: AbstractSet[str]):
+def has_sibling(context: TreeContext, name_set: AbstractSet[str]):
     if len(context) >= 2:
         node = context[-1]
         for child in context[-2]._children:
-            if child != node and child.name in tag_name_set:
+            if child != node and child.name in name_set:
                 return True
     return False
 
@@ -935,7 +935,7 @@ def replace_or_reduce(context: TreeContext, condition: Callable = is_named):
 
 
 @transformation_factory(str)
-def change_tag_name(context: TreeContext, tag_name: str, restriction: Callable = always):
+def change_name(context: TreeContext, name: str, restriction: Callable = always):
     """
     Changes the tag name of the last node in the context.
 
@@ -943,17 +943,17 @@ def change_tag_name(context: TreeContext, tag_name: str, restriction: Callable =
         restriction: A function of the context that returns False in cases
                 where the tag name shall not be exchanged
         context: the context where the parser shall be replaced
-        tag_name: The new tag name.
+        name: The new tag name.
     """
     if restriction(context):
         node = context[-1]
         # ZOMBIE_TAGS will not be changed, so that errors don't get overlooked
         # if node.name != ZOMBIE_TAG:
-        node.name = tag_name
+        node.name = name
 
 
 @transformation_factory(dict)
-def replace_tag_names(context: TreeContext, replacements: Dict[str, str]):
+def replace_child_names(context: TreeContext, replacements: Dict[str, str]):
     """
     Replaces the tag names of the children of the last node in the context
     according to the replacement dictionary.
@@ -967,8 +967,8 @@ def replace_tag_names(context: TreeContext, replacements: Dict[str, str]):
     # assert ZOMBIE_TAG not in replacements, 'Replacing ZOMBIE_TAGS is not allowed, " \
     #     "because they result from errors that could otherwise be overlooked, subsequently!'
     for child in context[-1]._children:
-        original_tag_name = child.name
-        child.name = replacements.get(original_tag_name, original_tag_name)
+        original_name = child.name
+        child.name = replacements.get(original_name, original_name)
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1154,7 +1154,7 @@ def normalize_whitespace(context):
 
 
 @transformation_factory(collections.abc.Callable)
-def merge_adjacent(context: TreeContext, condition: Callable, tag_name: str = ''):
+def merge_adjacent(context: TreeContext, condition: Callable, name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
     is assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
@@ -1176,11 +1176,11 @@ def merge_adjacent(context: TreeContext, condition: Callable, tag_name: str = ''
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    tag_names = {nd.name for nd in adjacent}
+                    names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, context[0]))
-                    if tag_name in tag_names:
-                        head.name = tag_name
+                    if name in names:
+                        head.name = name
                     new_result.append(head)
             else:
                 new_result.append(children[i])
@@ -1229,10 +1229,10 @@ def merge_connected(context: TreeContext, content: Callable, delimiter: Callable
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    tag_names = {nd.name for nd in adjacent}
+                    names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, context[0]))
-                    if content_name in tag_names:
+                    if content_name in names:
                         head.name = content_name
                     new_result.append(head)
             else:
@@ -1463,9 +1463,9 @@ def keep_tokens(context: TreeContext, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_nodes(context: TreeContext, tag_names: AbstractSet[str]):
+def keep_nodes(context: TreeContext, names: AbstractSet[str]):
     """Removes children by tag name."""
-    keep_children_if(context, partial(is_one_of, tag_name_set=tag_names))
+    keep_children_if(context, partial(is_one_of, name_set=names))
 
 
 @transformation_factory
@@ -1545,9 +1545,9 @@ def remove_tokens(context: TreeContext, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_children(context: TreeContext, tag_names: AbstractSet[str]):
+def remove_children(context: TreeContext, names: AbstractSet[str]):
     """Removes children by tag name."""
-    remove_children_if(context, partial(is_one_of, tag_name_set=tag_names))
+    remove_children_if(context, partial(is_one_of, name_set=names))
 
 
 @transformation_factory
@@ -1583,7 +1583,7 @@ DynamicResultType = Union[Tuple[NodeGenerator, ...], NodeGenerator, str]
 AT_THE_END = 2**32   # VERY VERY last position in a tuple of childe nodes
 
 
-def node_maker(tag_name: str,
+def node_maker(name: str,
                result: DynamicResultType,
                attributes: dict = {}) -> Callable:
     """
@@ -1609,10 +1609,10 @@ def node_maker(tag_name: str,
 
     def create_leaf() -> Node:
         assert isinstance(result, str)
-        return Node(tag_name, result, True).with_attr(attributes)
+        return Node(name, result, True).with_attr(attributes)
 
     def create_branch() -> Node:
-        return Node(tag_name, dynamic_result(result)).with_attr(attributes)
+        return Node(name, dynamic_result(result)).with_attr(attributes)
 
     if isinstance(result, str):
         return create_leaf
@@ -1621,11 +1621,11 @@ def node_maker(tag_name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(context: TreeContext, tag_names: AbstractSet[str] = frozenset()) -> Tuple[int, ...]:
+def positions_of(context: TreeContext, names: AbstractSet[str] = frozenset()) -> Tuple[int, ...]:
     """Returns a (potentially empty) tuple of the positions of the
-    children that have one of the given `tag_names`.
+    children that have one of the given `names`.
     """
-    return tuple(i for i, c in enumerate(context[-1]._children) if c.name in tag_names)
+    return tuple(i for i, c in enumerate(context[-1]._children) if c.name in names)
 
 
 @transformation_factory
@@ -1702,7 +1702,7 @@ def add_error(context: TreeContext, error_msg: str, error_code: ErrorCode = ERRO
         error_msg = "Syntax Error"
     try:
         cast(RootNode, context[0]).new_error(node, error_msg.format(
-             tag_name=node.name, content=node.content, pos=node.pos), error_code)
+             name=node.name, content=node.content, pos=node.pos), error_code)
     except KeyError as key_error:
         cast(RootNode, context[0].new_error(
             node, 'Schlüssel %s nicht erlaubt in Format-Zeichenkette: "%s"! '

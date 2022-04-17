@@ -31,7 +31,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     remove_empty, remove_tokens, flatten, is_empty, lean_left, ThreadLocalSingletonFactory, \
     collapse, collapse_children_if, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-    remove_children, remove_content, remove_brackets, change_tag_name, remove_anonymous_tokens, \
+    remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \
     keep_children, is_one_of, not_one_of, has_content, apply_if, set_tracer, trace_history, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     forbid, assert_content, remove_infix_operator, replace_content_with, resume_notices_on, \
@@ -136,7 +136,7 @@ ArithmeticRightRecursive_AST_transformation_table = {
     "element, factor, term, expression":
         [replace_by_single_child],
     "pi": [replace_content_with('π')],
-    "tail_pow": [change_tag_name('pow')],
+    "tail_pow": [change_name('pow')],
     "add, sub": [lean_left({'sub', 'add'})],
     "mul, div": [lean_left({'mul', 'div'})]
 }

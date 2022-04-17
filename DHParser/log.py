@@ -278,12 +278,12 @@ def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
     # return "->".join(name for name, _ in self.call_stack)
     short_stack = []
     anonymous_tail = True
-    for tag_name, _ in reversed(callstack):
-        if tag_name[:1] == ':':
-            if anonymous_tail and tag_name != ":Forward":
-                short_stack.append(tag_name)
+    for node_name, _ in reversed(callstack):
+        if node_name[:1] == ':':
+            if anonymous_tail and node_name != ":Forward":
+                short_stack.append(node_name)
         else:
-            short_stack.append(tag_name)
+            short_stack.append(node_name)
             anonymous_tail = False
     if depth <= 0:  depth = len(short_stack)
     s = "->".join(reversed(short_stack[:depth]))
