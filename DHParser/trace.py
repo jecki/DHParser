@@ -38,7 +38,7 @@ __all__ = ('trace_history', 'all_descendants', 'set_tracer',
 
 
 def symbol_name(parser: Parser, grammar: Grammar) -> str:
-    name = str(parser) if isinstance(parser, ContextSensitive) else parser.tag_name
+    name = str(parser) if isinstance(parser, ContextSensitive) else parser.node_name
     # name = parser.name
     if name[:1] == ':':
         name = grammar.associated_symbol__(parser).pname + '->' + name
@@ -102,8 +102,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             line_col(grammar.document_lbreaks__, mre.error.pos), errors))
 
     grammar.call_stack__.append(
-        (((' ' + self.repr) if self.tag_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")
-          else (self.pname or self.tag_name)), location))  # ' ' added to avoid ':' as first char!
+        (((' ' + self.repr) if self.node_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")
+          else (self.pname or self.node_name)), location))  # ' ' added to avoid ':' as first char!
     grammar.moving_forward__ = True
 
     try:
@@ -124,7 +124,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
-    if ((self.tag_name != WHITESPACE_PTYPE)
+    if ((self.node_name != WHITESPACE_PTYPE)
         and (grammar.moving_forward__
              or (not self.disposable
                  and (node

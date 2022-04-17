@@ -1459,7 +1459,7 @@ class TestMetaParser:
     mp.grammar = Grammar()  # override placeholder warning
     mp.pname = "named"
     mp.disposable = False
-    mp.tag_name = mp.pname
+    mp.node_name = mp.pname
 
     def test_return_value(self):
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
@@ -1484,7 +1484,7 @@ class TestMetaParser:
         assert nd.name == 'named' and not nd.children, nd.as_sxpr()
         self.mp.pname = ''
         self.mp.disposable = True
-        self.mp.tag_name = ':unnamed'
+        self.mp.node_name = ':unnamed'
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
         assert nd.name == 'tagged', nd.as_sxpr()
         assert len(nd.children) == 0
@@ -1506,7 +1506,7 @@ class TestMetaParser:
 
     def test_return_values(self):
         self.mp.pname = "named"
-        self.mp.tag_name = self.mp.pname
+        self.mp.node_name = self.mp.pname
         rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
         assert rv[-1].name != EMPTY_NODE.name, rv[-1].name
 
