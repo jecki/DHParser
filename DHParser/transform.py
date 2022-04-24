@@ -37,7 +37,8 @@ from typing import AbstractSet, ByteString, Callable, cast, Container, Dict, \
 from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode, parse_sxpr, flatten_sxpr, TreeContext
-from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython
+from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, cython, \
+    deprecation_warning
 
 
 __all__ = ('TransformationDict',
@@ -67,7 +68,9 @@ __all__ = ('TransformationDict',
            'reduce_single_child',
            'replace_or_reduce',
            'change_name',
+           'change_tag_name',
            'replace_child_names',
+           'replace_tag_names',
            'collapse',
            'join_content',
            'pick_longest_content',
@@ -952,6 +955,13 @@ def change_name(context: TreeContext, name: str, restriction: Callable = always)
         node.name = name
 
 
+@transformation_factory(str)
+def change_tag_name(context: TreeContext, name: str, restriction: Callable = always):
+    deprecation_warning('"DHParser.transform.change_tag_name()" is deprecated. '
+                        'Use "change_name()" instead!')
+    change_name(context, name, restriction)
+
+
 @transformation_factory(dict)
 def replace_child_names(context: TreeContext, replacements: Dict[str, str]):
     """
@@ -969,6 +979,13 @@ def replace_child_names(context: TreeContext, replacements: Dict[str, str]):
     for child in context[-1]._children:
         original_name = child.name
         child.name = replacements.get(original_name, original_name)
+
+
+@transformation_factory(dict)
+def replace_tag_names(context: TreeContext, replacements: Dict[str, str]):
+    deprecation_warning('"DHParser.transform.replace_tag_names()" is deprecated. '
+                        'Use "replace_child_names()" instead!')
+    replace_child_names(context, replacements)
 
 
 @transformation_factory(collections.abc.Callable)
