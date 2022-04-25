@@ -439,7 +439,7 @@ def run_pipeline(junctions: Set[Junction],
 CompilationResult = namedtuple('CompilationResult',
     ['result',      # type: Optional[Any]
      'messages',    # type: List[Error]
-     'AST'],        # type: RootNode
+     'AST'],        # type: Optional[RootNode]
     module=__name__)
 
 
@@ -481,7 +481,10 @@ def compile_source(source: str,
            or `None` otherwise.
     """
     ast = None  # type: Optional[Node]
-    original_text = load_if_file(source)  # type: str
+    try:
+        original_text = load_if_file(source)  # type: str
+    except (FileNotFoundError, IOError) as e:
+        return CompilationResult(None, [Error(str(e), 0, COMPILER_CRASH)], None)
     source_name = source if is_filename(source) else ''
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
