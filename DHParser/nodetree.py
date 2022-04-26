@@ -1527,7 +1527,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                indentation: int = 2,
                inline_tags: Set[str] = frozenset(),
                string_tags: Set[str] = frozenset(),
-               empty_tags: Set[str] = frozenset()) -> str:
+               empty_tags: Set[str] = frozenset(),
+               strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
 
         :param src: The source text or `None`. In case the source text is
@@ -1542,6 +1543,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 requires its content to be either a tuple of children or string content.
         :param empty_tags: A set of tags which shall be rendered as empty elements, e.g.
                 "<empty/>" instead of "<empty><empty>".
+        :param strict_mode: If True, violation of stylistic or interoperability rules
+                raises a ValueError.
         :returns: The XML-string representing the tree originating in `self`
         """
         root = cast(RootNode, self) if isinstance(self, RootNode) \
@@ -1564,7 +1567,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            nonlocal attr_filter
+            nonlocal attr_filter, empty_tags
             if node.name in string_tags and not node.has_attr():
                 return ''
             txt = ['<', xml_tag_name(node.name)]
@@ -1580,9 +1583,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 #             for err in root.node_errors(node))))
                 txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
             if node.name in empty_tags:
-                assert node.name[0] == '?' or not node.result, \
-                    f"Node {node.name} with content {str(node)} is not an empty element!"
+                if node.name[0:1] != '?' and node.result:
+                    error_msg = f'Empty element "{node.name}" with content: "{node.content}" !?'
+                    if strict_mode:  raise ValueError(error_msg)
+                    else:
+                        print(error_msg)
+                        empty_tags = empty_tags.copy()
+                        empty_tags.remove(node.name)
                 if node.name[0] == '?':  ending = '?>'
+                elif node.result:  ending = '>'
                 else:  ending = '/>'
             elif node.name == '!--':
                 ending = ""
@@ -2812,7 +2821,8 @@ RX_WHITESPACE_TAIL = re.compile(r'\s*$')
 def parse_xml(xml: Union[str, StringView],
               string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
-              out_empty_tags: Set[str] = set()) -> Node:
+              out_empty_tags: Set[str] = set(),
+              strict_mode: bool = True) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
 
@@ -2825,6 +2835,9 @@ def parse_xml(xml: Union[str, StringView],
         and not transferred to the `node.attr`-dictionary.
     :param out_empty_tags: A set that is filled with the names of those
         tags that are empty tags, e.g. "<br/>"
+    :param strict_mode: If True, errors are raised if XML
+        contains stylistic or interoperability errors, like using one
+        and the same tag-name for empty and non-empty tags, for example.
     """
 
     xml = StringView(str(xml))
@@ -2902,7 +2915,11 @@ def parse_xml(xml: Union[str, StringView],
         if solitary:
             out_empty_tags.add(tagname)
         else:
-            assert tagname not in out_empty_tags
+            if tagname in out_empty_tags:
+                error_message = f'"{tagname}" is used as empty as well as non-empty element!' \
+                                f' This can cause errors when re-serializing data as XML!'
+                if strict_mode:  raise ValueError(error_message)
+                else:  print(error_message)
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
@@ -2914,7 +2931,10 @@ def parse_xml(xml: Union[str, StringView],
                         s, child = parse_full_content(s)
                         res.append(child)
             s, closing_tagname = parse_closing_tag(s)
-            assert tagname == closing_tagname, tagname + ' != ' + closing_tagname
+            if tagname != closing_tagname:
+                error_message = f'Tag-name mismatch: <{tagn_name}>...</{closing_tagname}>!'
+                if strict_mode:  raise ValueError(error_message)
+                else:  print(error_message)
         if len(res) == 1 and res[0].name == string_tag:
             result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
         else:

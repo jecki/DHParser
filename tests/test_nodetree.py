@@ -764,6 +764,32 @@ class TestSerialization:
         assert tree.as_xml(inline_tags=all_tags, string_tags=all_tags) == \
                '<T class="kursiv">Hallo</T> Welt!'
 
+    def test_XML_strict_mode(self):
+        xml = "<xml><empty/><empty>not_empty!?</empty></xml>"
+        try:
+            data = parse_xml(xml)
+            assert False, "ValueError exptected!"
+        except ValueError:
+            pass
+        empty_tags = set()
+        data = parse_xml(xml, out_empty_tags=empty_tags, strict_mode=False)
+        assert data.as_sxpr() == '(xml (empty) (empty "not_empty!?"))'
+        assert empty_tags == {'empty'}
+        assert data.as_xml().replace('\n', '').replace(' ', '') == \
+            "<xml><empty></empty><empty>not_empty!?</empty></xml>"
+        try:
+            _ = data.as_xml(empty_tags=empty_tags)
+            assert False, "ValueError expected"
+        except ValueError:
+            pass
+        assert data.as_xml(empty_tags=empty_tags, strict_mode=False)\
+            .replace('\n', '').replace(' ', '') == \
+            "<xml><empty/><empty>not_empty!?</empty></xml>"
+        data.result = data.result + (Node('empty', ''),)
+        assert data.as_xml(empty_tags=empty_tags, strict_mode=False)\
+            .replace('\n', '').replace(' ', '') == \
+            "<xml><empty/><empty>not_empty!?</empty><empty></empty></xml>"
+
 
 class TestSegementExtraction:
     def test_get_context(self):
