@@ -1,3 +1,9 @@
+DHParser Version 1.0.2 (28.4.2022)
+..................................
+
+- Cython compatibility restored
+
+
 DHParser Version 1.0.1 (27.4.2022)
 ..................................
 
