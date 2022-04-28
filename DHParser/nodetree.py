@@ -361,7 +361,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     There are three different kinds of nodes:
 
-    1. Branch nodes the have children, but no string content. Other
+    1. Branch nodes that have children, but no string content. Other
        than in XML there are no mixed-content nodes that contain strings as
        well other tags. This constraint simplifies tree-processing
        considerably.
