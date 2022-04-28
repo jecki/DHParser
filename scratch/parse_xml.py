@@ -1,5 +1,6 @@
 import sys
 sys.path.append('../')
+sys.path.append('../../')
 
 
 from DHParser.nodetree import parse_xml, parse_sxpr
@@ -68,12 +69,24 @@ def cpu_profile(func, repetitions=1):
     return success
 
 
+def test():
+    from examples.XML.XMLParser import compile_src
+    with open('archiv.xml', 'r', encoding='utf-8-sig') as f:
+        xml = f.read()
+    result, errors = compile_src(xml)
+    for e in errors:
+        print(e)
+
+
 def profile():
+    from examples.XML.XMLParser import compile_src
     print('Lese archiv.xml')
     with open('archiv.xml', 'r', encoding='utf-8') as f:
         xml = f.read()
     print('Parse archiv.xml mit DHParser.nodetree.parse_xml - Bitte etwas Geduld')
     cpu_profile(lambda :parse_xml(xml, strict_mode=False))
+    print('Parse archiv.xml mit generiertem XML-parser')
+    cpu_profile(lambda :compile_src(xml))
 
 
 def main():
@@ -97,3 +110,4 @@ if __name__ == '__main__':
     # json_beispiel()
     # main()
     profile()
+    # test()

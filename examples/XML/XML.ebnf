@@ -11,9 +11,9 @@
 @ comment     = //                   # no implicit comments
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops       # merge anonymous leaf-nodes
-@ disposable  = Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
+@ disposable  = BOM, Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
                 PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF
-@ drop        = strings, whitespace, EOF  # drop anonymous tokens, whitespace and EOF
+@ drop        = strings, whitespace, BOM, EOF  # drop anonymous tokens, whitespace, EOF and BOM
 
 
 #######################################################################
@@ -22,9 +22,10 @@
 #
 #######################################################################
 
-document        = prolog element [Misc] EOF
+document        = [BOM] prolog §element [Misc] EOF
+BOM             = /[\ufeff]|[\ufffe]|[\u0000feff]|[\ufffe0000]/  # byte-order-mark
 prolog          = [ ~ XMLDecl ] [Misc] [doctypedecl [Misc]]
-XMLDecl         = '<?xml' VersionInfo [EncodingDecl] [SDDecl] ~ '?>'
+XMLDecl         = '<?xml' §VersionInfo [EncodingDecl] [SDDecl] ~ '?>'
 
 VersionInfo     = ~ 'version' ~ '=' ~ ("'" VersionNum "'" | '"' VersionNum '"')
 VersionNum      = /[0-9]+\.[0-9]+/

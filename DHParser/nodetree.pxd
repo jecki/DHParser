@@ -8,8 +8,8 @@ cdef class Node:
     cdef public int _pos
     cdef public object _result
     cdef public tuple _children
-    cdef public str tag_name
-    cdef public object _xml_attr
+    cdef public str name
+    cdef public object _attributes
 
     # cpdef equals(self, other, ignore_attr_order)
     # cpdef get(self,  index_or_tagname, surrogate)

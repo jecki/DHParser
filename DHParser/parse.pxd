@@ -9,7 +9,7 @@ cdef class Parser:
     cdef public str pname
     cdef public bint disposable
     cdef public bint drop_content
-    cdef public str tag_name
+    cdef public str node_name
     cdef public object eq_class
     cdef public object _grammar
     cdef object visited
@@ -25,7 +25,7 @@ cdef class Parser:
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
-    cpdef _apply(self, func, context, flip)
+    # cpdef _apply(self, func, context, flip)
     cpdef apply(self, func)
 
 # cpdef mixin_comment(whitespace, str)
