@@ -31,7 +31,6 @@ in the (XML-)tree.
 """
 
 
-from collections import OrderedDict
 import bisect
 import copy
 import functools
@@ -39,6 +38,11 @@ import json
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
     Tuple, Container, Optional, Dict, Any
+
+if sys.version_info >= (3, 6, 0):
+    OrderedDict = dict
+else:
+    from collections import OrderedDict
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
@@ -740,12 +744,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             Any attributes present? False
             >>> node.attr['id'] = 'identificator'
             >>> node.attr
-            OrderedDict([('id', 'identificator')])
+            {'id': 'identificator'}
             >>> node.attr['id']
             'identificator'
             >>> del node.attr['id']
             >>> node.attr
-            OrderedDict()
+            {}
 
         NOTE: Use :py:meth:`Node.has_attr()` rather than `bool(node.attr)`
         to probe the presence of attributes. Attribute dictionaries are
@@ -1584,10 +1588,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
             if node.name in empty_tags:
                 if node.name[0:1] != '?' and node.result:
-                    error_msg = f'Empty element "{node.name}" with content: "{node.content}" !?'
+                    error_msg = f'Empty element "{node.name}" with content: "{node.content}" !?' \
+                                f'Use Node.as_xml(..., strict_mode=False) to suppress this error!'
                     if strict_mode:  raise ValueError(error_msg)
                     else:
-                        print(error_msg)
                         empty_tags = empty_tags.copy()
                         empty_tags.remove(node.name)
                 if node.name[0] == '?':  ending = '?>'
@@ -1646,7 +1650,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # JSON serialization ###
 
     def to_json_obj(self) -> list:
-        """Converts the tree into a JSON-serializable nested list."""
+        """Converts the tree into a JSON-serializable nested list. Nodes
+        are serialized as JSON-lists with either two or three elements:
+            1. name (always a string),
+            2. content (either a string or a list of JSON-serialized Nodes)
+            3. optional: a dictionary that maps attribute names to attribute values,
+               both of which are strings.
+
+        Example::
+
+            >>> Node('root', 'content').with_attr(importance="high").to_json_obj()
+            ['root', 'content', {'importance': 'high'}]
+        """
         jo = [self.name,
               [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
         pos = self._pos
@@ -1677,7 +1692,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return node
 
     def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
-        """Serializes the tree originating in `self` as JSON-string."""
+        """Serializes the tree originating in `self` as JSON-string. Nodes
+        are serialized as JSON-lists with either two or three elements:
+            1. name (always a string),
+            2. content (either a string or a list of JSON-serialized Nodes)
+            3. optional: a dictionary that maps attribute names to attribute values,
+               both of which are strings.
+
+        Example::
+
+            >>> Node('root', 'content').with_attr(importance="high").as_json(indent=0)
+            '["root","content",{"importance":"high"}]'
+        """
         if not indent or indent <= 0:  indent = None
         return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
@@ -2816,6 +2842,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
+# RX_XML_ATTRIBUTES =
 
 
 def parse_xml(xml: Union[str, StringView],
@@ -2917,9 +2944,9 @@ def parse_xml(xml: Union[str, StringView],
         else:
             if tagname in out_empty_tags:
                 error_message = f'"{tagname}" is used as empty as well as non-empty element!' \
-                                f' This can cause errors when re-serializing data as XML!'
+                                f' This can cause errors when re-serializing data as XML! ' \
+                                f'Use parse_xml(..., strict_mode=False) to suppress this error!'
                 if strict_mode:  raise ValueError(error_message)
-                else:  print(error_message)
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
@@ -2932,7 +2959,9 @@ def parse_xml(xml: Union[str, StringView],
                         res.append(child)
             s, closing_tagname = parse_closing_tag(s)
             if tagname != closing_tagname:
-                error_message = f'Tag-name mismatch: <{tagn_name}>...</{closing_tagname}>!'
+                error_message = f'Tag-name mismatch: <{tagname}>...</{closing_tagname}>!' \
+                                f'Use parse_xml(..., strict_mode=False) to suppress this error,' \
+                                f' but do not expect sound results if you do!'
                 if strict_mode:  raise ValueError(error_message)
                 else:  print(error_message)
         if len(res) == 1 and res[0].name == string_tag:
