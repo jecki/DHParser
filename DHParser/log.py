@@ -82,7 +82,7 @@ __all__ = ('CallItem',
            'log_parsing_history')
 
 
-CallItem = Tuple[str, int]      # call stack item: (tag_name, location)
+CallItem = Tuple[str, int]      # call stack item: (name, location)
 
 
 #######################################################################
@@ -275,15 +275,15 @@ NONE_NODE = NoneNode(NONE_TAG, '')
 
 def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
     """Returns a string representation of the callstack!"""
-    # return "->".join(tag_name for tag_name, _ in self.call_stack)
+    # return "->".join(name for name, _ in self.call_stack)
     short_stack = []
     anonymous_tail = True
-    for tag_name, _ in reversed(callstack):
-        if tag_name[:1] == ':':
-            if anonymous_tail and tag_name != ":Forward":
-                short_stack.append(tag_name)
+    for node_name, _ in reversed(callstack):
+        if node_name[:1] == ':':
+            if anonymous_tail and node_name != ":Forward":
+                short_stack.append(node_name)
         else:
-            short_stack.append(tag_name)
+            short_stack.append(node_name)
             anonymous_tail = False
     if depth <= 0:  depth = len(short_stack)
     s = "->".join(reversed(short_stack[:depth]))
@@ -426,18 +426,18 @@ class HistoryRecord:
     def status(self) -> str:
         if self.errors:
             return self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
-        elif self.node.tag_name in (NONE_TAG, ZOMBIE_TAG):
+        elif self.node.name in (NONE_TAG, ZOMBIE_TAG):
             return self.FAIL
-        elif self.node.tag_name == EMPTY_PTYPE:
+        elif self.node.name == EMPTY_PTYPE:
             return self.DROP
         else:
             return self.MATCH
-        # return self.FAIL if self.node is None or self.node.tag_name == ZOMBIE_TAG else \
+        # return self.FAIL if self.node is None or self.node.name == ZOMBIE_TAG else \
         #     ('"%s"' % self.err_msg()) if self.errors else self.MATCH
 
     @property
     def excerpt(self):
-        if self.node.tag_name not in (NONE_TAG, ZOMBIE_TAG) and not self.errors:
+        if self.node.name not in (NONE_TAG, ZOMBIE_TAG) and not self.errors:
             excerpt = abbreviate_middle(str(self.node), 40)
         else:
             s = self.text
@@ -452,7 +452,7 @@ class HistoryRecord:
 
     @property
     def remaining(self) -> int:
-        return len(self.text) - len(self.node)
+        return len(self.text) - self.node.strlen()
 
     @staticmethod
     def last_match(history: List['HistoryRecord']) -> Union['HistoryRecord', None]:

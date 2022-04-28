@@ -1,5 +1,19 @@
-DHParser Versions 1.0.0 (9.2.2022)
+DHParser Version 1.0.1 (27.4.2022)
 ..................................
+
+- Some refactorings and performance improvements, e.g. Parser.apply()
+  which makes resetting Parser and Grammer objects faster
+- Grammar.match() and Grammar.fullmatch()-method added to allow
+  using DHParser-grammers like regular expression objects in some
+  cases.
+- BREAKING CHANGE: Node.__len__() disabled and replaced by Node.strlen() to
+  avoid error-prone ambiguities: Node.strlen() vs len(node.children)
+- DEPRECATION: Node.tag_name has been renamed to Node.name and
+  Parser.tag_name to Parser.node_name.
+
+
+DHParser Version 1.0.0 (9.2.2022)
+.................................
 
 - Module syntaxtree has been renamed to nodetree, because this expresses
   the general character of this module better which can be used for

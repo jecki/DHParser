@@ -37,6 +37,8 @@ cdef class Grammar:
     cdef public set all_parsers__
     cdef public object comment_rx__
     cdef public object start_parser__
+    # cdef public object unconnected_parsers__
+    # cdef public object resume_parsers__
     cdef bint _dirty_flag__
     cdef public bint history_tracking__
     cdef public bint suspend_memoization__
@@ -55,6 +57,9 @@ cdef class Grammar:
     cdef public list history__
     cdef public bint moving_forward__
     cdef public int farthest_failure__
+    # cdef public object static_analysis_pending__
+    # cdef public object static_analysis_errors__
+    # cdef public object parser_names
 
 cdef class PreprocessorToken(Parser):
     pass

@@ -42,7 +42,7 @@ of concrete syntax trees into abstract syntax trees or, more generally, the stre
 the leaner functional style is preferable, while for more complex tree-transformations or the
 transformation of a syntax tree into something else the more
 powerful object-oriented version of the visitor pattern is to be preferred, because it allows to exchange
-data between the visiting methods via the :py:class`~compile.Compiler`-object to which they are attached.
+data between the visiting methods via the :py:class:`~compile.Compiler`-object to which they are attached.
 There is of course not "must" to use the ``transform`` and the ``compile``-module for their envisioned
 purposes, but you can choose freely which transformation-scaffolding to use for which of your tree-transformations.
 
@@ -126,7 +126,7 @@ we shall call it henceforth, "transformation table"::
     ...                             [replace_by_single_child] }
 
 Note, that the transformation table is an ordinary Python-dictionary, only that
-a string-key that contains a comma-separated list of tag_names will be interpreted
+a string-key that contains a comma-separated list of node-names will be interpreted
 as so many different keys that are mapped onto the same sequence of
 transformations.
 
@@ -150,7 +150,7 @@ on every node that has one of the tag-names in the key::
 Two things are important to know about :py:func:`~transform.traverse`:
 
 1. Trees are transformed depth first. So, when a transformation is called
-   on a particular node, or rather context (see :ref:contexts_), all
+   on a particular node, or rather context (see :ref:_contexts), all
    children of that node have already been transformed.
 
 2. As any other tree transformation method in DHParser, function
@@ -177,8 +177,8 @@ on our own, easily::
    ...         while rest:
    ...             infix, right, rest = rest[0], rest[1], rest[2:]
    ...             assert not infix._children
-   ...             assert infix.tag_name[0:1] != ":"
-   ...             left = Node(infix.tag_name, (left, right))
+   ...             assert infix.name[0:1] != ":"
+   ...             left = Node(infix.name, (left, right))
    ...         node.result = (left,)
 
 A transformation function is functions with the tree context as single argument and
@@ -249,9 +249,32 @@ and most trivial installment of the visitor-pattern in DHParser.)
 The Transformation Table
 ------------------------
 
-(You could think of the transformation table as a simple "embedded" or
+As shown by the examples earlier, the transformation table is a "smart" dictionary
+that maps tag-names to sequences of transformation functions. It is called "smart",
+because it allows to list several tag names within one and the same dictionary
+keys, thus assigning each one of them to one and the same sequences of transformation
+functions. (You could think of the transformation table as a simple "embedded" or
 `internal DSL (Domain Specific Languag) <https://martinfowler.com/bliki/DomainSpecificLanguage.html>`_
-realized within Python, if you liked.)
+realized within Python, if you liked.) This is quite useful, because it allows to cover similar idioms used at
+different places of a grammar (and with different tag-names) with the same sequence
+of transformation functions, without having to type the same list of functions
+over and over again.
+
+The transformation table has three special keys: ``<``, ``>``, ``*``. The asterix ``*`` is a joker,
+which means that the sequence of transformations assigned to the asterix will be called for
+every node, the tag-name of which does not occur in the table. The ``<``-key marks a sequence of functions
+that will be executed before any of the individual sequences assigned to particular tag-names (including the
+joker ``*``) will be executed. The ``>``-key takes a transformation-sequence that will be executed after
+every tag-specific transformation-sequence has been processed. Because of the time-penalty incurred, the
+``<``- and ``>``-keys should only be used when really needed. Most of the time the desired result can
+be achieved more effectively with the ``@disposable``- and ``@drop``-directives at the
+parsing-stage, already (see :ref:`simplifying_syntax_trees`)).
+
+To demonstrate what a transformation table looks like, here is an excerpt from the transformation-
+table of the LaTeX-Parser example::
+
+
+
 
 
 Transformation Functions

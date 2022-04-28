@@ -38,7 +38,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
     merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
@@ -46,7 +46,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     get_config_value, node_maker, access_thread_locals, access_presets, has_children, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
-    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
+    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, apply_unless, WARNING, ERROR, FATAL, EMPTY_NODE, TreeReduction, CombinedParser, \
     PreprocessorResult, preprocess_includes, gen_find_include_func, flatten_sxpr, \
@@ -289,10 +289,10 @@ def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True
 
 
 def streamline_whitespace(context):
-    # if context[-2].tag_name == TOKEN_PTYPE:
+    # if context[-2].name == TOKEN_PTYPE:
     #     return
     node = context[-1]
-    assert node.tag_name in ['WSPC', ':Whitespace', 'S']
+    assert node.name in ['WSPC', ':Whitespace', 'S']
     s = node.content
     if s.find('%') >= 0:
         node.result = '\n'
@@ -308,15 +308,15 @@ def streamline_whitespace(context):
 def watch(node):
     print(node.as_sxpr())
 
-flatten_structure = flatten(lambda context: is_one_of(
-    context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
-              "SubParagraphs", "sequence"}), recursive=True)
+# flatten_structure = flatten(lambda context: is_one_of(
+#     context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
+#               "SubParagraphs", "sequence"}), recursive=True)
 
 
 def transform_generic_command(context: List[Node]):
     node = context[-1]
-    if node.children[0].tag_name == 'CMDNAME':
-        node.tag_name = 'cmd_' + node.children[0].content.lstrip('\\')
+    if node.children[0].name == 'CMDNAME':
+        node.name = 'cmd_' + node.children[0].content.lstrip('\\')
         node.result = node.children[1:]
 
 
@@ -325,11 +325,11 @@ def transform_generic_block(context: List[Node]):
     if not node.children or not node.children[0].children:
         context[0].new_error(node, 'unknown kind of block: ' + flatten_sxpr(node.as_sxpr()))
     else:
-        # assert node.children[0].tag_name == "begin_generic_block"
-        # assert node.children[0].children[0].tag_name == "begin_environment"
-        # assert node.children[-1].tag_name == "end_generic_block"
-        # assert node.children[-1].children[0].tag_name == "end_environment"
-        node.tag_name = 'env_' + node.children[0].children[0].content.lstrip('\\')
+        # assert node.children[0].name == "begin_generic_block"
+        # assert node.children[0].children[0].name == "begin_environment"
+        # assert node.children[-1].name == "end_generic_block"
+        # assert node.children[-1].children[0].name == "end_environment"
+        node.name = 'env_' + node.children[0].children[0].content.lstrip('\\')
         node.result = node.children[1:-1]
 
 
@@ -351,7 +351,7 @@ def replace_quotationmark(context: List[Node]):
 
 def is_expendable(context: List[Node]):
     node = context[-1]
-    return not node._result and not node.tag_name[0:4] in ('cmd_', 'cfg_')
+    return not node._result and not node.name[0:4] in ('cmd_', 'cfg_')
 
 
 def show(context: List[Node]):
@@ -360,14 +360,14 @@ def show(context: List[Node]):
 
 LaTeX_AST_transformation_table = {
     # AST Transformations for the LaTeX-grammar
-    "<": [flatten, flatten_structure, remove_children_if(is_expendable)],
+    "<": [flatten, remove_children_if(is_expendable)],
     "latexdoc": [],
-    "document": [flatten_structure],
+    "document": [],
     "pdfinfo": [],
     "_TEXT_NOPAR": [apply_unless(normalize_whitespace, has_children)],
-    "info_assoc": [change_tag_name('association'), replace_by_single_child],
-    "info_key": [change_tag_name('key')],
-    "info_value": [apply_unless(normalize_whitespace, has_children), change_tag_name('value')],
+    "info_assoc": [change_name('association'), replace_by_single_child],
+    "info_key": [change_name('key')],
+    "info_value": [apply_unless(normalize_whitespace, has_children), change_name('value')],
     "parameters": [replace_by_single_child],
     "association": [replace_by_single_child],
     "key": reduce_single_child,
@@ -381,23 +381,22 @@ LaTeX_AST_transformation_table = {
     "_block_environment": replace_by_single_child,
     "_known_environment": replace_by_single_child,
     "generic_block": [transform_generic_block],
-    "generic_command": [transform_generic_command, reduce_single_child],  # [flatten],
+    "generic_command": [transform_generic_command, reduce_single_child],
     "begin_generic_block, end_generic_block": [],
-        # [remove_children({'NEW_LINE', 'LFF'}), replace_by_single_child],
-    "itemize, enumerate": [flatten],
+    "itemize, enumerate": [],
     "item": [],
     "figure": [],
     "quotation": [reduce_single_child, remove_brackets],
     "verbatim": [],
     "tabular": [],
     "tabular_config, block_of_paragraphs": [remove_brackets, reduce_single_child],
-    "tabular_row": [flatten, remove_tokens('&', '\\')],
-    "tabular_cell": [flatten, remove_whitespace],
+    "tabular_row": [remove_tokens('&', '\\')],
+    "tabular_cell": [remove_whitespace],
     "multicolumn": [remove_tokens('{', '}')],
     "hline": [remove_whitespace, reduce_single_child],
     "ref, label, url": reduce_single_child,
-    "sequence": [flatten],
-    "paragraph": [flatten, strip(is_one_of({'S'}))],
+    "sequence": [],
+    "paragraph": [strip(is_one_of({'S'}))],
     "_text_element": replace_by_single_child,
     "_line_element": replace_by_single_child,
     "_inline_environment": replace_by_single_child,
@@ -415,7 +414,7 @@ LaTeX_AST_transformation_table = {
     "caption": [],
     "config": [reduce_single_child],
     "cfg_text": [reduce_single_child],
-    "block": [flatten, reduce_single_child],
+    "block": [reduce_single_child],
     "flag": [reduce_single_child],
     "text": collapse,
     "path": collapse,
@@ -438,8 +437,8 @@ LaTeX_AST_transformation_table = {
     "_PARSEP": [replace_content_with('\n\n')],
     ":Whitespace, _WSPC, S": streamline_whitespace,
     "WARN_Komma": add_error('No komma allowed at the end of a list', WARNING),
-    "*": apply_unless(replace_by_single_child,
-                      lambda ctx: ctx[-1].tag_name[:4] not in ('cmd_', 'env_'))
+    "*": apply_if(replace_by_single_child,
+                  lambda ctx: ctx[-1].name[:4] in ('cmd_', 'env_'))
 }
 
 
@@ -490,13 +489,13 @@ class LaTeXCompiler(Compiler):
 
     def fallback_generic_environment(self, node) -> Node:
         node = super().fallback_compiler(node)
-        node.tag_name = 'VOID'
+        node.name = 'VOID'
         return node
 
     def fallback_compiler(self, node: Node) -> Any:
-        if node.tag_name.startswith('cmd_'):
+        if node.name.startswith('cmd_'):
             node = self.fallback_generic_command(node)
-        elif node.tag_name.startswith('env_'):
+        elif node.name.startswith('env_'):
             node = self.fallback_generic_environment(node)
         else:
             node = super().fallback_compiler(node)
@@ -504,7 +503,7 @@ class LaTeXCompiler(Compiler):
         if node.children:
             result = [];  void_flag = False
             for child in node.children:
-                if child.tag_name == 'VOID' and child.children:
+                if child.name == 'VOID' and child.children:
                     result.extend(child.children);  void_flag = True
                 else:
                     result.append(child)

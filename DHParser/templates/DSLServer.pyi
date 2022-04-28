@@ -352,12 +352,11 @@ def run_server(host, port, log_path=None):
         finally:
             if not ports:
                 echo('Server on %s:%i stopped' % (host, port))
-                if overwrite:
-                    try:
-                        os.remove(cfg_filename)
-                        verbose('removing temporary config file: ' + cfg_filename)
-                    except FileNotFoundError:
-                        pass
+                try:
+                    os.remove(cfg_filename)
+                    verbose('removing temporary config file: ' + cfg_filename)
+                except FileNotFoundError:
+                    pass
 
 
 async def send_request(reader, writer, request, timeout=SERVER_REPLY_TIMEOUT) -> str:
@@ -408,8 +407,12 @@ async def connect_to_daemon(host, port) -> tuple:
     """Opens a connections to the server on host, port. Returns the reader,
     writer and the string result of the identification-request."""
     global KNOWN_HOST, KNOWN_PORT, servername
-    delay = 0.05
-    countdown = SERVER_REPLY_TIMEOUT / delay + 10
+    if sys.platform.find('win') < 0:
+        delay = 0.05
+        countdown = SERVER_REPLY_TIMEOUT / delay + 10
+    else:
+        delay = 0.05
+        countdown = max(SERVER_REPLY_TIMEOUT, 5)
     ident, reader, writer = None, None, None
     cfg_filename = get_config_filename()
     save = (host, port)
@@ -460,6 +463,7 @@ async def start_server_daemon(host, port, requests, timeout=SERVER_REPLY_TIMEOUT
             verbose('Connection to server "%s" established.' % ident)
     else:
         try:
+            if sys.platform.find('win') >= 0:  raise OSError
             subprocess.Popen([__file__, '--startserver', host, str(port)])
         except OSError:
             subprocess.Popen([sys.executable, __file__, '--startserver', host, str(port)])

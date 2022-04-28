@@ -37,7 +37,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
     merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
@@ -45,7 +45,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     get_config_value, node_maker, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
-    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
+    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory
 
 
@@ -72,7 +72,7 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "2bf7bcf6d88dff4d90f4a82f8d16e224"
+    source_hash__ = "8e740546a919e9d9fa62ed074f44ac94"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

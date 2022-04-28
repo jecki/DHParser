@@ -47,7 +47,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    identity, Protocol
+    deprecation_warning
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -129,7 +129,7 @@ WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Text'
 REGEXP_PTYPE = ':RegExp'
 EMPTY_PTYPE = ':EMPTY'
-LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE}
+LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE, EMPTY_PTYPE}
 
 ZOMBIE_TAG = "ZOMBIE__"
 
@@ -141,13 +141,13 @@ ZOMBIE_TAG = "ZOMBIE__"
 #######################################################################
 
 
-# support functions for searching an navigating trees #################
+# support functions for searching and navigating trees #################
 
 
 # criteria for finding nodes:
 # - node itself (equality)
-# - tag_name
-# - one of several tag_names
+# - name
+# - one of several names
 # - a function Node -> bool
 re_pattern = Any
 CriteriaType = Union['Node', str, Container[str], Callable, int, re_pattern]
@@ -180,11 +180,11 @@ def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
     tag name (str)       equality of tag name only
     multiple tag names   equality of tag name with one of the given names
     pattern (re.Pattern) full match of content with pattern
-    match function       match function returns `True`
+    match function       function returns `True`
     ==================== ===================================================
 
     :param criterion: Either a node, the id of a node, a frozen node,
-        a tag_name or a container (usually a set) of multiple tag names,
+        a name or a container (usually a set) of multiple tag names,
         a regular expression pattern or another match function.
 
     :returns: a match-function (Node -> bool) for the given criterion.
@@ -197,11 +197,11 @@ def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
         return lambda nd: nd == criterion
         # return lambda nd: nd.equals(criterion)  # may yield wrong results for Node.index()
     elif isinstance(criterion, str):
-        return lambda nd: nd.tag_name == criterion
+        return lambda nd: nd.name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
-        return lambda nd: nd.tag_name in cast(Container, criterion)
+        return lambda nd: nd.name in cast(Container, criterion)
     elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
         return lambda nd: criterion.fullmatch(nd.content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
@@ -218,7 +218,7 @@ def create_context_match_function(criterion: CriteriaType) -> ContextMatchFuncti
     criteria and their meaning.
 
     :param criterion: Either a node, the id of a node, a frozen node,
-        a tag_name or a container (usually a set) of multiple tag names,
+        a name or a container (usually a set) of multiple tag names,
         a regular expression pattern or another match function.
 
     :returns: a match-function (TreeContext -> bool) for the given criterion.
@@ -231,11 +231,11 @@ def create_context_match_function(criterion: CriteriaType) -> ContextMatchFuncti
         return lambda ctx: ctx[-1] == criterion
         # return lambda ctx[-1]: ctx[-1].equals(criterion)  # may yield wrong results for Node.ictx[-1]ex()
     elif isinstance(criterion, str):
-        return lambda ctx: ctx[-1].tag_name == criterion
+        return lambda ctx: ctx[-1].name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
-        return lambda ctx: ctx[-1].tag_name in cast(Container, criterion)
+        return lambda ctx: ctx[-1].name in cast(Container, criterion)
     elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
         return lambda ctx: criterion.fullmatch(ctx[-1].content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
@@ -256,7 +256,7 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
 
     The ``threshold`` value is a maximum number of
     characters allowed in the flattened expression. If this number
-    is exceeded the the unflattened S-expression is returned. A
+    is exceeded the unflattened S-expression is returned. A
     negative number means that the S-expression will always be
     flattened. Zero or (any postive integer <= 3) essentially means
     that the expression will not be flattened. Example::
@@ -320,7 +320,7 @@ def xml_tag_name(tag_name: str) -> str:
         'ANONYMOUS_Series__'
 
     :param tag_name: the original tag name
-    :returns: the XML-conform tag_name
+    :returns: the XML-conform name
     """
     if tag_name[:1] == ':':
         return 'ANONYMOUS_%s__' % tag_name[1:]
@@ -374,13 +374,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     3. The root node which contains further properties that are
        global properties of the parsing tree, such as the error list
        (which cannot be stored locally in the nodes, because nodes
-       might be dropped during tree-processsing, but error messages
+       might be dropped during tree-processing, but error messages
        should not be forgotten!). Because of that, the root node
        requires a different class (`RootNode`) while leaf-nodes
        as well as branch nodes are both instances of class Node.
 
     A node always has a tag name (which can be empty, though) and
-    a result field, which stores the results of the parsing processs
+    a result field, which stores the results of the parsing process
     and contains either a string or a tuple of child nodes.
 
     All other properties are either optional or represent different
@@ -392,7 +392,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     of the node's content in the source code, but may also be left
     uninitialized.
 
-    :ivar tag_name: The name of the node, which is either its
+    :ivar name: The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name.
 
             By convention the parser's class name when used as tag name
@@ -437,15 +437,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             correctly locating errors which might only be detected at
             later stages of the tree-transformation within the source text.
 
-    :ivar attr: An optional dictionary of XML-attr. This
-            dictionary is created lazily upon first usage. The attr
-            will only be shown in the XML-Representation, not in the
-            S-expression-output.
+    :ivar attr: An optional dictionary of attributes attached to the node.
+            This dictionary is created lazily upon first usage.
     """
 
-    __slots__ = '_result', '_children', '_pos', 'tag_name', '_xml_attr'
+    __slots__ = '_result', '_children', '_pos', 'name', '_attributes'
 
-    def __init__(self, tag_name: str,
+    def __init__(self, name: str,
                  result: Union[Tuple['Node', ...], 'Node', StringView, str],
                  leafhint: bool = False) -> None:
         """
@@ -455,7 +453,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         considered to be a "branch-node", or a text-string, in which case
         the node is informally considered to be a "leaf-node".
 
-        :param tag_name: a tag_name for the node. If the node has been created
+        :param name: a name for the node. If the node has been created
             by a parser, this is either the parser's name, e.g. "phrase",
             or if the parser wasn't named the parser's type, i.e. name of the
             parser's class, preceded by a colon, e.g. ":Series"
@@ -473,18 +471,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._children = tuple()     # type: Tuple['Node', ...]
         else:
             self._set_result(result)
-        self.tag_name = tag_name         # type: str
+        self.name = name         # type: str
 
     def __deepcopy__(self, memo):
         if self._children:
-            duplicate = self.__class__(self.tag_name, copy.deepcopy(self._children), False)
+            duplicate = self.__class__(self.name, copy.deepcopy(self._children), False)
         else:
-            duplicate = self.__class__(self.tag_name, self.result, True)
+            duplicate = self.__class__(self.name, self.result, True)
         duplicate._pos = self._pos
         if self.has_attr():
-            duplicate.attr.update(self._xml_attr)
-            # duplicate.attr.update(copy.deepcopy(self._xml_attr))
-            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is not cython compatible
+            duplicate.attr.update(self._attributes)
+            # duplicate.attr.update(copy.deepcopy(self._attributes))
+            # duplicate._attributes = copy.deepcopy(self._attributes)  # this is not cython compatible
         return duplicate
 
     def __str__(self):
@@ -493,7 +491,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __repr__(self):
         rarg = ("'%s'" % str(self)) if not self._children else \
             "(" + ", ".join(child.__repr__() for child in self._children) + ")"
-        return "Node('%s', %s)" % (self.tag_name, rarg)
+        return "Node('%s', %s)" % (self.name, rarg)
 
     @property
     def repr(self) -> str:
@@ -507,9 +505,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             rep.append('.with_pos(%i)' % self._pos)
         return ''.join(rep)
 
-    def __len__(self):
-        return (sum(child.__len__() for child in self._children)
+    def strlen(self):
+        """Returns the length of the string-content of this node.
+        Mind that len(node) returns the number of children of this node!"""
+        return (sum(child.strlen() for child in self._children)
                 if self._children else len(self._result))
+
+    def __len__(self):
+        raise AssertionError(
+            "len() on Node-objects would be too mbiguous! Please use either "
+            "node.strlen() to query the string-length of the contained text, "
+            "or len(node.children) to query the number of child nodes.")
 
     def __bool__(self):
         """Returns the bool value of a node, which is always True. The reason
@@ -519,7 +525,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return True
 
     # def __hash__(self):
-    #     return hash(self.tag_name)  # very bad idea!
+    #     return hash(self.name)  # very bad idea!
+
+    @property
+    def tag_name(self) -> str:
+        deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
+                            'Use "Node.name" instead!')
+        return self.name
+
+    @tag_name.setter
+    def tag_name(self, name: str):
+        deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
+                            'Use "Node.name" instead!')
+        self.name = name
 
     def equals(self, other: 'Node', ignore_attr_order: bool = True) -> bool:
         """
@@ -530,10 +548,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         same order.
 
         :param other: The node to which `self` shall be compared.
+        :param ignore_attr_order: If True (default), two sets of attributes
+            are considered as equal if their attribute-names and
+            attribute-values are the same, no matter in which order the
+            attributes have been added.
         :returns: True, if the tree originating in node `self` is equal by
             value to the tree originating in node `other`.
         """
-        if self.tag_name == other.tag_name and self.compare_attr(other, ignore_attr_order):
+        if self.name == other.name and self.compare_attr(other, ignore_attr_order):
             if self._children:
                 return (len(self._children) == len(other._children)
                         and all(a.equals(b, ignore_attr_order)
@@ -548,12 +570,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         has not been created by a named parser.
 
         The tag name of anonymous node contains a colon followed by the class name
-        of the parser that created the node, i.e. ":Series". It is recommended
+        of the parser that created the node, i.e. ":Series". It is the recommended
         practice to remove (or name) all anonymous nodes during the
         AST-transformation.
         """
-        tn = self.tag_name
-        return not tn or tn[0] == ':'  # self.tag_name.find(':') >= 0
+        tn = self.name
+        return not tn or tn[0] == ':'  # self.name.find(':') >= 0
 
     # node content ###
 
@@ -589,7 +611,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 prev.with_pos(offset)
             for child in children[1:]:
                 if child._pos < 0:
-                    offset = offset + prev.__len__()
+                    offset = offset + prev.strlen()
                     child.with_pos(offset)
                 else:
                     offset = child._pos
@@ -702,7 +724,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         existence of any attributes.
         """
         try:
-            return attr in self._xml_attr if attr else bool(self._xml_attr)
+            return attr in self._attributes if attr else bool(self._attributes)
         except (AttributeError, TypeError):
             return False
 
@@ -728,18 +750,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         NOTE: Use :py:meth:`Node.has_attr()` rather than `bool(node.attr)`
         to probe the presence of attributes. Attribute dictionaries are
         created lazily and `node.attr` would create a dictionary, even
-        though it may never be needed, any more.
+        though it may never be needed, anymore.
         """
         try:
-            if self._xml_attr is None:          # cython compatibility
-                self._xml_attr = OrderedDict()  # type: Dict[str, str]
+            if self._attributes is None:          # cython compatibility
+                self._attributes = OrderedDict()  # type: Dict[str, Any]
         except AttributeError:
-            self._xml_attr = OrderedDict()
-        return self._xml_attr
+            self._attributes = OrderedDict()
+        return self._attributes
 
     @attr.setter
     def attr(self, attr_dict: Dict[str, str]):
-        self._xml_attr = attr_dict
+        self._attributes = attr_dict
 
     def get_attr(self, attribute: str, default: str) -> str:
         """
@@ -811,21 +833,29 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', Tuple['Node', ...]]:
+    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', List['Node']]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
 
-            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")))')
-            >>> flatten_sxpr(tree[0].as_sxpr())
-            '(b "X")'
-            >>> flatten_sxpr(tree["X"].as_sxpr())
-            '(X (c "d"))'
+            >>> tree = parse_sxpr('(a (b "X") (X (c "d")) (e (X "F")) (b "Y"))')
+            >>> tree[0]
+            Node('b', 'X')
+            >>> tree['X']
+            Node('X', (Node('c', 'd')))
+            >>> tree['b']
+            [Node('b', 'X'), Node('b', 'Y')]
+
+            >>> from DHParser.toolkit import as_list
+            >>> as_list(tree['b'])
+            [Node('b', 'X'), Node('b', 'Y')]
+            >>> as_list(tree['e'])
+            [Node('e', (Node('X', 'F')))]
 
         :param key(str): A tag-name (string) or an index or a slice of the 
             child or children that shall be returned.
         :returns: The node with the given index (always type Node) or a
-            tuple of all nodes which have a given tag name, if `key` was a
+            list of all nodes which have a given tag name, if `key` was a
             tag-name and there is more than one child-node with this tag-name
         :raises:
             KeyError:   if no matching child was found.
@@ -838,10 +868,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self._children[key]
         else:
             mf = create_match_function(key)
-            items = tuple(child for child in self._children if mf(child))
+            items = [child for child in self._children if mf(child)]
             if items:
                 return items if len(items) >= 2 else items[0]
-            raise IndexError('index out of range') if isinstance(key, int) else KeyError(str(key))
+            raise KeyError(str(key))
 
     def __setitem__(self, 
                     key: Union[CriteriaType, slice, int], 
@@ -919,7 +949,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
         """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
-        child with the given index or tag_name exists, the ``surrogate`` is
+        child with the given index or name exists, the ``surrogate`` is
         returned instead. This mimics the behaviour of Python's dictionary's
         `get()`-method.
 
@@ -1032,7 +1062,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             for a match.
         :param reverse: If True, the tree will be walked in reverse
                 order, i.e. last children first.
-        :param skip_subtree: A criterion to identify sub-trees, the returned
+        :param skip_subtree: A criterion to identify subtrees, the returned
                 iterator shall not dive into. Note that the root-node of the
                 subtree will still be yielded by the iterator.
         :returns: An iterator over all descendant nodes which fulfill the
@@ -1106,15 +1136,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(location=cython.int, end=cython.int)
     def locate(self, location: int) -> Optional['Node']:
         """
-        Returns the leaf-Node that covers the given `location`, where
-        location is the actual position within self.content (not the
+        Returns the leaf-Node that covers the given ``location``, where
+        location is the actual position within ``self.content`` (not the
         source code position that the pos-attribute represents). If
-        the location lies out side the node's string content, `None` is
+        the location lies outside the node's string content, `None` is
         returned.
         """
         end = 0
         for nd in self.select_if(lambda nd: not nd._children, include_root=True):
-            end += len(nd)
+            end += nd.strlen()
             if location < end:
                 return nd
         return None
@@ -1190,7 +1220,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         end = 0
         for ctx in self.select_context_if(lambda ctx: not ctx[-1]._children, include_root=True):
-            end += len(ctx[-1])
+            end += ctx[-1].strlen()
             if location < end:
                 return ctx
         return []
@@ -1227,7 +1257,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return ctx
         else:
             raise ValueError('Node "%s" does not occur in the tree %s '
-                             % (node.tag_name, flatten_sxpr(self.as_sxpr())))
+                             % (node.name, flatten_sxpr(self.as_sxpr())))
 
     # milestone support ### EXPERIMENTAL!!! ###
 
@@ -1278,7 +1308,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 k = index(parent, ctx[i])
                 segment = cut_func(parent.result, k, child)
                 if tainted or len(segment) != len(parent.result):
-                    parent_copy = Node(parent.tag_name, segment)
+                    parent_copy = Node(parent.name, segment)
                     if parent.has_attr():
                         parent_copy.attr = parent.attr
                     child = parent_copy
@@ -1311,7 +1341,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 i += 1
         except (IndexError, ValueError):
             pass
-        new_ca = Node(common_ancestor.tag_name, left_children[:i] + right_children[k + i:])
+        new_ca = Node(common_ancestor.name, left_children[:i] + right_children[k + i:])
         if common_ancestor.has_attr():
             new_ca.attr = common_ancestor.attr
         return new_ca
@@ -1329,17 +1359,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> tree.evaluate(actions)
             23
 
-        :param actions: A dictionary that maps tag_names to action functions.
+        :param actions: A dictionary that maps node-names to action functions.
         :return: the result of the evaluation
         """
         args = tuple(child.evaluate(actions) for child in self._children) if self._children \
                else (self._result,)
         try:
-            return actions[self.tag_name](*args)
+            return actions[self.name](*args)
         except KeyError:
             return self.content
         except TypeError as e:
-            raise AssertionError(f'Evaluation function for tag "{self.tag_name}" cannot handle '
+            raise AssertionError(f'Evaluation function for tag "{self.name}" cannot handle '
                                  f'arguments: {args}. Error raised: {e}')
 
     # serialization ###########################################################
@@ -1347,7 +1377,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(i=cython.int, k=cython.int, N=cython.int)
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
-                   allow_ommissions=False) -> List[str]:
+                   allow_omissions=False) -> List[str]:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -1358,9 +1388,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         :param tab:  The indentation string, e.g. '\t' or '    '
         :param open_fn: A function (Node -> str) that returns an
-            opening string (e.g. an XML-tag_name) for a given node
+            opening string (e.g. an XML-name) for a given node
         :param close_fn:  A function (Node -> str) that returns a closing
-            string (e.g. an XML-tag_name) for a given node.
+            string (e.g. an XML-name) for a given node.
         :param data_fn:  A function (str -> str) that filters the data
             string before printing, e.g. to add quotation marks
 
@@ -1388,7 +1418,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             # first_child = self._children[0]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                                           density, inline, inline_fn, allow_ommissions)
+                                           density, inline, inline_fn, allow_omissions)
                 if subtree:
                     if inline:
                         content[-1] += '\n'.join(subtree)
@@ -1405,7 +1435,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return content
 
         res = self.content
-        if not inline and not head and allow_ommissions:
+        if not inline and not head and allow_omissions:
             # strip whitespace for omitted non-inline node, e.g. CharData in mixed elements
             res = res.strip()  # WARNING: This changes the data in subtle ways
         if density & 1 and res.find('\n') < 0:
@@ -1418,7 +1448,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             lines = [data_fn(s) for s in res.split('\n')]
             N = len(lines)
             i, k = 0, N - 1
-            if not inline and allow_ommissions:
+            if not inline and allow_omissions:
                 # Strip preceding and succeeding whitespace.
                 # WARNING: This changes the data in subtle ways
                 while i < N and not lines[i]:
@@ -1435,7 +1465,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 content[-1] += tail
             return content
-
 
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
@@ -1466,11 +1495,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            txt = [left_bracket, node.tag_name]
+            txt = [left_bracket, node.name]
             # s += " '(pos %i)" % node.add_pos
             # txt.append(str(id(node)))  # for debugging
             if node.has_attr():
-                txt.extend(' `(%s "%s")' % (k, v) for k, v in node.attr.items())
+                txt.extend(' `(%s "%s")' % (k, str(v)) for k, v in node.attr.items())
             if node._pos >= 0:
                 if src:
                     line, col = line_col(lbreaks, node.pos)
@@ -1498,7 +1527,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                indentation: int = 2,
                inline_tags: Set[str] = frozenset(),
                string_tags: Set[str] = frozenset(),
-               empty_tags: Set[str] = frozenset()) -> str:
+               empty_tags: Set[str] = frozenset(),
+               strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
 
         :param src: The source text or `None`. In case the source text is
@@ -1513,6 +1543,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 requires its content to be either a tuple of children or string content.
         :param empty_tags: A set of tags which shall be rendered as empty elements, e.g.
                 "<empty/>" instead of "<empty><empty>".
+        :param strict_mode: If True, violation of stylistic or interoperability rules
+                raises a ValueError.
         :returns: The XML-string representing the tree originating in `self`
         """
         root = cast(RootNode, self) if isinstance(self, RootNode) \
@@ -1535,10 +1567,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            nonlocal attr_filter
-            if node.tag_name in string_tags and not node.has_attr():
+            nonlocal attr_filter, empty_tags
+            if node.name in string_tags and not node.has_attr():
                 return ''
-            txt = ['<', xml_tag_name(node.tag_name)]
+            txt = ['<', xml_tag_name(node.name)]
             if node.has_attr():
                 txt.extend(' %s=%s' % (k, attr_filter(str(v))) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
@@ -1550,12 +1582,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 #     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
                 #             for err in root.node_errors(node))))
                 txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
-            if node.tag_name in empty_tags:
-                assert node.tag_name[0] == '?' or not node.result, \
-                    f"Node {node.tag_name} with content {str(node)} is not an empty element!"
-                if node.tag_name[0] == '?':  ending = '?>'
+            if node.name in empty_tags:
+                if node.name[0:1] != '?' and node.result:
+                    error_msg = f'Empty element "{node.name}" with content: "{node.content}" !?'
+                    if strict_mode:  raise ValueError(error_msg)
+                    else:
+                        print(error_msg)
+                        empty_tags = empty_tags.copy()
+                        empty_tags.remove(node.name)
+                if node.name[0] == '?':  ending = '?>'
+                elif node.result:  ending = '>'
                 else:  ending = '/>'
-            elif node.tag_name == '!--':
+            elif node.name == '!--':
                 ending = ""
             else:
                 ending = ">"
@@ -1563,11 +1601,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
-            if node.tag_name in empty_tags or (node.tag_name in string_tags and not node.has_attr()):
+            if node.name in empty_tags or (node.name in string_tags and not node.has_attr()):
                 return ''
-            elif node.tag_name == '!--':
+            elif node.name == '!--':
                 return '-->'
-            return '</' + xml_tag_name(node.tag_name) + '>'
+            return '</' + xml_tag_name(node.name) + '>'
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
@@ -1580,14 +1618,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             thereby signalling that the children of this node shall not be
             printed on several lines to avoid unwanted gaps in the output.
             """
-            return node.tag_name in inline_tags \
+            return node.name in inline_tags \
                    or (node.has_attr() and node.attr.get('xml:space', 'default') == 'preserve')
-                   # or (node.tag_name in string_tags and not node.children)
+                    # or (node.name in string_tags and not node.children)
 
         line_breaks = linebreaks(src) if src else []
         return '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
-            allow_ommissions=bool(string_tags)))
+            allow_omissions=bool(string_tags)))
 
     def as_tree(self) -> str:
         """Serialize as a simple indented text-tree."""
@@ -1609,7 +1647,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def to_json_obj(self) -> list:
         """Converts the tree into a JSON-serializable nested list."""
-        jo = [self.tag_name,
+        jo = [self.name,
               [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
         pos = self._pos
         if pos >= 0:
@@ -1712,26 +1750,26 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if ET is None:
             import xml.etree.ElementTree as ET
         # import lxml.etree as ET
-        attributes = self.attr if self.has_attr() else {}
-        tag_name = xml_tag_name(self.tag_name) if self.tag_name[:1] == ':' else self.tag_name
+        attributes = {k: str(v) for k, v in self.attr.items()} if self.has_attr() else {}
+        tag_name = xml_tag_name(self.name) if self.name[:1] == ':' else self.name
         if self.children:
             element = ET.Element(tag_name, attrib=attributes)
             # element.extend([child.as_etree(text_tags, empty_tags) for child in self.children])
             children = self.children
             i = 0;  L = len(children);  text = []
-            while i < L and children[i].tag_name in string_tags:
+            while i < L and children[i].name in string_tags:
                 assert not children[i].children
                 text.append(children[i].content)
                 i += 1
             if text:  element.text = ''.join(text)
             last_element = None
             while i < L:
-                while i < L and children[i].tag_name not in string_tags:
+                while i < L and children[i].name not in string_tags:
                     last_element = children[i].as_etree(ET, string_tags, empty_tags)
                     element.append(last_element)
                     i += 1
                 text = []
-                while i < L and children[i].tag_name in string_tags:
+                while i < L and children[i].name in string_tags:
                     assert not children[i].children
                     text.append(children[i].content)
                     i += 1
@@ -1791,8 +1829,8 @@ def as_path(context: TreeContext) -> str:
     """Returns the context a pseudo filepath of tag-names."""
     tag_list = ['']
     for node in context:
-        assert not node.tag_name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
-        tag_list.append(node.tag_name)
+        assert not node.name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
+        tag_list.append(node.name)
     if context[-1].children:
         tag_list.append('')
     return '/'.join(tag_list)
@@ -1814,7 +1852,7 @@ def prev_context(context: TreeContext) -> Optional[TreeContext]:
     """Returns the context of the predecessor of the last node in the
     context. The predecessor is the sibling of the same parent-node
     preceding the node, or, if it already is the first sibling, the parent's
-    sibling preceding the parent, or grand-parent's sibling and so on.
+    sibling preceding the parent, or grandparent's sibling and so on.
     In case no predecessor is found, when the first ancestor has been
     reached, `None` is returned.
     """
@@ -1836,7 +1874,7 @@ def prev_context(context: TreeContext) -> Optional[TreeContext]:
 def next_context(context: TreeContext) -> Optional[TreeContext]:
     """Returns the context of the successor of the last node in the
     context. The successor is the sibling of the same parent Node
-    succeeding the the node, or if it already is the last sibling, the
+    succeeding the node, or if it already is the last sibling, the
     parent's sibling succeeding the parent, or grand-parent's sibling and
     so on. In case no successor is found when the first ancestor has been
     reached, `None` is returned.
@@ -2041,18 +2079,18 @@ def serialize_context(context: TreeContext, with_content: int = 0, delimiter: st
         -> str:
     """Serializes a context as string.
 
-    :param context: the context to serialized.
+    :param context: the context to be serialized.
     :param with_content: the number of nodes from the end of the context for
-        which the content will be displayed next to the tag_name.
+        which the content will be displayed next to the name.
     :param delimiter: The delimiter separating the nodes in the returned string.
     :returns: the string-serialization of the given context.
     """
     if with_content == 0:
-        lines = [nd.tag_name for nd in context]
+        lines = [nd.name for nd in context]
     else:
         n = with_content if with_content > 0 else len(context)
-        lines = [nd.tag_name for nd in context[:-n]]
-        lines.extend(nd.tag_name + ':' + str(nd.content) for nd in context[-n:])
+        lines = [nd.name for nd in context[:-n]]
+        lines.extend(nd.name + ':' + str(nd.content) for nd in context[-n:])
     return delimiter.join(lines)
 
 
@@ -2086,7 +2124,7 @@ def generate_context_mapping(node: Node) -> ContextMapping:
     for ctx in node.select_context_if(LEAF_CONTEXT, include_root=True):
         pos_list.append(pos)
         ctx_list.append(ctx)
-        pos += len(ctx[-1])
+        pos += ctx[-1].strlen()
     return pos_list, ctx_list
 
 
@@ -2224,19 +2262,19 @@ class FrozenNode(Node):
 
     Frozen nodes must only be used temporarily during parsing or
     tree-transformation and should not occur in the product of the
-    transformation any more. This can be verified with
+    transformation anymore. This can be verified with
     :py:func:`tree_sanity_check()`. Or, as comparison criterion for
     content equality when picking or selecting nodes or contexts from
     a tree (see :py:func:`create_match_function()`).
     """
 
-    def __init__(self, tag_name: str, result: ResultType, leafhint: bool = True) -> None:
+    def __init__(self, name: str, result: ResultType, leafhint: bool = True) -> None:
         if isinstance(result, str) or isinstance(result, StringView):
             result = str(result)
         else:
             raise TypeError('FrozenNode only accepts string as result. '
                             '(Only leaf-nodes can be frozen nodes.)')
-        super(FrozenNode, self).__init__(tag_name, result, True)
+        super(FrozenNode, self).__init__(name, result, True)
 
     @property
     def result(self) -> Union[Tuple[Node, ...], StringView, str]:
@@ -2249,16 +2287,16 @@ class FrozenNode(Node):
     @property
     def attr(self):
         try:
-            return self._xml_attr
+            return self._attributes
         except AttributeError:
             return OrderedDict()  # assignments will be void!
 
     @attr.setter
-    def attr(self, attr_dict: OrderedDict):
+    def attr(self, attr_dict: Dict[str, Any]):
         if self.has_attr():
             raise AssertionError("Frozen nodes' attributes can only be set once")
         else:
-            self._xml_attr = attr_dict
+            self._attributes = attr_dict
 
     @property
     def pos(self):
@@ -2317,7 +2355,7 @@ class RootNode(Node):
     Although errors are local properties that occur on a specific point or
     chunk of source code, instead of attaching the errors to the nodes on
     which they have occurred, the list of errors in managed globally by the
-    root-node object. Otherwise it would be hard to keep track of the
+    root-node object. Otherwise, it would be hard to keep track of the
     errors when during the transformation of trees node are replaced or
     dropped that might also contain error messages.
 
@@ -2340,7 +2378,7 @@ class RootNode(Node):
 
     :ivar source:  The source code (after preprocessing)
     :ivar source_mapping:  A source mapping function to map source code
-        position to positions of the non-preprocessed source.
+        position to the positions of the non-preprocessed source.
         See module `preprocess`
     :ivar lbreaks: A list of indices of all linebreaks in the source.
 
@@ -2394,8 +2432,8 @@ class RootNode(Node):
         new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
         map_id = dict(zip(old_node_ids, new_node_ids))
         if self.has_attr():
-            duplicate.attr.update(self._xml_attr)
-            # duplicate._xml_attr = copy.deepcopy(self._xml_attr)  # this is blocked by cython
+            duplicate.attr.update(self._attributes)
+            # duplicate._attributes = copy.deepcopy(self._attributes)  # this is blocked by cython
         duplicate.errors = copy.deepcopy(self.errors)
         duplicate._error_set = {error for error in duplicate.errors}
         duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
@@ -2405,7 +2443,7 @@ class RootNode(Node):
         duplicate.inline_tags = self.inline_tags
         duplicate.string_tags = self.string_tags
         duplicate.empty_tags = self.empty_tags
-        duplicate.tag_name = self.tag_name
+        duplicate.name = self.name
         return duplicate
 
     def swallow(self, node: Optional[Node],
@@ -2430,19 +2468,19 @@ class RootNode(Node):
             self.source_mapping = gen_neutral_srcmap_func(source)
         else:
             self.source_mapping = source_mapping  # type: SourceMapFunc
-        if self.tag_name != '__not_yet_ready__':
+        if self.name != '__not_yet_ready__':
             raise AssertionError('RootNode.swallow() has already been called!')
         if node is None:
-            self.tag_name = ZOMBIE_TAG
+            self.name = ZOMBIE_TAG
             self.with_pos(0)
             self.new_error(self, 'Parser did not match!', PARSER_STOPPED_BEFORE_END)
             return self
         self._result = node._result
         self._children = node._children
         self._pos = node._pos
-        self.tag_name = node.tag_name
+        self.name = node.name
         if node.has_attr():
-            self._xml_attr = node._xml_attr
+            self._attributes = node._attributes
         # self._content = node._content
         if id(node) in self.error_nodes:
             self.error_nodes[id(self)] = self.error_nodes[id(node)]
@@ -2487,7 +2525,7 @@ class RootNode(Node):
             nd = None
             for nd in self.select_if(lambda nd: not nd._children):
                 assert nd.pos >= 0
-                if nd.pos <= error.pos < nd.pos + len(nd):
+                if nd.pos <= error.pos < nd.pos + nd.strlen():
                     node = nd
                     break
                 pos_list.append(nd.pos)
@@ -2503,7 +2541,7 @@ class RootNode(Node):
             assert isinstance(node, Node)
             assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
                 "Wrong error position when processing error: %s\n" % str(error) + \
-                "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, len(node) - 1))
+                "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, node.strlen() - 1))
             assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
         self.error_nodes.setdefault(id(node), []).append(error)
         if node.pos == error.pos:
@@ -2523,7 +2561,7 @@ class RootNode(Node):
         Adds an error to this tree, locating it at a specific node.
 
         :param node:    the node where the error occurred
-        :param message: a string with the error message.abs
+        :param message: a string with the error message
         :param code:    an error code to identify the type of the error
         """
         error = Error(message, node.pos, code)
@@ -2536,12 +2574,12 @@ class RootNode(Node):
         at the position of the node that has already been removed from the tree,
         for example, because it was an anonymous empty child node.
         The position of the node is here understood to cover the range:
-        [node.pos, node.pos + len(node)[
+        [node.pos, node.pos + node.strlen()[
         """
         node_id = id(node)           # type: int
         errors = []                  # type: List[Error]
         start_pos = node.pos
-        end_pos = node.pos + max(len(node), 1)
+        end_pos = node.pos + max(node.strlen(), 1)
         error_node_ids = set()
         for pos, ids in self.error_positions.items():   # TODO: use bisect here...
             if start_pos <= pos < end_pos:
@@ -2554,7 +2592,7 @@ class RootNode(Node):
                 for _ in node.select_if(lambda n: id(n) == nid):
                     break
                 else:
-                    # node is not connected to tree any more, but since errors
+                    # node is not connected to tree anymore, but since errors
                     # should not get lost, display its errors on its parent
                     errors.extend(self.error_nodes[nid])
         return errors
@@ -2564,7 +2602,7 @@ class RootNode(Node):
         Transfers errors to a different node. While errors never get lost
         during AST-transformation, because they are kept by the RootNode,
         the nodes they are connected to may be dropped in the course of the
-        transformation. This function allows to attach errors from a node that
+        transformation. This function allows attaching errors from a node that
         will be dropped to a different node.
         """
         srcId = id(src)
@@ -2606,7 +2644,7 @@ class RootNode(Node):
         have matched without errors. It simply means the no
         PARSER_STOPPED_BEFORE_END-error has occurred.
         """
-        return self.tag_name != '__not_yet_ready__' \
+        return self.name != '__not_yet_ready__' \
             and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
 
     def as_xml(self, src: str = None,
@@ -2616,9 +2654,9 @@ class RootNode(Node):
                empty_tags: Set[str] = _EMPTY_SET_SENTINEL) -> str:
         return super().as_xml(
             src, indentation,
-            inline_tags = self.inline_tags if inline_tags is _EMPTY_SET_SENTINEL else inline_tags,
-            string_tags = self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
-            empty_tags = self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags)
+            inline_tags=self.inline_tags if inline_tags is _EMPTY_SET_SENTINEL else inline_tags,
+            string_tags=self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
+            empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags)
 
     def customized_XML(self):
         """
@@ -2712,7 +2750,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
         tagname = sxpr[:end]
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
-        attributes = OrderedDict()  # type: OrderedDict[str, str]
+        attributes = OrderedDict()  # type: Dict[str, Any]
         pos = -1  # type: int
         # parse attr
         while sxpr[:2] == "`(":
@@ -2783,7 +2821,8 @@ RX_WHITESPACE_TAIL = re.compile(r'\s*$')
 def parse_xml(xml: Union[str, StringView],
               string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
-              out_empty_tags: Set[str] = set()) -> Node:
+              out_empty_tags: Set[str] = set(),
+              strict_mode: bool = True) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
 
@@ -2791,21 +2830,24 @@ def parse_xml(xml: Union[str, StringView],
     :param string_tag: A tag-name that will be used for
         strings inside mixed-content-tags.
     :param ignore_pos: if True, '_pos'-attributes will be understood as
-        normal XML-attributes. Otherwise '_pos' will be understood as a
+        normal XML-attributes. Otherwise, '_pos' will be understood as a
         special attribute, the value of which will be written to `node._pos`
         and not transferred to the `node.attr`-dictionary.
     :param out_empty_tags: A set that is filled with the names of those
         tags that are empty tags, e.g. "<br/>"
+    :param strict_mode: If True, errors are raised if XML
+        contains stylistic or interoperability errors, like using one
+        and the same tag-name for empty and non-empty tags, for example.
     """
 
     xml = StringView(str(xml))
 
-    def parse_attributes(s: StringView) -> Tuple[StringView, OrderedDict]:
+    def parse_attributes(s: StringView) -> Tuple[StringView, Dict[str, Any]]:
         """
-        Parses a sqeuence of XML-Attributes. Returns the string-slice
+        Parses a sequence of XML-Attributes. Returns the string-slice
         beginning after the end of the attr.
         """
-        attributes = OrderedDict()  # type: OrderedDict[str, str]
+        attributes = OrderedDict()  # type: Dict[str, Any]
         eot = s.find('>')
         restart = 0
         for match in s.finditer(re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')):
@@ -2827,7 +2869,7 @@ def parse_xml(xml: Union[str, StringView],
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
         """
-        Parses an opening tag. Returns the string segment following the
+        Parses an opening tag. Returns the string segment following
         the opening tag, the tag name, a dictionary of attr and
         a flag indicating whether the tag is actually a solitary tag as
         indicated by a slash at the end, i.e. <br/>.
@@ -2873,7 +2915,11 @@ def parse_xml(xml: Union[str, StringView],
         if solitary:
             out_empty_tags.add(tagname)
         else:
-            assert tagname not in out_empty_tags
+            if tagname in out_empty_tags:
+                error_message = f'"{tagname}" is used as empty as well as non-empty element!' \
+                                f' This can cause errors when re-serializing data as XML!'
+                if strict_mode:  raise ValueError(error_message)
+                else:  print(error_message)
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
@@ -2885,8 +2931,11 @@ def parse_xml(xml: Union[str, StringView],
                         s, child = parse_full_content(s)
                         res.append(child)
             s, closing_tagname = parse_closing_tag(s)
-            assert tagname == closing_tagname, tagname + ' != ' + closing_tagname
-        if len(res) == 1 and res[0].tag_name == string_tag:
+            if tagname != closing_tagname:
+                error_message = f'Tag-name mismatch: <{tagn_name}>...</{closing_tagname}>!'
+                if strict_mode:  raise ValueError(error_message)
+                else:  print(error_message)
+        if len(res) == 1 and res[0].name == string_tag:
             result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
         else:
             result = tuple(res)

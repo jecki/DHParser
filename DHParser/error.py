@@ -87,12 +87,18 @@ __all__ = ('SourceMap',
            'REORDERING_OF_ALTERNATIVES_REQUIRED',
            'MANDATORY_CONTINUATION',
            'MANDATORY_CONTINUATION_AT_EOF',
+           'MANDATORY_CONTINUATION_AT_EOF_NON_ROOT',
+           'CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY',
+           'AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT',
+           'ERROR_WHILE_RECOVERING_FROM_ERROR',
+           'PARSER_NEVER_TOUCHES_DOCUMENT',
            'PARSER_NEVER_TOUCHES_DOCUMENT',
            'PARSER_LOOKAHEAD_FAILURE_ONLY',
            'PARSER_STOPPED_BEFORE_END',
            'PARSER_STOPPED_ON_RETRY',
            'PARSER_LOOKAHEAD_MATCH_ONLY',
            'CAPTURE_STACK_NOT_EMPTY',
+           'CAPTURE_STACK_NOT_EMPTY_WARNING',
            'AUTOCAPTURED_SYMBOL_NOT_CLEARED',
            'MALFORMED_ERROR_STRING',
            'AMBIGUOUS_ERROR_HANDLING',
@@ -145,7 +151,7 @@ SourceMap = namedtuple('SourceMap',
      'offsets',  # type: List[int]
      'file_names',  # type: List[str]
      'originals_dict',  # type: Dict[str, Union[str, StringView]]
-    ], module = __name__)
+    ], module=__name__)
 
 # class SourceLocation(NamedTuple):
 #     original_name: str          # the file name (or path or uri) of the source code
@@ -283,7 +289,7 @@ class Error:
         is too distorted for further processing.
 
     :ivar orig_pos:  the position of the error in the original source file,
-        not in the preprocessed document. This is a write once value!
+        not in the preprocessed document. This is a write-once value!
     :ivar orig_doc:  the name or path or url of the original source file to
         which ``orig_pos`` is related. This is relevant, if the preprocessed
         document has been plugged together from several source files.
@@ -315,7 +321,7 @@ class Error:
         self.message = message    # type: str
         self._pos = pos           # type: int
         # Add some logic to avoid double assignment of the same error code?
-        # Problem: Same code might allowedly be used by two different parsers/compilers
+        # Problem: Same code might legitimately be used by two different parsers/compilers
         self.code = code          # type: ErrorCode
         self.orig_pos = orig_pos  # type: int
         self.orig_doc = orig_doc  # type: str
@@ -354,7 +360,7 @@ class Error:
     @pos.setter
     def pos(self, value: int):
         self._pos = value
-        # reset line and column values, because they might now not be valid any more
+        # reset line and column values, because they might now not be valid anymore
         self.orig_pos = -1
         self.line, self.column = -1, -1
         self.end_line, self.end_column = -1, -1
@@ -391,7 +397,7 @@ class Error:
                 'end': {'line': self.end_line - 1, 'character': self.end_column - 1}}
 
     def diagnosticObj(self) -> dict:
-        """Returns the Error as as Language Server Protocol Diagnostic object.
+        """Returns the Error as Language Server Protocol Diagnostic object.
         https://microsoft.github.io/language-server-protocol/specifications/specification-current/#diagnostic
         """
         def relatedObj(relatedError: 'Error') -> dict:
@@ -493,7 +499,7 @@ def add_source_locations(errors: List[Error], source_mapping: SourceMapFunc):
     for err in errors:
         if err.pos < 0:
             raise ValueError(f'Illegal error position: {err.pos} Must be >= 0!')
-        if err.orig_pos < 0:  # do not overwriter oirg_pos if already set
+        if err.orig_pos < 0:  # do not overwrite orig_pos if already set
             err.orig_doc, orig_text, err.orig_pos = source_mapping(err.pos)
             lbreaks = lb_dict.setdefault(orig_text, linebreaks(orig_text))
             err.line, err.column = line_col(lbreaks, err.orig_pos)

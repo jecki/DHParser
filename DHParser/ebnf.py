@@ -117,7 +117,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \\
     merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \\
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \\
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \\
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \\
@@ -125,7 +125,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
-    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \\
+    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \\
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
@@ -1342,9 +1342,9 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar',
-                      '    # "<": flatten',
-                      '    # "*": replace_by_single_child',
-                      '    # ">: []']
+                      '    # "<": [],  # called for each node before calling its specific rules',
+                      '    # "*": [],  # fallback for nodes that do not appear in this table',
+                      '    # ">": [],   # called for each node after calling its specific rules']
         for name in self.rules:
             transformations = '[]'
             transtable.append('    "' + name + '": %s,' % transformations)
@@ -1370,7 +1370,7 @@ class EBNFCompiler(Compiler):
                     '',
                     '    def reset(self):',
                     '        super().reset()',
-                    '        self._None_check = True  # set to False if any compilation is allowed to return None'
+                    '        self._None_check = True  # set to False if any compilation is allowed to return None',
                     '        # initialize your variables here, not in the constructor!',
                     '']
         for name in self.rules:
@@ -1432,12 +1432,12 @@ class EBNFCompiler(Compiler):
     def extract_regex(self, node: Node) -> str:
         """Extracts regular expression string from regexp-Node."""
         value = node.content
-        if node.tag_name in ('literal', 'plaintext'):
+        if node.name in ('literal', 'plaintext'):
             assert value
             assert value[0] + value[-1] in ('""', "''", "``")
             value = escape_re(value[1:-1])
         else:
-            assert node.tag_name == "regexp"""
+            assert node.name == "regexp"""
         value = self.check_rx(node, value)
         return value
 
@@ -1453,18 +1453,18 @@ class EBNFCompiler(Compiler):
             "resume", "skip", "error"
         """
         assert kind in ('resume', 'skip', 'error')
-        if nd.tag_name == 'regexp':
+        if nd.name == 'regexp':
             super_ws = self.directives.super_ws
             nonempty_ws = mixin_nonempty(super_ws)
             search_regex = self.extract_regex(nd)\
                 .replace(r'\~!', nonempty_ws).replace(r'\~', super_ws)
             return unrepr("re.compile(r'%s')" % search_regex)
-        elif nd.tag_name == 'literal':
+        elif nd.name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks
             return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
-        elif nd.tag_name == 'procedure':
+        elif nd.name == 'procedure':
             return unrepr(nd.content)
-        elif nd.tag_name == 'symbol':
+        elif nd.name == 'symbol':
             referred_symbol = nd.content.strip()
             self.referred_by_directive.add(referred_symbol)
             return unrepr(referred_symbol)
@@ -1862,12 +1862,12 @@ class EBNFCompiler(Compiler):
         # compile definitions and directives and collect definitions
         root_symbol = ''
         for nd in node.children:
-            if nd.tag_name == "definition":
+            if nd.name == "definition":
                 rule, defn = self.compile(nd)
                 self.definitions[rule] = defn
                 if not root_symbol:  root_symbol = rule
             else:
-                assert nd.tag_name == "directive", nd.as_sxpr()
+                assert nd.name == "directive", nd.as_sxpr()
                 self.compile(nd)
 
         if not self.definitions:
@@ -1954,13 +1954,13 @@ class EBNFCompiler(Compiler):
 
     @staticmethod
     def join_literals(nd):
-        assert nd.tag_name == "literals"
+        assert nd.name == "literals"
         parts = [nd.children[0].content[:-1]]
         for child in nd.children[1:-1]:
             parts.append(child.content[1:-1])
         parts.append(nd.children[-1].content[1:])
         nd.result = "".join(parts)
-        nd.tag_name = "literal"
+        nd.name = "literal"
 
     def add_to_disposable_regexp(self, pattern):
         if self.directives.disposable == NEVER_MATCH_PATTERN:
@@ -1971,9 +1971,9 @@ class EBNFCompiler(Compiler):
 
     def on_directive(self, node: Node) -> str:
         for child in node.children:
-            if child.tag_name == "literal":
+            if child.name == "literal":
                 child.result = escape_ctrl_chars(child.content)
-            elif child.tag_name == "literals":
+            elif child.name == "literals":
                 self.join_literals(child)
                 child.result = escape_ctrl_chars(child.content)
 
@@ -1994,7 +1994,7 @@ class EBNFCompiler(Compiler):
 
         if key in {'comment', 'whitespace'}:
             check_argnum()
-            if node.children[1].tag_name == "symbol":
+            if node.children[1].name == "symbol":
                 value = node.children[1].content
                 if key == 'whitespace' and value in WHITESPACE_TYPES:
                     value = WHITESPACE_TYPES[value]  # replace whitespace-name by regex
@@ -2010,7 +2010,7 @@ class EBNFCompiler(Compiler):
             self.directives[key] = value
 
         elif key == 'disposable':
-            if node.children[1].tag_name == "regexp":
+            if node.children[1].name == "regexp":
                 if len(node.children) > 2:
                     self.tree.new_error(node, 'Directive "@disposable" can only have one argument'
                                         ' if specified as regexp and not as a list of symbols.')
@@ -2024,7 +2024,7 @@ class EBNFCompiler(Compiler):
             else:
                 args = node.children[1:]
                 for child in args:
-                    if child.tag_name != "symbol":
+                    if child.name != "symbol":
                         self.tree.new_error(
                             child, f'Non-symbol argument: {flatten_sxpr(child.as_sxpr())}'
                             ' cannot be mixed with symbols in @disposable-directive')
@@ -2101,10 +2101,10 @@ class EBNFCompiler(Compiler):
         elif key.endswith('_filter'):
             check_argnum()
             symbol = key[:-7]
-            if node.children[1].tag_name != "procedure":
+            if node.children[1].name != "procedure":
                 self.tree.new_error(
                     node, 'Filter must be a procedure, denoted as "foo()", not not a %s: %s'
-                    % (node.children[1].tag_name, node.children[1].content))
+                    % (node.children[1].name, node.children[1].content))
             self.directives.filter[symbol] = node.children[1].content.strip()
 
         elif key.endswith('_error'):
@@ -2114,7 +2114,7 @@ class EBNFCompiler(Compiler):
             # if symbol in self.rules:
             #     self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
             #                         + ' must be defined before the symbol!')
-            if node.children[1 if len(node.children) == 2 else 2].tag_name != 'literal':
+            if node.children[1 if len(node.children) == 2 else 2].name != 'literal':
                 self.tree.new_error(
                     node, 'Directive "%s" requires message string or a pair ' % key
                     + '(regular expression or search string, message string) as argument!')
@@ -2166,8 +2166,8 @@ class EBNFCompiler(Compiler):
         arguments = [self.compile(r) for r in node.children] + custom_args
         assert all(isinstance(arg, str) for arg in arguments), str(arguments)
         # remove drop clause for non dropping definitions of forms like "/\w+/~"
-        if (parser_class == "Series" and node.tag_name not in self.directives.drop
-            and DROP_REGEXP in self.directives.drop and self.context[-2].tag_name == "definition"
+        if (parser_class == "Series" and node.name not in self.directives.drop
+            and DROP_REGEXP in self.directives.drop and self.context[-2].name == "definition"
             and all((arg[:12] == 'Drop(RegExp(' or arg[:10] == 'Drop(Text('
                      or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
             arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
@@ -2195,13 +2195,13 @@ class EBNFCompiler(Compiler):
         def literal_content(nd: Node) -> Optional[str]:
             """Returns the literal content of either a literal-Node, a plaintext-Node
             or a symbol-Node, where the symbol is defined as a literal or plaintext."""
-            if nd.tag_name in ('literal', 'plaintext'):
+            if nd.name in ('literal', 'plaintext'):
                 return nd.content[1:-1]
-            elif nd.tag_name == 'symbol':
+            elif nd.name == 'symbol':
                 if self.cache_literal_symbols is None:
                     self.cache_literal_symbols = dict()
                     for df in self.tree.select_children('definition'):
-                        if df.children[1].tag_name in ('literal', 'plaintext'):
+                        if df.children[1].name in ('literal', 'plaintext'):
                             self.cache_literal_symbols[df.children[0].content] = \
                                 df.children[1].content[1:-1]
                 return self.cache_literal_symbols.get(nd.content, None)
@@ -2263,7 +2263,7 @@ class EBNFCompiler(Compiler):
         mandatory_marker = []
         filtered_children = []  # type: List[Node]
         for nd in node.children:
-            if nd.tag_name == TOKEN_PTYPE and nd.content == "§":
+            if nd.name == TOKEN_PTYPE and nd.content == "§":
                 mandatory_marker.append(len(filtered_children))
                 if len(mandatory_marker) > 1:
                     self.tree.new_error(nd, 'One mandatory marker (§) is sufficient to declare '
@@ -2310,7 +2310,7 @@ class EBNFCompiler(Compiler):
 
     def on_sequence(self, node) -> str:
         filtered_result, custom_args = self._error_customization(node)
-        mock_node = Node(node.tag_name, filtered_result)
+        mock_node = Node(node.name, filtered_result)
         return self.non_terminal(mock_node, 'Series', custom_args)
 
 
@@ -2319,30 +2319,30 @@ class EBNFCompiler(Compiler):
         repetitions = []
         filtered_result, custom_args = self._error_customization(node)
         for child in filtered_result:
-            if child.tag_name == "group":
+            if child.name == "group":
                 assert len(child.children) == 1
-                if child.children[0].tag_name == 'repetition':
-                    child.tag_name = "option"
-                    child.children[0].tag_name = "oneormore"
-                elif child.children[0].tag_name == 'option':
+                if child.children[0].name == 'repetition':
+                    child.name = "option"
+                    child.children[0].name = "oneormore"
+                elif child.children[0].name == 'option':
                     child = child.children[0]
                 else:
                     repetitions.append((1, 1))
                     children.append(child.children[0])
                     continue
-            if child.tag_name == "oneormore":
+            if child.name == "oneormore":
                 repetitions.append((1, INFINITE))
                 assert len(child.children) == 1
                 children.append(child.children[0])
-            elif child.tag_name == "repetition":
+            elif child.name == "repetition":
                 repetitions.append((0, INFINITE))
                 assert len(child.children) == 1
                 children.append(child.children[0])
-            elif child.tag_name == "option":
+            elif child.name == "option":
                 repetitions.append((0, 1))
                 assert len(child.children) == 1
                 children.append(child.children[0])
-            elif child.tag_name == "counted":
+            elif child.name == "counted":
                 what, r = self.extract_counted(child)
                 repetitions.append(r)
                 children.append(what)
@@ -2350,16 +2350,16 @@ class EBNFCompiler(Compiler):
                 repetitions.append((1, 1))
                 children.append(child)
         custom_args.append('repetitions=' + str(repetitions).replace(str(INFINITE), 'INFINITE'))
-        mock_node = Node(node.tag_name, tuple(children))
+        mock_node = Node(node.name, tuple(children))
         return self.non_terminal(mock_node, 'Interleave', custom_args)
 
 
     def on_lookaround(self, node: Node) -> str:
         # assert node.children
         # assert len(node.children) == 2, self.node.as_sxpr()
-        # assert node.children[0].tag_name == 'flowmarker'
+        # assert node.children[0].name == 'flowmarker'
         if not node.children or len(node.children) != 2 \
-                or node.children[0].tag_name != 'flowmarker':
+                or node.children[0].name != 'flowmarker':
             tree_dump = flatten_sxpr(node.as_sxpr())
             self.tree.new_error(
                 node, 'Structural error in AST when compiling lookaround operator: '
@@ -2377,7 +2377,7 @@ class EBNFCompiler(Compiler):
                 nd = node
                 if len(nd.children) >= 1:
                     nd = nd.children[0]
-                while nd.tag_name == "symbol":
+                while nd.name == "symbol":
                     symlist = self.rules.get(nd.content, [])
                     if len(symlist) == 2:
                         nd = symlist[1]
@@ -2386,9 +2386,9 @@ class EBNFCompiler(Compiler):
                             nd = symlist[0].children[1]
                         break
                 # content = nd.content
-                if nd.tag_name != "regexp":   # outdated: or content[:1] != '/' or content[-1:] != '/'):
+                if nd.name != "regexp":   # outdated: or content[:1] != '/' or content[-1:] != '/'):
                     self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
-                                              "-parsers, not: " + nd.tag_name)
+                                              "-parsers, not: " + nd.name)
 
             if not result[:7] == 'RegExp(':
                 self.deferred_tasks.append(lambda: verify(node))
@@ -2405,8 +2405,8 @@ class EBNFCompiler(Compiler):
     def on_element(self, node: Node) -> str:
         assert node.children
         assert len(node.children) == 2
-        assert node.children[0].tag_name == "retrieveop"
-        assert node.children[1].tag_name == "symbol"
+        assert node.children[0].name == "retrieveop"
+        assert node.children[1].name == "symbol"
         prefix = node.children[0].content  # type: str
         usage = node.children[1]
         arg = usage.content     # type: str
@@ -2453,8 +2453,8 @@ class EBNFCompiler(Compiler):
     def extract_range(self, node) -> Tuple[int, int]:
         """Returns the range-value of a range-node as a tuple of two integers.
         """
-        assert node.tag_name == "range"
-        assert all(child.tag_name == 'multiplier' for child in node.children)
+        assert node.name == "range"
+        assert all(child.name == 'multiplier' for child in node.children)
         if len(node.children) == 2:
             r = (int(node.children[0].content), int(node.children[1].content))
             if r[0] > r[1]:
@@ -2472,7 +2472,7 @@ class EBNFCompiler(Compiler):
         (node, (n, m)) where node is root of the sub-parser that is counted,
         i.e. repeated n or n up to m times.
         """
-        assert node.tag_name == 'counted'
+        assert node.name == 'counted'
         if len(node.children) != 2:
             self.tree.new_error(node, f'Wrong number of arguments for repetition: '
                                       f'{len(node.children)} (two expected)!')
@@ -2481,22 +2481,22 @@ class EBNFCompiler(Compiler):
         if rng:
             r = self.extract_range(rng)
             what = node.children[0]
-            assert what.tag_name != 'range'
+            assert what.name != 'range'
         else:  # multiplier specified instead of range
-            if node.children[0].tag_name == 'multiplier':
+            if node.children[0].name == 'multiplier':
                 m = int(node.children[0].content)
                 what = node.children[1]
             else:
-                assert node.children[1].tag_name == 'multiplier'
+                assert node.children[1].name == 'multiplier'
                 m = int(node.children[1].content)
                 what = node.children[0]
-            if what.tag_name == 'option':
+            if what.name == 'option':
                 what = what.children[0]
                 r = (0, m)
-            elif what.tag_name == 'oneormore':
+            elif what.name == 'oneormore':
                 what = what.children[0]
                 r = (m, INFINITE)
-            elif what.tag_name == 'repetition':
+            elif what.name == 'repetition':
                 self.tree.new_error(
                     node, 'Counting zero or more repetitions of something does not make sense! '
                     'Its still zero or more repetitions all the same.')
@@ -2511,7 +2511,7 @@ class EBNFCompiler(Compiler):
         what, r = self.extract_counted(node)
         # whatstr = self.compile(what)
         rstr = str(r).replace(str(INFINITE), 'INFINITE')
-        mock_node = Node(node.tag_name, (what,))
+        mock_node = Node(node.name, (what,))
         return self.non_terminal(mock_node, 'Counted', ['repetitions=' + rstr])
 
 
@@ -2536,7 +2536,7 @@ class EBNFCompiler(Compiler):
 
 
     def drop_on(self, category):
-        return category in self.directives.drop and self.context[-2].tag_name != "definition"
+        return category in self.directives.drop and self.context[-2].name != "definition"
 
 
     def TEXT_PARSER(self, text, drop):
@@ -2549,8 +2549,8 @@ class EBNFCompiler(Compiler):
 
     def WSPC_PARSER(self, force_drop=False):
         if ((force_drop or DROP_WSPC in self.directives.drop)
-                and (self.context[-2].tag_name != "definition"
-                     or self.context[-1].tag_name == 'literal')):
+                and (self.context[-2].name != "definition"
+                     or self.context[-1].name == 'literal')):
             return 'dwsp__'
         return 'wsp__'
 
@@ -2596,9 +2596,9 @@ class EBNFCompiler(Compiler):
 
     def on_char_range(self, node) -> str:
         for child in node.children:
-            if child.tag_name == 'character':
+            if child.name == 'character':
                 child.result = self.extract_character(child)
-            elif child.tag_name == 'free_char':
+            elif child.name == 'free_char':
                 child.result = self.extract_free_char(child)
         re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
         re_str = re.sub(r"(?<!\\)]", r'\]', re_str)

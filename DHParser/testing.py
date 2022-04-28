@@ -417,16 +417,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                 or raw_errors[-1].code == MANDATORY_CONTINUATION_AT_EOF)))
         if is_artifact:
             # don't remove zombie node with error message at the end
-            # but change it's tag_name to indicate that it is an artifact!
-            for parent in syntax_tree.select_if(lambda node: any(child.tag_name == ZOMBIE_TAG
+            # but change it's name to indicate that it is an artifact!
+            for parent in syntax_tree.select_if(lambda node: any(child.name == ZOMBIE_TAG
                                                                  for child in node.children),
                                                 include_root=True, reverse=True):
                 zombie = parent.pick_child(ZOMBIE_TAG)
-                zombie.tag_name = TEST_ARTIFACT
+                zombie.name = TEST_ARTIFACT
                 zombie.result = 'Artifact can be ignored. Be aware, though, that also the ' \
                                 'tree structure may not be the same as in a non-testing ' \
                                 'environment, when a testing artifact has occurred!'
-                # parent.result = tuple(c for c in parent.children if c.tag_name != ZOMBIE_TAG)
+                # parent.result = tuple(c for c in parent.children if c.name != ZOMBIE_TAG)
                 break
         return is_artifact
 
@@ -648,7 +648,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 # write parsing-history log only in case of test-failure
                 if is_logging() and track_history:
                     with local_log_dir('./LOGS'):
-                        log_parsing_history(parser, "fail_%s_%s.log" % (parser_name, test_name))
+                        tname = test_name.replace('*', '')
+                        log_parsing_history(parser, f"fail_{parser_name}_{tname}.log")
             if cst.error_flag:
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors)

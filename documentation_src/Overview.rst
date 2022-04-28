@@ -198,7 +198,7 @@ instead of compiling an EBNF-grammar first::
 
 There are few caveats when defining parsers directly within Python-code:
 Any parser that is referred to in other parsers must be assigned to a variable. Unless they are
-disposable (see :py:ref`~ebnf.simlpifying_syntax_trees`), they also must be assigned their name
+disposable (see :py:ref`~ebnf.simlpifying_syntax_trees`), their name must be assigned
 explicitly with the :py:meth:`~parse.Parser.name`-method. Forward-declarations always need to be
 named explicitly, even if the declared parser is considered disposable.
 
@@ -217,6 +217,8 @@ Usually, however, it is best to specify the grammar in EBNF, compile it and then
 compiled grammar into your script, because this saves startup time over compiling the
 grammar within the script.
 
+
+.. _full_scale_DSLs:
 
 Full scale DSLs
 ---------------
@@ -259,12 +261,14 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
 
     #:  atomic expressions types
 
-    _CHARACTERS = { PLAIN | ESCAPE }
+    # string components
+    _CHARACTERS = { PLAIN | ESCAPE | UNICODE }
     PLAIN       = /[^"\\]+/
-    ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+    ESCAPE      = /\\[\/bnrt\\"]/
     UNICODE     = "\u" HEX HEX
     HEX         = /[0-9a-fA-F][0-9a-fA-F]/
 
+    # number components
     INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
     FRAC        = `.` /[0-9]+/
     EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
@@ -350,6 +354,8 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
 7. Ah, and yes, of course, you do not need to end grammar definitions
    with a semicolon ``;`` as demanded by the ISO-norm for EBNF :-)
 
+
+.. _ast_building
 
 Declarative AST-building
 ------------------------
@@ -733,10 +739,438 @@ AST::
 Compiling DSLs
 --------------
 
+The auto-generated parser-script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As explained earlier (see :ref:_full_scale_DSLs), full scale DSL-projects
+contain a test-script the name of which starts with ``tst_...`` that generates
+and updates (if the grammar has been changed) a parser-script the name of which
+ends with ``...Parser.py``. This parser script can be used to "compile" documents
+written in the DSL described by the ebnf-Grammar in the project directory. When
+running this script yields a concrete-syntax-tree. In almost all cases, you'll
+want to adjust the ``...Parser.py`` script, so that yields the data in contained
+in the compiled document. This, however, requires further processing steps than
+just parsing. The ``...Parser.py``-script contains four different sections,
+nameley, the **Preprocesser**-, **Parser**-, **AST**- and **Compiler**-sections.
+Once this script has been generated, only the Parser-section will be updated
+automatically when running the ``tst_...``-scripts. The Parser-section should
+therefore be left untouched, because any change might be overwritten without
+warning. For the same reason the comments demarking the different sections should
+be left intact. All other sections can and - with the exceptions of the
+Preprocessor-section - usually must be edited by hand in order to allow the
+``..Parser.py``-script to return the parsed data in the desired form.
+
+Because for most typical DSL-projects, preprocessors are not needed, the
+Preprocessor-section will be not be discussed, here. The other two sections,
+AST (for **A**bstract **S**yntax **T**ree) and Compiler, contain skeletons for (different kinds of)
+tree-transformations that can be edited as will or even completely be substituted
+by custom code. All sections (including "Preprocessor") comprise a callable class
+or an "instantiation function" returning a transformation function that should be
+edited as well as a ``get_...``-function
+that returns a thread-specific instance of this class or function and a function
+that passes a call through to this thread-specific instance. Only the
+transformation-function proper needs to be touched. The other two functions are
+merely scaffolding to ensure thread-safety so that you do not have to worry
+about it, when filling in the transformation-function proper.
+
+In the case of our json-parser, the skeleton for the Compilation looks
+like this:
+
+.. code-block:: python
+
+    #######################################################################
+    #
+    # COMPILER SECTION - Can be edited. Changes will be preserved.
+    #
+    #######################################################################
+
+    class jsonCompiler(Compiler):
+        """Compiler for the abstract-syntax-tree of a json source file.
+        """
+
+        def __init__(self):
+            super(jsonCompiler, self).__init__()
+
+        def reset(self):
+            super().reset()
+            # initialize your variables here, not in the constructor!
+
+        def on_json(self, node):
+            return self.fallback_compiler(node)
+
+        ...
+
+        # def on__EOF(self, node):
+        #     return node
+
+
+    get_compiler = ThreadLocalSingletonFactory(jsonCompiler, ident=1)
+
+    def compile_json(ast):
+        return get_compiler()(ast)
+
+
+Here, the ``get_compiler()``- and ``compile_json()``-functions do not need to be
+touched, while the ``jsonCompiler``-class should be edited at will or be replaced
+by a functions that returns a transformation functions, i.e. a function that
+takes a syntax tree as input and returns an arbitrary kind of output. In this example,
+it is reasonable to expect a nested Python-data-structure as output that contains
+the data of the json-file. We'll se below, how this could be done.
+
+Streamlining the abstract-syntax-tree (AST)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Let's first look at the AST-transformation-skeleton:
+
+.. code-block:: python
+
+    #######################################################################
+    #
+    # PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!
+    #
+    #######################################################################
+
+    json_AST_transformation_table = {
+        # AST Transformations for the json-grammar
+        "json": [],
+        ...
+        "_EOF": []
+    }
+
+    def jsonTransformer() -> TransformationFunc:
+        """Creates a transformation function that does not share state with other
+        threads or processes."""
+        return partial(traverse, transformation_table=json_AST_transformation_table.copy())
+
+    get_transformer = ThreadLocalSingletonFactory(jsonTransformer, ident=1)
+
+    def transform_json(cst):
+        get_transformer()(cst)
+
+This may look slightly more complicated, because - as explained earlier in
+:py:ref:`_ast_building` - per default the AST-transformations
+are defined declaratively by a transformation-table. Of course, you are free to replace
+the table-definition and the ``jsonTransformer``-instantiation function alltogether by
+a class like in the compilation section. (See the
+`XML-example <https://gitlab.lrz.de/badw-it/DHParser/-/tree/master/examples/XML>`_
+in the examples-subdirectory of the DHParser-repository, where this has been done to
+realize a more complicated AST-transformation.) However, filling in the table,
+allows to define the abstract-syntax-tree-transformation to be described by sequences
+of simple rules that are applied to each node. Most of the time this suffices to distill
+an abstract-syntax-tree from a concrete syntax-tree. Therefore, we rewrite the
+table as follows:
+
+.. code-block:: python
+
+    json_AST_transformation_table = {
+        'string': [remove_brackets, reduce_single_child],
+        'number': [collapse]
+    }
+
+Just like shown above (:py:ref:`_ast_building`) we use the :py:func:`transform.remove_brackets`-transformation
+to get rid of the quotation marks surrounding string elements and, other than above, we also ad the
+:py:func:`transform.reduce_single_child` which eliminates a single dangling leaf-node.
+(The complement to :py:func:`transform.reduce_single_child` is the function
+:py:func:`transform.replace_by_single_child` which removes the parent node of a singe dangeling leaf-node.)
+For the ``number``-primitive we use the ``collapse``-transformation which replaces any substructure of
+child-nodes by its concatenated string-content.
+
+.. note::
+    The ``collapse``-transformation is a bit like a bulldozer. You loose all information about the
+    substructure of the element to which it is applied.
+
+    In this case it is not possible, any more, to
+    determine whether a number is an integer or a floating point number by looking for the
+    FRAC- or EXP-nodes in the syntax-tree of the number element in the subsequent compilation
+    stage.
+
+A great way to check if an AST-transformation works as expected is by adding an asterix "*" to the name
+of match-test. Usually, the test runner only outputs the abstract-syntax-tree of match-tests in the
+test-report. However, if marked with an asterix, the concrete syntax tree will be printed, too. So,
+adding this marker to a test within an ".ini"-file in the "tests_grammar"-subdirectory, say::
+
+    [match:number]
+    M1*: "-2.0E-10"
+
+yields the following in results in the respective markdown-file in "tests_grammar/REPORT"-subdirectory::
+
+    Test of parser: "number"
+    ========================
+
+
+    Match-test "M1*"
+    -----------------
+
+    ### Test-code:
+
+        -2.0E-10
+
+    ### CST
+
+        (number (INT (NEG "-") (:RegExp "2")) (FRAC (DOT ".") (:RegExp "0")) (EXP (:Text "E") (:Text "-") (:RegExp "10")))
+
+    ### AST
+
+        (number "-2.0E-10")
+
+The transformation rules specified above already greatly simplify the AST. For
+example, compilin our simple test data set ``{ "one": 1, "two": 2 }`` now yields::
+
+    (json (object (member (string "one") (number "1")) (member (string "two") (number "2"))))
+
+
+Compiling the AST to data
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+However, this is still not quite what we would expect from a JSON-parser. What we'd like would
+be a JSON-parser (or "compiler" for that matter) that returns a nested Python-data-structure
+that contains the data stored in a JSON-file - and not merely the concrete or abstract syntax-tree
+of that file. For this purpose, we need to fill in the Compiler-class-skeleton in the compiler-sections
+of the generated Parser script:
+
+.. code-block:: python
+
+    class jsonCompiler(Compiler):
+        def __init__(self):
+            super(jsonCompiler, self).__init__()
+
+        def reset(self):
+            super().reset()
+            self._None_check = False  # set to False if any compilation is allowed to return None
+            # initialize your variables here, not in the constructor!
+
+        def on_json(self, node):
+            assert len(node.children) == 1
+            return self.compile(node[0])
+
+        def on_object(self, node):
+            return { k: v for k, v in (self.compile(child) for child in node)}
+
+        def on_member(self, node):
+            assert len(node.children) == 2
+            return (self.compile(node[0]), self.compile(node[1]))
+
+        def on_array(self, node):
+            return [self.compile(child) for child in node]
+
+        def on_string(self, node):
+            if node.children:
+                return ''.join(self.compile(child) for child in node)
+            else:
+                return node.content
+
+        def on_number(self, node):
+            num_str = node.content
+            if num_str.find('.') >= 0 or num_str.upper().find('E') >= 0:
+                return float(num_str)
+            else:
+                return int(num_str)
+
+        def on_true(self, node):
+            return True
+
+        def on_false(self, node):
+            return False
+
+        def on_null(self, node):
+            return None
+
+        def on_PLAIN(self, node):
+            return node.content
+
+        def on_ESCAPE(self, node):
+            assert len(node.content) == 2
+            code = node.content[1]
+            return {
+                '/': '/',
+                '\\': '\\',
+                '"': '"',
+                'b': '\b',
+                'f': '\f',
+                'n': '\n',
+                'r': '\r',
+                't': '\t'
+            }[code]
+
+        def on_UNICODE(self, node):
+            try:
+                return chr(int(node.content, 16))
+            except ValueError:
+                self.tree.new_error(node, f'Illegal unicode character: {node.content}')
+                return '?'
+
+The code should be self-explanatory: For each node-type (or tag name) that can occur in
+the abstract-syntax-tree the associated visitor-method converts the sub-tree to a Python
+data-structure which is returned to the calling method.
+
+After having added this compiler code to the
+Parser-skript, calling it with our trivial test-data set yields the expected Python-dictionary:
+``{'one': 1, 'two': 2}`` instead of the syntax-tree.
+
+Now, since our JSON-Parser is able to produce Python-objects from JSON-files, we will probably
+prefer to call it from Python in order to receive the data rather than running it on the command
+line. Instead of calling it, the generated parser-script can simply be imported as a module.
+The generated script contains a ``compile_src()``-function which allows to compile a DSL-string
+from within a python programm by running all four stages (preprocessing, parsing, AST-transformation
+and compiling) in sequence on the source string.
+
+.. code-block:: python
+
+    import jsonParser
+
+    json_string = '{"one": 1, "two":2}'
+    json_data, errors = jsonParser.compile_src(json_string)
+    assert len(errors) == 0
+    assert json_data == {'one': 1, 'two': 2}
+
+It is as simple as that!
+
+Splitting the Parser-script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For most real-world DSLs the compilation stage will be more complext than in our JSON-example. Also,
+there might be more than one transformation or compilation stage after the AST-transformation. Adding
+all this to the autogenerated parser-script would leave us with a rather large and unwieldy script.
+In order to avoid this, it is advisable to split the parser-script after the AST-transformation into a
+parser-script and a compiler-script while leaving its name (ending with "Parser.py") for the first part,
+i.e. the parser-script. DHParser is then still able to update the code in the parser-script in case
+the grammar hast changed. The second part should be given a different name, say "...Compiler.py".
+
+A simple import statement at the beginning of the compiler script suffices to connect both parts.
+In our example of the JSON-parser one would just add the following line at the beginning of
+the "jsonCompiler.py" script::
+
+    from jsonParser import get_preprocessor, get_grammar, get_transformer
+
+and everything works just the same, only that from now on the compiler-script takes the role
+of the parser script from the perspective of any client using the JSON-parser.
+This means that from now on, in order to use the parser/compiler either from the
+command line or from Python code, the second
+part, i.e. the compiler-script must be called or imported. Thus, if we split our JSON-parser in
+this fashion, we'd call ``python jsonCompiler.py test.json`` from the command line, and we
+would add ``import jsonCompiler`` or ``from jsonCompiler import compile_src`` at the beginning
+of a client script.
+
+In case you make use of the auto-generated Server-script (see below), you should also adjust
+any import-statements that refer to the parser-script, so that they refer to the compile-script
+instead.
 
 Language Servers
 ----------------
 
-Performance
------------
+DHParser supports running parsers as local servers and includes includes boilerplate code for
+building editor support for your domain specific language via the `language server protocol`_.
+After creating a new project and running the test-runner script in the project directory, you
+will also find a "...Server.py"-script next to the "...Parser.py" in the project directory.
+The server-script can be used in a similar way as the parser-script. However, the server script
+will pass on any parsing requests to a server running in the background. The server will
+automatically be started when calling the script for the first time::
 
+    $ python jsonServer.py test.json
+    Starting server on 127.0.0.1:8890
+    [{"one":1,"two":2},[]]
+
+Other than the plain parser-script, the result the server returns is always a list of
+the result propper and any errors or warnings that haven been generated on the way.
+
+Running the parser in server-mode as several advantages:
+
+1. Once the server is running, there are no startup times any more. Not the least
+   because of the compilation of the (potentially very many) regular expressions
+   within a parser, the startup times can otherwise be considerable for complex
+   grammars.
+
+2. In particular, just-in-time compilers like `pypy`_ that typically trade startup
+   time for run-time speed, can profit in particular from the server mode.
+
+3. Serveral parsing/compilation can be run in parrallel and will automatically
+   use different processor cores. However, when calling the parser-script in
+
+   batch-mode by adding more than one filename to the command line or calling
+   it with the name of a cirectory containing source files, it will also try
+   to exploit multiple processor cores.
+
+4. Last not least, the server script can be extended to provide a language server
+   for an integrated development environment or programm-editor. In this
+   case the script would usually be startet from within the editor and with
+   the "--stream"-option which will allow connect to the server via streams
+   rather than a tcp port and address.
+
+In order to stop a running server, the server-script should be called with
+the "--stoperver"-option::
+
+    $ python jsonServer.py --stopserver
+    Server on 127.0.0.1:8890 stopped
+
+The language server protocol support that DHParser offers differs in several
+respects from the popular `pygls`_-module::
+
+* DHParser uses the more lightwight `TypedDict`_ -dictionaries instead
+  `pydantic`_-modules. The TypedDict-definitions in the
+  DHParser.lsp-module are auto-generated from the `language server protocol specification`_
+  with `ts2python`_, a package that has itself been build with DHParser.
+
+* The DHParser.server-module also provides some boilerplate code to support
+  parallel execution via multiprocessing.
+
+But, of course `pygls`_ can also be used together with DHParser, if you prefer
+`pygls`_ or already have some experience with this module.
+
+
+Performance optimization
+------------------------
+
+The most important design goals of DHParser have been reliability, flexibility and
+testability. There are some performance optimizations, most notably the early
+tree reduction during the parsing stage that is controlled with the
+``@drop``  and  ``@disposable``-directives (see :py:ref`~ebnf.simlpifying_syntax_trees`)
+and type-hint modules (.pxd) for
+compiling DHParser with `Cython`_. However, given that the whole project has been
+realized with Python, rather than a compiled language like `nim`_, top-performance
+has not been the most import design goal.
+
+This said, you can expect
+DHParser to have roundabout the same performance as other python parsers that
+are equally powerful, i.e. DHParser is slower but more powerful than
+LALR-parsers and about as fast as the about equally powerful Earley-parsers.
+
+If you feel that DHParser's performance is too slow, you can increase the
+roughly a factor of 2 by compiling with `Cython`_. In order to do so you
+need to have a c-ompiler installed on your system (gcc, clang on Linux
+or MacOs and msvc on Windows will all do. You can then install the
+`Cython`_-package with::
+
+    $ python -m pip install cython
+
+Compiling DHParser is simple. You just need to call the ``cythonize_dhparser.py``-script
+in the ``scripts``-subdirectory of DHParsers-installation-driectory::
+
+    $ python DHParser/scripts/dhparser_cythonize.py
+
+DHParser can also be run with any recent version of `pypy3`_. However, my own
+experience so far has been that while running DHParser with pypy over one and the
+same dataset over and over again produces a most impressive speedup, in real-world
+applications of DHParser (e.g. running a whole fascicle of different(!) medieval latin
+dictionary articles through DHParser in batch-mode), pypy is a even bit slower
+than the python-interpreter. So, presently, I'd recommend staying with `Cython`_ when
+trying to speed-up DHParser.
+
+DHParser uses a variant of a recursive descent parser, a so called "pack-rat-parser",
+which means that it employs memoizing to cache results. It has been proven that this
+kind of parser runs in linear time, although I am not sure if the proof also accounts for
+the "seed and grow"-algorithm that has been implemented to support left-recursive grammars.
+Other than that, you can rest assured that there will be no nasty runtime surprises
+as they can happen with regular-expression engines or uncached recursive-descent-parsers.
+
+
+
+.. _`language server protocol`: https://microsoft.github.io/language-server-protocol/
+.. _`language server protocol specification`: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
+.. _`pypy`: https://www.pypy.org/
+.. _`pypy3`: https://www.pypy.org/
+.. _`pygls`: https://github.com/openlawlibrary/pygls
+.. _`TypedDict`: https://peps.python.org/pep-0589/
+.. _`pydantic`: https://pydantic-docs.helpmanual.io/
+.. _`ts2python`: https://github.com/jecki/ts2python
+.. _`nim`: https://nim-lang.org/
+.. _`Cython`: https://cython.org/

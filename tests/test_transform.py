@@ -33,7 +33,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
-    positions_of, insert, node_maker, apply_if, change_tag_name, add_attributes, \
+    positions_of, insert, node_maker, apply_if, change_name, add_attributes, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -250,7 +250,7 @@ class TestComplexTransformations:
                    <SEITENZAHL>18</SEITENZAHL>
                  </Stelle>"""
         tree = parse_xml(xml)
-        collapse_children_if([tree], lambda context: context[-1].tag_name != 'HOCHGESTELLT',
+        collapse_children_if([tree], lambda context: context[-1].name != 'HOCHGESTELLT',
                              self.Text)
         assert tree.as_xml(inline_tags={'Stelle'}) == \
                "<Stelle><Text>p.26</Text><HOCHGESTELLT>b</HOCHGESTELLT><Text>,18</Text></Stelle>"
@@ -283,10 +283,10 @@ class TestWhitespaceTransformations:
                               '(WORD (LETTERS "not") (:Whitespace " ")) '
                               '(WORD (LETTERS "to") (:Whitespace " "))'
                               '(WORD (LETTERS "be") (:Whitespace " ")))')
-        transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
+        transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
-        assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
+        assert all(i % 2 == 0 or node.name == ':Whitespace' for i, node in enumerate(sentence))
 
     def test_move_fringes2(self):
         sentence = parse_sxpr('(SENTENCE (WORD (LETTERS "To") (:Whitespace " ")) '
@@ -296,18 +296,18 @@ class TestWhitespaceTransformations:
                               '(:Whitespace "c")'
                               '(WORD (:Whitespace "d") (:Whitespace "e") (LETTERS "to") (:Whitespace " "))'
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
-        transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
+        transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert sentence.content.find('abcde') >= 0
-        assert all(i % 2 == 0 or node.tag_name == ':Whitespace' for i, node in enumerate(sentence))
-        assert all(i % 2 != 0 or (node.tag_name == "WORD" and ":Whitespace" not in node)
+        assert all(i % 2 == 0 or node.name == ':Whitespace' for i, node in enumerate(sentence))
+        assert all(i % 2 != 0 or (node.name == "WORD" and ":Whitespace" not in node)
                    for i, node in enumerate(sentence))
 
     def test_move_fringes3(self):
         sentence = parse_sxpr('(SENTENCE  (:Whitespace " ") (:Whitespace " ")  '
                               '(TEXT (PHRASE "Guten Tag") (:Whitespace " ")))')
-        transformations = {'TEXT': move_fringes(lambda ctx: ctx[-1].tag_name == WHITESPACE_PTYPE)}
+        transformations = {'TEXT': move_fringes(lambda ctx: ctx[-1].name == WHITESPACE_PTYPE)}
         traverse(sentence, transformations)
 
     def test_merge_adjacent(self):
@@ -319,7 +319,7 @@ class TestWhitespaceTransformations:
         assert tree_sanity_check(sentence)
         assert sentence.pick_child('TEXT').result == "Guten Tag"
         assert sentence[2].result == "Hallo Welt"
-        assert sentence[-1].tag_name == 'L'
+        assert sentence[-1].name == 'L'
         assert 'T' in sentence
 
         # leaf nodes should be left untouched
@@ -427,7 +427,7 @@ class TestConstructiveTransformations:
 class TestBoolean:
     def test_apply_if(self):
         tree = parse_sxpr('(A (B 1) (C 1) (B 2))').with_pos(0)
-        trans_table = { 'B': [apply_if((change_tag_name('X'),
+        trans_table = { 'B': [apply_if((change_name('X'),
                                         add_attributes({'renamed': 'True'})),
                                        is_one_of('B'))] }
         traverse(tree, trans_table)

@@ -185,7 +185,7 @@ captures the first json-array within the syntax-tree::
 
 The nodes of the syntax-tree carry the names of the production rules
 by which they have been generated. Nodes, that have been created by
-components of a prduction receive the name of of the parser-type
+components of a production receive the name of of the parser-type
 that has created the node (see :py:mod:`parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
 because they lack the name of a proper grammatical component.
@@ -644,7 +644,7 @@ Let's just try our grammar on an example::
     >>> text_parser = create_parser(text_gr, 'Text')
     >>> text_as_data = text_parser(text_example)
     >>> sentence = text_as_data.pick(
-    ... lambda nd: nd.tag_name == "sentence" and nd.content.startswith('First'))
+    ... lambda nd: nd.name == "sentence" and nd.content.startswith('First'))
     >>> print(sentence.as_sxpr())
     (sentence
       (clause
@@ -723,7 +723,7 @@ we have succeeded::
     >>> extended_text_gr = text_gr[:text_gr.rfind(' PBR')] + wsp_gr
     >>> extended_parser = create_parser(extended_text_gr, 'Text')
     >>> syntax_tree = extended_parser('What {check this again!} is work?')
-    >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
+    >>> print(' '.join(nd.name for nd in syntax_tree.pick('clause').children))
     word S word S word
     >>> print(syntax_tree.pick('clause').as_sxpr())
     (clause
@@ -745,10 +745,10 @@ at a later tree-processing stage. For now, let's just check wehter our
 comments work as expected::
 
     >>> syntax_tree = extended_parser('What{check this again!} is work?')
-    >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
+    >>> print(' '.join(nd.name for nd in syntax_tree.pick('clause').children))
     word S word S word
     >>> syntax_tree = extended_parser('What {check this again!}is work?')
-    >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('clause').children))
+    >>> print(' '.join(nd.name for nd in syntax_tree.pick('clause').children))
     word S word S word
     >>> syntax_tree = extended_parser('What{check this again!}is work?')
     >>> print(syntax_tree.errors[0])
@@ -765,13 +765,13 @@ near paragraph breaks works as well::
     ...
     ... What is work?'''
     >>> syntax_tree = extended_parser(test_text)
-    >>> print(' '.join(nd.tag_name for nd in syntax_tree.children))
+    >>> print(' '.join(nd.name for nd in syntax_tree.children))
     paragraph PBR paragraph
     >>> test_text = '''Happiness lies in the diminuniation of work.
     ... { Here comes the comment }
     ... What is work?'''
     >>> syntax_tree = extended_parser(test_text)
-    >>> print(' '.join(nd.tag_name for nd in syntax_tree.children))
+    >>> print(' '.join(nd.name for nd in syntax_tree.children))
     paragraph
 
 The last result might look surprising at first, but since a paragraph
@@ -780,7 +780,7 @@ is correctly understood by the parser as a single paragraph with
 two sentence interspersed by a single whitespace which, incidentally,
 contains a comment::
 
-    >>> print(' '.join(nd.tag_name for nd in syntax_tree.pick('paragraph').children))
+    >>> print(' '.join(nd.name for nd in syntax_tree.pick('paragraph').children))
     sentence S sentence
     >>> print(syntax_tree.pick('paragraph')['S'].as_sxpr(flatten_threshold=0))
     (S

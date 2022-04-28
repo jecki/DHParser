@@ -163,7 +163,7 @@ class TestParseXML:
             <?xpacket end="r"?> 
             <?xpacket end='r'?>"""
         tree = parse_xml(testdata)
-        assert tree.tag_name == 'x:xmpmeta'
+        assert tree.name == 'x:xmpmeta'
         author = tree.pick('bibtex:author')
         assert author and author.content == "Eckhart Arnold"
         description = tree.pick('rdf:Description')
@@ -285,7 +285,7 @@ class TestNode:
         n2 = Node('C', '456')
         root = Node('root', (nd, n1, n2))
         root.with_pos(0)
-        assert len(root) == root.children[-1].pos + len(root.children[-1])
+        assert root.strlen() == root.children[-1].pos + root.children[-1].strlen()
 
     def test_deepcopy(self):
         tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
@@ -329,24 +329,24 @@ class TestNode:
         assert test4.repr == "Node('test', '').with_attr({'attr': 'value'}).with_pos(0)"
 
     def test_select_subnodes(self):
-        tags = [node.tag_name
+        tags = [node.name
                 for node in self.unique_tree.select_if(lambda nd: True, include_root=True)]
         assert ''.join(tags) == "abdfg", ''.join(tags)
-        tags = [node.tag_name
+        tags = [node.name
                 for node in self.unique_tree.select(ANY_NODE, include_root=True, skip_subtree='f')]
         assert ''.join(tags) == "abdf", ''.join(tags)
 
     def test_tree_select_context_if(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
         contexts = []
-        for ctx in tree.select_context_if(lambda ctx: ctx[-1].tag_name >= 'd',
+        for ctx in tree.select_context_if(lambda ctx: ctx[-1].name >= 'd',
                                           include_root=True, reverse=False):
-            contexts.append(''.join(nd.tag_name for nd in ctx))
+            contexts.append(''.join(nd.name for nd in ctx))
         assert contexts == ['ad', 'af', 'afg']
         contexts = []
-        for ctx in tree.select_context_if(lambda ctx: ctx[-1].tag_name >= 'd',
+        for ctx in tree.select_context_if(lambda ctx: ctx[-1].name >= 'd',
                                           include_root=True, reverse=True):
-            contexts.append(''.join(nd.tag_name for nd in ctx))
+            contexts.append(''.join(nd.name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
 
     def test_select_context_with_skipping(self):
@@ -355,15 +355,15 @@ class TestNode:
         contexts = []
         def select_f(ctx):
             nonlocal check
-            check.append(''.join(nd.tag_name for nd in ctx))
+            check.append(''.join(nd.name for nd in ctx))
             return True
         for ctx in tree.select_context(select_f, include_root=True):
-            contexts.append(''.join(nd.tag_name for nd in ctx))
+            contexts.append(''.join(nd.name for nd in ctx))
         assert check == contexts == ['a', 'ab', 'ad', 'af', 'afg']
         check = []
         contexts = []
         for ctx in tree.select_context(select_f, include_root=True, skip_subtree='f'):
-            contexts.append(''.join(nd.tag_name for nd in ctx))
+            contexts.append(''.join(nd.name for nd in ctx))
         assert check == contexts == ['a', 'ab', 'ad', 'af']
 
     def test_tree_select_context(self):
@@ -375,7 +375,7 @@ class TestNode:
 
     def test_select_children(self):
         tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
-        children = list(nd.tag_name for nd in tree.select_children(ANY_NODE))
+        children = list(nd.name for nd in tree.select_children(ANY_NODE))
         assert children == ['B', 'C', 'B']
         B_values = list(nd.content for nd in tree.select_children('B', reverse=True))
         assert B_values == ['2', '1']
@@ -416,7 +416,7 @@ class TestNode:
         found = list(self.unique_tree.select_if(lambda nd: not nd.children and nd.result == "e"))
         assert len(found) == 1
         assert found[0].result == 'e'
-        found = list(self.recurr_tree.select_if(lambda nd: nd.tag_name == 'b'))
+        found = list(self.recurr_tree.select_if(lambda nd: nd.name == 'b'))
         assert len(found) == 2
         assert found[0].result == 'x' and found[1].result == 'y'
 
@@ -472,11 +472,11 @@ class TestNode:
     def test_len_and_pos(self):
         """Test len-property of Node."""
         nd1 = Node(ZOMBIE_TAG, "123")
-        assert len(nd1) == 3, "Expected Node.len == 3, got %i" % len(nd1)
+        assert nd1.strlen() == 3, "Expected Node.len == 3, got %i" % len(nd1)
         nd2 = Node(ZOMBIE_TAG, "456")
-        assert len(nd2) == 3, "Expected Node.len == 3, got %i" % len(nd2)
+        assert nd2.strlen() == 3, "Expected Node.len == 3, got %i" % len(nd2)
         nd = Node(ZOMBIE_TAG, (nd1, nd2))
-        assert len(nd) == 6, "Expected Node.len == 6, got %i" % len(nd)
+        assert nd.strlen() == 6, "Expected Node.len == 6, got %i" % len(nd)
         nd.with_pos(0)
         assert nd.pos == 0, "Expected Node.pos == 0, got %i" % nd.pos
         assert nd1.pos == 0, "Expected Node.pos == 0, got %i" % nd1.pos
@@ -528,7 +528,7 @@ class TestNode:
             assert False, 'ValueError expected'
         except ValueError:
             pass
-        assert node[-1].tag_name == "D"
+        assert node[-1].name == "D"
         try:
             del node[4]
             assert False, 'IndexError expected'
@@ -619,7 +619,7 @@ class TestNodeFind:
 
     def test_find(self):
         def match_tag_name(node, tag_name):
-            return node.tag_name == tag_name
+            return node.name == tag_name
         matchf = lambda node: match_tag_name(node, "X")
         tree = parse_sxpr('(a (b X) (X (c d)) (e (X F)))')
         matches = list(tree.select_if(matchf))
@@ -764,24 +764,50 @@ class TestSerialization:
         assert tree.as_xml(inline_tags=all_tags, string_tags=all_tags) == \
                '<T class="kursiv">Hallo</T> Welt!'
 
+    def test_XML_strict_mode(self):
+        xml = "<xml><empty/><empty>not_empty!?</empty></xml>"
+        try:
+            data = parse_xml(xml)
+            assert False, "ValueError exptected!"
+        except ValueError:
+            pass
+        empty_tags = set()
+        data = parse_xml(xml, out_empty_tags=empty_tags, strict_mode=False)
+        assert data.as_sxpr() == '(xml (empty) (empty "not_empty!?"))'
+        assert empty_tags == {'empty'}
+        assert data.as_xml().replace('\n', '').replace(' ', '') == \
+            "<xml><empty></empty><empty>not_empty!?</empty></xml>"
+        try:
+            _ = data.as_xml(empty_tags=empty_tags)
+            assert False, "ValueError expected"
+        except ValueError:
+            pass
+        assert data.as_xml(empty_tags=empty_tags, strict_mode=False)\
+            .replace('\n', '').replace(' ', '') == \
+            "<xml><empty/><empty>not_empty!?</empty></xml>"
+        data.result = data.result + (Node('empty', ''),)
+        assert data.as_xml(empty_tags=empty_tags, strict_mode=False)\
+            .replace('\n', '').replace(' ', '') == \
+            "<xml><empty/><empty>not_empty!?</empty><empty></empty></xml>"
+
 
 class TestSegementExtraction:
     def test_get_context(self):
         tree = parse_sxpr('(A (F (X "a") (Y "b")) (G "c"))')
         nd_X = tree.pick('X')
         ctx = tree.reconstruct_context(nd_X)
-        assert [nd.tag_name for nd in ctx] == ['A', 'F', 'X']
+        assert [nd.name for nd in ctx] == ['A', 'F', 'X']
         nd_F = tree.pick('F')
         nd_Y = tree.pick('Y')
         ctx = nd_F.reconstruct_context(nd_Y)
-        assert [nd.tag_name for nd in ctx] == ['F', 'Y']
+        assert [nd.name for nd in ctx] == ['F', 'Y']
         ctx = tree.reconstruct_context(nd_F)
-        assert [nd.tag_name for nd in ctx] == ['A', 'F']
+        assert [nd.name for nd in ctx] == ['A', 'F']
         ctx = tree.reconstruct_context(nd_Y)
-        assert [nd.tag_name for nd in ctx] == ['A', 'F', 'Y']
+        assert [nd.name for nd in ctx] == ['A', 'F', 'Y']
         nd_G = tree.pick('G')
         ctx = tree.reconstruct_context(nd_G)
-        assert [nd.tag_name for nd in ctx] == ['A', 'G']
+        assert [nd.name for nd in ctx] == ['A', 'G']
         not_there = Node('not_there', '')
         try:
             tree.reconstruct_context(not_there)
@@ -845,30 +871,30 @@ class TestContextNavigation:
     def test_prev_context(self):
         ctx = self.tree.pick_context('D')
         c = prev_context(ctx)
-        assert c[-1].tag_name == 'B'
+        assert c[-1].name == 'B'
         ctx = self.tree.pick_context('E')
         c = prev_context(ctx)
-        assert c[-1].tag_name == 'D'
+        assert c[-1].name == 'D'
         ctx = self.tree.pick_context('F')
         c = prev_context(ctx)
-        assert c[-1].tag_name == 'C'
+        assert c[-1].name == 'C'
         ctx = self.tree.pick_context('C')
         c = prev_context(ctx)
-        assert c[-1].tag_name == 'B'
+        assert c[-1].name == 'B'
 
     def test_next_context(self):
         ctx = self.tree.pick_context('D')
         c = next_context(ctx)
-        assert c[-1].tag_name == 'E'
+        assert c[-1].name == 'E'
         ctx = self.tree.pick_context('E')
         c = next_context(ctx)
-        assert c[-1].tag_name == 'F'
+        assert c[-1].name == 'F'
         ctx = self.tree.pick_context('C')
         c = next_context(ctx)
-        assert c[-1].tag_name == 'F'
+        assert c[-1].name == 'F'
         ctx = self.tree.pick_context('B')
         c = next_context(ctx)
-        assert c[-1].tag_name == 'C'
+        assert c[-1].name == 'C'
 
     def test_context_mapping(self):
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
@@ -877,19 +903,19 @@ class TestContextNavigation:
             ctx, rel_pos = map_pos_to_context(i, cm)
         i = tree.content.find("delta")
         ctx, rel_pos = map_pos_to_context(i, cm)
-        assert ctx[-1].tag_name == 'F' and rel_pos == 0
+        assert ctx[-1].name == 'F' and rel_pos == 0
         i = tree.content.find("lta")
         ctx, rel_pos = map_pos_to_context(i, cm)
-        assert ctx[-1].tag_name == 'F' and rel_pos == 2
+        assert ctx[-1].name == 'F' and rel_pos == 2
         i = tree.content.find("a")
         ctx, rel_pos = map_pos_to_context(i, cm)
-        assert ctx[-1].tag_name == 'B' and rel_pos == 0
+        assert ctx[-1].name == 'B' and rel_pos == 0
         i = tree.content.rfind("a")
         ctx, rel_pos = map_pos_to_context(i, cm)
-        assert ctx[-1].tag_name == 'F' and rel_pos == 4
+        assert ctx[-1].name == 'F' and rel_pos == 4
         i = tree.content.find("mm")
         ctx, rel_pos = map_pos_to_context(i, cm)
-        assert ctx[-1].tag_name == 'E' and rel_pos == 2
+        assert ctx[-1].name == 'E' and rel_pos == 2
 
     def test_standalone_select_context_if(self):
         start = self.tree.pick_context('E')
@@ -897,7 +923,7 @@ class TestContextNavigation:
         sequence = []
         for ctx in select_context_if(
                 start, lambda c: True, include_root=True, reverse=True):
-            sequence.append(''.join(n.tag_name for n in ctx))
+            sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACE', 'ACD', 'AC', 'AB', 'A']
         assert save == start  # context passed should not be changed by select_context
 
@@ -905,15 +931,15 @@ class TestContextNavigation:
         sequence = []
         for ctx in select_context_if(
                 start, lambda c: True, include_root=True, reverse=False):
-            sequence.append(''.join(n.tag_name for n in ctx))
+            sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACD', 'ACE', 'AC', 'AF', 'A']
 
     def test_standalone_pick_context(self):
         start = self.tree.pick_context('A', include_root=True)
         anfang = pick_context(start, LEAF_CONTEXT, include_root=True)
         ende = pick_context(start, LEAF_CONTEXT, include_root=True, reverse=True)
-        assert anfang[-1].tag_name == 'B'
-        assert ende[-1].tag_name == 'F'
+        assert anfang[-1].name == 'B'
+        assert ende[-1].name == 'F'
 
 
 class TestEvaluation:

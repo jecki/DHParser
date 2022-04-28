@@ -75,20 +75,20 @@ class CompilerError(Exception):
     pass
 
 
-def visitor_name(tag_name: str) -> str:
+def visitor_name(node_name: str) -> str:
     """
-    Returns the visitor_method name for `tag_name`, e.g.::
+    Returns the visitor_method name for `name`, e.g.::
 
         >>> visitor_name('expression')
         'on_expression'
         >>> visitor_name('!--')
         'on_212d2d'
     """
-    if re.match(r'\w+$', tag_name):
-        return 'on_' + tag_name
+    if re.match(r'\w+$', node_name):
+        return 'on_' + node_name
     else:
         letters = []
-        for ch in tag_name:
+        for ch in node_name:
             if not re.match(r'\w', ch):
                 ch = hex(ord(ch))[2:]
             letters.append(ch)
@@ -240,36 +240,36 @@ class Compiler:
                 if id(nd) != id(child):
                     replacements[id(child)] = nd
                 if nd is not None and not isinstance(nd, Node):
-                    tn = node.tag_name
+                    tn = node.name
                     raise TypeError(
                         'Fallback compiler for Node `%s` received a value of type '
                         '`%s` from child `%s` instead of the required return type `Node`. '
                         'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
                         'method `on_%s(self, node)` in class `%s` to avoid this error!'
-                        % (tn, str(type(nd)), child.tag_name, tn, self.__class__.__name__))
+                        % (tn, str(type(nd)), child.name, tn, self.__class__.__name__))
             if replacements:
                 # replace Nodes the identity of which has been changed during transformation
                 # and drop any returned None-results
                 result = []
                 for child in node.children:
                     nd = replacements.get(id(child), child)
-                    if nd is not None and nd.tag_name != EMPTY_PTYPE:
+                    if nd is not None and nd.name != EMPTY_PTYPE:
                         result.append(nd)
                 node.result = tuple(result)
         if self.has_attribute_visitors and not block_attribute_visitors:
             node = self.visit_attributes(node)
         return node
 
-    def get_compiler(self, tag_name: str) -> CompilerFunc:
+    def get_compiler(self, node_name: str) -> CompilerFunc:
         try:
-            method = self.method_dict[tag_name]
+            method = self.method_dict[node_name]
         except KeyError:
-            method_name = visitor_name(tag_name)
+            method_name = visitor_name(node_name)
             try:
                 method = self.__getattribute__(method_name)
             except AttributeError:
                 method = self.fallback_compiler
-            self.method_dict[tag_name] = method
+            self.method_dict[node_name] = method
         return method
 
     def compile(self, node: Node) -> Any:
@@ -289,7 +289,7 @@ class Compiler:
             assert node not in self._debug_already_compiled
             self._debug_already_compiled.add(node)
 
-        elem = node.tag_name
+        elem = node.name
         if elem[:1] == ':':
             elem = elem[1:] + '__'
         compiler = self.get_compiler(elem)
@@ -439,7 +439,7 @@ def run_pipeline(junctions: Set[Junction],
 CompilationResult = namedtuple('CompilationResult',
     ['result',      # type: Optional[Any]
      'messages',    # type: List[Error]
-     'AST'],        # type: RootNode
+     'AST'],        # type: Optional[RootNode]
     module=__name__)
 
 
@@ -481,7 +481,10 @@ def compile_source(source: str,
            or `None` otherwise.
     """
     ast = None  # type: Optional[Node]
-    original_text = load_if_file(source)  # type: str
+    try:
+        original_text = load_if_file(source)  # type: str
+    except (FileNotFoundError, IOError) as e:
+        return CompilationResult(None, [Error(str(e), 0, COMPILER_CRASH)], None)
     source_name = source if is_filename(source) else ''
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:

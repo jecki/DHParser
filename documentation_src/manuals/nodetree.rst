@@ -19,12 +19,12 @@ called "leaf nodes", but not both at the same time. (There is no mixed
 content as in XML!)
 
 Apart from their content, the most important property of a Node-object is its
-``tag_name``. Nodes are initialized with their tag_name and content as
+``name``. Nodes are initialized with their name and content as
 arguments::
 
     >>> from DHParser.nodetree import *
     >>> number_1 = Node('number', "5")
-    >>> number_1.tag_name
+    >>> number_1.name
     'number'
 
 The Node-object ``number_1`` now has the tag-name "number" and the content "5".
@@ -130,8 +130,13 @@ In order to change the data of a node, its `result`-property must be assigned to
 (as shown above).
 
 Just like HTML- oder XML-tags, nodes can be annotated with attributes.
+Unlike XML and HTML, however, the value of these attributes can be of any
+type, not only strings. The only requirement is that the value is serializable
+as string. Be aware, though of the possible loss of information when
+serializing nodes or converting nodes to ElementTree-elements, if there are
+attributes with non-string values!
 Attributes are stored in an ordered dictionary that maps string identifiers,
-i.e. the attribute name, to the string-content of the attribute. This dictionary
+i.e. the attribute name, to the content of the attribute. This dictionary
 can be accessed via the `attr`-property::
 
     >>> node.attr['price'] = 'very high'
@@ -192,7 +197,7 @@ nodes according to the offset of the string values from the main field::
     </phrase>
     >>> essentials[-1].pos, essentials.content.find('Palace')
     (11, 11)
-    >>> essentials.result = tuple(child for child in essentials.children if child.tag_name != 'blank')
+    >>> essentials.result = tuple(child for child in essentials.children if child.name != 'blank')
     >>> print(essentials.as_xml(src=essentials.content))
     <phrase line="1" col="1">
       <word line="1" col="1">Buckingham</word>
@@ -384,7 +389,7 @@ as well as a dictionary-like access, with the difference that a "key" may occur
 several times::
 
     >>> sentence['word']
-    (Node('word', 'This'), Node('word', 'is'))
+    [Node('word', 'This'), Node('word', 'is')]
     >>> sentence['phrase']
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
 
@@ -417,7 +422,7 @@ phrase and assume at the same time that words may occur in nested structures::
     >>> nested = copy.deepcopy(sentence)
     >>> i = nested.index(lambda nd: nd.content == 'is')
     >>> nested[i].result = Node('word', nested[i].result)
-    >>> nested[i].tag_name = 'italic'
+    >>> nested[i].name = 'italic'
     >>> nested[0:i + 1]
     (Node('word', 'This'), Node('blank', ' '), Node('italic', (Node('word', 'is'))))
 
@@ -696,13 +701,14 @@ The Node-class
 * :py:class:`~snytaxtree.Node`: the central building-block of a node-tree
 
   * :py:attr:`~nodetree.Node.result`: either the child nodes or the node's
-    string
+    string content
   * :py:attr:`~nodetree.Node.children`: the node's immediate children or an
     empty tuple
   * :py:attr:`~nodetree.Node.content`: the concatenated string content of
     all descendants
+  * :py:attr:`~nodetree.Node.tag_name`: the node's name
   * :py:attr:`~nodetree.Node.attr`: the dictionary of the node's
-    XML-attributes
+    attributes
   * :py:attr:`~nodetree.Node.pos`: the source-code position of this node, in
     case the node stems from a parsing process
 

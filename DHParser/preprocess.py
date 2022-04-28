@@ -32,7 +32,7 @@ import bisect
 from collections import namedtuple
 import functools
 import os
-from typing import Union, Optional, Callable, Tuple, NamedTuple, List, Any, Iterator
+from typing import Union, Optional, Callable, Tuple, List, Any
 
 from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
     add_source_locations
@@ -89,6 +89,7 @@ IncludeInfo = namedtuple('IncludeInfo',
      'file_name'],  # type: str
     module=__name__)
 
+
 def has_includes(sm: SourceMap) -> bool:
     return any(fname != sm.original_name for fname in sm.file_names)
 
@@ -104,7 +105,7 @@ PreprocessorResult = namedtuple('PreprocessorResult',
     ['original_text',      # type: Union[str, StringView]
      'preprocessed_text',  # type: Union[str, StringView]
      'back_mapping',       # type: SourceMapFunc
-     'errors'],            # type: List[Errors]
+     'errors'],            # type: List[Error]
     module=__name__)
 
 
@@ -243,7 +244,7 @@ def strip_tokens(tokenized: str) -> str:
 
 
 def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:
-    """Generates a source map functions that maps positions to itself."""
+    """Generates a source map function that maps positions to itself."""
     if not original_name:  original_name = 'UNKNOWN_FILE'
     return lambda pos: SourceLocation(original_name, original_text, pos)
 
@@ -255,9 +256,9 @@ def tokenized_to_original_mapping(tokenized_text: str,
     Generates a source map for mapping positions in a text that has
     been enriched with token markers to their original positions.
 
-    :param tokenized_text:  the source text enriched with token markers.
+    :param tokenized_text:  the source text enriched with token markers
     :param original_text: the original source text
-    :param original_name:  the name or path or uri of the original source file.
+    :param original_name:  the name or path or uri of the original source file
     :returns:  a source map, i.e. a list of positions and a list of corresponding
         offsets. The list of positions is ordered from smallest to highest.
         An offset is valid for its associated position and all following
@@ -454,5 +455,4 @@ def preprocess_includes(original_text: Optional[str],
     include_map, result = generate_include_map(original_name, original_text, find_next_include)
     mapping_func = functools.partial(srcmap_includes, inclmap=include_map)
     return PreprocessorResult(original_text, result, mapping_func, [])
-
 

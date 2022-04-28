@@ -340,7 +340,7 @@ class TestFlowControl:
         assert cst.error_flag, cst.as_sxpr()
 
         cst = parser(self.t2, parser['ws'], complete_match=False)
-        assert cst.did_match() and len(cst) == 0 and not cst.errors
+        assert cst.did_match() and cst.strlen() == 0 and not cst.errors
         cst = parser(self.t2, parser['word'], complete_match=False)
         assert cst.did_match() and cst.content == "All" and not cst.errors
         cst = parser(self.t2, parser['end'], complete_match=False)
@@ -380,7 +380,7 @@ class TestRegex:
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
-        assert node.tag_name == "regex"
+        assert node.name == "regex"
         assert str(node) == 'abc+def'
 
     def test_multilineRegex_wo_Comments(self):
@@ -396,7 +396,7 @@ class TestRegex:
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
         node = parser('abc+def', parser.regex)
         assert not node.error_flag
-        assert node.tag_name == "regex"
+        assert node.name == "regex"
         assert str(node) == 'abc+def'
 
     def test_ignore_case(self):
@@ -412,7 +412,7 @@ class TestRegex:
         node, rest = parser.regex(StringView('Alpha'))
         assert node
         assert rest == ''
-        assert node.tag_name == "regex"
+        assert node.name == "regex"
         assert str(node) == 'Alpha'
 
         mlregex = r"""
@@ -525,6 +525,27 @@ class TestGrammar:
         st = gr('eins 1 zwei2drei 3')
         st = gr('-3')
         assert str(gr['S']) == "S = ~", str(gr['S'])
+
+    def test_match_and_fullmatch(self):
+        lang = r"""
+            word = /[A-Za-z]+/
+            number = /[0-9]+/
+        """
+        gr = create_parser(lang)
+        assert gr.match('word', 'hallo123') == "hallo"
+        assert gr.match('word', '') is None
+        assert gr.match('word', '123') is None
+        assert gr.match('word', 'hallo') == "hallo"
+
+        assert gr.fullmatch('word', 'hallo123') is None
+        assert gr.fullmatch('word', '') is None
+        assert gr.fullmatch('word', '123') is None
+        assert gr.fullmatch('word', 'hallo') == 'hallo'
+
+        assert gr.match('number', 'hallo123') is None
+        assert gr.match('number', '') is None
+        assert gr.match('number', '123') == "123"
+        assert gr.match('number', 'hallo') is None
 
 
 class TestSeries:
@@ -804,7 +825,7 @@ class TestPopRetrieve:
 
     @staticmethod
     def has_tag_name(node, name):
-        return node.tag_name == name # and not isinstance(node.parser, Retrieve)
+        return node.name == name # and not isinstance(node.parser, Retrieve)
 
     def test_capture_assertions(self):
         try:
@@ -1438,46 +1459,46 @@ class TestMetaParser:
     mp.grammar = Grammar()  # override placeholder warning
     mp.pname = "named"
     mp.disposable = False
-    mp.tag_name = mp.pname
+    mp.node_name = mp.pname
 
     def test_return_value(self):
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
-        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert nd.name == 'named', nd.as_sxpr()
         assert len(nd.children) == 1
-        assert nd.children[0].tag_name == 'tagged'
+        assert nd.children[0].name == 'tagged'
         assert nd.children[0].result == "non-empty"
         nd = self.mp._return_value(Node('tagged', ''))
-        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert nd.name == 'named', nd.as_sxpr()
         assert len(nd.children) == 1
-        assert nd.children[0].tag_name == 'tagged'
+        assert nd.children[0].name == 'tagged'
         assert not nd.children[0].result
         nd = self.mp._return_value(Node(':anonymous', 'content'))
-        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert nd.name == 'named', nd.as_sxpr()
         assert not nd.children
         assert nd.result == 'content'
         nd = self.mp._return_value(Node(':anonymous', ''))
-        assert nd.tag_name == 'named', nd.as_sxpr()
+        assert nd.name == 'named', nd.as_sxpr()
         assert not nd.children
         assert not nd.content
         nd = self.mp._return_value(EMPTY_NODE)
-        assert nd.tag_name == 'named' and not nd.children, nd.as_sxpr()
+        assert nd.name == 'named' and not nd.children, nd.as_sxpr()
         self.mp.pname = ''
         self.mp.disposable = True
-        self.mp.tag_name = ':unnamed'
+        self.mp.node_name = ':unnamed'
         nd = self.mp._return_value(Node('tagged', 'non-empty'))
-        assert nd.tag_name == 'tagged', nd.as_sxpr()
+        assert nd.name == 'tagged', nd.as_sxpr()
         assert len(nd.children) == 0
         assert nd.content == 'non-empty'
         nd = self.mp._return_value(Node('tagged', ''))
-        assert nd.tag_name == 'tagged', nd.as_sxpr()
+        assert nd.name == 'tagged', nd.as_sxpr()
         assert len(nd.children) == 0
         assert not nd.content
         nd = self.mp._return_value(Node(':anonymous', 'content'))
-        assert nd.tag_name == ':anonymous', nd.as_sxpr()
+        assert nd.name == ':anonymous', nd.as_sxpr()
         assert not nd.children
         assert nd.result == 'content'
         nd = self.mp._return_value(Node('', ''))
-        assert nd.tag_name == '', nd.as_sxpr()
+        assert nd.name == '', nd.as_sxpr()
         assert not nd.children
         assert not nd.content
         assert self.mp._return_value(None) == EMPTY_NODE
@@ -1485,9 +1506,9 @@ class TestMetaParser:
 
     def test_return_values(self):
         self.mp.pname = "named"
-        self.mp.tag_name = self.mp.pname
+        self.mp.node_name = self.mp.pname
         rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
-        assert rv[-1].tag_name != EMPTY_NODE.tag_name, rv[-1].tag_name
+        assert rv[-1].name != EMPTY_NODE.name, rv[-1].name
 
     def test_in_context(self):
         minilang = r"""
@@ -1760,7 +1781,7 @@ class TestStructurePreservationOnLookahead:
         assert bib['author'].content == "Bertrand Russel"
         assert bib['work'].content == "Principia Mathematica"
         author = gr('Bertrand Russell', 'author')
-        assert author.tag_name == "author" and author.content == "Bertrand Russell"
+        assert author.name == "author" and author.content == "Bertrand Russell"
         assert author.errors[0].code == MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
 
 

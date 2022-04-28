@@ -1,0 +1,980 @@
+# EBNF-Syntax für Artikel des Mittellateinischen Wörterbuchs (MLW)
+
+@ comment         =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/   # Kommentare im C++ Stil
+                                      # ohne das Zeilenende zu beinhalten
+@ whitespace      =  /[\t ]*/         # Zeilensprünge zählen nicht als Leerraum
+@ literalws       =  right            # Leerraum nach Literalen wird automatisch entfernt
+@ disposable      =  /_\w+$/          # Bezeichner, die mit _ beginnen bleiben im AST anonym
+
+##############################################################################
+
+@ Artikel_error   = ':', 'Hier darf kein (weiterer) Doppelpunkt stehen »{1}«, ggf. sollte er in einen (verschachtelten) Kommentar verschoben werden.'
+@ Artikel_error   = /\s*ETYMOLOGIE/, 'Die Etymologie-Position muss unmittelbar auf die Grammatik-Position folgen.'
+@ Artikel_error   = /\s*[A-Z][A-Z][A-Z]+/, 'An dieser Stelle sollte {0} folgen, nicht »{1}«'
+# @ Artikel_skip    = /(?:\n\s*[A-Z][A-Z][A-Z]+)(?:.|\n)*?(?=\n\s*BEDEUTUNG|VERWEISE|AUTOR|STELLENVERZEICHNIS)/, /$/
+@ Artikel_skip    = /(?=\n\s*[A-Z][A-Z][A-Z]+)/, /$/
+
+Artikel           = VerweisArtikel |
+                    ( [LZ] [NachtragsPosition]
+                      §{ LemmaPosition }+
+                      [EtymologiePosition]
+                      [VERBOTENE_GRAMMATIKPOSITION]
+                      ArtikelKopf
+                      [BedeutungsPosition]
+                      [VerweisPosition]
+                      { UnterArtikel }
+                      ArtikelVerfasser
+                      [Stellenverzeichnis]
+                      [Direktiven]
+                      [LZ] DATEI_ENDE )
+
+VERBOTENE_GRAMMATIKPOSITION = GrammatikPosition
+
+#### VERWEIS-ARTIKEL #########################################################
+
+@VerweisArtikel_skip    = /(?=$)/
+VerweisArtikel     = &ist_Verweisartikel _VerweisBlöcke § ArtikelVerfasser [Direktiven] [LZ] § DATEI_ENDE
+ist_Verweisartikel = [LZ] "LEMMA" (VerweisBlock | unberechtigt)
+
+@ _VerweisBlöcke_resume = /(?=\nAUTOR|$)/
+@ _VerweisBlöcke_skip   = /(?=LEMMA)/
+
+_VerweisBlöcke    = { [LZ] ("LEMMA" § (VerweisBlock | unberechtigt) { PraeterBlock } | FehlerhafterVerweis) [VERBINDE|TRENNE] }+
+  VERBINDE        = &/[^\n]*LEMMA/
+  TRENNE          = &LÜCKE
+
+FehlerhafterVerweis = [LZ] "[" "LEMMA" /(?:.|\n)*?(?:\n(?=LEMMA)|(?=\n\s*AUTOR))/
+
+PraeterBlock      = [LL] PRAETER § ( [VERBINDE|TRENNE] VerweisBlock | unberechtigt [VERBINDE|TRENNE] )
+                                   { [LZ] !"LEMMA" ( VerweisBlock | unberechtigt) [VERBINDE|TRENNE] }
+@ unberechtigt_skip = /\]/
+unberechtigt      = "[" VerweisBlock § "]"
+
+@ VerweisBlock_error = /\[/, 'Die »unberechtigt«-Markierung [] muss immer am Anfang, ggf. noch vor der Lemma-Nr. stehen!'
+@ VerweisBlock_skip = /(?=\w|\n|$)/
+@ VerweisBlock_resume = /(?=LEMMA|AUTOR|$)/
+
+VerweisBlock      = AusgangsLemmata Vide
+AusgangsLemmata   = _AusgangsLemma { ET _AusgangsLemma }
+_AusgangsLemma    = _LemmaStück {KOMMA _LemmaStück }
+_LemmaStück       = [LemmaNr § !unberechtigt] [LZ] {Zusatz [LL]} Lemma [KLAMMER_AUF LemmaWort KLAMMER_ZU] [Zusatz]
+
+@ Vide_resume     = /(?=\nAUTOR|[A-Z][A-Z][A-Z]|\]|$)/
+@ Vide_skip       = /(?=ET|\nAUTOR|[A-Z][A-Z][A-Z]|\]|$)/
+@ Vide_error      = /\s*{/, "Ein Zusatz ist an dieser Stelle nicht erlaubt: »{1}«"
+
+Vide              = [LL] VIDE [LL]
+                    § ( EinzelVerweis | Zusatz &Vide_Anschluss | VerweisLemmazeile { ET VerweisLemmazeile } )
+                    &Vide_Anschluss
+Vide_Anschluss    = ZEILENSPRUNG | /\s*\]|\s*$/ | "PRAETER" | "LEMMA"
+VerweisLemmazeile = [LemmaNr] ZielLemma [dot] [EinzelVerweis] [!VLZ_Fehler Zusatz] [":" [LZ] Belege]
+  dot             =  /\./~
+ZielLemma         = ([nicht_klassisch_verweis] ° [nicht_gesichert]) { Zusatz } ZielLemmaWort
+ZielLemmaWort     = _lemma_text
+
+VIDE              = "VIDE" | VIDE_Fehler
+ET                = [LZ] ("ET" | ET_Fehler) [LZ]
+PRAETER           = "PRAETER" | PRAETER_Fehler
+
+VLZ_Fehler        = ET_Fehler | PRAETER_Fehler | VIDE_Fehler
+ET_Fehler         = [`{`] ["/"] ("Et" | "et") [`}`] | `{` ["/"] "ET" `}`
+PRAETER_Fehler    = [`{`] ["/"] ("Praeter" | "praeter") [`}`] | `{` ["/"] "PRAETER" `}`
+VIDE_Fehler       = [`{`] ["/"] ("Vide" | "vide") [`}`] | `{` ["/"] "VIDE" `}`
+
+
+#### UNTER-ARTIKEL ###########################################################
+
+UnterArtikel      = ZWW SubLemmaPosition
+                    §[EtymologiePosition]
+                    ArtikelKopf
+                    BedeutungsPosition
+                    [VerweisPosition]
+
+@ SubLemmaPosition_resume = /(?=\nETYMOLOGIE|\nSCHREIBWEISE|\nSTRUKTUR|\nGEBRAUCH|\nMETRIK|\nVERWECHSELBAR|\nBEDEUTUNG)/
+
+SubLemmaPosition  = "SUB_LEMMA" LemmaBlock { [LZ] "VEL" LemmaBlock } §&({/\s+/~} /[A-Z][A-Z][A-Z]/)
+
+#### NACHTRAG ################################################################
+
+@ NachtragsPosition_resume = /(?=\nLEMMA)/
+@ NachtragsPosition_error = '', 'ad oder post -Klausel fehlerhaft oder fehlend: »{1}«'
+@ Nachtrag_error   = '', 'Doppelpunkt, ggf. gefolgt von einer Ziffer erwartet, aber nicht »{1}«'
+@ ad_error         = '', 'Nachtragslemma oder Nachtragsstellenangabe fehlt oder ist nicht richtig formatiert: »{1}«'
+@ post_error       = '', 'Nachtragslemma oder Nachtragsstellenangabe fehlt oder ist nicht richtig formatiert: »{1}«'
+
+NachtragsPosition  = "NACHTRAG" §Nachtrag &({/\s+/~} "LEMMA")
+
+Nachtrag           = [ad ";"] post §":" [LZ] [Ziffer]
+ad                 = "ad" §_nachtrags_bezug
+post               = "post" §_nachtrags_bezug
+_nachtrags_bezug   = (NachtragsLemma [NachtragsStelle] | NachtragsStelle)
+
+NachtragsLemma     = !"p." [LemmaNr <-&/\s*\./] _Lemma
+Ziffer             = /\d+\./~
+NachtragsStelle    = STELLENTEXT
+
+
+#### LEMMA-POSITION ##########################################################
+
+@ LemmaPosition_error = '', 'Artikelkopf, Etymologie- oder Bedeutungsposition erwartet, aber nicht »{1}«!'
+@ LemmaPosition_resume = /(?=\n\s*ETYMOLOGIE|\n\s*SCHREIBWEISE|\n\s*STRUKTUR|\n\s*GEBRAUCH|\n\s*METRIK|\n\s*VERWECHSELBAR|\n\s*BEDEUTUNG)/
+
+LemmaPosition     = [ABS] "LEMMA" [unecht] LemmaBlock { [LZ] "VEL" LemmaBlock } [GrammatikPosition]
+                    §&(({/\s+/~} /[A-Z][A-Z][A-Z]/) | DATEI_ENDE )
+unecht            = "UNECHT"
+LemmaNr           = /\d+\.?/~
+
+@ LemmaBlock_error = '', '»{1}« ist kein gültiges Lemma!'
+LemmaBlock        = [LZ] {Zusatz [LL]} [LemmaNr]
+                    §Lemma ([[LL] Zusatz] ° [[LL] LemmaVarianten])
+                    [verbotener_Punkt]
+                    [GrammatikPosition|EtymologiePosition]
+  verbotener_Punkt = "."
+
+Lemma             = _Lemma
+_Lemma            = ([nicht_klassisch] ° [nicht_gesichert]) { Zusatz [LL] } LemmaWort
+
+  nicht_klassisch = "*"    # Sechszackig fett ✶  # Stern 1. Ordnung
+  nicht_gesichert = "?"
+
+LemmaVarianten    = "(" LemmaVariante { "," [ZW] LemmaVariante } ")"
+LemmaVariante     = /\-?/ _lemma_text [[LL] Zusatz]
+LemmaWort         = _lemma_text
+_lemma_text       = [/-/] [/\(/ _LATEIN_KLEIN_FOLGE /\)/ | /\(-\)/]
+                    LAT_GWORT [/\(-\)/]
+                    { [AUSGEWICHEN] !`p.` LAT_WORT [/\(-\)/] }   # Alternativ: ZEILENSPRUNG|AUSGEWICHEN
+
+
+## GRAMMATIK-POSITION ##
+
+GrammatikPosition = ZWW "GRAMMATIK" § [LZ] Grammatik [GrammatikVarianten] {[LL] Zusatz}
+
+@ Grammatik_skip  = /[^\w.-] */
+@ Grammatik_error = "nomen", '»nomen« ist als wortangabe nicht erlaubt, verwende bitte »substantiv«!'
+
+Grammatik         = §GrammatikAngabe { [LL] vel [LL] [Zusätze [LL]] GrammatikAngabe }
+@ GrammatikAngabe_error  = ",", 'Nach der Wortartangabe sollte ein Semikolon oder ein Zeilenwechsel folgen, kein Komma!'
+@ GrammatikAngabe_resume = /(?=\n)/
+GrammatikAngabe   = (wortarten §&ABS | WA_UNBEKANNT)
+                    [ABS [_casus_nummerus] stammformen]
+                    [[ABS|VERBOTENES_KOMMA] genera ]
+                    [[ABS] AlternativeGrammatik]
+AlternativeGrammatik = "(" [Zusatz] [wortarten [Zusatz] [ABS]]
+                             [[_casus_nummerus [Zusatz]] stammformen [Zusatz]]
+                             [[ABS|VERBOTENES_KOMMA] genera [Zusatz]] ")"
+
+@wortarten_error  = 'Auf »vel« darf an dieser Stelle nur »raro«, »rarius«, »semel«, ein Zusatz '
+                    'oder gleich eine weitere Wortart folgen, aber nicht »{1}«!'
+
+wortarten         = wortart { [","] [LL] vel [LL] [ Zusätze ] [LL] § wortart }
+@ wortart_resume  = /(?=(?:[-:;\n{]|vel|raro|rarius|semel))/
+wortart           = "adverbium" | "adv."
+                  | "adiectivum" §nom_klasse | "adi." §nom_klasse
+                  | "comparativus" §nom_klasse | "compar." §nom_klasse
+                  | "interiectio" [wa_ergänzung] | "interi." [wa_ergänzung]
+                  | "littera" [wa_ergänzung]
+                  | "numerale" §nom_klasse | "numer." §nom_klasse
+                  | "particula"
+                  | "praepositio" | "praep."
+                  | "pronomen" §nom_klasse | "pron." §nom_klasse
+                  | "substantivum" §nom_klasse | "subst." §nom_klasse
+                  | "superlativus" §nom_klasse | "superl." §nom_klasse
+                  | "verbum" §verb_klasse
+
+WA_UNBEKANNT      = /\w+\.?/ { ~ /\w+\.?/ }
+
+wa_ergänzung      = { [ZW] (EINZEILER | Zusatz | Verweise) }+
+
+nom_klasse        = ("IV" | "V" | "III" | "II" | "I-II" | "I"
+                    | "anormal" | "unbestimmt")
+                    [VERBOTENER_PUNKT]
+verb_klasse       = ("IV" | "III" | "II" | "I" | "anormal" | "unbestimmt") [VERBOTENER_PUNKT]
+
+VERBOTENER_PUNKT  = "."
+VERBOTENES_KOMMA  = ","
+
+stammformen      = flexion { vel flexion }
+flexion          = indeclinabile | FLEX {"," FLEX}
+indeclinabile    = "indecl." | "indeclinabile"
+FLEX             = { !(genus|wortart|casus|numerus|vel) /-?[a-z]+(?:\([a-z]+\)[a-z]+)*/~ }+
+
+@genera_error    = 'Auf »vel« darf an dieser Stelle nur »raro«, , »rarius«, »semel«, »bis«, '
+                   'ein Zusatz oder gleich ein weiterer genus folgen, aber nicht »{1}«!'
+@genera_resume   = /\.|um\n/
+
+genera           = [numerus] genus { [","] [LL] vel [LL] [Zusätze] [LL] § genus }
+genus            = "maskulinum" | "m." | "masc."
+                 | "femininum" | "f." | "fem."
+                 | "neutrum" | "n." | "neutr."
+
+_casus_nummerus  = casus [numerus] | "{" casus [numerus] §"}"
+
+casus            = "nominativus" | "nom."
+                 | "genitivus" | "gen."
+                 | "dativus" | "dat."
+                 | "accusativus" | "acc."
+                 | "ablativus" | "abl."
+                 | "vocativus" | "voc."
+
+numerus          = "singular" | "sg." | "sing."
+                 | "plural" | "pl." | "plur."
+
+vel              = "{" _vel §"}" | _vel
+_vel             = (("vel"|ET_VERBOTEN) [LL] [_vel_qualifikator] | VEL_FEHLER)
+                   [`(`~ Verweise §`)`~ | Zusatz]
+_vel_qualifikator = "raro" | "rarius" | "semel" | "bis"
+ET_VERBOTEN       = "et"
+VEL_FEHLER        = "VEL" [LL] _vel_qualifikator | <-!/ *\n/ "VEL"
+
+@ GrammatikVariante_error = "", "Fehlerhafte Angabe bei Grammatik-Variante oder fehlende Belege!"
+@ GrammatikVariante_resume = /(?=\n(?=(?:[^\n]*:)|(?:\s*\n)))/
+
+GrammatikVarianten = { LABS GrammatikVariante }+
+GrammatikVariante  = GVariante §DPP Belege
+  GVariante = &(wortarten|casus|flexion|genus|numerus)
+              ([wortarten [ABS]] ° [_casus_nummerus] ° [stammformen [ABS]] ° [genera [ABS]])
+
+
+## ETYMOLOGIE-POSITION ##
+
+@ EtymologiePosition_resume = /(?=\nSCHREIBWEISE|\nSTRUKTUR|\nGEBRAUCH|\nMETRIK|\nVERWECHSELBAR|\nBEDEUTUNG)/
+@ EtymologiePosition_error = /\./, 'Hier scheint ein Punk zu viel zu sein: {1}'
+
+EtymologiePosition = ZWW "ETYMOLOGIE" (&(ZWW GROSSBUCHSTABEN) | [LZ]
+                     § EtymologieAngabe { _Überleitung EtymologieAngabe } &(~/\n/))
+_Überleitung        = ZLL | (KOMMA|SEMIKOLON) [ZWW] | &`{`
+
+@ EtymologieAngabe_resume = /(?=\n(?!\s*\*))/
+@ EtymologieAngabe_skip = /(?=\n(?!\s*\*))|(?=\n\s*\*)/
+@ EtymologieAngabe_error = '', 'Sekundärliteratur erwartet, aber »{1}« nicht als solche erkannt. Möglicherweise ist der Titel falsch oder wurde dem Programm noch nicht bekannt gemacht.'
+EtymologieAngabe   = ([unsicher] [Zusatz] [ZWW] (EtymologieSprache [Etymon] | Etymon) | Zusatz )
+                     [Zusatz &(":" | _Überleitung | /\s*$/)]
+                     [":" §[ZWW] ( SekundärliteraturBlock | ECKIGE_AUF_KURSIV SekundärliteraturBlock ECKIGE_ZU_KURSIV )]
+SekundärliteraturBlock = { Zusatz } [ `*` / */ ] {Zusatz} [ZW] (Sekundärliteratur | Verweise)
+                          { [ZWW] "*" {Zusatz} [ZW] (Sekundärliteratur | Verweise) }
+Etymon             = [LemmaNr] ([nicht_klassisch_verweis] ° [erschlossen] ° [nicht_gesichert]) { ETYMOLOGIE_TEXT }+ [Anker]
+# { (ETYMOLOGIE_TEXT | Kursiv) ([Kursiv] ° [Zusatz]) }+
+
+EtymologieSprache  = ("anglosax." ["vet."] | "arab." | "bohem." ["vet."]
+                     | "byz." | "catal." | "finnice"
+                     | "franc." ["vet." | "inf." "vet."] | "francog." ["vet."]
+                     | "francoprov."
+                     | "frisic." | "gall." | "germ." | "got." | "gr." ["byz."]
+                     | "hebr." | "hibern." | "hisp." ["vet."] | "hung." | "ital."
+                     # | "lat."     # | "lat-klass." | "lat-mlw." | "lat-erschlossen"
+                     | "occ." ["vet."] | "pers." | "polon." ["vet."]
+                     | "port." | "prov." | "raetoroman."
+                     | "saxon" ["vet."]
+                     | "sard." | "sicil." | "slav." | "theod." ["inf."] ["vet."]
+                     | "turc."
+                     | "val." | fehlerhafte_Sprachangabe ) [fehlerhaftes_vet]
+fehlerhafte_Sprachangabe = "graec." | "griech."  # unbedingt nur bestimmte auflisten!!!
+fehlerhaftes_vet = { "inf." | "vet." }+
+
+erschlossen = "+"  # fünfzackig dünn Stern 3. Ordnung etymologischer Erschließungsstern: keine Belege
+
+# natürlicher Stern: Chart. Tirol. 713*!!!
+
+# (ital. ficcare ex *figicare; cf. Battaglia, Dizionario V. p. 934 et Wartburg, Frz. etym. Wb. III. p. 511)
+
+ECKIGE_AUF_KURSIV = "["
+ECKIGE_ZU_KURSIV  = "]"
+
+
+#### ARTIKEL-KOPF ############################################################
+
+ArtikelKopf     = [SchreibweisenPosition]
+                ° [StrukturPosition]
+                ° [FormPosition]
+                ° [GebrauchsPosition]
+                ° [MetrikPosition]
+                ° [VerwechselungsPosition]
+
+SchreibweisenPosition = ZWW "SCHREIBWEISE" Position
+StrukturPosition      = ZWW "STRUKTUR"     Position
+FormPosition          = ZWW "FORM"         Position
+GebrauchsPosition     = ZWW "GEBRAUCH"     Position
+MetrikPosition        = ZWW "METRIK"       Position
+VerwechselungsPosition = ZWW ("VERWECHSELBARKEIT" | "VERWECHSELBAR") Position
+
+## ARTIKELKOPF POSITIONEN ##
+
+@ Position_error  = /(?!\s*\n)/, "Zeilenwechsel nach Schlüsselwort vor »{1}« erforderlich!"
+@ Position_resume = /(?=\n *[A-Z][A-Z][A-Z])/     # Fortführung nach Fehler beim nächsten Schlüsselwort
+
+Position       = &(ZWW GROSSBUCHSTABEN)     # Position darf leer bleiben (Warnmeldung?)
+               | § &ZWW Besonderheiten
+                 &(ZWW GROSSBUCHSTABEN)     # Auf eine Position muss immer eine andere Position
+                                            # oder ein Hauptstrukturblock folgen.
+
+@ Besonderheit_error = /\n* +\w/, "Einrückung scheint nicht zu stimmen. Zu viele oder zu wenig Leerzeichen!"
+@ Besonderheit_error = "Hier sollten Verweise »{{=> ...}}«, Belege oder Unterkategorien folgen, nicht »{1}«. Möglicherweise wurde die maximale Gliederungstiefe von vier Ebenen überschritten."
+
+Besonderheiten  = Besonderheit { Besonderheit }  [&:?ER1]    # [&:?ER1] = delete captured indentation sizes
+Besonderheit    = TAB_1 Beschreibung ":" §(Kategorien | [LZ] Belege | Zusatz | fehlende_Belege)
+Kategorien      = { TAB_2 Variante | Kategorie }+  [&:?ER2]
+Kategorie       = TAB_2 Beschreibung ":" (Unterkategorien | KVarianten | fehlende_Belege)
+KVarianten      = { TAB_3 Variante }+
+Unterkategorien = { TAB_3 Variante | Unterkategorie }+  [&:?ER3]
+Unterkategorie  = TAB_3 Beschreibung ":" (Varianten | fehlende_Belege)
+Varianten       = { TAB_4 Variante }+ [&:?ER4]
+Variante        = !KATEGORIENZEILE Beschreibung ":" §( [LZ] Belege | Zusatz | fehlende_Belege)
+
+fehlende_Belege = /(?=\n)/
+
+# Definition von Einrückungstiefen
+TAB_1           = ZWS :ER1
+TAB_2           = ZWS :ER1 :ER2
+TAB_3           = ZWS :ER1 :ER2 :ER3
+TAB_4           = ZWS :ER1 :ER2 :ER3 :ER4
+
+ZWS             = { ~/\n/ }+   # Leerzeilen, bis zum Anfang der nächsten Zeile
+
+ER1             = / */
+ER2             = / +/
+ER3             = / +/
+ER4             = / +/
+
+@ Beschreibung_resume = /(?=:)/    # Fortführung ab Doppelpunkt
+
+Beschreibung   = !/[A-Z][A-Z_][A-Z_]+/ { (EINZEILER | Lemmawort) ° {Zusatz} }+ {";" Ergänzung}
+                 { Einschub } &":"   # [Kursiv]  sollte hier nicht nötig sein!
+Ergänzung      = [Zusatz] { EINZEILER ° [Zusatz] }+
+
+
+#### BEDEUTUNGS-POSITION #####################################################
+
+BedeutungsPosition   = { [ABSATZ] Bedeutung }+
+
+@ Bedeutung_resume   = /(?=\n *BEDEUTUNG|\n *ABSATZ|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/  # \n *ANHÄNGER|
+@ U1Bedeutung_resume = /(?=\n *BEDEUTUNG|\n *ABSATZ|\n *UNTER_B|\n *U_B|\n *U1_B|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+@ U2Bedeutung_resume = /(?=\n *BEDEUTUNG|\n *ABSATZ|\n *UNTER_B|\n *U_B|\n *U1_B|\n *UNTER_UNTER_B|\n *UU_B|\n *U2_B|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+@ U3Bedeutung_resume = /(?=\n *BEDEUTUNG|\n *ABSATZ|\n *UNTER_B|\n *U_B|\n *U1_B|\n *UNTER_UNTER_B|\n *UU_B|\n *U2_B|\n *UNTER_UNTER_UNTER_B|\n *UUU_B|\n *U3_B|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+@ U4Bedeutung_resume = /(?=\n *BEDEUTUNG|\n *ABSATZ|\n *UNTER_B|\n *U_B|\n *U1_B|\n *UNTER_UNTER_B|\n *UU_B|\n *U2_B|\n *UNTER_UNTER_UNTER_B|\n *UUU_B|\n *U3_B|\n *UUUU_B|\n *U4_B|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+@ U5Bedeutung_resume = /(?=\n *BEDEUTUNG|\n *ABSATZ|\n *UNTER_B|\n *U_B|\n *U1_B|\n *UNTER_UNTER_B|\n *UU_B|\n *U2_B|\n *UNTER_UNTER_UNTER_B|\n *UUU_B|\n *U3_B|\n *UUUU_B|\n *U4_B|\n *UUUUU_B|\n *U5_B|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+
+Bedeutung            = ZWW "BEDEUTUNG" [LZ]
+                       §Bedeutungsangabe (BelegeOderAufzählung|{[ABSATZ] U1Bedeutung}+|FehlendeBelege) &Anschluss
+U1Bedeutung          = ZWW ("U_BEDEUTUNG" | "UNTER_BEDEUTUNG" | "U1_BEDEUTUNG") [LZ]
+                       §Bedeutungsangabe (BelegeOderAufzählung|{[ABSATZ] U2Bedeutung}+|FehlendeBelege) &Anschluss
+U2Bedeutung          = ZWW ("UU_BEDEUTUNG" | "UNTER_UNTER_BEDEUTUNG" | "U2_BEDEUTUNG") [LZ]
+                       §Bedeutungsangabe (BelegeOderAufzählung|{[VERBOTENER_ABSATZ] U3Bedeutung}+|FehlendeBelege) &Anschluss
+U3Bedeutung          = ZWW ("UUU_BEDEUTUNG" | "UNTER_UNTER_UNTER_BEDEUTUNG" | "U3_BEDEUTUNG" ) [LZ]
+                       §Bedeutungsangabe (BelegeOderAufzählung|{[VERBOTENER_ABSATZ] U4Bedeutung}+|FehlendeBelege) &Anschluss
+U4Bedeutung          = ZWW ("UUUU_BEDEUTUNG" | "U4_BEDEUTUNG" | uuuu_mit_warnung) [LZ]
+                       §Bedeutungsangabe (BelegeOderAufzählung|{[VERBOTENER_ABSATZ] U5Bedeutung}+|FehlendeBelege) &Anschluss
+U5Bedeutung          = ZWW ("UUUUU_BEDEUTUNG" | "U5_BEDEUTUNG" | uuuuu_mit_warnung) [LZ]
+                       §Bedeutungsangabe (BelegeOderAufzählung|FehlendeBelege) &Anschluss
+
+VERBOTENER_ABSATZ    = ABSATZ
+ABSATZ               = ZWW "ABSATZ"
+
+BelegeOderAufzählung = BelegPosition {Anhänger} | Aufzählung
+Aufzählung           = { AufzählungsPunkt }+
+FehlendeBelege       = &Anschluss
+
+uuuu_mit_warnung     = "UNTER_UNTER_UNTER_UNTER_BEDEUTUNG"        # Verwendung dieser Form löst eine Warnung aus
+uuuuu_mit_warnung    = "UNTER_UNTER_UNTER_UNTER_UNTER_BEDEUTUNG"  # Verwendung dieser Form löst eine Warnung aus
+
+@ Anhänger_resume    = /(?=\n *BEDEUTUNG|\n *ABSATZ|\n *UNTER|\n *U_|\n *UU|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+Anhänger             = ZWW "ANHÄNGER" [LZ] §Bedeutungsangabe BelegPosition
+
+@ AufzählungsPunkt_resume = /(?=\n *BEDEUTUNG|\n *UNTER|\n *U_|\n *UU|\n *AUF|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+AufzählungsPunkt     = ZWW "AUFZÄHLUNG" [LZ] § Exemplar ":" BelegPosition
+Exemplar             = (Sperrung | ExemplarText) ° { Zusatz | Verweise | Einschub }
+ExemplarText         = EINZEILER
+
+@ Bedeutungsangabe_error = '(', "»{1}« kann nicht verarbeitet werden, möglicherweise wurde die Markierung eines Zusatzes mit geschweiften Klammern »{{ ... }}« versäumt?"
+@ Bedeutungsangabe_error = /\n/, "Neuer Block: »{1}« an dieser Stelle nicht erwartet. Wurde die letzte Bedeutungsangabe nicht durch einen Doppelpunkt ':' abgeschlossen?"
+@ Bedeutungsangabe_error = '', "»{1}« an dieser Stelle nicht erwartet. Möglicherweise enthält ein Teil der (vorhergehenden) Bedeungsangabe unerlaubte Zeichen."
+# @ Bedeutungsangabe_resume = /(?=\n\s*[U*])/
+@ Bedeutungsangabe_resume = /(?=\n *BEDEUTUNG|\n *UNTER|\n *U_|\n *UU|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+
+@Bedeutungsangabe_skip = /(?=:)/
+Bedeutungsangabe     = "OHNE" [":"]
+                     | ((Interpretamente | Klassifikation) [Nebenbedeutungen]
+                        | Einschub) § [/\n/~] ":"
+                       &(BelegeOderAufzählung | Anschluss)
+Anschluss            = [LZ] (/BEDEUTUNG|ABSATZ|UNTER|U_|UU|AUFZÄHLUNG|SUB_LEMMA|VERWEISE|AUTOR/ | DATEI_ENDE)
+Nebenbedeutungen     = {
+                         ([ZW] ";" [ZW] [/\(/~] (Interpretamente [NBVerweise] | Klassifikation [NBVerweise]) [/\)/~])
+                       | ([ZW] EINSCHUB_ANFANG [ZW] (Interpretamente [NBVerweise] | Klassifikation [NBVerweise]) [ZW] EINSCHUB_ENDE [ZW])
+                       | Einschub
+                       | [ZW] [";"] [ZW] Belege
+                       | [ZW] [";"] [ZW] Zusatz
+                       }+
+NBVerweise           = ":" { [ZW] (Verweise ° [[ZW] Zusatz]) }+
+Klassifikation       = [Zusatz [ZW]] { Kategorienangabe ({Verweise}°{Zusatz}°{ZW}) }+
+Kategorienangabe     = { (EINZEILER|Kursiv|Sperrung|BelegText|Lemmawort) [ZW] }+
+# Bedeutungsabschluss  = ":"    # VERALTET: &(/$/|{/\n/~}+ /\*|UNTER|UU/)
+
+Interpretamente      = [LateinischeBedeutung] [[/,/~] [ZW] Zusätze] InterpretamentTrenner
+                       §DeutscheBedeutung [[/,/~] [ZW] Zusätze]
+InterpretamentTrenner = [ZW] "--" [ZW]
+LateinischeBedeutung = LateinischerAusdruck { "," LateinischerAusdruck }
+DeutscheBedeutung    = DeutscherAusdruck { "," DeutscherAusdruck }
+LateinischerAusdruck = ([unsicher] ° [idem_qui]) { [ZW] ((LateinischerBestandteil | BelegText) ° {~ [ZW] (Zusatz|EinzelVerweis)}) }+
+idem_qui             = { [ZW] !iq_markierung (LateinischerBestandteil | BelegText) }+ iq_markierung
+iq_markierung        = "i." "q." | "i." &("qui" | "que") | "ea" &"quae"
+DeutscherAusdruck    = [unsicher] { [ZW] (DeutscherBestandteil ° [BelegText] ° {~ [ZW] (Zusatz|EinzelVerweis)}) }+
+unsicher             = "?"
+LateinischerBestandteil = [ZW] (LateinischeEllipse | LateinischesWort | Lemmawort | LateinischeKlammer | Kursiv)
+DeutscherBestandteil    = [ZW] (Qualifizierung | DeutscheEllipse | DeutschesWort | DeutscheKlammer | Kursiv)
+Qualifizierung       = ( "etwa:" | "viell.:" | "vielleicht:" ) ! /\s*(?:\*|UNTER|U_|UU)/
+LateinischeEllipse   = (LAT_WORT|GRI_WORT) <-&/\s*-/ | /-/ (LAT_WORT|GRI_WORT) | "..."
+DeutscheEllipse      = DEU_GWORT <-&/\s*-/ | /-/ DEU_GWORT | "..."
+LateinischesWort     = LAT_WÖRTER | LAT_ZITAT
+  LAT_ZITAT          = ZITAT_ANFANG LAT_WÖRTER {[ZW] LAT_WÖRTER} ZITAT_ENDE
+  LAT_WÖRTER         = LAT_WORT|GRI_WORT|LAT_ABK|LAT_GWORT | ARABISCHE_ZAHL | ROEMISCHE_ZAHL
+DeutschesWort        = DEU_KOMPOSITUM | DEU_GWORT | DEU_ZITAT | ARABISCHE_ZAHL | ROEMISCHE_ZAHL
+  DEU_ZITAT          = ZITAT_ANFANG DEU_GWORT {[ZW] DEU_GWORT} ZITAT_ENDE
+LateinischeKlammer   = KLAMMER_AUF LateinischeBedeutung [";" Zusatz] KLAMMER_ZU
+DeutscheKlammer      = KLAMMER_AUF DeutscheBedeutung [";" Zusatz] KLAMMER_ZU
+
+# LAT = "LATEINISCH"
+# DEU = "DEUTSCH"
+# GRI = "GRIECHISCH"
+
+BelegPosition = [ZWW] ("*" | !SCHLUESSELWORT) Belege
+#  [ZWW "*"] Belege
+
+#### VERWEIS-POSITION ########################################################
+
+VerweisPosition = ZWW "VERWEISE" { ([LZ]°[","]) (Verweise | verwiesen_auf | Zusatz)} ["."]
+verwiesen_auf   = [LemmaNr] [nicht_klassisch_verweis] LemmaWort
+nicht_klassisch_verweis = "*"
+
+#### AUTOR/AUTORIN ###########################################################
+
+ArtikelVerfasser = ZWW ("AUTORINNEN" | "AUTOREN" | "AUTORIN" | "AUTOR") [LZ] §Name
+Name             = { (NAME | NAMENS_ABKÜRZUNG | "-" | unbekannt) [","] }+
+unbekannt        = "unbekannt"
+
+
+#### STELLENVERZEICHNIS ######################################################
+
+Stellenverzeichnis = ZWW "STELLENVERZEICHNIS" [LemmaWort] ZWW Verweisliste
+Verweisliste       = { [LZ] "*" Stellenverweis }
+Stellenverweis     = AutorWerk { [ABS] Stelle (NullVerweis | Verweise) }
+NullVerweis        = "{" "-" "}"
+
+
+#### ZUSATZ an verschiedenen Stellen der Struktur ############################
+
+Zusätze = { [ZW] (Zusatz | Verweise) }+ | KLAMMER_AUF { [ZW] (Zusatz | Verweise) }+ KLAMMER_ZU
+
+Zusatz = { FesterZusatz | VariaLectioZusatz | FreierZusatz | Anker }+
+@ FreierZusatz_error = '{', "»{1}« kann nicht verarbeitet werden. Zusätze können nicht geschachtelt werden, dürfen aber Verweise »{{=> ...}}« enthalten."
+@ FreierZusatz_error  = /[\\]/, "Hier darf kein rückwärts gerichteter Schrägstrich »{1}« stehen. Vielleicht wurde er mit einem vorwärts gerichteten Schrägstrich »/« verwechselt."
+@ FreierZusatz_error = /--/, 'Unerwarteter Doppelstrich: »--« Bedeutungsangaben sollten als Nebenbedeutungen notiert und nicht in Zusätze verpackt werden.'
+@ FreierZusatz_resume = /(?=(?<=}).|\s*\n(?:\s*\n)*.|$)/
+FreierZusatz = "{" !zusatz_spezialisierung [ZusatzInhalt] §"}" | &`({=>` EinzelVerweis
+  ZusatzInhalt = { Verweise | FREITEXT | Anker | BelegText | BelegLemma
+                 | Kursiv | Sperrung | Junktur | `((` | `))` }+   # BelegText
+  Sperrung   = "{!" { FREITEXT | Lemmawort | Zusatz }+ §"}"
+  Kursiv     = "{/" { FREITEXT | Lemmawort | Verweise }+ §"}"
+  Junktur    = "<<" §BelegKern ">>" | "˻" §BelegKern "˼"
+
+FesterZusatz = "{" ("adde-ad" |"adde" | "al" | "ibid-al" | "ibid-per-saepe"
+             | "ibid-saepe" | "ibid-saepius" | "persaepe" | sim_ibid_kern | "sim" | "saepe"
+             | "saepius" | "vel-rarius" | "vel-semel" | "vel") ["."] "}"
+# var_l = "var." "l" ["."]
+sim_ibid = "{" sim_ibid_kern "}"
+sim_ibid_kern = /sim\. *ibid\. */~
+
+VariaLectioZusatz = "{" !zusatz_spezialisierung { TEXTELEMENT ["."] [ZW] }+ &/\}\)(?!\))/ "}"
+zusatz_spezialisierung = "=>" | "@" | "^" | "!" | "/" | "_" | "-" "}"
+
+
+#### BELEGE ##################################################################
+
+@ Belege_resume  = /(?=\)\)|\*|\n *BEDEUTUNG|\n *UNTER|\n *U_|\n *UU|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|$)/
+@ Belege_error   = '$', "Autorennamen sollten immer GROSSGESCHRIEBEN werden, mit Ausnahme von Sekundärliteratur. Auch bei disambiguierten Autorennamen: »{1}«"
+Belege           = &([LZ] "*" | Beleg) [Beleg] { [LZ] "*" §Beleg } [Zusatzzeilen]
+@ Einschub_resume = /\)\)/
+@ Einschub_error = '', "Innerhalb eines Einschubs dürfen nur Verweise, Zusätze, Belege oder Belegtext folgen, nicht »{1}«!"
+Einschub         = [ZW] EINSCHUB_ANFANG [ZW] § ([Verweise [ZW]]°[Zusatz [ZW]]°[BelegText [ZW]]) { Belege } [ZW] EINSCHUB_ENDE
+# EinschubKern     = {Zusatz | MEHRZEILER | KLAMMER_AUF EinschubKern KLAMMER_ZU }
+# SonderBelege     = "**" Beleg { [LZ] "**" Beleg }
+Zusatzzeilen     = LÜCKE { [ZLL] !Beschreibung (Zusatz | Verweise) }+
+
+@ Beleg_error    = /\.( *\n| *\*)/, "Belege bitte nicht mit einem Punkt ».« abschließen! (Entschuldigt diese umständliche Regel!)"
+@ Beleg_error    = /;\s*\*/, "Nach einem Semikolon werden weitere Belegstellen desselben Autors UND Werks erwartet, nicht: »{1}«"
+@ Beleg_error    = /(?<=")[.]/, 'Trennpunkte nach Zitaten müssen innerhalb der Anführungsstriche stehen, z.B. »punctum.«, nicht »punctum«. !'
+@ Beleg_error    = /"(?!$)/, 'An der Stelle:  »"{1}« ist kein weiteres Zitat erlaubt. Wurde zuvor evtl. eine doppelte runde Klammer »((« vergessen?'
+@ Beleg_error    = /\s*$/, "Unerwartetes Ende des Textes erreicht!"
+@ Beleg_error    = /\^ /, 'Das Hochstellungszeichen "^" muss dem Buchstaben (unmittelbar) vorangestellt werden.'
+@ Beleg_error    = /[()][^()]/, '»{1}« passt hier nicht. Einschübe, opera minora etc. sollten in doppelte runde Klammern »(( ... ))« gesetzt werden'
+@ Beleg_error    = '', "Hier darf es nicht weitergehen mit: »{1}« (Möglicherweise ein Folgefehler eines vorhergehen Fehlers.)"
+@ Beleg_resume   = /(?=\s*\*|\n *U_|\n *UU|\n *UNTER|\n *BEDEUTUNG|\n *ANHÄNGER|\n *SUB_LEMMA|\n *VERWEISE|\n *AUTOR|\)\)|\s*\n(?:\s*\n)+.|$)/
+Beleg            = (Zusatz &SCHLUESSELWORT !([ZW] AutorWerk))
+                   | (Zusatz &([ZW] "*") )
+                   | [!sim_ibid Zusatz] ( { Verweise [[ZW] !Beschreibung Zusatz] }+
+                                        | ["*"] Sekundärliteratur [BelegErgänzung]
+                                        | Quellenangabe )
+                     [ SEM !Beschreibung Zusatz ] !VARIANTEN_ABSCHLUSS
+                     §&( {/\s+/~} /\s*\)\)|\s*\*|\s*[A-Z{]/ | ~/\n\s*[^:\n]*:/ | /\s*$/ | /\]/ )
+Quellenangabe    = (Quelle | BelegStelle [BelegErgänzung]) { SEM [ZW] BelegStelle [BelegErgänzung]}
+# Primärliteratur  = { Zusatz } Quelle { SEM [ZW] BelegStelle }
+Quelle           = [ZW] ["*"] AutorWerk [!Beschreibung Zusatz] [Einschub] [!Beschreibung Zusatz]
+
+Sekundärliteratur = [{ZITAT KOMMA}+ [Zusatz]]
+                    ( Autorangabe [Anker] "," [ZW] Werktitel [Erscheinungsjahr] [_Verknüpfung|Zusatz]
+                    | Nachschlagewerk [_Verknüpfung|Zusatz]
+                    | op_cit_werk [_Verknüpfung|Zusatz])
+                    { SEM [ZW] !`*` BelegStelle } #  [";"]
+Nachschlagewerk  = Werkname [ZW] [Anker] [ZW] Band [Erscheinungsjahr] | Werkname [Erscheinungsjahr] [ZW] [Anker]
+op_cit_werk      = ["cf."] "op." "cit."
+Werkname         = /(?:Bibl\.|CC|Cod\.|Corp\.|Font\.|Hist\.|MG|Mittelniederdt\.|Althochdt\.|Dt\.|Frühmittelalterl\.|Mitt|Mon\. |Rer\.|Scrin\.|Script\.|Sources|Sudhoffs) \w+\.(?: \w+\.)?/~
+                   | /(?:Abh|Ahd\. |Anal|Anz|Arab\. |Arch|AS|Bonn|Bull|Dt|Edit|Forsch|Freib|GeschQuell|Hist|Jb|Journ|Lex|Liturg|Mediaev|Mittellat|Mitt|Münch|Nachr|Oberbayer|Quell|Rev|Rom|Röm|Schweiz|Stud|Theol|Thür|Verh|Veröff|Vjschr|Westdt|Z)[A-Z]\w+\./~
+                   | /Lex\.?(?: ?\w+\.?)+/
+                   | `Der` [LZ] "Geschichtsfreund" | [`N`] "Arch." | "MG (Script. rer.) " ("Lang." | "Mer.") | "SBBerl."
+                   | `Schweizerisches` [LZ] "Idiotikon"
+                   | `Allg.` [LZ] `Encyklopädie` [LZ] `d.` [LZ] `Wissenschaften` [LZ] `u.` [LZ] "Künste"
+                   | /Reallexikon (?: ?\w+\.?)+/
+                   | "ThLL." | "DuC." | `Mél.` [LZ] `de` [LZ] "Chellinck" | /Grzimeks Tierleben\.?/~
+                   | ( `DMLBS` | `ALMA` | `HRG` | `MIÖG` { WERKTITEL_FOLGE }  | "LThK."
+                     | `PG` |`PL` | `UB` | `RAC` | `RDK` | `RE` ) [`|`] !/(?!\d)\w/ ~
+Band             = WERKTITEL_FOLGE { [ZW] WERKTITEL_FOLGE }
+_Verknüpfung     = Anker ° (Verweise | KLAMMER_AUF Verweise KLAMMER_ZU | ECKIGE_AUF Verweise ECKIGE_ZU)
+                 | Anker | Verweise | KLAMMER_AUF Verweise KLAMMER_ZU | ECKIGE_AUF Verweise ECKIGE_ZU
+
+Autorangabe      =  { DEU_GEMISCHT { "-" DEU_GEMISCHT } } [Anker] {"," { DEU_GEMISCHT } [Anker] &","}
+Werktitel        =  [ZW] /(?![ap]\.)(?![0-9])/ WERKTITEL_FOLGE { [ZW] WERKTITEL_FOLGE } [Erscheinungsjahr]
+
+BelegStelle      = { !sim_ibid Zusatz } [ZW] [["*"] _Werk [Anker] SEM] Stellenangabe [[ZW] BelegText]
+BelegErgänzung   = [ZW | ~] (!Beschreibung Zusätze | Einschub)
+Stellenangabe    = ((om_erwartet | Stelle) ({EinzelVerweis}°[Zusatz]°[Datierung]) {[ZW] om_erwartet [[ZW] Datierung]})
+Datierung        = /\((?=[\w])/~ DATIERUNG /\)/~
+
+SEM              = [ZW] ";"
+
+@ BelegText_error  = '|', 'Das Zeichen »|« darf nur in einem mit »#« gekennzeichneten Lemmawort oder einer Abkürzung vorkommen!'
+@ BelegText_error  = '*', 'Quellen- und Literaturangaben sind innerhalb von Zitaten nur in Einschüben »((...))« erlaubt!'
+@ BelegText_error  = '@', 'Anker müssen in geschweifte Klammern eingeschlossen werden, z.B. »{{@ invado_3a}}«.'
+@ BelegText_resume = /(?=\s*\n(?:\s*\n)+.)/,  /\)\)/,  /\(\(/,  /(?<=")/
+BelegText        = /"/~ BelegKern §/"/~
+BelegKern        = { MEHRZEILER | BelegLemma | Verweise | Zusatz | Sperrung | Junktur | Kursiv
+                   | opus | KLAMMER_AUF BelegKern KLAMMER_ZU }
+BelegLemma       = Lemmawort
+@ Lemmawort_resume = / |\n/
+Lemmawort        = (tmesi | "#") § (("{" [ZW] §{ (LEMMAWORT | SATZZEICHEN) [ZW] }+ "}") | §LEMMAWORT)
+  tmesi          = "##"
+LEMMAWORT        =  (Athetese | [/-/] LEMMAFRAGMENT) { <-! / / (Athetese | LEMMAFRAGMENT) }
+Athetese         = [/[.|]*/]  `[` LEMMAFRAGMENT `]`
+LEMMAFRAGMENT    = [/[.|]*/] (LAT_GWORT | GRI_WORT | DEU_WORT)
+
+@AutorWerk_error = 'Unerwartete Zeichenfolge »{1}« im Autor- oder Werknamen. Wurde ein Semikolon vor der Stellenangabe »;« vergessen?'
+@AutorWerk_skip  = /(?=\)\)|;|\s\*)|\s*\n(?:\s*\n)+./
+AutorWerk        = Autor [Anker] §[_Werk [Anker]] &(";" | "))")
+Autor            = [ZW] [disambig_marker] AUTORANFANG { [ZW] (ROEMISCHE_ZAHL | AUTORNAME) } [fraglich] # "$" dient als optionale Markierung für Sekundärliteratur
+  fraglich       = "(?)" | "[?]"
+disambig_marker  = /\$ *\n? */ | FALSCHER_MARKER
+FALSCHER_MARKER  = /\§ *\n? */
+
+_Werk            = Werk [Erscheinungsjahr]
+Werk             = [ZW] /(?![ap]\.)(?![0-9])/ WERKTITEL_ANFANG { [ZW] WERKTITEL_FOLGE }
+
+# @Stelle_error    = '', 'Bei einer Stellenangabe muss nach einem Trennungsstrich immer ein zweiter Abschnitt folgen, nicht »{1}«.'
+# @Stelle_skip     = /(?="|\n|;|$)/
+Stelle           = &sim_ibid FesterZusatz | [fehler_fraglich] Stellenabschnitt ["|" (Stellenabschnitt | KeinAbschnitt ~)]
+  fehler_fraglich = ~ fraglich
+Stellenabschnitt = EinzelVerweis | { [ZW] !STELLE_VERBOTEN STELLENTEXT | Kursiv | _StellenVerweis }+
+KeinAbschnitt    = `-` | ``
+_StellenVerweis  = KLAMMER_AUF !/[acs]\./ { [STELLENKERN] Verweise }+ [STELLENKERN] KLAMMER_ZU
+
+om_erwartet      = &"((" § (om_ungeprüft | Einschub)
+om_ungeprüft     = "((" [ZW] om_kern_ungeprüft { "*" om_kern_ungeprüft } "))"
+opus             = &"((" §(opus_minus | Einschub)
+opus_minus       = "((" [ZW] om_kern { "*" om_kern_ungeprüft } "))"
+om_kern          = (OM_MARKIERUNG | &om_regeln) § (_Werk | Nachschlagewerk) [Verweise | _om_stelle] [_om_ergänzung] ([[ZW] opus]°[[ZW] Zusatz])
+om_kern_ungeprüft = ((OM_MARKIERUNG §(_Werk | Nachschlagewerk)) | (_Werk | Nachschlagewerk))
+                    [Verweise | _om_stelle] [_om_ergänzung] ([[ZW] om_erwartet]°[[ZW] Zusatz])
+_om_stelle       = [[";" !`;` [ZW]] Stelle [";" !`;`[ZW] OriginalStelle]] [BelegText]
+_om_ergänzung    = DOPPEL_SEM ([ZW] DATIERUNG [DOPPEL_SEM [ZW] om_zusatzangabe] | [ZW] om_zusatzangabe)
+DOPPEL_SEM       = ";;"
+om_zusatzangabe  = "vs." | "epist." | OM_FALSCHE_ZUSATZANGABE
+OM_FALSCHE_ZUSATZANGABE = FREITEXT
+om_regeln        = (OM_WERK | "rec." | "ed." | ("cod." | "Cod.") ("Vat" | "Paris" | "Darmst" | "Guelf"))  # "cf." /[A-Z]/
+OM_MARKIERUNG    = "OM:"
+OM_WERK          = /[A-Z][A-Z][A-Z]?(?![A-Z.])/
+# Bis max. drei Großbuchstaben in Folge, ohne dass auf den letzten Großbuchstaben ein Punkt folgt!
+OriginalStelle   = Stelle
+
+
+#### VERWEISE (LINKS) ########################################################
+
+Verweise            = { [","] [ZW] EinzelVerweis }+
+EinzelVerweis       = "{" VerweisKern § "}"
+                    | /\(/ `{` VerweisKern `}` /\)/~
+                    | <-&/{/ /\(/ VerweisKern § /\)/~  # Sonderform {(=> verweis_ziel)}
+@ VerweisKern_error = /[\w:\/\/=?.%&\[\] ]*,[^|]*}/, 'Komma als Trenner zwischen Verweisen nicht erlaubt. Verwende Semikolon »;«.'
+@ VerweisKern_error = /[^|]*}/, 'Kein gültiges Verweisziel: »{1}« oder Platzhalter »|-« fehlt nach Alias!'
+@ VerweisKern_error = /=>/, 'Kein gültiger Verweis »{1}«. Mglw. ein Verweiszeichen »=>« zu viel.'
+@ VerweisKern_error = '', 'Kein gültiger Verweis: »{1}«'
+@ VerweisKern_resume = /(?=\})/
+VerweisKern      = "=>" [ZW] §Verweis { ";" [ZW] Verweis }
+
+@ Anker_error    = '', "Ungültiger Ankername (erlaubte Zeichen: A-Z, a-z, 0-9 und _) oder keine schließende geschweifte Klammer."
+@ Anker_resume   = /\}[ \t]*/, /\n[ \t]*/
+Anker            = [ZW] "{" "@" [ZW] §ANKER_NAME "}"
+
+@ Verweis_error    = 'Hier muß eine gültige Zielangabe (z.B. »domus/domus_22«) oder NUR ein Platzhalter »-« stehen, aber kein weiterer Text es sei denn innerhalb von Kommentarzeichen /* ... */'
+@ Verweis_resume   = /(?=;|\})/
+Verweis          = (URL &/[;{})]/ | alias [ZW] "|" [ZW] (URL | "-")) [Textzusatz] § &/[;})]/
+URL              = !`}` [protokoll] { pfad } [ziel] ~
+Textzusatz       = "{" /\w+\.?/ "}"
+
+alias            = [nicht_klassisch] { T_ELEMENT | GROSSSCHRIFT | SATZZEICHEN | /[\w\/\t\n,.⇒→-]+/~ | Kursiv
+                   | KLAMMER_AUF { T_ELEMENT } KLAMMER_ZU }+
+protokoll        = /\w+:\/\/(?!\*)/
+# domäne           = /\w+\.\w+(?:\.\w+)*/
+pfad             = PFAD_NAME /\/(?!\*)/
+ziel             = PFAD_NAME { <-!/s?ptth/ `:` PFAD_NAME } [ (`#`| <-!/s?ptth/ `:`) /[\w=?.:\-%&\[\] \/]+/ ]
+
+
+#### GENERISCHE UND ATOMARE AUSDRÜCKE ########################################
+
+PFAD_NAME        = /[\w=~?.,%&\[\]-]+/
+ANKER_NAME       = /[a-zA-Z0-9_]+/~
+
+NAMENS_ABKÜRZUNG = _LATEIN_GROSS `.` ~                      # /[A-ZÄÖÜÁÀÂÓÒÔÚÙÛ]\./~
+NAME             = _LATEIN_GROSS _LATEIN_KLEIN_FOLGE ~      # /[A-ZÄÖÜÁÀÓÒÚÙÂÔÛ][a-zäöüßáàâóòôúùû]+/~
+
+DEU_WORT         = DEU_GROSS | DEU_KLEIN | GROSSBUCHSTABEN
+DEU_GWORT        = _LATEIN { _LATEIN_KLEIN_FOLGE | /-(?!-)/ } /\.?/ !_LATEIN !`|` ~
+DEU_KOMPOSITUM   = DEU_KOMP_GLIED { /-/ DEU_KOMP_GLIED } !_LATEIN !`|` ~
+DEU_KOMP_GLIED   = _LATEIN { _LATEIN_KLEIN_FOLGE } /\.?/
+DEU_GROSS        = (_LATEIN_GROSS | `˜`) { _LATEIN_KLEIN_FOLGE | /-(?!-)/ } /\.?/ !_LATEIN !`|` ~
+GROSSBUCHSTABEN  = !ROEMISCHE_ZAHL _LATEIN_GROSS_FOLGE /(?=[ ,\^\t\n)]|$)/ ~
+DEU_KLEIN        = _LATEIN_KLEIN_FOLGE { _LATEIN_KLEIN_FOLGE | KLEINER_ZEICHEN
+                                       | GRÖßER_ZEICHEN | /-(?!-)/ } /\.?/ !_LATEIN !`|` ~
+DEU_GEMISCHT     = _LATEIN { _LATEIN_FOLGE | /-(?!-)/ } /\.?/ !_LATEIN !`|` ~
+
+LAT_WORT         = _LATEIN_KLEIN_FOLGE
+                   { _LATEIN_KLEIN_FOLGE | `(` _LATEIN_KLEIN_FOLGE `)` | /-(?!-)/ } /\.?/
+                   !_LATEIN ~
+LAT_GWORT        = _LATEIN
+                   { _LATEIN_KLEIN_FOLGE | /[_\-](?![_\-.|])/ | /(?:\|\.?)|(?:\.\|)/ _LATEIN_KLEIN_FOLGE
+                   | `(` _LATEIN_KLEIN_FOLGE `)` | `[` _LATEIN_KLEIN_FOLGE `]`
+                   | KLEINER_ZEICHEN | GRÖßER_ZEICHEN } !_LATEIN ~
+LAT_ABK          = /\w\./~   # Lateinische Namensabkürzung
+GROSSSCHRIFT     = _LATEIN_GROSS_FOLGE { _LATEIN_GROSS_FOLGE | /-(?!-)/ } !_LATEIN ~
+
+GRI_WORT         = [GRI_VERBOTEN] { /(?!--)[\-.\[\]]*
+                   (?:(?:[\u0370-\u0377]|[\u037A-\u037F]|[\u0384-\u038A]|\u038C|
+                         [\u038E-\u03A1]|[\u03A3-\u03E1]|[\u03F0-\u03FF]|[\u1D26-\u1D2A]|
+                         [\u1D66-\u1D6A]|[\u1F00-\u1F15]|[\u1F18-\u1F1D]|[\u1F20-\u1F45]|
+                         [\u1F48-\u1F4D]|[\u1F50-\u1F57]|\u1F59|\u1F5B|\u1F5D|[\u1F5F-\u1F7D]|
+                         [\u1F80-\u1FB4]|[\u1FB6-\u1FC4]|[\u1FC6-\u1FD3]|[\u1FD6-\u1FDB]|
+                         [\u1FDD-\u1FEF]|[\u1FF2-\u1FF4]|[\u1FF6-\u1FFE]|\uAB65|
+                         [\U00010140-\U0001018D]|\U000101A0|[\U0001D200-\U0001D241]|
+                         \U0001D245)[\-.\[\]]*)+(?<!--)/ [GRI_VERBOTEN]
+                                  | KLEINER_ZEICHEN | GRÖßER_ZEICHEN }+ ~
+GRI_VERBOTEN     = /[èéêëìíîïòóôõöùúûüü]/
+
+SEITENZAHL       = /\d+/~
+ARABISCHE_ZAHL   = /\d+/~
+ROEMISCHE_ZAHL   = ROEM_GROSSBUCHSTABEN | ROEM_NORMAL
+ROEM_GROSSBUCHSTABEN = "$" ROEM_NORMAL
+ROEM_NORMAL      = /(?![MD][^\w])(?=[MDCLXVI])M*(C[MD]|D?C*)(X[CL]|L?X*)(I[XV]|V?I*)(?=[^\w])\.?/~
+HOCHGESTELLT     = ("{^" | "^{") FREITEXT "}" | "^" /[\w.]+/~
+TIEFGESTELLT     = ("{_" | "_{") FREITEXT "}" | "_" /[\w.]+/~
+SCHLUESSELWORT   = ~/\s*/~ !ROEMISCHE_ZAHL /[A-ZÄÖÜ_]{4,}\s+/  # ACTHUNG: VERWECHSELBAR mit Autorangabe!!!
+
+AUTORANFANG      = `LXX` | !ROEMISCHE_ZAHL /\[?(?:[A-ZÄÖÜ][A-ZÄÖÜ.\-]+)\]?(?=(?:\s+|;|$))/~
+    # Sollten hier Schlüsselworte explizit ausgeschlossen werden?
+    # LXX ist ein (Quasi-)Autorname! Es steht für die Spetuaginta
+AUTORNAME        = /\[?(?:[A-ZÄÖÜ.\-]+|[0-9\-]+)\]?(?=(?:\s+|;|$))/~  # nicht mehr benötigt |[MDCLXVI\-]+
+WERKTITEL_ANFANG = [ECKIGE_AUF] ( /[A-ZÄÖÜ-]{0,3}/ !/[A-ZÄÖÜ]/ [ _WERKTITEL_KERN ] | /[MDCLXVI]+|-{1,1}/ !/[A-ZÄÖÜ]/ ) [ECKIGE_ZU] ~
+WERKTITEL_FOLGE  = { [ECKIGE_AUF | KLAMMER_AUF]
+                     ( /[A-ZÄÖÜa-zßäöüéáèàœæçëâûôîï']?/ _WERKTITEL_KERN | /[MDCLXVI]+|[A-ZÄÖÜ]{1,1}|-{1,1}/
+                     | !(Erscheinungsjahr &/;|\)\)/) /[0-9]+/ )
+                     [ECKIGE_ZU | KLAMMER_ZU] }+ ~
+_WERKTITEL_KERN  = { _WERKTITEL_ZEICHEN
+                   | KLAMMER_AUF !OM_INDIKATOR _WERKTITEL_ZEICHEN [HOCHGESTELLT | TIEFGESTELLT] KLAMMER_ZU
+                   | HOCHGESTELLT | TIEFGESTELLT }+
+_WERKTITEL_ZEICHEN = /[a-zßäöüéáèàœæçëâûôîï,.'?\/]+/
+Erscheinungsjahr   = [AUFLAGE] JAHR [PUNKT] ~
+  AUFLAGE          = ("{^" | "^{") /[1-9][0-9]?[0-9]?/ "}" | "^" /[1-9]/
+  JAHR             = /[1-9][0-9][0-9][0-9](?=[ .\n])/
+  PUNKT            = `.`
+
+JAHRESZAHL       = /[1-9][0-9](?:[0-9][0-9])?/
+OM_INDIKATOR     = /rec\.|ed\.|cod\. /
+
+BINDESTRICH      = /(?:-(?!-))/
+SATZZEICHEN      = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|(?:\[(?!\[))|(?:\](?!\]))|[.]+)|[`´''‘’\/?!~]/~
+    # div. Satzzeichen, aber keine doppelten ,, ;; oder :: und keine Klammern
+TEIL_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:-(?!-))|[.]+)|[`''‘’\/?!]/~  # Satzeichen bis auf Doppelpunkt ":", Semikolon ";" und runde oder eckige Klammern
+ZITAT_SATZZEICHEN = /(?!->)(?:(?:,(?!,))|(?:;(?!;))|(?::(?!:))|(?:-(?!-))|[.]+)|[\/?!]/~  # innerhalb eines Zitats erlaubte Satzzeichen
+
+# BUCHSTABENFOLGE  = /\w+/~
+# ZEICHENFOLGE     = /[\w-]+/~
+TEXTELEMENT      = ROEMISCHE_ZAHL | DEU_WORT | DEU_GEMISCHT | GRI_WORT | LAT_GWORT
+                 | SEITENZAHL | HOCHGESTELLT | TIEFGESTELLT | SPEZIAL | SONDERZEICHEN ~ | UNICODE ~ | AUSGEWICHEN
+T_ELEMENT        = ROEMISCHE_ZAHL | DEU_WORT | DEU_GEMISCHT | GRI_WORT
+                 | SEITENZAHL | HOCHGESTELLT | TIEFGESTELLT | SPEZIAL | SONDERZEICHEN ~ | AUSGEWICHEN
+SONDERZEICHEN    = /[\u2014§°∻𐆒₰℈℥ℨ∋∻⊢⊣♮﹂𝔣ꝑϽ =]/
+UNICODE          = /\\u\d+/
+SPEZIAL          = homothetisch
+    homothetisch = "-:-"
+AUSGEWICHEN      = /\\[#*{}\[\]()\\<>]/~
+KLEINER_ZEICHEN  = /<(?!<|\/)/~
+GRÖßER_ZEICHEN   = />(?!>)/~
+EINSCHUB_ANFANG  = /\(\(/~
+EINSCHUB_ENDE    = /\)\)/~
+STELLENTEXT      = STELLENKERN | KLAMMER_AUF !/(?:dipl. )?[acs]\./ STELLENKERN KLAMMER_ZU [TEIL_SATZZEICHEN]
+DATIERUNG        = [DATIERUNG_FEHLER] { STELLENKERN | HOCHGESTELLT | TIEFGESTELLT | ROEMISCHE_ZAHL }+
+DATIERUNG_FEHLER = /vs\.|[a-z]\.[\w\d]/
+STELLENKERN      = (!TEIL_SATZZEICHEN | &ZITAT)
+                   { ZITAT | TEXTELEMENT | TEIL_SATZZEICHEN | AUSGEWICHEN
+                     | /\[/~ _STELLENKERN /\]/~ }+
+_STELLENKERN     = { TEXTELEMENT | TEIL_SATZZEICHEN | AUSGEWICHEN }+
+# NACHTRAGSSTELLE  = (!TEIL_SATZZEICHEN | &ZITAT) { ZITAT | !"post" TEXTELEMENT | TEIL_SATZZEICHEN | AUSGEWICHEN }
+EINZEILER        = { TEXTELEMENT | ZITAT | TEIL_SATZZEICHEN | KLAMMER_AUF | KLAMMER_ZU | ECKIGE_AUF | ECKIGE_ZU }+
+ETYMOLOGIE_TEXT  = { DEU_GWORT | DEU_KOMPOSITUM | LAT_GWORT | GRI_WORT
+                   | KLAMMER_AUF | KLAMMER_ZU | ECKIGE_AUF | ECKIGE_ZU | BINDESTRICH | /[.']/ }+
+FREITEXT         = { TEXTELEMENT | ZITAT | SATZZEICHEN | ZW | KLAMMER_AUF | KLAMMER_ZU
+                   | GROSSSCHRIFT | GRÖßER_ZEICHEN | KLEINER_ZEICHEN }+
+XML              = `<` TAG_NAME `>` ~ FREITEXT §`</` ::TAG_NAME `>`
+TAG_NAME         = /\w+/
+
+ZITAT            = ZITAT_ANFANG { TEXTELEMENT | ZITAT_SATZZEICHEN  | KLAMMER_AUF | KLAMMER_ZU
+                                | ECKIGE_AUF | ECKIGE_ZU | BelegLemma | Zusatz | opus_minus | Einschub
+                                | Verweise | Sperrung | Junktur | Kursiv }
+                   ZITAT_ENDE
+ZITAT_ANFANG     =  <-!/\w/ /['‘`]/
+ZITAT_ENDE       = /['´’]/ !/\w/ ~
+
+KLAMMER_AUF      = /\((?!\()/~
+KLAMMER_ZU       = /\)(?!\))/~
+ECKIGE_AUF       = /\[(?!\[)/~
+ECKIGE_ZU        = /\](?!\])/~
+
+MEHRZEILER       = { FREITEXT | /\s+(?=[\w,;:.\-])/ }+
+
+L                = ~                         # signifikantes Leerzeichen
+LL               = LZ                        # Synonym für Leerzeilen oder -zeichen. Wird anders als LZ nicht gelöscht, sondern durch L ersetzt
+
+# TR               = ABS | LZ                # (beliebiger) Trenner
+# ABS              = /\s*;;?/ LZ | ZWW | /$/   # Abschluss (durch Semikolon oder Zeilenwechsel)
+LABS             = ABS
+ABS              = /\s*/ (/;;?/ LZ | /$/) | ZWW  # Abschluss (durch Semikolon oder Zeilenwechsel)
+LZ               = { COMMENT__ | /\s+/ }+    # Leerzeichen oder -zeilen
+DPP              = /::?/~                    # Doppelpunkt als Trenner
+KOMMA            = ","
+SEMIKOLON        = ";"
+
+ZW               = !LÜCKE ZEILENSPRUNG       # Zeilenwechsel, aber keine Leerzeile(n)
+ZLL              = ZWW                       # mindestens ein Zeilenwechsel, wird anders als ZWW nicht gelöscht
+ZWW              = ZEILENSPRUNG [ LZ ]       # mindestens ein Zeilenwechsel
+LÜCKE            = KOMMENTARZEILEN LEERZEILEN [LZ] # Leerraum mit mindestens einer echten Leerzeile
+LEERZEILEN       = /[ \t]*(?:\n[ \t]*)+\n/ ~/\n?/ # eine oder mehrere echte LEERZEILEN
+# RZS              = /\s*?\n|$/                # Rückwärtiger Zeilensprung oder Textanfang
+
+ZEILENSPRUNG     = ~/\n/~                    # /[ \t]*\n/~
+KOMMENTARZEILEN  = { /[ \t]*\n?[ \t]*/ COMMENT__ }  # echte Kommentarzeilen
+
+KATEGORIENZEILE  = ~ ["|"] { /[^":\n\/{]+/~ | Zusatz } ~ /:/~ /\n/ !(~ `*`)    #/\n(?! *\*)/
+    # Kategorienzeilen enthalten genau einen Doppelpunkt am Ende der Zeile
+    # Es ist keine Kategorienzeile, wenn die nächste Zeile mit einem Beleg-Stern beginnt
+
+VARIANTE         = ~ { /[^":\n\/{}()]+/~ | /\((?!\()/ | /\)(?!\))/ } VARIANTEN_ABSCHLUSS
+VARIANTEN_ABSCHLUSS = ~ /:/ # <-! /(?:(?![ \t]*(?:\n[ \t]*)+\n).)*GNUTUEDEB/
+    # Eine Variantenzeile enthält irgendwann einen Doppelpunkt, der nicht Teil eines Zitats
+    # oder eines Kommentars ist. Eine Variante enthält niemals doppelte Runde Klammern
+
+# FORTSETZUNG      = !(ZWW /[^:\n]+[:]/)
+STELLE_VERBOTEN    = VARIANTE | SCHLUESSELWORT
+
+DATEI_ENDE       = !/./
+# NIEMALS        = /(?!.)/
+
+
+#### Buchstabensätze #########################################################
+
+_LATEIN  = /[\x41-\x5A]|[\x61-\x7A]|[\xC0-\xD6]|[\xD8-\xF6]|[\u00F8-\u02AF]|[\u0363-\u036F]
+            |[\u1D00-\u1D25]|[\u1D62-\u1D65]|[\u1D6B-\u1D77]|[\u1D79-\u1D9A]|\u1DCA
+            |[\u1DD3-\u1DF4]|[\u1E00-\u1EFF]|\u2071|\u207F|[\u2090-\u209C]|\u2184|[\u249C-\u24E9]
+            |[\u271D-\u271F]|\u2C2E|\u2C5E|[\u2C60-\u2C7C]|[\u2C7E-\u2C7F]|[\uA722-\uA76F]
+            |[\uA771-\uA787]|[\uA78B-\uA7BF]|[\uA7C2-\uA7C6]|\uA7F7|[\uA7FA-\uA7FF]
+            |[\uAB30-\uAB5A]|[\uAB60-\uAB64]|[\uAB66-\uAB67]|[\uFB00-\uFB06]|[\uFF21-\uFF3A]
+            |[\uFF41-\uFF5A]|[\U0001F110-\U0001F12C]|[\U0001F130-\U0001F149]
+            |[\U0001F150-\U0001F169]|[\U0001F170-\U0001F18A]|\U0001F1A5|[\U0001F520-\U0001F521]
+            |\U0001F524|[\U0001F546-\U0001F547]|[\U000E0041-\U000E005A]|[\U000E0061-\U000E007A]/
+
+_LATEIN_FOLGE = /(?:[\x41-\x5A]|[\x61-\x7A]|[\xC0-\xD6]|[\xD8-\xF6]|[\u00F8-\u02AF]|[\u0363-\u036F]
+            |[\u1D00-\u1D25]|[\u1D62-\u1D65]|[\u1D6B-\u1D77]|[\u1D79-\u1D9A]|\u1DCA
+            |[\u1DD3-\u1DF4]|[\u1E00-\u1EFF]|\u2071|\u207F|[\u2090-\u209C]|\u2184|[\u249C-\u24E9]
+            |[\u271D-\u271F]|\u2C2E|\u2C5E|[\u2C60-\u2C7C]|[\u2C7E-\u2C7F]|[\uA722-\uA76F]
+            |[\uA771-\uA787]|[\uA78B-\uA7BF]|[\uA7C2-\uA7C6]|\uA7F7|[\uA7FA-\uA7FF]
+            |[\uAB30-\uAB5A]|[\uAB60-\uAB64]|[\uAB66-\uAB67]|[\uFB00-\uFB06]|[\uFF21-\uFF3A]
+            |[\uFF41-\uFF5A]|[\U0001F110-\U0001F12C]|[\U0001F130-\U0001F149]
+            |[\U0001F150-\U0001F169]|[\U0001F170-\U0001F18A]|\U0001F1A5|[\U0001F520-\U0001F521]
+            |\U0001F524|[\U0001F546-\U0001F547]|[\U000E0041-\U000E005A]|[\U000E0061-\U000E007A])+/
+
+_LATEIN_KLEIN = /[\x61-\x7A]|[\xDF-\xF6]|[\xF8-\xFF]|\u0101|\u0103|\u0105|\u0107|\u0109|\u010B|\u010D
+            |\u010F|\u0111|\u0113|\u0115|\u0117|\u0119|\u011B|\u011D|\u011F|\u0121|\u0123|\u0125
+            |\u0127|\u0129|\u012B|\u012D|\u012F|\u0131|\u0133|\u0135|[\u0137-\u0138]|\u013A|\u013C
+            |\u013E|\u0140|\u0142|\u0144|\u0146|[\u0148-\u0149]|\u014B|\u014D|\u014F|\u0151|\u0153
+            |\u0155|\u0157|\u0159|\u015B|\u015D|\u015F|\u0161|\u0163|\u0165|\u0167|\u0169|\u016B
+            |\u016D|\u016F|\u0171|\u0173|\u0175|\u0177|\u017A|\u017C|[\u017E-\u0180]|\u0183|\u0185
+            |\u0188|[\u018C-\u018D]|\u0192|\u0195|[\u0199-\u019B]|\u019E|\u01A1|\u01A3|\u01A5
+            |\u01A8|\u01AB|\u01AD|\u01B0|\u01B4|\u01B6|[\u01B9-\u01BA]|\u01BD|[\u01C5-\u01C6]
+            |[\u01C8-\u01C9]|[\u01CB-\u01CC]|\u01CE|\u01D0|\u01D2|\u01D4|\u01D6|\u01D8|\u01DA
+            |[\u01DC-\u01DD]|\u01DF|\u01E1|\u01E3|\u01E5|\u01E7|\u01E9|\u01EB|\u01ED
+            |[\u01EF-\u01F0]|[\u01F2-\u01F3]|\u01F5|\u01F9|\u01FB|\u01FD|\u01FF|\u0201|\u0203
+            |\u0205|\u0207|\u0209|\u020B|\u020D|\u020F|\u0211|\u0213|\u0215|\u0217|\u0219|\u021B
+            |\u021D|\u021F|\u0221|\u0223|\u0225|\u0227|\u0229|\u022B|\u022D|\u022F|\u0231
+            |[\u0233-\u0239]|\u023C|[\u023F-\u0240]|\u0242|\u0247|[\u0249-\u024B]|\u024D
+            |[\u024F-\u0293]|[\u0299-\u02A0]|[\u02A3-\u02AB]|[\u02AE-\u02AF]|[\u0363-\u036F]
+            |[\u1D00-\u1D23]|[\u1D62-\u1D65]|[\u1D6B-\u1D77]|[\u1D79-\u1D9A]|\u1DCA
+            |[\u1DD3-\u1DF4]|\u1E01|\u1E03|\u1E05|\u1E07|\u1E09|\u1E0B|\u1E0D|\u1E0F|\u1E11|\u1E13
+            |\u1E15|\u1E17|\u1E19|\u1E1B|\u1E1D|\u1E1F|\u1E21|\u1E23|\u1E25|\u1E27|\u1E29|\u1E2B
+            |\u1E2D|\u1E2F|\u1E31|\u1E33|\u1E35|\u1E37|\u1E39|\u1E3B|\u1E3D|\u1E3F|\u1E41|\u1E43
+            |\u1E45|\u1E47|\u1E49|\u1E4B|\u1E4D|\u1E4F|\u1E51|\u1E53|\u1E55|\u1E57|\u1E59|\u1E5B
+            |\u1E5D|\u1E5F|\u1E61|\u1E63|\u1E65|\u1E67|\u1E69|\u1E6B|\u1E6D|\u1E6F|\u1E71|\u1E73
+            |\u1E75|\u1E77|\u1E79|\u1E7B|\u1E7D|\u1E7F|\u1E81|\u1E83|\u1E85|\u1E87|\u1E89|\u1E8B
+            |\u1E8D|\u1E8F|\u1E91|\u1E93|[\u1E95-\u1E9D]|\u1E9F|\u1EA1|\u1EA3|\u1EA5|\u1EA7|\u1EA9
+            |\u1EAB|\u1EAD|\u1EAF|\u1EB1|\u1EB3|\u1EB5|\u1EB7|\u1EB9|\u1EBB|\u1EBD|\u1EBF|\u1EC1
+            |\u1EC3|\u1EC5|\u1EC7|\u1EC9|\u1ECB|\u1ECD|\u1ECF|\u1ED1|\u1ED3|\u1ED5|\u1ED7|\u1ED9
+            |\u1EDB|\u1EDD|\u1EDF|\u1EE1|\u1EE3|\u1EE5|\u1EE7|\u1EE9|\u1EEB|\u1EED|\u1EEF|\u1EF1
+            |\u1EF3|\u1EF5|\u1EF7|\u1EF9|\u1EFB|\u1EFD|\u1EFF|\u2071|\u207F|[\u2090-\u209C]|\u2184
+            |[\u249C-\u24B5]|[\u24D0-\u24E9]|\u2C5E|\u2C61|[\u2C65-\u2C66]|\u2C68|\u2C6A|\u2C6C
+            |\u2C71|[\u2C73-\u2C74]|[\u2C76-\u2C7C]|\uA723|\uA725|\uA727|\uA729|\uA72B|\uA72D
+            |[\uA72F-\uA731]|\uA733|\uA735|\uA737|\uA739|\uA73B|\uA73D|\uA73F|\uA741|\uA743|\uA745
+            |\uA747|\uA749|\uA74B|\uA74D|\uA74F|\uA751|\uA753|\uA755|\uA757|\uA759|\uA75B|\uA75D
+            |\uA75F|\uA761|\uA763|\uA765|\uA767|\uA769|\uA76B|\uA76D|\uA76F|[\uA771-\uA778]|\uA77A
+            |\uA77C|\uA77F|\uA781|\uA783|\uA785|\uA787|\uA78C|\uA78E|\uA791|[\uA793-\uA795]|\uA797
+            |\uA799|\uA79B|\uA79D|\uA79F|\uA7A1|\uA7A3|\uA7A5|\uA7A7|\uA7A9|[\uA7AE-\uA7AF]|\uA7B5
+            |\uA7B7|\uA7B9|\uA7BB|\uA7BD|\uA7BF|\uA7C3|\uA7FA|[\uAB30-\uAB5A]|[\uAB60-\uAB64]
+            |[\uAB66-\uAB67]|[\uFB00-\uFB06]|[\uFF41-\uFF5A]|\U0001F1A5|\U0001F521
+            |[\U000E0061-\U000E007A]/
+
+_LATEIN_KLEIN_FOLGE = /(?:[\x61-\x7A]|[\xDF-\xF6]|[\xF8-\xFF]|\u0101|\u0103|\u0105|\u0107|\u0109|\u010B|\u010D
+            |\u010F|\u0111|\u0113|\u0115|\u0117|\u0119|\u011B|\u011D|\u011F|\u0121|\u0123|\u0125
+            |\u0127|\u0129|\u012B|\u012D|\u012F|\u0131|\u0133|\u0135|[\u0137-\u0138]|\u013A|\u013C
+            |\u013E|\u0140|\u0142|\u0144|\u0146|[\u0148-\u0149]|\u014B|\u014D|\u014F|\u0151|\u0153
+            |\u0155|\u0157|\u0159|\u015B|\u015D|\u015F|\u0161|\u0163|\u0165|\u0167|\u0169|\u016B
+            |\u016D|\u016F|\u0171|\u0173|\u0175|\u0177|\u017A|\u017C|[\u017E-\u0180]|\u0183|\u0185
+            |\u0188|[\u018C-\u018D]|\u0192|\u0195|[\u0199-\u019B]|\u019E|\u01A1|\u01A3|\u01A5
+            |\u01A8|\u01AB|\u01AD|\u01B0|\u01B4|\u01B6|[\u01B9-\u01BA]|\u01BD|[\u01C5-\u01C6]
+            |[\u01C8-\u01C9]|[\u01CB-\u01CC]|\u01CE|\u01D0|\u01D2|\u01D4|\u01D6|\u01D8|\u01DA
+            |[\u01DC-\u01DD]|\u01DF|\u01E1|\u01E3|\u01E5|\u01E7|\u01E9|\u01EB|\u01ED
+            |[\u01EF-\u01F0]|[\u01F2-\u01F3]|\u01F5|\u01F9|\u01FB|\u01FD|\u01FF|\u0201|\u0203
+            |\u0205|\u0207|\u0209|\u020B|\u020D|\u020F|\u0211|\u0213|\u0215|\u0217|\u0219|\u021B
+            |\u021D|\u021F|\u0221|\u0223|\u0225|\u0227|\u0229|\u022B|\u022D|\u022F|\u0231
+            |[\u0233-\u0239]|\u023C|[\u023F-\u0240]|\u0242|\u0247|[\u0249-\u024B]|\u024D
+            |[\u024F-\u0293]|[\u0299-\u02A0]|[\u02A3-\u02AB]|[\u02AE-\u02AF]|[\u0363-\u036F]
+            |[\u1D00-\u1D23]|[\u1D62-\u1D65]|[\u1D6B-\u1D77]|[\u1D79-\u1D9A]|\u1DCA
+            |[\u1DD3-\u1DF4]|\u1E01|\u1E03|\u1E05|\u1E07|\u1E09|\u1E0B|\u1E0D|\u1E0F|\u1E11|\u1E13
+            |\u1E15|\u1E17|\u1E19|\u1E1B|\u1E1D|\u1E1F|\u1E21|\u1E23|\u1E25|\u1E27|\u1E29|\u1E2B
+            |\u1E2D|\u1E2F|\u1E31|\u1E33|\u1E35|\u1E37|\u1E39|\u1E3B|\u1E3D|\u1E3F|\u1E41|\u1E43
+            |\u1E45|\u1E47|\u1E49|\u1E4B|\u1E4D|\u1E4F|\u1E51|\u1E53|\u1E55|\u1E57|\u1E59|\u1E5B
+            |\u1E5D|\u1E5F|\u1E61|\u1E63|\u1E65|\u1E67|\u1E69|\u1E6B|\u1E6D|\u1E6F|\u1E71|\u1E73
+            |\u1E75|\u1E77|\u1E79|\u1E7B|\u1E7D|\u1E7F|\u1E81|\u1E83|\u1E85|\u1E87|\u1E89|\u1E8B
+            |\u1E8D|\u1E8F|\u1E91|\u1E93|[\u1E95-\u1E9D]|\u1E9F|\u1EA1|\u1EA3|\u1EA5|\u1EA7|\u1EA9
+            |\u1EAB|\u1EAD|\u1EAF|\u1EB1|\u1EB3|\u1EB5|\u1EB7|\u1EB9|\u1EBB|\u1EBD|\u1EBF|\u1EC1
+            |\u1EC3|\u1EC5|\u1EC7|\u1EC9|\u1ECB|\u1ECD|\u1ECF|\u1ED1|\u1ED3|\u1ED5|\u1ED7|\u1ED9
+            |\u1EDB|\u1EDD|\u1EDF|\u1EE1|\u1EE3|\u1EE5|\u1EE7|\u1EE9|\u1EEB|\u1EED|\u1EEF|\u1EF1
+            |\u1EF3|\u1EF5|\u1EF7|\u1EF9|\u1EFB|\u1EFD|\u1EFF|\u2071|\u207F|[\u2090-\u209C]|\u2184
+            |[\u249C-\u24B5]|[\u24D0-\u24E9]|\u2C5E|\u2C61|[\u2C65-\u2C66]|\u2C68|\u2C6A|\u2C6C
+            |\u2C71|[\u2C73-\u2C74]|[\u2C76-\u2C7C]|\uA723|\uA725|\uA727|\uA729|\uA72B|\uA72D
+            |[\uA72F-\uA731]|\uA733|\uA735|\uA737|\uA739|\uA73B|\uA73D|\uA73F|\uA741|\uA743|\uA745
+            |\uA747|\uA749|\uA74B|\uA74D|\uA74F|\uA751|\uA753|\uA755|\uA757|\uA759|\uA75B|\uA75D
+            |\uA75F|\uA761|\uA763|\uA765|\uA767|\uA769|\uA76B|\uA76D|\uA76F|[\uA771-\uA778]|\uA77A
+            |\uA77C|\uA77F|\uA781|\uA783|\uA785|\uA787|\uA78C|\uA78E|\uA791|[\uA793-\uA795]|\uA797
+            |\uA799|\uA79B|\uA79D|\uA79F|\uA7A1|\uA7A3|\uA7A5|\uA7A7|\uA7A9|[\uA7AE-\uA7AF]|\uA7B5
+            |\uA7B7|\uA7B9|\uA7BB|\uA7BD|\uA7BF|\uA7C3|\uA7FA|[\uAB30-\uAB5A]|[\uAB60-\uAB64]
+            |[\uAB66-\uAB67]|[\uFB00-\uFB06]|[\uFF41-\uFF5A]|\U0001F1A5|\U0001F521
+            |[\U000E0061-\U000E007A])+/
+
+_LATEIN_GROSS = /[\x41-\x5A]|[\xC0-\xD6]|[\xD8-\xDE]|\u0100|\u0102|\u0104|\u0106|\u0108|\u010A|\u010C
+           |\u010E|\u0110|\u0112|\u0114|\u0116|\u0118|\u011A|\u011C|\u011E|\u0120|\u0122|\u0124
+           |\u0126|\u0128|\u012A|\u012C|\u012E|\u0130|\u0132|\u0134|\u0136|\u0139|\u013B|\u013D
+           |\u013F|\u0141|\u0143|\u0145|\u0147|\u014A|\u014C|\u014E|\u0150|\u0152|\u0154|\u0156
+           |\u0158|\u015A|\u015C|\u015E|\u0160|\u0162|\u0164|\u0166|\u0168|\u016A|\u016C|\u016E
+           |\u0170|\u0172|\u0174|\u0176|[\u0178-\u0179]|\u017B|\u017D|[\u0181-\u0182]|\u0184
+           |[\u0186-\u0187]|[\u0189-\u018B]|[\u018E-\u0191]|[\u0193-\u0194]|[\u0196-\u0198]
+           |[\u019C-\u019D]|[\u019F-\u01A0]|\u01A2|\u01A4|\u01A7|\u01A9|\u01AC|[\u01AE-\u01AF]
+           |[\u01B1-\u01B3]|\u01B5|[\u01B7-\u01B8]|\u01BC|[\u01C4-\u01C5]|[\u01C7-\u01C8]
+           |[\u01CA-\u01CB]|\u01CD|\u01CF|\u01D1|\u01D3|\u01D5|\u01D7|\u01D9|\u01DB|\u01DE|\u01E0
+           |\u01E2|\u01E4|\u01E6|\u01E8|\u01EA|\u01EC|\u01EE|[\u01F1-\u01F2]|\u01F4
+           |[\u01F6-\u01F8]|\u01FA|\u01FC|\u01FE|\u0200|\u0202|\u0204|\u0206|\u0208|\u020A|\u020C
+           |\u020E|\u0210|\u0212|\u0214|\u0216|\u0218|\u021A|\u021C|\u021E|\u0220|\u0222|\u0224
+           |\u0226|\u0228|\u022A|\u022C|\u022E|\u0230|\u0232|[\u023A-\u023B]|[\u023D-\u023E]
+           |\u0241|[\u0243-\u0246]|\u0248|\u024A|\u024C|\u024E|\u0262|\u026A|\u0274|\u0276
+           |[\u0280-\u0281]|\u028F|\u0299|[\u029B-\u029C]|\u029F|[\u1D00-\u1D01]|[\u1D03-\u1D07]
+           |[\u1D0A-\u1D10]|\u1D15|[\u1D18-\u1D1C]|[\u1D20-\u1D23]|\u1D7B|\u1D7E|\u1DDB
+           |[\u1DDE-\u1DDF]|[\u1DE1-\u1DE2]|\u1E00|\u1E02|\u1E04|\u1E06|\u1E08|\u1E0A|\u1E0C
+           |\u1E0E|\u1E10|\u1E12|\u1E14|\u1E16|\u1E18|\u1E1A|\u1E1C|\u1E1E|\u1E20|\u1E22|\u1E24
+           |\u1E26|\u1E28|\u1E2A|\u1E2C|\u1E2E|\u1E30|\u1E32|\u1E34|\u1E36|\u1E38|\u1E3A|\u1E3C
+           |\u1E3E|\u1E40|\u1E42|\u1E44|\u1E46|\u1E48|\u1E4A|\u1E4C|\u1E4E|\u1E50|\u1E52|\u1E54
+           |\u1E56|\u1E58|\u1E5A|\u1E5C|\u1E5E|\u1E60|\u1E62|\u1E64|\u1E66|\u1E68|\u1E6A|\u1E6C
+           |\u1E6E|\u1E70|\u1E72|\u1E74|\u1E76|\u1E78|\u1E7A|\u1E7C|\u1E7E|\u1E80|\u1E82|\u1E84
+           |\u1E86|\u1E88|\u1E8A|\u1E8C|\u1E8E|\u1E90|\u1E92|\u1E94|\u1E9E|\u1EA0|\u1EA2|\u1EA4
+           |\u1EA6|\u1EA8|\u1EAA|\u1EAC|\u1EAE|\u1EB0|\u1EB2|\u1EB4|\u1EB6|\u1EB8|\u1EBA|\u1EBC
+           |\u1EBE|\u1EC0|\u1EC2|\u1EC4|\u1EC6|\u1EC8|\u1ECA|\u1ECC|\u1ECE|\u1ED0|\u1ED2|\u1ED4
+           |\u1ED6|\u1ED8|\u1EDA|\u1EDC|\u1EDE|\u1EE0|\u1EE2|\u1EE4|\u1EE6|\u1EE8|\u1EEA|\u1EEC
+           |\u1EEE|\u1EF0|\u1EF2|\u1EF4|\u1EF6|\u1EF8|\u1EFA|\u1EFC|\u1EFE|[\u24B6-\u24CF]|\u2C2E
+           |\u2C60|[\u2C62-\u2C64]|\u2C67|\u2C69|\u2C6B|[\u2C6D-\u2C70]|\u2C72|\u2C75|\u2C7B
+           |[\u2C7E-\u2C7F]|\uA722|\uA724|\uA726|\uA728|\uA72A|\uA72C|\uA72E|[\uA730-\uA732]
+           |\uA734|\uA736|\uA738|\uA73A|\uA73C|\uA73E|\uA740|\uA742|\uA744|\uA746|\uA748|\uA74A
+           |\uA74C|\uA74E|\uA750|\uA752|\uA754|\uA756|\uA758|\uA75A|\uA75C|\uA75E|\uA760|\uA762
+           |\uA764|\uA766|\uA768|\uA76A|\uA76C|\uA76E|\uA776|\uA779|\uA77B|[\uA77D-\uA77E]|\uA780
+           |\uA782|\uA784|\uA786|\uA78B|\uA78D|\uA790|\uA792|\uA796|\uA798|\uA79A|\uA79C|\uA79E
+           |\uA7A0|\uA7A2|\uA7A4|\uA7A6|\uA7A8|[\uA7AA-\uA7B4]|\uA7B6|\uA7B8|\uA7BA|\uA7BC|\uA7BE
+           |\uA7C2|[\uA7C4-\uA7C6]|\uA7FA|\uAB46|[\uFF21-\uFF3A]|[\U0001F110-\U0001F12C]
+           |[\U0001F130-\U0001F149]|[\U0001F150-\U0001F169]|[\U0001F170-\U0001F18A]|\U0001F520
+           |[\U000E0041-\U000E005A]/
+
+_LATEIN_GROSS_FOLGE = /(?:[\x41-\x5A]|[\xC0-\xD6]|[\xD8-\xDE]|\u0100|\u0102|\u0104|\u0106|\u0108|\u010A|\u010C
+           |\u010E|\u0110|\u0112|\u0114|\u0116|\u0118|\u011A|\u011C|\u011E|\u0120|\u0122|\u0124
+           |\u0126|\u0128|\u012A|\u012C|\u012E|\u0130|\u0132|\u0134|\u0136|\u0139|\u013B|\u013D
+           |\u013F|\u0141|\u0143|\u0145|\u0147|\u014A|\u014C|\u014E|\u0150|\u0152|\u0154|\u0156
+           |\u0158|\u015A|\u015C|\u015E|\u0160|\u0162|\u0164|\u0166|\u0168|\u016A|\u016C|\u016E
+           |\u0170|\u0172|\u0174|\u0176|[\u0178-\u0179]|\u017B|\u017D|[\u0181-\u0182]|\u0184
+           |[\u0186-\u0187]|[\u0189-\u018B]|[\u018E-\u0191]|[\u0193-\u0194]|[\u0196-\u0198]
+           |[\u019C-\u019D]|[\u019F-\u01A0]|\u01A2|\u01A4|\u01A7|\u01A9|\u01AC|[\u01AE-\u01AF]
+           |[\u01B1-\u01B3]|\u01B5|[\u01B7-\u01B8]|\u01BC|[\u01C4-\u01C5]|[\u01C7-\u01C8]
+           |[\u01CA-\u01CB]|\u01CD|\u01CF|\u01D1|\u01D3|\u01D5|\u01D7|\u01D9|\u01DB|\u01DE|\u01E0
+           |\u01E2|\u01E4|\u01E6|\u01E8|\u01EA|\u01EC|\u01EE|[\u01F1-\u01F2]|\u01F4
+           |[\u01F6-\u01F8]|\u01FA|\u01FC|\u01FE|\u0200|\u0202|\u0204|\u0206|\u0208|\u020A|\u020C
+           |\u020E|\u0210|\u0212|\u0214|\u0216|\u0218|\u021A|\u021C|\u021E|\u0220|\u0222|\u0224
+           |\u0226|\u0228|\u022A|\u022C|\u022E|\u0230|\u0232|[\u023A-\u023B]|[\u023D-\u023E]
+           |\u0241|[\u0243-\u0246]|\u0248|\u024A|\u024C|\u024E|\u0262|\u026A|\u0274|\u0276
+           |[\u0280-\u0281]|\u028F|\u0299|[\u029B-\u029C]|\u029F|[\u1D00-\u1D01]|[\u1D03-\u1D07]
+           |[\u1D0A-\u1D10]|\u1D15|[\u1D18-\u1D1C]|[\u1D20-\u1D23]|\u1D7B|\u1D7E|\u1DDB
+           |[\u1DDE-\u1DDF]|[\u1DE1-\u1DE2]|\u1E00|\u1E02|\u1E04|\u1E06|\u1E08|\u1E0A|\u1E0C
+           |\u1E0E|\u1E10|\u1E12|\u1E14|\u1E16|\u1E18|\u1E1A|\u1E1C|\u1E1E|\u1E20|\u1E22|\u1E24
+           |\u1E26|\u1E28|\u1E2A|\u1E2C|\u1E2E|\u1E30|\u1E32|\u1E34|\u1E36|\u1E38|\u1E3A|\u1E3C
+           |\u1E3E|\u1E40|\u1E42|\u1E44|\u1E46|\u1E48|\u1E4A|\u1E4C|\u1E4E|\u1E50|\u1E52|\u1E54
+           |\u1E56|\u1E58|\u1E5A|\u1E5C|\u1E5E|\u1E60|\u1E62|\u1E64|\u1E66|\u1E68|\u1E6A|\u1E6C
+           |\u1E6E|\u1E70|\u1E72|\u1E74|\u1E76|\u1E78|\u1E7A|\u1E7C|\u1E7E|\u1E80|\u1E82|\u1E84
+           |\u1E86|\u1E88|\u1E8A|\u1E8C|\u1E8E|\u1E90|\u1E92|\u1E94|\u1E9E|\u1EA0|\u1EA2|\u1EA4
+           |\u1EA6|\u1EA8|\u1EAA|\u1EAC|\u1EAE|\u1EB0|\u1EB2|\u1EB4|\u1EB6|\u1EB8|\u1EBA|\u1EBC
+           |\u1EBE|\u1EC0|\u1EC2|\u1EC4|\u1EC6|\u1EC8|\u1ECA|\u1ECC|\u1ECE|\u1ED0|\u1ED2|\u1ED4
+           |\u1ED6|\u1ED8|\u1EDA|\u1EDC|\u1EDE|\u1EE0|\u1EE2|\u1EE4|\u1EE6|\u1EE8|\u1EEA|\u1EEC
+           |\u1EEE|\u1EF0|\u1EF2|\u1EF4|\u1EF6|\u1EF8|\u1EFA|\u1EFC|\u1EFE|[\u24B6-\u24CF]|\u2C2E
+           |\u2C60|[\u2C62-\u2C64]|\u2C67|\u2C69|\u2C6B|[\u2C6D-\u2C70]|\u2C72|\u2C75|\u2C7B
+           |[\u2C7E-\u2C7F]|\uA722|\uA724|\uA726|\uA728|\uA72A|\uA72C|\uA72E|[\uA730-\uA732]
+           |\uA734|\uA736|\uA738|\uA73A|\uA73C|\uA73E|\uA740|\uA742|\uA744|\uA746|\uA748|\uA74A
+           |\uA74C|\uA74E|\uA750|\uA752|\uA754|\uA756|\uA758|\uA75A|\uA75C|\uA75E|\uA760|\uA762
+           |\uA764|\uA766|\uA768|\uA76A|\uA76C|\uA76E|\uA776|\uA779|\uA77B|[\uA77D-\uA77E]|\uA780
+           |\uA782|\uA784|\uA786|\uA78B|\uA78D|\uA790|\uA792|\uA796|\uA798|\uA79A|\uA79C|\uA79E
+           |\uA7A0|\uA7A2|\uA7A4|\uA7A6|\uA7A8|[\uA7AA-\uA7B4]|\uA7B6|\uA7B8|\uA7BA|\uA7BC|\uA7BE
+           |\uA7C2|[\uA7C4-\uA7C6]|\uA7FA|\uAB46|[\uFF21-\uFF3A]|[\U0001F110-\U0001F12C]
+           |[\U0001F130-\U0001F149]|[\U0001F150-\U0001F169]|[\U0001F170-\U0001F18A]|\U0001F520
+           |[\U000E0041-\U000E005A])+/
+
+
+#### Direktiven #########################################################
+
+Direktiven = ZWW Unterdrücke_Warnungen
+
+# @Unterdrücke_Warnungen_resume = /\n|$/
+
+Unterdrücke_Warnungen = UNTERDRÜCKE_WARNUNGEN [LZ] [NUMMER { "," [LZ] NUMMER }]
+  UNTERDRÜCKE_WARNUNGEN = "UNTERDRÜCKE" "WARNUNG" ["EN"]
+  NUMMER        = /\d+/~

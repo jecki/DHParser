@@ -38,9 +38,9 @@ class SerializingTestCompiler(Compiler):
     def serialize(self, node):
         if node.children:
             content = [self.compile(child) for child in node.children]
-            return ' '.join(['(' + node.tag_name] + content) + ')'
+            return ' '.join(['(' + node.name] + content) + ')'
         else:
-            return '(' + node.tag_name + ' ' + node.content + ')'
+            return '(' + node.name + ' ' + node.content + ')'
 
     def on_A(self, node):
         return self.serialize(node)

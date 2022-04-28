@@ -69,7 +69,7 @@ def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringVi
                     node.result = node.children + tail
                 else:
                     node = Node(
-                        self.tag_name,
+                        self.name,
                         (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail) \
                         .with_pos(location)
             elif pe.first_throw:
@@ -77,11 +77,11 @@ def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringVi
                 raise ParserError(pe.node, pe.rest, pe.error, first_throw=False)
             elif grammar.tree__.errors[-1].code == MANDATORY_CONTINUATION_AT_EOF:
                 # try to create tree as faithful as possible
-                node = Node(self.tag_name, pe.node).with_pos(location)
+                node = Node(self.name, pe.node).with_pos(location)
             else:
                 result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                     else pe.node  # type: ResultType
-                raise ParserError(Node(self.tag_name, result).with_pos(location),
+                raise ParserError(Node(self.name, result).with_pos(location),
                                   text, pe.error, first_throw=False)
 
         if left_recursion_depth__:

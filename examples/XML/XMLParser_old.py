@@ -38,7 +38,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, PLACEHOLDER, \
     merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
@@ -46,7 +46,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     get_config_value, node_maker, any_of, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
-    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
+    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
     TreeContext, apply_unless, ERROR
 
@@ -154,7 +154,7 @@ def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
 XML_AST_transformation_table = {
     # AST Transformations for the XML-grammar
     # "<": [flatten, remove_empty, remove_anonymous_tokens, remove_whitespace, remove_children("S")],
-    "document": [flatten(lambda context: context[-1].tag_name == 'prolog', recursive=False)],
+    "document": [flatten(lambda context: context[-1].name == 'prolog', recursive=False)],
     "VersionInfo": [reduce_single_child],
     "EncodingDecl": [reduce_single_child],
     "element": [flatten, replace_by_single_child],
@@ -218,9 +218,9 @@ class XMLCompiler(Compiler):
     def extract_attributes(self, node_sequence):
         attributes = collections.OrderedDict()
         for node in node_sequence:
-            if node.tag_name == "Attribute":
-                assert node[0].tag_name == "Name", node.as_sexpr()
-                assert node[1].tag_name == "AttValue", node.as_sxpr()
+            if node.name == "Attribute":
+                assert node[0].name == "Name", node.as_sexpr()
+                assert node[1].name == "AttValue", node.as_sxpr()
                 attributes[node[0].content] = node[1].content
         return attributes
 
@@ -248,18 +248,18 @@ class XMLCompiler(Compiler):
         attributes = dict()
         for child in node.children:
             s = child.content
-            if child.tag_name == "VersionInfo":
+            if child.name == "VersionInfo":
                 attributes['version'] = s
-            elif child.tag_name == "EncodingDecl":
+            elif child.name == "EncodingDecl":
                 attributes['encoding'] = s
-            elif child.tag_name == "SDDecl":
+            elif child.name == "SDDecl":
                 attributes['standalone'] = s
                 self.value_constraint(node, s, {'yes', 'no'})
         if attributes:
             node.attr.update(attributes)
         node.result = ''
         self.tree.empty_tags.add('?xml')
-        node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
+        node.name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
     def on_element(self, node):
@@ -277,16 +277,16 @@ class XMLCompiler(Compiler):
         if attributes:
             node.attr.update(attributes)
             self.preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
-        node.tag_name = tag_name
+        node.name = tag_name
         xml_content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children)
         if len(xml_content) == 1:
-            if xml_content[0].tag_name == "CharData":
+            if xml_content[0].name == "CharData":
                 # reduce single CharData children
                 xml_content = xml_content[0].content
         elif self.cleanup_whitespace and not self.preserve_whitespace:
             # remove CharData that consists only of whitespace from mixed elements
             xml_content = tuple(child for child in xml_content
-                                if child.tag_name != "CharData" or child.content.strip() != '')
+                                if child.name != "CharData" or child.content.strip() != '')
         self.preserve_whitespace = save_preserve_ws
         node.result = xml_content
         return node
@@ -295,9 +295,9 @@ class XMLCompiler(Compiler):
         attributes = self.extract_attributes(node.children)
         if attributes:
             node.attr.update(attributes)
-        node.tag_name = node['Name'].content
+        node.name = node['Name'].content
         node.result = ''
-        self.tree.empty_tags.add(node.tag_name)
+        self.tree.empty_tags.add(node.name)
         return node
 
 

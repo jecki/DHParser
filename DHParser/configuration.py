@@ -686,3 +686,20 @@ CONFIG_PRESET['test_parallelization'] = True
 # structure that would not occur outside the testing-environment.
 # Default value: True
 CONFIG_PRESET['test_suppress_lookahead_failures'] = True
+
+
+########################################################################
+#
+# decprecation warnings
+#
+########################################################################
+
+# Determines what happens when functions decorated as deprecated
+# are called. Possible values are:
+# "warn" - print ar warning, the first time the deprecated function
+#          is called
+# "fail" - raise a DeprecationWarning, the first time the deprecated
+#          function is called
+CONFIG_PRESET['deprecation_policy'] = 'warn'
+ALLOWED_PRESET_VALUES['deprecation_policy'] = frozenset({'warn', 'fail'})
+

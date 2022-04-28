@@ -35,7 +35,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
     merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_tag_name, \
+    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
@@ -43,7 +43,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
-    positions_of, replace_tag_names, add_attributes, delimit_children, merge_connected, \
+    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
@@ -93,7 +93,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "0fa485e2e9dc9dc76e9e512e004b7926"
+    source_hash__ = "50ecce375eeaf641efa2008e6f3263de"
     disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -196,9 +196,9 @@ class XMLTransformer(Compiler):
     def extract_attributes(self, node_sequence):
         attributes = collections.OrderedDict()
         for node in node_sequence:
-            if node.tag_name == "Attribute":
-                assert node[0].tag_name == "Name", node.as_sexpr()
-                assert node[1].tag_name == "AttValue", node.as_sxpr()
+            if node.name == "Attribute":
+                assert node[0].name == "Name", node.as_sexpr()
+                assert node[1].name == "AttValue", node.as_sxpr()
                 attributes[node[0].content] = node[1].content
         return attributes
 
@@ -216,39 +216,52 @@ class XMLTransformer(Compiler):
             ERROR_VALUE_CONSTRAINT_VIOLATION)
 
     def on_document(self, node):
-        node.tag_name = XML_PTYPE
+        node.name = XML_PTYPE
         self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE, 'CharRef', 'EntityRef'})
         self.tree.empty_tags.update({'?xml'})
         node.result = tuple(self.compile(nd) for nd in node.children
-                            if nd.tag_name not in self.expendables)
+                            if nd.name not in self.expendables)
         return node
 
     def on_prolog(self, node):
         node.result = tuple(self.compile(nd) for nd in node.children
-                            if nd.tag_name not in self.expendables)
+                            if nd.name not in self.expendables)
         return node
 
     def on_CharData(self, node):
-        node.tag_name = TOKEN_PTYPE
+        node.name = TOKEN_PTYPE
         return node
 
     def on_XMLDecl(self, node):
         attributes = dict()
         for child in node.children:
             s = child.content
-            if child.tag_name == "VersionInfo":
+            if child.name == "VersionInfo":
                 attributes['version'] = s
-            elif child.tag_name == "EncodingDecl":
+            elif child.name == "EncodingDecl":
                 attributes['encoding'] = s
-            elif child.tag_name == "SDDecl":
+            elif child.name == "SDDecl":
                 attributes['standalone'] = s
                 self.value_constraint(node, s, {'yes', 'no'})
         if attributes:
             node.attr.update(attributes)
         node.result = ''
         # self.tree.empty_tags.add('?xml')
-        node.tag_name = '?xml'  # node.parser = self.get_parser('?xml')
+        node.name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
+
+    def on_content(self, node) -> Union[Tuple[Node], str]:
+        xml_content = tuple(self.compile(nd) for nd in node.children
+                            if nd.name not in self.expendables)
+        if len(xml_content) == 1:
+            if xml_content[0].name == TOKEN_PTYPE:
+                # reduce single CharData children
+                xml_content = xml_content[0].content
+        elif self.cleanup_whitespace and not self.preserve_whitespace:
+            # remove CharData that consists only of whitespace from mixed elements
+            xml_content = tuple(child for child in xml_content
+                                if child.name != TOKEN_PTYPE or child.content.strip() != '')
+        return xml_content
 
     def on_element(self, node):
         if len(node.children) == 1:
@@ -267,28 +280,18 @@ class XMLTransformer(Compiler):
         if attributes:
             node.attr.update(attributes)
             self.preserve_whitespace |= attributes.get('xml:space', '') == 'preserve'
-        node.tag_name = tag_name
-        xml_content = tuple(self.compile(nd) for nd in node.get('content', PLACEHOLDER).children
-                            if nd.tag_name not in self.expendables)
-        if len(xml_content) == 1:
-            if xml_content[0].tag_name == TOKEN_PTYPE:
-                # reduce single CharData children
-                xml_content = xml_content[0].content
-        elif self.cleanup_whitespace and not self.preserve_whitespace:
-            # remove CharData that consists only of whitespace from mixed elements
-            xml_content = tuple(child for child in xml_content
-                                if child.tag_name != TOKEN_PTYPE or child.content.strip() != '')
+        node.name = tag_name
+        node.result = self.compile(node['content']) if 'content' in node else tuple()
         self.preserve_whitespace = save_preserve_ws
-        node.result = xml_content
         return node
 
     def on_emptyElement(self, node):
         attributes = self.extract_attributes(node.children)
         if attributes:
             node.attr.update(attributes)
-        node.tag_name = node['Name'].content
+        node.name = node['Name'].content
         node.result = ''
-        self.tree.empty_tags.add(node.tag_name)
+        self.tree.empty_tags.add(node.name)
         return node
 
     def on_Reference(self, node):
@@ -296,7 +299,7 @@ class XMLTransformer(Compiler):
         return node
 
     def on_Comment(self, node):
-        node.tag_name = '!--'
+        node.name = '!--'
         return node
 
 

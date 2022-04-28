@@ -16,7 +16,7 @@ if scriptpath not in sys.path:
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
-        finalize_presets
+        finalize_presets, read_local_config
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
@@ -66,6 +66,10 @@ if __name__ == '__main__':
         os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
         # if called with a single filename that is either an EBNF file or a known
         # test file type then use the given argument
+        if argv[1].endswith('.ebnf'):
+            cfg_name = argv[1][:-5] + '.ini'
+            if os.path.exists(cfg_name):
+                read_local_config(cfg_name)
         arg = argv[1]
     else:
         # otherwise run all tests in the test directory
