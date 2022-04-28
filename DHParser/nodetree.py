@@ -2706,6 +2706,11 @@ class RootNode(Node):
 #
 #######################################################################
 
+RX_SXPR_INNER_PARSER = re.compile(r'[\w:]+')
+RX_SXPR_NOTEXT = re.compile(r'(?:(?!\)).)*', re.DOTALL)
+RX_SXPR_TEXT = {qtmark: re.compile(qtmark + r'.*?' + qtmark, re.DOTALL)
+                for qtmark in ['"""', "'''", '"', "'"]}
+
 
 def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     """
@@ -2768,7 +2773,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
             raise ValueError('"(" expected, not ' + sxpr[:10])
         # assert sxpr[0] == '(', sxpr
         sxpr = sxpr[1:].strip()
-        match = sxpr.match(re.compile(r'[\w:]+'))
+        match = sxpr.match(RX_SXPR_INNER_PARSER)
         if match is None:
             raise AssertionError('Malformed S-expression Node-tagname or identifier expected, '
                                  'not "%s"' % sxpr[:40].replace('\n', ''))
@@ -2813,7 +2818,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
             while sxpr and sxpr[0:1] != ')':
                 # parse content
                 for qtmark in ['"""', "'''", '"', "'"]:
-                    match = sxpr.match(re.compile(qtmark + r'.*?' + qtmark, re.DOTALL))
+                    match = sxpr.match(RX_SXPR_TEXT[qtmark])
                     if match:
                         end = sxpr.index(match.end())
                         i = len(qtmark)
@@ -2821,7 +2826,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
                         sxpr = sxpr[end:].strip()
                         break
                 else:
-                    match = sxpr.match(re.compile(r'(?:(?!\)).)*', re.DOTALL))
+                    match = sxpr.match(RX_SXPR_NOTEXT)
                     end = sxpr.index(match.end())
                     lines.append(str(sxpr[:end]))
                     sxpr = sxpr[end:]
@@ -2842,7 +2847,11 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
-# RX_XML_ATTRIBUTES =
+RX_XML_ATTRIBUTES = re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')
+RX_XML_SPECIAL_TAG = re.compile(r'<(?![?!])')
+RX_XML_OPENING_TAG = re.compile(r'<\s*(?P<tagname>[\w:_.-]+)\s*')
+RX_XML_CLOSING_TAG = re.compile(r'</\s*(?P<tagname>[\w:_.-]+)\s*>')
+RX_XML_HEADER = re.compile(r'<(?![?!])')
 
 
 def parse_xml(xml: Union[str, StringView],
@@ -2877,7 +2886,7 @@ def parse_xml(xml: Union[str, StringView],
         attributes = OrderedDict()  # type: Dict[str, Any]
         eot = s.find('>')
         restart = 0
-        for match in s.finditer(re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')):
+        for match in s.finditer(RX_XML_ATTRIBUTES):
             if s.index(match.start()) >= eot:
                 break
             d = match.groupdict()
@@ -2889,7 +2898,7 @@ def parse_xml(xml: Union[str, StringView],
         """Skip special tags, e.g. <?...>, <!...>, and return the string
         view at the position of the next normal tag."""
         assert s[:2] in ('<!', '<?')
-        m = s.search(re.compile(r'<(?![?!])'))
+        m = s.search(RX_XML_SPECIAL_TAG)
         i = s.index(m.start()) if m else len(s)
         k = s.rfind(">", end=i)
         return s[k+1:] if k >= 0 else s
@@ -2901,7 +2910,7 @@ def parse_xml(xml: Union[str, StringView],
         a flag indicating whether the tag is actually a solitary tag as
         indicated by a slash at the end, i.e. <br/>.
         """
-        match = s.match(re.compile(r'<\s*(?P<tagname>[\w:_.-]+)\s*'))
+        match = s.match(RX_XML_OPENING_TAG)
         assert match
         tagname = match.groupdict()['tagname']
         section = s[s.index(match.end()):]
@@ -2915,7 +2924,7 @@ def parse_xml(xml: Union[str, StringView],
         Parses a closing tag and returns the string segment, just after
         the closing tag.
         """
-        match = s.match(re.compile(r'</\s*(?P<tagname>[\w:_.-]+)\s*>'))
+        match = s.match(RX_XML_CLOSING_TAG)
         assert match, 'XML-closing-tag expected, but found: ' + s[:20]
         tagname = match.groupdict()['tagname']
         return s[s.index(match.end()):], tagname
@@ -2979,7 +2988,7 @@ def parse_xml(xml: Union[str, StringView],
             node.attr.update(attrs)
         return s, node
 
-    match_header = xml.search(re.compile(r'<(?![?!])'))
+    match_header = xml.search(RX_XML_HEADER)
     start = xml.index(match_header.start()) if match_header else 0
     _, tree = parse_full_content(xml[start:])
     return tree
