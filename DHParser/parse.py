@@ -2715,8 +2715,8 @@ class ZeroOrMore(Option):
                 break
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
-            if length == n:
-                break  # avoid infinite loop
+            # if length == n:
+            #     break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         return nd, text
 
@@ -2761,8 +2761,8 @@ class OneOrMore(UnaryParser):
             match_flag = True
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
-            if length == n:
-                break  # avoid infinite loop
+            # if length == n:
+            #    break  # avoid infinite loop
         if not match_flag:
             return None, text
         nd = self._return_values(results)  # type: Node
