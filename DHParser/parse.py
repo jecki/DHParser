@@ -2748,14 +2748,14 @@ class OneOrMore(UnaryParser):
     """
     def _parse(self, text: StringView) -> ParsingResult:
         results = ()  # type: Tuple[Node, ...]
-        text_ = text  # type: StringView
+        # text_ = text  # type: StringView
         match_flag = False
         length = text.__len__()
         n = length + 1  # type: int
         while length < n:  # text_ and len(text_) < n:
             n = length
-            node, text_ = self.parser(text_)
-            length = text_.__len__()
+            node, text = self.parser(text)
+            length = text.__len__()
             if node is None:
                 break
             match_flag = True
@@ -2766,7 +2766,7 @@ class OneOrMore(UnaryParser):
         if not match_flag:
             return None, text
         nd = self._return_values(results)  # type: Node
-        return nd, text_
+        return nd, text  # text_
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -2836,26 +2836,26 @@ class Counted(UnaryParser):
     def _parse(self, text: StringView):
         results = ()  # Tuple[Node, ...]
         text_ = text
-        length = text_.__len__()
+        length = text.__len__()
         for _ in range(self.repetitions[0]):
-            node, text_ = self.parser(text_)
+            node, text = self.parser(text)
             if node is None:
-                return None, text
+                return None, text_
             results += (node,)
             n = length
-            length = text_.__len__()
+            length = text.__len__()
             if length == n:
                 break  # avoid infinite loop
         for _ in range(self.repetitions[1] - self.repetitions[0]):
-            node, text_ = self.parser(text_)
+            node, text = self.parser(text)
             if node is None:
                 break
             results += (node,)
             n = length
-            length = text_.__len__()
+            length = text.__len__()
             if length == n:
                 break  # avoid infinite loop
-        return self._return_values(results), text_
+        return self._return_values(results), text
 
     def is_optional(self) -> Optional[bool]:
         return self.repetitions[0] == 0
