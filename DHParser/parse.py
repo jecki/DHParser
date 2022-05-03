@@ -2974,8 +2974,9 @@ class MandatoryNary(NaryParser):
         This is a helper function that abstracts functionality that is
         needed by the Interleave-parser as well as the Series-parser.
 
-        :param text_: the point, where the mandatory violation. As usual the
-                string view represents the remaining text from this point.
+        :param text_: the point, where the mandatory violation happend.
+                As usual the string view represents the remaining text from
+                this point.
         :param failed_on_lookahead: True if the violating parser was a
                 Lookahead-Parser.
         :param expected:  the expected (but not found) text at this point.
