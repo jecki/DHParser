@@ -1753,6 +1753,7 @@ class Grammar:
         self.start_parser__ = None
         return self.tree__
 
+
     def match(self,
               parser: Union[str, Parser],
               string: str,
