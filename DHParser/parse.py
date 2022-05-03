@@ -2941,11 +2941,11 @@ class MandatoryNary(NaryParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    @cython.returns(cython.int)
     def get_reentry_point(self, text_: StringView) -> Tuple[int, Node]:
-        """Returns a reentry-point determined by the associated skip-list in
-        `self.grammar.skip_rules__`. If no reentry-point was found or the
-        skip-list ist empty, -1 is returned.
+        """Returns a tuple of integer index of the closest reentry point and a Node
+        capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
+        reentry-point was found. If no reentry-point was found or the
+        skip-list ist empty, -1 and a zombie-node are returned.
         """
         skip = tuple(self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname,
                                                    tuple()))
