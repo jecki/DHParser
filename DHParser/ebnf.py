@@ -24,12 +24,16 @@ Various flavors of EBNF- of PEG- (Parsing-Expression-Grammar) notations
 are supported.
 """
 
-
-from collections import OrderedDict
 from functools import partial
 import keyword
 import os
+import sys
 from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Union, Optional, cast
+
+if sys.version_info >= (3, 6, 0):
+    OrderedDict = dict
+else:
+    from collections import OrderedDict
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source, visitor_name
 from DHParser.configuration import access_thread_locals, get_config_value, \

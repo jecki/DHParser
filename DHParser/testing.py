@@ -40,6 +40,11 @@ import threading
 import time
 from typing import Dict, List, Union, Deque, cast
 
+if sys.version_info >= (3, 6, 0):
+    OrderedDict = dict
+else:
+    from collections import OrderedDict
+
 from DHParser.configuration import get_config_value
 from DHParser.compile import run_pipeline
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
@@ -141,7 +146,7 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
 
     cfg = config_str.replace('\t', '    ')
 
-    OD = collections.OrderedDict
+    OD = OrderedDict
     unit = OD()
 
     pos = eat_comments(cfg, 0)
@@ -720,7 +725,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
 
     if not isinstance(fn_patterns, collections.abc.Iterable):
         fn_patterns = [fn_patterns]
-    all_errors = collections.OrderedDict()
+    all_errors = OrderedDict()
     if verbose:
         print("\nScanning test-directory: " + directory)
     save_cwd = os.getcwd()
@@ -831,7 +836,7 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
             deflist = '#: ' + os.path.splitext(ebnf_text_or_file)[0]
         else:
             deflist = '#: ALL'
-    symbols = collections.OrderedDict()  # type: SymbolsDictType
+    symbols = OrderedDict()  # type: SymbolsDictType
     if deflist[0][:2] != '#:':
         curr_section = ALL_SYMBOLS
         symbols[curr_section] = []
@@ -988,7 +993,7 @@ def runner(tests, namespace, profile=False):
             from DHParser.testing import runner
             runner("", globals())
     """
-    test_classes = collections.OrderedDict()
+    test_classes = OrderedDict()
     test_functions = []
 
     if tests:
