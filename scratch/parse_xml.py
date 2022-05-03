@@ -3,7 +3,7 @@ sys.path.append('../')
 sys.path.append('../../')
 
 
-from DHParser.nodetree import parse_xml, parse_sxpr
+from DHParser.nodetree import parse_xml, parse_sxpr, parse_json
 from DHParser.toolkit import normalize_docstring
 
 
@@ -90,20 +90,45 @@ def profile():
 
 
 def main():
-    print('Lese archiv.xml')
-    with open('archiv.xml', 'r', encoding='utf-8') as f:
+    # print('Lese archiv.xml')
+    # with open('archiv.xml', 'r', encoding='utf-8') as f:
+    #     xml = f.read()
+    # print('Parse archiv.xml - Bitte etwas Geduld')
+    # data = parse_xml(xml, strict_mode=False)
+    print('Lese archiv.json')
+    with open('archiv.json', 'r', encoding='utf-8') as f:
         xml = f.read()
-    print('Parse archiv.xml - Bitte etwas Geduld')
-    data = parse_xml(xml, strict_mode=False)
-    print('Schreibe archiv.json')
-    with open('archiv.json', 'w', encoding='utf-8') as f:
-        f.write(data.as_json())
-    print('Schreibe archiv.tree.txt')
-    with open('archiv.tree.txt', 'w', encoding='utf-8') as f:
-        f.write(data.as_tree())
-    print('Schreibe archiv.lsp')
-    with open('archiv.lsp', 'w', encoding='utf-8') as f:
-        f.write(data.as_sxpr())
+    print('Parse archiv.json - Bitte etwas Geduld')
+    data = parse_json(xml)
+    block_types = set()
+    field_types = set()
+    document_child_names = set()
+    for node in data.select('h1:Block'):
+        if node.has_attr('Type'):
+            block_types.add(node.attr['Type'])
+        else:
+            print("Block ohne Type-Attribut entdeckt!")
+    for node in data.select('h1:Field'):
+        if node.has_attr('Type'):
+            field_types.add(node.attr['Type'])
+        else:
+            print("Field ohne Type-Attribut entdeckt!")
+    for node in data.select('h1:Document'):
+        child_names = frozenset({child.name for child in node.children})
+        document_child_names.add(child_names)
+
+    print(document_child_names)
+    print(block_types)
+    print(len(field_types), field_types)
+    # print('Schreibe archiv.json')
+    # with open('archiv.json', 'w', encoding='utf-8') as f:
+    #     f.write(data.as_json())
+    # print('Schreibe archiv.tree.txt')
+    # with open('archiv.tree.txt', 'w', encoding='utf-8') as f:
+    #     f.write(data.as_tree())
+    # print('Schreibe archiv.lsp')
+    # with open('archiv.lsp', 'w', encoding='utf-8') as f:
+    #     f.write(data.as_sxpr())
 
 
 if __name__ == '__main__':
