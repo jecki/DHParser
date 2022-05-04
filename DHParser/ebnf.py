@@ -1397,7 +1397,7 @@ class EBNFCompiler(Compiler):
         """
         assert self._dirty_flag
         table_entries = set(expand_table(transtable).keys()) - {'*', '<', '>', '~'}
-        symbols = self.rules.keys()
+        symbols = set(self.rules.keys())
         messages = []
         for entry in table_entries:
             if entry not in symbols and not entry[:1] == ":":
@@ -2278,7 +2278,7 @@ class EBNFCompiler(Compiler):
         # add custom error message if it has been declared for the current definition
         if custom_args:
             try:
-                current_symbol = next(reversed(self.rules.keys()))
+                current_symbol = next(reversed(list(self.rules.keys())))   # list() needed for Python < 3.8
             except StopIteration:
                 current_symbol = ''
             # add customized error messages, if defined
