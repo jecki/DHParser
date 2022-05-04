@@ -1753,6 +1753,7 @@ class Grammar:
         self.start_parser__ = None
         return self.tree__
 
+
     def match(self,
               parser: Union[str, Parser],
               string: str,
@@ -2715,8 +2716,8 @@ class ZeroOrMore(Option):
                 break
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
-            if length == n:
-                break  # avoid infinite loop
+            # if length == n:
+            #     break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         return nd, text
 
@@ -2748,25 +2749,25 @@ class OneOrMore(UnaryParser):
     """
     def _parse(self, text: StringView) -> ParsingResult:
         results = ()  # type: Tuple[Node, ...]
-        text_ = text  # type: StringView
+        # text_ = text  # type: StringView
         match_flag = False
         length = text.__len__()
         n = length + 1  # type: int
         while length < n:  # text_ and len(text_) < n:
             n = length
-            node, text_ = self.parser(text_)
-            length = text_.__len__()
+            node, text = self.parser(text)
+            length = text.__len__()
             if node is None:
                 break
             match_flag = True
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
-            if length == n:
-                break  # avoid infinite loop
+            # if length == n:
+            #    break  # avoid infinite loop
         if not match_flag:
             return None, text
         nd = self._return_values(results)  # type: Node
-        return nd, text_
+        return nd, text  # text_
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -2836,26 +2837,26 @@ class Counted(UnaryParser):
     def _parse(self, text: StringView):
         results = ()  # Tuple[Node, ...]
         text_ = text
-        length = text_.__len__()
+        length = text.__len__()
         for _ in range(self.repetitions[0]):
-            node, text_ = self.parser(text_)
+            node, text = self.parser(text)
             if node is None:
-                return None, text
+                return None, text_
             results += (node,)
             n = length
-            length = text_.__len__()
+            length = text.__len__()
             if length == n:
                 break  # avoid infinite loop
         for _ in range(self.repetitions[1] - self.repetitions[0]):
-            node, text_ = self.parser(text_)
+            node, text = self.parser(text)
             if node is None:
                 break
             results += (node,)
             n = length
-            length = text_.__len__()
+            length = text.__len__()
             if length == n:
                 break  # avoid infinite loop
-        return self._return_values(results), text_
+        return self._return_values(results), text
 
     def is_optional(self) -> Optional[bool]:
         return self.repetitions[0] == 0
@@ -2940,11 +2941,11 @@ class MandatoryNary(NaryParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    @cython.returns(cython.int)
     def get_reentry_point(self, text_: StringView) -> Tuple[int, Node]:
-        """Returns a reentry-point determined by the associated skip-list in
-        `self.grammar.skip_rules__`. If no reentry-point was found or the
-        skip-list ist empty, -1 is returned.
+        """Returns a tuple of integer index of the closest reentry point and a Node
+        capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
+        reentry-point was found. If no reentry-point was found or the
+        skip-list ist empty, -1 and a zombie-node are returned.
         """
         skip = tuple(self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname,
                                                    tuple()))
@@ -2973,8 +2974,9 @@ class MandatoryNary(NaryParser):
         This is a helper function that abstracts functionality that is
         needed by the Interleave-parser as well as the Series-parser.
 
-        :param text_: the point, where the mandatory violation. As usual the
-                string view represents the remaining text from this point.
+        :param text_: the point, where the mandatory violation happend.
+                As usual the string view represents the remaining text from
+                this point.
         :param failed_on_lookahead: True if the violating parser was a
                 Lookahead-Parser.
         :param expected:  the expected (but not found) text at this point.

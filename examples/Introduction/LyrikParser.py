@@ -90,7 +90,7 @@ get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "8b9a45e01aa324d5671a02d38a19f288"
+    source_hash__ = "6ad8f293271a6b452870f88eca5d202f"
     disposable__ = re.compile('JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|LEERRAUM$|ziel$|wortfolge$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
