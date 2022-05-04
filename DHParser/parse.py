@@ -656,6 +656,7 @@ class Parser:
             return cast(Interleave, other).__rmul__(self)
         return Interleave(self, other)
 
+    @cython.locals(location=cython.int)
     def _parse(self, location: int) -> ParsingResult:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
@@ -2009,24 +2010,30 @@ class Unparameterized(Parser):
 
 class Always(Unparameterized):
     """A parser that always matches, but does not capture anything."""
-    def _parse(self, text: StringView) -> ParsingResult:
-        return EMPTY_NODE, text
+    @cython.locals(location=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        return EMPTY_NODE, location
 
 
 class Never(Unparameterized):
     """A parser that never matches."""
-    def _parse(self, text: StringView) -> ParsingResult:
-        return None, text
+    @cython.locals(location=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        return None, location
 
 
 class AnyChar(Unparameterized):
     """A parser that returns the next unicode character of the document
     whatever that is. The parser fails only at the very end of the text."""
-    def _parse(self, text: StringView) -> ParsingResult:
-        if len(text) >= 1:
-            return Node(self.node_name, text[:1], True), text[1:]
+    @cython.locals(location=cython.int, location_=cython.int, L=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        text = self.grammar.document__._text
+        L = len(text)
+        if location < L:
+            location_ = location + 1
+            return Node(self.node_name, text[location:location_], True), location_
         else:
-            return None, text
+            return None, location
 
 
 class PreprocessorToken(Parser):
@@ -2113,7 +2120,8 @@ class Text(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, text: StringView) -> ParsingResult:
+    @cython.locals(location=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
         self_len = self.len    # use local variables for optimization
         self_text = self.text
         if text[:self_len] == self_text:  # text.startswith(self.text):
