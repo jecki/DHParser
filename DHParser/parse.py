@@ -1134,8 +1134,11 @@ class Grammar:
                 least once so that the parsing-variables need to be reset
                 when it is called again.
 
-        document__:  the text that has most recently been parsed or that is
-                currently being parsed.
+        text__: The text that is currently been parsed or that has mose recently
+               been parsed.
+
+        document__:  A string view on the text that has most recently been parsed
+                or that is currently being parsed.
 
         document_length__:  the length of the document.
 
@@ -1608,16 +1611,17 @@ class Grammar:
 
         self.start_parser__ = parser
         assert isinstance(document, str)
+        self.text__ = document
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         # done by reset: self.last_rb__loc__ = -1  # rollback location
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
-        rest = self.document__
-        if not rest:
+        L = len(self.document__)
+        if L == 0:
             try:
-                result, _ = parser(rest)
+                result, _ = parser(0)
             except ParserError as pe:
                 result = pe.node
             if result is None:
@@ -1634,16 +1638,18 @@ class Grammar:
 
         # copy to local variable, so break condition can be triggered manually
         max_parser_dropouts = self.max_parser_dropouts__
-        while rest and len(stitches) < max_parser_dropouts:
+        location = 0
+        while location < L and len(stitches) < max_parser_dropouts:
             try:
-                result, rest = parser(rest)
+                result, location = parser(location)
             except ParserError as pe:
-                result, rest = pe.node, StringView('')
+                result, location = pe.node, L
             if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
                 result = Node(EMPTY_PTYPE, '').with_pos(0)
-            if rest and complete_match:
+            if location < L and complete_match:
+                rest = self.document__[location:]
                 fwd = rest.find("\n") + 1 or len(rest)
-                skip, rest = rest[:fwd], rest[fwd:]
+                skip, location = rest[:fwd], location + fwd
                 if result is None or (result.name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
                     associated_symbol = self.associated_symbol__(self.ff_parser__)
@@ -1721,10 +1727,11 @@ class Grammar:
                             self.document__[error.pos:], lc, [error]))
             else:
                 # if complete_match is False, ignore the rest and leave while loop
-                rest = StringView('')
+                location = L
         if stitches:
-            if rest:
-                stitches.append(Node(ZOMBIE_TAG, rest).with_pos(tail_pos(stitches)))
+            if location < L:
+                stitches.append(Node(ZOMBIE_TAG, self.document__[location:])\
+                                .with_pos(tail_pos(stitches)))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
         if any(self.variables__.values()):
                 # capture stack not empty will only be reported for root-parsers
@@ -2060,7 +2067,9 @@ class PreprocessorToken(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, text: StringView) -> ParsingResult:
+    @cython.locals(location=cython.int, end=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        text = self.grammar.document__[location:]
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
@@ -2069,14 +2078,14 @@ class PreprocessorToken(Parser):
                     node,
                     'END_TOKEN delimiter missing from preprocessor token. '
                     '(Most likely due to a preprocessor bug!)')
-                return node, text[1:]
+                return node, location + 1
             elif end == 0:
                 node = Node(self.node_name, '')
                 self.grammar.tree__.new_error(
                     node,
                     'Preprocessor-token cannot have zero length. '
                     '(Most likely due to a preprocessor bug!)')
-                return node, text[2:]
+                return node, location + 2
             elif text.find(BEGIN_TOKEN, 1, end) >= 0:
                 node = Node(self.node_name, text[len(self.pname) + 1:end])
                 self.grammar.tree__.new_error(
@@ -2084,12 +2093,12 @@ class PreprocessorToken(Parser):
                     'Preprocessor-tokens must not be nested or contain '
                     'BEGIN_TOKEN delimiter as part of their argument. '
                     '(Most likely due to a preprocessor bug!)')
-                return node, text[end:]
+                return node, location + end
             if text[1:len(self.pname) + 1] == self.pname:
                 if self.drop_content:
-                    return EMPTY_NODE, text[end + 1:]
-                return Node(self.node_name, text[len(self.pname) + 2:end], True), text[end + 1:]
-        return None, text
+                    return EMPTY_NODE, location + end + 1
+                return Node(self.node_name, text[len(self.pname) + 2:end], True), location + end + 1
+        return None, location
 
 
 ########################################################################
@@ -2120,17 +2129,18 @@ class Text(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    @cython.locals(location=cython.int)
+    @cython.locals(location=cython.int, location_=cython.int, self_len=cython.int)
     def _parse(self, location: int) -> ParsingResult:
         self_len = self.len    # use local variables for optimization
+        location_ = location + self_len
         self_text = self.text
-        if text[:self_len] == self_text:  # text.startswith(self.text):
+        if self.grammar.text__[location:location_] == self_text:
             if self.drop_content:
-                return EMPTY_NODE, text[self_len:]
+                return EMPTY_NODE, location_
             elif self_text or not self.disposable:
-                return Node(self.node_name, self_text, True), text[self_len:]
-            return EMPTY_NODE, text
-        return None, text
+                return Node(self.node_name, self_text, True), location_
+            return EMPTY_NODE, location
+        return None, location
 
     def __repr__(self):
         return '`%s`' % abbreviate_middle(self.text, 80)
@@ -2174,17 +2184,18 @@ class RegExp(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, text: StringView) -> ParsingResult:
-        match = text.match(self.regexp)
+    @cython.locals(location=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        match = self.regexp.match(self.grammar.text__, location)
         if match:
             capture = match.group(0)
             if capture or not self.disposable:
-                end = text.index(match.end())
+                end = match.end()
                 if self.drop_content:
-                    return EMPTY_NODE, text[end:]
-                return Node(self.node_name, capture, True), text[end:]
-            return EMPTY_NODE, text
-        return None, text
+                    return EMPTY_NODE, end
+                return Node(self.node_name, capture, True), end
+            return EMPTY_NODE, location
+        return None, location
 
     def __repr__(self):
         pattern = self.regexp.pattern
@@ -2673,9 +2684,10 @@ class Option(UnaryParser):
     def __init__(self, parser: Parser) -> None:
         super(Option, self).__init__(parser)
 
-    def _parse(self, text: StringView) -> ParsingResult:
-        node, text = self.parser(text)
-        return self._return_value(node), text
+    @cython.locals(location=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        node, location = self.parser(location)
+        return self._return_value(node), location
 
     def is_optional(self) -> Optional[bool]:
         return True
