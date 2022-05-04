@@ -528,7 +528,7 @@ class Parser:
         # grammar = self._grammar
         self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
 
-    @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
+    @cython.locals(location=cython.int, next_location=cython.int, gap=cython.int, i=cython.int)
     def __call__(self: 'Parser', location: int) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
@@ -557,11 +557,11 @@ class Parser:
                 node, next_location = self._parse_proxy(location)
             except ParserError as pe:
                 # catching up with parsing after an error occurred
-                next_location = pe.location
-                gap = next_location - location
+                gap = pe.location - location
                 rules = tuple(grammar.resume_rules__.get(
                     grammar.associated_symbol__(self).pname, []))
-                rest = grammar.document__[pe.location + pe.node_orig_len:]
+                next_location = pe.location + pe.node_orig_len
+                rest = grammar.document__[next_location:]
                 i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
                                              grammar.reentry_search_window__)
                 if i >= 0 or self == grammar.start_parser__:
@@ -628,7 +628,7 @@ class Parser:
             grammar.tree__.add_error(node, error)
             grammar.most_recent_error__ = ParserError(self, node, node.strlen(), location, error,
                                                       first_throw=False)
-            rest = EMPTY_STRING_VIEW
+            next_location = len(grammar.document__)
 
         return node, next_location
 
