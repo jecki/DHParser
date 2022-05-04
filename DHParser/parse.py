@@ -141,17 +141,17 @@ class ParserError(Exception):
                  parser: 'Parser',
                  node: Node,
                  node_orig_len: int,
-                 rest: StringView,
+                 location: int,
                  error: Error, *,
                  first_throw: bool):
         assert node is not None
         self.parser = parser  # type: 'Parser'
         self.node = node      # type: Node
         self.node_orig_len = node_orig_len  # type: int
-        self.rest = rest      # type: StringView
+        self.location = location  # type: int
         self.error = error    # type: Error
         self.first_throw = first_throw   # type: bool
-        self.attributes_locked = frozenset({'parser', 'node', 'rest', 'error', 'first_throw'})
+        self.attributes_locked = frozenset({'parser', 'node', 'location', 'error', 'first_throw'})
         self.callstack_snapshot = []  # type: List[CallItem]  # name, location
 
     def __setattr__(self, name, value):
@@ -164,8 +164,9 @@ class ParserError(Exception):
             raise TypeError('Attribute %s of ParserError-object must not be reassigned!' % name)
 
     def __str__(self):
+        snippet = self.grammar.document__[self.location:self.location + 25]
         return "%i: %s    %s (%s)" \
-               % (self.node.pos, str(self.rest[:25]), repr(self.node), str(self.error))
+               % (self.node.pos, snippet, repr(self.node), str(self.error))
 
     def new_PE(self, **kwargs):
         """Returns a new ParserError object with the same attribute values
@@ -181,7 +182,7 @@ class ParserError(Exception):
         args = {"parser": self.parser,
                 "node": self.node,
                 "node_orig_len": self.node_orig_len,
-                "rest": self.rest,
+                "location": self.location,
                 "error": self.error,
                 "first_throw": self.first_throw}
         assert len(kwargs.keys() - args.keys()) == 0, str(kwargs.keys() - args.keys())
@@ -361,13 +362,13 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
-ParsingResult = Tuple[Optional[Node], StringView]
+ParsingResult = Tuple[Optional[Node], int]
 MemoizationDict = Dict[int, ParsingResult]
 
 ApplyFunc = Callable[[List['Parser']], Optional[bool]]
 # The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
-ParseFunc = Callable[['Parser', StringView], ParsingResult]
+ParseFunc = Callable[['Parser', int], ParsingResult]
 ParserContext = List['Parser']
 
 
@@ -528,14 +529,13 @@ class Parser:
         self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
 
     @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
-    def __call__(self: 'Parser', text: StringView) -> ParsingResult:
+    def __call__(self: 'Parser', location: int) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
         done in the overridden method `_parse()`. This wrapper-method can be thought of
         as a "parser guard", because it guards the parsing process.
         """
         grammar = self._grammar
-        location = grammar.document_length__ - text._len  # faster than len(text)?
 
         try:
             # rollback variable changing operation if parser backtracks to a position
@@ -554,13 +554,14 @@ class Parser:
 
             # now, the actual parser call!
             try:
-                node, rest = self._parse_proxy(text)
+                node, next_location = self._parse_proxy(location)
             except ParserError as pe:
                 # catching up with parsing after an error occurred
-                gap = len(text) - len(pe.rest)
+                next_location = pe.location
+                gap = next_location - location
                 rules = tuple(grammar.resume_rules__.get(
                     grammar.associated_symbol__(self).pname, []))
-                rest = pe.rest[pe.node_orig_len:]
+                rest = grammar.document__[pe.location + pe.node_orig_len:]
                 i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
                                              grammar.reentry_search_window__)
                 if i >= 0 or self == grammar.start_parser__:
@@ -584,9 +585,10 @@ class Parser:
                         node = pe.node
                         node.result = node._children + tail
                     else:
+                        cut = grammar.document__[location:location + gap]
                         node = Node(
                             self.node_name,
-                            (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail) \
+                            (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) + tail) \
                             .with_pos(location)
                 # if no re-entry point was found, do any of the following:
                 elif pe.first_throw:
@@ -599,11 +601,12 @@ class Parser:
                     node = Node(self.node_name, pe.node).with_pos(location)
                 else:
                     # fall through but skip the gap
-                    result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
+                    cut = grammar.document__[location:location + gap]
+                    result = (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
                     raise pe.new_PE(node=Node(self.node_name, result).with_pos(location),
                                     node_orig_len=pe.node_orig_len + gap,
-                                    rest=text, first_throw=False)
+                                    location=location, first_throw=False)
 
             if node is None:
                 if location > grammar.ff_pos__:
@@ -613,20 +616,21 @@ class Parser:
                 node._pos = location
             # grammar.suspend_memoization__ = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
-                visited[location] = (node, rest)
+                visited[location] = (node, location)
                 grammar.suspend_memoization__ = save_suspend_memoization
 
         except RecursionError:
+            text = grammar.document__[location:]
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
             node._pos = location
             error = Error("maximum recursion depth of parser reached; potentially due to too many "
                           "errors or left recursion!", location, RECURSION_DEPTH_LIMIT_HIT)
             grammar.tree__.add_error(node, error)
-            grammar.most_recent_error__ = ParserError(self, node, node.strlen(), text, error,
+            grammar.most_recent_error__ = ParserError(self, node, node.strlen(), location, error,
                                                       first_throw=False)
             rest = EMPTY_STRING_VIEW
 
-        return node, rest
+        return node, next_location
 
     def __add__(self, other: 'Parser') -> 'Series':
         """The + operator generates a series-parser that applies two
@@ -652,7 +656,7 @@ class Parser:
             return cast(Interleave, other).__rmul__(self)
         return Interleave(self, other)
 
-    def _parse(self, text: StringView) -> ParsingResult:
+    def _parse(self, location: int) -> ParsingResult:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
