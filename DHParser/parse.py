@@ -2967,10 +2967,6 @@ class MandatoryNary(NaryParser):
                                                    tuple()))
         if skip:
             gr = self._grammar
-            # print(gr.variables__)
-            # location = gr.document_length__ - text_._len
-            # if location <= gr.last_rb__loc__ + 1:
-            #     gr.rollback_to__(location - 1)
             reloc = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
             return reloc
         return -1, Node(ZOMBIE_TAG, '')
@@ -3809,7 +3805,7 @@ class Capture(ContextSensitive):
     @property
     def can_capture_zero_length(self) -> bool:
         if self._can_capture_zero_length is None:
-            self._can_capture_zero_length = self.parser._parse(StringView(""))[0] is not None
+            self._can_capture_zero_length = self.parser._parse(0)[0] is not None
         return cast(bool, self._can_capture_zero_length)
 
     def _rollback(self):
