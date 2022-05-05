@@ -636,6 +636,7 @@ class TestInterleave:
     def test_all(self):
         ebnf = 'prefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
+        print(grammar.python_src__)
         assert len(grammar.prefix.parsers) > 1
         assert grammar('B A').content == 'B A'
         assert grammar('A B').content == 'A B'
