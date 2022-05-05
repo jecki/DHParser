@@ -2959,8 +2959,8 @@ class MandatoryNary(NaryParser):
             # location = gr.document_length__ - text_._len
             # if location <= gr.last_rb__loc__ + 1:
             #     gr.rollback_to__(location - 1)
-            reloc = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
-            return reloc
+            reloc, znd = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            return reloc, znd
         return -1, Node(ZOMBIE_TAG, '')
 
     @cython.locals(location=cython.int)
