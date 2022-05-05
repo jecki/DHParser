@@ -1636,6 +1636,7 @@ class Grammar:
                 result, rest = pe.node, StringView('')
             if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
                 result = Node(EMPTY_PTYPE, '').with_pos(0)
+
             if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, rest = rest[:fwd], rest[fwd:]
@@ -1717,10 +1718,12 @@ class Grammar:
             else:
                 # if complete_match is False, ignore the rest and leave while loop
                 rest = StringView('')
+
         if stitches:
             if rest:
                 stitches.append(Node(ZOMBIE_TAG, rest).with_pos(tail_pos(stitches)))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
+
         if any(self.variables__.values()):
                 # capture stack not empty will only be reported for root-parsers
                 # to avoid false negatives when testing
@@ -1748,6 +1751,7 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
+
         self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
