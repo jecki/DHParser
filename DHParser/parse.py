@@ -322,7 +322,9 @@ def reentry_point(rest: StringView,
             save = grammar.history_tracking__
             grammar.history_tracking__ = False
             try:
-                _node, _text = parser(rest)
+                location = len(parser.grammar.text__) - len(rest)
+                _node, _location = parser(location)
+                _text = parser.grammar.document__[_location:]
             except ParserError as pe:
                 grammar.tree__.new_error(
                     grammar.tree__,
@@ -616,7 +618,7 @@ class Parser:
                 node._pos = location
             # grammar.suspend_memoization__ = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
-                visited[location] = (node, location)
+                visited[location] = (node, next_location)
                 grammar.suspend_memoization__ = save_suspend_memoization
 
         except RecursionError:
@@ -3841,7 +3843,7 @@ class Capture(ContextSensitive):
                 0, CAPTURE_DROPPED_CONTENT_WARNING
             )))
         if self.zero_length_warning:
-            node, _ = self.parser._parse(StringView(''))
+            node, _ = self.parser._parse(0)
             if node is not None:
                 errors.append(AnalysisError(self.pname, self, Error(
                     'Variable "%s" captures zero length strings, which can lead to '
@@ -3975,7 +3977,7 @@ class Retrieve(ContextSensitive):
         accordingly.
         """
         # `or self.parser.parser.pname` needed, because Forward-Parsers do not have a pname
-        text = self.grammar.document__[location]
+        text = self.grammar.document__[location:]
         try:
             stack = self.grammar.variables__[self.symbol_pname]
             value = self.match(text, stack)
