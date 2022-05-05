@@ -635,6 +635,13 @@ class TestInterleave:
         assert st.errors
 
     def test_all(self):
+        ebnf = 'prefix = "A" ° "B"'
+        grammar = grammar_provider(ebnf)()
+        assert len(grammar.prefix.parsers) > 1
+        tree = grammar('B A')
+        assert tree.content == 'B A'
+        assert tree.errors
+
         ebnf = '@literalws=right\nprefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
         assert len(grammar.prefix.parsers) > 1
