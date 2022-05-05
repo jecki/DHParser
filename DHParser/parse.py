@@ -515,7 +515,7 @@ class Parser:
         """Returns the parser's name if it has a name and self.__repr___() otherwise."""
         return self.pname if self.pname else self.__repr__()
 
-    def gen_momoization_dict(self) -> dict:
+    def gen_memoization_dict(self) -> dict:
         """Create and return an empty memoization dictionary. This allows to customize
         memoization dictionaries. The default is to just return a new plain dictionary."""
         return dict()
@@ -1542,7 +1542,7 @@ class Grammar:
         """Returns the memoization dictionary for the parser's equivalence class.
         """
         try:
-            return self.memoization__.setdefault(parser.eq_class, parser.gen_momoization_dict())
+            return self.memoization__.setdefault(parser.eq_class, parser.gen_memoization_dict())
         except AttributeError:  # happens when grammar object is the _GRAMMAR_PLACEHOLDER
             return dict()
 
@@ -3487,9 +3487,9 @@ class Interleave(MandatoryNary):
                 results += (err_node,)
                 if reloc < 0:
                     break
-            if location_ >= location:
+            if location_ <= location:
                 break
-            location_ = location
+            location = location_
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
@@ -3719,6 +3719,8 @@ def is_context_sensitive(parser: Parser) -> bool:
 
 
 class BlackHoleDict(dict):
+    """A dictionary that always stays empty. Usae case:
+    Disabling memoization."""
     def __setitem__(self, key, value):
         return
 
@@ -3745,12 +3747,12 @@ class ContextSensitive(UnaryParser):
     it is recommended to use context-sensitive-parsers sparingly.
     """
 
-    def gen_momoization_dict(self) -> dict:
+    def gen_memoization_dict(self) -> dict:
         return BlackHoleDict()
 
     @cython.returns(cython.int)
-    @cython.locals(L=cython.int, rb_loc=cython.int)
-    def _rollback_location(self, text: StringView, rest: StringView) -> int:
+    @cython.locals(location=cython.int, location_=cython.int)
+    def _rollback_location(self, location: int, location_: int) -> int:
         """
         Determines the rollback location for context-sensitive parsers, i.e.
         parsers that either manipulate (store or change) or use variables.
@@ -3780,11 +3782,7 @@ class ContextSensitive(UnaryParser):
 
         determines whether memoization should be blocked.
         """
-        L = text._len
-        rb_loc = self.grammar.document_length__ - L
-        if rest._len == text._len:
-            rb_loc -= 1
-        return rb_loc
+        return location if location != location_ else -1
 
     def _signature(self) -> Hashable:
         return id(self)
@@ -3817,17 +3815,18 @@ class Capture(ContextSensitive):
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
 
-    def _parse(self, text: StringView) -> ParsingResult:
-        node, text_ = self.parser(text)
+    @cython.locals(location=cython.int, location_=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        node, location_ = self.parser(location)
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
                 "Cannot capture content from parsers that drop content!"
             self.grammar.variables__[self.pname].append(node.content)
-            self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
-            return self._return_value(node), text_
+            self.grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
+            return self._return_value(node), location_
         else:
-            return None, text
+            return None, location
 
     def __repr__(self):
         return self.parser.repr
@@ -3952,23 +3951,27 @@ class Retrieve(ContextSensitive):
             # return cast(Forward, self.parser).parser.name
         return self.node_name
 
-    def _parse(self, text: StringView) -> ParsingResult:
+    @cython.locals(location=cython.int, location_=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
         # auto-capture on first use if symbol was not captured before
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
-            node, text_ = self.parser(text)   # auto-capture value
+            node, location_ = self.parser(location)   # auto-capture value
             if node is None:
                 # set last_rb__loc__ to avoid memoizing of retrieved results
-                self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
-                return None, text_
-        node, text_ = self.retrieve_and_match(text)
+                self.grammar.push_rollback__(
+                    self._rollback_location(location, location_), lambda: None)
+                return None, location_
+        node, location_ = self.retrieve_and_match(location)
         # set last_rb__loc__ to avoid memoizing of retrieved results
-        self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
-        return node, text_
+        self.grammar.push_rollback__(
+            self._rollback_location(location, location_), lambda: None)
+        return node, location_
 
     def __repr__(self):
         return ':' + self.parser.repr
 
-    def retrieve_and_match(self, text: StringView) -> ParsingResult:
+    @cython.locals(location=cython.int)
+    def retrieve_and_match(self, location: int) -> ParsingResult:
         """
         Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
@@ -3976,6 +3979,7 @@ class Retrieve(ContextSensitive):
         accordingly.
         """
         # `or self.parser.parser.pname` needed, because Forward-Parsers do not have a pname
+        text = self.grammar.document__[location]
         try:
             stack = self.grammar.variables__[self.symbol_pname]
             value = self.match(text, stack)
@@ -3983,18 +3987,18 @@ class Retrieve(ContextSensitive):
             tn = self.get_node_name()
             if self.match.__name__.startswith('optional_'):
                 # returns a None match if parser is optional but there was no value to retrieve
-                return None, text
+                return None, location
             else:
                 node = Node(tn, '', True)  # .with_pos(self.grammar.document_length__ - text.__len__())
                 self.grammar.tree__.new_error(
                     node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
                     UNDEFINED_RETRIEVE)
-                return node, text
+                return node, location
         if value is None:
-            return None, text
+            return None, location
         elif self.drop_content:
-            return EMPTY_NODE, text[len(value):]
-        return Node(self.get_node_name(), value), text[len(value):]
+            return EMPTY_NODE, location + len(value)
+        return Node(self.get_node_name(), value), location + len(value)
 
 
 class Pop(Retrieve):
@@ -4025,15 +4029,16 @@ class Pop(Retrieve):
     def _rollback(self):
         self.grammar.variables__[self.symbol_pname].append(self.values.pop())
 
-    def _parse(self, text: StringView) -> ParsingResult:
-        node, text_ = self.retrieve_and_match(text)
+    @cython.locals(location=cython.int, location_=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        node, location_ = self.retrieve_and_match(location)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
-            self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
+            self.grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
         else:
             # set last_rb__loc__ to avoid memoizing of retrieved results
-            self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
-        return node, text_
+            self.grammar.push_rollback__(self._rollback_location(location, location_), lambda: None)
+        return node, location_
 
     def __repr__(self):
         stack = self.grammar.variables__.get(self.symbol_pname, [])
@@ -4067,20 +4072,21 @@ class Synonym(UnaryParser):
         assert not parser.drop_content
         super(Synonym, self).__init__(parser)
 
-    def _parse(self, text: StringView) -> ParsingResult:
-        node, text = self.parser(text)
+    @cython.locals(location=cython.int)
+    def _parse(self, location: int) -> ParsingResult:
+        node, location = self.parser(location)
         if node is not None:
             if self.drop_content:
-                return EMPTY_NODE, text
+                return EMPTY_NODE, location
             if not self.disposable:
                 if node is EMPTY_NODE:
-                    return Node(self.node_name, '', True), text
+                    return Node(self.node_name, '', True), location
                 if node.name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
                     node.name = self.node_name
                 else:
-                    return Node(self.node_name, (node,)), text
-        return node, text
+                    return Node(self.node_name, (node,)), location
+        return node, location
 
     def __str__(self):
         return self.pname + (' = ' if self.pname else '') + self.parser.repr
@@ -4145,7 +4151,7 @@ class Forward(UnaryParser):
         return duplicate
 
     @cython.locals(location=cython.int, depth=cython.int, rb_stack_size=cython.int)
-    def __call__(self, text: StringView) -> ParsingResult:
+    def __call__(self,location: int) -> ParsingResult:
         """
         Overrides `Parser.__call__`, because Forward is not an independent parser
         but merely a redirects the call to another parser. Other than parser
@@ -4163,9 +4169,8 @@ class Forward(UnaryParser):
         """
         grammar = self.grammar
         if not grammar.left_recursion__:  # TODO: add a static check and flag: self.left_recursive__!
-            return self.parser(text)
+            return self.parser(location)
 
-        location = grammar.document_length__ - text._len
         # rollback variable changing operation if parser backtracks
         # to a position before the variable changing operation occurred
         if location <= grammar.last_rb__loc__:
@@ -4181,10 +4186,10 @@ class Forward(UnaryParser):
             depth = self.recursion_counter[location]
             if depth == 0:
                 grammar.suspend_memoization__ = True
-                result = None, text
+                result = None, location
             else:
                 self.recursion_counter[location] = depth - 1
-                result = self.parser(text)
+                result = self.parser(location)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
             self.recursion_counter[location] = 0  # fail on the first recursion
@@ -4192,7 +4197,7 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             history_pointer = len(grammar.history__)
 
-            result = self.parser(text)
+            result = self.parser(location)
 
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
@@ -4213,10 +4218,10 @@ class Forward(UnaryParser):
                     # occurred. Big topic...)
                     # don't carry error/resumption-messages over to the next iteration
                     # grammar.most_recent_error__ = None
-                    next_result = self.parser(text)
+                    next_result = self.parser(location)
 
                     # discard next_result if it is not the longest match and return
-                    if len(next_result[1]) >= len(result[1]):  # also true, if no match
+                    if next_result[1] <= result[1]:  # also true, if no match
                         # Since the result of the last parser call (`next_result`) is discarded,
                         # any variables captured by this call should be "rolled back", too.
                         while len(grammar.rollback__) > rb_stack_size:
