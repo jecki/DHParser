@@ -514,7 +514,7 @@ class Parser:
         """Returns the parser's name if it has a name and self.__repr___() otherwise."""
         return self.pname if self.pname else self.__repr__()
 
-    def gen_momoization_dict(self) -> dict:
+    def gen_memoization_dict(self) -> dict:
         """Create and return an empty memoization dictionary. This allows to customize
         memoization dictionaries. The default is to just return a new plain dictionary."""
         return dict()
@@ -1534,7 +1534,7 @@ class Grammar:
         """Returns the memoization dictionary for the parser's equivalence class.
         """
         try:
-            return self.memoization__.setdefault(parser.eq_class, parser.gen_momoization_dict())
+            return self.memoization__.setdefault(parser.eq_class, parser.gen_memoization_dict())
         except AttributeError:  # happens when grammar object is the _GRAMMAR_PLACEHOLDER
             return dict()
 
@@ -3703,6 +3703,8 @@ def is_context_sensitive(parser: Parser) -> bool:
 
 
 class BlackHoleDict(dict):
+    """A dictionary that always stays empty. Usae case:
+    Disabling memoization."""
     def __setitem__(self, key, value):
         return
 
@@ -3729,7 +3731,7 @@ class ContextSensitive(UnaryParser):
     it is recommended to use context-sensitive-parsers sparingly.
     """
 
-    def gen_momoization_dict(self) -> dict:
+    def gen_memoization_dict(self) -> dict:
         return BlackHoleDict()
 
     @cython.returns(cython.int)
