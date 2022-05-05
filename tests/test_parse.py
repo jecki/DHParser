@@ -61,8 +61,11 @@ class TestWhitespace:
 
 class TestParserError:
     def test_parser_error_str(self):
-        pe = ParserError(Parser(), Node('TAG', 'test').with_pos(0), len('test'),
-                         StringView('Beispiel'), None, first_throw=True)
+        parser = Parser()
+        parser.grammar = Grammar()
+        parser.grammar.document__ = StringView('Beispiel')
+        pe = ParserError(parser, Node('TAG', 'test').with_pos(0), len('test'),
+                         0, None, first_throw=True)
         assert str(pe).find('Beispiel') >= 0 and str(pe).find('TAG') >= 0
 
     def test_false_lookahead_only_message(self):
@@ -408,10 +411,10 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
-        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
-        node, rest = parser.regex(StringView('Alpha'))
+        grammar = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
+        node = grammar('Alpha', grammar.regex)
         assert node
-        assert rest == ''
+        assert node.strlen() == 5
         assert node.name == "regex"
         assert str(node) == 'Alpha'
 
@@ -423,9 +426,9 @@ class TestRegex:
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
-        parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
-        node, rest = parser.regex(StringView('Alpha'))
-        assert node is None
+        grammar = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
+        node = grammar('Alpha', 'regex')
+        assert node.error_flag and node.errors[0].code == 1040
 
     def test_token(self):
         tokenlang = r"""@literalws = right
@@ -894,7 +897,7 @@ class TestPopRetrieve:
         assert not st.error_flag
         test4 = '<info>Hey, <emph>you</></info>'
         st = self.minilang_parser4(test4)
-        assert not st.error_flag
+        assert not st.error_flag, str(st.errors_sorted)
 
     def test_rollback_behaviour_of_optional_match(self):
         test1 = '<info>Hey, you</info*>'

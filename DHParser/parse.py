@@ -164,7 +164,7 @@ class ParserError(Exception):
             raise TypeError('Attribute %s of ParserError-object must not be reassigned!' % name)
 
     def __str__(self):
-        snippet = self.grammar.document__[self.location:self.location + 25]
+        snippet = self.parser.grammar.document__[self.location:self.location + 25]
         return "%i: %s    %s (%s)" \
                % (self.node.pos, snippet, repr(self.node), str(self.error))
 
@@ -172,7 +172,7 @@ class ParserError(Exception):
         """Returns a new ParserError object with the same attribute values
         as `self`, except those that are reassigned in `**kwargs`.::
 
-            >>> pe = ParserError(Parser(), Node('test', ""), 0, StringView(""), Error("", 0), first_throw=True)
+            >>> pe = ParserError(Parser(), Node('test', ""), 0, 0, Error("", 0), first_throw=True)
             >>> pe_derived = pe.new_PE(first_throw = False)
             >>> pe.first_throw
             True
@@ -2970,8 +2970,8 @@ class MandatoryNary(NaryParser):
                                                    tuple()))
         if skip:
             gr = self._grammar
-            reloc = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
-            return reloc
+            reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            return reloc, zombie
         return -1, Node(ZOMBIE_TAG, '')
 
     @cython.locals(location=cython.int)
