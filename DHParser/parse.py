@@ -3656,7 +3656,7 @@ class Lookbehind(FlowParser):
     def _parse(self, text: StringView) -> ParsingResult:
         backwards_text = self.grammar.reversed__[text.__len__():]
         if self.regexp is None:  # assert self.text is not None
-            does_match = backwards_text[:text.__len__()] == self.text
+            does_match = backwards_text[:len(self.text)] == self.text
         else:  # assert self.regexp is not None
             does_match = backwards_text.match(self.regexp)
         if self.match(does_match):
