@@ -1503,6 +1503,7 @@ class Grammar:
 
     def _reset__(self):
         self.tree__: RootNode = RootNode()
+        self.text__: str = ''
         self.document__: StringView = EMPTY_STRING_VIEW
         self._reversed__: StringView = EMPTY_STRING_VIEW
         self.document_length__: int = 0
@@ -3465,7 +3466,7 @@ class Interleave(MandatoryNary):
                     if node is not None:
                         if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                             results += (node,)
-                            location_ = location__
+                            # location_ = location__
                         counter[i] += 1
                         if counter[i] >= self.repetitions[i][1]:
                             consumed.add(parser)
@@ -3485,9 +3486,9 @@ class Interleave(MandatoryNary):
                 results += (err_node,)
                 if reloc < 0:
                     break
-            if location_ <= location:
+            if location__ <= location_:
                 break
-            location = location_
+            location_ = location__
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
