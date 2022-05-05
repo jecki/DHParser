@@ -3482,7 +3482,7 @@ class Interleave(MandatoryNary):
                     return None, location
                 reloc, err_node = self.get_reentry_point(location_)
                 expected = ' ° '.join([parser.repr for parser in self.parsers])
-                error, location_ = self.mandatory_violation(location_, False, expected, reloc, err_node)
+                error, location__ = self.mandatory_violation(location_, False, expected, reloc, err_node)
                 results += (err_node,)
                 if reloc < 0:
                     break
