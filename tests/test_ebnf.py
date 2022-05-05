@@ -638,17 +638,15 @@ class TestInterleave:
         ebnf = '@literalws=right\nprefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
         assert len(grammar.prefix.parsers) > 1
-        syntaxtree = grammar('B A')
-        assert not syntaxtree.errors
-        assert grammar('B A').content == 'B A'
-        assert grammar('A B').content == 'A B'
+        assert grammar('B A').error_safe().content == 'B A'
+        assert grammar('A B').error_safe().content == 'A B'
 
     def test_some(self):
         ebnf = '@literalws=right\nprefix = "A"? ° "B"?'
         grammar = grammar_provider(ebnf)()
         assert len(grammar.prefix.parsers) > 1
-        assert grammar('B A').content == 'B A'
-        assert grammar('B').content == 'B'
+        assert grammar('B A').error_safe().content == 'B A'
+        assert grammar('B').error_safe().content == 'B'
         result = grammar('')
         assert result.content == '' and not result.errors
 

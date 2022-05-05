@@ -46,7 +46,7 @@ else:
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
-    add_source_locations, SourceMapFunc
+    add_source_locations, SourceMapFunc, has_errors, only_errors
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
@@ -2657,6 +2657,18 @@ class RootNode(Node):
         errors = self.errors[:]
         errors.sort(key=lambda e: e.pos)
         return errors
+
+    def error_safe(self, level: int = ERROR) -> 'RootNode':
+        """
+        Asserts that the given tree does not contain any errors with a
+        code equal or higher than the given level.
+        Returns the tree if this is the case, raises an `AssertionError`
+        otherwise.
+        """
+        if has_errors(self.errors, level):
+            raise AssertionError('\n'.join(['Tree-sanity-check failed, because of:'] +
+                                           [str(e) for e in only_errors(self.errors, level)]))
+        return self
 
     def did_match(self) -> bool:
         """
