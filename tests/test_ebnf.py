@@ -940,7 +940,7 @@ class TestCustomizedResumeParsing:
         grammar = grammar_provider(grammar_specification)()
         doc0 = """word no*word word"""
         st = grammar(doc0)
-        assert st.children and st.children[-1].name == 'word'
+        assert st.children and st.children[-1].name == 'word', st.as_sxpr()
         doc1 = """word no*word /* comment */ word"""
         st = grammar(doc1)
         assert st.children and st.children[-1].name == 'word'

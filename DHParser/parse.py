@@ -582,7 +582,7 @@ class Parser:
                     else:
                         # nd.attr['err'] = pe.error.message
                         tail = (skip_node,)
-                    rest = rest[i:]
+                    next_location += i
                     if pe.first_throw:
                         node = pe.node
                         node.result = node._children + tail
@@ -3781,7 +3781,7 @@ class ContextSensitive(UnaryParser):
 
         determines whether memoization should be blocked.
         """
-        return location if location != location_ else -1
+        return location if location != location_ else location-1
 
     def _signature(self) -> Hashable:
         return id(self)
