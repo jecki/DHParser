@@ -141,17 +141,17 @@ class ParserError(Exception):
                  parser: 'Parser',
                  node: Node,
                  node_orig_len: int,
-                 location: int,
+                 rest: StringView,
                  error: Error, *,
                  first_throw: bool):
         assert node is not None
         self.parser = parser  # type: 'Parser'
         self.node = node      # type: Node
         self.node_orig_len = node_orig_len  # type: int
-        self.location = location  # type: int
+        self.rest = rest      # type: StringView
         self.error = error    # type: Error
         self.first_throw = first_throw   # type: bool
-        self.attributes_locked = frozenset({'parser', 'node', 'location', 'error', 'first_throw'})
+        self.attributes_locked = frozenset({'parser', 'node', 'rest', 'error', 'first_throw'})
         self.callstack_snapshot = []  # type: List[CallItem]  # name, location
 
     def __setattr__(self, name, value):
@@ -164,15 +164,14 @@ class ParserError(Exception):
             raise TypeError('Attribute %s of ParserError-object must not be reassigned!' % name)
 
     def __str__(self):
-        snippet = self.parser.grammar.document__[self.location:self.location + 25]
         return "%i: %s    %s (%s)" \
-               % (self.node.pos, snippet, repr(self.node), str(self.error))
+               % (self.node.pos, str(self.rest[:25]), repr(self.node), str(self.error))
 
     def new_PE(self, **kwargs):
         """Returns a new ParserError object with the same attribute values
         as `self`, except those that are reassigned in `**kwargs`.::
 
-            >>> pe = ParserError(Parser(), Node('test', ""), 0, 0, Error("", 0), first_throw=True)
+            >>> pe = ParserError(Parser(), Node('test', ""), 0, StringView(""), Error("", 0), first_throw=True)
             >>> pe_derived = pe.new_PE(first_throw = False)
             >>> pe.first_throw
             True
@@ -182,7 +181,7 @@ class ParserError(Exception):
         args = {"parser": self.parser,
                 "node": self.node,
                 "node_orig_len": self.node_orig_len,
-                "location": self.location,
+                "rest": self.rest,
                 "error": self.error,
                 "first_throw": self.first_throw}
         assert len(kwargs.keys() - args.keys()) == 0, str(kwargs.keys() - args.keys())
@@ -322,9 +321,7 @@ def reentry_point(rest: StringView,
             save = grammar.history_tracking__
             grammar.history_tracking__ = False
             try:
-                location = len(parser.grammar.text__) - len(rest)
-                _node, _location = parser(location)
-                _text = parser.grammar.document__[_location:]
+                _node, _text = parser(rest)
             except ParserError as pe:
                 grammar.tree__.new_error(
                     grammar.tree__,
@@ -364,13 +361,13 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
-ParsingResult = Tuple[Optional[Node], int]
+ParsingResult = Tuple[Optional[Node], StringView]
 MemoizationDict = Dict[int, ParsingResult]
 
 ApplyFunc = Callable[[List['Parser']], Optional[bool]]
 # The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
-ParseFunc = Callable[['Parser', int], ParsingResult]
+ParseFunc = Callable[['Parser', StringView], ParsingResult]
 ParserContext = List['Parser']
 
 
@@ -530,14 +527,15 @@ class Parser:
         # grammar = self._grammar
         self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
 
-    @cython.locals(location=cython.int, next_location=cython.int, gap=cython.int, i=cython.int)
-    def __call__(self: 'Parser', location: int) -> ParsingResult:
+    @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
+    def __call__(self: 'Parser', text: StringView) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
         done in the overridden method `_parse()`. This wrapper-method can be thought of
         as a "parser guard", because it guards the parsing process.
         """
         grammar = self._grammar
+        location = grammar.document_length__ - text._len  # faster than len(text)?
 
         try:
             # rollback variable changing operation if parser backtracks to a position
@@ -556,14 +554,13 @@ class Parser:
 
             # now, the actual parser call!
             try:
-                node, next_location = self._parse_proxy(location)
+                node, rest = self._parse_proxy(text)
             except ParserError as pe:
                 # catching up with parsing after an error occurred
-                gap = pe.location - location
+                gap = len(text) - len(pe.rest)
                 rules = tuple(grammar.resume_rules__.get(
                     grammar.associated_symbol__(self).pname, []))
-                next_location = pe.location + pe.node_orig_len
-                rest = grammar.document__[next_location:]
+                rest = pe.rest[pe.node_orig_len:]
                 i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
                                              grammar.reentry_search_window__)
                 if i >= 0 or self == grammar.start_parser__:
@@ -582,15 +579,14 @@ class Parser:
                     else:
                         # nd.attr['err'] = pe.error.message
                         tail = (skip_node,)
-                    next_location += i
+                    rest = rest[i:]
                     if pe.first_throw:
                         node = pe.node
                         node.result = node._children + tail
                     else:
-                        cut = grammar.document__[location:location + gap]
                         node = Node(
                             self.node_name,
-                            (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) + tail) \
+                            (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) + tail) \
                             .with_pos(location)
                 # if no re-entry point was found, do any of the following:
                 elif pe.first_throw:
@@ -603,12 +599,11 @@ class Parser:
                     node = Node(self.node_name, pe.node).with_pos(location)
                 else:
                     # fall through but skip the gap
-                    cut = grammar.document__[location:location + gap]
-                    result = (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) if gap \
+                    result = (Node(ZOMBIE_TAG, text[:gap]).with_pos(location), pe.node) if gap \
                         else pe.node  # type: ResultType
                     raise pe.new_PE(node=Node(self.node_name, result).with_pos(location),
                                     node_orig_len=pe.node_orig_len + gap,
-                                    location=location, first_throw=False)
+                                    rest=text, first_throw=False)
 
             if node is None:
                 if location > grammar.ff_pos__:
@@ -618,21 +613,20 @@ class Parser:
                 node._pos = location
             # grammar.suspend_memoization__ = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
-                visited[location] = (node, next_location)
+                visited[location] = (node, rest)
                 grammar.suspend_memoization__ = save_suspend_memoization
 
         except RecursionError:
-            text = grammar.document__[location:]
             node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
             node._pos = location
             error = Error("maximum recursion depth of parser reached; potentially due to too many "
                           "errors or left recursion!", location, RECURSION_DEPTH_LIMIT_HIT)
             grammar.tree__.add_error(node, error)
-            grammar.most_recent_error__ = ParserError(self, node, node.strlen(), location, error,
+            grammar.most_recent_error__ = ParserError(self, node, node.strlen(), text, error,
                                                       first_throw=False)
-            next_location = len(grammar.document__)
+            rest = EMPTY_STRING_VIEW
 
-        return node, next_location
+        return node, rest
 
     def __add__(self, other: 'Parser') -> 'Series':
         """The + operator generates a series-parser that applies two
@@ -658,8 +652,7 @@ class Parser:
             return cast(Interleave, other).__rmul__(self)
         return Interleave(self, other)
 
-    @cython.locals(location=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
+    def _parse(self, text: StringView) -> ParsingResult:
         """Applies the parser to the given `text` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
@@ -1136,11 +1129,8 @@ class Grammar:
                 least once so that the parsing-variables need to be reset
                 when it is called again.
 
-        text__: The text that is currently been parsed or that has mose recently
-               been parsed.
-
-        document__:  A string view on the text that has most recently been parsed
-                or that is currently being parsed.
+        document__:  the text that has most recently been parsed or that is
+                currently being parsed.
 
         document_length__:  the length of the document.
 
@@ -1503,7 +1493,6 @@ class Grammar:
 
     def _reset__(self):
         self.tree__: RootNode = RootNode()
-        self.text__: str = ''
         self.document__: StringView = EMPTY_STRING_VIEW
         self._reversed__: StringView = EMPTY_STRING_VIEW
         self.document_length__: int = 0
@@ -1614,17 +1603,16 @@ class Grammar:
 
         self.start_parser__ = parser
         assert isinstance(document, str)
-        self.text__ = document
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
         # done by reset: self.last_rb__loc__ = -1  # rollback location
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
-        L = len(self.document__)
-        if L == 0:
+        rest = self.document__
+        if not rest:
             try:
-                result, _ = parser(0)
+                result, _ = parser(rest)
             except ParserError as pe:
                 result = pe.node
             if result is None:
@@ -1641,18 +1629,17 @@ class Grammar:
 
         # copy to local variable, so break condition can be triggered manually
         max_parser_dropouts = self.max_parser_dropouts__
-        location = 0
-        while location < L and len(stitches) < max_parser_dropouts:
+        while rest and len(stitches) < max_parser_dropouts:
             try:
-                result, location = parser(location)
+                result, rest = parser(rest)
             except ParserError as pe:
-                result, location = pe.node, L
+                result, rest = pe.node, StringView('')
             if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
                 result = Node(EMPTY_PTYPE, '').with_pos(0)
-            if location < L and complete_match:
-                rest = self.document__[location:]
+
+            if rest and complete_match:
                 fwd = rest.find("\n") + 1 or len(rest)
-                skip, location = rest[:fwd], location + fwd
+                skip, rest = rest[:fwd], rest[fwd:]
                 if result is None or (result.name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
                     associated_symbol = self.associated_symbol__(self.ff_parser__)
@@ -1730,12 +1717,13 @@ class Grammar:
                             self.document__[error.pos:], lc, [error]))
             else:
                 # if complete_match is False, ignore the rest and leave while loop
-                location = L
+                rest = StringView('')
+
         if stitches:
-            if location < L:
-                stitches.append(Node(ZOMBIE_TAG, self.document__[location:])\
-                                .with_pos(tail_pos(stitches)))
+            if rest:
+                stitches.append(Node(ZOMBIE_TAG, rest).with_pos(tail_pos(stitches)))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
+
         if any(self.variables__.values()):
                 # capture stack not empty will only be reported for root-parsers
                 # to avoid false negatives when testing
@@ -1763,6 +1751,7 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
+
         self.tree__.swallow(result, document, source_mapping)
         if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
@@ -2020,30 +2009,24 @@ class Unparameterized(Parser):
 
 class Always(Unparameterized):
     """A parser that always matches, but does not capture anything."""
-    @cython.locals(location=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        return EMPTY_NODE, location
+    def _parse(self, text: StringView) -> ParsingResult:
+        return EMPTY_NODE, text
 
 
 class Never(Unparameterized):
     """A parser that never matches."""
-    @cython.locals(location=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        return None, location
+    def _parse(self, text: StringView) -> ParsingResult:
+        return None, text
 
 
 class AnyChar(Unparameterized):
     """A parser that returns the next unicode character of the document
     whatever that is. The parser fails only at the very end of the text."""
-    @cython.locals(location=cython.int, location_=cython.int, L=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        text = self.grammar.document__._text
-        L = len(text)
-        if location < L:
-            location_ = location + 1
-            return Node(self.node_name, text[location:location_], True), location_
+    def _parse(self, text: StringView) -> ParsingResult:
+        if len(text) >= 1:
+            return Node(self.node_name, text[:1], True), text[1:]
         else:
-            return None, location
+            return None, text
 
 
 class PreprocessorToken(Parser):
@@ -2070,9 +2053,7 @@ class PreprocessorToken(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    @cython.locals(location=cython.int, end=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        text = self.grammar.document__[location:]
+    def _parse(self, text: StringView) -> ParsingResult:
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
@@ -2081,14 +2062,14 @@ class PreprocessorToken(Parser):
                     node,
                     'END_TOKEN delimiter missing from preprocessor token. '
                     '(Most likely due to a preprocessor bug!)')
-                return node, location + 1
+                return node, text[1:]
             elif end == 0:
                 node = Node(self.node_name, '')
                 self.grammar.tree__.new_error(
                     node,
                     'Preprocessor-token cannot have zero length. '
                     '(Most likely due to a preprocessor bug!)')
-                return node, location + 2
+                return node, text[2:]
             elif text.find(BEGIN_TOKEN, 1, end) >= 0:
                 node = Node(self.node_name, text[len(self.pname) + 1:end])
                 self.grammar.tree__.new_error(
@@ -2096,12 +2077,12 @@ class PreprocessorToken(Parser):
                     'Preprocessor-tokens must not be nested or contain '
                     'BEGIN_TOKEN delimiter as part of their argument. '
                     '(Most likely due to a preprocessor bug!)')
-                return node, location + end
+                return node, text[end:]
             if text[1:len(self.pname) + 1] == self.pname:
                 if self.drop_content:
-                    return EMPTY_NODE, location + end + 1
-                return Node(self.node_name, text[len(self.pname) + 2:end], True), location + end + 1
-        return None, location
+                    return EMPTY_NODE, text[end + 1:]
+                return Node(self.node_name, text[len(self.pname) + 2:end], True), text[end + 1:]
+        return None, text
 
 
 ########################################################################
@@ -2132,17 +2113,16 @@ class Text(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        location_ = location + self.len
+    def _parse(self, text: StringView) -> ParsingResult:
+        self_len = self.len    # use local variables for optimization
         self_text = self.text
-        if self.grammar.text__[location:location_] == self_text:
+        if text[:self_len] == self_text:  # text.startswith(self.text):
             if self.drop_content:
-                return EMPTY_NODE, location_
+                return EMPTY_NODE, text[self_len:]
             elif self_text or not self.disposable:
-                return Node(self.node_name, self_text, True), location_
-            return EMPTY_NODE, location
-        return None, location
+                return Node(self.node_name, self_text, True), text[self_len:]
+            return EMPTY_NODE, text
+        return None, text
 
     def __repr__(self):
         return '`%s`' % abbreviate_middle(self.text, 80)
@@ -2186,18 +2166,17 @@ class RegExp(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    @cython.locals(location=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        match = self.regexp.match(self.grammar.text__, location)
+    def _parse(self, text: StringView) -> ParsingResult:
+        match = text.match(self.regexp)
         if match:
             capture = match.group(0)
             if capture or not self.disposable:
-                end = match.end()
+                end = text.index(match.end())
                 if self.drop_content:
-                    return EMPTY_NODE, end
-                return Node(self.node_name, capture, True), end
-            return EMPTY_NODE, location
-        return None, location
+                    return EMPTY_NODE, text[end:]
+                return Node(self.node_name, capture, True), text[end:]
+            return EMPTY_NODE, text
+        return None, text
 
     def __repr__(self):
         pattern = self.regexp.pattern
@@ -2686,10 +2665,9 @@ class Option(UnaryParser):
     def __init__(self, parser: Parser) -> None:
         super(Option, self).__init__(parser)
 
-    @cython.locals(location=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        node, location = self.parser(location)
-        return self._return_value(node), location
+    def _parse(self, text: StringView) -> ParsingResult:
+        node, text = self.parser(text)
+        return self._return_value(node), text
 
     def is_optional(self) -> Optional[bool]:
         return True
@@ -2729,19 +2707,23 @@ class ZeroOrMore(Option):
     EBNF-Example:  ``sentence = { /\w+,?/ } "."``
     """
 
-    @cython.locals(location=cython.int, n=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        results: Tuple[Node, ...] = ()
-        n: int = location - 1
-        while location > n:
-            n = location
-            node, location = self.parser(location)
+    @cython.locals(n=cython.int, length=cython.int)
+    def _parse(self, text: StringView) -> ParsingResult:
+        results = ()  # type: Tuple[Node, ...]
+        length = text.__len__()
+        n = length + 1  # type: int
+        while length < n:  # text and length(text) < n:
+            n = length
+            node, text = self.parser(text)
+            length = text.__len__()
             if node is None:
                 break
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
+            # if length == n:
+            #     break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
-        return nd, location
+        return nd, text
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -2769,24 +2751,27 @@ class OneOrMore(UnaryParser):
 
     EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
-    @cython.locals(location=cython.int, n=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        results: Tuple[Node, ...] = ()
+    def _parse(self, text: StringView) -> ParsingResult:
+        results = ()  # type: Tuple[Node, ...]
         # text_ = text  # type: StringView
-        match_flag: bool = False
-        n: int = location - 1
-        while location > n:
-            n = location
-            node, location = self.parser(location)
+        match_flag = False
+        length = text.__len__()
+        n = length + 1  # type: int
+        while length < n:  # text_ and len(text_) < n:
+            n = length
+            node, text = self.parser(text)
+            length = text.__len__()
             if node is None:
                 break
             match_flag = True
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
+            # if length == n:
+            #    break  # avoid infinite loop
         if not match_flag:
-            return None, location
+            return None, text
         nd = self._return_values(results)  # type: Node
-        return nd, location  # text_
+        return nd, text  # text_
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
@@ -2852,27 +2837,30 @@ class Counted(UnaryParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int):
-        results: Tuple[Node, ...] = ()
-        location_ = location
+    @cython.locals(n=cython.int, length=cython.int)
+    def _parse(self, text: StringView):
+        results = ()  # Tuple[Node, ...]
+        text_ = text
+        length = text.__len__()
         for _ in range(self.repetitions[0]):
-            node, location = self.parser(location)
+            node, text = self.parser(text)
             if node is None:
-                return None, location_
+                return None, text_
             results += (node,)
-            if location_ >= location:
+            n = length
+            length = text.__len__()
+            if length == n:
                 break  # avoid infinite loop
-            location_ = location
         for _ in range(self.repetitions[1] - self.repetitions[0]):
-            node, location = self.parser(location)
+            node, text = self.parser(text)
             if node is None:
                 break
             results += (node,)
-            if location_ >= location:
+            n = length
+            length = text.__len__()
+            if length == n:
                 break  # avoid infinite loop
-            location_ = location
-        return self._return_values(results), location
+        return self._return_values(results), text
 
     def is_optional(self) -> Optional[bool]:
         return self.repetitions[0] == 0
@@ -2957,29 +2945,31 @@ class MandatoryNary(NaryParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    @cython.locals(location=cython.int)
-    def get_reentry_point(self, location: int) -> Tuple[int, Node]:
+    def get_reentry_point(self, text_: StringView) -> Tuple[int, Node]:
         """Returns a tuple of integer index of the closest reentry point and a Node
         capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
         reentry-point was found. If no reentry-point was found or the
         skip-list ist empty, -1 and a zombie-node are returned.
         """
-        text_ = self.grammar.document__[location:]
         skip = tuple(self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname,
                                                    tuple()))
         if skip:
             gr = self._grammar
-            reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
-            return reloc, zombie
+            # print(gr.variables__)
+            # location = gr.document_length__ - text_._len
+            # if location <= gr.last_rb__loc__ + 1:
+            #     gr.rollback_to__(location - 1)
+            reloc = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            return reloc
         return -1, Node(ZOMBIE_TAG, '')
 
     @cython.locals(location=cython.int)
     def mandatory_violation(self,
-                            location: int,
+                            text_: StringView,
                             failed_on_lookahead: bool,
                             expected: str,
                             reloc: int,
-                            err_node: Node) -> Tuple[Error, int]:
+                            err_node: Node) -> Tuple[Error, StringView]:
         """
         Chooses the right error message in case of a mandatory violation and
         returns an error with this message, an error node, to which the error
@@ -3004,7 +2994,7 @@ class MandatoryNary(NaryParser):
                 continuation the parsing process
         """
         grammar = self._grammar
-        text_ = self.grammar.document__[location:]
+        location = grammar.document_length__ - len(text_)
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
         err_node.with_pos(location)  # for testing artifacts
         found = text_[:10].replace('\n', '\\n') + '...'
@@ -3041,8 +3031,8 @@ class MandatoryNary(NaryParser):
         if reloc >= 0:
             # signal error to tracer directly, because this error is not raised!
             grammar.most_recent_error__ = ParserError(
-                self, err_node, reloc, location, error, first_throw=False)
-        return error, location + max(reloc, 0)
+                self, err_node, reloc, text_, error, first_throw=False)
+        return error, text_[max(reloc, 0):]
 
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
@@ -3104,25 +3094,25 @@ class Series(MandatoryNary):
     """
     RX_ARGUMENT = re.compile(r'\s(\S)')
 
-    @cython.locals(location=cython.int, location_=cython.int, pos=cython.int, reloc=cython.int, mandatory=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
+    @cython.locals(pos=cython.int, reloc=cython.int, mandatory=cython.int)
+    def _parse(self, text: StringView) -> ParsingResult:
         results = []  # type: List[Node]
-        location_ = location
+        text_ = text  # type: StringView
         error = None  # type: Optional[Error]
         mandatory = self.mandatory  # type: int
         for pos, parser in enumerate(self.parsers):
-            node, location_ = parser(location_)
+            node, text_ = parser(text_)
             if node is None:
                 if pos < mandatory:
-                    return None, location
+                    return None, text
                 else:
                     parser_str = str(parser) if is_context_sensitive(parser) else parser.repr
-                    reloc, node = self.get_reentry_point(location_)
-                    error, location_ = self.mandatory_violation(
-                        location_, isinstance(parser, Lookahead), parser_str, reloc, node)
+                    reloc, node = self.get_reentry_point(text_)
+                    error, text_ = self.mandatory_violation(
+                        text_, isinstance(parser, Lookahead), parser_str, reloc, node)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
-                        nd, location_ = parser(location_)  # try current parser again
+                        nd, text_ = parser(text_)  # try current parser again
                         if nd is not None:
                             results.append(node)
                             node = nd
@@ -3136,10 +3126,10 @@ class Series(MandatoryNary):
         ret_node = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
-            raise ParserError(self, ret_node.with_pos(location_),
-                              location_ - location,
-                              location, error, first_throw=True)
-        return ret_node, location_
+            raise ParserError(self, ret_node.with_pos(self.grammar.document_length__ - len(text_)),
+                              len(text) - len(text_),
+                              text, error, first_throw=True)
+        return ret_node, text_
 
     def __repr__(self):
         return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
@@ -3240,16 +3230,15 @@ class Alternative(NaryParser):
 
     EBNF-Example:  ``number = /\d+\.\d+/ | /\d+/``
     """
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
+    def _parse(self, text: StringView) -> ParsingResult:
         for parser in self.parsers:
-            node, location_ = parser(location)
+            node, text_ = parser(text)
             if node is not None:
-                return self._return_value(node), location_
+                return self._return_value(node), text_
                 # return self._return_value(node if node._result or parser.pname else None), text_
                 # return Node(self.name,
                 #             node if node._result or parser.pname else ()), text_
-        return None, location
+        return None, text
 
     def __repr__(self):
         if self.pname:
@@ -3386,16 +3375,14 @@ class TextAlternative(Alternative):
         self.indices = {h: parsers.index(p) for h, p in zip(heads, parsers)}
         self.min_head_size = min(len(h) for h in self.heads)
 
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        text = self.grammar.document__[location:]
+    def _parse(self, text: StringView) -> ParsingResult:
         m = longest_match(self.heads, text, self.min_head_size)
         if m:
             parser = self.parsers[self.indices[m]]
-            node, location_ = parser(location)
+            node, text_ = parser(text)
             if node is not None:
-                return self._return_value(node), location_
-        return None, location
+                return self._return_value(node), text_
+        return None, text
 
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
@@ -3450,22 +3437,23 @@ class Interleave(MandatoryNary):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    @cython.locals(location=cython.int, location_=cython.int, location__=cython.int, i=cython.int, reloc=cython.int)
-    def _parse(self, location: int):
+    @cython.locals(i=cython.int, n=cython.int, length=cython.int, reloc=cython.int)
+    def _parse(self, text: StringView):
         results = ()  # type: Tuple[Node, ...]
-        location_ = location  # type: int
+        text_ = text  # type: StringView
         counter = [0] * len(self.parsers)
         consumed = set()  # type: Set[Parser]
         error = None  # type: Optional[Error]
+        length = text_.__len__()
         while True:
             # there is an order of testing, but no promise about the order of testing, here!
             for i, parser in enumerate(self.parsers):
                 if parser not in consumed:
-                    node, location__ = parser(location_)
+                    node, text__ = parser(text_)
                     if node is not None:
                         if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                             results += (node,)
-                            # location_ = location__
+                            text_ = text__
                         counter[i] += 1
                         if counter[i] >= self.repetitions[i][1]:
                             consumed.add(parser)
@@ -3478,23 +3466,24 @@ class Interleave(MandatoryNary):
                     if consumed == self.parsers_set:
                         break
                 else:
-                    return None, location
-                reloc, err_node = self.get_reentry_point(location_)
+                    return None, text
+                reloc, err_node = self.get_reentry_point(text_)
                 expected = ' ° '.join([parser.repr for parser in self.parsers])
-                error, location__ = self.mandatory_violation(location_, False, expected, reloc, err_node)
+                error, text_ = self.mandatory_violation(text_, False, expected, reloc, err_node)
                 results += (err_node,)
                 if reloc < 0:
                     break
-            if location__ <= location_:
-                break
-            location_ = location__
+            n = length
+            length = text_.__len__()
+            if length == n:
+                break  # avoid infinite loop
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
-            raise ParserError(self, nd.with_pos(location),
-                              location_ - location,
-                              location, error, first_throw=True)
-        return nd, location_
+            raise ParserError(self, nd.with_pos(self.grammar.document_length__ - len(text)),
+                              len(text) - len(text_),
+                              text, error, first_throw=True)
+        return nd, text_
 
     def is_optional(self) -> Optional[bool]:
         return all(r[0] == 0 for r in self.repetitions)
@@ -3605,13 +3594,12 @@ class Lookahead(FlowParser):
     Matches, if the contained parser would match for the following text,
     but does not consume any text.
     """
-    @cython.locals(location=int)
-    def _parse(self, location: int) -> ParsingResult:
-        node, _ = self.parser(location)
+    def _parse(self, text: StringView) -> ParsingResult:
+        node, _ = self.parser(text)
         if self.match(node is not None):
-            return (EMPTY_NODE if self.disposable else Node(self.node_name, '', True)), location
+            return (EMPTY_NODE if self.disposable else Node(self.node_name, '', True)), text
         else:
-            return None, location
+            return None, text
 
     def __repr__(self):
         return '&' + self.parser.repr
@@ -3669,19 +3657,17 @@ class Lookbehind(FlowParser):
             self.text = cast(Text, p).text
         super(Lookbehind, self).__init__(parser)
 
-    @cython.locals(location=cython.int, start=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        start = self.grammar.document_length__ - location
-        backwards_text = self.grammar.reversed__[start:]
+    def _parse(self, text: StringView) -> ParsingResult:
+        backwards_text = self.grammar.reversed__[text.__len__():]
         if self.regexp is None:  # assert self.text is not None
             does_match = backwards_text[:len(self.text)] == self.text
         else:  # assert self.regexp is not None
             does_match = backwards_text.match(self.regexp)
         if self.match(does_match):
             if self.drop_content:
-                return EMPTY_NODE, location
-            return Node(self.node_name, '', True), location
-        return None, location
+                return EMPTY_NODE, text
+            return Node(self.node_name, '', True), text
+        return None, text
 
     def __repr__(self):
         return '-&' + self.parser.repr
@@ -3749,8 +3735,8 @@ class ContextSensitive(UnaryParser):
         return BlackHoleDict()
 
     @cython.returns(cython.int)
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _rollback_location(self, location: int, location_: int) -> int:
+    @cython.locals(L=cython.int, rb_loc=cython.int)
+    def _rollback_location(self, text: StringView, rest: StringView) -> int:
         """
         Determines the rollback location for context-sensitive parsers, i.e.
         parsers that either manipulate (store or change) or use variables.
@@ -3780,7 +3766,11 @@ class ContextSensitive(UnaryParser):
 
         determines whether memoization should be blocked.
         """
-        return location if location != location_ else location-1
+        L = text._len
+        rb_loc = self.grammar.document_length__ - L
+        if rest._len == text._len:
+            rb_loc -= 1
+        return rb_loc
 
     def _signature(self) -> Hashable:
         return id(self)
@@ -3807,24 +3797,23 @@ class Capture(ContextSensitive):
     @property
     def can_capture_zero_length(self) -> bool:
         if self._can_capture_zero_length is None:
-            self._can_capture_zero_length = self.parser._parse(0)[0] is not None
+            self._can_capture_zero_length = self.parser._parse(StringView(""))[0] is not None
         return cast(bool, self._can_capture_zero_length)
 
     def _rollback(self):
         return self.grammar.variables__[self.pname].pop()
 
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        node, location_ = self.parser(location)
+    def _parse(self, text: StringView) -> ParsingResult:
+        node, text_ = self.parser(text)
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
                 "Cannot capture content from parsers that drop content!"
             self.grammar.variables__[self.pname].append(node.content)
-            self.grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
-            return self._return_value(node), location_
+            self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
+            return self._return_value(node), text_
         else:
-            return None, location
+            return None, text
 
     def __repr__(self):
         return self.parser.repr
@@ -3843,7 +3832,7 @@ class Capture(ContextSensitive):
                 0, CAPTURE_DROPPED_CONTENT_WARNING
             )))
         if self.zero_length_warning:
-            node, _ = self.parser._parse(0)
+            node, _ = self.parser._parse(StringView(''))
             if node is not None:
                 errors.append(AnalysisError(self.pname, self, Error(
                     'Variable "%s" captures zero length strings, which can lead to '
@@ -3949,27 +3938,23 @@ class Retrieve(ContextSensitive):
             # return cast(Forward, self.parser).parser.name
         return self.node_name
 
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
+    def _parse(self, text: StringView) -> ParsingResult:
         # auto-capture on first use if symbol was not captured before
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
-            node, location_ = self.parser(location)   # auto-capture value
+            node, text_ = self.parser(text)   # auto-capture value
             if node is None:
                 # set last_rb__loc__ to avoid memoizing of retrieved results
-                self.grammar.push_rollback__(
-                    self._rollback_location(location, location_), lambda: None)
-                return None, location_
-        node, location_ = self.retrieve_and_match(location)
+                self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
+                return None, text_
+        node, text_ = self.retrieve_and_match(text)
         # set last_rb__loc__ to avoid memoizing of retrieved results
-        self.grammar.push_rollback__(
-            self._rollback_location(location, location_), lambda: None)
-        return node, location_
+        self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
+        return node, text_
 
     def __repr__(self):
         return ':' + self.parser.repr
 
-    @cython.locals(location=cython.int)
-    def retrieve_and_match(self, location: int) -> ParsingResult:
+    def retrieve_and_match(self, text: StringView) -> ParsingResult:
         """
         Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
@@ -3977,7 +3962,6 @@ class Retrieve(ContextSensitive):
         accordingly.
         """
         # `or self.parser.parser.pname` needed, because Forward-Parsers do not have a pname
-        text = self.grammar.document__[location:]
         try:
             stack = self.grammar.variables__[self.symbol_pname]
             value = self.match(text, stack)
@@ -3985,18 +3969,18 @@ class Retrieve(ContextSensitive):
             tn = self.get_node_name()
             if self.match.__name__.startswith('optional_'):
                 # returns a None match if parser is optional but there was no value to retrieve
-                return None, location
+                return None, text
             else:
                 node = Node(tn, '', True)  # .with_pos(self.grammar.document_length__ - text.__len__())
                 self.grammar.tree__.new_error(
                     node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
                     UNDEFINED_RETRIEVE)
-                return node, location
+                return node, text
         if value is None:
-            return None, location
+            return None, text
         elif self.drop_content:
-            return EMPTY_NODE, location + len(value)
-        return Node(self.get_node_name(), value), location + len(value)
+            return EMPTY_NODE, text[len(value):]
+        return Node(self.get_node_name(), value), text[len(value):]
 
 
 class Pop(Retrieve):
@@ -4027,16 +4011,15 @@ class Pop(Retrieve):
     def _rollback(self):
         self.grammar.variables__[self.symbol_pname].append(self.values.pop())
 
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        node, location_ = self.retrieve_and_match(location)
+    def _parse(self, text: StringView) -> ParsingResult:
+        node, text_ = self.retrieve_and_match(text)
         if node is not None and not id(node) in self.grammar.tree__.error_nodes:
             self.values.append(self.grammar.variables__[self.symbol_pname].pop())
-            self.grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
+            self.grammar.push_rollback__(self._rollback_location(text, text_), self._rollback)
         else:
             # set last_rb__loc__ to avoid memoizing of retrieved results
-            self.grammar.push_rollback__(self._rollback_location(location, location_), lambda: None)
-        return node, location_
+            self.grammar.push_rollback__(self._rollback_location(text, text_), lambda: None)
+        return node, text_
 
     def __repr__(self):
         stack = self.grammar.variables__.get(self.symbol_pname, [])
@@ -4070,21 +4053,20 @@ class Synonym(UnaryParser):
         assert not parser.drop_content
         super(Synonym, self).__init__(parser)
 
-    @cython.locals(location=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
-        node, location = self.parser(location)
+    def _parse(self, text: StringView) -> ParsingResult:
+        node, text = self.parser(text)
         if node is not None:
             if self.drop_content:
-                return EMPTY_NODE, location
+                return EMPTY_NODE, text
             if not self.disposable:
                 if node is EMPTY_NODE:
-                    return Node(self.node_name, '', True), location
+                    return Node(self.node_name, '', True), text
                 if node.name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
                     node.name = self.node_name
                 else:
-                    return Node(self.node_name, (node,)), location
-        return node, location
+                    return Node(self.node_name, (node,)), text
+        return node, text
 
     def __str__(self):
         return self.pname + (' = ' if self.pname else '') + self.parser.repr
@@ -4149,7 +4131,7 @@ class Forward(UnaryParser):
         return duplicate
 
     @cython.locals(location=cython.int, depth=cython.int, rb_stack_size=cython.int)
-    def __call__(self,location: int) -> ParsingResult:
+    def __call__(self, text: StringView) -> ParsingResult:
         """
         Overrides `Parser.__call__`, because Forward is not an independent parser
         but merely a redirects the call to another parser. Other than parser
@@ -4167,8 +4149,9 @@ class Forward(UnaryParser):
         """
         grammar = self.grammar
         if not grammar.left_recursion__:  # TODO: add a static check and flag: self.left_recursive__!
-            return self.parser(location)
+            return self.parser(text)
 
+        location = grammar.document_length__ - text._len
         # rollback variable changing operation if parser backtracks
         # to a position before the variable changing operation occurred
         if location <= grammar.last_rb__loc__:
@@ -4184,10 +4167,10 @@ class Forward(UnaryParser):
             depth = self.recursion_counter[location]
             if depth == 0:
                 grammar.suspend_memoization__ = True
-                result = None, location
+                result = None, text
             else:
                 self.recursion_counter[location] = depth - 1
-                result = self.parser(location)
+                result = self.parser(text)
                 self.recursion_counter[location] = depth  # allow moving back and forth
         else:
             self.recursion_counter[location] = 0  # fail on the first recursion
@@ -4195,7 +4178,7 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             history_pointer = len(grammar.history__)
 
-            result = self.parser(location)
+            result = self.parser(text)
 
             if result[0] is not None:
                 # keep calling the (potentially left-)recursive parser and increase
@@ -4216,10 +4199,10 @@ class Forward(UnaryParser):
                     # occurred. Big topic...)
                     # don't carry error/resumption-messages over to the next iteration
                     # grammar.most_recent_error__ = None
-                    next_result = self.parser(location)
+                    next_result = self.parser(text)
 
                     # discard next_result if it is not the longest match and return
-                    if next_result[1] <= result[1]:  # also true, if no match
+                    if len(next_result[1]) >= len(result[1]):  # also true, if no match
                         # Since the result of the last parser call (`next_result`) is discarded,
                         # any variables captured by this call should be "rolled back", too.
                         while len(grammar.rollback__) > rb_stack_size:

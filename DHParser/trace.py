@@ -45,25 +45,23 @@ def symbol_name(parser: Parser, grammar: Grammar) -> str:
     return name
 
 
-@cython.locals(location=cython.int, loc=cython.int, delta=cython.int, cs_len=cython.int,
+@cython.locals(location=cython.int, location_=cython.int, delta=cython.int, cs_len=cython.int,
                i=cython.int, L=cython.int)
-def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], StringView]:
+def trace_history(self: Parser, location: int) -> Tuple[Optional[Node], int]:
     grammar = self._grammar  # type: Grammar
     if not grammar.history_tracking__:
         try:
-            node, rest = self._parse(text)  # <===== call to the actual parser!
+            node, location = self._parse(location)  # <===== call to the actual parser!
         except ParserError as pe:
             raise pe
-        return node, rest
-
-    location = grammar.document_length__ - text._len  # type: int
+        return node, location
 
     mre: Optional[ParserError] = grammar.most_recent_error__
     if mre is not None and location >= mre.error.pos:
         # add resume notice (mind that skip notices are added by
         # `parse.MandatoryElementsParser.mandatory_violation()`
         if mre.error.code == RECURSION_DEPTH_LIMIT_HIT:
-            return mre.node, text
+            return mre.node, location
 
         grammar.most_recent_error__ = None
         errors = [mre.error]  # type: List[Error]
@@ -71,9 +69,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
         orig_lc = line_col(grammar.document_lbreaks__, mre.error.pos)
         orig_snippet= text_ if len(text_) <= 10 else text_[:7] + '...'
         # orig_snippet = orig_rest if len(orig_rest) <= 10 else orig_rest[:7] + '...'
-        target_pos = grammar.document_length__ - len(text)
-        target_lc = line_col(grammar.document_lbreaks__, target_pos)
-        target_text_ = grammar.document__[target_pos:]
+        target_lc = line_col(grammar.document_lbreaks__, location)
+        target_text_ = grammar.document__[location:]
         target_snippet = target_text_ if len(target_text_) <= 10 else target_text_[:7] + '...'
         # target = text if len(text) <= 10 else text[:7] + '...'
 
@@ -106,8 +103,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
           else (self.pname or self.node_name)), location))  # ' ' added to avoid ':' as first char!
     grammar.moving_forward__ = True
 
+    doc = self.grammar.document__
     try:
-        node, rest = self._parse(text)   # <===== call to the actual parser!
+        node, location_ = self._parse(location)   # <===== call to the actual parser!
     except ParserError as pe:
         if pe.first_throw:
             pe.callstack_snapshot = grammar.call_stack__.copy()
@@ -118,7 +116,8 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
             # TODO: get the call stack from when the error occurred, here
             nd = fe.node
             grammar.history__.append(
-                HistoryRecord(grammar.call_stack__, nd, fe.rest[nd.strlen():], lc, [fe.error]))
+                HistoryRecord(grammar.call_stack__, nd, doc[fe.location + nd.strlen():],
+                              lc, [fe.error]))
         grammar.call_stack__.pop()
         raise pe
 
@@ -131,10 +130,9 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
                       or grammar.history__ and grammar.history__[-1].node)))):
         # record history
         # TODO: Make dropping insignificant whitespace from history configurable
-        delta = text._len - rest._len
-        hnd = Node(node.name, text[:delta]).with_pos(location) if node else None
+        hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
         lc = line_col(grammar.document_lbreaks__, location)
-        record = HistoryRecord(grammar.call_stack__, hnd, rest, lc, [])
+        record = HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, [])
         cs_len = len(record.call_stack)
         if (not grammar.history__ or not node
                 or lc != grammar.history__[-1].line_col
@@ -144,7 +142,7 @@ def trace_history(self: Parser, text: StringView) -> Tuple[Optional[Node], Strin
 
     grammar.moving_forward__ = False
     grammar.call_stack__.pop()
-    return node, rest
+    return node, location_
 
 
 def all_descendants(root: Parser) -> List[Parser]:
