@@ -99,7 +99,6 @@ def fast_real_indices(begin: Optional[int],
     indices `begin`,  `end`, assuming a string of size `length`.
     """
     cbegin = 0 if begin is None else begin
-    # cbegin = begin if begin else 0
     cend = length if end is None else end
     return pack_index(cbegin, length), pack_index(cend, length)
 
@@ -124,12 +123,6 @@ class StringView:  # collections.abc.Sized
     @cython.locals(_begin=cython.int, _end=cython.int, _len=cython.int)
     def __init__(self, text: str, begin: Optional[int] = 0, end: Optional[int] = None) -> None:
         # assert isinstance(text, str)
-        # self._text = text  # type: str
-        # self._begin, self._end = fast_real_indices(begin, end, len(text))
-        # self._len = self._end - self._begin  # type: int
-        # if self._len < 0:
-        #     self._len = 0
-        # self._fullstring = ''  # type: str
         self._text = text  # type: str
         _begin, _end = fast_real_indices(begin, end, len(text))
         _len = _end - _begin  # type: int

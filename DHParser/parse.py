@@ -527,7 +527,7 @@ class Parser:
         # grammar = self._grammar
         self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
 
-    @cython.locals(location=cython.int, gap=cython.int, i=cython.int)
+    @cython.locals(location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
     def __call__(self: 'Parser', text: StringView) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
