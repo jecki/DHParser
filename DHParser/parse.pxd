@@ -18,10 +18,10 @@ cdef class Parser:
     cdef str _symbol
 
     cpdef reset(self)
-    # def __call__(self, location)
+    # cpdef __call__(self, int location)
     # def __add__(self, other)
     # def __or__(self, other)
-    cpdef _parse(self, location)
+    cpdef _parse(self, int location)
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
