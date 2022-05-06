@@ -57,12 +57,17 @@ import html
 import os
 from typing import List, Tuple, Union, Optional, Sequence
 
+try:
+    import cython
+except ImportError:
+    import DHParser.externallibs.shadow_cython as cython
+
 from DHParser.configuration import access_presets, finalize_presets, get_config_value, \
     set_config_value, get_preset_value, set_preset_value
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.nodetree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
-from DHParser.toolkit import escape_ctrl_chars, abbreviate_middle, cython
+from DHParser.toolkit import escape_ctrl_chars, abbreviate_middle
 
 __all__ = ('CallItem',
            'start_logging',

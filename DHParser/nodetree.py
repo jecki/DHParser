@@ -44,12 +44,17 @@ if sys.version_info >= (3, 6, 0):
 else:
     from collections import OrderedDict
 
+try:
+    import cython
+except ImportError:
+    import DHParser.externallibs.shadow_cython as cython
+
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, SourceMapFunc, has_errors, only_errors
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
+from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     deprecation_warning
 
@@ -1002,8 +1007,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         result.insert(index, node)
         self.result = tuple(result)
 
-    @cython.locals(start=cython.int, stop=cython.int, i=cython.int)
-    def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
+    def index(self, what: CriteriaType, start: int = 0, stop: int = 2**30) -> int:
         """
         Returns the index of the first child that fulfills the criterion
         `what`. If the parameters start and stop are given, the search is

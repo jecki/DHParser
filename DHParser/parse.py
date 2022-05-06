@@ -39,6 +39,11 @@ from functools import lru_cache
 from typing import Callable, cast, List, Tuple, Set, Dict, \
     DefaultDict, Sequence, Union, Optional, Iterator, Hashable
 
+try:
+    import cython
+except ImportError:
+    import DHParser.externallibs.shadow_cython as cython
+
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
@@ -57,7 +62,7 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
-from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, cython, \
+from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col
 
 
@@ -2133,6 +2138,7 @@ class Text(Parser):
         return duplicate
 
     @cython.locals(location=cython.int, location_=cython.int)
+    @cython.returns((object, cython.int))
     def _parse(self, location: int) -> ParsingResult:
         location_ = location + self.len
         self_text = self.text
@@ -3102,7 +3108,7 @@ class Series(MandatoryNary):
 
     EBNF-Example:  ``series = letter letter_or_digit``
     """
-    RX_ARGUMENT = re.compile(r'\s(\S)')
+    # RX_ARGUMENT = re.compile(r'\s(\S)')
 
     @cython.locals(location=cython.int, location_=cython.int, pos=cython.int, reloc=cython.int, mandatory=cython.int)
     def _parse(self, location: int) -> ParsingResult:

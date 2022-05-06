@@ -18,10 +18,10 @@ cdef class Parser:
     cdef str _symbol
 
     cpdef reset(self)
-    # cpdef __call__(self, int location)
+    # cpdef __call__(self, location)
     # def __add__(self, other)
     # def __or__(self, other)
-    cpdef _parse(self, location)
+    cpdef _parse(self, int location)
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
@@ -147,7 +147,7 @@ cdef class BlackHoleDict(dict):
     pass
 
 cdef class ContextSensitive(UnaryParser):
-    cpdef _rollback_location(self, text, rest)
+    cpdef _rollback_location(self, int location, int location)
 
 cdef class Capture(ContextSensitive):
     cdef public bint zero_length_warning
