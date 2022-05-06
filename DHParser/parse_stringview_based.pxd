@@ -18,10 +18,10 @@ cdef class Parser:
     cdef str _symbol
 
     cpdef reset(self)
-    # def __call__(self, location)
+    # def __call__(self, StringView text)
     # def __add__(self, other)
     # def __or__(self, other)
-    cpdef _parse(self, location)
+    cpdef _parse(self, text)
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
@@ -47,7 +47,6 @@ cdef class Grammar:
 #    cdef public object root_parser__  # do not uncomment this!!!
     cdef public object tree__
     cdef public object document__
-    cdef public str text__
     cdef public object _reversed__
     cdef public int document_length__
     cdef public list _document_lbreaks__
