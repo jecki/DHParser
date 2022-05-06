@@ -186,9 +186,9 @@ href                = "\href{" urlstring "}" block
 
 block          = "{" _block_content §`}`
 _block_content = [_PARSEP|S] { (_block_environment | _text_element | paragraph) [_PARSEP|S] }
-# text           = {CHARS|special}+ { (S {CHARS|special}+ }
-# text           = {LINE|special}+ { (S {LINE|special}+ }
-text           = {_TEXT|special}+ { S  {_TEXT|special}+ }
+text           = {CHARS|special}+ { S {CHARS|special}+ }
+# text           = {LINE|special}+ { S {LINE|special}+ }
+# text           = {_TEXT|special}+ { S  {_TEXT|special}+ }
   special      = `\-` | /\\/ esc_char   # reserved for characters that may appear in
                | UMLAUT | QUOTEMARK
   esc_char     = `,`                    # in the middle of a word but do not delimit words
@@ -269,7 +269,7 @@ _TAG       = /[\w=?.:\-%&\[\] \/]+/
 
 _TEXT      = /(?:[^\\%$&\{\}\[\]\n'`"]+(?:\n(?![ \t]*\n))?)+/
 _TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parnetheses
-# LINE       = /[^\\%$&\{\}\[\]\n'`"]+/          # a line of text
+LINE       = /[^\\%$&\{\}\[\]\n'`"]+/          # a line of text
 CHARS      = /[^\\%$&\{\}\[\]\s\n'`"]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters
 _LETTERS   = /\w+/
