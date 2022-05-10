@@ -517,6 +517,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def strlen(self):
         """Returns the length of the string-content of this node.
         Mind that len(node) returns the number of children of this node!"""
+        flag = False
+        for child in self.children:
+            if not isinstance(child, Node):
+                print('>>>', self.name, self.children)
+                return "ERROR"
         return (sum(child.strlen() for child in self._children)
                 if self._children else len(self._result))
 
