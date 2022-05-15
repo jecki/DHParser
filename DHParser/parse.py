@@ -2366,7 +2366,6 @@ class CombinedParser(Parser):
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.node_name, '', True)
 
-    @cython.locals(N=cython.int)
     def _return_values_no_tree_reduction(self, results: Sequence[Node]) -> Node:
         # assert isinstance(results, (list, tuple))
         if self.drop_content:
@@ -2403,7 +2402,7 @@ class CombinedParser(Parser):
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.node_name, '', True)
 
-    @cython.locals(N=cython.int)
+    @cython.locals(N=cython.int, merge=cython.bint)
     def _return_values_merge_treetops(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from
