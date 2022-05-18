@@ -602,12 +602,13 @@ class TestWhitespace:
 
 class TestInterleave:
     def test_counted(self):
-        ebnf = 'test   = form_1 | form_2 | form_3 | form_4 | "non optional" form_5 | form_6\n' \
-               'form_1 = "a"{2,4}' \
-               'form_2 = "b"{3}' \
-               'form_3 = "c"*3' \
-               'form_4 = 2*"d"' \
-               'form_5 = ["e"]*3' \
+        ebnf = '@literalws=right\n'\
+               'test   = form_1 | form_2 | form_3 | form_4 | "non optional" form_5 | form_6\n' \
+               'form_1 = "a"{2,4}\n' \
+               'form_2 = "b"{3}\n' \
+               'form_3 = "c"*3\n' \
+               'form_4 = 2*"d"\n' \
+               'form_5 = ["e"]*3\n' \
                'form_6 = 5*{"f"}+'
         grammar = create_parser(ebnf)
         assert grammar.form_6.repetitions == (5, INFINITE)
@@ -626,7 +627,7 @@ class TestInterleave:
         assert not st.errors
 
     def test_illegal_multiplier(self):
-        lang = 'doc = "a" * 3'
+        lang = '@literalws=right\ndoc = "a" * 3'
         st = parse_ebnf(lang)
         assert not st.errors
         lang_wrong = 'doc = "a" * 0'
@@ -637,20 +638,27 @@ class TestInterleave:
         ebnf = 'prefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
         assert len(grammar.prefix.parsers) > 1
-        assert grammar('B A').content == 'B A'
-        assert grammar('A B').content == 'A B'
+        tree = grammar('B A')
+        assert tree.content == 'B A'
+        assert tree.errors
 
-    def test_some(self):
-        ebnf = 'prefix = "A"? ° "B"?'
+        ebnf = '@literalws=right\nprefix = "A" ° "B"'
         grammar = grammar_provider(ebnf)()
         assert len(grammar.prefix.parsers) > 1
-        assert grammar('B A').content == 'B A'
-        assert grammar('B').content == 'B'
+        assert grammar('B A').error_safe().content == 'B A'
+        assert grammar('A B').error_safe().content == 'A B'
+
+    def test_some(self):
+        ebnf = '@literalws=right\nprefix = "A"? ° "B"?'
+        grammar = grammar_provider(ebnf)()
+        assert len(grammar.prefix.parsers) > 1
+        assert grammar('B A').error_safe().content == 'B A'
+        assert grammar('B').error_safe().content == 'B'
         result = grammar('')
         assert result.content == '' and not result.errors
 
     def test_interleave_counted(self):
-        ebnf = 'prefix = "A"{1,5} ° "B"{2,3}'
+        ebnf = '@literalws=right\nprefix = "A"{1,5} ° "B"{2,3}'
         grammar = create_parser(ebnf)
         assert isinstance(grammar.prefix, Interleave)
         assert grammar.prefix.repetitions == [(1, 5), (2, 3)]
@@ -660,7 +668,7 @@ class TestInterleave:
         assert not st.errors
 
     def test_grouping_1(self):
-        ebnf = 'prefix = ("A"{1,5}) ° ("B"{2,3})'
+        ebnf = '@literalws=right\nprefix = ("A"{1,5}) ° ("B"{2,3})'
         grammar = create_parser(ebnf)
         assert isinstance(grammar.prefix, Interleave)
         assert grammar.prefix.repetitions == [(1, 1), (1, 1)]
@@ -670,7 +678,7 @@ class TestInterleave:
         assert not st.errors
 
     def test_grouping_2(self):
-        ebnf = 'prefix = ("A"{1,5}) ° ("B"{2,3})'
+        ebnf = '@literalws=right\nprefix = ("A"{1,5}) ° ("B"{2,3})'
         grammar = create_parser(ebnf)
         assert isinstance(grammar.prefix, Interleave)
         assert grammar.prefix.repetitions == [(1, 1), (1, 1)]

@@ -35,6 +35,11 @@ if sys.version_info >= (3, 6, 0):
 else:
     from collections import OrderedDict
 
+try:
+    import cython
+except ImportError:
+    import DHParser.externallibs.shadow_cython as cython
+
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source, visitor_name
 from DHParser.configuration import access_thread_locals, get_config_value, \
     NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
@@ -54,7 +59,7 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOM
     flatten_sxpr
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
-    cython, ThreadLocalSingletonFactory
+    ThreadLocalSingletonFactory
 from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \

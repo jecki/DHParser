@@ -44,12 +44,17 @@ if sys.version_info >= (3, 6, 0):
 else:
     from collections import OrderedDict
 
+try:
+    import cython
+except ImportError:
+    import DHParser.externallibs.shadow_cython as cython
+
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
-    add_source_locations, SourceMapFunc
+    add_source_locations, SourceMapFunc, has_errors, only_errors
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, cython, linebreaks, line_col, JSONnull, \
+from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     deprecation_warning
 
@@ -512,6 +517,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def strlen(self):
         """Returns the length of the string-content of this node.
         Mind that len(node) returns the number of children of this node!"""
+        flag = False
+        for child in self.children:
+            if not isinstance(child, Node):
+                print('>>>', self.name, self.children)
+                return "ERROR"
         return (sum(child.strlen() for child in self._children)
                 if self._children else len(self._result))
 
@@ -1002,8 +1012,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         result.insert(index, node)
         self.result = tuple(result)
 
-    @cython.locals(start=cython.int, stop=cython.int, i=cython.int)
-    def index(self, what: CriteriaType, start: int = 0, stop: int = sys.maxsize) -> int:
+    def index(self, what: CriteriaType, start: int = 0, stop: int = 2**30) -> int:
         """
         Returns the index of the first child that fulfills the criterion
         `what`. If the parameters start and stop are given, the search is
@@ -2657,6 +2666,18 @@ class RootNode(Node):
         errors = self.errors[:]
         errors.sort(key=lambda e: e.pos)
         return errors
+
+    def error_safe(self, level: int = ERROR) -> 'RootNode':
+        """
+        Asserts that the given tree does not contain any errors with a
+        code equal or higher than the given level.
+        Returns the tree if this is the case, raises an `AssertionError`
+        otherwise.
+        """
+        if has_errors(self.errors, level):
+            raise AssertionError('\n'.join(['Tree-sanity-check failed, because of:'] +
+                                           [str(e) for e in only_errors(self.errors, level)]))
+        return self
 
     def did_match(self) -> bool:
         """

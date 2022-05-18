@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "e7589e299dab800bdf33cf66639439b9"
+    source_hash__ = "416327407c43be83205a07fc4ac93bdb"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -117,6 +117,7 @@ class LaTeXGrammar(Grammar):
     LFF = Alternative(Series(NEW_LINE, Option(_WSPC)), EOF)
     _LETTERS = RegExp('\\w+')
     CHARS = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n\'`"]+')
+    LINE = RegExp('[^\\\\%$&\\{\\}\\[\\]\\n\'`"]+')
     _TEXT_NOPAR = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\(\\)\\n]+(?:\\n(?![ \\t]*\\n))?)+')
     _TEXT = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\n\'`"]+(?:\\n(?![ \\t]*\\n))?)+')
     _TAG = RegExp('[\\w=?.:\\-%&\\[\\] /]+')

@@ -273,7 +273,23 @@ parsing-stage, already (see :ref:`simplifying_syntax_trees`)).
 To demonstrate what a transformation table looks like, here is an excerpt from the transformation-
 table of the LaTeX-Parser example::
 
-
+    LaTeX_AST_transformation_table = {
+        "<": [flatten, remove_children_if(is_expendable)],
+        "hide_from_toc, no_numbering": [replace_content_with('')],
+        "_known_environment": replace_by_single_child,
+        "paragraph": [strip(is_one_of({'S'}))],
+        "text, path": collapse,
+        "CMDNAME": [remove_whitespace, reduce_single_child],
+        "TXTCOMMAND": [remove_whitespace, reduce_single_child],
+        "ESCAPED": [apply_ifelse(transform_content(lambda result: result[1:]),
+                                 replace_content_with('~'),
+                                 lambda ctx: '~' not in ctx[-1].content)],
+        "UMLAUT": replace_Umlaut,
+        "QUOTEMARK": replace_quotationmark,
+        ":Whitespace, _WSPC, S": streamline_whitespace,
+        "WARN_Komma": add_error('No komma allowed at the end of a list', WARNING),
+        # ...
+    }
 
 
 
@@ -290,6 +306,10 @@ Conditional Transformations
 
 Writing Custom Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Debugging the transformation-table
+----------------------------------
+
 
 
 *Functions-Reference*

@@ -18,10 +18,10 @@ cdef class Parser:
     cdef str _symbol
 
     cpdef reset(self)
-    # cpdef __call__(self, location)
+    # def __call__(self, StringView text)
     # def __add__(self, other)
     # def __or__(self, other)
-    cpdef _parse(self, int location)
+    cpdef _parse(self, text)
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
@@ -47,7 +47,6 @@ cdef class Grammar:
 #    cdef public object root_parser__  # do not uncomment this!!!
     cdef public object tree__
     cdef public object document__
-    cdef public str text__
     cdef public object _reversed__
     cdef public int document_length__
     cdef public list _document_lbreaks__
@@ -147,7 +146,7 @@ cdef class BlackHoleDict(dict):
     pass
 
 cdef class ContextSensitive(UnaryParser):
-    cpdef _rollback_location(self, int location, int location)
+    cpdef _rollback_location(self, text, rest)
 
 cdef class Capture(ContextSensitive):
     cdef public bint zero_length_warning

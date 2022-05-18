@@ -13,7 +13,7 @@ construction kit for the Digital Humanities
 Features
 --------
 
-* Handles all context-free grammers; based on Parsing Expression Grammars,
+* Handles all context-free grammars; based on Parsing Expression Grammars,
   but with added support for left-recursive grammars
 
 * Full unicode support
@@ -153,7 +153,7 @@ License
 
 DHParser is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
 
-Copyright 2016-2021  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
+Copyright 2016-2022  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -168,8 +168,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-Optional Post-Installaton
--------------------------
+Optional Post-Installation
+--------------------------
 
 It is recommended that you install the `regex`-module
 (https://bitbucket.org/mrabarnett/mrab-regex). If present, DHParser
@@ -214,9 +214,6 @@ There exists a mirror of this repository on github:
 https://github.com/jecki/DHParser Be aware, though, that the github-mirror
 may occasionally lag behind a few commits.
 
-Please contact me, if you are intested in contributing to the
-development or just using DHParser.
-
 
 Purpose
 -------
@@ -256,7 +253,7 @@ emphasizes and evolutionary development model for grammars with
 unit-testing support, which fits the typical use cases in DH where DSLs
 evolve in a discussion process between technicians and humanists.
 Because the users of DSLs in the humanities are not necessarily very
-technically mindes people, DHParser supports the construction of
+technically minded people, DHParser supports the construction of
 fail-tolerant parsers with good error reporting in terms of locating
 the errors at the right spot and giving useful error messages.
 
@@ -291,10 +288,10 @@ Further (intended) use cases are:
 * Digital dictionaries
 
 For a simple self-test run `dhparser.py` from the command line. This
-compiles the EBNF-Grammer in `examples/EBNF/EBNF.ebnf` and outputs the
+compiles the EBNF-Grammar in `examples/EBNF/EBNF.ebnf` and outputs the
 Python-based parser class representing that grammar. The concrete and
 abstract syntax tree as well as a full and abbreviated log of the
-parsing process will be stored in a sub-directory named "LOG".
+parsing process will be stored in a subdirectory named "LOG".
 
 
 Author

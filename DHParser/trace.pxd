@@ -3,4 +3,4 @@
 #cython: c_string_type=unicode
 #cython: c_string_encoding=utf-8
 
-cpdef trace_history(self, text)
+cpdef trace_history(self, int location)
