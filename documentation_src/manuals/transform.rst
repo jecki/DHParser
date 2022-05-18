@@ -291,6 +291,9 @@ table of the LaTeX-Parser example::
         # ...
     }
 
+The first entry in the dictionary contains transformations which shall be performed on every node
+before the node's specific transformations are performed, but still after the node's children have been transformed.
+(Remember: Tree-traversal is depth-first.)
 
 
 Transformation Functions
