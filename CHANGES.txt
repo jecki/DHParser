@@ -1,6 +1,8 @@
-DHParser Version 1.0.2 (28.4.2022)
+DHParser Version 1.0.2 (18.5.2022)
 ..................................
 
+- faster parser: now uses text locations instead of string views to hand over
+  the rest of the document to the next parser. Approx 25% faster!
 - Cython compatibility restored
 
 

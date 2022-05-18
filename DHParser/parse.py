@@ -4154,7 +4154,7 @@ class Forward(UnaryParser):
         return duplicate
 
     @cython.locals(location=cython.int, depth=cython.int, rb_stack_size=cython.int)
-    def __call__(self,location: int) -> ParsingResult:
+    def __call__(self, location: int) -> ParsingResult:
         """
         Overrides `Parser.__call__`, because Forward is not an independent parser
         but merely a redirects the call to another parser. Other than parser
