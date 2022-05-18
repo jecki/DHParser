@@ -268,7 +268,7 @@ _COLON     = `:`
 _TAG       = /[\w=?.:\-%&\[\] \/]+/
 
 _TEXT      = /(?:[^\\%$&\{\}\[\]\n'`"]+(?:\n(?![ \t]*\n))?)+/
-_TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parnetheses
+_TEXT_NOPAR = /(?:[^\\%$&\{\}\[\]\(\)\n]+(?:\n(?![ \t]*\n))?)+/  # text without parentheses
 LINE       = /[^\\%$&\{\}\[\]\n'`"]+/          # a line of text
 CHARS      = /[^\\%$&\{\}\[\]\s\n'`"]+/        # some piece of text excluding whitespace,
                                             # linefeed and special characters

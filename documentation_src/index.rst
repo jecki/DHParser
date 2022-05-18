@@ -26,6 +26,20 @@ DHParser offers:
 * extensive tree-processing facilities
 * support for building language servers (experimental)
 
+DHParser is by now mature and "production ready". It is being used in several projects,
+most notably for the domain specific notation of the `Medieval Latin Dictionary`_
+and the Typescript-to-Python-interface-transpiler `ts2python`_
+
+License
+--------
+
+DHParser is open source software under the `Apache 2.0 License`_.
+
+Copyright 2016-2022  `Eckhart Arnold <arnold@badw.de>`_, Bavarian Academy of Sciences and Humanities
+
+The source code can downloaded from: `gitlab.lrz.de/badw-it/DHParser <https://gitlab.lrz.de/badw-it/DHParser>`_
+
+
 Install DHParser
 ----------------
 
@@ -52,3 +66,8 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
+.. _Medieval Latin Dictionary: https://mlw.badw.de/en/
+.. _ts2python: https://github.com/jecki/ts2python
+.. _Apache 2.0 License: https://www.apache.org/licenses/LICENSE-2.0
