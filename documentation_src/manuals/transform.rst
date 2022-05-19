@@ -290,7 +290,18 @@ table of the LaTeX-Parser example::
         # ...
     }
 
-The first entry
+Let's go through this table entry for entry and explain what the effect of each entry is. Doing so
+you will become acquainted with some of the transformation primitives that the :py:mod:`DHParser.transform`-module
+provides and also learn how this kind of table-based tree-transformation works.
+
+The first entry of the dictionary turns nodes with the either of the names "hide_from_toc" or "no_numbering"
+into empty nodes, which is reasonable, because these markers - which in the LaTeX-source consist of a simple asterix that is
+appended to a section-command or a command for an equation array, respectively - hall not
+be printed as part of the text. At the same time it is reasonable to keep the empty nodes as flags to
+indicate to latter processing stages that a certain section or chapter shall not appear in the table
+of contents or the numbering of an equation array shall be suppressed.
+
+
 
 
 Transformation Functions
