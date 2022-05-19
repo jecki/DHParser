@@ -274,7 +274,6 @@ To demonstrate what a transformation table looks like, here is an excerpt from t
 table of the LaTeX-Parser example::
 
     LaTeX_AST_transformation_table = {
-        "<": [flatten, remove_children_if(is_expendable)],
         "hide_from_toc, no_numbering": [replace_content_with('')],
         "_known_environment": replace_by_single_child,
         "paragraph": [strip(is_one_of({'S'}))],
@@ -291,9 +290,7 @@ table of the LaTeX-Parser example::
         # ...
     }
 
-The first entry in the dictionary contains transformations which shall be performed on every node
-before the node's specific transformations are performed, but still after the node's children have been transformed.
-(Remember: Tree-traversal is depth-first.)
+The first entry
 
 
 Transformation Functions
