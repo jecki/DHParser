@@ -8,6 +8,9 @@ license = "Apache-2"
 authors = ["Eckhart Arnold <eckhart.arnold@posteo.de>"]
 
 readme = "README.md"
+
+include = ['CHANGES.txt', 'Introduction.md']
+
 repository = "https://gitlab.lrz.de/badw-it/DHParser"
 homepage = "https://gitlab.lrz.de/badw-it/DHParser"
 documentation = "https://dhparser.readthedocs.io/en/latest/"
