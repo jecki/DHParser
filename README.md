@@ -28,7 +28,7 @@ Features
 
 * Digital Humanities features, like support for XML-workflows
 
-* no mandatory dependencies other than the Python Standard Library
+* No dependencies except the Python Standard Library
 
 * Soon to come: Extensive documentation and documented examples
 
@@ -195,11 +195,11 @@ The Cython-compiled version is about 2-3 times faster than the
 CPython interpreted version.
 
 Depending on the use case, e.g. when parsing large files, 
-[PyPy3](https://www.pypy.org/) yields even more impressive speed-ups,
-up to 8 times faster than CPython. To circumvent the longer startup
-times of pypy3 in comparison to CPython, it is recommended to use
-the xxxServer.py-scripts rather than calling the xxxParser.py-script
-each time when parsing many documents subsequently.
+[PyPy3](https://www.pypy.org/) yields even greater speed-ups. 
+However, in other cases pypy can also be noticeably slower than cpython!
+To circumvent the longer startup times of pypy3 in comparison to CPython, 
+it is recommended to use the xxxServer.py-scripts rather than calling 
+the xxxParser.py-script each time when parsing many documents subsequently.
 
 
 Sources
