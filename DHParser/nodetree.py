@@ -2413,7 +2413,7 @@ class RootNode(Node):
 
     :ivar source:  The source code (after preprocessing)
     :ivar source_mapping:  A source mapping function to map source code
-        position to the positions of the non-preprocessed source.
+        positions to the positions of the non-preprocessed source.
         See module `preprocess`
     :ivar lbreaks: A list of indices of all linebreaks in the source.
 
@@ -2474,6 +2474,9 @@ class RootNode(Node):
         duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
         duplicate.error_positions = {pos: {map_id.get(i, i) for i in s}
                                      for pos, s in self.error_positions.items()}
+        duplicate.source = self.source
+        duplicate.source_mapping = self.source_mapping
+        duplicate.lbreaks = copy.deepcopy(self.lbreaks)
         duplicate.error_flag = self.error_flag
         duplicate.inline_tags = self.inline_tags
         duplicate.string_tags = self.string_tags

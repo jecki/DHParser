@@ -33,6 +33,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
     select_context_if, select_context, create_context_match_function, pick_context, \
     LEAF_CONTEXT
+from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
@@ -288,7 +289,7 @@ class TestNode:
         assert root.strlen() == root.children[-1].pos + root.children[-1].strlen()
 
     def test_deepcopy(self):
-        tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'))
+        tree = RootNode(parse_sxpr('(a (b c) (d (e f) (h i)))'), "cfi", gen_neutral_srcmap_func("cfi"))
         tree.with_pos(0)
         tree_copy = copy.deepcopy(tree)
 
@@ -304,12 +305,16 @@ class TestNode:
         tree['d'].result = "x"
         assert not tree.equals(tree_copy)
         assert tree_copy.equals(parse_sxpr('(a (b c) (d (e f) (h i)))'))
-        #print(tree.as_sxpr())
-        #print(tree.attr)
         assert tree.equals(parse_sxpr('(a (b c) (d x))'))
 
         # this also checks for errors equality...
         assert parse_sxpr('(a (b c) (d x))').as_sxpr() != tree.as_sxpr()
+        tree_copy = copy.deepcopy(tree)
+        assert tree.source == tree_copy.source
+        assert tree.source_mapping == tree_copy.source_mapping
+        assert tree.lbreaks == tree_copy.lbreaks
+        assert tree.errors == tree_copy.errors
+
 
     def test_str(self):
         assert str(self.unique_tree) == "ceh"
