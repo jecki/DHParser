@@ -33,7 +33,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
-    positions_of, insert, node_maker, apply_if, change_name, add_attributes, \
+    positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content
 from typing import AbstractSet, List, Sequence, Tuple
 
@@ -459,6 +459,23 @@ class TestOptimizations:
         }
         traverse(tree, transtable)
         assert tree.equals(parse_sxpr('(array (number "1") (number "2.0") (string "a string"))'))
+
+
+class TestErrors:
+    def test_add_error(self):
+        lang = """
+            doc = letters { ws letters }
+            letters = /\w+/ | WRONG
+            ws = /\s+/
+            WRONG = /[^\w\s]+/
+        """
+        from DHParser.dsl import create_parser
+        parser = create_parser(lang)
+        ast = parser('abc ??? def')
+        trans_table = {'WRONG': add_error('Bad mistake!!!')}
+        traverse(ast, trans_table)
+        e = ast.errors[0]
+        assert e.line > 0 and e.column > 0
 
 
 if __name__ == "__main__":

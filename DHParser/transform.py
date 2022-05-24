@@ -1720,16 +1720,18 @@ def add_error(context: TreeContext, error_msg: str, error_code: ErrorCode = ERRO
     encoded in the syntax to provide more accurate error messages.
     """
     node = context[-1]
+    assert isinstance(context[0], RootNode)
+    root = cast(RootNode, context[0])
     if not error_msg:
         error_msg = "Syntax Error"
     try:
-        cast(RootNode, context[0]).new_error(node, error_msg.format(
+        root.new_error(node, error_msg.format(
              name=node.name, content=node.content, pos=node.pos), error_code)
     except KeyError as key_error:
-        cast(RootNode, context[0].new_error(
+        root.new_error(
             node, 'Schlüssel %s nicht erlaubt in Format-Zeichenkette: "%s"! '
             'Erlaubt sind "name", "content", "pos"' % (str(key_error), error_msg),
-            AST_TRANSFORM_CRASH))
+            AST_TRANSFORM_CRASH)
 
 
 @transformation_factory(collections.abc.Callable)
