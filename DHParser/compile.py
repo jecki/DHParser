@@ -43,7 +43,7 @@ from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc
-from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, TreeContext
+from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Trail
 from DHParser.transform import TransformerCallable
 from DHParser.parse import Grammar
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -130,7 +130,7 @@ class Compiler:
     method which will pick the right `on_XXX`-method. It is not
     recommended to call the `on_XXX`-methods directly.
 
-    :ivar context:  A list of parent nodes that ends with the currently
+    :ivar trail:  A list of parent nodes that ends with the currently
                 compiled node.
     :ivar tree: The root of the abstract syntax tree.
     :ivar finalizers:  A stack of tuples (function, parameters) that will be
@@ -160,7 +160,7 @@ class Compiler:
 
     def reset(self):
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
-        self.context = []  # type: TreeContext
+        self.trail = []  # type: Trail
         self._None_check = True  # type: bool
         self._dirty_flag = False
         self._debug = get_config_value('debug_compiler')  # type: bool
@@ -195,7 +195,7 @@ class Compiler:
         required before the compilation and the finalization the compilation
         has been finished by taking the following steps::
 
-            1. reset all variables and initalize ``self.tree`` with ``root``
+            1. reset all variables and initialize ``self.tree`` with ``root``
             2. call the :py:meth:`Compiler.prepare()`-method.
             3. compile the syntax-tree originating in ``root`` by calling
                :py:meth:`Compiler.compile()` on the root-node.
@@ -293,9 +293,9 @@ class Compiler:
         if elem[:1] == ':':
             elem = elem[1:] + '__'
         compiler = self.get_compiler(elem)
-        self.context.append(node)
+        self.trail.append(node)
         result = compiler(node)
-        self.context.pop()
+        self.trail.pop()
         if result is None and self._None_check:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
@@ -367,8 +367,8 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
             try:
                 result = tp(tree)
             except Exception as e:
-                # node = tp.context[-1] if hasattr(tp, 'context') and tp.context else tree
-                node = getattr(tp, 'context', [tree])[-1]
+                # node = tp.trail[-1] if hasattr(tp, 'trail') and tp.trail else tree
+                node = getattr(tp, 'trail', [tree])[-1]
                 st = traceback.format_list(traceback.extract_tb(e.__traceback__))
                 trace = ''.join(st)  # filter_stacktrace(st)
                 tree.new_error(

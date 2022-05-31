@@ -32,7 +32,7 @@ REVEAL = False
 
 from DHParser import grammar_provider, all_descendants, \
     set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
-    set_config_value, resume_notices_on, Error
+    set_config_value, get_config_value, resume_notices_on, Error
 from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     MANDATORY_CONTINUATION_AT_EOF, WARNING, RESUME_NOTICE, ERROR_WHILE_RECOVERING_FROM_ERROR
 from DHParser.testing import unique_name
@@ -57,10 +57,14 @@ def reveal(grammar, name):
 
 class TestTrace:
     def setup(self):
-        start_logging()
+        self.log_name = unique_name("LOGS")
+        start_logging(self.log_name)
+        self.save_compiled_EBNF_log = get_config_value('compiled_EBNF_log')
 
     def teardown(self):
+        set_config_value('compiled_EBNF_log', self.save_compiled_EBNF_log)
         LOG_DIR = log_dir()
+        assert LOG_DIR.endswith(self.log_name), f"{LOG_DIR} does not end with {self.log_name}!?"
         if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
             for fname in os.listdir(LOG_DIR):
                 os.remove(os.path.join(LOG_DIR, fname))
@@ -237,6 +241,7 @@ class TestTrace:
         for e in tree.errors:
             assert e.code != RESUME_NOTICE or e.message.find('_item') >= 0
 
+
 class TestErrorReporting:
     lang = """
     @literalws = right
@@ -253,10 +258,12 @@ class TestErrorReporting:
     gr = grammar_provider(lang)()
 
     def setup(self):
-        start_logging(unique_name("LOGS"))
+        self.log_name = unique_name("LOGS")
+        start_logging(self.log_name)
 
     def teardown(self):
         LOG_DIR = log_dir()
+        assert LOG_DIR.endswith(self.log_name), f"{LOG_DIR} does not end with {self.log_name}!?"
         if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
             for fname in os.listdir(LOG_DIR):
                 os.remove(os.path.join(LOG_DIR, fname))

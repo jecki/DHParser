@@ -66,19 +66,19 @@ __all__ = ('WHITESPACE_PTYPE',
            'LEAF_PTYPES',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
-           'TreeContext',
+           'Trail',
            'ResultType',
            'StrictResultType',
            'ChildrenType',
            'CriteriaType',
            'NodeMatchFunction',
-           'ContextMatchFunction',
+           'TrailMatchFunction',
            'ANY_NODE',
            'NO_NODE',
            'LEAF_NODE',
-           'ANY_CONTEXT',
-           'NO_CONTEXT',
-           'LEAF_CONTEXT',
+           'ANY_TRAIL',
+           'NO_TRAIL',
+           'LEAF_TRAIL',
            'Node',
            'content',
            'validate_token_sequence',
@@ -92,28 +92,28 @@ __all__ = ('WHITESPACE_PTYPE',
            'has_class',
            'add_class',
            'remove_class',
-           'prev_context',
-           'next_context',
-           'zoom_into_context',
-           'leaf_context',
-           'prev_leaf_context',
-           'next_leaf_context',
+           'prev_trail',
+           'next_trail',
+           'zoom_into_trail',
+           'leaf_trail',
+           'prev_leaf_trail',
+           'next_leaf_trail',
            'PickChildFunction',
            'FIRST_CHILD',
            'LAST_CHILD',
-           'select_context_if',
-           'select_context',
-           'pick_context',
+           'select_trail_if',
+           'select_trail',
+           'pick_trail',
            'foregoing_str',
            'ensuing_str',
-           'select_from_context_if',
-           'select_from_context',
-           'pick_from_context',
-           'serialize_context',
-           'context_sanity_check',
-           'ContextMapping',
-           'generate_context_mapping',
-           'map_pos_to_context',
+           'select_from_trail_if',
+           'select_from_trail',
+           'pick_from_trail',
+           'serialize_trail',
+           'trail_sanity_check',
+           'TrailMapping',
+           'generate_trail_mapping',
+           'map_pos_to_trail',
            'FrozenNode',
            'EMPTY_NODE',
            'tree_sanity_check',
@@ -161,17 +161,17 @@ ZOMBIE_TAG = "ZOMBIE__"
 re_pattern = Any
 CriteriaType = Union['Node', str, Container[str], Callable, int, re_pattern]
 
-TreeContext = List['Node']
+Trail = List['Node']
 NodeMatchFunction = Callable[['Node'], bool]
-ContextMatchFunction = Callable[[TreeContext], bool]
+TrailMatchFunction = Callable[[Trail], bool]
 
 ANY_NODE = lambda nd: True
 NO_NODE = lambda nd: False
 LEAF_NODE = lambda nd: not nd._children
 
-ANY_CONTEXT = lambda ctx: True
-NO_CONTEXT = lambda ctx: False
-LEAF_CONTEXT = lambda ctx: not ctx[-1].children
+ANY_TRAIL = lambda trl: True
+NO_TRAIL = lambda trl: False
+LEAF_TRAIL = lambda trl: not trl[-1].children
 
 
 def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
@@ -217,10 +217,10 @@ def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
                     % (repr(criterion), type(criterion)))
 
 
-def create_context_match_function(criterion: CriteriaType) -> ContextMatchFunction:
+def create_trail_match_function(criterion: CriteriaType) -> TrailMatchFunction:
     """
-    Creates a context-match-function (TreeContext -> bool) for the given
-    criterion that returns True, if the last node in the context passed
+    Creates a trail-match-function (Trail -> bool) for the given
+    criterion that returns True, if the last node in the trail passed
     to the function matches the criterion.
 
     See :py:func:`create_match_function()` for a description of the possible
@@ -230,23 +230,23 @@ def create_context_match_function(criterion: CriteriaType) -> ContextMatchFuncti
         a name or a container (usually a set) of multiple tag names,
         a regular expression pattern or another match function.
 
-    :returns: a match-function (TreeContext -> bool) for the given criterion.
+    :returns: a match-function (Trail -> bool) for the given criterion.
     """
     if isinstance(criterion, int):
-        return lambda ctx: id(ctx[-1]) == criterion
+        return lambda trl: id(trl[-1]) == criterion
     elif isinstance(criterion, FrozenNode):
-        return lambda ctx: ctx[-1].equals(criterion, ignore_attr_order=True)
+        return lambda trl: trl[-1].equals(criterion, ignore_attr_order=True)
     elif isinstance(criterion, Node):
-        return lambda ctx: ctx[-1] == criterion
-        # return lambda ctx[-1]: ctx[-1].equals(criterion)  # may yield wrong results for Node.ictx[-1]ex()
+        return lambda trl: trl[-1] == criterion
+        # return lambda trl[-1]: trl[-1].equals(criterion)  # may yield wrong results
     elif isinstance(criterion, str):
-        return lambda ctx: ctx[-1].name == criterion
+        return lambda trl: trl[-1].name == criterion
     elif callable(criterion):
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
-        return lambda ctx: ctx[-1].name in cast(Container, criterion)
+        return lambda trl: trl[-1].name in cast(Container, criterion)
     elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
-        return lambda ctx: criterion.fullmatch(ctx[-1].content)
+        return lambda trl: criterion.fullmatch(trl[-1].content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
                     % (repr(criterion), type(criterion)))
 
@@ -1173,89 +1173,89 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return nd
         return None
 
-    # context selection ###
+    # trail selection ###
 
-    def select_context_if(self, match_function: ContextMatchFunction,
-                          include_root: bool = False,
-                          reverse: bool = False,
-                          skip_subtree: ContextMatchFunction = NO_CONTEXT) -> Iterator[TreeContext]:
+    def select_trail_if(self, match_function: TrailMatchFunction,
+                        include_root: bool = False,
+                        reverse: bool = False,
+                        skip_subtree: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
         """
-        Like :py:func:`Node.select_if()` but yields the entire context (i.e. list
+        Like :py:func:`Node.select_if()` but yields the entire trail (i.e. list
         of descendants, the last one being the matching node) instead of just
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
-        receives the complete context as argument, rather than just the last node!
+        receives the complete trail as argument, rather than just the last node!
         """
-        def recursive(ctx, include_root) -> Iterator[TreeContext]:
+        def recursive(trl, include_root) -> Iterator[Trail]:
             nonlocal match_function, reverse, skip_subtree
-            if include_root and match_function(ctx):
-                yield ctx
-            top = ctx[-1]
+            if include_root and match_function(trl):
+                yield trl
+            top = trl[-1]
             child_iterator = reversed(top._children) if reverse else top._children
             for child in child_iterator:
-                child_ctx = ctx + [child]
-                if match_function(child_ctx):
-                    yield child_ctx
-                if child._children and not skip_subtree(child_ctx):
-                    yield from recursive(child_ctx, include_root=False)
+                child_trl = trl + [child]
+                if match_function(child_trl):
+                    yield child_trl
+                if child._children and not skip_subtree(child_trl):
+                    yield from recursive(child_trl, include_root=False)
         yield from recursive([self], include_root)
 
-    def select_context(self, criterion: CriteriaType,
-                       include_root: bool = False,
-                       reverse: bool = False,
-                       skip_subtree: CriteriaType = NO_CONTEXT) -> Iterator[TreeContext]:
+    def select_trail(self, criterion: CriteriaType,
+                     include_root: bool = False,
+                     reverse: bool = False,
+                     skip_subtree: CriteriaType = NO_TRAIL) -> Iterator[Trail]:
         """
-        Like :py:meth:`Node.select()` but yields the entire context (i.e. list of
+        Like :py:meth:`Node.select()` but yields the entire trail (i.e. list of
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
-        return self.select_context_if(create_context_match_function(criterion),
-                                      include_root, reverse,
-                                      create_context_match_function(skip_subtree))
+        return self.select_trail_if(create_trail_match_function(criterion),
+                                    include_root, reverse,
+                                    create_trail_match_function(skip_subtree))
 
-    def pick_context(self, criterion: CriteriaType,
-                     include_root: bool = False,
-                     reverse: bool = False,
-                     skip_subtree: CriteriaType = NO_CONTEXT) -> TreeContext:
+    def pick_trail(self, criterion: CriteriaType,
+                   include_root: bool = False,
+                   reverse: bool = False,
+                   skip_subtree: CriteriaType = NO_TRAIL) -> Trail:
         """
-        Like :py:meth:`Node.pick()`, only that the entire context (i.e.
+        Like :py:meth:`Node.pick()`, only that the entire trail (i.e.
         chain of descendants) relative to `self` is returned.
         """
         try:
-            return next(self.select_context(criterion, include_root, reverse, skip_subtree))
+            return next(self.select_trail(criterion, include_root, reverse, skip_subtree))
         except StopIteration:
             return []
 
     @cython.locals(location=cython.int, end=cython.int)
-    def locate_context(self, location: int) -> TreeContext:
+    def locate_trail(self, location: int) -> Trail:
         """
-        Like :py:meth:`Node.locate()`, only that the entire context (i.e.
+        Like :py:meth:`Node.locate()`, only that the entire trail (i.e.
         chain of descendants) relative to `self` is returned.
         """
         end = 0
-        for ctx in self.select_context_if(lambda ctx: not ctx[-1]._children, include_root=True):
-            end += ctx[-1].strlen()
+        for trl in self.select_trail_if(lambda trl: not trl[-1]._children, include_root=True):
+            end += trl[-1].strlen()
             if location < end:
-                return ctx
+                return trl
         return []
 
-    def _reconstruct_context_recursive(self: 'Node', node: 'Node') -> TreeContext:
+    def _reconstruct_trail_recursive(self: 'Node', node: 'Node') -> Trail:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
-        the public method `reconstruct_context`, this method returns the chain of ancestors
+        the public method `reconstruct_trail`, this method returns the chain of ancestors
         in reverse order [node, ... , self] and returns None in case `node` does not exist
         in the tree rooted in self instead of raising a Value Error.
-        If `node` equals `self`, any empty context, i.e. list will be returned.
+        If `node` equals `self`, any empty trail, i.e. list will be returned.
         """
         if node in self._children:
             return [node, self]
         for nd in self._children:
-            ctx = nd._reconstruct_context_recursive(node)
-            if ctx:
-                ctx.append(self)
-                return ctx
+            trl = nd._reconstruct_trail_recursive(node)
+            if trl:
+                trl.append(self)
+                return trl
         return []
 
-    def reconstruct_context(self, node: 'Node') -> TreeContext:
+    def reconstruct_trail(self, node: 'Node') -> Trail:
         """
         Determines the chain of ancestors of a node that leads up to self.
         :param node: the descendant node, the ancestry of which shall be determined.
@@ -1264,10 +1264,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         if node == self:
             return [node]
-        ctx = self._reconstruct_context_recursive(node)
-        if ctx:
-            ctx.reverse()
-            return ctx
+        trl = self._reconstruct_trail_recursive(node)
+        if trl:
+            trl.reverse()
+            return trl
         else:
             raise ValueError('Node "%s" does not occur in the tree %s '
                              % (node.name, flatten_sxpr(self.as_sxpr())))
@@ -1282,9 +1282,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     #     :return: the nearest common ancestor
     #     :raises: ValueError in case `A` and `B` are not both rooted in `self`
     #     """
-    #     ctxA = self.reconstruct_context(A)
-    #     ctxB = self.reconstruct_context(B)
-    #     for a,b in zip(ctxA, ctxB):
+    #     trlA = self.reconstruct_trail(A)
+    #     trlB = self.reconstruct_trail(B)
+    #     for a,b in zip(trlA, trlB):
     #         if a != b:
     #             break
     #         common_ancestor = a
@@ -1313,12 +1313,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def right_cut(result: Tuple['Node', ...], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return result[:index] + (subst,)
 
-        def cut(ctx: TreeContext, cut_func: Callable) -> 'Node':
-            child = ctx[-1]
+        def cut(trl: Trail, cut_func: Callable) -> 'Node':
+            child = trl[-1]
             tainted = False
-            for i in range(len(ctx) - 1, 0, -1):
-                parent = ctx[i - 1]
-                k = index(parent, ctx[i])
+            for i in range(len(trl) - 1, 0, -1):
+                parent = trl[i - 1]
+                k = index(parent, trl[i])
                 segment = cut_func(parent.result, k, child)
                 if tainted or len(segment) != len(parent.result):
                     parent_copy = Node(parent.name, segment)
@@ -1333,14 +1333,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if begin.pos > end.pos:
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        ctxA = self.reconstruct_context(begin)  # type: TreeContext
-        ctxB = self.reconstruct_context(end)    # type: TreeContext
-        for a, b in zip(ctxA, ctxB):
+        trlA = self.reconstruct_trail(begin)  # type: Trail
+        trlB = self.reconstruct_trail(end)    # type: Trail
+        for a, b in zip(trlA, trlB):
             if a != b:
                 break
             common_ancestor = a
-        left = cut(ctxA[ctxA.index(common_ancestor):], left_cut)    # type: Node
-        right = cut(ctxB[ctxB.index(common_ancestor):], right_cut)  # type: Node
+        left = cut(trlA[trlA.index(common_ancestor):], left_cut)    # type: Node
+        right = cut(trlB[trlB.index(common_ancestor):], right_cut)  # type: Node
         left_children = left._children    # type: Tuple[Node, ...]
         right_children = right._children  # type: Tuple[Node, ...]
         if left_children == right_children:
@@ -1856,23 +1856,23 @@ def content(segment: Union[Node, Tuple[Node, ...]]) -> str:
 #######################################################################
 
 
-# Query contexts as paths #############################################
+# Query trails as paths #############################################
 
 ### EXPERIMENTAL
 
-def as_path(context: TreeContext) -> str:
-    """Returns the context a pseudo filepath of tag-names."""
+def as_path(trail: Trail) -> str:
+    """Returns the trail a pseudo filepath of tag-names."""
     tag_list = ['']
-    for node in context:
+    for node in trail:
         assert not node.name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
         tag_list.append(node.name)
-    if context[-1].children:
+    if trail[-1].children:
         tag_list.append('')
     return '/'.join(tag_list)
 
 
 def match_path(path: str, glob_pattern: str) -> bool:
-    """Matches a context as path against a glob-pattern."""
+    """Matches a trail as path against a glob-pattern."""
     from fnmatch import fnmatchcase
     if glob_pattern[0:1] not in ("/", "*"):
         glob_pattern = "*/" + glob_pattern
@@ -1880,51 +1880,51 @@ def match_path(path: str, glob_pattern: str) -> bool:
 
 
 
-# Navigate contexts ###################################################
+# Navigate trails ###################################################
 
 @cython.locals(i=cython.int, k=cython.int)
-def prev_context(context: TreeContext) -> Optional[TreeContext]:
-    """Returns the context of the predecessor of the last node in the
-    context. The predecessor is the sibling of the same parent-node
+def prev_trail(trail: Trail) -> Optional[Trail]:
+    """Returns the trail of the predecessor of the last node in the
+    trail. The predecessor is the sibling of the same parent-node
     preceding the node, or, if it already is the first sibling, the parent's
     sibling preceding the parent, or grandparent's sibling and so on.
     In case no predecessor is found, when the first ancestor has been
     reached, `None` is returned.
     """
-    assert isinstance(context, list)
-    node = context[-1]
-    for i in range(len(context) - 2, -1, -1):
-        siblings = context[i]._children
+    assert isinstance(trail, list)
+    node = trail[-1]
+    for i in range(len(trail) - 2, -1, -1):
+        siblings = trail[i]._children
         if node is not siblings[0]:
             for k in range(1, len(siblings)):
                 if node is siblings[k]:
-                    return context[:i + 1] + [siblings[k - 1]]
-            raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
+                    return trail[:i + 1] + [siblings[k - 1]]
+            raise AssertionError('Structural Error: trail[%i] is not the parent of trail[%i]'
                                  % (i, i + 1))
-        node = context[i]
+        node = trail[i]
     return None
 
 
 @cython.locals(i=cython.int, k=cython.int)
-def next_context(context: TreeContext) -> Optional[TreeContext]:
-    """Returns the context of the successor of the last node in the
-    context. The successor is the sibling of the same parent Node
+def next_trail(trail: Trail) -> Optional[Trail]:
+    """Returns the trail of the successor of the last node in the
+    trail. The successor is the sibling of the same parent Node
     succeeding the node, or if it already is the last sibling, the
-    parent's sibling succeeding the parent, or grand-parent's sibling and
+    parent's sibling succeeding the parent, or grand parent's sibling and
     so on. In case no successor is found when the first ancestor has been
     reached, `None` is returned.
     """
-    assert isinstance(context, list)
-    node = context[-1]
-    for i in range(len(context) - 2, -1, -1):
-        siblings = context[i]._children
+    assert isinstance(trail, list)
+    node = trail[-1]
+    for i in range(len(trail) - 2, -1, -1):
+        siblings = trail[i]._children
         if node is not siblings[-1]:
             for k in range(len(siblings) - 2, -1, -1):
                 if node is siblings[k]:
-                    return context[:i + 1] + [siblings[k + 1]]
-            raise AssertionError('Structural Error: context[%i] is not the parent of context[%i]'
+                    return trail[:i + 1] + [siblings[k + 1]]
+            raise AssertionError('Structural Error: trail[%i] is not the parent of trail[%i]'
                                  % (i, i + 1))
-        node = context[i]
+        node = trail[i]
     return None
 
 
@@ -1933,249 +1933,249 @@ LAST_CHILD = lambda nd: nd.result[-1]
 FIRST_CHILD = lambda nd: nd.result[0]
 
 
-def zoom_into_context(context: Optional[TreeContext],
-                      pick_child: PickChildFunction,
-                      steps: int) \
-                      -> Optional[TreeContext]:
-    """Returns the context of a descendant that follows `steps` generations
-    up the tree originating in 'context[-1]`. If `steps` < 0 this will be
+def zoom_into_trail(trail: Optional[Trail],
+                    pick_child: PickChildFunction,
+                    steps: int) \
+                      -> Optional[Trail]:
+    """Returns the trail of a descendant that follows `steps` generations
+    up the tree originating in 'trail[-1]`. If `steps` < 0 this will be
     as many generations as are needed to reach a leaf-node.
     The function `pick_child` determines which branch to follow during each
-    iteration, as long as the top of the context is not yet a leaf node.
-    A `context`-parameter value of `None` will simply be passed through.
+    iteration, as long as the top of the trail is not yet a leaf node.
+    A `trail`-parameter value of `None` will simply be passed through.
     """
-    if context:
-        ctx = context.copy()
-        top = ctx[-1]
+    if trail:
+        trl = trail.copy()
+        top = trl[-1]
         while top.children and steps != 0:
             top = pick_child(top)
-            ctx.append(top)
+            trl.append(top)
             steps -= 1
-        return ctx
+        return trl
     return None
 
 
-leaf_context = functools.partial(zoom_into_context, steps=-1)
-next_leaf_context = lambda ctx: leaf_context(next_context(ctx), FIRST_CHILD)
-prev_leaf_context = lambda ctx: leaf_context(prev_context(ctx), LAST_CHILD)
+leaf_trail = functools.partial(zoom_into_trail, steps=-1)
+next_leaf_trail = lambda trl: leaf_trail(next_trail(trl), FIRST_CHILD)
+prev_leaf_trail = lambda trl: leaf_trail(prev_trail(trl), LAST_CHILD)
 
 
-def foregoing_str(context: TreeContext, length: int = -1) -> str:
+def foregoing_str(trail: Trail, length: int = -1) -> str:
     """Returns `length` characters from the string content preceding
-    the context."""
+    the trail."""
     N = 0
     l = []
-    ctx = prev_context(context)
-    while ctx and (N < length or length < 0):
-        s = ctx[-1].content
+    trl = prev_trail(trail)
+    while trl and (N < length or length < 0):
+        s = trl[-1].content
         l.append(s)
         N += len(s)
-        ctx = prev_context(ctx)
+        trl = prev_trail(trl)
     foregoing = ''.join(reversed(l))
     return foregoing if length < 0 else foregoing[-length:]
 
 
-def ensuing_str(context: TreeContext, length: int = -1) -> str:
+def ensuing_str(trail: Trail, length: int = -1) -> str:
     """Returns `length` characters from the string content succeeding
-    the context."""
+    the trail."""
     N = 0
     l = []
-    ctx = next_context(context)
-    while ctx and (N < length or length < 0):
-        s = ctx[-1].content
+    trl = next_trail(trail)
+    while trl and (N < length or length < 0):
+        s = trl[-1].content
         l.append(s)
         N += len(s)
-        ctx = next_context(ctx)
+        trl = next_trail(trl)
     following = ''.join(l)
     return following if length < 0 else following[:length]
 
 
-def select_context_if(start_context: TreeContext,
-                      match_function: ContextMatchFunction,
-                      include_root: bool = False,
-                      reverse: bool = False,
-                      skip_subtree: ContextMatchFunction = NO_CONTEXT) -> Iterator[TreeContext]:
+def select_trail_if(start_trail: Trail,
+                    match_function: TrailMatchFunction,
+                    include_root: bool = False,
+                    reverse: bool = False,
+                    skip_subtree: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
     """
-    Creates an Iterator yielding all `contexts` for which the
-    `match_function` is true, starting from `context`.
+    Creates an Iterator yielding all `trails` for which the
+    `match_function` is true, starting from `trail`.
     """
 
-    def recursive(ctx):
+    def recursive(trl):
         nonlocal match_function, reverse, skip_subtree
-        if match_function(ctx):
-            yield ctx
-        top = ctx[-1]
+        if match_function(trl):
+            yield trl
+        top = trl[-1]
         child_iterator = reversed(top._children) if reverse else top._children
         for child in child_iterator:
-            child_ctx = ctx + [child]
-            if not skip_subtree(child_ctx):
-                yield from recursive(child_ctx)
+            child_trl = trl + [child]
+            if not skip_subtree(child_trl):
+                yield from recursive(child_trl)
 
-    context = start_context.copy()
-    while context:
+    trail = start_trail.copy()
+    while trail:
         if include_root:
-            yield from recursive(context)
+            yield from recursive(trail)
         else:
             include_root = True
-        node = context.pop()
+        node = trail.pop()
         edge, delta = (0, -1) if reverse else (-1, 1)
-        while context and node is context[-1]._children[edge]:
-            if match_function(context):
-                yield context
-            node = context.pop()
-        if context:
-            parent = context[-1]
+        while trail and node is trail[-1]._children[edge]:
+            if match_function(trail):
+                yield trail
+            node = trail.pop()
+        if trail:
+            parent = trail[-1]
             i = parent.index(node)
             nearest_sibling = parent._children[i + delta]
-            context.append(nearest_sibling)
+            trail.append(nearest_sibling)
             # include_root = True
 
-    # context = context.copy()
-    # while context:
-    #     if match_function(context):
-    #         yield context
-    #     node = context.pop()
+    # trail = trail.copy()
+    # while trail:
+    #     if match_function(trail):
+    #         yield trail
+    #     node = trail.pop()
     #
     #     edge, delta = (0, -1) if reverse else (-1, 1)
-    #     while context and node is context[-1]._children[edge]:
-    #         if match_function(context):
-    #             yield context
-    #         node = context.pop()
-    #     if context:
-    #         parent = context[-1]
+    #     while trail and node is trail[-1]._children[edge]:
+    #         if match_function(trail):
+    #             yield trail
+    #         node = trail.pop()
+    #     if trail:
+    #         parent = trail[-1]
     #         i = parent.index(node)
     #         nearest_sibling = parent._children[i + delta]
-    #         innermost_ctx = nearest_sibling.pick_context(
-    #             LEAF_CONTEXT, include_root=True, reverse=reverse)
-    #         context.extend(innermost_ctx)
+    #         innermost_trl = nearest_sibling.pick_trail(
+    #             LEAF_TRAIL, include_root=True, reverse=reverse)
+    #         trail.extend(innermost_trl)
 
 
-def select_context(start_context: TreeContext,
-                   criterion: CriteriaType,
-                   include_root: bool = False,
-                   reverse: bool = False,
-                   skip_subtree: CriteriaType = NO_CONTEXT) -> Iterator[TreeContext]:
-    """
-    Like `select_context_if()` but yields the entire context (i.e. list of
-    descendants, the last one being the matching node) instead of just
-    the matching nodes.
-    """
-    return select_context_if(start_context, create_context_match_function(criterion),
-                             include_root, reverse, create_context_match_function(skip_subtree))
-
-
-def pick_context(start_context: TreeContext,
+def select_trail(start_trail: Trail,
                  criterion: CriteriaType,
                  include_root: bool = False,
                  reverse: bool = False,
-                 skip_subtree: CriteriaType = NO_CONTEXT) -> Optional[TreeContext]:
+                 skip_subtree: CriteriaType = NO_TRAIL) -> Iterator[Trail]:
     """
-    Like `Node.pick()`, only that the entire context (i.e. chain of descendants)
+    Like `select_trail_if()` but yields the entire trail (i.e. list of
+    descendants, the last one being the matching node) instead of just
+    the matching nodes.
+    """
+    return select_trail_if(start_trail, create_trail_match_function(criterion),
+                           include_root, reverse, create_trail_match_function(skip_subtree))
+
+
+def pick_trail(start_trail: Trail,
+               criterion: CriteriaType,
+               include_root: bool = False,
+               reverse: bool = False,
+               skip_subtree: CriteriaType = NO_TRAIL) -> Optional[Trail]:
+    """
+    Like `Node.pick()`, only that the entire trail (i.e. chain of descendants)
     relative to `self` is returned.
     """
     try:
-        return next(select_context(
-            start_context, criterion, include_root=include_root, reverse=reverse,
+        return next(select_trail(
+            start_trail, criterion, include_root=include_root, reverse=reverse,
             skip_subtree=skip_subtree))
     except StopIteration:
         return None
 
 
-def select_from_context_if(context: TreeContext,
-                           match_function: NodeMatchFunction,
-                           reverse: bool=False):
-    """Yields all nodes from context for which the match_function is true."""
+def select_from_trail_if(trail: Trail,
+                         match_function: NodeMatchFunction,
+                         reverse: bool=False):
+    """Yields all nodes from trail for which the match_function is true."""
     if reverse:
-        for nd in reversed(context):
+        for nd in reversed(trail):
             if match_function(nd):
                 yield nd
     else:
-        for nd in context:
+        for nd in trail:
             if match_function(nd):
                 yield nd
 
 
-def select_from_context(context: TreeContext, criterion: CriteriaType, reverse: bool=False):
-    """Yields all nodes from context which fulfill the criterion."""
-    return select_from_context_if(context, create_match_function(criterion), reverse)
+def select_from_trail(trail: Trail, criterion: CriteriaType, reverse: bool=False):
+    """Yields all nodes from trail which fulfill the criterion."""
+    return select_from_trail_if(trail, create_match_function(criterion), reverse)
 
 
-def pick_from_context(context: TreeContext, criterion: CriteriaType, reverse: bool=False) \
+def pick_from_trail(trail: Trail, criterion: CriteriaType, reverse: bool=False) \
         -> Optional[Node]:
-    """Picks the first node from the context that fulfils the criterion. Returns `None`
-    if the context does not contain any node fulfilling the criterion."""
+    """Picks the first node from the trail that fulfils the criterion. Returns `None`
+    if the trail does not contain any node fulfilling the criterion."""
     try:
-        return next(select_from_context(context, criterion, reverse=reverse))
+        return next(select_from_trail(trail, criterion, reverse=reverse))
     except StopIteration:
         return None
 
 
-def serialize_context(context: TreeContext, with_content: int = 0, delimiter: str = ' <- ') \
+def serialize_trail(trail: Trail, with_content: int = 0, delimiter: str = ' <- ') \
         -> str:
-    """Serializes a context as string.
+    """Serializes a trail as string.
 
-    :param context: the context to be serialized.
-    :param with_content: the number of nodes from the end of the context for
+    :param trail: the trail to be serialized.
+    :param with_content: the number of nodes from the end of the trail for
         which the content will be displayed next to the name.
     :param delimiter: The delimiter separating the nodes in the returned string.
-    :returns: the string-serialization of the given context.
+    :returns: the string-serialization of the given trail.
     """
     if with_content == 0:
-        lines = [nd.name for nd in context]
+        lines = [nd.name for nd in trail]
     else:
-        n = with_content if with_content > 0 else len(context)
-        lines = [nd.name for nd in context[:-n]]
-        lines.extend(nd.name + ':' + str(nd.content) for nd in context[-n:])
+        n = with_content if with_content > 0 else len(trail)
+        lines = [nd.name for nd in trail[:-n]]
+        lines.extend(nd.name + ':' + str(nd.content) for nd in trail[-n:])
     return delimiter.join(lines)
 
 
-def context_sanity_check(context: TreeContext) -> bool:
-    """Checks whether the nodes following in the context-list are really
+def trail_sanity_check(trail: Trail) -> bool:
+    """Checks whether the nodes following in the trail-list are really
     immediate descendants of each other."""
-    return all(context[i] in context[i - 1]._children for i in range(1, len(context)))
+    return all(trail[i] in trail[i - 1]._children for i in range(1, len(trail)))
 
 
-# Context-mapping (allowing a "string-view" on syntax-trees) ##########
+# Trail-mapping (allowing a "string-view" on syntax-trees) ##########
 
-ContextMapping = Tuple[List[int], List[TreeContext]]  # A mapping of character positions to contexts
+TrailMapping = Tuple[List[int], List[Trail]]  # A mapping of character positions to trails
 
 
-def generate_context_mapping(node: Node) -> ContextMapping:
+def generate_trail_mapping(node: Node) -> TrailMapping:
     """
-    Generates a context mapping for all leave-nodes of the tree
-    originating in `node`. A context mapping is an ordered mapping
-    of the first text position of every leaf-node to the context of
+    Generates a trail mapping for all leave-nodes of the tree
+    originating in `node`. A trail mapping is an ordered mapping
+    of the first text position of every leaf-node to the trail of
     this node.
 
-    Context mappings are a helpful tool when searching substrings in a
+    Trail mappings are a helpful tool when searching substrings in a
     document and then trying to locate them within in the tree.
 
-    :param node: the root of the tree for which a context mapping shall be
+    :param node: the root of the tree for which a trail mapping shall be
         generated.
-    :returns: The context mapping for the node.
+    :returns: The trail mapping for the node.
     """
     pos = 0
-    pos_list, ctx_list = [], []
-    for ctx in node.select_context_if(LEAF_CONTEXT, include_root=True):
+    pos_list, trl_list = [], []
+    for trl in node.select_trail_if(LEAF_TRAIL, include_root=True):
         pos_list.append(pos)
-        ctx_list.append(ctx)
-        pos += ctx[-1].strlen()
-    return pos_list, ctx_list
+        trl_list.append(trl)
+        pos += trl[-1].strlen()
+    return pos_list, trl_list
 
 
-def map_pos_to_context(i: int, cm: ContextMapping) -> Tuple[TreeContext, int]:
-    """Yields the context and relative position for the absolute
+def map_pos_to_trail(i: int, tm: TrailMapping) -> Tuple[Trail, int]:
+    """Yields the trail and relative position for the absolute
     position `i`.
 
     :param i:   a position in the content of the tree for which the
-        context mapping `cm` was generated
-    :param cm:  a context mapping
-    :returns:    tuple (context, relative position) where relative
+        trail mapping `cm` was generated
+    :param tm:  a trail mapping
+    :returns:    tuple (trail, relative position) where relative
         position is the position of i relative to the actual
-        position of the last node in the context.
+        position of the last node in the trail.
     """
-    ctx_index = bisect.bisect_right(cm[0], i) - 1
-    return cm[1][ctx_index], i - cm[0][ctx_index]
+    trl_index = bisect.bisect_right(tm[0], i) - 1
+    return tm[1][trl_index], i - tm[0][trl_index]
 
 
 # Attribute handling ##################################################
@@ -2299,7 +2299,7 @@ class FrozenNode(Node):
     tree-transformation and should not occur in the product of the
     transformation anymore. This can be verified with
     :py:func:`tree_sanity_check()`. Or, as comparison criterion for
-    content equality when picking or selecting nodes or contexts from
+    content equality when picking or selecting nodes or trails from
     a tree (see :py:func:`create_match_function()`).
     """
 

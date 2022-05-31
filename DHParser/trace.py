@@ -154,8 +154,8 @@ def all_descendants(root: Parser) -> List[Parser]:
     """Returns a list with the parser `root` and all of its descendants."""
     descendants = []
 
-    def visit(context: List[Parser]):
-        descendants.append(context[-1])
+    def visit(trail: List[Parser]):
+        descendants.append(trail[-1])
     root.apply(visit)
     return descendants
 

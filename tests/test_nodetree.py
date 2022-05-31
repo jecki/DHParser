@@ -29,10 +29,10 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
-    flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_context, \
-    prev_context, serialize_context, generate_context_mapping, map_pos_to_context, \
-    select_context_if, select_context, create_context_match_function, pick_context, \
-    LEAF_CONTEXT
+    flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_trail, \
+    prev_trail, serialize_trail, generate_trail_mapping, map_pos_to_trail, \
+    select_trail_if, select_trail, create_trail_match_function, pick_trail, \
+    LEAF_TRAIL
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -344,13 +344,13 @@ class TestNode:
     def test_tree_select_context_if(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
         contexts = []
-        for ctx in tree.select_context_if(lambda ctx: ctx[-1].name >= 'd',
-                                          include_root=True, reverse=False):
+        for ctx in tree.select_trail_if(lambda ctx: ctx[-1].name >= 'd',
+                                        include_root=True, reverse=False):
             contexts.append(''.join(nd.name for nd in ctx))
         assert contexts == ['ad', 'af', 'afg']
         contexts = []
-        for ctx in tree.select_context_if(lambda ctx: ctx[-1].name >= 'd',
-                                          include_root=True, reverse=True):
+        for ctx in tree.select_trail_if(lambda ctx: ctx[-1].name >= 'd',
+                                        include_root=True, reverse=True):
             contexts.append(''.join(nd.name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
 
@@ -362,12 +362,12 @@ class TestNode:
             nonlocal check
             check.append(''.join(nd.name for nd in ctx))
             return True
-        for ctx in tree.select_context(select_f, include_root=True):
+        for ctx in tree.select_trail(select_f, include_root=True):
             contexts.append(''.join(nd.name for nd in ctx))
         assert check == contexts == ['a', 'ab', 'ad', 'af', 'afg']
         check = []
         contexts = []
-        for ctx in tree.select_context(select_f, include_root=True, skip_subtree='f'):
+        for ctx in tree.select_trail(select_f, include_root=True, skip_subtree='f'):
             contexts.append(''.join(nd.name for nd in ctx))
         assert check == contexts == ['a', 'ab', 'ad', 'af']
 
@@ -375,7 +375,7 @@ class TestNode:
         tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
         l = [str(nd) for nd in tree.select('B')]
         assert ''.join(l) == '12'
-        l = [str(ctx[-1]) for ctx in tree.select_context('B')]
+        l = [str(ctx[-1]) for ctx in tree.select_trail('B')]
         assert ''.join(l) == '12'
 
     def test_select_children(self):
@@ -800,26 +800,26 @@ class TestSegementExtraction:
     def test_get_context(self):
         tree = parse_sxpr('(A (F (X "a") (Y "b")) (G "c"))')
         nd_X = tree.pick('X')
-        ctx = tree.reconstruct_context(nd_X)
+        ctx = tree.reconstruct_trail(nd_X)
         assert [nd.name for nd in ctx] == ['A', 'F', 'X']
         nd_F = tree.pick('F')
         nd_Y = tree.pick('Y')
-        ctx = nd_F.reconstruct_context(nd_Y)
+        ctx = nd_F.reconstruct_trail(nd_Y)
         assert [nd.name for nd in ctx] == ['F', 'Y']
-        ctx = tree.reconstruct_context(nd_F)
+        ctx = tree.reconstruct_trail(nd_F)
         assert [nd.name for nd in ctx] == ['A', 'F']
-        ctx = tree.reconstruct_context(nd_Y)
+        ctx = tree.reconstruct_trail(nd_Y)
         assert [nd.name for nd in ctx] == ['A', 'F', 'Y']
         nd_G = tree.pick('G')
-        ctx = tree.reconstruct_context(nd_G)
+        ctx = tree.reconstruct_trail(nd_G)
         assert [nd.name for nd in ctx] == ['A', 'G']
         not_there = Node('not_there', '')
         try:
-            tree.reconstruct_context(not_there)
+            tree.reconstruct_trail(not_there)
             assert False, "ValueError expected!"
         except ValueError:
             pass
-        assert tree.reconstruct_context(tree) == [tree]
+        assert tree.reconstruct_trail(tree) == [tree]
 
     def test_milestone_segment(self):
         tree = parse_sxpr('(root (left (A "a") (B "b") (C "c")) (middle "-") (right (X "x") (Y "y") (Z "z")))').with_pos(0)
@@ -874,75 +874,75 @@ class TestContextNavigation:
     tree = parse_sxpr('(A (B 1) (C (D 2) (E 3)) (F 4))')
 
     def test_prev_context(self):
-        ctx = self.tree.pick_context('D')
-        c = prev_context(ctx)
+        ctx = self.tree.pick_trail('D')
+        c = prev_trail(ctx)
         assert c[-1].name == 'B'
-        ctx = self.tree.pick_context('E')
-        c = prev_context(ctx)
+        ctx = self.tree.pick_trail('E')
+        c = prev_trail(ctx)
         assert c[-1].name == 'D'
-        ctx = self.tree.pick_context('F')
-        c = prev_context(ctx)
+        ctx = self.tree.pick_trail('F')
+        c = prev_trail(ctx)
         assert c[-1].name == 'C'
-        ctx = self.tree.pick_context('C')
-        c = prev_context(ctx)
+        ctx = self.tree.pick_trail('C')
+        c = prev_trail(ctx)
         assert c[-1].name == 'B'
 
     def test_next_context(self):
-        ctx = self.tree.pick_context('D')
-        c = next_context(ctx)
+        ctx = self.tree.pick_trail('D')
+        c = next_trail(ctx)
         assert c[-1].name == 'E'
-        ctx = self.tree.pick_context('E')
-        c = next_context(ctx)
+        ctx = self.tree.pick_trail('E')
+        c = next_trail(ctx)
         assert c[-1].name == 'F'
-        ctx = self.tree.pick_context('C')
-        c = next_context(ctx)
+        ctx = self.tree.pick_trail('C')
+        c = next_trail(ctx)
         assert c[-1].name == 'F'
-        ctx = self.tree.pick_context('B')
-        c = next_context(ctx)
+        ctx = self.tree.pick_trail('B')
+        c = next_trail(ctx)
         assert c[-1].name == 'C'
 
     def test_context_mapping(self):
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
-        cm = generate_context_mapping(tree)
+        cm = generate_trail_mapping(tree)
         for i in range(len(tree.content)):
-            ctx, rel_pos = map_pos_to_context(i, cm)
+            ctx, rel_pos = map_pos_to_trail(i, cm)
         i = tree.content.find("delta")
-        ctx, rel_pos = map_pos_to_context(i, cm)
+        ctx, rel_pos = map_pos_to_trail(i, cm)
         assert ctx[-1].name == 'F' and rel_pos == 0
         i = tree.content.find("lta")
-        ctx, rel_pos = map_pos_to_context(i, cm)
+        ctx, rel_pos = map_pos_to_trail(i, cm)
         assert ctx[-1].name == 'F' and rel_pos == 2
         i = tree.content.find("a")
-        ctx, rel_pos = map_pos_to_context(i, cm)
+        ctx, rel_pos = map_pos_to_trail(i, cm)
         assert ctx[-1].name == 'B' and rel_pos == 0
         i = tree.content.rfind("a")
-        ctx, rel_pos = map_pos_to_context(i, cm)
+        ctx, rel_pos = map_pos_to_trail(i, cm)
         assert ctx[-1].name == 'F' and rel_pos == 4
         i = tree.content.find("mm")
-        ctx, rel_pos = map_pos_to_context(i, cm)
+        ctx, rel_pos = map_pos_to_trail(i, cm)
         assert ctx[-1].name == 'E' and rel_pos == 2
 
     def test_standalone_select_context_if(self):
-        start = self.tree.pick_context('E')
+        start = self.tree.pick_trail('E')
         save = start.copy()
         sequence = []
-        for ctx in select_context_if(
+        for ctx in select_trail_if(
                 start, lambda c: True, include_root=True, reverse=True):
             sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACE', 'ACD', 'AC', 'AB', 'A']
         assert save == start  # context passed should not be changed by select_context
 
-        start = self.tree.pick_context('D')
+        start = self.tree.pick_trail('D')
         sequence = []
-        for ctx in select_context_if(
+        for ctx in select_trail_if(
                 start, lambda c: True, include_root=True, reverse=False):
             sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACD', 'ACE', 'AC', 'AF', 'A']
 
     def test_standalone_pick_context(self):
-        start = self.tree.pick_context('A', include_root=True)
-        anfang = pick_context(start, LEAF_CONTEXT, include_root=True)
-        ende = pick_context(start, LEAF_CONTEXT, include_root=True, reverse=True)
+        start = self.tree.pick_trail('A', include_root=True)
+        anfang = pick_trail(start, LEAF_TRAIL, include_root=True)
+        ende = pick_trail(start, LEAF_TRAIL, include_root=True, reverse=True)
         assert anfang[-1].name == 'B'
         assert ende[-1].name == 'F'
 

@@ -53,7 +53,7 @@ by the module :py:mod:`DHParser.transform` will be described.
 Declarative Tree-Transformation
 -------------------------------
 
-Declarative tree-transformations are realized via functions that take a :ref:`context <contexts>`
+Declarative tree-transformations are realized via functions that take a :ref:`trail <trails>`
 as argument and which are organized in a dictionary that maps tag-names to sequences of such
 transformation functions which are called on every node with that tag-name. The tree as whole
 is traversed depth-first. Module :py:mod:`DHParser.transform` provides a large number of
@@ -150,7 +150,7 @@ on every node that has one of the tag-names in the key::
 Two things are important to know about :py:func:`~transform.traverse`:
 
 1. Trees are transformed depth first. So, when a transformation is called
-   on a particular node, or rather context (see :ref:_contexts), all
+   on a particular node, or rather trail (see :ref:_trails), all
    children of that node have already been transformed.
 
 2. As any other tree transformation method in DHParser, function
@@ -166,10 +166,10 @@ module :py:mod:`DHParser.transform` to already contain such an operation (althou
 in this particular case, in fact, it does). But we can write a suitable transformation
 on our own, easily::
 
-   >>> from DHParser.nodetree import Node, TreeContext
-   >>> def left_associative(context: TreeContext):
+   >>> from DHParser.nodetree import Node, Trail
+   >>> def left_associative(trail: Trail):
    ...     "Re-arranges a flat node with infix operators into a left associative tree."
-   ...     node = context[-1]
+   ...     node = trail[-1]
    ...     if len(node._children) >= 3:
    ...         assert (len(node._children) + 1) % 2 == 0
    ...         rest = list(node._children)
@@ -181,18 +181,18 @@ on our own, easily::
    ...             left = Node(infix.name, (left, right))
    ...         node.result = (left,)
 
-A transformation function is functions with the tree context as single argument and
-no return value. The tree context is the list of all nodes on the path from the
+A transformation function is a function with the tree-trail as single argument and
+no return value. The tree-trail is the list of all nodes on the path from the
 root node of the tree up to and including the node that shall be transformed.
-It is good practice that transformations only change the last node in the context-list
+It is good practice that transformations only change the last node in the trail-list
 and its children (which have already been transformed by the time this node
 has been reached by :py:func:`~transform.traverse`), but not any parents or siblings
-in the context. The context, rather than the node alone, is passed to transformation
+in the trail. The trail, rather than the node alone, is passed to transformation
 function only in order to enable it to query the parents or siblings in order to allow
-the transformation to make choices depending on the context. This said, it sometimes
+the transformation to make choices depending on the trail. This said, it sometimes
 makes sense to deviate from this rule, none the less.
 
-The just defined function does nothing if the last node in the context-list (which is
+The just defined function does nothing if the last node in the trail-list (which is
 the node that is just being visited during the tree-traversal and which
 the transformation-function should operate on) has three or more children. If so, it
 is assumed that the children form a sequence of value interspersed with dyadic

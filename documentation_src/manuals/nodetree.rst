@@ -320,10 +320,10 @@ can be parameterized in order to support mixed-content and empty-tags::
     <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
 
 
-.. _contexts:
+.. _trails:
 
-Navigating and Searching Nodes and Tree-contexts
-------------------------------------------------
+Navigating and Searching Nodes and Tree-trails
+----------------------------------------------
 
 Transforming syntax trees is usually done by traversing the complete tree and
 applying specific transformation functions on each node. Modules "transform" and
@@ -442,95 +442,95 @@ Navigating "uptree" within the neighborhood and lineage of a node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Instead of keeping a link within each node to its parent, it is much more
-elegant to keep track of a node's ancestry by using a "tree-context" which is a
+elegant to keep track of a node's ancestry by using a "tree-trail" which is a
 simple List of ancestors starting with the root-node and including the node
-itself as its last item. For most search methods such as select() or pick(),
-there exists a pendant that returns this context instead of just the node
-itself::
+itself as its last item. For most search methods such as select()
+or pick(), there exists a pendant that returns this trail instead of just
+the node itself::
 
-    >>> last_context = sentence.pick_context('word', reverse=True)
-    >>> last_context[-1] == last_match
+    >>> last_trail = sentence.pick_trail('word', reverse=True)
+    >>> last_trail[-1] == last_match
     True
-    >>> last_context[0] == sentence
+    >>> last_trail[0] == sentence
     True
-    >>> serialize_context(last_context)
+    >>> serialize_trail(last_trail)
     'sentence <- phrase <- word'
 
-One can also think of a tree-context as a breadcrumb-trail that "points" to a
+One can also think of a tree-trail as a breadcrumb- or, rather, ant-trail that "points" to a
 particular part of text by marking the path from the root to the node, the
 content of which contains this text. This node does not need to be a leaf node,
 but can be any branch-node on the way from the root to the leaves of the tree.
 When analysing or transforming a tree-structured text, it is often helpful to
-"zoom" in and out of a particular part of text (pointed to by a context) or to
+"zoom" in and out of a particular part of text (pointed to by a trail) or to
 move forward and backward from a particular location (again represented by a
-context).
+trail).
 
-The ``next_context()`` and ``prev_context()``-functions allow to move one step
-forward or backward from a given context::
+The ``next_trail()`` and ``prev_trail()``-functions allow to move one step
+forward or backward from a given trail::
 
-    >>> pointer = prev_context(last_context)
-    >>> serialize_context(pointer, with_content=-1)
+    >>> pointer = prev_trail(last_trail)
+    >>> serialize_trail(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- blank: '
 
-``prev_context()`` and ``next_context()`` automatically zoom out by one step, if
+``prev_trail()`` and ``next_trail()`` automatically zoom out by one step, if
 they move past the first or last child of the last but one node in the list::
 
-    >>> pointer = prev_context(pointer)
-    >>> serialize_context(pointer, with_content=-1)
+    >>> pointer = prev_trail(pointer)
+    >>> serialize_trail(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
-    >>> serialize_context(prev_context(pointer), with_content=-1)
+    >>> serialize_trail(prev_trail(pointer), with_content=-1)
     'sentence:This is Buckingham Palace <- blank: '
 
 Thus::
 
-    >>> next_context(prev_context(pointer)) == pointer
+    >>> next_trail(prev_trail(pointer)) == pointer
     False
-    >>> pointer = prev_context(pointer)
-    >>> serialize_context(next_context(pointer), with_content=-1)
+    >>> pointer = prev_trail(pointer)
+    >>> serialize_trail(next_trail(pointer), with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace'
 
-The reason for this beaviour is that ``prev_context()`` and ``next_context()``
-try to move to the context which contains the string content preeceding or
-succeeding that of the given context. Therefore, these functions move to the
+The reason for this beaviour is that ``prev_trail()`` and ``next_trail()``
+try to move to the trail which contains the string content preceeding or
+succeeding that of the given trail. Therefore, these functions move to the
 next sibling on the same branch, rather traversing the complete tree like the
-``select()`` and ``select_context()``- methods of the Node-class. However, when
+``select()`` and ``select_trail()``- methods of the Node-class. However, when
 moving past the first or last sibling, it is not clear what the next node on the
 same level should be. To keep it easy, the function "zooms out" and returns the
 next sibling of the parent.
 
-It is, of course, possible to zoom back into a context::
+It is, of course, possible to zoom back into a trail::
 
-    >>> serialize_context(zoom_into_context(next_context(pointer), FIRST_CHILD, steps=1), with_content=-1)
+    >>> serialize_trail(zoom_into_trail(next_trail(pointer), FIRST_CHILD, steps=1), with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
 
-Often it is preferable to move through the leaf-nodes and their contexts right
-away. Functions like ``next_leaf_context()`` and ``prev_leaf_context()`` provide
+Often it is preferable to move through the leaf-nodes and their trails right
+away. Functions like ``next_leaf_trail()`` and ``prev_leaf_trail()`` provide
 syntactic sugar for this case::
 
-    >>> pointer = next_leaf_context(pointer)
-    >>> serialize_context(pointer, with_content=-1)
+    >>> pointer = next_leaf_trail(pointer)
+    >>> serialize_trail(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
 
-It is also possible to inspect just the string content surrounding a context,
+It is also possible to inspect just the string content surrounding a trail,
 rather than its structural environment::
 
     >>> ensuing_str(pointer)
     ' Palace'
     >>> assert foregoing_str(pointer, length=1) == ' ', "Blank expected!"
 
-It is also possible to systematically iterate through the contexts forward or
-backward - just like the `node.select_context()`-method, but starting from an
-arbitraty context, instead of the one end or the other end of the tree rooted in
+It is also possible to systematically iterate through the trails forward or
+backward - just like the `node.select_trail()`-method, but starting from an
+arbitraty trail, instead of the one end or the other end of the tree rooted in
 `node`::
 
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
-    >>> pointer = t.pick_context('G')
-    >>> [serialize_context(ctx, with_content=1)
-    ...  for ctx in select_context(pointer, ANY_CONTEXT, include_root=True)]
+    >>> pointer = t.pick_trail('G')
+    >>> [serialize_trail(ctx, with_content=1)
+    ...  for ctx in select_trail(pointer, ANY_TRAIL, include_root=True)]
     ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7', 'A:1234567']
-    >>> [serialize_context(ctx, with_content=1)
-    ...  for ctx in select_context(
-    ...      pointer, ANY_CONTEXT, include_root=True, reverse=True)]
+    >>> [serialize_trail(ctx, with_content=1)
+    ...  for ctx in select_trail(
+    ...      pointer, ANY_TRAIL, include_root=True, reverse=True)]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
 
 Another important difference, besides the starting point, is that the
@@ -538,10 +538,10 @@ Another important difference, besides the starting point, is that the
 (or "depth first"), while the respective methods ot the Node-class traverse the
 tree pre-order. See the difference::
 
-    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ANY_CONTEXT, include_root=True)]
+    >>> l = [serialize_trail(ctx, with_content=1) for ctx in t.select_trail(ANY_TRAIL, include_root=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
-    >>> l = [serialize_context(ctx, with_content=1) for ctx in t.select_context(ANY_CONTEXT, include_root=True, reverse=True)]
+    >>> l = [serialize_trail(ctx, with_content=1) for ctx in t.select_trail(ANY_TRAIL, include_root=True, reverse=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
@@ -553,25 +553,25 @@ Sometimes it may be more convenient to search for a specific feature in the
 string-content of a text, rather than in the structured tree. For example,
 finding matching brackets in tree-strcutured text can be quite cumbersome if
 brackets are not "tagged" individually. For theses cases it is possible to
-generate a context mapping that maps text position to the contexts of the
-leaf-nodes to which they belong. The context-mapping can be thought of as a
+generate a trail mapping that maps text position to the trails of the
+leaf-nodes to which they belong. The trail-mapping can be thought of as a
 "string-view" on the tree::
 
     >>> flat_text = sentence.content
-    >>> ctx_mapping = generate_context_mapping(sentence)
-    >>> leaf_positions, contexts = ctx_mapping
-    >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in contexts))}
+    >>> ctx_mapping = generate_trail_mapping(sentence)
+    >>> leaf_positions, trails = ctx_mapping
+    >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in trails))}
     {0: '(word "This")', 4: '(blank " ")', 5: '(word "is")', 7: '(blank " ")', 8: '(word "Buckingham")', 18: '(blank " ")', 19: '(word "Palace")'}
 
 Now let's find all letters that are followed by a whitespace character::
 
     >>> import re; locations = [m.start() for m in re.finditer(r'\w ', flat_text)]
-    >>> targets = [map_pos_to_context(loc, ctx_mapping) for loc in locations]
+    >>> targets = [map_pos_to_trail(loc, ctx_mapping) for loc in locations]
 
-The target returned by `map_pos_to_context()` is a tuple of the target context
-and the relative position of the location that falls within this context::
+The target returned by `map_pos_to_trail()` is a tuple of the target trail
+and the relative position of the location that falls within this trail::
 
-    >>> [(serialize_context(ctx), relative_pos) for ctx, relative_pos in targets]
+    >>> [(serialize_trail(ctx), relative_pos) for ctx, relative_pos in targets]
     [('sentence <- word', 3), ('sentence <- word', 1), ('sentence <- phrase <- word', 9)]
 
 Now, the structured text can be manipulated at the precise locations where
@@ -584,7 +584,7 @@ dots::
     '...s ...s ...m Palace'
 
 The positions resemble the text positions of the text represented by the tree at
-the very moment when the context mapping is generated, not the source positions
+the very moment when the trail mapping is generated, not the source positions
 captured by the `pos`-propery of the node-objects! This also means that the
 mapping becomes outdated the very moment, the tree is being restructured.
 
@@ -720,11 +720,11 @@ The Node-class
     descendants.
   * :py:meth:`~nodetree.Node.locate`: Finds the leaf-node covering a
     paraticular location of string content of the tree originating in this node.
-  * :py:meth:`~nodetree.Node.select_context`: Selects :ref:`contexts <Contexts>`
+  * :py:meth:`~nodetree.Node.select_trail`: Selects :ref:`trails <trails>`
     from the tree of descendants.
-  * :py:meth:`~nodetree.Node.pick_context`: Picks a particular context from
+  * :py:meth:`~nodetree.Node.pick_trail`: Picks a particular trail from
     the tree of descendants.
-  * :py:meth:`~nodetree.Node.locate_context`: Finds the context of the
+  * :py:meth:`~nodetree.Node.locate_trail`: Finds the trail of the
     leaf-node covering a paraticular location of string content of the tree
     originating in this node.
 
@@ -763,18 +763,18 @@ Reading trees from serial data types
   accordingly.
 
 
-Functions for traversing trees with a context "pointer"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Functions for traversing trees with a trail "pointer"
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* :py:func:`~nodetree.prev_context`: Returns the :ref:`context <Contexts>`
-  preceeding a given context.
-* :py:func:`~nodetree.next_context`: Returns the :ref:`context <Contexts>`
-  following a given context.
-* :py:func:`~nodetree.generate_context_mapping`: Generates a context-mapping
+* :py:func:`~nodetree.prev_trail`: Returns the :ref:`trail <trails>`
+  preceeding a given trail.
+* :py:func:`~nodetree.next_trail`: Returns the :ref:`trail <trails>`
+  following a given trail.
+* :py:func:`~nodetree.generate_trail_mapping`: Generates a trail-mapping
   for all leaf-nodes of a tree, i.e. a dictionary mapping the current text
   position of each leaf-node (not the source-code position!) to the leaf-node
   itself.
-* :py:func:`~nodetree.map_pos_to_context`: Returns the leaf-node for a given
+* :py:func:`~nodetree.map_pos_to_trail`: Returns the leaf-node for a given
   text position and the number of characters of this position into the leaf-node.
 
 

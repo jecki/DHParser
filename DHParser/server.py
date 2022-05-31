@@ -1602,7 +1602,7 @@ class Server:
                             k = len(data)
                             content_length = 0
                     elif not incomplete_header(data):
-                        # no header or no context-length given
+                        # no header or no content-length given
                         # set `context_length` to the size of the data to break the loop
                         content_length = len(data)
                 elif content_length + k < len(data):

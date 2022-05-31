@@ -25,7 +25,7 @@ cdef class Parser:
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
-    # cpdef _apply(self, func, context, flip)
+    # cpdef _apply(self, func, ptrail, flip)
     cpdef apply(self, func)
 
 # cpdef mixin_comment(whitespace, str)

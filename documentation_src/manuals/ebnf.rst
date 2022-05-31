@@ -1761,7 +1761,7 @@ Context sensitive parsers and semantic actions
 ----------------------------------------------
 
 DHParser does by intention not contain support for semantic actions, because
-these can intrduce a context-sensitivity that can be hard to handle with a
+these can introduce a context-sensitivity that can be hard to handle with a
 recursive descent parser and compiler-generation, where semtantiv actions
 might become useful is not the main domain of application for DHParser.
 (In case you are worried: There are a few documented but unadvertised loopholes

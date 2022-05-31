@@ -296,7 +296,7 @@ class XMLTransformer(Compiler):
         return node
 
     def on_Reference(self, node):
-        replace_by_single_child(self.context)
+        replace_by_single_child(self.trail)
         return node
 
     def on_Comment(self, node):

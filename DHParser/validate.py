@@ -28,10 +28,10 @@ node-trees. EXPERIMENTAL!!!
 
 from typing import Callable, Dict
 
-from DHParser.nodetree import Node, RootNode, TreeContext, ANY_NODE
+from DHParser.nodetree import Node, RootNode, Trail, ANY_NODE
 
 
-ValidationFunction = Callable[[Node, TreeContext], None]  # validate(schema, data)
+ValidationFunction = Callable[[Node, Trail], None]  # validate(schema, data)
 SchemaLanguage = Dict[str, ValidationFunction]
 Schema = Node
 
@@ -48,39 +48,39 @@ def abstract_validate(language: SchemaLanguage, schema: Schema, data: Node) -> N
 ## relax-like schema validation
 
 
-def leaf(schema: Node, data: TreeContext) -> None:
+def leaf(schema: Node, data: Trail) -> None:
     pass
 
 
-def branch(schema: Node, data: TreeContext) -> None:
+def branch(schema: Node, data: Trail) -> None:
     pass
 
 
-def alternative(schema: Node, data: TreeContext) -> None:
+def alternative(schema: Node, data: Trail) -> None:
     pass
 
 
-def optional(schema: Node, data: TreeContext) -> None:
+def optional(schema: Node, data: Trail) -> None:
     pass
 
 
-def zero_or_more(schema: Node, data: TreeContext) -> None:
+def zero_or_more(schema: Node, data: Trail) -> None:
     pass
 
 
-def one_or_more(schema: Node, data: TreeContext) -> None:
+def one_or_more(schema: Node, data: Trail) -> None:
     pass
 
 
-def series(schema: Node, data: TreeContext) -> None:
+def series(schema: Node, data: Trail) -> None:
     pass
 
 
-def interleave(schema: Node, data: TreeContext) -> None:
+def interleave(schema: Node, data: Trail) -> None:
     pass
 
 
-def forward(schema: Node, data: TreeContext) -> None:
+def forward(schema: Node, data: Trail) -> None:
     pass
 
 

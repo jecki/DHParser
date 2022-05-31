@@ -7,7 +7,7 @@
 
 cdef class Compiler:
     cdef public object tree
-    cdef public list context
+    cdef public list trail
     cdef public bint _None_check
     cdef public bint _dirty_flag
     cdef public bint _debug

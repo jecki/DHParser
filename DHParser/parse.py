@@ -376,7 +376,7 @@ ApplyFunc = Callable[[List['Parser']], Optional[bool]]
 # The return value of `True` stops any further application
 FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc = Callable[['Parser', int], ParsingResult]
-ParserContext = List['Parser']
+ParserTrail = List['Parser']
 
 
 class Parser:
@@ -734,18 +734,18 @@ class Parser:
         """
         return tuple()
 
-    def descendants(self) -> Iterator[ParserContext]:
-        """Returns an iterator over the contexts of self and all descendant parsers,
+    def descendants(self) -> Iterator[ParserTrail]:
+        """Returns an iterator over the trails of self and all descendant parsers,
         avoiding of circles."""
         visited = set()
 
-        def descendants_(parser: Parser, ctx: ParserContext) -> Iterator[ParserContext]:
+        def descendants_(parser: Parser, ptrl: ParserTrail) -> Iterator[ParserTrail]:
             if parser not in visited:
                 visited.add(parser)
-                ctx = ctx + [parser]
-                yield ctx
+                ptrl = ptrl + [parser]
+                yield ptrl
                 for p in parser.sub_parsers():
-                    yield from descendants_(p, ctx)
+                    yield from descendants_(p, ptrl)
 
         yield from descendants_(self, [])
 
@@ -881,12 +881,12 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
 # functions for analysing the parser tree/graph ###
 
 
-def has_non_autocaptured_symbols(context: List[Parser]) -> Optional[bool]:
-    """Returns True, if the context contains a Capture-Parser that is not
+def has_non_autocaptured_symbols(ptrail: List[Parser]) -> Optional[bool]:
+    """Returns True, if the parser-trail contains a Capture-Parser that is not
     shielded by a Retrieve-Parser. This is the case for captured symbols
     that are not "auto-captured" by a Retrieve-Parser.
     """
-    for parser in context:
+    for parser in ptrail:
         if parser.ptype == ":Retrieve":
             break
         elif parser.ptype == ":Capture":
@@ -1340,12 +1340,12 @@ class Grammar:
         return duplicate
 
 
-    def _add_parser__(self, context: List[Parser]) -> None:
+    def _add_parser__(self, ptrail: List[Parser]) -> None:
         """
         Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
-        parser = context[-1]
+        parser = ptrail[-1]
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
@@ -1871,10 +1871,10 @@ class Grammar:
         symbol = self.associated_symbol_cache__.get(parser, None)   # type: Optional[Parser]
         if symbol:  return symbol
 
-        def find_symbol_for_parser(context: List[Parser]) -> Optional[bool]:
+        def find_symbol_for_parser(ptrail: List[Parser]) -> Optional[bool]:
             nonlocal symbol, parser
-            if parser in context[-1].sub_parsers():
-                for p in reversed(context):
+            if parser in ptrail[-1].sub_parsers():
+                for p in reversed(ptrail):
                     if p.pname:
                         # save the name of the closest containing named parser
                         symbol = p
@@ -2573,9 +2573,9 @@ def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> P
         >>> print(tree.as_sxpr())
         (root "ABD")
     """
-    def apply_func(context: List[Parser]) -> None:
+    def apply_func(ptrail: List[Parser]) -> None:
         nonlocal level
-        parser = context[-1]
+        parser = ptrail[-1]
         if isinstance(parser, CombinedParser):
             if level == CombinedParser.NO_TREE_REDUCTION:
                 cast(CombinedParser, parser)._return_value = parser._return_value_no_optimization
