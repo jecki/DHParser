@@ -270,12 +270,13 @@ every tag-specific transformation-sequence has been processed. Because of the ti
 be achieved more effectively with the ``@disposable``- and ``@drop``-directives at the
 parsing-stage, already (see :ref:`simplifying_syntax_trees`)).
 
-To demonstrate what a transformation table looks like, here is an excerpt from the transformation-
-table of the LaTeX-Parser example::
+To give a better impression of how tree-transformation works and what primitives the transformation-module
+provides, here is an excerpt from the transformation-table of the LaTeX-Parser example::
 
     LaTeX_AST_transformation_table = {
         "hide_from_toc, no_numbering": [replace_content_with('')],
         "_known_environment": replace_by_single_child,
+        "_inline_math": reduce_single_child
         "paragraph": [strip(is_one_of({'S'}))],
         "text, path": collapse,
         "CMDNAME": [remove_whitespace, reduce_single_child],
@@ -290,16 +291,43 @@ table of the LaTeX-Parser example::
         # ...
     }
 
-Let's go through this table entry for entry and explain what the effect of each entry is. Doing so
-you will become acquainted with some of the transformation primitives that the :py:mod:`DHParser.transform`-module
-provides and also learn how this kind of table-based tree-transformation works.
-
 The first entry of the dictionary turns nodes with the either of the names "hide_from_toc" or "no_numbering"
-into empty nodes, which is reasonable, because these markers - which in the LaTeX-source consist of a simple asterix that is
-appended to a section-command or a command for an equation array, respectively - hall not
-be printed as part of the text. At the same time it is reasonable to keep the empty nodes as flags to
+into empty nodes, which is reasonable, because these markers which in the LaTeX-source consist of a simple asterix that is
+appended to a section-command or a command for an equation array shall not
+be printed as part of the text. At the same time, it is reasonable to keep the empty nodes as flags to
 indicate to latter processing stages that a certain section or chapter shall not appear in the table
 of contents or the numbering of an equation array shall be suppressed.
+
+The second entry replaces any node with the name "_known_environment" by its single child in case it has only one child.
+This is a very useful transformation rule for symbols that are defined as alternatives in the grammar. In the file ``LaTeX.ebnf`` 
+the "_known_environment"-symbols is defined as 
+``_known_environment = itemize | enumerate | description | figure | tabular | quotation | verbatim | math_block``. For any 
+such known environment, the concrete syntax tree consists of a node of with the name "_known_environment" that contains
+the actual environment as a single child, say:: 
+
+    (_known_environment
+      (enumerate
+        (item ...)
+        (item ...)
+        ...
+      )
+    )
+
+
+(This can easily be checked by marking one or more of the environment-tests in the
+"test_grammar"-subfolder of the LaTeX-example with an asterix so as to show the concrete syntax tree in the test report.)
+Now, since we are only interested in the actual environment, it is only reasonable to replace any "_known_environment"-node
+in the concrete syntax tree by the actual environment it contains as its single child node. 
+
+The same effect can also be achieved by early tree-reduction during the parsing stage 
+(see :ref:`Simplifying Trees <_simplifying_syntax_trees>` in the documentation of the :doc:`ebnf`-module.) by listing
+the symbol "_known_environment" in the ``@disposable``-directeive at the beginning of the grammar. In cases as simple 
+as this one, it is preferable way to eliminate superfluous nodes as early as possible by using the ``@disposable``-directive.
+
+
+
+
+
 
 
 
