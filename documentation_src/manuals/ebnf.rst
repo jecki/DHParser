@@ -1381,6 +1381,8 @@ all or at least most errors on the first run. And, finally,
 modern development environments can make the most of incremental
 compilation make possible by fail-tolerant parsers.
 
+.. _generic_fail_tolerant_parsing:
+
 A generic method for fail-tolerant parsing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

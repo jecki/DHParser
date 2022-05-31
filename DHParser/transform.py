@@ -81,7 +81,7 @@ __all__ = ('TransformationDict',
            'pick_longest_content',
            'fix_content',
            'collapse_children_if',
-           'transform_content',
+           'transform_result',
            'replace_content_with',
            'add_attributes',
            'normalize_whitespace',
@@ -1132,9 +1132,9 @@ def collapse_children_if(trail: Trail,
 
 
 @transformation_factory(collections.abc.Callable)
-def transform_content(trail: Trail, func: Callable):  # Callable[[ResultType], ResultType]
+def transform_result(trail: Trail, func: Callable):  # Callable[[ResultType], ResultType]
     """
-    Replaces the content of the node. ``func`` takes the node's result
+    Replaces the result of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
     """
     node = trail[-1]

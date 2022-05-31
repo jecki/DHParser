@@ -37,7 +37,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
-    merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
+    merge_adjacent, collapse, collapse_children_if, transform_result, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
@@ -417,13 +417,13 @@ LaTeX_AST_transformation_table = {
     "cfg_text": [reduce_single_child],
     "block": [reduce_single_child],
     "flag": [reduce_single_child],
-    "text, path, urlstring": collapse,
+    "text, urlstring": collapse,
     "no_command, blockcmd": [],
     "_structure_name": [],
     "CMDNAME": [remove_whitespace, reduce_single_child],
     "TXTCOMMAND": [remove_whitespace, reduce_single_child],
     "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
-    "ESCAPED": [apply_ifelse(transform_content(lambda result: result[1:]),
+    "ESCAPED": [apply_ifelse(transform_result(lambda result: result[1:]),
                              replace_content_with('~'),
                              lambda ctx: '~' not in ctx[-1].content)],
     "UMLAUT": replace_Umlaut,

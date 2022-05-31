@@ -1,0 +1,120 @@
+Dient nur dazu zu zeigen, wie DHParser.nodetree (XML-)Datenbäume nach
+JSON überträgt, denn es sind ja durchaus unterschiedliche Arten denkbar,
+um XML eineindeutig zu JSON zu transformieren.
+
+XML-Urquelle:
+
+        <xml>
+          <leer/>
+          <leer_mit_Attributen name="wert"/>
+          <nur_Text>text</nur_Text>
+          <Text_mit_Attributen name="wert">text</Text_mit_Attributen>
+          <knoten_mit_Kindern>
+            <kind>1</kind>
+            <kind>2</kind>
+          </knoten_mit_Kindern>
+          <knoten_mit_Kindern_und_Attributen name="wert">
+            <kind>1</kind>
+            <kind>2</kind>
+          </knoten_mit_Kindern_und_Attributen>
+          <Gemischtes_Element>anfang <kind>1</kind> ende</Gemischtes_Element>
+        </xml>    
+    
+
+DHParser-XML:
+
+<xml>
+  <leer/>
+  <leer_mit_Attributen name="wert"/>
+  <nur_Text>text</nur_Text>
+  <Text_mit_Attributen name="wert">text</Text_mit_Attributen>
+  <knoten_mit_Kindern>
+    <kind>1</kind>
+    <kind>2</kind>
+  </knoten_mit_Kindern>
+  <knoten_mit_Kindern_und_Attributen name="wert">
+    <kind>1</kind>
+    <kind>2</kind>
+  </knoten_mit_Kindern_und_Attributen>
+  <Gemischtes_Element>
+    <ANONYMOUS_Text__>anfang </ANONYMOUS_Text__>
+    <kind>1</kind>
+    <ANONYMOUS_Text__> ende</ANONYMOUS_Text__>
+  </Gemischtes_Element>
+</xml>
+
+JSON-Ausgabe:
+
+[
+  "xml", 
+  [
+    [
+      "leer", 
+      ""
+    ], 
+    [
+      "leer_mit_Attributen", 
+      "", 
+      {
+        "name": "wert"
+      }
+    ], 
+    [
+      "nur_Text", 
+      "text"
+    ], 
+    [
+      "Text_mit_Attributen", 
+      "text", 
+      {
+        "name": "wert"
+      }
+    ], 
+    [
+      "knoten_mit_Kindern", 
+      [
+        [
+          "kind", 
+          "1"
+        ], 
+        [
+          "kind", 
+          "2"
+        ]
+      ]
+    ], 
+    [
+      "knoten_mit_Kindern_und_Attributen", 
+      [
+        [
+          "kind", 
+          "1"
+        ], 
+        [
+          "kind", 
+          "2"
+        ]
+      ], 
+      {
+        "name": "wert"
+      }
+    ], 
+    [
+      "Gemischtes_Element", 
+      [
+        [
+          ":Text", 
+          "anfang "
+        ], 
+        [
+          "kind", 
+          "1"
+        ], 
+        [
+          ":Text", 
+          " ende"
+        ]
+      ]
+    ]
+  ]
+]

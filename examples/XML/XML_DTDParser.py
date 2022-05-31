@@ -36,7 +36,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, matches_re, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, PLACEHOLDER, \
-    merge_adjacent, collapse, collapse_children_if, transform_content, WHITESPACE_PTYPE, \
+    merge_adjacent, collapse, collapse_children_if, transform_result, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \

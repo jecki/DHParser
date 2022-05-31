@@ -279,9 +279,9 @@ provides, here is an excerpt from the transformation-table of the LaTeX-Parser e
         "inline_math": reduce_single_child,
         "paragraph": strip(is_one_of({'S'})),
         "text, urlstring": collapse,
-        "ESCAPED": [apply_ifelse(transform_content(lambda result: result[1:]),
+        "ESCAPED": [apply_ifelse(transform_result(lambda result: result[1:]),
                                  replace_content_with('~'),
-                                 lambda ctx: '~' not in ctx[-1].content)],
+                                 lambda trail: '~' not in trail[-1].content)],
         "UMLAUT": replace_Umlaut,
         "QUOTEMARK": replace_quotationmark,
         ":Whitespace, _WSPC, S": streamline_whitespace,
@@ -375,10 +375,27 @@ need to eliminate the following characters, too, in the case of the tilde.
 
 This case differentiation is effected by the :py:func:`DHParser.transform.apply_ifelse`-function which applies
 one (list of) primitive(s) or an alternative (list of) primitive(s) depending on boolean condition. Note that
-the the boolean condition is stated as the last term in the list of paramters of the ``apply_if_else``-operator.
- 
+the the boolean condition is stated as the last term in the list of paramters of the ``apply_if_else``-operator!
+In this case the boolean-primitive is defined inline as a lambda function::
+    
+    lambda trail: '~' not in trail[-1].content
 
+Just like the transformation-functions proper, boolean-primitives take the whole trail (i.e. a list of all nodes starting 
+with the root and ending with the node under inspection) as argument, but - different from the transformation-functions -
+they return a boolean value. The :py:func:`DHParser.transform.transform_result`-primitive takes a function as
+an argument to which the result of a Node (i.e. a string or a tuple of child-Nodes) is passed and that returns the 
+transformed result. The :py:func:`DHParser.transform.replace_content_with`-primitive replaces the result of the 
+last node in the trail with the given string content. Observe the subtle difference between the two primities: 
+`replace_content_with` always yields a leaf node with string content but no children.
 
+The following three entries apply custem functions, specifically written for the LaTeX example case. ``replace_Umlaut``
+replaces LaTeX-Umlaute like ``\"a`` by their unicode-counterpart, in this case "ä". ``replace_quotationmark`` does
+the same for quotationmarks. And ``streamline_whitspace`` compresses any whitespace either to a single blank or
+single linefeed.
+
+Finally, the entry for ``WARN_Komma`` adds a syntax warning to all nodes with the name "WARN_Komma".
+This follows a pattern for fail tolerant parsing descirbed in the documentation of the :py:mod:`DHParser.ebnf` 
+as :ref:`generic fail tolerant parsing <_generic_fail_tolerant_parsing>`.
 
 
 
