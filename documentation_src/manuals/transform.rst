@@ -274,13 +274,11 @@ To give a better impression of how tree-transformation works and what primitives
 provides, here is an excerpt from the transformation-table of the LaTeX-Parser example::
 
     LaTeX_AST_transformation_table = {
-        "hide_from_toc, no_numbering": [replace_content_with('')],
+        "hide_from_toc, no_numbering": replace_content_with(''),
         "_known_environment": replace_by_single_child,
-        "_inline_math": reduce_single_child
-        "paragraph": [strip(is_one_of({'S'}))],
-        "text, path": collapse,
-        "CMDNAME": [remove_whitespace, reduce_single_child],
-        "TXTCOMMAND": [remove_whitespace, reduce_single_child],
+        "inline_math": reduce_single_child,
+        "paragraph": strip(is_one_of({'S'})),
+        "text, urlstring": collapse,
         "ESCAPED": [apply_ifelse(transform_content(lambda result: result[1:]),
                                  replace_content_with('~'),
                                  lambda ctx: '~' not in ctx[-1].content)],
@@ -299,6 +297,7 @@ indicate to latter processing stages that a certain section or chapter shall not
 of contents or the numbering of an equation array shall be suppressed.
 
 The second entry replaces any node with the name "_known_environment" by its single child in case it has only one child.
+(See :py:func:`DHParser.transform.replace_by_single_child`.)
 This is a very useful transformation rule for symbols that are defined as alternatives in the grammar. In the file ``LaTeX.ebnf`` 
 the "_known_environment"-symbols is defined as 
 ``_known_environment = itemize | enumerate | description | figure | tabular | quotation | verbatim | math_block``. For any 
@@ -324,8 +323,60 @@ The same effect can also be achieved by early tree-reduction during the parsing 
 the symbol "_known_environment" in the ``@disposable``-directeive at the beginning of the grammar. In cases as simple 
 as this one, it is preferable way to eliminate superfluous nodes as early as possible by using the ``@disposable``-directive.
 
+The opposite case where you want to reatain the parent node but eliminate a single child is demonstrated by the following
+entry. The symbol "inline_math" is meant to mark mathematical notation that occurs within the text of a paragraph. 
+LaTeX has two different sets of symbols, ``\( ... \)`` and ``$ ... $`` to mark the begining and end of a stretch of
+inline maths, which are captured by "_im_bracket" and "_im_dollar"-symbol, respectively. Thus, "inline_math" is defined
+in the grammar as ``inline_math = _im_bracket | _im_dollar``. Hower, this time we are only interested in the fact that
+some piece of text is a piece of inline math and not what set of delimiters has been used to mark it as such. Therefore
+we use the :py:func:`DHParser.transform.reduce_single_child`-primitive to eliminate the child node while transfering it data to the parent.
 
+Again, the same can more efficiently be achieved by adding the symbols "_im_bracket" and "_im_dollar" to the list
+of disposable symbols at the top of the grammar. However, when still developing the grammar, it can, for debugging purposes, 
+still be helpful to eliminate them during the tree-transformation stage and not already while parsing. Once it has been
+superseeded by the disposable directive, the ``reduce_single_child``-primitive should be removed from the table, because -
+other than the ``replace_by_single_child``-primitive it can produce undesired side effect if the child to be reduced to
+its parent has already been eliminated earlier.
 
+In the grammar of the LaTeX-example, the symbol "S" captures significant whitespace. However, at the beginning and 
+the end of a paragraph, explicit whitespace is really unneccessary, because begining or ending a paragraph already
+implies that there is a linefeed (and thus whitespace). The entry for the "paragraph" symbol therefore eliminates
+whitespace that has been captured by the "paragraph"-parser at the beginning or the end. This is achieved with the 
+:py:func:`DHParser.transform.strip`-primitive. Like the :py:func:`DHParser.transform.replace_content_with`-primitive
+it takes an argument, only this time, the argument is another primitive (applied to the current trail of the 
+node under inspection), namely :py:func:`DHParser.transform.is_one_of`, which returns true if the trail passed
+to it ends with a node the name of which is one of a set of names. In this case this is the set with the
+single element "S": ``strip(is_one_of({'S'}))``.
+
+The following entry uses a rather trivial primitive, :py:func:`DHParser.transform.collapse` which simply replaces
+the the result of the node to which it is applied by the concatenated string content of all of its children
+(if any). Here it serves to yield the string content for sub-trees the structure of which is not relevant for
+further processing. "urlstring", to pick this one out, is defined as ``urlstring = [protocol] { path } [target]``.
+Each of the components of urlstring has a syntax of its own, which results in an intricate tree-structure when
+parsed. 
+
+Given that this structure is not relevant in the further processing of the parsed document one might
+ask the question why not a very much simplified URL-parser might have been suficient. A possible reason for specifying
+a detailed parser in cases where the structure does not matter is to capture syntax errors early on. Otherwise
+a misspelled URL that hasn't been rejected by a simplified parser might cause trouble later on. In cases where
+this is not to be feared simplified parsers are often a good choice, not in the least, 
+because they usually increase parsing speed. The parser of the LaTeX-example uses simplified parsers for the mathematical 
+notation, because this can be passed through to Javascript rendering libraries like `MathJax`_ or `KaTeX`_ as is.
+
+The transformation rule for the "ESCAPED" symbol is more complex. Usually, escaping in LaTeX works simply by 
+writing a backslash followed by the symbol that shall be escaped (i.e. not be interpreted as a control character but 
+simply written out), e.g. "\#" writes a "#"-character instead of starting a comment which would be the usual 
+meaning of the "#" in LaTeX. However, the case of the tilde "~" is more complicated, because if LaTeX encounters 
+an escaped tilde character, it will try to write the tilde *above* the following character. In order to really get
+a single tilde character one has to write "\~{ }" in LaTeX. The definition of the ESCAPED-symbol: 
+``ESCAPED = /\\(?:(?:[#%$&_\/{} \n])|(?:~\{\s*\}))/`` knows about this special case. But this means that while 
+usually just dropping the leading backslash "\" when unescaping a character during AST-transformation, we
+need to eliminate the following characters, too, in the case of the tilde.
+
+This case differentiation is effected by the :py:func:`DHParser.transform.apply_ifelse`-function which applies
+one (list of) primitive(s) or an alternative (list of) primitive(s) depending on boolean condition. Note that
+the the boolean condition is stated as the last term in the list of paramters of the ``apply_if_else``-operator.
+ 
 
 
 
@@ -357,3 +408,7 @@ Debugging the transformation-table
 The full documentation of all functions can be found in module
 :py:mod:`DHParser.transform`. The following table lists only the most
 important of these:
+
+
+.. _MathJAX: https://www.mathjax.org/
+.. _KaTeX: https://katex.org/
