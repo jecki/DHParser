@@ -23,7 +23,7 @@
 """
 Module ``validate`` contains functions and classes for the structural
 validation (i.e. validation according to a grammar-like schema) of
-node-trees. EXPERIMENTAL!!!
+node-trees. EXPERIMENTAL!!! THIS IS STILL A STUB!!!
 """
 
 from typing import Callable, Dict
@@ -42,10 +42,10 @@ def is_schema(schema: Node, language: SchemaLanguage) -> bool:
 
 def abstract_validate(language: SchemaLanguage, schema: Schema, data: Node) -> None:
     assert is_schema(schema, language)
-    language[schema.name](schema, data)
+    language[schema.name](schema, [data])
 
 
-## relax-like schema validation
+# relax-like schema validation
 
 
 def leaf(schema: Node, data: Trail) -> None:
