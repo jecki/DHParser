@@ -41,7 +41,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, has_content, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    transform_content, replace_content_with, forbid, assert_content, remove_infix_operator, \
+    replace_content_with, forbid, assert_content, remove_infix_operator, \
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
     get_config_value, node_maker, access_thread_locals, access_presets, has_children, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
