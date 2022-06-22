@@ -1502,7 +1502,6 @@ def remove_children_if(trail: Trail, condition: Callable):
     node = trail[-1]
     if node._children:
         node._set_result(tuple(c for c in node._children if not condition(trail + [c])))
-    pass
 
 
 remove_whitespace = remove_children_if(is_one_of(WHITESPACE_PTYPE))

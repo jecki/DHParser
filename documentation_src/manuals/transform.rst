@@ -66,7 +66,7 @@ Declarative Tree-Transformation
 Declarative tree-transformations are realized via functions that take a
 :ref:`trail <trails>` as argument and which are organized in a dictionary that
 maps tag-names to sequences of such transformation functions which are called on
-every node with that tag-name. The tree as whole is traversed depth-first.
+every node with that tag-name. The tree as a whole is traversed depth-first.
 Module :py:mod:`DHParser.transform` provides a large number of predefined
 transformation functions that can be combined to transform the tree in the
 desired manner.
@@ -264,9 +264,8 @@ statement does. (The ``evaluate()``-method of the
 installment of the visitor-pattern in DHParser.)
 
 
-
-The Transformation Table
-------------------------
+A Walk Through the Transformation Table
+---------------------------------------
 
 As shown by the examples earlier, the transformation table is a "smart"
 dictionary that maps tag-names to sequences of transformation functions. It is
@@ -434,7 +433,8 @@ boolean-primitive is defined inline as a lambda function::
     
     lambda trail: '~' not in trail[-1].content
 
-Just like the transformation-functions proper, boolean-primitives take the whole
+Just like the transformation-functions proper, boolean-primitives
+(or "probing functions") take the whole
 trail (i.e. a list of all nodes starting with the root and ending with the node
 under inspection) as argument, but - different from the transformation-functions
 - they return a boolean value. The
@@ -458,10 +458,98 @@ descirbed in the documentation of the :py:mod:`DHParser.ebnf` as :ref:`generic
 fail tolerant parsing <_generic_fail_tolerant_parsing>`.
 
 
-
 Transformation Functions
 ------------------------
 
+A transformation function is a function that takes the trail of a node
+(i.e. the list of nodes that connects the node with the root of the
+tree, starting with the root and ending with the node) as single argument
+and has no return value.
+
+By convention transformation functions should only make changes to the
+node and descending nodes, but not to its siblings or any nodes further
+down the tree. The trail, rather than the node, is passed as argument
+in order to allow the inspection of the environment of the node. And,
+well, in rare cases it makes sense to deviate from the just mentioned rule.
+
+However, it should be kept in mind that the tree is traversed depth-first
+and that changes to the ancestry of a node will not affect the tree traversel
+which still operates on the children-tuples of the acesters before the
+change by a transformation-function takes effect. To avoid confusion,
+it is best, not to change the ancestry.
+
+Generally speaking, transformation function will see the effects of
+any other transfomration further up the tree (i.e. those affecting
+the last node in the trail and its descendants) or earlier in the
+list of transformations assigned to an entry in the transformation-table.
+
+See the section on :ref:`debugging <debuggin_transformations>`, below,
+for an example of what can happen when this is not taken into consideration.
+
+There is a special kind of transformation functions, called "probing
+functions", that take the trail as an argument but return a boolean
+value. Probing functions should not make any changes to the tree.
+Also, it does not make sense to add probing functions directly to a list
+of transformation-function in the transformation table. Rather, probing
+functions are passed as arguments to conditional transformation functions.
+
+While transformation functions are functions with a single argument, it
+would often be helpful to pass further parameters, like the jsut
+mentioned boolean conditions, to a transformation.
+
+One way to do this is by deriving partial functions as described in
+`Python documentation <https://docs.python.org/3/library/functools.html#functools.partial>`_.
+Example::
+
+    >>> from functools import partial
+    >>> from DHParser.transform import remove_children_if, is_empty
+    >>> trans_table = {"*": partial(remove_children_if, condition=is_empty)}
+
+However, since this makes the transformation-table less readable,
+:py:mod:`DHParser.transform` provides the
+:py:func:`DHParser.transform.transformation_factory`-decorator that
+must be added to the definition of transformation functions that
+have further arguments after the `trail`-argument. Example::
+
+    >>> from collections.abc import Callable
+    >>> from DHParser.transform import transformation_factory
+    >>> @transformation_factory
+    ... def remove_children_if(trail: Trail, condition: Callable):
+    ...     node = trail[-1]
+    ...     if node.children:
+    ...         node.result = tuple(c for c in node.children if not condition(trail + [c]))
+
+The decorator must be parameterized with the type of the second argument, unless
+this argument has already been annotated with the type. Now, it is possible
+to rewrite the transformation table above as::
+
+    >>> trans_table = {"*": remove_children_if(is_empty)}
+
+The same decorator also works for probing functions::
+
+    >>> from typing import AbstractSet
+    >>> from collections.abc import Set
+    >>> @transformation_factory(Set)
+    ... def is_one_of(trail: Trail, name_set: AbstractSet[str]) -> bool:
+    ...     return trail[-1].name in name_set
+
+This example also shows that the type parameter of the
+``transformation_factory``-argument overrides the type annotation, which
+is useful in cases where this annotation does not work for
+technical reasons.
+
+
+.. hint:: Transformation functions usually either assume that the
+   trail on which they are called ends with e leaf-node or with
+   a branch-node but do not make much sense in the other case.
+   It is therefore good practie to check this as a pre-condition
+   with an if-clause (see function ``remove_children_if`` above)
+   or an assert-statement::
+
+       >>> def normalize_whitespace(trail):
+       ...     node = trail[-1]
+       ...     assert not node.children
+       ...     node.result = re.sub(r'\\s+', ' ', node.content)
 
 
 Parameterized Transformations
@@ -475,9 +563,57 @@ Conditional Transformations
 Writing Custom Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+
+.. _debugging_transformations
+
 Debugging the transformation-table
 ----------------------------------
 
+Complex tranformations can become hard to follow and to debug. The
+transformation-module provides a simple "printf-style" debugging
+facility in form of the peek-function to help spotting mistakes.
+Additionally, the :py:mod:`DHParser.testng`-module provides
+unit-testing-facilities that also cover the AST-transformation-step.
+
+Here is an example that demonstrates potentially unexpected results
+of badly ordered transformation-rules::
+
+    >>> import copy
+    >>> from DHParser.transform import collapse
+    >>> from DHParser.nodetree import parse_sxpr
+    >>> def duplicate_children(trail: Trail):
+    ...     node = trail[-1]
+    ...     if node.children:
+    ...         node.result = node.children + node.children
+    >>> trans_table = { 'bag': [collapse, duplicate_children] }  # <-- bad mistake
+    >>> testdata = parse_sxpr('(bag (item "apple") (item "orange"))')
+    >>> traverse(copy.deepcopy(testdata), trans_table).as_sxpr()
+    '(bag "appleorange")'
+
+If we had expected that the contents of "bag" would be doubled,
+we might find the result disappointing. Now, the mistake is easy to
+spot and to understand. But let's for the sake of the example assume
+that we are just surprised and have no clue where the error lies. Then
+using the :py:func:`DHParser.transform.peek`-function can help us
+debugging the transformation-list. The ``peek``-function, while technically
+a transformation function, does not change the tree, but simply
+prints the tree as S-expression::
+
+    >>> from DHParser.transform import peek
+    >>> trans_table = { 'bag': [collapse, peek, duplicate_children] }
+    >>> _ = traverse(copy.deepcopy(testdata), trans_table).as_sxpr()
+    (bag "appleorange")
+
+Thus, we can see the tree that the ``collapse``-function leaves behind and which
+the the ``duplicate_children``-functions receives as input. Since the collapse
+functions "collapses" the last node of the trail into a leaf-node. Therefore,
+the function ``duplicate_children`` does not receive a node with children
+that could be duplicated. We could remedy the situation by changing the the
+order of the transformations functions::
+
+    >>> trans_table = { 'bag': [duplicate_children, collapse] }
+    >>> traverse(copy.deepcopy(testdata), trans_table).as_sxpr()
+    '(bag "appleorangeappleorange")'
 
 
 *Functions-Reference*
