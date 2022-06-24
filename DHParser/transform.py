@@ -943,25 +943,22 @@ def replace_or_reduce(trail: Trail, condition: Callable = is_named):
 
 
 @transformation_factory(str)
-def change_name(trail: Trail, name: str, restriction: Callable = always):
+def change_name(trail: Trail, name: str):
     """
     Changes the tag name of the last node in the trail.
 
     Parameters:
-        restriction: A function of the trail that returns False in cases
-                where the tag name shall not be exchanged
         trail: the trail where the parser shall be replaced
         name: The new tag name.
     """
-    if restriction(trail):
-        node = trail[-1]
-        # ZOMBIE_TAGS will not be changed, so that errors don't get overlooked
-        # if node.name != ZOMBIE_TAG:
-        node.name = name
+    node = trail[-1]
+    # # ZOMBIE_TAGS will not be changed, so that errors don't get overlooked
+    # if node.name != ZOMBIE_TAG:
+    node.name = name
 
 
 @transformation_factory(str)
-def change_tag_name(trail: Trail, name: str, restriction: Callable = always):
+def change_tag_name(trail: Trail, name: str):
     deprecation_warning('"DHParser.transform.change_tag_name()" is deprecated. '
                         'Use "change_name()" instead!')
     change_name(trail, name, restriction)

@@ -7,7 +7,7 @@ trees or, more generally, simplifying and streamlining syntax trees in a much
 for fine-grained manner than is possible at the parsing stage (see
 :ref:`simplifying_syntax_trees`).
 
-A "concrete syntax tree" (CST) is a data tree, the structure of which represents
+A "concrete syntax tree" (CST) is a data tree the structure of which represents
 the grammatical structure of a text according to a given grammar. If unabridged,
 the concatenated content of all leaf-nodes of the concrete syntax tree yields
 the text original document. Thus, the shape and the content of the concrete
@@ -495,9 +495,14 @@ functions are passed as arguments to conditional transformation functions.
 
 While transformation functions are functions with a single argument, it
 would often be helpful to pass further parameters, like the jsut
-mentioned boolean conditions, to a transformation.
+mentioned boolean conditions, to a transformation. Such transformation
+functions with further parameters can be called "parameterized
+transformation function" where we consider the second argument of the
+parameterized transformation function as its first parameter.
 
-One way to do this is by deriving partial functions as described in
+One obvious way to turn a paremterized transformation function into
+a transformation function proper with a single argument is by deriving
+partial functions as described in
 `Python documentation <https://docs.python.org/3/library/functools.html#functools.partial>`_.
 Example::
 
@@ -525,7 +530,40 @@ to rewrite the transformation table above as::
 
     >>> trans_table = {"*": remove_children_if(is_empty)}
 
-The same decorator also works for probing functions::
+While the transformations with parameters in transformation table look like
+functions calls where the first argument is missing, they are actually
+calls to the transformation_factory decorator that returns a partial function
+where all arguments are fixed execpt the "trails"-argument at the beginning
+of the argument sequence. However, transformation functions with parameters
+can still be called like regular functions, if the first parameter is given.
+In this case the ``transformation_factory``-decorator simply passes the
+the call through to the original function. The ``transformation_factory``-decorator::
+
+    >>> from DHParser import parse_sxpr, has_content
+    >>> tree = parse_sxpr('(WORT "hallo")')
+    >>> has_content([tree], r'\w+')
+    True
+    >>> has_content(r'\w+')
+    functools.partial(<function has_content at 0x7fe1f06ad090>, regexp='\\w+')
+
+
+The distinction between function call and partial function generation
+is made on the basis of the type of the first argument.
+If the first argument is of type ``Trail`` (defined as ``List[Node]``)
+the call is passed through, otherwise a partial function is generated.
+This places some subtle restrictions on the type of the first parameter
+(i.e. second argument) of a paramterized transformation function in so
+far as this must not be a type that could be mistaken for the type
+``Trail`` of a subtype of ``Trail``. As a rule of thumb it is advisable
+to avoid lists as types of the first parameter (or second argument,
+respectively) and use tuples or sets instead if a container type is needed.
+
+While this technical background may sound complicated, there is in fact little
+need to worry. For, paremeterized transformation functions have turned
+out to be easy and intuitive to handle in pratice.
+
+Probing functions can be paramterized in exactly the same fashion as regular
+transformation functions with the same decorator ``transformation_factory``::
 
     >>> from typing import AbstractSet
     >>> from collections.abc import Set
@@ -550,18 +588,6 @@ technical reasons.
        ...     node = trail[-1]
        ...     assert not node.children
        ...     node.result = re.sub(r'\\s+', ' ', node.content)
-
-
-Parameterized Transformations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-Conditional Transformations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-Writing Custom Functions
-^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 .. _debugging_transformations
@@ -622,6 +648,33 @@ order of the transformations functions::
 The full documentation of all functions can be found in module
 :py:mod:`DHParser.transform`. The following table lists only the most
 important of these:
+
+* :py:func:`~transform.transformation_factory`: A decorator that turns
+   parameterized transformation of probing functions into simple
+   transformation or probing functions with a singe argument.
+
+* :py:func:`~transform.traverse`: Traverses a tree depth-first and
+   calls zero or more transformation functions on each node picked
+   from the transformation table by the name of the node.
+
+Basic Re-Arrangeing Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These transformations change und usually simplify the structure of the
+tree but do not touch the string-content of the node-tree.
+
+* :py:func:`~transform.replace_by_single_child`: Replaces a node with its
+  single child, in case it has exactly one chile. Thus, ``(a (b "x"))``
+  becomes ``(b "x")``, if the function is called on node "a", e.g. the
+  trail ending with "a".
+
+* :py:func:`~transform.replace_by_children`: Replaces a node by all of its
+  children, if possible, e.g. ``(root (a (b "x") (c "y")))`` ->
+  ``(root (b "x") (c "y"))''
+
+* :py:func:`~transform.raduce_single_child`: "Reduces" a single child
+  to its parent. ``(a (b "x"))`` -> ``(a "x")``
+
 
 
 .. _MathJAX: https://www.mathjax.org/
