@@ -661,7 +661,11 @@ Basic Re-Arrangeing Transformations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These transformations change und usually simplify the structure of the
-tree but do not touch the string-content of the node-tree.
+tree but do not touch the string-content of the node-tree. When speaking
+of the "node" a transformation function operates on in the following,
+we always mean the last node in the trail that is passed to the
+transformation function as argument.
+
 
 * :py:func:`~transform.replace_by_single_child`: Replaces a node with its
   single child, in case it has exactly one chile. Thus, ``(a (b "x"))``
@@ -675,6 +679,12 @@ tree but do not touch the string-content of the node-tree.
 * :py:func:`~transform.raduce_single_child`: "Reduces" a single child
   to its parent. ``(a (b "x"))`` -> ``(a "x")``
 
+* :py:func:`~transform.change_name`: Changes the name of the node.
+
+* :py:func:`~transform.flatten`: "Flattens" a node by replacing all
+  of its children that are not leave nodes and which fulfil a given
+  critrion by that child's children. The default criterion is
+  :py:func:`~transform.is_anonymous`
 
 
 .. _MathJAX: https://www.mathjax.org/

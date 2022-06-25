@@ -961,7 +961,7 @@ def change_name(trail: Trail, name: str):
 def change_tag_name(trail: Trail, name: str):
     deprecation_warning('"DHParser.transform.change_tag_name()" is deprecated. '
                         'Use "change_name()" instead!')
-    change_name(trail, name, restriction)
+    change_name(trail, name)
 
 
 @transformation_factory(dict)

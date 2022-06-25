@@ -521,6 +521,17 @@ delimiters would be merged with content. Therefore, the ``@reduction = merge``-
 directive should at best only be applied in conjunction with the ``@drop`` and
 ``@disposable``-directives.
 
+There are for possible values for the ``@direction``-directive:
+
+.. _table_reduction_directive:
+
+| value              | effect |
+|--------------------|--------|
+| ``none``           | no tree-reduction during parsing stage |
+| ``flatten``        | flattens anonymous nodes |
+| ``merge_treetops`` | flattens anonymous nodes and merges only nodes that contain only anonymous leaf-nodes as children |
+| ``merge``          | flattans anonymous nodes and merge anonymous leaf-nodes |
+
 Applying any of the here described tree-reductions (or "simplifications" for
 that matter) requires a bit of careful planning concerning which nodes
 will be named and which nodes will be dropped. This, however, pays off in
