@@ -1,3 +1,11 @@
+DHParser Version 1.1.0 (25.6.2022)
+..................................
+
+- refactoring (breaking changes!) "Node.name" instead
+  of "Node.tag_name" and type Context is now called "Trail"
+- bug fixes
+- documentation extended
+
 DHParser Version 1.0.2 (18.5.2022)
 ..................................
 

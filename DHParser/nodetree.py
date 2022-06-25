@@ -1661,10 +1661,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def to_json_obj(self) -> list:
         """Converts the tree into a JSON-serializable nested list. Nodes
         are serialized as JSON-lists with either two or three elements:
-            1. name (always a string),
-            2. content (either a string or a list of JSON-serialized Nodes)
-            3. optional: a dictionary that maps attribute names to attribute values,
-               both of which are strings.
+
+        1. name (always a string),
+        2. content (either a string or a list of JSON-serialized Nodes)
+        3. optional: a dictionary that maps attribute names to attribute values,
+           both of which are strings.
 
         Example::
 
@@ -1672,7 +1673,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ['root', 'content', {'importance': 'high'}]
         """
         jo = [self.name,
-              [nd.to_json_obj() for nd in self._children] if self._children else str(self.result)]
+              [nd.to_json_obj() for nd in self._children]
+              if self._children else str(self.result)]
         pos = self._pos
         if pos >= 0:
             jo.append(pos)
@@ -1703,10 +1705,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
         """Serializes the tree originating in `self` as JSON-string. Nodes
         are serialized as JSON-lists with either two or three elements:
-            1. name (always a string),
-            2. content (either a string or a list of JSON-serialized Nodes)
-            3. optional: a dictionary that maps attribute names to attribute values,
-               both of which are strings.
+
+        1. name (always a string),
+        2. content (either a string or a list of JSON-serialized Nodes)
+        3. optional: a dictionary that maps attribute names to attribute values,
+           both of which are strings.
 
         Example::
 

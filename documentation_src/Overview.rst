@@ -355,7 +355,7 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
    with a semicolon ``;`` as demanded by the ISO-norm for EBNF :-)
 
 
-.. _ast_building
+.. _ast_building:
 
 Declarative AST-building
 ------------------------
@@ -762,7 +762,7 @@ Preprocessor-section - usually must be edited by hand in order to allow the
 
 Because for most typical DSL-projects, preprocessors are not needed, the
 Preprocessor-section will be not be discussed, here. The other two sections,
-AST (for **A**bstract **S**yntax **T**ree) and Compiler, contain skeletons for (different kinds of)
+AST (for Abstract Syntax Tree) and Compiler, contain skeletons for (different kinds of)
 tree-transformations that can be edited as will or even completely be substituted
 by custom code. All sections (including "Preprocessor") comprise a callable class
 or an "instantiation function" returning a transformation function that should be
@@ -848,7 +848,7 @@ Let's first look at the AST-transformation-skeleton:
         get_transformer()(cst)
 
 This may look slightly more complicated, because - as explained earlier in
-:py:ref:`_ast_building` - per default the AST-transformations
+:py:ref:`ast_building` - per default the AST-transformations
 are defined declaratively by a transformation-table. Of course, you are free to replace
 the table-definition and the ``jsonTransformer``-instantiation function alltogether by
 a class like in the compilation section. (See the
@@ -867,7 +867,7 @@ table as follows:
         'number': [collapse]
     }
 
-Just like shown above (:py:ref:`_ast_building`) we use the :py:func:`transform.remove_brackets`-transformation
+Just like shown above (:py:ref:`ast_building`) we use the :py:func:`transform.remove_brackets`-transformation
 to get rid of the quotation marks surrounding string elements and, other than above, we also ad the
 :py:func:`transform.reduce_single_child` which eliminates a single dangling leaf-node.
 (The complement to :py:func:`transform.reduce_single_child` is the function
@@ -1103,10 +1103,10 @@ the "--stoperver"-option::
     Server on 127.0.0.1:8890 stopped
 
 The language server protocol support that DHParser offers differs in several
-respects from the popular `pygls`_-module::
+respects from the popular `pygls`_-module:
 
 * DHParser uses the more lightwight `TypedDict`_ -dictionaries instead
-  `pydantic`_-modules. The TypedDict-definitions in the
+  of `pydantic`_-modules. The TypedDict-definitions in the
   DHParser.lsp-module are auto-generated from the `language server protocol specification`_
   with `ts2python`_, a package that has itself been build with DHParser.
 

@@ -348,7 +348,7 @@ in the actual environment, it is only reasonable to replace any
 it contains as its single child node. 
 
 The same effect can also be achieved by early tree-reduction during the parsing
-stage (see :ref:`Simplifying Trees <_simplifying_syntax_trees>` in the
+stage (see :ref:`Simplifying Trees <simplifying_syntax_trees>` in the
 documentation of the :doc:`ebnf`-module.) by listing the symbol
 "_known_environment" in the ``@disposable``-directeive at the beginning of the
 grammar. In cases as simple as this one, it is preferable way to eliminate
@@ -455,7 +455,7 @@ either to a single blank or single linefeed.
 Finally, the entry for ``WARN_Komma`` adds a syntax warning to all nodes with
 the name "WARN_Komma". This follows a pattern for fail tolerant parsing
 descirbed in the documentation of the :py:mod:`DHParser.ebnf` as :ref:`generic
-fail tolerant parsing <_generic_fail_tolerant_parsing>`.
+fail tolerant parsing <generic_fail_tolerant_parsing>`.
 
 
 Transformation Functions
@@ -483,7 +483,7 @@ any other transfomration further up the tree (i.e. those affecting
 the last node in the trail and its descendants) or earlier in the
 list of transformations assigned to an entry in the transformation-table.
 
-See the section on :ref:`debugging <debuggin_transformations>`, below,
+See the section on :ref:`debugging <debugging_transformations>`, below,
 for an example of what can happen when this is not taken into consideration.
 
 There is a special kind of transformation functions, called "probing
@@ -590,7 +590,7 @@ technical reasons.
        ...     node.result = re.sub(r'\\s+', ' ', node.content)
 
 
-.. _debugging_transformations
+.. _debugging_transformations:
 
 Debugging the transformation-table
 ----------------------------------
@@ -674,7 +674,7 @@ transformation function as argument.
 
 * :py:func:`~transform.replace_by_children`: Replaces a node by all of its
   children, if possible, e.g. ``(root (a (b "x") (c "y")))`` ->
-  ``(root (b "x") (c "y"))''
+  ``(root (b "x") (c "y"))``
 
 * :py:func:`~transform.raduce_single_child`: "Reduces" a single child
   to its parent. ``(a (b "x"))`` -> ``(a "x")``
