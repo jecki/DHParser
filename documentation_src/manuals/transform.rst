@@ -684,7 +684,18 @@ transformation function as argument.
 * :py:func:`~transform.flatten`: "Flattens" a node by replacing all
   of its children that are not leave nodes and which fulfil a given
   critrion by that child's children. The default criterion is
-  :py:func:`~transform.is_anonymous`
+  :py:func:`~transform.is_anonymous`. Example:
+  ``(expr (term "5") (:OneOrMore (PLUS "+") (term "4") (MINUS "-") (term "3")))``
+  -> ``(expr (term "5") (PLUS "+") (term "4") (MINUS "-") (term "3"))``
+
+* :py:func:`~transform.collapse`: Replaces the children of the node
+  by their concatenated string content, e.g.
+  ``(number (digits "3") (dot ".") (decimal "14159"))``
+  -> (number "3.15159"). The function "collapse" is mostly useful
+  in cases when grammatical constructs have been added merely to validate an
+  input string and the deep structure is not of interest in the further
+  processing stages any more.
+
 
 
 .. _MathJAX: https://www.mathjax.org/
