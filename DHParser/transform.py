@@ -1073,7 +1073,7 @@ def fix_content(fixed_content: str) -> MergeRule:
 @transformation_factory(collections.abc.Callable)
 def collapse_children_if(trail: Trail,
                          condition: Callable,
-                         target_tag: str,
+                         target_name: str,
                          merge_rule: MergeRule = join_content):
     """
     (Recursively) merges the content of all adjacent child nodes that
@@ -1088,7 +1088,7 @@ def collapse_children_if(trail: Trail,
 
     See `test_transform.TestComplexTransformations` for more examples.
     """
-    assert isinstance(target_tag, str)  # TODO: Delete this when safe
+    assert isinstance(target_name, str)  # TODO: Delete this when safe
 
     node = trail[-1]
     if not node._children:
@@ -1097,10 +1097,10 @@ def collapse_children_if(trail: Trail,
     result = []  # type: List[Node]
 
     def close_package():
-        nonlocal package, target_tag, merge_rule
+        nonlocal package, target_name, merge_rule
         if package:
             merged_node = merge_rule(package)
-            merged_node.name = target_tag
+            merged_node.name = target_name
             attrs = dict()
             for nd in package:
                 if nd.has_attr():
@@ -1111,7 +1111,7 @@ def collapse_children_if(trail: Trail,
     for child in node._children:
         if condition([child]):
             if child._children:
-                collapse_children_if([child], condition, target_tag)
+                collapse_children_if([child], condition, target_name)
                 for c in child._children:
                     if condition([c]):
                         package.append(c)
@@ -1129,55 +1129,35 @@ def collapse_children_if(trail: Trail,
 
 
 @transformation_factory(collections.abc.Callable)
-def transform_result(trail: Trail, func: Callable):  # Callable[[ResultType], ResultType]
-    """
-    Replaces the result of the node. ``func`` takes the node's result
-    as an argument an returns the mapped result.
-    """
-    node = trail[-1]
-    node.result = func(node.result)
-
-
-@transformation_factory  # (str)
-def replace_content_with(trail: Trail, content: str):  # Callable[[Node], ResultType]
-    """
-    Replaces the content of the node with the given text content.
-    """
-    node = trail[-1]
-    node.result = content
-
-
-@transformation_factory
-def add_attributes(trail: Trail, attributes: dict):  # Dict[str, str]
-    """
-    Adds the attributes in the dictionary to the XML-Attributes of the last node
-    in the given trail.
-    """
-    trail[-1].attr.update(attributes)
-
-
-def normalize_whitespace(trail):
-    """
-    Normalizes Whitespace inside a leaf node, i.e. any sequence of
-    whitespaces, tabs and line feeds will be replaced by a single
-    whitespace. Empty (i.e. zero-length) Whitespace remains empty,
-    however.
-    """
-    node = trail[-1]
-    assert not node._children
-    if trail[-1].name == WHITESPACE_PTYPE:
-        if node.result:
-            node.result = ' '
-    else:
-        node.result = re.sub(r'\s+', ' ', node.result)
-
-
-@transformation_factory(collections.abc.Callable)
-def merge_adjacent(trail: Trail, condition: Callable, name: str = ''):
+def merge_adjacent(trail: Trail, condition: Callable, preferred_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
-    is assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
-    alike. Otherwise a type-error might ensue.
+    assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
+    alike. Otherwise a type-error might ensue!
+
+    The merged node's name is determined according to the following rule:
+
+    - If any of the nodes to be merged has the name that is passed as argument
+      'preferred_name', this name is chosen.
+    - If none of the to be merged nodes has the 'preferred_name' the
+      name of the first node is chosen.
+
+    'merge_adjacent' differs from :py:func:`collapse_children_if` in
+    two respects:
+
+    1. The merged nodes are not "collapsed" to their string content.
+    2. The naming rule for merged nodes is different, in so far as
+       the 'preferred_name' passed to `merge_adjacent` is only used
+       if it actually occurs among the nodes to be merged.
+
+    This, if 'merge_adjacent' is subsituted for 'collapse_children_if'
+    in doc-string example of the latter function, the exmpale yields::
+
+    >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
+    >>> tree = parse_sxpr(sxpr)
+    >>> merge_adjacent([tree], not_one_of({'superscript', 'subscript'}), 'text')
+    >>> print(flatten_sxpr(tree.as_sxpr()))
+    (place (abbreviation "p.26") (superscript "b") (mark ",18"))
     """
     node = trail[-1]
     children = node._children
@@ -1198,8 +1178,8 @@ def merge_adjacent(trail: Trail, condition: Callable, name: str = ''):
                     names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, trail[0]))
-                    if name in names:
-                        head.name = name
+                    if preferred_name in names:
+                        head.name = preferred_name
                     new_result.append(head)
             else:
                 new_result.append(children[i])
@@ -1294,7 +1274,36 @@ def move_fringes(trail: Trail, condition: Callable, merge: bool = True):
     Moves adjacent nodes on the left and right fringe that fulfill the given condition
     to the parent node. If the `merge`-flag is set, a moved node will be merged with its
     predecessor (or successor, respectively) in the parent node in case it
-    also fulfills the given `condition`.
+    also fulfills the given `condition`. Example:
+
+    >>> tree = parse_sxpr('''(paragraph
+    ...  (sentence
+    ...    (word "Hello ")
+    ...    (S " ")
+    ...    (word "world,")
+    ...    (S " "))
+    ...  (sentence
+    ...    (word "said")
+    ...    (S " ")
+    ...    (word "Hal.")))''')
+    >>> tree = traverse(tree, {'sentence': move_fringes(is_one_of({'S'}))})
+    >>> print(tree.as_sxpr())
+    (paragraph
+      (sentence
+        (word "Hello ")
+        (S " ")
+        (word "world,"))
+      (S " ")
+      (sentence
+        (word "said")
+        (S " ")
+        (word "Hal.")))
+
+    In this example the blank at the end of the first sentence has been
+    moved BETWEEN the two sentences. This is desirable, because if
+    you extract a sentence from the data, most likely you are not interested
+    in the trailing blank. Of course, this situation can best be
+    avoided by a careful formulation of the grammar in the first place.
 
     WARNING: This function should never follow replace_by_children() in the transformation list!!!
     """
@@ -1386,6 +1395,12 @@ def lean_left(trail: Trail, operators: AbstractSet[str]):
     parser, `lean_left` can be used to rearrange the tree structure
     so that it properly reflects the order of association.
 
+    This transformation is needed, if you want to get the order of
+    precedence right, when writing a grammar, say, for arithmetic
+    that avoids left-recursion. (DHParser does support left-recursion
+    but left-recursive grammars might not be compatibale with
+    other PEG-frameworks any more.)
+
     ATTENTION: This transformation function moves forward recursively,
     so grouping nodes must not be eliminated during traversal! This
     must be done in a second pass.
@@ -1436,7 +1451,7 @@ def lstrip(trail: Trail, condition: Callable = contains_only_whitespace):
 
 @transformation_factory(collections.abc.Callable)
 def rstrip(trail: Trail, condition: Callable = contains_only_whitespace):
-    """Recursively removes all leading nodes that fulfill a given condition."""
+    """Recursively removes all trailing nodes that fulfill a given condition."""
     node = trail[-1]
     i, L = 0, len(node._children)
     while i < L and node._children:
@@ -1593,6 +1608,51 @@ def remove_if(trail: Trail, condition: Callable):
 # nodes may be added (attention: position value )
 #
 #######################################################################
+
+
+@transformation_factory(collections.abc.Callable)
+def transform_result(trail: Trail, func: Callable):  # Callable[[ResultType], ResultType]
+    """
+    Replaces the result of the node. ``func`` takes the node's result
+    as an argument an returns the mapped result.
+    """
+    node = trail[-1]
+    node.result = func(node.result)
+
+
+@transformation_factory  # (str)
+def replace_content_with(trail: Trail, content: str):  # Callable[[Node], ResultType]
+    """
+    Replaces the content of the node with the given text content.
+    """
+    node = trail[-1]
+    node.result = content
+
+
+def normalize_whitespace(trail):
+    """
+    Normalizes Whitespace inside a leaf node, i.e. any sequence of
+    whitespaces, tabs and line feeds will be replaced by a single
+    whitespace. Empty (i.e. zero-length) Whitespace remains empty,
+    however.
+    """
+    node = trail[-1]
+    assert not node._children
+    if trail[-1].name == WHITESPACE_PTYPE:
+        if node.result:
+            node.result = ' '
+    else:
+        node.result = re.sub(r'\s+', ' ', node.result)
+
+
+@transformation_factory
+def add_attributes(trail: Trail, attributes: dict):  # Dict[str, str]
+    """
+    Adds the attributes in the dictionary to the XML-Attributes of the last node
+    in the given trail.
+    """
+    trail[-1].attr.update(attributes)
+
 
 NodeGenerator = Callable[[], Node]
 DynamicResultType = Union[Tuple[NodeGenerator, ...], NodeGenerator, str]

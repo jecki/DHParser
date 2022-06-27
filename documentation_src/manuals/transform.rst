@@ -543,8 +543,8 @@ the call through to the original function. The ``transformation_factory``-decora
     >>> tree = parse_sxpr('(WORT "hallo")')
     >>> has_content([tree], r'\w+')
     True
-    >>> has_content(r'\w+')
-    functools.partial(<function has_content at 0x7fe1f06ad090>, regexp='\\w+')
+    >>> type(has_content(r'\w+'))
+    <class 'functools.partial'>
 
 
 The distinction between function call and partial function generation
@@ -657,8 +657,8 @@ important of these:
    calls zero or more transformation functions on each node picked
    from the transformation table by the name of the node.
 
-Basic Re-Arrangeing Transformations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Basic Re-Arranging Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These transformations change und usually simplify the structure of the
 tree but do not touch the string-content of the node-tree. When speaking
@@ -696,6 +696,46 @@ transformation function as argument.
   input string and the deep structure is not of interest in the further
   processing stages any more.
 
+* :py:func:`~transform.collapse_children_if`. Merges adjacent children
+  that fulfil a given condition, e.g.
+  ``(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))``
+  -> ``(place (text "p.26") (superscript "b") (text ",18"))``
+  (In this example the condition was "not_one_of({'superscript', 'subscript'})"
+   and the target name for merged children was "test". See the docstring
+   of :py:func:`~transform.collapse_children_if`.)
+
+* :py:func:`~transform.merge_adjacent`. Like the previous function, only
+  that the children to be merged will not be collapsed and the target-name
+  (here called 'preferred_name') will only be used if it already occurs
+  as node-name among the nodes to be merged. See the doc-string of this
+  function for more details.
+
+* :py:func:`~transform.move_fringes`. Moves children from the left and right
+  fringes to the parent node as long as the children on the fringes fulfil
+  a given condition. This functions can help to patch up badly formulated
+  grammars.
+
+
+Content-Changing Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* :py:func:`~transform.lstrip`, :py:func:`~transform.rstrip`,
+  :py:func:`~transform.strip`. Recursively removes all leading, trailing or
+  both child-nodes that fulfil a given condition like 'is_whitespace'.
+
+* :py:func:`~transform.remove_children_if`. Removes all children that
+  fulfil a given condition.
+
+* :py:func:`~transform.remove_children`. A more specialized form of
+  'remove_children_if' that removes children based on their names.
+
+* :py:func:`~transform.remove_content`
+
+* :py:func:`~transform.remove_brackets`
+
+* :py:func:`~transform.remove_tokens`
+
+* :py:func:`~transform.remove_if`
 
 
 .. _MathJAX: https://www.mathjax.org/
