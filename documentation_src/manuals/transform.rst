@@ -729,14 +729,29 @@ Content-Changing Transformations
 * :py:func:`~transform.remove_children`. A more specialized form of
   'remove_children_if' that removes children based on their names.
 
-* :py:func:`~transform.remove_content`
+* :py:func:`~transform.remove_content`: Removes all children, the string content of 
+  which matches a given regular expression.
 
-* :py:func:`~transform.remove_brackets`
+* :py:func:`~transform.remove_brackets`: Removes any leading or trailing sequence
+  of (insignificant) whitespaces, anonymous text or anonymous regular expression nodes,
+  e.g. ``(formular (:Text "(") (number "5") (operator "+") (number "3") (:Text ")") (:Whitespace " "))``
+  -> ``(formular (number "5") (operator "+") (number "3"))``
 
-* :py:func:`~transform.remove_tokens`
+* :py:func:`~transform.remove_tokens`: Removes and tokens, i.e. anonymous Text-nodes,
+  e.g. ``(plus (number "5") (:Text "+") (number 3))`` -> ``(plus (number "5") (number 3))``
 
-* :py:func:`~transform.remove_if`
+* :py:func:`~transform.remove_if`: Removes the last node of the trail from ist parent'S
+  children. (Note: This transformation breaks the rule not to touch a node's parent's 
+  children-tuple! But, depending on the use case, the meaning of the transformation 
+  might become clearer when using "remove_if" on the node to be removed rather than 
+  "remove_children_if" on its parent node.)
 
+
+Control Strcutures
+^^^^^^^^^^^^^^^^^^
+
+Probing Functions
+^^^^^^^^^^^^^^^^^
 
 .. _MathJAX: https://www.mathjax.org/
 .. _KaTeX: https://katex.org/
