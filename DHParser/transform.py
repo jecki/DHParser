@@ -658,11 +658,11 @@ def not_one_of(trail: Trail, name_set: AbstractSet[str]) -> bool:
 def name_matches(trail: Trail, regexp: str) -> bool:
     """
     Returns true, if the node's name matches the regular
-    expression `regexp`. For example, ':.*' matches all anonymous nodes.
+    expression `regexp` completely. For example, ':.*' matches all anonymous nodes.
     """
     if not regexp.endswith('$'):
-        regexp += "$"
-    return bool(re.match(regexp, trail[-1].content))
+        regexp = f"(?:{regexp})$"
+    return bool(re.match(regexp, trail[-1].name))
 
 
 @transformation_factory
@@ -674,7 +674,7 @@ def content_matches(trail: Trail, regexp: str) -> bool:
     string and not just the beginning of the string to succeed!
     """
     if not regexp.endswith('$'):
-        regexp += "$"
+        regexp = f"(?:{regexp})$"
     return bool(re.match(regexp, trail[-1].content))
 
 
