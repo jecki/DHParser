@@ -32,7 +32,7 @@ from functools import partial, singledispatch, reduce
 import inspect
 import operator
 from typing import AbstractSet, ByteString, Callable, cast, Container, Dict, \
-    Tuple, List, Sequence, Union, Text
+    Tuple, List, Sequence, Union, Text, Optional
 
 try:
     import cython
@@ -99,14 +99,13 @@ __all__ = ('TransformationDict',
            'is_anonymous',
            'is_anonymous_leaf',
            'contains_only_whitespace',
-           # 'is_any_kind_of_whitespace',
            'is_empty',
            'is_token',
            'is_one_of',
            'not_one_of',
            'name_matches',
            'has_attr',
-           'attr_equals',
+           # 'attr_equals',
            'has_content',
            'has_ancestor',
            'has_parent',
@@ -669,23 +668,27 @@ def name_matches(trail: Trail, patterns: AbstractSet[str]) -> bool:
 
 
 @transformation_factory(str)
-def has_attr(trail: Trail, attr: str) -> bool:
+def has_attr(trail: Trail, attr: str, value: Optional[str] = None) -> bool:
     """
-    Returns true, if the node has the attribute `attr`, no matter
-    what its value is.
-    """
-    node = trail[-1]
-    return node.has_attr(attr)
-
-
-@transformation_factory(str)
-def attr_equals(trail: Trail, attr: str, value: str) -> bool:
-    """
-    Returns true, if the node has the attribute `attr` and its value equals
-    `value`.
+    Returns true, if the node has the attribute ``attr`` and its value
+    equals ``value``. If ``value`` is None, True is returned if the attribute
+    exists, no matter what it value is.
     """
     node = trail[-1]
-    return node.has_attr(attr) and node.attr[attr] == value
+    if value is None:
+        return node.has_attr(attr)
+    else:
+        return node.get_attr(attr, None) == value
+
+
+# @transformation_factory(str)
+# def attr_equals(trail: Trail, attr: str, value: str) -> bool:
+#     """
+#     Returns true, if the node has the attribute `attr` and its value equals
+#     `value`.
+#     """
+#     node = trail[-1]
+#     return node.has_attr(attr) and node.attr[attr] == value
 
 
 @transformation_factory

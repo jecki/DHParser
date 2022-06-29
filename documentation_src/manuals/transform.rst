@@ -773,9 +773,11 @@ Probing Functions
 
 * :py:func:`~transform.not_one_of`:
 
-* :py:func:`~transform.contains_only_whitespace`:
+* :py:func:`~transform.name_matches`:
 
-* :py:func:`~transform.any_of`: 
+* :py:func:`~transform.has_content`:
+
+* :py:func:`~transform.has_attr`: 
 
 
 
