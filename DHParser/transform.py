@@ -106,6 +106,7 @@ __all__ = ('TransformationDict',
            'name_matches',
            'has_attr',
            'content_matches',
+           'has_content',
            'has_ancestor',
            'has_parent',
            'has_descendant',
@@ -677,6 +678,13 @@ def content_matches(trail: Trail, regexp: str) -> bool:
     if not regexp.endswith('$'):
         regexp += "$"
     return bool(re.match(regexp, trail[-1].content))
+
+
+@transformation_factory
+def has_content(trail: Trail, content: str) -> bool:
+    """Checks a node's content against a given string. This is faster
+    than content_matches for mere string comparisons."""
+    return trail[-1].content == content
 
 
 @transformation_factory(str)
