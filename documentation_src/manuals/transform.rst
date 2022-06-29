@@ -747,11 +747,49 @@ Content-Changing Transformations
   "remove_children_if" on its parent node.)
 
 
-Control Strcutures
-^^^^^^^^^^^^^^^^^^
+Conditional Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Conditional Transformations apply a transformation or a sequences of transformations
+depending on the result of a probing function or boolean combination of probing functions.
+
+* :py:func:`~transform.apply_if`: 
+
+* :py:func:`~transform.apply_unless`: 
+
+* :py:func:`~transform.apply_ifelse`: 
+
 
 Probing Functions
 ^^^^^^^^^^^^^^^^^
+
+* :py:func:`~transform.is_anonymous`:
+
+* :py:func:`~transform.is_empty`:
+
+* :py:func:`~transform.is_token`:
+
+* :py:func:`~transform.is_one_of`: 
+
+* :py:func:`~transform.not_one_of`:
+
+* :py:func:`~transform.contains_only_whitespace`:
+
+* :py:func:`~transform.any_of`: 
+
+
+
+Boolean Combinators
+^^^^^^^^^^^^^^^^^^^
+
+* :py:func:`~transform.any_of`: 
+
+* :py:func:`~transform.all_of`: 
+
+* :py:func:`~transform.neg`:
+
+
+
 
 .. _MathJAX: https://www.mathjax.org/
 .. _KaTeX: https://katex.org/

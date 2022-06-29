@@ -104,7 +104,7 @@ __all__ = ('TransformationDict',
            'is_token',
            'is_one_of',
            'not_one_of',
-           'matches_re',
+           'name_matches',
            'has_attr',
            'attr_equals',
            'has_content',
@@ -656,7 +656,7 @@ def not_one_of(trail: Trail, name_set: AbstractSet[str]) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def matches_re(trail: Trail, patterns: AbstractSet[str]) -> bool:
+def name_matches(trail: Trail, patterns: AbstractSet[str]) -> bool:
     """
     Returns true, if the node's name matches one of the regular
     expressions in `patterns`. For example, ':.*' matches all anonymous nodes.
