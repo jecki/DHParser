@@ -787,31 +787,41 @@ Probing Functions
 * :py:func:`~transform.not_one_of`: The opposite of the above. Returns True, if the 
   node has none of the given names.
 
-* :py:func:`~transform.name_matches`: Returns True if the node's name matches 
+* :py:func:`~transform.name_matches`: Returns True, if the node's name matches 
   the given regular expression completely.
 
-* :py:func:`~transform.content_matches`: 
+* :py:func:`~transform.content_matches`: Returns True, if the node's content matches
+  the given regular expression completely.
 
-* :py:func:`~transform.has_content`:
+* :py:func:`~transform.has_content`: Returns True, if the node's content is the
+  same as the given string. (This is a faster special case of the the above.)
 
-* :py:func:`~transform.has_attr`: 
+* :py:func:`~transform.has_attr`: Checks whether the node has a particular attribute
+  and if a value is given, also whether the attributes value is the given value.
 
-* :py:func:`~transfrom.has_ancestor`:
+* :py:func:`~transfrom.has_ancestor`: Checks whether the node has an has an has an ancestor 
+  with one of the given names.
 
-* :py:func:`~transform.has_descendant`:
+* :py:func:`~transform.has_descendant`: Checks whether the node has a decsendant with
+  one of the given names. There are further functions like :py:func:`~transform.has_parent`, 
+  :py:func:`~transform.has_child`, :py:func:`~transform.has_sibling` to check for immediate
+  ancestors, descendants or for neighbours on the same level.
 
 
 
 Boolean Combinators
 ^^^^^^^^^^^^^^^^^^^
 
-* :py:func:`~transform.any_of`: 
+* :py:func:`~transform.any_of`: Returns True, if any one of the zero or more given
+  probing functions returns True. Note that like Python's "any()" this is
+  False if the set of given functions is empty.
 
-* :py:func:`~transform.all_of`: 
+* :py:func:`~transform.all_of`: Returns True, if all of the zero or more given probing 
+  functions return True. Note that like Python's "all()" this is True if the set of given
+  functions if empty, e.g. ``remove_if(all_of([is_empty, is_anonymous]))`` (remove a node
+  if it is both empty and anonymous).
 
-* :py:func:`~transform.neg`:
-
-
+* :py:func:`~transform.neg`: Inverts the boolean return value of the given probing function.
 
 
 .. _MathJAX: https://www.mathjax.org/
