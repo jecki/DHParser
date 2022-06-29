@@ -654,17 +654,15 @@ def not_one_of(trail: Trail, name_set: AbstractSet[str]) -> bool:
     return trail[-1].name not in name_set
 
 
-@transformation_factory(collections.abc.Set)
-def name_matches(trail: Trail, patterns: AbstractSet[str]) -> bool:
+@transformation_factory(str)
+def name_matches(trail: Trail, regexp: str) -> bool:
     """
-    Returns true, if the node's name matches one of the regular
-    expressions in `patterns`. For example, ':.*' matches all anonymous nodes.
+    Returns true, if the node's name matches the regular
+    expression `regexp`. For example, ':.*' matches all anonymous nodes.
     """
-    tn = trail[-1].name
-    for pattern in patterns:
-        if re.match(pattern, tn):
-            return True
-    return False
+    if not regexp.endswith('$'):
+        regexp += "$"
+    return bool(re.match(regexp, trail[-1].content))
 
 
 @transformation_factory
