@@ -105,7 +105,7 @@ __all__ = ('TransformationDict',
            'not_one_of',
            'name_matches',
            'has_attr',
-           'has_content',
+           'content_matches',
            'has_ancestor',
            'has_parent',
            'has_descendant',
@@ -666,6 +666,19 @@ def name_matches(trail: Trail, patterns: AbstractSet[str]) -> bool:
     return False
 
 
+@transformation_factory
+def content_matches(trail: Trail, regexp: str) -> bool:
+    """
+    Checks a node's content against a regular expression.
+
+    In contrast to ``re.match`` the regular expression must match the complete
+    string and not just the beginning of the string to succeed!
+    """
+    if not regexp.endswith('$'):
+        regexp += "$"
+    return bool(re.match(regexp, trail[-1].content))
+
+
 @transformation_factory(str)
 def has_attr(trail: Trail, attr: str, value: Optional[str] = None) -> bool:
     """
@@ -678,29 +691,6 @@ def has_attr(trail: Trail, attr: str, value: Optional[str] = None) -> bool:
         return node.has_attr(attr)
     else:
         return node.get_attr(attr, None) == value
-
-
-# @transformation_factory(str)
-# def attr_equals(trail: Trail, attr: str, value: str) -> bool:
-#     """
-#     Returns true, if the node has the attribute `attr` and its value equals
-#     `value`.
-#     """
-#     node = trail[-1]
-#     return node.has_attr(attr) and node.attr[attr] == value
-
-
-@transformation_factory
-def has_content(trail: Trail, regexp: str) -> bool:
-    """
-    Checks a node's content against a regular expression.
-
-    In contrast to ``re.match`` the regular expression must match the complete
-    string and not just the beginning of the string to succeed!
-    """
-    if not regexp.endswith('$'):
-        regexp += "$"
-    return bool(re.match(regexp, trail[-1].content))
 
 
 @transformation_factory(collections.abc.Set)
@@ -1507,7 +1497,7 @@ def keep_nodes(trail: Trail, names: AbstractSet[str]):
 @transformation_factory
 def keep_content(trail: Trail, regexp: str):
     """Removes children depending on their string value."""
-    keep_children_if(trail, partial(has_content, regexp=regexp))
+    keep_children_if(trail, partial(content_matches, regexp=regexp))
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1588,7 +1578,7 @@ def remove_children(trail: Trail, names: AbstractSet[str]):
 @transformation_factory
 def remove_content(trail: Trail, regexp: str):
     """Removes children depending on their string value."""
-    remove_children_if(trail, partial(has_content, regexp=regexp))
+    remove_children_if(trail, partial(content_matches, regexp=regexp))
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1833,7 +1823,7 @@ assert_has_children = error_on(lambda nd: nd._children, 'Element "%s" has no chi
 @transformation_factory
 def assert_content(trail: Trail, regexp: str):
     node = trail[-1]
-    if not has_content(trail, regexp):
+    if not content_matches(trail, regexp):
         cast(RootNode, trail[0]).new_error(node, 'Element "%s" violates %s on %s'
                                              % (node.name, str(regexp), node.content))
 

@@ -539,11 +539,11 @@ can still be called like regular functions, if the first parameter is given.
 In this case the ``transformation_factory``-decorator simply passes the
 the call through to the original function. The ``transformation_factory``-decorator::
 
-    >>> from DHParser import parse_sxpr, has_content
+    >>> from DHParser import parse_sxpr, content_matches
     >>> tree = parse_sxpr('(WORT "hallo")')
-    >>> has_content([tree], r'\w+')
+    >>> content_matches([tree], r'\w+')
     True
-    >>> type(has_content(r'\w+'))
+    >>> type(content_matches(r'\w+'))
     <class 'functools.partial'>
 
 
@@ -775,7 +775,7 @@ Probing Functions
 
 * :py:func:`~transform.name_matches`:
 
-* :py:func:`~transform.has_content`:
+* :py:func:`~transform.content_matches`:
 
 * :py:func:`~transform.has_attr`: 
 

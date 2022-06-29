@@ -32,7 +32,7 @@ from DHParser import start_logging, is_filename, load_if_file, \
     remove_empty, remove_tokens, flatten, is_empty, \
     collapse, collapse_children_if, WHITESPACE_PTYPE, TOKEN_PTYPE, \
     remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, has_content, apply_if, \
+    keep_children, is_one_of, not_one_of, content_matches, apply_if, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     forbid, assert_content, remove_infix_operator, ThreadLocalSingletonFactory, \
     error_on, recompile_grammar, left_associative, access_thread_locals, get_config_value
