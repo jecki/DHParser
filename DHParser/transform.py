@@ -1151,11 +1151,11 @@ def merge_adjacent(trail: Trail, condition: Callable, preferred_name: str = ''):
     This, if 'merge_adjacent' is subsituted for 'collapse_children_if'
     in doc-string example of the latter function, the exmpale yields::
 
-    >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
-    >>> tree = parse_sxpr(sxpr)
-    >>> merge_adjacent([tree], not_one_of({'superscript', 'subscript'}), 'text')
-    >>> print(flatten_sxpr(tree.as_sxpr()))
-    (place (abbreviation "p.26") (superscript "b") (mark ",18"))
+        >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
+        >>> tree = parse_sxpr(sxpr)
+        >>> merge_adjacent([tree], not_one_of({'superscript', 'subscript'}), 'text')
+        >>> print(flatten_sxpr(tree.as_sxpr()))
+        (place (abbreviation "p.26") (superscript "b") (mark ",18"))
     """
     node = trail[-1]
     children = node._children

@@ -26,6 +26,7 @@ validation (i.e. validation according to a grammar-like schema) of
 node-trees. EXPERIMENTAL!!! THIS IS STILL A STUB!!!
 """
 
+import re
 from typing import Callable, Dict
 
 from DHParser.nodetree import Node, RootNode, Trail, ANY_NODE
@@ -47,8 +48,34 @@ def abstract_validate(language: SchemaLanguage, schema: Schema, data: Node) -> N
 
 # relax-like schema validation
 
+RX_ANYSTRING = re.compile('.?')
+
+
+def verify_attributes(schema: Node, data: Trail) -> bool:
+    attributes = schema.get_attr('attributes', '').split(',')
+    if isinstance(attributes, str):
+        attributes = attributes.split(',')
+        schema.attr['attributes'] = tuple(attributes)
+    else:
+        assert isinstance(attributes, tuple)
+        attributes = list(attributes)
+    value_patterns = schema.get_attr('values', '').split(',')
+    if attributes:
+        allow_free_attributes = False
+        if attributes[-1] == '*':
+            allow_free_attributes = True
+            attributes.pop()
+        if not value_patterns:
+            for _ in range(len(attributes)):
+                value_patterns.append(RX_ANYSTRING)
+        assert len(attributes) == len(value_patterns)
+        
+    else:
+        assert not value_patterns
+
 
 def leaf(schema: Node, data: Trail) -> None:
+    global Relax
     pass
 
 

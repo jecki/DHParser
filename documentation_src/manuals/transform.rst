@@ -701,8 +701,8 @@ transformation function as argument.
   ``(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))``
   -> ``(place (text "p.26") (superscript "b") (text ",18"))``
   (In this example the condition was "not_one_of({'superscript', 'subscript'})"
-   and the target name for merged children was "test". See the docstring
-   of :py:func:`~transform.collapse_children_if`.)
+  and the target name for merged children was "test". See the docstring
+  of :py:func:`~transform.collapse_children_if`.)
 
 * :py:func:`~transform.merge_adjacent`. Like the previous function, only
   that the children to be merged will not be collapsed and the target-name
@@ -765,7 +765,7 @@ depending on the result of a probing function or boolean combination of probing 
   last in  the parameter-list.)
 
 * :py:func:`~transform.apply_ifelse`: Applies either of two transformation-functions depending
-on the truth-value the given probing function (last parameter!) returns.
+  on the truth-value the given probing function (last parameter!) returns.
 
 
 Probing Functions
