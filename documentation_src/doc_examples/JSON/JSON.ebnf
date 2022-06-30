@@ -1,0 +1,40 @@
+    #  EBNF-Directives
+
+    @literalws  = right  # eat insignificant whitespace to the right of literals
+    @whitespace = /\s*/  # regular expression for insignificant whitespace
+    @comment    = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # C++ style comments
+    @drop       = whitespace, strings  # silently drop bare strings and whitespace
+    @disposable = /_\w+/  # regular expression to identify disposable symbols
+
+    #:  compound elements
+
+    json        = ~ _element _EOF
+    _element    = object | array | string | number | _bool | null
+    object      = "{" member { "," §member } §"}"
+    member      = string §":" _element
+    array       = "[" [ _element { "," _element } ] §"]"
+
+    #:  simple elements
+
+    string      = `"` §_CHARACTERS `"` ~
+    number      = INT [ FRAC ] [ EXP ] ~
+    _bool       = true | false
+    true        = `true` ~
+    false       = `false` ~
+    null        = "null"
+
+    #:  atomic expressions types
+
+    # string components
+    _CHARACTERS = { PLAIN | ESCAPE | UNICODE }
+    PLAIN       = /[^"\\]+/
+    ESCAPE      = /\\[\/bnrt\\"]/
+    UNICODE     = "\u" HEX HEX
+    HEX         = /[0-9a-fA-F][0-9a-fA-F]/
+
+    # number components
+    INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
+    FRAC        = `.` /[0-9]+/
+    EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
+
+    _EOF        =  !/./
