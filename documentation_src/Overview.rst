@@ -453,8 +453,9 @@ in either a nicely formatted or compact form.
 
 1. S-expressions::
 
+    >>> from doc_examples.JSON import JSONParser
     >>> syntax_tree = JSONParser.parse_JSON('{ "one": 1, "two": 2 }')
-    >>> JSONParser.transform_JSON(syntax_tree)
+    >>> _ = JSONParser.transform_JSON(syntax_tree)
     >>> print(syntax_tree.as_sxpr())
     (json
       (object
@@ -471,7 +472,7 @@ in either a nicely formatted or compact form.
 
 2. XML::
 
-    >>> print(syntax_tree.as_xml(indent=None))
+    >>> print(syntax_tree.as_xml())
     <json>
       <object>
         <member>

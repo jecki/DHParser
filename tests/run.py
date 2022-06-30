@@ -10,7 +10,8 @@ import time
 import threading
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
-reldoc_path = os.path.join('..', 'documentation_src', 'manuals')
+reldoc_paths = [os.path.join('..', 'documentation_src'),
+                os.path.join('..', 'documentation_src', 'manuals')]
 doc_path = os.path.join(scriptdir, '..', 'documentation_src', 'manuals')
 sys.path.append(os.path.join(scriptdir, '../'))
 
