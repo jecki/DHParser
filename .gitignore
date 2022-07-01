@@ -18,6 +18,7 @@ LOGS
 **/LOGS/*
 **/LOG*
 **/REPORT/*
+**/node_modules/*
 REPORT
 external_resources/
 tmp/*
