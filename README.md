@@ -9,6 +9,10 @@ DHParser
 DHParser - A parser generator and domain specific language (DSL)
 construction kit for the Digital Humanities
 
+This software is open source software under the Apache 2.0-License (see section License, below).
+
+Copyright 2016-2022  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
+
 
 Features
 --------
