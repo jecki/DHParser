@@ -867,7 +867,7 @@ Just like shown above (:py:ref:`ast_building`) we use the :py:func:`transform.re
 to get rid of the quotation marks surrounding string elements and, other than above, we also ad the
 :py:func:`transform.reduce_single_child` which eliminates a single dangling leaf-node.
 (The complement to :py:func:`transform.reduce_single_child` is the function
-:py:func:`transform.replace_by_single_child` which removes the parent node of a singe dangeling leaf-node.)
+:py:func:`transform.replace_by_single_child` which removes the parent node of a singe dangling leaf-node.)
 For the ``number``-primitive we use the ``collapse``-transformation which replaces any substructure of
 child-nodes by its concatenated string-content.
 
@@ -880,9 +880,9 @@ child-nodes by its concatenated string-content.
     FRAC- or EXP-nodes in the syntax-tree of the number element in the subsequent compilation
     stage.
 
-A great way to check if an AST-transformation works as expected is by adding an asterix "*" to the name
+A great way to check if an AST-transformation works as expected is by adding an asterisk "*" to the name
 of match-test. Usually, the test runner only outputs the abstract-syntax-tree of match-tests in the
-test-report. However, if marked with an asterix, the concrete syntax tree will be printed, too. So,
+test-report. However, if marked with an asterisk, the concrete syntax tree will be printed, too. So,
 adding this marker to a test within an ".ini"-file in the "tests_grammar"-subdirectory, say::
 
     [match:number]
