@@ -447,10 +447,9 @@ nodes into an application-specific tree of objects of different classes.
 Serialization as you like it: XML, JSON, S-expressions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-DHParser makes it easy to visualize the various stages
-of tree-transformation (CST, AST, ...) by offering
-manifold serialization methods that output syntax-trees
-in either a nicely formatted or compact form.
+DHParser makes it easy to visualize the various stages of tree-transformation
+(CST, AST, ...) by offering manifold serialization methods that output
+syntax-trees in either a nicely formatted or compact form.
 
 1. S-expressions::
 
@@ -526,7 +525,7 @@ XML-connection
 ^^^^^^^^^^^^^^
 
 Since DHParser has been build with Digital-Humanities-applications in mind, it
-offers to further methods to connect to X-technologies. The methods
+offers two further methods to connect to X-technologies. The methods
 :py:meth:`~nodetree.Node.as_etree` and :py:meth:`~nodetree.Node.from_etree`
 allow direct transfer to and from the xml-ElementTrees of either the Python
 standard-library or the lxml-package. This can become useful if you need full
@@ -538,13 +537,13 @@ Test-driven grammar development
 
 Just like regular expressions, it is quite difficult to get EBNF-grammars right
 on the first try, especially, if you are new to the technology. DHParser offers
-a unit-testing environment and a dbugger for EBNF-grammars. This greatly helps
+a unit-testing environment and a debugger for EBNF-grammars. This greatly helps
 when learning to work with parser-technology and while you might not need the
-debugger oftern, any more, by the time you are more experienced with writing
-grammars, the unit-testing facilities becomde almost indispensable when
+debugger often, any more, by the time you are more experienced with writing
+grammars, the unit-testing facilities become almost indispensable when
 refactoring the grammar of evolving DSLs.
 
-This unit-testing has been designed to be easy to handle: Tests for any symbol
+The unit-testing-framework has been designed to be easy to handle: Tests for any symbol
 of the grammar are written into ``.ini``-Files in the ``tests_grammar``
 sub-directory of the DSL-project. Test-cases look like this::
 
@@ -556,7 +555,7 @@ Here, we test, whether the parser "number" (from our JSON-grammar) really
 matches the given strings as we would expect. "M1" and "M2" are arbitrary names
 for the individual test-cases. Since parsers should not only match strings that
 conform to the grammar of that parser, but must also fail to match strings that
-don't, it is also possible to specify "fail-tests"::
+don't, it is possible to specify "fail-tests" as well::
 
     [fail:number]
     F1: "π"   # the symbol for pi is not a valid number value in JSON
@@ -574,12 +573,12 @@ the test-subdirectory yields the results of the tests in this file, only::
 
     SUCCESS! All tests passed :-)
 
-In addition to this summary-report the test-script stores detailed reports of
+In addition to this summary-report, the test-script stores detailed reports of
 all tests for each test-file in form of Markdown-documents in the
-"test_grammar/REPORTS" directory. These reports contain the ASTs of all matches
-and the error messages for all fail-tests. If we look at the AST of the first
-match-test "M1" we might find to our surprise that it is not what we expect, but
-much more verbose::
+"test_grammar/REPORTS" directory. These reports contain the generated ASTs from
+all match-tests and the error messages for all fail-tests. If we look at the AST
+of the first match-test "M1" we might find to our surprise that it is not what
+we expect, but much more verbose::
 
    (number (INT (NEG "-") (:RegExp "3"))
            (FRAC (DOT ".") (:RegExp "2"))
@@ -596,7 +595,7 @@ name as the match-test that yields the AST we'd like to test::
 Running the test-suite will, of course, yield a failure for the AST-Test until
 we fix the issue, which in this case could be done by adding ``"number":
 [collapse]`` to our AST-transformations. Since it is sometimes helpful to
-inspect the CST as well, a match test's name can be marked with an asterix, e.g.
+inspect the CST as well, a match test's name can be marked with an asterisk, e.g.
 ``M1*:  "-3.2E-32"`` to include the CST for this test in the report, too.
 
 If a parser fails to match, it is sometimes hard to tell which mistake in the
@@ -614,7 +613,7 @@ also be introduced by a capital letter "E": ``EXP = `e` [`+`|`-`] /[0-9]+/``.
     :alt: a screenshot of DHParser's post-mortem-debugger
 
 While error messages help to locate errors in the source text, the
-grammar-debugger helps to locate the cause of an error that is not due to a
+grammar-debugger helps to find the cause of an error that is not due to a
 faulty source text but due to an error within the grammar-specification.
 
 Fail-tolerant parsing
@@ -624,44 +623,41 @@ Fail-tolerance is the ability of a parser to resume parsing after an error has
 been encountered. A parser that is fail-tolerant does not stop parsing at the
 first error but can report several if not all errors in a source-code file in
 one single run. Thus, the user is not forced to fix an earlier error before she
-is even being informed of the next error. Fail-tolerance is a particularly
-desirable property when using a modern IDE that annotates errors while typing
-the source code.
+or he is even being informed about the next error. Fail-tolerance is a
+particularly desirable property when using a modern editor or integrated
+development environment (IDE) that annotate errors while typing the source code.
 
 DHParser offers support for fail-tolerant parsing that goes beyond what can be
 achieved within EBNF alone. A prerequisite for fail-tolerant-parsing is to
-annotate the the grammar with ``§``-markers ("mandatory-marker") at places where
+annotate the grammar with ``§``-markers ("mandatory-marker") at places where
 one can be sure that the parser annotated with the marker must match if it is
 called at all. This is usually the case for parsers in a series after the point
 where it is uniquely determined.
 
-F or example, once the opening bracket of a bracketed expression has
-been matched by a parser it is clear that eventually the closing bracket will be matched
-by its respective parser, too, or it is an error. Thus, in our JSON-grammar
-we could write::
+For example, once the opening bracket of a bracketed expression has been matched
+by a parser it is clear that eventually the closing bracket must be matched,
+too, or it is an error. Thus, in our JSON-grammar we could write::
 
     array       = "[" [ _element { "," _element } ] §"]"
 
 The ``§`` advises the following parser(s) in the series to raise an error
 on the spot instead of merely returning a non-match if they fail.
-If we wantet to, we could also add a ``§``-marker in front of the second
-``_element``-parser, because after a komma there must always be another
-element in an array or it is an error.
 
-The §-marker can be supplemented with a ``@ ..._resume``-directive that
-tells the calling parsers where to continue after the array parser has failed.
-So, the parser resuming the parsing process is not the array parser that
-has failed, but the first of the parsers in the call-stack of the array-parser that
-catches up at the location indicated by the ``@ ..._resume``-directive.
-The location itself is determined by a regular expression, where the
-point for reentry is the location *after* the next match of the regular
-expression::
+The §-marker can be supplemented with a ``@ ..._resume``-directive that tells
+the calling parsers where to continue after the array parser has failed. So, the
+parser resuming the parsing process is not the array-parser that has failed, but
+the first of the parsers in the call-stack of the array-parser that catches up
+at the location indicated by the ``@ ..._resume``-directive. The location itself
+is determined by either a regular expression or another parser. If a parser is
+given, it must match all characters between the error location and the
+intended point of re-entry. In the case of a regular expression, the point for
+reentry is the location *after* the next match of the regular expression::
 
     @array_resume = /\]/
     array       = "[" [ _element { "," _element } ] §"]"
 
-Here, the whole array up to and including the closing bracket ``]`` will
-be skipped and the calling parser continue just as if the array had matched.
+Here, the whole array up to and including the closing bracket ``]`` will be
+skipped and the calling parser will continue just as if the array had matched.
 
 Let's see the difference this makes by running both versions of the grammar
 over a simple test case::
@@ -726,6 +722,12 @@ AST::
               (string
                 (PLAIN "two")))))
 
+It should be noted that it can be quite an art to find the proper
+resume-clauses, because different kinds of errors require different resume-clause.
+Assume for example, the coder of the JSON-file had forgotten the closing square bracket.
+It is virtually impossible to anticipate and take care of all possible mistakes 
+with a resume clause. But one can build these clauses "empirically" based on the 
+most common or most typical mistakes.
 
 
 Compiling DSLs
@@ -737,33 +739,34 @@ The auto-generated parser-script
 As explained earlier (see :ref:_full_scale_DSLs), full scale DSL-projects
 contain a test-script the name of which starts with ``tst_...`` that generates
 and updates (if the grammar has been changed) a parser-script the name of which
-ends with ``...Parser.py``. This parser script can be used to "compile" documents
-written in the DSL described by the ebnf-Grammar in the project directory. When
-running this script yields a concrete-syntax-tree. In almost all cases, you'll
-want to adjust the ``...Parser.py`` script, so that yields the data in contained
-in the compiled document. This, however, requires further processing steps than
-just parsing. The ``...Parser.py``-script contains four different sections,
-nameley, the **Preprocesser**-, **Parser**-, **AST**- and **Compiler**-sections.
-Once this script has been generated, only the Parser-section will be updated
-automatically when running the ``tst_...``-scripts. The Parser-section should
-therefore be left untouched, because any change might be overwritten without
-warning. For the same reason the comments demarking the different sections should
-be left intact. All other sections can and - with the exceptions of the
-Preprocessor-section - usually must be edited by hand in order to allow the
-``..Parser.py``-script to return the parsed data in the desired form.
+ends with ``...Parser.py``. This parser script can be used to "compile"
+documents written in the DSL described by the ebnf-Grammar in the project
+directory. When running this script yields a concrete-syntax-tree. In almost all
+cases, you'll want to adjust the ``...Parser.py`` script, so that yields the
+data in contained in the compiled document. This, however, requires further
+processing steps than just parsing. The ``...Parser.py``-script contains four
+different sections, namley, the **Preprocesser**-, **Parser**-, **AST**- and
+**Compiler**-sections. Once this script has been generated, only the
+Parser-section will be updated automatically when running the
+``tst_...``-scripts. The Parser-section should therefore be left untouched,
+because any change might be overwritten without warning. For the same reason the
+comments demarking the different sections should be left intact. All other
+sections can and - with the exceptions of the Preprocessor-section - usually
+must be edited by hand in order to allow the ``..Parser.py``-script to return
+the parsed data in the desired form.
 
 Because for most typical DSL-projects, preprocessors are not needed, the
-Preprocessor-section will be not be discussed, here. The other two sections,
-AST (for Abstract Syntax Tree) and Compiler, contain skeletons for (different kinds of)
-tree-transformations that can be edited as will or even completely be substituted
-by custom code. All sections (including "Preprocessor") comprise a callable class
-or an "instantiation function" returning a transformation function that should be
-edited as well as a ``get_...``-function
-that returns a thread-specific instance of this class or function and a function
-that passes a call through to this thread-specific instance. Only the
-transformation-function proper needs to be touched. The other two functions are
-merely scaffolding to ensure thread-safety so that you do not have to worry
-about it, when filling in the transformation-function proper.
+Preprocessor-section will be not be discussed, here. The other two sections, AST
+(for Abstract Syntax Tree) and Compiler, contain skeletons for (different kinds
+of) tree-transformations that can be edited as will or even completely be
+substituted by custom code. All sections (including "Preprocessor") comprise a
+callable class or an "instantiation function" returning a transformation
+function that should be edited as well as a ``get_...``-function that returns a
+thread-specific instance of this class or function and a function that passes a
+call through to this thread-specific instance. Only the transformation-function
+proper needs to be touched. The other two functions are merely scaffolding to
+ensure thread-safety so that you do not have to worry about it, when filling in
+the transformation-function proper.
 
 In the case of our json-parser, the skeleton for the Compilation looks
 like this:
