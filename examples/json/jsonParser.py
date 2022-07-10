@@ -11,7 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable
+from typing import Tuple, List, Union, Any, Optional, Callable, Dict
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -206,6 +206,9 @@ def transform_json(cst):
 #
 #######################################################################
 
+JSONType = Union[Dict, List, str, int, float, None]
+
+
 class jsonCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a json source file.
     """
@@ -218,46 +221,46 @@ class jsonCompiler(Compiler):
         self._None_check = False  # set to False if any compilation is allowed to return None
         # initialize your variables here, not in the constructor!
 
-    def on_json(self, node):
+    def on_json(self, node) -> JSONType:
         assert len(node.children) == 1
         return self.compile(node[0])
 
-    def on_object(self, node):
+    def on_object(self, node) -> Dict[str, JSONType]:
         return { k: v for k, v in (self.compile(child) for child in node)}
 
-    def on_member(self, node):
+    def on_member(self, node) -> Tuple[str, JSONType]:
         assert len(node.children) == 2
         return (self.compile(node[0]), self.compile(node[1]))
 
-    def on_array(self, node):
+    def on_array(self, node) -> List[JSONType]:
         return [self.compile(child) for child in node]
 
-    def on_string(self, node):
+    def on_string(self, node) -> str:
         if node.children:
             return ''.join(self.compile(child) for child in node)
         else:
             return node.content
 
-    def on_number(self, node):
+    def on_number(self, node) -> Union[float, int]:
         num_str = node.content
         if num_str.find('.') >= 0 or num_str.upper().find('E') >= 0:
             return float(num_str)
         else:
             return int(num_str)
 
-    def on_true(self, node):
+    def on_true(self, node) -> bool:
         return True
 
-    def on_false(self, node):
+    def on_false(self, node) -> bool:
         return False
 
-    def on_null(self, node):
+    def on_null(self, node) -> None:
         return None
 
-    def on_PLAIN(self, node):
+    def on_PLAIN(self, node) -> str:
         return node.content
 
-    def on_ESCAPE(self, node):
+    def on_ESCAPE(self, node) -> str:
         assert len(node.content) == 2
         code = node.content[1]
         return {
@@ -271,7 +274,7 @@ class jsonCompiler(Compiler):
             't': '\t'
         }[code]
 
-    def on_UNICODE(self, node):
+    def on_UNICODE(self, node) -> str:
         try:
             return chr(int(node.content, 16))
         except ValueError:

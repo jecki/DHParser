@@ -1376,10 +1376,10 @@ class EBNFCompiler(Compiler):
                     '    """', '',
                     '    def __init__(self):',
                     '        super(' + self.grammar_name + 'Compiler, self).__init__()',
+                    '        self._None_check = True  # set to False if any compilation-method is allowed to return None',
                     '',
                     '    def reset(self):',
                     '        super().reset()',
-                    '        self._None_check = True  # set to False if any compilation is allowed to return None',
                     '        # initialize your variables here, not in the constructor!',
                     '']
         for name in self.rules:

@@ -156,12 +156,12 @@ class Compiler:
     def __init__(self):
         self.has_attribute_visitors = any(field[0:5] == 'attr_' and callable(getattr(self, field))
                                           for field in dir(self))
+        self._None_check = True  # type: bool
         self.reset()
 
     def reset(self):
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.trail = []  # type: Trail
-        self._None_check = True  # type: bool
         self._dirty_flag = False
         self._debug = get_config_value('debug_compiler')  # type: bool
         self._debug_already_compiled = set()              # type: Set[Node]
@@ -179,7 +179,7 @@ class Compiler:
     def finalize(self, result: Any) -> Any:
         """
         A finalization method that is called after compilation has finished and
-        after all tasks from the finalizers stack have been executed
+        after all tasks from the finalizers-stack have been executed
         """
         return result
 
@@ -260,7 +260,7 @@ class Compiler:
             node = self.visit_attributes(node)
         return node
 
-    def get_compiler(self, node_name: str) -> CompilerFunc:
+    def find_compilation_method(self, node_name: str) -> CompilerFunc:
         try:
             method = self.method_dict[node_name]
         except KeyError:
@@ -292,7 +292,7 @@ class Compiler:
         elem = node.name
         if elem[:1] == ':':
             elem = elem[1:] + '__'
-        compiler = self.get_compiler(elem)
+        compiler = self.find_compilation_method(elem)
         self.trail.append(node)
         result = compiler(node)
         self.trail.pop()
