@@ -1,0 +1,28 @@
+# miniXML-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = /\s*/
+@ disposable  = EOF
+@ drop        = EOF, whitespace, strings
+
+document = ~ element ~ §EOF
+
+@element_resume = (:?TagName (&('</' :TagName '>') | '</' /\w+/ '>'))
+element  = STag §content ETag
+
+@STag_skip = (/[^<>]*>/)
+STag     = '<' TagName §'>'
+
+@ETag_skip = (/[^<>]*/)
+ETag     = '</' ::TagName §'>'
+
+TagName  = /\w+/
+content  = [CharData] { (element | COMMENT__) [CharData] }
+
+CharData = /(?:(?!\]\]>)[^<&])+/
+EOF      =  !/./        # no more characters ahead, end of file reached

@@ -1376,7 +1376,7 @@ class EBNFCompiler(Compiler):
                     '    """', '',
                     '    def __init__(self):',
                     '        super(' + self.grammar_name + 'Compiler, self).__init__()',
-                    '        self._None_check = True  # set to False if any compilation-method is allowed to return None',
+                    '        self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None',
                     '',
                     '    def reset(self):',
                     '        super().reset()',

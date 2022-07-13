@@ -130,6 +130,23 @@ class Compiler:
     method which will pick the right `on_XXX`-method. It is not
     recommended to call the `on_XXX`-methods directly.
 
+    Variables that are (re-)set only in the constructor and retain their
+    value if changed during subesquent calls::
+
+    :ivar forbid_returning_None:  Default value: True. Most of the time,
+            if a compiler-method (i.e. on_XXX()) returns None, this is
+            a mistake due to a forgotten return statement. The method
+            compile() checks for this mistake and raises an error if
+            a compiler-method returns None. However, some compilers require
+            the possibility to return None-values. In this case
+            ``forbis_returing_None`` should be set to False in the constructor
+            of the derived class.
+
+            (Another Alternativ would be to return a sentinel object instead of
+            None.)
+
+    Object-Variables that are reset after each call of the Compiler-object::
+
     :ivar trail:  A list of parent nodes that ends with the currently
                 compiled node.
     :ivar tree: The root of the abstract syntax tree.
@@ -156,7 +173,7 @@ class Compiler:
     def __init__(self):
         self.has_attribute_visitors = any(field[0:5] == 'attr_' and callable(getattr(self, field))
                                           for field in dir(self))
-        self._None_check = True  # type: bool
+        self.forbid_returning_None = True  # type: bool
         self.reset()
 
     def reset(self):
@@ -296,12 +313,12 @@ class Compiler:
         self.trail.append(node)
         result = compiler(node)
         self.trail.pop()
-        if result is None and self._None_check:
+        if result is None and self.forbid_returning_None:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
                  'result! It is recommended to use `nodetree.EMPTY_NODE` as a '
                  'void value. This Error can be turn off by adding '
-                 '`self._None_check = False` to the reset()-Method of your'
+                 '`self.forbid_returning_None = False` to the reset()-Method of your'
                  'compiler class, in case on_%s actually SHOULD be allowed to '
                  'return None.') % (elem, elem))
         return result
