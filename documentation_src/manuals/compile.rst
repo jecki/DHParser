@@ -119,9 +119,10 @@ further processing)::
     >>> class XMLTransformer(Compiler):
     ...     def reset(self):
     ...         super().reset()
+    ...         # don't keep pure whitespace nodes in mixed content
     ...         self.preserve_whitespace = False
     ...
-    ...     def on_document(self, node):
+    ...     def on_document(self, node: Node) -> Node:
     ...         # compile all descendants
     ...         node = self.fallback_compiler(node)
     ...         # then reduce document node to its single element
@@ -130,33 +131,44 @@ further processing)::
     ...         node.name = 'element'
     ...         return node
     ...
-    ...     def on_CharData(self, node):
-    ...         if not self.preserve_whitespace and not node.content.strip() \
-    ...                 and len(self.trail[-2].children) > 1:
-    ...             # set whitespace to empty string if CharData appears in
-    ...             # mixed mode, i.e. the CharData-node has siblings.
-    ...             node.result = ''
-    ...         return node
-    ...
-    ...     def on_content(self, node):
+    ...     def on_content(self, node: Node) -> Node:
     ...         node = self.fallback_compiler(node)
     ...         if len(node.children) == 1:
     ...             if node[0].name == 'CharData':
-    ...                 node.result = node[0].result  # eliminate solitary CharData-nodes
+    ...                  # eliminate solitary CharData-nodes
+    ...                 node.result = node[0].result
     ...         else:
+    ...             # remove CharData nodes that contain only whitespace
     ...             node.result = tuple(child for child in node.children
-    ...                                 if child.name != 'CharData' or child.content)
+    ...                                 if child.name != 'CharData' \
+    ...                                 or self.preserve_whitespace \
+    ...                                 or child.content.strip())
     ...         return node
     ...
-    ...     def on_element(self, node):
+    ...     def on_element(self, node: Node) -> Node:
     ...         node = self.fallback_compiler(node)
     ...         tag_name = node['STag']['TagName'].content
     ...         if node['ETag']['TagName'].content != tag_name:
     ...             self.tree.new_error(
     ...                 node['ETag'], "Mismatch of opening and closing tag!")
+    ...         # set element-name to tag-name
     ...         node.name = tag_name
+    ...         # drop opening and closing tag and reduce content-node
     ...         node.result = node['content'].result
     ...         return node
+
+Other than with the table-based-transformation that is used in :py:mod:`~transform`
+each the compilation/transformation-methods of classes derived from :py:class:`~compile.Compiler`
+are themselves responsible for calling the compiler-functions for their child-nodes. Also,
+even though it is assumed that compilation, just like any other tree-transformation, may
+change the tree in-place, every compilation-method (i.e. "on_XXX()") must return the result
+of the the compilation. In this case where the compilation-methods merely transform the
+tree, the result is also a node. It is not necessary (i.e. nowhere silently assumed) that
+the node object passed as a parameter is the same as the result-node that is returned.
+
+
+
+    >>> syntaxtree_to_datatree = XMLTransformer()
 
 
 Compiling to other structures

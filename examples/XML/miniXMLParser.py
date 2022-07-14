@@ -164,14 +164,6 @@ class XMLTransformer(Compiler):
         node.name = 'element'
         return node
 
-    def on_CharData(self, node):
-        if not self.preserve_whitespace and not node.content.strip() \
-                and len(self.trail[-2].children) > 1:
-            # set whitespace to empty string if CharData appears in
-            # mixed mode, i.e. the CharData-node has siblings.
-            node.result = ''
-        return node
-
     def on_content(self, node):
         node = self.fallback_compiler(node)
         if len(node.children) == 1:
@@ -179,7 +171,9 @@ class XMLTransformer(Compiler):
                 node.result = node[0].result  # eliminate solitary CharData-nodes
         else:
             node.result = tuple(child for child in node.children 
-                                if child.name != 'CharData' or child.content)
+                                if child.name != 'CharData' \
+                                or self.preserve_whitespace \
+                                or child.content.strip())
         return node
 
     def on_element(self, node):
