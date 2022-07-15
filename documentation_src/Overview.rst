@@ -741,12 +741,12 @@ contain a test-script the name of which starts with ``tst_...`` that generates
 and, if the grammar has been changed, updates a parser-script the name of which
 ends with ``...Parser.py``. This parser-script can be used to "compile"
 documents written in the DSL described by the ebnf-Grammar in the project
-directory. A freshley generated parser-script merely yields a concrete-syntax-tree
-when run on a source file.
-In almost all cases, you'll want to adjust the ``...Parser.py`` script, so that
-it really yields the data contained in the compiled document. This, however, requires further
-processing steps than just parsing. The ``...Parser.py``-script contains four
-different sections, namley, the **Preprocesser**-, **Parser**-, **AST**- and
+directory. A freshley generated parser-script merely yields a
+concrete-syntax-tree when run on a source file. In almost all cases, you'll want
+to adjust the ``...Parser.py`` script, so that it really yields the data
+contained in the compiled document. This, however, requires further processing
+steps than just parsing. The ``...Parser.py``-script contains four different
+sections, namley, the **Preprocesser**-, **Parser**-, **AST**- and
 **Compiler**-sections. Once this script has been generated, only the
 Parser-section will be updated automatically when running the
 ``tst_...``-scripts. The Parser-section should therefore be left untouched,

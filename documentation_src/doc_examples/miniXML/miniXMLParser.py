@@ -93,29 +93,24 @@ class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML source file.
     """
     element = Forward()
-    source_hash__ = "f99d5939cdddcb8ec54618e3e48f1593"
+    source_hash__ = "ac5d424ca8c844df4e191f17be87aa78"
     disposable__ = re.compile('EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
-    comment__ = RegExp(comment_rx__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(NegativeLookahead(RegExp('.')))
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
-    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, comment__), Option(CharData))))
-    TagName = Capture(RegExp('\\w+'), zero_length_warning=True)
-    ETag = Series(Drop(Text('</')), Pop(TagName), Drop(Text('>')), mandatory=2)
+    TagName = RegExp('\\w+')
+    content = Series(Option(CharData), ZeroOrMore(Series(element, Option(CharData))))
+    ETag = Series(Drop(Text('</')), TagName, Drop(Text('>')), mandatory=2)
     STag = Series(Drop(Text('<')), TagName, Drop(Text('>')), mandatory=2)
-    element_resume_1__ = Series(Pop(TagName, match_func=optional_last_value), Alternative(Lookahead(Series(Drop(Text('</')), Retrieve(TagName), Drop(Text('>')))), Series(Drop(Text('</')), RegExp('\\w+'), Drop(Text('>')))))
     element.set(Series(STag, content, ETag, mandatory=1))
     document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
-    resume_rules__ = {'element': [element_resume_1__]}
-    skip_rules__ = {'STag': [re.compile(r'[^<>]*>')],
-                    'ETag': [re.compile(r'[^<>]*')]}
     root__ = document
     
 
@@ -145,7 +140,10 @@ def parse_miniXML(document, start_parser = "root_parser__", *, complete_match=Tr
 #######################################################################
 
 class XMLTransformer(Compiler):
-    """Compiler for the abstract-syntax-tree of a XML source file.
+    """Compiler for the abstract-syntax-tree of an XML source file.
+
+    As of now, processing instructions, cdata-sections an document-type definition
+    declarations are simply dropped.
     """
 
     def reset(self):

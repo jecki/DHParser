@@ -37,11 +37,11 @@ Class :py:class:`~compile.Compiler` provides the scaffolding for
 tree-transformations based on the visitor-pattern. Typically, you'd derive a
 custom-compilation class from the "Compiler"-class and add "on_NAME"-methods for
 transforming nodes with a particular name. These methods are calle the
-"compilation-methods". (You can also add "attr_ATTRIBUTENAME"-methods that will
-be called on all those nodes that have an attribute of that name.) The
-Compiler-class itself is callable and the compilation-process is initiated by
-calling an instance of this class (or a class derived from "Compile") with the
-(AST-)tree as argument.
+"compilation-methods". It is also possible, though less common, to add
+"attr_ATTRIBUTENAME"-methods that will be called on all those nodes that have an
+attribute of that name. The Compiler-class itself is callable and the
+compilation-process is initiated by calling an instance of this class (or a
+class derived from "Compile") with the (AST-)tree as argument.
 
 For nodes for which no "on_NAME"-method has been defined, class compile simply
 calls the compilation-methods for all children (if any) and updates the node's
@@ -49,18 +49,18 @@ result-tuple with the return values of the children's compilation-call that are
 not None. This :py:meth:`~compile.Compiler.fallback_compiler`-method silently
 assumes that the compilation methods do return a (transformed)- node. Since the
 fallback-method fails in any case where the result of a child's compilation is
-not a Node, the fallback-method must be overridden in sub-classes that yield
+not a Node, the fallback-method must be overridden for compilers that yield
 other data-structures than node-trees. Or it must be made sure otherwise that
 the "fallback_compiler"-method will never be called, for example by providing
 "on_NAME"-methods for all possible node-names. This technique has been used in
 the JSON-compiler-example in the "Overview"-section of this manual (see
 `json_compiler`_). 
 
-Using class :py:class:`~compile.Compiler` for merely transforming data on the one
-hand side or using it for deriving different kinds data-structures or even, as 
-with a classical compiler, a runnable piece of code on the other hand side, are
-different use cases that require slightly different design patterns. We will look 
-at each of these use cases separately in the following.
+Using class :py:class:`~compile.Compiler` for merely transforming data or using
+it for deriving different kinds data-structures or even, as with a classical
+compiler, a runnable piece of code, are different use cases that require
+slightly different design patterns. We will look at each of these use cases
+separately in the following.
 
 Transforming node-trees
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -109,13 +109,66 @@ encoded in an XML-source, but the syntax tree of that XML-encoded text::
       </element>
     </document>
 
-In order to extract the tree-data that has been encoded in the XML-source, we 
-need a compiler that can compile XML-syntax-trees to XML-data-trees. (We can 
+Where we would like to get to, is the data-tree that when serialized looks
+more or less like the original XML::
+
+    <line>Herz, mein Herz ist traurig</line>  
+
+In order to extract the tree-data that has been encoded in the XML-source, we
+need a compiler that can compile XML-syntax-trees to XML-data-trees. (We can
 skip the AST-transformation-step, because with the @drop-directive in the
 grammar, the concrete syntax tree has already sufficiently been streamlined for
-further processing)::
+further processing). In order to do so, we need to write compilation-methods at
+least for the node-types "document", "element" and "content". We do not really
+need compilation-methods for "STag" and "ETag", because these will be dropped,
+anyway. Similarly, "CharData" does not need to be compiled, because it is a
+leaf-node the content of which shall not be changed, anyway. And the elimination
+of "CharData"-nodes happens on the level below "CharData". (Of course, this is
+just one way of writing a syntax-tree to data-tree converter, other approaches
+with different decisions on which compilation-methods are implemented are also
+imaginable.)
 
+The compilation-methods typically follow one or the other of the following two 
+patterns:
+
+.. code-block:: python
+
+    # Tree-transformation-pattern
+    def on_NAME(self, node: Node) -> Node:
+        node = self.fallback_compiler(node)
+        ...
+        return node
+
+    # Generalized-compilation-pattern
+    def on_NAME(self, node: Node) -> Any:
+        node.result = tuple(self.compile(child) for child in self.children)
+        ...
+        return node   # could also be anything other than a node-object
+
+"NAME" does here stand as placeholder for any concrete node-name.
+
+The first pattern works only for compilers that yield tree-structures, because,
+as said, :py:meth:`~compile.Compiler.fallback_compiler` assumes that the
+returned result of any compilation function is a node.
+:py:meth:`~compile.Compiler.compile` does not make this assumption. Therefore,
+the second pattern can be employed in either use-case. In any case, calling
+compilation-methods of child-nodes should always be channeled through one of the
+two methods "fallback_compiler()" or "compile()", because these methods make
+sure the "self.trail"- variable (which keeps the "trail" of nodes from the
+root-node to the current node) will be updated and that any
+"attr_NAME()"-methods are called, plus a few other things. 
+
+It is not necessary to call the compilation-methods of the child-nodes right at
+the beginning of the compilation-method as these patterns suggest, or to call
+them at all. Rather, the compilation-method decides when and for which children
+the compilation-methods will be called. 
+
+With this in mind the following code that compiles the XML-syntax-tree into 
+the XML-data-tree should be easy to understand::
+
+    >>> from DHParser.nodetree import Node
     >>> from DHParser.compile import Compiler
+
     >>> class XMLTransformer(Compiler):
     ...     def reset(self):
     ...         super().reset()
@@ -127,8 +180,8 @@ further processing)::
     ...         node = self.fallback_compiler(node)
     ...         # then reduce document node to its single element
     ...         assert len(node.children) == 1
+    ...         node.name = node[0].name
     ...         node.result = node[0].result
-    ...         node.name = 'element'
     ...         return node
     ...
     ...     def on_content(self, node: Node) -> Node:
@@ -157,18 +210,27 @@ further processing)::
     ...         node.result = node['content'].result
     ...         return node
 
-Other than with the table-based-transformation that is used in :py:mod:`~transform`
-each the compilation/transformation-methods of classes derived from :py:class:`~compile.Compiler`
-are themselves responsible for calling the compiler-functions for their child-nodes. Also,
-even though it is assumed that compilation, just like any other tree-transformation, may
-change the tree in-place, every compilation-method (i.e. "on_XXX()") must return the result
-of the the compilation. In this case where the compilation-methods merely transform the
-tree, the result is also a node. It is not necessary (i.e. nowhere silently assumed) that
-the node object passed as a parameter is the same as the result-node that is returned.
+Like all tree-transformations in DHParser, Compilation-methods are free to
+change the tree in-place. If you want to retain the structure of the tree before
+compilation, the only way to do so is to make a deep copy of the node-tree,
+before calling the Compiler-object. Still, compilation-methods must always
+return the result of the compilation! In cases where the return value of
+a compilation-method is a Node-object, it is not necessary (i.e. nowhere
+silently assumed) that the returned node-object is the same as the node-object
+that has been passed as a parameter. It can be an entirely freshly constructed
+Node-object. 
 
+Observe the use of a reset()-method: This method is called by the
+__call__-method of :py:class:`~compile.Compiler` before the compilation starts
+and should be used to reset any object-variables which may still contain values
+from the last compilation-run to their default values. 
 
+Let's see, how our XMLTransformer-object produces the actual data tree::
 
     >>> syntaxtree_to_datatree = XMLTransformer()
+    >>> data = syntaxtree_to_datatree(data)
+    >>> print(data.as_xml())
+    <line>Herz, mein Herz ist traurig</line>
 
 
 Compiling to other structures

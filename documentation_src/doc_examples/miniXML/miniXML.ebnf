@@ -1,0 +1,23 @@
+# miniXML-grammar
+
+@ whitespace  = /\s*/
+@ disposable  = EOF
+@ drop        = EOF, whitespace, strings
+
+#: document
+
+document = ~ element ~ §EOF
+
+#: element
+
+element  = STag §content ETag
+STag     = '<' TagName §'>'
+ETag     = '</' TagName §'>'
+content  = [CharData] { element [CharData] }
+
+#: atomic expressions
+
+TagName  = /\w+/
+CharData = /(?:(?!\]\]>)[^<&])+/
+EOF      = !/./ 
+
