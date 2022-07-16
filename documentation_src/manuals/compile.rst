@@ -236,7 +236,25 @@ Let's see, how our XMLTransformer-object produces the actual data tree::
 Compiling to other structures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here is an excerpt from that Compiler-class, again:
+In order to illustrate how compiling a syntax-tree to a data-structure that
+is not a node-tree, any more, we use a simplified (and somewhat sloppy)
+JSON-parser as an example. Here is the simplified JSON-Grammar::
+
+    >>> json_grammar = '''
+    @literalws  = right  # eat insignificant whitespace to the right of literals
+    @whitespace = /\s*/  # regular expression for insignificant whitespace
+    @drop       = whitespace, strings  # silently drop bare strings and whitespace
+    @disposable = /_\w+/  # regular expression to identify disposable symbols
+
+    json        = ~ _element _EOF
+    _element    = object | array | string | other_literal
+    object      = "{" member { "," §member } §"}"
+    member      = string §":" _element
+    array       = "[" [ _element { "," _element } ] §"]"
+    string      = `"` §/[^"]+/ `"` ~
+    other_literal = /[\w\d.+-]+/~
+    _EOF        =  !/./
+    '''
 
 .. code-block:: python
 

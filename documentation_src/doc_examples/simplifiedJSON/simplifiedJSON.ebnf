@@ -1,0 +1,23 @@
+#  EBNF-Directives
+
+@literalws  = right  # eat insignificant whitespace to the right of literals
+@whitespace = /\s*/  # regular expression for insignificant whitespace
+@comment    = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # C++ style comments
+@drop       = whitespace, strings  # silently drop bare strings and whitespace
+@disposable = /_\w+/  # regular expression to identify disposable symbols
+
+#:  compound elements
+
+json        = ~ _element _EOF
+_element    = object | array | string | other_literal
+object      = "{" member { "," §member } §"}"
+member      = string §":" _element
+array       = "[" [ _element { "," _element } ] §"]"
+
+#:  simple elements
+
+string      = `"` §/[^"]+/ `"` ~
+other_literal = /[\w\d.+-]+/~
+
+_EOF        =  !/./
+    

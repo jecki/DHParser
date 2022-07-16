@@ -11,7 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable, Dict
+from typing import Tuple, List, Union, Any, Dict, Callable
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -62,24 +62,24 @@ RE_INCLUDE = NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 
 
-def JSONTokenizer(original_text) -> Tuple[str, List[Error]]:
+def simplifiedJSONTokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 
 def preprocessor_factory() -> PreprocessorFunc:
-    # below, the second parameter must always be the same as JSONGrammar.COMMENT__!
-    find_next_include = gen_find_include_func(RE_INCLUDE, NEVER_MATCH_PATTERN)
+    # below, the second parameter must always be the same as simplifiedJSONGrammar.COMMENT__!
+    find_next_include = gen_find_include_func(RE_INCLUDE, '(?:\\/\\/.*)|(?:\\/\\*(?:.|\\n)*?\\*\\/)')
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor(JSONTokenizer)
+    tokenizing_prep = make_preprocessor(simplifiedJSONTokenizer)
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
 get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
 
 
-def preprocess_JSON(source):
+def preprocess_simplifiedJSON(source):
     return get_preprocessor()(source)
 
 
@@ -89,11 +89,11 @@ def preprocess_JSON(source):
 #
 #######################################################################
 
-class JSONGrammar(Grammar):
-    r"""Parser for a JSON source file.
+class simplifiedJSONGrammar(Grammar):
+    r"""Parser for a simplifiedJSON source file.
     """
     _element = Forward()
-    source_hash__ = "d932fa46e6d7c2b3b4a3f2d848472a1c"
+    source_hash__ = "d3a0e5846946bdc6542ac50cb366d075"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -104,31 +104,19 @@ class JSONGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     _EOF = NegativeLookahead(RegExp('.'))
-    EXP = Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+'))
-    FRAC = Series(Text("."), RegExp('[0-9]+'))
-    INT = Series(Option(Text("-")), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
-    HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
-    UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
-    ESCAPE = RegExp('\\\\[/bnrt\\\\"]')
-    PLAIN = RegExp('[^"\\\\]+')
-    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE, UNICODE))
-    null = Series(Text("null"), dwsp__)
-    false = Series(Text("false"), dwsp__)
-    true = Series(Text("true"), dwsp__)
-    _bool = Alternative(true, false)
-    number = Series(INT, Option(FRAC), Option(EXP), dwsp__)
-    string = Series(Text('"'), _CHARACTERS, Text('"'), dwsp__, mandatory=1)
+    other_literal = Series(RegExp('[\\w\\d.+-]+'), dwsp__)
+    string = Series(Text('"'), RegExp('[^"]+'), Text('"'), dwsp__, mandatory=1)
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element)))), Series(Drop(Text("]")), dwsp__), mandatory=2)
     member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
     object = Series(Series(Drop(Text("{")), dwsp__), member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)), Series(Drop(Text("}")), dwsp__), mandatory=3)
-    _element.set(Alternative(object, array, string, number, _bool, null))
+    _element.set(Alternative(object, array, string, other_literal))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
     
 
-_raw_grammar = ThreadLocalSingletonFactory(JSONGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(simplifiedJSONGrammar, ident=1)
 
-def get_grammar() -> JSONGrammar:
+def get_grammar() -> simplifiedJSONGrammar:
     grammar = _raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
@@ -141,7 +129,7 @@ def get_grammar() -> JSONGrammar:
         pass
     return grammar
     
-def parse_JSON(document, start_parser = "root_parser__", *, complete_match=True):
+def parse_simplifiedJSON(document, start_parser = "root_parser__", *, complete_match=True):
     return get_grammar()(document, start_parser, complete_match)
 
 
@@ -151,8 +139,8 @@ def parse_JSON(document, start_parser = "root_parser__", *, complete_match=True)
 #
 #######################################################################
 
-JSON_AST_transformation_table = {
-    # AST Transformations for the JSON-grammar
+simplifiedJSON_AST_transformation_table = {
+    # AST Transformations for the simplifiedJSON-grammar
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
@@ -161,36 +149,22 @@ JSON_AST_transformation_table = {
     "object": [],
     "member": [],
     "array": [],
-    "string": [remove_brackets],
-    "number": [],
-    "_bool": [],
-    "true": [],
-    "false": [],
-    "null": [],
-    "_CHARACTERS": [],
-    "PLAIN": [],
-    "ESCAPE": [],
-    "UNICODE": [],
-    "HEX": [],
-    "INT": [],
-    "NEG": [],
-    "FRAC": [],
-    "DOT": [],
-    "EXP": [],
+    "string": [remove_tokens('"'), reduce_single_child],
+    "other_literal": [],
     "_EOF": [],
 }
 
 
-def JSONTransformer() -> TransformerCallable:
+def simplifiedJSONTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, transformation_table=JSON_AST_transformation_table.copy())
+    return partial(traverse, transformation_table=simplifiedJSON_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(JSONTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(simplifiedJSONTransformer, ident=1)
 
 
-def transform_JSON(cst):
+def transform_simplifiedJSON(cst):
     return get_transformer()(cst)
 
 
@@ -202,20 +176,19 @@ def transform_JSON(cst):
 
 JSONType = Union[Dict, List, str, int, float, None]
 
-
-class JSONCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a json source file.
+class simplifiedJSONCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a simplifiedJSON source file.
     """
 
     def __init__(self):
-        super(JSONCompiler, self).__init__()
+        super(simplifiedJSONCompiler, self).__init__()
+        self.forbid_returning_None = False  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
         super().reset()
-        self.forbid_returning_None = False  # set to False if any compilation is allowed to return None
         # initialize your variables here, not in the constructor!
 
-    def on_json(self, node) -> JSONType:
+    def on_json(self, node):
         assert len(node.children) == 1
         return self.compile(node[0])
 
@@ -230,56 +203,25 @@ class JSONCompiler(Compiler):
         return [self.compile(child) for child in node]
 
     def on_string(self, node) -> str:
-        if node.children:
-            return ''.join(self.compile(child) for child in node)
-        else:
-            return node.content
-
-    def on_number(self, node) -> Union[float, int]:
-        num_str = node.content
-        if num_str.find('.') >= 0 or num_str.upper().find('E') >= 0:
-            return float(num_str)
-        else:
-            return int(num_str)
-
-    def on_true(self, node) -> bool:
-        return True
-
-    def on_false(self, node) -> bool:
-        return False
-
-    def on_null(self, node) -> None:
-        return None
-
-    def on_PLAIN(self, node) -> str:
         return node.content
 
-    def on_ESCAPE(self, node) -> str:
-        assert len(node.content) == 2
-        code = node.content[1]
-        return {
-            '/': '/',
-            '\\': '\\',
-            '"': '"',
-            'b': '\b',
-            'f': '\f',
-            'n': '\n',
-            'r': '\r',
-            't': '\t'
-        }[code]
-
-    def on_UNICODE(self, node) -> str:
-        try:
-            return chr(int(node.content, 16))
-        except ValueError:
-            self.tree.new_error(node, f'Illegal unicode character: {node.content}')
-            return '?'
+    def on_other_literal(self, node):
+        content = node.content
+        if content == "null":
+            return None
+        elif content == "true":
+            return True
+        elif content == "false":
+            return False
+        else:
+            return float(content)
 
 
-get_compiler = ThreadLocalSingletonFactory(JSONCompiler, ident=1)
+
+get_compiler = ThreadLocalSingletonFactory(simplifiedJSONCompiler, ident=1)
 
 
-def compile_JSON(ast):
+def compile_simplifiedJSON(ast):
     return get_compiler()(ast)
 
 
@@ -403,7 +345,7 @@ def main():
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a JSON-file and shows its syntax-tree.")
+    parser = ArgumentParser(description="Parses a simplifiedJSON-file and shows its syntax-tree.")
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')
