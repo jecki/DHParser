@@ -241,87 +241,103 @@ is not a node-tree, any more, we use a simplified (and somewhat sloppy)
 JSON-parser as an example. Here is the simplified JSON-Grammar::
 
     >>> json_grammar = '''
-    @literalws  = right  # eat insignificant whitespace to the right of literals
-    @whitespace = /\s*/  # regular expression for insignificant whitespace
-    @drop       = whitespace, strings  # silently drop bare strings and whitespace
-    @disposable = /_\w+/  # regular expression to identify disposable symbols
+    ... @literalws  = right  # eat insignificant whitespace to the right of literals
+    ... @whitespace = /\s*/  # regular expression for insignificant whitespace
+    ... @drop       = whitespace, strings  # silently drop bare strings and whitespace
+    ... @disposable = /_\w+/  # regular expression to identify disposable symbols
+    ...
+    ... json        = ~ _element _EOF
+    ... _element    = object | array | string | other_literal
+    ... object      = "{" member { "," §member } §"}"
+    ... member      = string §":" _element
+    ... array       = "[" [ _element { "," _element } ] §"]"
+    ... string      = `"` §/[^"]+/ `"` ~
+    ... other_literal = /[\w\d.+-]+/~
+    ... _EOF        =  !/./ '''
 
-    json        = ~ _element _EOF
-    _element    = object | array | string | other_literal
-    object      = "{" member { "," §member } §"}"
-    member      = string §":" _element
-    array       = "[" [ _element { "," _element } ] §"]"
-    string      = `"` §/[^"]+/ `"` ~
-    other_literal = /[\w\d.+-]+/~
-    _EOF        =  !/./
-    '''
+Let's now test this grammar, with a small piece of JSON::
 
-.. code-block:: python
+    >>> json_parser = create_parser(json_grammar)
+    >>> st = json_parser('{"pi": 3.1415}')
+    >>> print(st.as_sxpr())
+    (json
+      (object
+        (member
+          (string
+            (:Text '"')
+            (:RegExp "pi")
+            (:Text '"'))
+          (other_literal "3.1415"))))
 
-  JSONType = Union[Dict, List, str, int, float, None]
+Despite the early-on simplifications that have been configured by the
+"@disposable"- and the "@drop"-directives, the concrete-syntax-tree, is still a
+bit verbose. So we, furthermore define an abstract-syntax-tree-transformation::
 
-    class jsonCompiler(Compiler):
-        def __init__(self):
-            super(jsonCompiler, self).__init__()
-            self._None_check = False  # set to False if any compilation-method is allowed to return None
+    >>> from DHParser.transform import traverse, remove_tokens, reduce_single_child
+    >>> json_AST_trans = {"string": [remove_tokens('"'), reduce_single_child]}
+    >>> st = traverse(st, json_AST_trans) 
+    >>> print(st.as_sxpr())
+    (json (object (member (string "pi") (other_literal "3.1415"))))
 
+Now, let's write a compiler that compiles the abstract-syntax-tree of 
+a JSON-file into a Python data-structure::
 
-        def reset(self):
-            super().reset()
-            # initialize your variables here, not in the constructor!
+    >>> from typing import Dict, List, Tuple, Union
+    >>> JSONType = Union[Dict, List, str, int, float, None]
+    >>> class simplifiedJSONCompiler(Compiler):
+    ...     def __init__(self):
+    ...         super(simplifiedJSONCompiler, self).__init__()
+    ...         self.forbid_returning_None = False  # None will be returned when compiling "null"
+    ... 
+    ...     def reset(self):
+    ...         super().reset()
+    ...         # initialize your variables here, not in the constructor!
+    ... 
+    ...     def on_json(self, node) -> JSONType:
+    ...         assert len(node.children) == 1
+    ...         return self.compile(node[0])
+    ... 
+    ...     def on_object(self, node) -> Dict[str, JSONType]:
+    ...         return {k: v for k, v in (self.compile(child) for child in node)}
+    ... 
+    ...     def on_member(self, node) -> Tuple[str, JSONType]:
+    ...         assert len(node.children) == 2
+    ...         return (self.compile(node[0]), self.compile(node[1]))
+    ... 
+    ...     def on_array(self, node) -> List[JSONType]:
+    ...         return [self.compile(child) for child in node]
+    ... 
+    ...     def on_string(self, node) -> str:
+    ...         return node.content
+    ... 
+    ...     def on_other_literal(self, node) -> Union[bool, float, None]:
+    ...         content = node.content
+    ...         if content == "null":    return None
+    ...         elif content == "true":  return True
+    ...         elif content == "false": return False
+    ...         else:                    return float(content)
 
-        def on_json(self, node) -> JSONType:
-            assert len(node.children) == 1
-            return self.compile(node[0])
+The essential characteristics of this pattern (i.e. compilation of a node-tree
+to a data-structure that is not a node-tree, any more) are:
 
-        def on_object(self, node) -> Dict[str, JSONType]:
-            return { k: v for k, v in (self.compile(child) for child in node)}
+1. For each possible, or rather, reachable node-type an "on_NAME"-method has been 
+   defined. So the fallback that silently assumes that the compilation-result
+   is going to be yet another node-tree will never be invoked.
+2. Compilation methods are themselves responsible for compiling the child-nodes
+   of "their" node, if needed. They always do so by calling the "compile"-method
+   of the superclass on the child-nodes.
+3. Every compilation methods returns the complete (compiled) data-structure that 
+   the tree originating in its node represents.
+4. By the same token each compilation method that calls "Compiler.compile" on
+   any of its child-nodes is responsible for integrating the results of these
+   calls into its own return value.  
 
-        def on_member(self, node) -> Tuple[str, JSONType]:
-            assert len(node.children) == 2
-            return (self.compile(node[0]), self.compile(node[1]))
-        
-        ...
+Now, let's see our JSON-compiler in action::
 
-
-A few specifics about compilation-functions are noteworthy, here::
-
-1. The use of a reset()-method: This method is called by the __call__-method of 
-   :py:class:`~compile.Compiler` before the compilation starts and should be
-   used to reset any object-variables, which may still contain values from the
-   last compilation-run to their default values. 
-
-   There are two further methods that can be overridden an will be called during 
-   each call of a Compiler-object, namely :py:meth:`~compile.Compiler.prepare`
-   and :py:meth:`~compile.Compiler.finalize`. These allow a fine-grained control
-   of initialization an de-initialization of any variables or other resources
-   needed during compilation. It is furthermore possible to add any function
-   you'd like to the finalizers-list of the Compiler-object at any time during
-   compilation. This allows to defer certain tasks to the end of the 
-   compilation-process.
-
-2. Compilation-methods receive a node object as argument and are required to
-   return the result of the compilation of this node object. The Compiler-object
-   assumes that if any compilation function returns ``None`` then the return
-   statement has been forgotten and raises and Error. In cases where ``None``
-   is a reasonable compilation result (as with our JSON-compiler), this check can
-   be turned of by setting the ``_None_check``-flag of to ``False`` in the 
-   constructor.
-
-3. Compilation-methods can get access to the "trail" (i.e. the list of nodes
-   leading up from the root of the tree to the node that has been passed to the
-   compilation-method as argument) via ``self.trail``. (This does not happen
-   in the example above, though.)
-
-4. Compilation-methods route calling the compilation-methods of any 
-   child-objects through the :py:meth:`~compile.Compiler.compile`-method
-   of the :py:class:`~compile.Compiler`-object or - in case of pure
-   tree-transformations through :py:meth:`~compile.fallback_compiler`.
-
-   These methods take care of picking the right compilation method, 
-   updating the "trail"-field as well as a few other things. It is not
-   advisable to call one compilation-method from another compilation-method
-   directly.
+    >>> json_compiler = simplifiedJSONCompiler()
+    >>> data = json_compiler(st)
+    >>> print(data)
+    {'pi': 3.1415}
 
 
 
