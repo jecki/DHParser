@@ -30,7 +30,7 @@ trees. Only the very last transformation may yield a different data type. Or,
 put it differently, the processing-pipeline support of DHParser ends after the
 first transformation that does not yield a node-tree any more.
 
-Class Compiler
+class Compiler
 --------------
 
 Class :py:class:`~compile.Compiler` provides the scaffolding for
@@ -62,8 +62,8 @@ compiler, a runnable piece of code, are different use cases that require
 slightly different design patterns. We will look at each of these use cases
 separately in the following.
 
-Transforming node-trees
-^^^^^^^^^^^^^^^^^^^^^^^
+Transforming
+^^^^^^^^^^^^
 
 Let's first see how class :py:class:`~compile.Compiler` can be used to transform
 node-trees. As an example we use a rudimentary XML-parser that only parses tags
@@ -210,6 +210,18 @@ the XML-data-tree should be easy to understand::
     ...         node.result = node['content'].result
     ...         return node
 
+
+As can be seen, it is not necessary to fill in a compilation method for each
+and every node-type that can appear in the syntax-tree. When the Compiler-object
+is used for tree-transformation, it suffices to fill in compilation-methods
+only where necessary. 
+
+Most of the magic is contained in the "on_element"-method, which renames the
+"element"-nodes with the tag-name found in its starting- and ending-tag-children
+and then drops these children entirely. (Because they will be dropped anyway, 
+it is not necessary to define a compilation-method for the STag and ETag-nodes!) 
+Finally, the remaining "content"-child is reduced to the renamend element-node. 
+
 Like all tree-transformations in DHParser, Compilation-methods are free to
 change the tree in-place. If you want to retain the structure of the tree before
 compilation, the only way to do so is to make a deep copy of the node-tree,
@@ -233,8 +245,8 @@ Let's see, how our XMLTransformer-object produces the actual data tree::
     <line>Herz, mein Herz ist traurig</line>
 
 
-Compiling to other structures
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Compiling
+^^^^^^^^^
 
 In order to illustrate how compiling a syntax-tree to a data-structure that
 is not a node-tree, any more, we use a simplified (and somewhat sloppy)
@@ -289,10 +301,6 @@ a JSON-file into a Python data-structure::
     ...         super(simplifiedJSONCompiler, self).__init__()
     ...         self.forbid_returning_None = False  # None will be returned when compiling "null"
     ... 
-    ...     def reset(self):
-    ...         super().reset()
-    ...         # initialize your variables here, not in the constructor!
-    ... 
     ...     def on_json(self, node) -> JSONType:
     ...         assert len(node.children) == 1
     ...         return self.compile(node[0])
@@ -338,6 +346,66 @@ Now, let's see our JSON-compiler in action::
     >>> data = json_compiler(st)
     >>> print(data)
     {'pi': 3.1415}
+
+A slightly more complex example will follow further below.
+
+Initializing and Finalizing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Class compiler provides several hooks to initialize or
+prepare the compilation-process before it is started and to finalize
+it after it has been finished. For initialization, there are two
+overloadable methods:
+
+1. the :py:meth:`~compile.Compiler.reset`-method which is called both by the
+   constructor (i.e. "__init__"-method) of the class and at the very beginning
+   of the :py:meth:`~compile.Compiler.__call__`-method. It's purpose is to
+   initialize or reset all variables that need to be reset anew every time
+   the compiler is invoked by running the Compile-object. 
+
+   The reset method should contain all initializations that can be done
+   indepently of the concrete node-tree that is going to be compiled.
+
+2. the :py:meth:`~compile.Compiler.prepare`-method which will be called
+   just before the first compile-method, i.e. the compile-method of the
+   root-node is called. The prepare-method will receive the root-node of
+   the tree to be compiled as argument and can therefore perform any kind
+   of initializations that require knowledge about the concrete data that
+   is going to be compiled.
+
+For finalization, there are again two "hooks", although of different kind:
+
+1. the :py:meth:`~compile.Compiler.finalize`-method, which will be called after the
+   compilation has been finished and which receives the result of the 
+   compilations (whatever that may be) as parameter and returns the
+   (possibly) altered result. The purpose of the finalize method is to 
+   perform wrap-up-tasks that require access to the complete 
+   compilation-result, before they can be performed.
+
+2. a list of finalizers ("Compiler.finalizers"). This is a list of 
+   pairs (function, parameter-tuple), which will be executed in order
+   after the compilation has been finished, but before the 
+   Compiler.finalize-method is called. 
+   
+   While it would of course be possible to concentrate all wrap-up task in this
+   methods, the mechanism of the finalizer-list is convenient, because it allows
+   to define a wrap-up tasks as local functions of compilation-methods and defer
+   their execution to the end of the overall compilation-process. Or, in other
+   words, finalizer-tasks can be defined within the context to which they are
+   logically connected. A typical use case are structural changes to the
+   data-tree which could hamper the compilation if not deferred till the very
+   end.
+
+   A disadvantage of finalizers in contrast to the finalization-method, hoewver,
+   is that it becomes harder to keep unexpected side effects of finalizers on
+   other finalizers in check if the various finalizers are contextually 
+   separated from each other.
+   
+
+Processing Pipelines
+--------------------
+
+
 
 
 

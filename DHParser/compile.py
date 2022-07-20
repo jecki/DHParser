@@ -177,6 +177,10 @@ class Compiler:
         self.reset()
 
     def reset(self):
+        """
+        Resets alls variables to their default values before the next call
+        of the object.
+        """
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
         self.trail = []  # type: Trail
         self._dirty_flag = False
@@ -238,15 +242,17 @@ class Compiler:
 
     def visit_attributes(self, node) -> Node:
         if node.has_attr():
+            self.trail.append(node)
             for attribute, value in list(node.attr.items()):
                 try:
                     attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
                     node = attribute_visitor(node, value) or node
                 except AttributeError:
                     pass
+            self.trail.pop()
         return node
 
-    def fallback_compiler(self, node: Node, block_attribute_visitors: bool=False) -> Any:
+    def fallback_compiler(self, node: Node) -> Any:
         """This is a generic compiler function which will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
@@ -273,7 +279,7 @@ class Compiler:
                     if nd is not None and nd.name != EMPTY_PTYPE:
                         result.append(nd)
                 node.result = tuple(result)
-        if self.has_attribute_visitors and not block_attribute_visitors:
+        if self.has_attribute_visitors:
             node = self.visit_attributes(node)
         return node
 
@@ -311,8 +317,10 @@ class Compiler:
             elem = elem[1:] + '__'
         compiler = self.find_compilation_method(elem)
         self.trail.append(node)
-        result = compiler(node)
+        result = compiler(node)     
         self.trail.pop()
+        if self.has_attribute_visitors:
+            node = self.visit_attributes(node)          
         if result is None and self.forbid_returning_None:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
@@ -337,6 +345,9 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
             name = function_or_class_or_instance.__class__.__name__
         i = name.find('.')
         return name[:i] + '_out' if i >= 0 else name
+
+
+# processing pipeline support #########################################
 
 
 CompilerCallable = Union[Compiler, Callable[[RootNode], Any], functools.partial]
@@ -406,6 +417,19 @@ Junction = Tuple[str, CompilerFactory, str]
 def run_pipeline(junctions: Set[Junction],
                  source_stages: Dict[str, RootNode],
                  target_stages: Set[str]) -> Dict[str, Tuple[Any, List[Error]]]:
+    """
+    Runs all the intermediary compilation-steps that are necessary to produce
+    the "target-stages" from the given "source-stages". Here, each source-stage
+    consists of a name for that stage, say "AST", and a node-tree that
+    represents the data at this stage of the processing pipeline. In the
+    target-stage, the data can be a node-tree or data of any other kind.
+
+    The stages or connected through chains of junctions, where a junction is
+    essentially a function that transforms a tree from one particular stage
+    (identified by its name) to another stage, again itentified by its name.
+
+    TODO: Parallelize processing of junctions
+    """
     t_to_j = {j[-1]: j for j in junctions}
     steps = []
     targets = target_stages.copy()
