@@ -1290,7 +1290,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     #         common_ancestor = a
     #     return common_ancestor
 
-    def milestone_segment(self, begin: 'Node', end: 'Node') -> 'Node':
+    def milestone_segment(self, begin: Union[Trail, 'Node'], end: Union[Trail, 'Node']) -> 'Node':
         """
         EXPERIMENTAL!!!
         Picks a segment from a tree beginning with start and ending with end.
@@ -1333,8 +1333,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if begin.pos > end.pos:
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        trlA = self.reconstruct_trail(begin)  # type: Trail
-        trlB = self.reconstruct_trail(end)    # type: Trail
+        trlA = self.reconstruct_trail(begin) if isinstance(begin, Node) else begin
+        trlB = self.reconstruct_trail(end) if isinstance(end, Node) else end
         for a, b in zip(trlA, trlB):
             if a != b:
                 break
@@ -2181,6 +2181,135 @@ def map_pos_to_trail(i: int, tm: TrailMapping) -> Tuple[Trail, int]:
     return tm[1][trl_index], i - tm[0][trl_index]
 
 
+# EXPERIMENTAL!!! #####################################################
+
+@functools.singledispatch
+def insert_node(t, str_pos: int, node: Node, text_type: str = TOKEN_PTYPE):
+    """Add a node at a particular position of string content into the
+    tree. This is useful for inserting milesones."""
+    raise TypeError(f'First parameter of "insert_node" must be of type DHParser.nodetree.Trail '
+                    f'or TrailMapping or Node, but not {type(t)}')
+
+@insert_node.register(list)
+def _(t: Trail, str_pos: int, node: Node):
+    assert t
+    leaf = t[-1]
+    leaf_len = leaf.strlen()
+    assert not leaf.children
+    assert str_pos <= leaf_len
+    if len(t) >= 2:
+        parent = t[-2]
+        i = parent.index(leaf)
+        if str_pos == 0:
+            parent.insert(i, node)
+        elif str_pos == leaf_len:
+            parent.insert(i + 1, node)
+        else:
+            content = leaf.content
+            parent.result = parent.result[:i] + \
+                            (Node(leaf.name, content[:str_pos]), node,
+                             Node(leaf.name, content[str_pos:])) + \
+                            parent.result[i + 1:]
+    else:
+        if str_pos == 0:
+            leaf.result = (node, Node(leaf.name, leaf.content))
+        elif str_pos == leaf_len:
+            leaf.result = (Node(leaf.name, leaf.content), node)
+        else:
+            content = leaf.content
+            leaf.result = (Node(leaf.name, content[:str_pos]), node,
+                           Node(leaf.name, content[str_pos:]))
+
+
+@insert_node.register(tuple)
+def _(t: TrailMapping, rel_pos: int, node: Node):
+    trail, pos = map_pos_to_trail(rel_pos, t)
+    return insert_node(trail, pos, node)
+
+
+@insert_node.register(Node)
+def _(t: Node, rel_pos: int, node: Node):
+    tm = generate_trail_mapping(t)
+    return insert_node(tm, rel_pos, node)
+
+
+@functools.singledispatch
+def markup(t, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
+    """EXPERIMENTAL!!!"""
+    raise TypeError(f'First parameter of "markup" must be of type DHParser.nodetree.TrailMapping '
+                    f'or Node, but not {type(t)}')
+
+
+@markup.register(tuple)
+def _(t: TrailMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
+    if start_pos == end_pos:
+        milestone = Node(name, '').with_attr(*attr_dict, **attributes)
+        insert_node(t, start_pos, milestone)
+        return milestone
+    trail_A, pos_A = map_pos_to_trail(start_pos, t)
+    trail_B, pos_B = map_pos_to_trail(end_pos, t)
+    assert trail_A
+    assert trail_B
+    common_ancestor = None
+    for i, (a, b) in enumerate(zip(trail_A, trail_B)):
+        if a != b:  break
+        common_ancestor = a
+    assert common_ancestor
+    leaf_A = trail_A[-1]
+    leaf_B = trail_B[-1]
+    if common_ancestor == leaf_A:
+        assert common_ancestor == leaf_B
+        if len(trail_A) <= 1:
+            content = common_ancestor.content
+            new_result = []
+            if pos_A > 0:
+                new_result.append(Node(leaf_A.name, content[:pos_A]))
+            markup_node = Node(name, content[pos_A:pos_B]).with_attr(*attr_dict, **attributes)
+            new_result.append(markup_node)
+            if pos_B < len(content):
+                new_result.append(Node(leaf_B.name, content[:pos_B]))
+            common_ancestor.result = tuple(new_result)
+            return markup_node
+        else:
+            common_ancestor = trail_A[-2]
+            assert common_ancestor == trail_B[-2]
+            branch_A = leaf_A
+            branch_B = leaf_B
+    else:
+        branch_A = trail_A[i]
+        branch_B = trail_B[i]
+
+    i = common_ancestor.index(branch_A)
+    k = common_ancestor.index(branch_B)
+    new_result = list(common_ancestor.result[:i])
+    if pos_A > 0:
+        new_result.append(Node(leaf_A.name, leaf_A.content[:pos_A]))
+        leaf_A.result = leaf_A.content[pos_A:]
+    markup_node = Node(name, common_ancestor.result[i:k + 1]).with_attr(*attr_dict, **attributes)
+    new_result.append(markup_node)
+    if pos_B < leaf_B.strlen():
+        leaf_B.result = leaf_B.content[:pos_B]
+        new_result.append(Node(leaf_B.name, leaf_B.content[pos_B:]))
+    new_result.extend(list(common_ancestor.result[k + 1:]))
+    common_ancestor.result = tuple(new_result)
+
+    if not leaf_A.result:
+        trail_A = next(common_ancestor.select_trail(leaf_A))
+        del trail_A[-2][leaf_A]
+    if not leaf_B.result:
+        trail_B = next(common_ancestor.select_trail(leaf_A, reverse=True))
+        del trail_B[-2][leaf_B]
+
+    return markup_node
+
+
+@markup.register(Node)
+def _(t: Node, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
+    tm = generate_trail_mapping(t)
+    return markup(tm, start_pos, end_pos, *attr_dict, **attributes)
+
+
+
 # Attribute handling ##################################################
 
 
@@ -2704,12 +2833,14 @@ class RootNode(Node):
                indentation: int = 2,
                inline_tags: Set[str] = _EMPTY_SET_SENTINEL,
                string_tags: Set[str] = _EMPTY_SET_SENTINEL,
-               empty_tags: Set[str] = _EMPTY_SET_SENTINEL) -> str:
+               empty_tags: Set[str] = _EMPTY_SET_SENTINEL,
+               strict_mode: bool=True) -> str:
         return super().as_xml(
             src, indentation,
             inline_tags=self.inline_tags if inline_tags is _EMPTY_SET_SENTINEL else inline_tags,
             string_tags=self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
-            empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags)
+            empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags,
+            strict_mode=strict_mode)
 
     def customized_XML(self):
         """

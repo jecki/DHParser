@@ -296,6 +296,7 @@ a JSON-file into a Python data-structure::
 
     >>> from typing import Dict, List, Tuple, Union
     >>> JSONType = Union[Dict, List, str, int, float, None]
+    ...
     >>> class simplifiedJSONCompiler(Compiler):
     ...     def __init__(self):
     ...         super(simplifiedJSONCompiler, self).__init__()
@@ -331,14 +332,22 @@ to a data-structure that is not a node-tree, any more) are:
 1. For each possible, or rather, reachable node-type an "on_NAME"-method has been 
    defined. So the fallback that silently assumes that the compilation-result
    is going to be yet another node-tree will never be invoked.
-2. Compilation methods are themselves responsible for compiling the child-nodes
+2. Compilation-methods are themselves responsible for compiling the child-nodes
    of "their" node, if needed. They always do so by calling the "compile"-method
    of the superclass on the child-nodes.
-3. Every compilation methods returns the complete (compiled) data-structure that 
+3. Every compilation-method returns the complete (compiled) data-structure that 
    the tree originating in its node represents.
 4. By the same token each compilation method that calls "Compiler.compile" on
    any of its child-nodes is responsible for integrating the results of these
-   calls into its own return value.  
+   calls into its own return value.
+5. Compilation-methods can and must make assumptions about the structure of the
+   subtree that has been passed as the node-argument. (For example,
+   "member"-nodes of the JSON-AST always have exactly two children.) These
+   assumptions must be warranted by the grammar in combination with the
+   AST-transformation. Their validity can be checked with "assert"-statements.
+   As of now, DHParser does not offer any support for structural tree-validation.
+   (If really needed, though, the tree could be serialized as XML and validated
+   with common XML-tools against a DTD, Relax-NG-schema or XML-schema.) 
 
 Now, let's see our JSON-compiler in action::
 

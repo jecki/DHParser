@@ -32,7 +32,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_trail, \
     prev_trail, serialize_trail, generate_trail_mapping, map_pos_to_trail, \
     select_trail_if, select_trail, create_trail_match_function, pick_trail, \
-    LEAF_TRAIL
+    LEAF_TRAIL, TOKEN_PTYPE, insert_node, markup
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -40,6 +40,7 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar
+from DHParser.toolkit import re
 
 
 class TestParseSxpression:
@@ -994,6 +995,65 @@ class TestEvaluation:
             'NEG': lambda token: -1,
             'POS': lambda token: 1}
         assert tree.evaluate(actions) == -13
+
+
+class TestMarkupInsertion:
+    testdata_1 = '<document>In Charlot<lb/>tenburg steht ein Schloss.</document>'
+    testdata_2 = '''<document>
+<app n="g">
+<lem>silvae</lem>
+<rdg wit="A">silvae, </rdg>
+</app> glandiferae</document>'''
+
+    def test_insert_milestone_1(self):
+        empty_tags = set()
+        tree = parse_xml(self.testdata_1, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        i = tree.content.find("Charlottenburg")
+        assert i >= 0
+        milestone = Node("ref", "").with_attr(type="subj", target="Charlottenburg_S00231")
+        empty_tags.add("ref")
+        tm = generate_trail_mapping(tree)
+        insert_node(tm, i, milestone)
+        xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
+                          empty_tags=empty_tags)
+        assert xml == '<document>In <ref type="subj" target="Charlottenburg_S00231"/>Charlot<lb/>tenburg steht ein Schloss.</document>'
+
+    def test_insert_milestone_2(self):
+        empty_tags = set()
+        tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
+        milestone = Node("ref", "").with_attr(type="subj", target="silva_glandifera_S01229")
+        empty_tags.add("ref")
+        tm = generate_trail_mapping(tree)
+        insert_node(tm, m.start(), milestone)
+        xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
+                          empty_tags=empty_tags)
+        assert xml == '<document><app n="g"><lem>silvae</lem><ref type="subj" target="silva_glandifera_S01229"/><rdg wit="A">silvae, </rdg></app> glandiferae</document>'
+
+    def test_insert_markup_1(self):
+        empty_tags = set()
+        tree = parse_xml(self.testdata_1, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        i = tree.content.find("Charlottenburg")
+        assert i >= 0
+        k = i + len("Charlottenburg")
+        tm = generate_trail_mapping(tree)
+        markup(tm, i, k, "ref", type="subj", target="Charlottenburg_S00231")
+        xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
+                          empty_tags=empty_tags)
+        assert xml == '<document>In <ref type="subj" target="Charlottenburg_S00231">Charlot<lb/>tenburg</ref></document>'
+
+    def test_insert_markup_2(self):
+        empty_tags = set()
+        tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
+        tm = generate_trail_mapping(tree)
+        markup(tm, m.start(), m.end(), "ref", type="subj", target="silva_glandifera_S01229")
+        xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
+                          empty_tags=empty_tags)
+        assert xml == '<document><ref type="subj" target="silva_glandifera_S01229"><app n="g"><lem>silvae</lem><rdg wit="A">silvae, </rdg></app> glandiferae</ref></document>'
+
+
+
 
 
 if __name__ == "__main__":
