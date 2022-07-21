@@ -2282,12 +2282,12 @@ def _(t: TrailMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **at
     i = common_ancestor.index(branch_A)
     k = common_ancestor.index(branch_B)
     new_result = list(common_ancestor.result[:i])
-    if pos_A > 0:
+    if pos_A > 0 and common_ancestor == trail_A[-2]:
         new_result.append(Node(leaf_A.name, leaf_A.content[:pos_A]))
         leaf_A.result = leaf_A.content[pos_A:]
     markup_node = Node(name, common_ancestor.result[i:k + 1]).with_attr(*attr_dict, **attributes)
     new_result.append(markup_node)
-    if pos_B < leaf_B.strlen():
+    if pos_B < leaf_B.strlen() and common_ancestor == trail_B[-2]:
         leaf_B.result = leaf_B.content[:pos_B]
         new_result.append(Node(leaf_B.name, leaf_B.content[pos_B:]))
     new_result.extend(list(common_ancestor.result[k + 1:]))

@@ -1050,7 +1050,6 @@ class TestMarkupInsertion:
         markup(tm, m.start(), m.end(), "ref", type="subj", target="silva_glandifera_S01229")
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
-        print(xml)
         assert xml == '<document><ref type="subj" target="silva_glandifera_S01229"><app n="g"><lem>silvae</lem><rdg wit="A">silvae, </rdg></app> glandiferae</ref></document>'
 
 
