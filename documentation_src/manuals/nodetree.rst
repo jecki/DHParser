@@ -558,7 +558,7 @@ leaf-nodes to which they belong. The trail-mapping can be thought of as a
 "string-view" on the tree::
 
     >>> flat_text = sentence.content
-    >>> ctx_mapping = generate_trail_mapping(sentence)
+    >>> ctx_mapping = generate_content_mapping(sentence)
     >>> leaf_positions, trails = ctx_mapping
     >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in trails))}
     {0: '(word "This")', 4: '(blank " ")', 5: '(word "is")', 7: '(blank " ")', 8: '(word "Buckingham")', 18: '(blank " ")', 19: '(word "Palace")'}
@@ -775,7 +775,7 @@ Traversing trees via trails
   preceeding a given trail.
 * :py:func:`~nodetree.next_trail`: Returns the :ref:`trail <trails>`
   following a given trail.
-* :py:func:`~nodetree.generate_trail_mapping`: Generates a trail-mapping
+* :py:func:`~nodetree.generate_content_mapping`: Generates a trail-mapping
   for all leaf-nodes of a tree, i.e. a dictionary mapping the current text
   position of each leaf-node (not the source-code position!) to the leaf-node
   itself.

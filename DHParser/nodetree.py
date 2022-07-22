@@ -111,8 +111,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'pick_from_trail',
            'serialize_trail',
            'trail_sanity_check',
-           'TrailMapping',
-           'generate_trail_mapping',
+           'ContentMapping',
+           'generate_content_mapping',
            'map_pos_to_trail',
            'FrozenNode',
            'EMPTY_NODE',
@@ -2140,10 +2140,10 @@ def trail_sanity_check(trail: Trail) -> bool:
 
 # Trail-mapping (allowing a "string-view" on syntax-trees) ##########
 
-TrailMapping = Tuple[List[int], List[Trail]]  # A mapping of character positions to trails
+ContentMapping = Tuple[List[int], List[Trail]]  # A mapping of character positions to trails
 
 
-def generate_trail_mapping(node: Node) -> TrailMapping:
+def generate_content_mapping(node: Node) -> ContentMapping:
     """
     Generates a trail mapping for all leave-nodes of the tree
     originating in `node`. A trail mapping is an ordered mapping
@@ -2166,7 +2166,7 @@ def generate_trail_mapping(node: Node) -> TrailMapping:
     return pos_list, trl_list
 
 
-def map_pos_to_trail(i: int, tm: TrailMapping) -> Tuple[Trail, int]:
+def map_pos_to_trail(i: int, tm: ContentMapping) -> Tuple[Trail, int]:
     """Yields the trail and relative position for the absolute
     position `i`.
 
@@ -2188,7 +2188,7 @@ def insert_node(t, str_pos: int, node: Node, text_type: str = TOKEN_PTYPE):
     """Add a node at a particular position of string content into the
     tree. This is useful for inserting milesones."""
     raise TypeError(f'First parameter of "insert_node" must be of type DHParser.nodetree.Trail '
-                    f'or TrailMapping or Node, but not {type(t)}')
+                    f'or ContentMapping or Node, but not {type(t)}')
 
 @insert_node.register(list)
 def _(t: Trail, str_pos: int, node: Node):
@@ -2222,26 +2222,26 @@ def _(t: Trail, str_pos: int, node: Node):
 
 
 @insert_node.register(tuple)
-def _(t: TrailMapping, rel_pos: int, node: Node):
+def _(t: ContentMapping, rel_pos: int, node: Node):
     trail, pos = map_pos_to_trail(rel_pos, t)
     return insert_node(trail, pos, node)
 
 
 @insert_node.register(Node)
 def _(t: Node, rel_pos: int, node: Node):
-    tm = generate_trail_mapping(t)
+    tm = generate_content_mapping(t)
     return insert_node(tm, rel_pos, node)
 
 
 @functools.singledispatch
 def markup(t, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
     """EXPERIMENTAL!!!"""
-    raise TypeError(f'First parameter of "markup" must be of type DHParser.nodetree.TrailMapping '
+    raise TypeError(f'First parameter of "markup" must be of type DHParser.nodetree.ContentMapping '
                     f'or Node, but not {type(t)}')
 
 
 @markup.register(tuple)
-def _(t: TrailMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
+def _(t: ContentMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
     if start_pos == end_pos:
         milestone = Node(name, '').with_attr(*attr_dict, **attributes)
         insert_node(t, start_pos, milestone)
@@ -2305,7 +2305,7 @@ def _(t: TrailMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **at
 
 @markup.register(Node)
 def _(t: Node, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
-    tm = generate_trail_mapping(t)
+    tm = generate_content_mapping(t)
     return markup(tm, start_pos, end_pos, *attr_dict, **attributes)
 
 

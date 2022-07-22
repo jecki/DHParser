@@ -1,5 +1,9 @@
+DHParser Version 1.1.1 (22.7.2022)
+..................................
 
-
+- some experimental suuport in DHParser.nodetree for adding
+  markup and milestones into a nodetree
+- documentation extended
 
 
 DHParser Version 1.1.0 (25.6.2022)

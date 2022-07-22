@@ -30,7 +30,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_trail, \
-    prev_trail, serialize_trail, generate_trail_mapping, map_pos_to_trail, \
+    prev_trail, serialize_trail, generate_content_mapping, map_pos_to_trail, \
     select_trail_if, select_trail, create_trail_match_function, pick_trail, \
     LEAF_TRAIL, TOKEN_PTYPE, insert_node, markup
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -904,7 +904,7 @@ class TestContextNavigation:
 
     def test_context_mapping(self):
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
-        cm = generate_trail_mapping(tree)
+        cm = generate_content_mapping(tree)
         for i in range(len(tree.content)):
             ctx, rel_pos = map_pos_to_trail(i, cm)
         i = tree.content.find("delta")
@@ -1012,7 +1012,7 @@ class TestMarkupInsertion:
         assert i >= 0
         milestone = Node("ref", "").with_attr(type="subj", target="Charlottenburg_S00231")
         empty_tags.add("ref")
-        tm = generate_trail_mapping(tree)
+        tm = generate_content_mapping(tree)
         insert_node(tm, i, milestone)
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
@@ -1024,7 +1024,7 @@ class TestMarkupInsertion:
         m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
         milestone = Node("ref", "").with_attr(type="subj", target="silva_glandifera_S01229")
         empty_tags.add("ref")
-        tm = generate_trail_mapping(tree)
+        tm = generate_content_mapping(tree)
         insert_node(tm, m.start(), milestone)
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
@@ -1036,7 +1036,7 @@ class TestMarkupInsertion:
         i = tree.content.find("Charlottenburg")
         assert i >= 0
         k = i + len("Charlottenburg")
-        tm = generate_trail_mapping(tree)
+        tm = generate_content_mapping(tree)
         markup(tm, i, k, "ref", type="subj", target="Charlottenburg_S00231")
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
@@ -1046,7 +1046,7 @@ class TestMarkupInsertion:
         empty_tags = set()
         tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
-        tm = generate_trail_mapping(tree)
+        tm = generate_content_mapping(tree)
         markup(tm, m.start(), m.end(), "ref", type="subj", target="silva_glandifera_S01229")
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
