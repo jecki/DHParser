@@ -342,7 +342,7 @@ class TestNode:
                 for node in self.unique_tree.select(ANY_NODE, include_root=True, skip_subtree='f')]
         assert ''.join(tags) == "abdf", ''.join(tags)
 
-    def test_tree_select_context_if(self):
+    def test_tree_select_trail_if(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
         contexts = []
         for ctx in tree.select_trail_if(lambda ctx: ctx[-1].name >= 'd',
@@ -355,7 +355,7 @@ class TestNode:
             contexts.append(''.join(nd.name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
 
-    def test_select_context_with_skipping(self):
+    def test_select_trail_with_skipping(self):
         tree = parse_sxpr('(a (b c) (d e) (f (g h)))')
         check = []
         contexts = []
@@ -372,7 +372,7 @@ class TestNode:
             contexts.append(''.join(nd.name for nd in ctx))
         assert check == contexts == ['a', 'ab', 'ad', 'af']
 
-    def test_tree_select_context(self):
+    def test_tree_select_trail(self):
         tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
         l = [str(nd) for nd in tree.select('B')]
         assert ''.join(l) == '12'
@@ -798,7 +798,7 @@ class TestSerialization:
 
 
 class TestSegementExtraction:
-    def test_get_context(self):
+    def test_get_trail(self):
         tree = parse_sxpr('(A (F (X "a") (Y "b")) (G "c"))')
         nd_X = tree.pick('X')
         ctx = tree.reconstruct_trail(nd_X)
@@ -871,10 +871,10 @@ class TestPositionAssignment:
         assert (tree['G']['N'].pos, tree['G']['P'].pos) == (1, 5)
 
 
-class TestContextNavigation:
+class TestTrailNavigation:
     tree = parse_sxpr('(A (B 1) (C (D 2) (E 3)) (F 4))')
 
-    def test_prev_context(self):
+    def test_prev_trail(self):
         ctx = self.tree.pick_trail('D')
         c = prev_trail(ctx)
         assert c[-1].name == 'B'
@@ -888,7 +888,7 @@ class TestContextNavigation:
         c = prev_trail(ctx)
         assert c[-1].name == 'B'
 
-    def test_next_context(self):
+    def test_next_trail(self):
         ctx = self.tree.pick_trail('D')
         c = next_trail(ctx)
         assert c[-1].name == 'E'
@@ -902,7 +902,7 @@ class TestContextNavigation:
         c = next_trail(ctx)
         assert c[-1].name == 'C'
 
-    def test_context_mapping(self):
+    def test_content_mapping(self):
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
         cm = generate_content_mapping(tree)
         for i in range(len(tree.content)):
@@ -923,7 +923,20 @@ class TestContextNavigation:
         ctx, rel_pos = map_pos_to_trail(i, cm)
         assert ctx[-1].name == 'E' and rel_pos == 2
 
-    def test_standalone_select_context_if(self):
+        select, ignore = {'A', 'B', 'D', 'F'}, {'C'}
+        content = tree.content_selection(select, ignore)
+        assert content == "alphadelta"
+        assert tree.content_selection(select, ignore | {'B'}) == "delta"
+        assert tree.content_selection(select, ignore | {'A'}) == ""
+
+        mapping = generate_content_mapping(tree, select, ignore)
+        insert_node(mapping, content.find('delta'),
+                    Node('G', 'omicron'))
+        assert flatten_sxpr(tree.as_sxpr()) == \
+               '(A (B "alpha") (C (D "beta") (E "gamma")) (G "omicron") (F "delta"))'
+
+
+    def test_standalone_select_trail_if(self):
         start = self.tree.pick_trail('E')
         save = start.copy()
         sequence = []
@@ -931,7 +944,7 @@ class TestContextNavigation:
                 start, lambda c: True, include_root=True, reverse=True):
             sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACE', 'ACD', 'AC', 'AB', 'A']
-        assert save == start  # context passed should not be changed by select_context
+        assert save == start  # trail passed should not be changed by select_trail
 
         start = self.tree.pick_trail('D')
         sequence = []
@@ -940,7 +953,7 @@ class TestContextNavigation:
             sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACD', 'ACE', 'AC', 'AF', 'A']
 
-    def test_standalone_pick_context(self):
+    def test_standalone_pick_trail(self):
         start = self.tree.pick_trail('A', include_root=True)
         anfang = pick_trail(start, LEAF_TRAIL, include_root=True)
         ende = pick_trail(start, LEAF_TRAIL, include_root=True, reverse=True)

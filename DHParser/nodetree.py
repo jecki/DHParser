@@ -707,6 +707,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         match_func, ignore_func = _make_leaf_selectors(select_trail, ignore_trail)
         fragments = []
+        if ignore_func([self]):  return ''
         for leaf in self.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
             fragments.append(leaf[-1]._result)
         return ''.join(fragments)
@@ -2175,6 +2176,7 @@ def generate_content_mapping(node: Node,
 
     pos = 0
     pos_list, trl_list = [], []
+    if ignore_func([node]):  return [], []
     for trl in node.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
         pos_list.append(pos)
         trl_list.append(trl)
@@ -2189,12 +2191,20 @@ def map_pos_to_trail(i: int, tm: ContentMapping) -> Tuple[Trail, int]:
     :param i:   a position in the content of the tree for which the
         trail mapping `cm` was generated
     :param tm:  a trail mapping
-    :returns:    tuple (trail, relative position) where relative
+    :returns:   tuple (trail, relative position) where relative
         position is the position of i relative to the actual
         position of the last node in the trail.
+    :raises:    IndexError if not 0 <= position < length of document
     """
+    if i < 0:
+        raise IndexError(f'Illegal position value {i}. '
+                         f'Must be 0 <= position < length of text!')
     trl_index = bisect.bisect_right(tm[0], i) - 1
-    return tm[1][trl_index], i - tm[0][trl_index]
+    try:
+        return tm[1][trl_index], i - tm[0][trl_index]
+    except IndexError:
+        raise IndexError(f'Illegal position value {i}. '
+                         f'Must be 0 <= position < length of text!')
 
 
 # EXPERIMENTAL!!! #####################################################
@@ -2202,7 +2212,7 @@ def map_pos_to_trail(i: int, tm: ContentMapping) -> Tuple[Trail, int]:
 @functools.singledispatch
 def insert_node(t, str_pos: int, node: Node, text_type: str = TOKEN_PTYPE):
     """Add a node at a particular position of string content into the
-    tree. This is useful for inserting milesones."""
+    tree. This is useful for inserting milestones."""
     raise TypeError(f'First parameter of "insert_node" must be of type DHParser.nodetree.Trail '
                     f'or ContentMapping or Node, but not {type(t)}')
 
@@ -2240,13 +2250,13 @@ def _(t: Trail, str_pos: int, node: Node):
 @insert_node.register(tuple)
 def _(t: ContentMapping, rel_pos: int, node: Node):
     trail, pos = map_pos_to_trail(rel_pos, t)
-    return insert_node(trail, pos, node)
+    insert_node(trail, pos, node)
 
 
 @insert_node.register(Node)
 def _(t: Node, rel_pos: int, node: Node):
     tm = generate_content_mapping(t)
-    return insert_node(tm, rel_pos, node)
+    insert_node(tm, rel_pos, node)
 
 
 @functools.singledispatch
