@@ -15,7 +15,7 @@
 # implied.  See the License for the specific language governing
 # permissions and limitations under the License.
 
-__all__ = ('__version__',)
+__all__ = ('__version__', '__version_info__')
 __version__ = '1.1.1'
 __version_info__ = tuple(int(part) for part in __version__.split('.'))
 

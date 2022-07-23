@@ -251,6 +251,21 @@ def create_trail_match_function(criterion: CriteriaType) -> TrailMatchFunction:
                     % (repr(criterion), type(criterion)))
 
 
+def _make_leaf_selectors(select: CriteriaType, ignore: CriteriaType) -> Tuple[Callable, Callable]:
+    select_func = create_trail_match_function(select)
+    ignore_func = create_trail_match_function(ignore)
+
+    def general_match_func(trail: Trail) -> bool:
+        return not trail[-1]._children and select_func(trail) and not ignore_func(trail)
+
+    if select == LEAF_TRAIL and ignore == NO_TRAIL:
+        match_func = LEAF_TRAIL
+    else:
+        match_func = general_match_func
+
+    return match_func, ignore_func
+
+
 # support functions for tree-serialization ############################
 
 
@@ -682,6 +697,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # unoptimized
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
+
+    def content_selection(self, select_trail: CriteriaType, ignore_trail: CriteriaType) -> str:
+        """Returns the srting content of the tree spanned by node, but includes only
+        those leaf-nodes for which 'select_trail()' is true and ignores all subtrees
+        and leaves for which 'ignore_tail()' is True, e.g.
+        ``tree.content_selection(ignore_trail={'footnote'})`` would only the string-content
+        of the main text but ignores all footnotes.
+        """
+        match_func, ignore_func = _make_leaf_selectors(select_trail, ignore_trail)
+        fragments = []
+        for leaf in self.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
+            fragments.append(leaf[-1]._result)
+        return ''.join(fragments)
 
     # node position ###
 
@@ -2033,25 +2061,6 @@ def select_trail_if(start_trail: Trail,
             trail.append(nearest_sibling)
             # include_root = True
 
-    # trail = trail.copy()
-    # while trail:
-    #     if match_function(trail):
-    #         yield trail
-    #     node = trail.pop()
-    #
-    #     edge, delta = (0, -1) if reverse else (-1, 1)
-    #     while trail and node is trail[-1]._children[edge]:
-    #         if match_function(trail):
-    #             yield trail
-    #         node = trail.pop()
-    #     if trail:
-    #         parent = trail[-1]
-    #         i = parent.index(node)
-    #         nearest_sibling = parent._children[i + delta]
-    #         innermost_trl = nearest_sibling.pick_trail(
-    #             LEAF_TRAIL, include_root=True, reverse=reverse)
-    #         trail.extend(innermost_trl)
-
 
 def select_trail(start_trail: Trail,
                  criterion: CriteriaType,
@@ -2143,7 +2152,9 @@ def trail_sanity_check(trail: Trail) -> bool:
 ContentMapping = Tuple[List[int], List[Trail]]  # A mapping of character positions to trails
 
 
-def generate_content_mapping(node: Node) -> ContentMapping:
+def generate_content_mapping(node: Node,
+                             select: CriteriaType = LEAF_TRAIL,
+                             ignore: CriteriaType = NO_TRAIL) -> ContentMapping:
     """
     Generates a trail mapping for all leave-nodes of the tree
     originating in `node`. A trail mapping is an ordered mapping
@@ -2155,11 +2166,16 @@ def generate_content_mapping(node: Node) -> ContentMapping:
 
     :param node: the root of the tree for which a trail mapping shall be
         generated.
+    :param select: only leaf-trails for which this is true will be considered
+    :param ignore: subtrees or leaves for which ignore is true will be skipped
+        as well.
     :returns: The trail mapping for the node.
     """
+    match_func, ignore_func = _make_leaf_selectors(select, ignore)
+
     pos = 0
     pos_list, trl_list = [], []
-    for trl in node.select_trail_if(LEAF_TRAIL, include_root=True):
+    for trl in node.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
         pos_list.append(pos)
         trl_list.append(trl)
         pos += trl[-1].strlen()
