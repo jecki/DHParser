@@ -2196,15 +2196,15 @@ def map_pos_to_trail(i: int, tm: ContentMapping) -> Tuple[Trail, int]:
         position of the last node in the trail.
     :raises:    IndexError if not 0 <= position < length of document
     """
-    if i < 0:
-        raise IndexError(f'Illegal position value {i}. '
-                         f'Must be 0 <= position < length of text!')
-    trl_index = bisect.bisect_right(tm[0], i) - 1
+    assert len(tm) == 2
+    errmsg = lambda i: f'Illegal position value {i}. ' \
+                       f'Must be 0 <= position < length of text!'
+    if i < 0:  raise IndexError(errmsg(i))
     try:
+        trl_index = bisect.bisect_right(tm[0], i) - 1
         return tm[1][trl_index], i - tm[0][trl_index]
     except IndexError:
-        raise IndexError(f'Illegal position value {i}. '
-                         f'Must be 0 <= position < length of text!')
+        raise IndexError(errmsg(i))
 
 
 # EXPERIMENTAL!!! #####################################################
