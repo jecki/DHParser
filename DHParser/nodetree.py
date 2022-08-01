@@ -2588,12 +2588,13 @@ class RootNode(Node):
         self.error_nodes: Dict[int, List[Error]] = dict()   # id(node) -> error list
         self.error_positions: Dict[int, Set[int]] = dict()  # pos -> set of id(node)
         self.error_flag = 0
-        # info on source code (to be carried along all stages of tree-processing)
-        self.source = source           # type: Union[str, StringView]
-        if source_mapping is None:
-            self.source_mapping = gen_neutral_srcmap_func(source)
-        else:
-            self.source_mapping = source_mapping  # type: SourceMapFunc
+        self.source = ''
+        # # info on source code (to be carried along all stages of tree-processing)
+        # self.source = source           # type: Union[str, StringView]
+        # if source_mapping is None:
+        #     self.source_mapping = gen_neutral_srcmap_func(source)
+        # else:
+        #     self.source_mapping = source_mapping  # type: SourceMapFunc
         self.lbreaks = linebreaks(source)  # List[int]
         # customization for XML-Representation
         self.inline_tags = set()  # type: Set[str]

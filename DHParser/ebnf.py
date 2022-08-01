@@ -959,7 +959,7 @@ def get_grammar() -> {NAME}Grammar:
     return grammar
     
 def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 '''
 
 
