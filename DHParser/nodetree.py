@@ -1626,12 +1626,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
             if node.name in empty_tags:
                 if node.name[0:1] != '?' and node.result:
-                    error_msg = f'Empty element "{node.name}" with content: "{node.content}" !?' \
-                                f'Use Node.as_xml(..., strict_mode=False) to suppress this error!'
-                    if strict_mode:  raise ValueError(error_msg)
-                    else:
-                        empty_tags = empty_tags.copy()
-                        empty_tags.remove(node.name)
+                    if strict_mode:
+                        raise ValueError(
+                            f'Empty element "{node.name}" with content: "{node.content}" !?'
+                            f'Use Node.as_xml(..., strict_mode=False) to suppress this error!')
                 if node.name[0] == '?':  ending = '?>'
                 elif node.result:  ending = '>'
                 else:  ending = '/>'
@@ -1643,7 +1641,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
-            if node.name in empty_tags or (node.name in string_tags and not node.has_attr()):
+            if (node.name in empty_tags and not node.result) \
+                    or (node.name in string_tags and not node.has_attr()):
                 return ''
             elif node.name == '!--':
                 return '-->'
@@ -3038,10 +3037,13 @@ RX_XML_CLOSING_TAG = re.compile(r'</\s*(?P<tagname>[\w:_.-]+)\s*>')
 RX_XML_HEADER = re.compile(r'<(?![?!])')
 
 
+EMPTY_TAGS_SENTINEL = set()
+
+
 def parse_xml(xml: Union[str, StringView],
               string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
-              out_empty_tags: Set[str] = set(),
+              out_empty_tags: Set[str] = EMPTY_TAGS_SENTINEL,
               strict_mode: bool = True) -> Node:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
@@ -3061,6 +3063,17 @@ def parse_xml(xml: Union[str, StringView],
     """
 
     xml = StringView(str(xml))
+    non_empty_tags: Set[str] = set()
+    if out_empty_tags is EMPTY_TAGS_SENTINEL:
+        out_empty_tags = set()
+
+    def get_pos_str(substring: StringView) -> str:
+        """Returns line:column indicating where substring is located within
+        the whole xml-string."""
+        nonlocal xml
+        pos = len(xml) - len(substring)
+        l, c = line_col(linebreaks(xml), pos)
+        return f'{l}:{c}'
 
     def parse_attributes(s: StringView) -> Tuple[StringView, Dict[str, Any]]:
         """
@@ -3129,17 +3142,29 @@ def parse_xml(xml: Union[str, StringView],
         Parses the full content of a tag, starting right at the beginning
         of the opening tag and ending right after the closing tag.
         """
+        nonlocal non_empty_tags
         res = []  # type: List[Node]
+        substring = s
         s, tagname, attrs, solitary = parse_opening_tag(s)
         name, class_name = (tagname.split(":") + [''])[:2]
         if solitary:
+            if tagname in non_empty_tags:
+                if strict_mode:
+                    raise ValueError(get_pos_str(substring) +
+                        f' "{tagname}" is used as empty as well as non-empty element!'
+                        f' This can cause errors when re-serializing data as XML!'
+                        f' Use parse_xml(..., strict_mode=False) to suppress this error!')
+                non_empty_tags.remove(tagname)
             out_empty_tags.add(tagname)
         else:
             if tagname in out_empty_tags:
-                error_message = f'"{tagname}" is used as empty as well as non-empty element!' \
-                                f' This can cause errors when re-serializing data as XML! ' \
-                                f'Use parse_xml(..., strict_mode=False) to suppress this error!'
-                if strict_mode:  raise ValueError(error_message)
+                if strict_mode:
+                    raise ValueError(get_pos_str(substring) +
+                        f' "{tagname}" is used as empty as well as non-empty element!'
+                        f' This can cause errors when re-serializing data as XML!'
+                        f' Use parse_xml(..., strict_mode=False) to suppress this error!')
+            else:
+                non_empty_tags.add(tagname)
             while s and not s[:2] == "</":
                 s, leaf = parse_leaf_content(s)
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
@@ -3152,11 +3177,15 @@ def parse_xml(xml: Union[str, StringView],
                         res.append(child)
             s, closing_tagname = parse_closing_tag(s)
             if tagname != closing_tagname:
-                error_message = f'Tag-name mismatch: <{tagname}>...</{closing_tagname}>!' \
-                                f'Use parse_xml(..., strict_mode=False) to suppress this error,' \
-                                f' but do not expect sound results if you do!'
-                if strict_mode:  raise ValueError(error_message)
-                else:  print(error_message)
+                if strict_mode:
+                    raise ValueError(
+                        f'{get_pos_str(substring)} - {get_pos_str(s)}'
+                        f' Tag-name mismatch: <{tagname}>...</{closing_tagname}>!'
+                        f' Use parse_xml(..., strict_mode=False) to suppress this error,'
+                        f' but do not expect sound results if you do!')
+                else:
+                    print(f'{get_pos_str(substring)} - {get_pos_str(s)}'
+                          f' Tag-name mismatch: <{tagname}>...</{closing_tagname}>!')
         if len(res) == 1 and res[0].name == string_tag:
             result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
         else:

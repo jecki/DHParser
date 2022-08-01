@@ -140,6 +140,27 @@ class TestParseXML:
         tree = parse_xml(r'<LINEFEED>\\</LINEFEED>')
         assert tree
 
+    def test_tag_name_mismatch(self):
+        try:
+            _ = parse_xml('<xml><a>xxx</b></xml>', strict_mode=True)
+            assert False, "ValueError because of tag-mismatch expected!"
+        except ValueError as e:
+            assert str(e).find('1:6 - 1:16') >= 0
+        # This will still print an error message!
+        _ = parse_xml('<xml><a>xxx</b></xml>', strict_mode=False)
+
+    def test_non_empty_empty_tags(self):
+        try:
+            _ = parse_xml('<xml><a/><a>content</a></xml>', strict_mode=True)
+        except ValueError as e:
+            assert str(e).find('1:10') >= 0
+        try:
+            _ = parse_xml('<xml><a>content</a><a/></xml>', strict_mode=True)
+        except ValueError as e:
+            assert str(e).find('1:20') >= 0
+        _ = parse_xml('<xml><a/><a>content</a></xml>', strict_mode=False)
+        _ = parse_xml('<xml><a>content</a><a/></xml>', strict_mode=False)
+
     def test_PI_and_DTD(self):
         """PIs <?...> and DTDs <!...> and the like should politely be overlooked."""
         testdata = """<!DOCTYPE nonsense>
@@ -794,7 +815,7 @@ class TestSerialization:
         data.result = data.result + (Node('empty', ''),)
         assert data.as_xml(empty_tags=empty_tags, strict_mode=False)\
             .replace('\n', '').replace(' ', '') == \
-            "<xml><empty/><empty>not_empty!?</empty><empty></empty></xml>"
+            "<xml><empty/><empty>not_empty!?</empty><empty/></xml>"
 
 
 class TestSegementExtraction:
