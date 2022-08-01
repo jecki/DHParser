@@ -30,7 +30,7 @@ trees. Only the very last transformation may yield a different data type. Or,
 put it differently, the processing-pipeline support of DHParser ends after the
 first transformation that does not yield a node-tree any more.
 
-class Compiler
+Class Compiler
 --------------
 
 Class :py:class:`~compile.Compiler` provides the scaffolding for
@@ -214,13 +214,13 @@ the XML-data-tree should be easy to understand::
 As can be seen, it is not necessary to fill in a compilation method for each
 and every node-type that can appear in the syntax-tree. When the Compiler-object
 is used for tree-transformation, it suffices to fill in compilation-methods
-only where necessary. 
+only where necessary.
 
 Most of the magic is contained in the "on_element"-method, which renames the
 "element"-nodes with the tag-name found in its starting- and ending-tag-children
-and then drops these children entirely. (Because they will be dropped anyway, 
-it is not necessary to define a compilation-method for the STag and ETag-nodes!) 
-Finally, the remaining "content"-child is reduced to the renamend element-node. 
+and then drops these children entirely. (Because they will be dropped anyway,
+it is not necessary to define a compilation-method for the STag and ETag-nodes!)
+Finally, the remaining "content"-child is reduced to the renamend element-node.
 
 Like all tree-transformations in DHParser, Compilation-methods are free to
 change the tree in-place. If you want to retain the structure of the tree before
@@ -245,12 +245,10 @@ Let's see, how our XMLTransformer-object produces the actual data tree::
     <line>Herz, mein Herz ist traurig</line>
 
 
-Compiling
-^^^^^^^^^
+Compiling to other structures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In order to illustrate how compiling a syntax-tree to a data-structure that
-is not a node-tree, any more, we use a simplified (and somewhat sloppy)
-JSON-parser as an example. Here is the simplified JSON-Grammar::
+Here is an excerpt from that Compiler-class, again:
 
     >>> json_grammar = '''
     ... @literalws  = right  # eat insignificant whitespace to the right of literals
@@ -287,11 +285,11 @@ bit verbose. So we, furthermore define an abstract-syntax-tree-transformation::
 
     >>> from DHParser.transform import traverse, remove_tokens, reduce_single_child
     >>> json_AST_trans = {"string": [remove_tokens('"'), reduce_single_child]}
-    >>> st = traverse(st, json_AST_trans) 
+    >>> st = traverse(st, json_AST_trans)
     >>> print(st.as_sxpr())
     (json (object (member (string "pi") (other_literal "3.1415"))))
 
-Now, let's write a compiler that compiles the abstract-syntax-tree of 
+Now, let's write a compiler that compiles the abstract-syntax-tree of
 a JSON-file into a Python data-structure::
 
     >>> from typing import Dict, List, Tuple, Union
@@ -301,24 +299,24 @@ a JSON-file into a Python data-structure::
     ...     def __init__(self):
     ...         super(simplifiedJSONCompiler, self).__init__()
     ...         self.forbid_returning_None = False  # None will be returned when compiling "null"
-    ... 
+    ...
     ...     def on_json(self, node) -> JSONType:
     ...         assert len(node.children) == 1
     ...         return self.compile(node[0])
-    ... 
+    ...
     ...     def on_object(self, node) -> Dict[str, JSONType]:
     ...         return {k: v for k, v in (self.compile(child) for child in node)}
-    ... 
+    ...
     ...     def on_member(self, node) -> Tuple[str, JSONType]:
     ...         assert len(node.children) == 2
     ...         return (self.compile(node[0]), self.compile(node[1]))
-    ... 
+    ...
     ...     def on_array(self, node) -> List[JSONType]:
     ...         return [self.compile(child) for child in node]
-    ... 
+    ...
     ...     def on_string(self, node) -> str:
     ...         return node.content
-    ... 
+    ...
     ...     def on_other_literal(self, node) -> Union[bool, float, None]:
     ...         content = node.content
     ...         if content == "null":    return None
@@ -329,13 +327,13 @@ a JSON-file into a Python data-structure::
 The essential characteristics of this pattern (i.e. compilation of a node-tree
 to a data-structure that is not a node-tree, any more) are:
 
-1. For each possible, or rather, reachable node-type an "on_NAME"-method has been 
+1. For each possible, or rather, reachable node-type an "on_NAME"-method has been
    defined. So the fallback that silently assumes that the compilation-result
    is going to be yet another node-tree will never be invoked.
 2. Compilation-methods are themselves responsible for compiling the child-nodes
    of "their" node, if needed. They always do so by calling the "compile"-method
    of the superclass on the child-nodes.
-3. Every compilation-method returns the complete (compiled) data-structure that 
+3. Every compilation-method returns the complete (compiled) data-structure that
    the tree originating in its node represents.
 4. By the same token each compilation method that calls "Compiler.compile" on
    any of its child-nodes is responsible for integrating the results of these
@@ -347,7 +345,7 @@ to a data-structure that is not a node-tree, any more) are:
    AST-transformation. Their validity can be checked with "assert"-statements.
    As of now, DHParser does not offer any support for structural tree-validation.
    (If really needed, though, the tree could be serialized as XML and validated
-   with common XML-tools against a DTD, Relax-NG-schema or XML-schema.) 
+   with common XML-tools against a DTD, Relax-NG-schema or XML-schema.)
 
 Now, let's see our JSON-compiler in action::
 
@@ -370,7 +368,7 @@ overloadable methods:
    constructor (i.e. "__init__"-method) of the class and at the very beginning
    of the :py:meth:`~compile.Compiler.__call__`-method. It's purpose is to
    initialize or reset all variables that need to be reset anew every time
-   the compiler is invoked by running the Compile-object. 
+   the compiler is invoked by running the Compile-object.
 
    The reset method should contain all initializations that can be done
    indepently of the concrete node-tree that is going to be compiled.
@@ -385,17 +383,17 @@ overloadable methods:
 For finalization, there are again two "hooks", although of different kind:
 
 1. the :py:meth:`~compile.Compiler.finalize`-method, which will be called after the
-   compilation has been finished and which receives the result of the 
+   compilation has been finished and which receives the result of the
    compilations (whatever that may be) as parameter and returns the
-   (possibly) altered result. The purpose of the finalize method is to 
-   perform wrap-up-tasks that require access to the complete 
+   (possibly) altered result. The purpose of the finalize method is to
+   perform wrap-up-tasks that require access to the complete
    compilation-result, before they can be performed.
 
-2. a list of finalizers ("Compiler.finalizers"). This is a list of 
+2. a list of finalizers ("Compiler.finalizers"). This is a list of
    pairs (function, parameter-tuple), which will be executed in order
-   after the compilation has been finished, but before the 
-   Compiler.finalize-method is called. 
-   
+   after the compilation has been finished, but before the
+   Compiler.finalize-method is called.
+
    While it would of course be possible to concentrate all wrap-up task in this
    methods, the mechanism of the finalizer-list is convenient, because it allows
    to define a wrap-up tasks as local functions of compilation-methods and defer
@@ -407,9 +405,9 @@ For finalization, there are again two "hooks", although of different kind:
 
    A disadvantage of finalizers in contrast to the finalization-method, hoewver,
    is that it becomes harder to keep unexpected side effects of finalizers on
-   other finalizers in check if the various finalizers are contextually 
+   other finalizers in check if the various finalizers are contextually
    separated from each other.
-   
+
 
 Processing Pipelines
 --------------------

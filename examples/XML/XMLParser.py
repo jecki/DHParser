@@ -93,7 +93,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "74f6b5811157ab9aa5dd5ffaa0350863"
+    source_hash__ = "ab6289538a61338c4b25b36a97327fd4"
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -160,7 +160,7 @@ def get_grammar() -> XMLGrammar:
     return grammar
     
 def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 
 #######################################################################
@@ -172,10 +172,11 @@ def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
 
 XML_PTYPE = ":XML"
 
+WARNING_AMBIGUOUS_EMPTY_ELEMENT = ErrorCode(205)
+
 ERROR_TAG_NAME_MISMATCH = ErrorCode(2000)
 ERROR_VALUE_CONSTRAINT_VIOLATION = ErrorCode(2010)
 ERROR_VALIDITY_CONSTRAINT_VIOLATION = ErrorCode(2020)
-ERROR_WELL_FORMEDNESS_CONSTRAINT_VIOLATION = ErrorCode(2030)
 
 
 class XMLTransformer(Compiler):
@@ -184,15 +185,15 @@ class XMLTransformer(Compiler):
     As of now, processing instructions, cdata-sections an document-type definition
     declarations are simply dropped.
     """
-
     def __init__(self):
-        super(XMLTransformer, self).__init__()
+        super().__init__()
         self.cleanup_whitespace = True  # remove empty CharData from mixed elements
         self.expendables = {'PI', 'CDSect', 'doctypedecl'}
 
     def reset(self):
         super().reset()
         self.preserve_whitespace = False
+        self.non_empty_tags: Set[str] = set()
 
     def extract_attributes(self, node_sequence):
         attributes = collections.OrderedDict()
@@ -203,18 +204,12 @@ class XMLTransformer(Compiler):
                 attributes[node[0].content] = node[1].content
         return attributes
 
-    def constraint(self, node, condition, err_msg, error_code = ERROR):
-        """If `condition` is False an error is issued."""
-        if not condition:
-            self.tree.new_error(node, err_msg, error_code)
-
     def value_constraint(self, node, value, allowed):
         """If value is not in allowed, an error is issued."""
-        self.constraint(
-            node,
-            value in allowed,
-            'Invalid value "%s" for "standalone"! Must be one of %s.' % (value, str(allowed)),
-            ERROR_VALUE_CONSTRAINT_VIOLATION)
+        if not value in allowed:
+            self.tree.new_error(node,
+                                'Invalid value "%s" for "standalone"! Must be one of %s.' \
+                                % (value, str(allowed)), ERROR_VALUE_CONSTRAINT_VIOLATION)
 
     def on_document(self, node):
         node.name = XML_PTYPE
@@ -268,13 +263,24 @@ class XMLTransformer(Compiler):
         if len(node.children) == 1:
             return self.on_emptyElement(node['emptyElement'])
         stag = node['STag']
+        etag = node['ETag']
         tag_name = stag['Name'].content
-        self.constraint(
-            node,
-            tag_name == node['ETag']['Name'].content,
-            f'Starting tag name "{tag_name}" does not match ending '
-            f'tag name "{node["ETag"]["Name"].content}"',
-            ERROR_WELL_FORMEDNESS_CONSTRAINT_VIOLATION)
+
+        if tag_name != etag['Name'].content:
+            l, c = line_col(self.tree.lbreaks, etag['Name'].pos)
+            self.tree.new_error(stag['Name'],
+                                f'Starting tag name "{tag_name}" does not match ending '
+                                f'tag name "{etag["Name"].content}" at {l}:{c}',
+                                ERROR_TAG_NAME_MISMATCH)
+
+        if tag_name in self.tree.empty_tags \
+                and tag_name not in self.non_empty_tags:  # warn only once!
+            self.tree.new_error(node,
+                                f'Tag-name "{tag_name}" has already been used for an empty-tag '
+                                f'<{tag_name}/> earlier. This is considered bad XML-practice!',
+                                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
+
+        self.non_empty_tags.add(tag_name)
         save_preserve_ws = self.preserve_whitespace
         self.preserve_whitespace |= tag_name in self.tree.inline_tags
         attributes = self.extract_attributes(stag.children)
@@ -292,6 +298,14 @@ class XMLTransformer(Compiler):
             node.attr.update(attributes)
         node.name = node['Name'].content
         node.result = ''
+
+        if node.name in self.non_empty_tags \
+                and node.name not in self.tree.empty_tags:  # warn only once!
+            self.tree.new_error(node,
+                                f'Tag-name "{node.name}" has already been used for a non empty-tag '
+                                f'<{node.name}> ... </{node.name}> earlier. This is considered bad XML-practice!',
+                                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
+
         self.tree.empty_tags.add(node.name)
         return node
 
