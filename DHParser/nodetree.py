@@ -2895,7 +2895,7 @@ RX_SXPR_TEXT = {qtmark: re.compile(qtmark + r'.*?' + qtmark, re.DOTALL)
                 for qtmark in ['"""', "'''", '"', "'"]}
 
 
-def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
+def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
     """
     Generates a tree of nodes from an S-expression.
 
@@ -3026,7 +3026,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> Node:
     tree = inner_parser(xpr)
     if remaining != ')':
         raise ValueError('Malformed S-expression. Superfluous characters: ' + remaining[1:])
-    return tree
+    return RootNode(tree)
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
@@ -3044,7 +3044,7 @@ def parse_xml(xml: Union[str, StringView],
               string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
               out_empty_tags: Set[str] = EMPTY_TAGS_SENTINEL,
-              strict_mode: bool = True) -> Node:
+              strict_mode: bool = True) -> RootNode:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source.
 
@@ -3204,7 +3204,7 @@ def parse_xml(xml: Union[str, StringView],
     match_header = xml.search(RX_XML_HEADER)
     start = xml.index(match_header.start()) if match_header else 0
     _, tree = parse_full_content(xml[start:])
-    return tree
+    return RootNode(tree)
 
 
 class DHParser_JSONEncoder(json.JSONEncoder):
@@ -3219,7 +3219,7 @@ class DHParser_JSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def parse_json(json_str: str) -> Node:
+def parse_json(json_str: str) -> RootNode:
     """
     Parses a JSON-representation of a node-tree. Other than
     and parse_xml, this function does not convert any json-document into
@@ -3227,7 +3227,7 @@ def parse_json(json_str: str) -> Node:
     a json-document that has been produced by `Node.as_json()`!
     """
     json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: OrderedDict(pairs))
-    return Node.from_json_obj(json_obj)
+    return RootNode(Node.from_json_obj(json_obj))
 
 
 def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:

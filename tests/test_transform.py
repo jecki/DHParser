@@ -101,14 +101,14 @@ class TestRemoval:
             "wortarten": [remove_tokens({"et"})],
             "*": []
         }
-        traverse(cst, ast_table)
+        cst = traverse(cst, ast_table)
         cst1 = cst.as_sxpr()
         assert cst1.find('et') < 0
         ast_table = {
             "wortarten": [remove_tokens("et")],
             "*": []
         }
-        traverse(cst, ast_table)
+        cst = traverse(cst, ast_table)
         assert cst1 == cst.as_sxpr()
 
 
@@ -224,7 +224,7 @@ class TestConditionalTransformations:
             "LemmaVariante": [traverse_locally(LemmaVariante_transformations)],
             "Hinweis": [collapse]
         }
-        traverse(cst, global_tansformations)
+        cst = traverse(cst, global_tansformations)
         # whitespace after "facitergula", but not after "bona" should have been removed
         assert str(cst) == "faciterculasim.bona fide"
 
@@ -284,7 +284,7 @@ class TestWhitespaceTransformations:
                               '(WORD (LETTERS "to") (:Whitespace " "))'
                               '(WORD (LETTERS "be") (:Whitespace " ")))')
         transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].name == WHITESPACE_PTYPE)}
-        traverse(sentence, transformations)
+        sentence = traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert all(i % 2 == 0 or node.name == ':Whitespace' for i, node in enumerate(sentence))
 
@@ -297,7 +297,7 @@ class TestWhitespaceTransformations:
                               '(WORD (:Whitespace "d") (:Whitespace "e") (LETTERS "to") (:Whitespace " "))'
                               '(WORD (:Whitespace " ") (LETTERS "be") (:Whitespace " ")))')
         transformations = {'WORD': move_fringes(lambda ctx: ctx[-1].name == WHITESPACE_PTYPE)}
-        traverse(sentence, transformations)
+        sentence = traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert sentence.content.find('abcde') >= 0
         assert all(i % 2 == 0 or node.name == ':Whitespace' for i, node in enumerate(sentence))
@@ -308,14 +308,14 @@ class TestWhitespaceTransformations:
         sentence = parse_sxpr('(SENTENCE  (:Whitespace " ") (:Whitespace " ")  '
                               '(TEXT (PHRASE "Guten Tag") (:Whitespace " ")))')
         transformations = {'TEXT': move_fringes(lambda ctx: ctx[-1].name == WHITESPACE_PTYPE)}
-        traverse(sentence, transformations)
+        sentence = traverse(sentence, transformations)
 
     def test_merge_adjacent(self):
         sentence = parse_sxpr('(SENTENCE (TEXT "Guten") (L " ") (TEXT "Tag") '
                               ' (T "\n") (TEXT "Hallo") (L " ") (TEXT "Welt")'
                               ' (T "\n") (L " "))')
         transformations = {'SENTENCE': merge_adjacent(is_one_of('TEXT', 'L'), 'TEXT')}
-        traverse(sentence, transformations)
+        sentence = traverse(sentence, transformations)
         assert tree_sanity_check(sentence)
         assert sentence.pick_child('TEXT').result == "Guten Tag"
         assert sentence[2].result == "Hallo Welt"
@@ -324,13 +324,13 @@ class TestWhitespaceTransformations:
 
         # leaf nodes should be left untouched
         sentence = parse_sxpr('(SENTENCE "Hallo Welt")')
-        traverse(sentence, transformations)
+        sentence = traverse(sentence, transformations)
         assert sentence.content == "Hallo Welt", sentence.content
 
     # def test_merge_adjacent2(self):
     #     expr = parse_sxpr('(Autor (:Whitespace " ") (DEU_GEMISCHT "K. ") (DEU_GEMISCHT "Figala"))')
     #     transformations = {'Autor': merge_adjacent(not_one_of('Anker'), 'TEXT')}
-    #     traverse(expr, transformations)
+    #     expr = traverse(expr, transformations)
     #     print(expr.as_sxpr())
 
 
@@ -361,7 +361,7 @@ class TestConstructiveTransformations:
     def test_add_delimiter(self):
         tree = parse_sxpr('(A (B 1) (B 2) (B 3))').with_pos(0)
         trans_table = {'A': delimit_children(node_maker('c', ','))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         original_result = tree.serialize(how='S-expression')
         assert original_result == '(A (B "1") (c ",") (B "2") (c ",") (B "3"))', original_result
 
@@ -371,7 +371,7 @@ class TestConstructiveTransformations:
         n = nm()
         trans_table = {'A': delimit_children(
             node_maker('d', (node_maker('c', ','), node_maker('l', ' '))))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         original_result = tree.serialize()
         assert original_result \
             == '(A (B "1") (d (c ",") (l " ")) (B "2") (d (c ",") (l " ")) (B "3"))', \
@@ -380,28 +380,28 @@ class TestConstructiveTransformations:
     def test_insert_nodes(self):
         tree = parse_sxpr('(A (B 1) (B 2) (X 3))').with_pos(0)
         trans_table = {'A': insert(0, node_maker('c', '=>'))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         result1 = tree.serialize()
         assert result1 == '(A (c "=>") (B "1") (B "2") (X "3"))', result1
 
         trans_table = {'A': insert(4, node_maker('d', '<='))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         result2 = tree.serialize()
         assert result2 == '(A (c "=>") (B "1") (B "2") (X "3") (d "<="))', result2
         trans_table = {'A': insert(-2, node_maker('e', '|'))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         result3 = tree.serialize()
         assert result3 == '(A (c "=>") (B "1") (B "2") (e "|") (X "3") (d "<="))', result3
 
         tree = parse_sxpr('(A "")').with_pos(0)
         trans_table = {'A': insert(0, node_maker('B', 'b'))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         result4 = tree.serialize()
         assert result4 == '(A (B "b"))'
 
         tree = parse_sxpr('(A "")').with_pos(0)
         trans_table = {'A': insert(lambda ctx: None, node_maker('B', 'b'))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         result5 = tree.serialize()
         assert result5 == '(A)'
 
@@ -414,12 +414,12 @@ class TestConstructiveTransformations:
 
         tree = parse_sxpr('(A (B 1) (C 2) (D 3))').with_pos(0)
         trans_table = {'A': insert(positions_of('D'), node_maker('X', '0'))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         result1 = tree.serialize()
         assert result1 == '(A (B "1") (C "2") (X "0") (D "3"))', result1
 
         trans_table = {'A': insert(positions_of('Z'), node_maker('X', '0'))}
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         result2 = tree.serialize()
         assert result2 == '(A (B "1") (C "2") (X "0") (D "3"))', result2
 
@@ -430,7 +430,7 @@ class TestBoolean:
         trans_table = { 'B': [apply_if((change_name('X'),
                                         add_attributes({'renamed': 'True'})),
                                        is_one_of('B'))] }
-        traverse(tree, trans_table)
+        tree = traverse(tree, trans_table)
         assert flatten_sxpr(tree.as_sxpr()) == '(A (X `(renamed "True") "1") (C "1") (X `(renamed "True") "2"))'
 
 class TestOptimizations:
@@ -457,7 +457,7 @@ class TestOptimizations:
             'number': [merge_leaves, reduce_single_child],
             ':RegExp': self.raise_error
         }
-        traverse(tree, transtable)
+        tree = traverse(tree, transtable)
         assert tree.equals(parse_sxpr('(array (number "1") (number "2.0") (string "a string"))'))
 
 
@@ -473,7 +473,7 @@ class TestErrors:
         parser = create_parser(lang)
         ast = parser('abc ??? def')
         trans_table = {'WRONG': add_error('Bad mistake!!!')}
-        traverse(ast, trans_table)
+        ast = traverse(ast, trans_table)
         e = ast.errors[0]
         assert e.line > 0 and e.column > 0
 

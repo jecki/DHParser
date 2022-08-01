@@ -455,7 +455,7 @@ syntax-trees in either a nicely formatted or compact form.
 
     >>> from doc_examples.JSON import JSONParser
     >>> syntax_tree = JSONParser.parse_JSON('{ "one": 1, "two": 2 }')
-    >>> _ = JSONParser.transform_JSON(syntax_tree)
+    >>> syntax_tree = JSONParser.transform_JSON(syntax_tree)
     >>> print(syntax_tree.as_sxpr())
     (json
       (object

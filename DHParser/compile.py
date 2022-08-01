@@ -571,14 +571,14 @@ def compile_source(source: str,
             # earlier, the syntax tree might not look like expected,
             # which could (fatally) break AST transformations.
             try:
-                transformer(syntax_tree)
+                syntax_tree = transformer(syntax_tree)
             except Exception as e:
                 syntax_tree.new_error(syntax_tree,
                                       "AST-Transformation failed due to earlier parser errors. "
                                       "Crash Message: %s: %s" % (e.__class__.__name__, str(e)),
                                       AST_TRANSFORM_CRASH)
         else:
-            transformer(syntax_tree)
+            syntax_tree = transformer(syntax_tree)
 
         if 'ast' in log_syntax_trees:
             log_ST(syntax_tree, log_file_name + '.ast')

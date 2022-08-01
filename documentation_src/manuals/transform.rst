@@ -151,7 +151,7 @@ node that has one of the tag-names in the key::
     >>> from DHParser.transform import traverse
     >>> from copy import deepcopy
     >>> save_cst = deepcopy(formula_cst)
-    >>> _ = traverse(formula_cst, transformation_table)
+    >>> formula_cst = traverse(formula_cst, transformation_table)
     >>> print(formula_cst.as_sxpr(flatten_threshold=0))
     (term
       (NUMBER "3")
@@ -161,7 +161,7 @@ node that has one of the tag-names in the key::
         (PLUS "+")
         (NUMBER "5")))
 
-Two things are important to know about :py:func:`~transform.traverse`:
+Three things are important to know about :py:func:`~transform.traverse`:
 
 1. Trees are transformed depth first. So, when a transformation is called on a
    particular node, or rather trail (see :ref:_trails), all children of that
@@ -172,6 +172,15 @@ Two things are important to know about :py:func:`~transform.traverse`:
    reason you need to preserve earlier states of the tree, you'll have to make a
    `deep copy <https://docs.python.org/3/library/copy.html#copy.deepcopy>`_
    first.
+
+3. Although trees are transformed in place, it may happen that certain nodes
+   are replaced by other existing or even completely new nodes during the
+   transformation. In particular, if the node passed to :py:func:`~transform.traverse`
+   as the first argument is not of type :py:class:`~nodetree.RootNode`, it will
+   be replaced by a node of type :py:class:`~nodetree.RootNode`. There, it is
+   good practice to always assign the return value of :py:func:`~transform.traverse`
+   to the variable passed as its first argument, e.g.
+   ``formula_cst = traverse(formula_cst, transformation_table)``.
 
 The resulting tree looks much closer to the syntax tree of an arithmetic formula
 we had in mind. Every one-term "expression", "term", "factor" etc. has
@@ -237,7 +246,7 @@ the list of transformations for "term" and "expression"-node for those cases
 where these nodes have only one child. Now, let's see what difference this makes::
 
     >>> formula_cst = deepcopy(save_cst)  # restore concrete syntax tree
-    >>> _ = traverse(formula_cst, transformation_table)
+    >>> formula_cst = traverse(formula_cst, transformation_table)
     >>> print(formula_cst.as_sxpr(flatten_threshold=0))
     (MUL
       (NUMBER "3")
@@ -627,7 +636,7 @@ prints the tree as S-expression::
 
     >>> from DHParser.transform import peek
     >>> trans_table = { 'bag': [collapse, peek, duplicate_children] }
-    >>> _ = traverse(copy.deepcopy(testdata), trans_table).as_sxpr()
+    >>> _ = traverse(copy.deepcopy(testdata), trans_table)
     (bag "appleorange")
 
 Thus, we can see the tree that the ``collapse``-function leaves behind and which
