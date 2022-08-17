@@ -2527,6 +2527,7 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
         t2[k - 1].result = tuple((t2[k] if nd == t[k] else nd) for nd in t2[k - 1].result)
     t = t2
 
+    k = -1
     for k in range(len(t) - 1):
         node = t[-k - 1]
         if i != 0 and i != len(node._result) and node.name not in splitable:
@@ -2544,6 +2545,65 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
         if i == 0 or i == len(node._result) or node.name in splitable:
             k += 1
     return -k
+
+
+def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
+                 splitable: Set[str] = frozenset({TOKEN_PTYPE}),
+                 greedy: bool = True,
+                 select: TrailSelector = ANY_TRAIL,
+                 ignore: TrailSelector = NO_TRAIL):
+    # UNTESTED!
+    assert trail
+    k = max(can_split(trail, i, splitable, True, greedy, select, ignore) - 1, -len(trail))
+    i = deep_split(trail[k:], i, True, greedy, select, ignore)
+
+    nd = Node(name, trail[k]._result[i:]).with_attr(attr_dict)
+    if nd._children:
+        nd._pos = trail[k]._result[i]._pos
+        trail[k].result = trail[k]._result[:i] + (nd,)
+    else:
+        nd._pos = trail[k]._pos + i if trail[k]._pos >= 0 else -1
+        text_node = Node(TOKEN_PTYPE, trail[k]._result[:i])
+        text_node._pos = trail[k]._pos
+        trail[k].result = (text_node, nd)
+
+    k -= 1
+    while abs(k) < len(trail) - 1:
+        i = trail[k].index(trail[k + 1]) + 1
+        if i < len(trail[k]._result):
+            nd = Node(name, trail[k]._result[i:]).with_attr(attr_dict)
+            nd._pos = trail[k]._result[i]._pos
+            trail[k].result = trail[k]._result[:i] + (nd,)
+        k -= 1
+
+
+def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
+                 splitable: Set[str] = frozenset({TOKEN_PTYPE}),
+                 greedy: bool = True,
+                 select: TrailSelector = ANY_TRAIL,
+                 ignore: TrailSelector = NO_TRAIL):
+    # UNTESTED!
+    assert trail
+    k = max(can_split(trail, i, splitable, False, greedy, select, ignore) - 1, -len(trail))
+    i = deep_split(trail[k:], i, False, greedy, select, ignore)
+
+    nd = Node(name, trail[k]._result[:i]).with_attr(attr_dict)
+    nd._pos = trail[k]._pos
+    if nd._children:
+        trail[k].result = (nd,) + trail[k]._result[i:]
+    else:
+        text_node = Node(TOKEN_PTYPE, trail[k]._result[:i])
+        text_node._pos = trail[k]._pos + i if trail[k]._pos >= 0 else -1
+        trail[k].result = (nd, text_node)
+
+    k -= 1
+    while abs(k) < len(trail) - 1:
+        i = trail[k].index(trail[k + 1])
+        if i > 0:
+            nd = Node(name, trail[k]._result[:i]).with_attr(attr_dict)
+            nd._pos = trail[k]._pos
+            trail[k].result = (nd,) + trail[k]._result[i:]
+        k -= 1
 
 
 @functools.singledispatch
