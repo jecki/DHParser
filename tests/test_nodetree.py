@@ -32,7 +32,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_trail, \
     prev_trail, serialize_trail, generate_content_mapping, map_pos_to_trail, \
     select_trail_if, select_trail, create_trail_match_function, pick_trail, \
-    LEAF_TRAIL, TOKEN_PTYPE, insert_node, markup
+    LEAF_TRAIL, TOKEN_PTYPE, insert_node, markup, content_of, strlen_of
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -945,17 +945,19 @@ class TestTrailNavigation:
         assert ctx[-1].name == 'E' and rel_pos == 2
 
         select, ignore = {'A', 'B', 'D', 'F'}, {'C'}
-        content = tree.content_selection(select, ignore)
+        content = content_of(tree, select, ignore)
         assert content == "alphadelta"
-        assert tree.content_selection(select, ignore | {'B'}) == "delta"
-        assert tree.content_selection(select, ignore | {'A'}) == ""
+        assert strlen_of(tree, select, ignore) == len('alphadelta')
+        assert content_of(tree, select, ignore | {'B'}) == "delta"
+        assert strlen_of(tree, select, ignore | {'B'}) == len("delta")
+        assert content_of(tree, select, ignore | {'A'}) == ""
+        assert strlen_of(tree, select, ignore | {'A'}) == 0
 
         mapping = generate_content_mapping(tree, select, ignore)
         insert_node(mapping, content.find('delta'),
                     Node('G', 'omicron'))
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(A (B "alpha") (C (D "beta") (E "gamma")) (G "omicron") (F "delta"))'
-
 
     def test_standalone_select_trail_if(self):
         start = self.tree.pick_trail('E')
@@ -1031,6 +1033,10 @@ class TestEvaluation:
         assert tree.evaluate(actions) == -13
 
 
+#class TestStrLenPos:
+
+
+
 class TestMarkupInsertion:
     testdata_1 = '<document>In Charlot<lb/>tenburg steht ein Schloss.</document>'
     testdata_2 = '''<document>
@@ -1038,6 +1044,13 @@ class TestMarkupInsertion:
 <lem>silvae</lem>
 <rdg wit="A">silvae, </rdg>
 </app> glandiferae</document>'''
+    testdata_3 = '''<doc>Am <outer><inner>Anfang</inner> war das Wort</outer>.</doc>'''
+
+    def test_content(self):
+        tree = parse_xml('<p>This is<fn>footnote</fn> a text</p>')
+        assert content_of(tree) == 'This isfootnote a text'
+        assert content_of(tree, ignore='fn') == 'This is a text'
+        assert content_of(tree, select='fn') == 'footnote'
 
     def test_insert_milestone_1(self):
         empty_tags = set()
@@ -1076,19 +1089,23 @@ class TestMarkupInsertion:
                           empty_tags=empty_tags)
         assert xml == '<document>In <ref type="subj" target="Charlottenburg_S00231">Charlot<lb/>tenburg</ref></document>'
 
+    # def test_insert_markup_2(self):
+    #     empty_tags = set()
+    #     tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+    #     m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
+    #     tm = generate_content_mapping(tree)
+    #     markup(tm, m.start(), m.end(), "ref", type="subj", target="silva_glandifera_S01229")
+    #     xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
+    #                       empty_tags=empty_tags)
+    #     assert xml == '<document><ref type="subj" target="silva_glandifera_S01229"><app n="g"><lem>silvae</lem><rdg wit="A">silvae, </rdg></app> glandiferae</ref></document>'
+
     def test_insert_markup_2(self):
         empty_tags = set()
-        tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-        m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
-        tm = generate_content_mapping(tree)
-        markup(tm, m.start(), m.end(), "ref", type="subj", target="silva_glandifera_S01229")
-        xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
-                          empty_tags=empty_tags)
-        assert xml == '<document><ref type="subj" target="silva_glandifera_S01229"><app n="g"><lem>silvae</lem><rdg wit="A">silvae, </rdg></app> glandiferae</ref></document>'
-
-
-
-
+        tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        print(tree.as_sxpr())
+        m = next(re.finditer(r'Anfang war das Wort', tree.content))
+        cm = generate_content_mapping(tree)
+        markup(cm, m.start(), m.end(), "a")
 
 if __name__ == "__main__":
     from DHParser.testing import runner

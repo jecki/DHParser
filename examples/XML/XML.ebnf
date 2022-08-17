@@ -12,7 +12,7 @@
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops       # merge anonymous leaf-nodes
 @ disposable  = BOM, Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
-                PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF
+                PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF, tagContent
 @ drop        = strings, whitespace, BOM, EOF  # drop anonymous tokens, whitespace, EOF and BOM
 
 
@@ -52,11 +52,21 @@ ExternalID      = 'SYSTEM' §~ SystemLiteral
 #
 #######################################################################
 
-element         = emptyElement | STag §content ETag
-STag            = '<' Name { ~ Attribute } ~ '>'
-ETag            = '</' §Name ~ '>'
+@tagContent_resume = /(?=>|\/>)/
+@tagContent_error = "syntax error in tag-name of opening or empty tag:  {1}"
 
-emptyElement    = '<' Name { ~ Attribute } ~ '/>'
+@ETag_resume = /(?=>)/
+@ETag_error  = "syntax error in tag-name of closing tag:  {1}"
+
+@Attribute_resume = /(?=>|\/>)/
+@Attribute_error  = "syntax error in attribute definition:  {1}"
+
+
+element         = emptyElement | STag §content ETag
+emptyElement    = '<' tagContent '/>'
+STag            = '<' tagContent '>'
+tagContent      = !/[\/!?]/ §Name { ~ Attribute } ~ &('>'|'/>')
+ETag            = '</' §Name ~ '>'
 
 Attribute       = Name ~ §'=' ~ AttValue
 
@@ -72,8 +82,8 @@ content         = [ CharData ]
 #######################################################################
 
 AttValue        = '"' { /[^<&"]+/ | Reference } '"'
-			    | "'" { /[^<&']+/ | Reference } "'"
-SystemLiteral	= '"' /[^"]*/ '"' | "'" /[^']*/ "'"
+                | "'" { /[^<&']+/ | Reference } "'"
+SystemLiteral   = '"' /[^"]*/ '"' | "'" /[^']*/ "'"
 PubidLiteral    = '"' [PubidChars] '"'
                 | "'" [PubidCharsSingleQuoted] "'"
 

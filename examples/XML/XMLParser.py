@@ -93,10 +93,13 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "ab6289538a61338c4b25b36a97327fd4"
-    disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
+    source_hash__ = "8aec099040a4deac970f5ad623755b3e"
+    disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
+    error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
+                        'ETag': [('', "syntax error in tag-name of closing tag:  {1}")],
+                        'Attribute': [('', "syntax error in attribute definition:  {1}")]}
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'\s*'
@@ -126,9 +129,10 @@ class XMLGrammar(Grammar):
     AttValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Text("\'"))))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
-    emptyElement = Series(Drop(Text('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('/>')))
     ETag = Series(Drop(Text('</')), Name, dwsp__, Drop(Text('>')), mandatory=1)
-    STag = Series(Drop(Text('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('>')))
+    tagContent = Series(NegativeLookahead(RegExp('[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(Alternative(Drop(Text('>')), Drop(Text('/>')))), mandatory=1)
+    STag = Series(Drop(Text('<')), tagContent, Drop(Text('>')))
+    emptyElement = Series(Drop(Text('<')), tagContent, Drop(Text('/>')))
     BOM = Drop(RegExp('[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
     ExternalID = Alternative(Series(Drop(Text('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
     doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(Text('>')), mandatory=2)
@@ -141,6 +145,9 @@ class XMLGrammar(Grammar):
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     document = Series(Option(BOM), prolog, element, Option(Misc), EOF, mandatory=2)
+    resume_rules__ = {'tagContent': [re.compile(r'(?=>|\/>)')],
+                      'ETag': [re.compile(r'(?=>)')],
+                      'Attribute': [re.compile(r'(?=>|\/>)')]}
     root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
     
 

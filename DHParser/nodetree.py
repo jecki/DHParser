@@ -70,9 +70,10 @@ __all__ = ('WHITESPACE_PTYPE',
            'ResultType',
            'StrictResultType',
            'ChildrenType',
-           'CriteriaType',
            'NodeMatchFunction',
            'TrailMatchFunction',
+           'NodeSelector',
+           'TrailSelector',
            'ANY_NODE',
            'NO_NODE',
            'LEAF_NODE',
@@ -80,7 +81,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'NO_TRAIL',
            'LEAF_TRAIL',
            'Node',
-           'content',
+           'content_of',
+           'strlen_of',
            'validate_token_sequence',
            'has_token',
            'add_token',
@@ -114,6 +116,9 @@ __all__ = ('WHITESPACE_PTYPE',
            'ContentMapping',
            'generate_content_mapping',
            'map_pos_to_trail',
+           'insert_node',
+           'split',
+           'markup',
            'FrozenNode',
            'EMPTY_NODE',
            'tree_sanity_check',
@@ -157,9 +162,10 @@ ZOMBIE_TAG = "ZOMBIE__"
 # - node itself (equality)
 # - name
 # - one of several names
-# - a function Node -> bool
+# - a function Node -> bool  or  Trail -> bool, respectively
 re_pattern = Any
-CriteriaType = Union['Node', str, Container[str], Callable, int, re_pattern]
+NodeSelector = Union['Node', str, Container[str], Callable, int, re_pattern]
+TrailSelector = Union['Node', str, Container[str], Callable, int, re_pattern]
 
 Trail = List['Node']
 NodeMatchFunction = Callable[['Node'], bool]
@@ -174,7 +180,7 @@ NO_TRAIL = lambda trl: False
 LEAF_TRAIL = lambda trl: not trl[-1].children
 
 
-def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
+def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
     """
     Creates a node-match-function (Node -> bool) for the given criterion
     that returns True, if the node passed to the function matches the
@@ -208,6 +214,11 @@ def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
     elif isinstance(criterion, str):
         return lambda nd: nd.name == criterion
     elif callable(criterion):
+        for _, typ in criterion.__annotations__:
+            if typ is not Node:
+                raise ValueError(f'First argument of callable criterion '
+                                 f'{criterion} must have type Node, not {typ}!')
+            break  # only read the first argument
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.name in cast(Container, criterion)
@@ -217,7 +228,7 @@ def create_match_function(criterion: CriteriaType) -> NodeMatchFunction:
                     % (repr(criterion), type(criterion)))
 
 
-def create_trail_match_function(criterion: CriteriaType) -> TrailMatchFunction:
+def create_trail_match_function(criterion: TrailSelector) -> TrailMatchFunction:
     """
     Creates a trail-match-function (Trail -> bool) for the given
     criterion that returns True, if the last node in the trail passed
@@ -242,6 +253,13 @@ def create_trail_match_function(criterion: CriteriaType) -> TrailMatchFunction:
     elif isinstance(criterion, str):
         return lambda trl: trl[-1].name == criterion
     elif callable(criterion):
+        is_node_match_func = False
+        for _, typ in criterion.__annotations__.items():
+            if typ is Node or typ == 'Node':
+                is_node_match_func = True
+            break
+        if is_node_match_func:
+            return lambda trail: criterion(trail[-1])
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda trl: trl[-1].name in cast(Container, criterion)
@@ -251,7 +269,8 @@ def create_trail_match_function(criterion: CriteriaType) -> TrailMatchFunction:
                     % (repr(criterion), type(criterion)))
 
 
-def _make_leaf_selectors(select: CriteriaType, ignore: CriteriaType) -> Tuple[Callable, Callable]:
+def _make_leaf_selectors(select: TrailSelector,
+                         ignore: TrailSelector) -> Tuple[Callable, Callable]:
     select_func = create_trail_match_function(select)
     ignore_func = create_trail_match_function(ignore)
 
@@ -529,16 +548,27 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             rep.append('.with_pos(%i)' % self._pos)
         return ''.join(rep)
 
-    def strlen(self):
+    def strlen(self) -> int:
         """Returns the length of the string-content of this node.
         Mind that len(node) returns the number of children of this node!"""
-        flag = False
-        for child in self.children:
-            if not isinstance(child, Node):
-                print('>>>', self.name, self.children)
-                return "ERROR"
-        return (sum(child.strlen() for child in self._children)
-                if self._children else len(self._result))
+        if self._children:
+            return sum(child.strlen() for child in self._children)
+        else:
+            return len(self._result)
+
+    # def strpos(self, what: NodeSelector,
+    #            skip: NodeMatchFunction = NO_NODE) -> int:
+    #     """Strin-Pposition of the first child fulfilling 'what' within
+    #     the string-content of self, excluding all children that fulfill 'skip'."""
+    #     i = self.index(what)
+    #     skip_func = create_match_function(skip)
+    #     children = self._children
+    #     pos = 0
+    #     for k in range(i):
+    #         child = children[k]
+    #         if not skip_func(child):
+    #            pos += child.strlen_of(skip_func)
+    #     return pos
 
     def __len__(self):
         raise AssertionError(
@@ -698,19 +728,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
 
-    def content_selection(self, select_trail: CriteriaType, ignore_trail: CriteriaType) -> str:
-        """Returns the srting content of the tree spanned by node, but includes only
-        those leaf-nodes for which 'select_trail()' is true and ignores all subtrees
-        and leaves for which 'ignore_tail()' is True, e.g.
-        ``tree.content_selection(ignore_trail={'footnote'})`` would only the string-content
-        of the main text but ignores all footnotes.
-        """
-        match_func, ignore_func = _make_leaf_selectors(select_trail, ignore_trail)
-        fragments = []
-        if ignore_func([self]):  return ''
-        for leaf in self.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
-            fragments.append(leaf[-1]._result)
-        return ''.join(fragments)
+    # def content_selection(self, select: TrailSelector,
+    #                       ignore: TrailSelector) -> str:
+    #     """Returns the string content of the tree spanned by node, but includes only
+    #     those leaf-nodes for which 'select_trail()' is true and ignores all subtrees
+    #     and leaves for which 'ignore_tail()' is True, e.g.
+    #     ``tree.content_selection(ignore_trail={'footnote'})`` would only the string-content
+    #     of the main text but ignores all footnotes.
+    #     """
+    #     match_func, ignore_func = _make_leaf_selectors(select, ignore)
+    #     fragments = []
+    #     if ignore_func([self]):  return ''
+    #     for leaf in self.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
+    #         fragments.append(leaf[-1]._result)
+    #     return ''.join(fragments)
 
     # node position ###
 
@@ -876,7 +907,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # tree traversal and node selection #######################################
 
-    def __getitem__(self, key: Union[CriteriaType, int, slice]) -> Union['Node', List['Node']]:
+    def __getitem__(self, key: Union[NodeSelector, int, slice]) \
+            -> Union['Node', List['Node']]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
@@ -916,8 +948,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return items if len(items) >= 2 else items[0]
             raise KeyError(str(key))
 
-    def __setitem__(self, 
-                    key: Union[CriteriaType, slice, int], 
+    def __setitem__(self,
+                    key: Union[NodeSelector, slice, int],
                     value: Union['Node', Sequence['Node']]):
         """
         Changes one or more children of a branch-node.
@@ -953,7 +985,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     raise KeyError(f'No item matching "{str(key)}" found!')
         self.result = tuple(lchildren)
 
-    def __delitem__(self, key: Union[int, slice, CriteriaType]):
+    def __delitem__(self, key: Union[int, slice, NodeSelector]):
         """
         Removes children from the node. Note that integer values passed to
         parameter `key` are always interpreted as index, not as an object id
@@ -988,7 +1020,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 raise KeyError(f'No child-node matching {str(key)} found!')
             self.result = after
 
-    def get(self, key: Union[int, slice, CriteriaType],
+    def get(self, key: Union[int, slice, NodeSelector],
             surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
         """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
@@ -1009,16 +1041,16 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except (KeyError, ValueError, IndexError):
             return surrogate
 
-    def __contains__(self, what: CriteriaType) -> bool:
+    def __contains__(self, selector: NodeSelector) -> bool:
         """
         Returns true if at least one child that matches the given criterion
         exists. See :py:func:`create_match_function()` for a catalogue of
         possible criteria.
 
-        :param what: a criterion that describes the child-node
+        :param selector: a criterion that describes the child-node
         :returns: True, if at least one child fulfills the criterion
         """
-        mf = create_match_function(what)
+        mf = create_match_function(selector)
         for child in self._children:
             if mf(child):
                 return True
@@ -1041,14 +1073,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         result.insert(index, node)
         self.result = tuple(result)
 
-    def index(self, what: CriteriaType, start: int = 0, stop: int = 2**30) -> int:
+    def index(self, selector: NodeSelector, start: int = 0, stop: int = 2 ** 30) -> int:
         """
         Returns the index of the first child that fulfills the criterion
         `what`. If the parameters start and stop are given, the search is
         restricted to the children with indices from the half-open interval
         [start:end[. If no such child exists a ValueError is raised.
 
-        :param what: the criterion by which the child is identified, the index
+        :param selector: the criterion by which the child is identified, the index
             of which shall be returned.
         :param start: the first index to start searching.
         :param stop: the last index that shall be searched
@@ -1058,53 +1090,60 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         assert 0 <= start < stop
         if not self.children:
             raise ValueError('Node.index(x): Called on a Node without children')
-        mf = create_match_function(what)
+        mf = create_match_function(selector)
         for i, child in enumerate(self._children[start:stop]):
             if mf(child):
                 return i + start
-        raise ValueError("Node identified by '%s' not among child-nodes." % str(what))
+        raise ValueError("Node identified by '%s' not among child-nodes." % repr(selector))
 
     @cython.locals(i=cython.int)
-    def indices(self, what: CriteriaType) -> Tuple[int, ...]:
+    def indices(self, selector: NodeSelector) -> Tuple[int, ...]:
         """
         Returns the indices of all children that fulfil the criterion `what`.
         """
-        mf = create_match_function(what)
+        mf = create_match_function(selector)
         children = self._children
         return tuple(i for i in range(len(children)) if mf(children[i]))
 
-    def select_if(self, match_function: NodeMatchFunction,
+    def select_if(self, match_func: NodeMatchFunction,
                   include_root: bool = False, reverse: bool = False,
-                  skip_subtree: NodeMatchFunction = NO_NODE) -> Iterator['Node']:
+                  skip_func: NodeMatchFunction = NO_NODE) -> Iterator['Node']:
         """
         Generates an iterator over all nodes in the tree for which
         `match_function()` returns True. See the more general function
         :py:meth:`Node.select()` for a detailed description and examples.
         The tree is traversed pre-order by the iterator.
         """
-        if include_root and match_function(self):
-            yield self
-        child_iterator = reversed(self._children) if reverse else self._children
-        for child in child_iterator:
-            if match_function(child):
-                yield child
-            if child._children and not skip_subtree(child):
-                yield from child.select_if(match_function, False, reverse, skip_subtree)
+        def recursive(nd: Node) -> Iterator['Node']:
+            nonlocal match_func, reverse, skip_func
+            child_iterator = reversed(nd._children) if reverse else nd._children
+            for child in child_iterator:
+                if match_func(child):
+                    yield child
+                if child._children and not skip_func(child):
+                    yield from recursive(child)
 
-    def select(self, criterion: CriteriaType,
+        if include_root:
+            if match_func(self):  yield self
+            if not skip_func(self):
+                yield from recursive(self)
+        else:
+            yield from recursive(self)
+
+    def select(self, criteria: NodeSelector,
                include_root: bool = False, reverse: bool = False,
-               skip_subtree: CriteriaType = NO_NODE) -> Iterator['Node']:
+               skip_subtree: NodeSelector = NO_NODE) -> Iterator['Node']:
         """
         Generates an iterator over all nodes in the tree that fulfill the
         given criterion. See :py:func:`create_match_function()` for a
         catalogue of possible criteria.
 
-        :param criterion: The criterion for selecting nodes.
+        :param criteria: The criteria for selecting nodes.
         :param include_root: If False, only descendant nodes will be checked
             for a match.
         :param reverse: If True, the tree will be walked in reverse
                 order, i.e. last children first.
-        :param skip_subtree: A criterion to identify subtrees, the returned
+        :param skip_subtree: A criterion to identify subtrees that the returned
                 iterator shall not dive into. Note that the root-node of the
                 subtree will still be yielded by the iterator.
         :returns: An iterator over all descendant nodes which fulfill the
@@ -1124,27 +1163,28 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> flatten_sxpr(next(tree.select("X", False)).as_sxpr())
             '(X (c "d"))'
         """
-        return self.select_if(create_match_function(criterion), include_root, reverse,
+        return self.select_if(create_match_function(criteria), include_root, reverse,
                               create_match_function(skip_subtree))
 
-    def select_children(self, criterion: CriteriaType, reverse: bool = False) -> Iterator['Node']:
+    def select_children(self, criteria: NodeSelector, reverse: bool = False) \
+            -> Iterator['Node']:
         """Returns an iterator over all direct children of a node that
         fulfil the given `criterion`. See :py:meth:`Node.select()` for a description
         of the parameters.
         """
-        match_function = create_match_function(criterion)
+        match_function = create_match_function(criteria)
         if reverse:
-            for child in reversed(tuple(self.select_children(criterion, False))):
+            for child in reversed(tuple(self.select_children(criteria, False))):
                 yield child
         else:
             for child in self._children:
                 if match_function(child):
                     yield child
 
-    def pick(self, criterion: CriteriaType,
+    def pick(self, criteria: NodeSelector,
              include_root: bool = False,
              reverse: bool = False,
-             skip_subtree: CriteriaType = NO_NODE) -> Optional['Node']:
+             skip_subtree: NodeSelector = NO_NODE) -> Optional['Node']:
         """
         Picks the first (or last if run in reverse mode) descendant that
         fulfils the given criterion. See :py:func:`create_match_function()`
@@ -1155,11 +1195,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         with the given tag-name exists, it returns `None`.
         """
         try:
-            return next(self.select(criterion, include_root, reverse, skip_subtree))
+            return next(self.select(criteria, include_root, reverse, skip_subtree))
         except StopIteration:
             return None
 
-    def pick_child(self, criterion: CriteriaType, reverse: bool = False) -> Optional['Node']:
+    def pick_child(self, criteria: NodeSelector, reverse: bool = False) \
+            -> Optional['Node']:
         """
         Picks the first child (or last if run in reverse mode) descendant
         that fulfils the given criterion. See :py:func:`create_match_function()`
@@ -1171,7 +1212,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         exists, it returns None.
         """
         try:
-            return next(self.select_children(criterion, reverse=reverse))
+            return next(self.select_children(criteria, reverse=reverse))
         except StopIteration:
             return None
 
@@ -1204,53 +1245,58 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # trail selection ###
 
-    def select_trail_if(self, match_function: TrailMatchFunction,
+    def select_trail_if(self, match_func: TrailMatchFunction,
                         include_root: bool = False,
                         reverse: bool = False,
-                        skip_subtree: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
+                        skip_func: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
         """
         Like :py:func:`Node.select_if()` but yields the entire trail (i.e. list
         of descendants, the last one being the matching node) instead of just
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
         receives the complete trail as argument, rather than just the last node!
         """
-        def recursive(trl, include_root) -> Iterator[Trail]:
-            nonlocal match_function, reverse, skip_subtree
-            if include_root and match_function(trl):
-                yield trl
+        def recursive(trl) -> Iterator[Trail]:
+            nonlocal match_func, reverse, skip_func
             top = trl[-1]
             child_iterator = reversed(top._children) if reverse else top._children
             for child in child_iterator:
                 child_trl = trl + [child]
-                if match_function(child_trl):
+                if match_func(child_trl):
                     yield child_trl
-                if child._children and not skip_subtree(child_trl):
-                    yield from recursive(child_trl, include_root=False)
-        yield from recursive([self], include_root)
+                if child._children and not skip_func(child_trl):
+                    yield from recursive(child_trl)
 
-    def select_trail(self, criterion: CriteriaType,
+        trl = [self]
+        if include_root:
+            if match_func(trl):  yield trl
+            if not skip_func(trl):
+                yield from recursive(trl)
+        else:
+            yield from recursive(trl)
+
+    def select_trail(self, criteria: TrailSelector,
                      include_root: bool = False,
                      reverse: bool = False,
-                     skip_subtree: CriteriaType = NO_TRAIL) -> Iterator[Trail]:
+                     skip_subtree: TrailSelector = NO_TRAIL) -> Iterator[Trail]:
         """
         Like :py:meth:`Node.select()` but yields the entire trail (i.e. list of
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
-        return self.select_trail_if(create_trail_match_function(criterion),
+        return self.select_trail_if(create_trail_match_function(criteria),
                                     include_root, reverse,
                                     create_trail_match_function(skip_subtree))
 
-    def pick_trail(self, criterion: CriteriaType,
+    def pick_trail(self, criteria: TrailSelector,
                    include_root: bool = False,
                    reverse: bool = False,
-                   skip_subtree: CriteriaType = NO_TRAIL) -> Trail:
+                   skip_subtree: TrailSelector = NO_TRAIL) -> Trail:
         """
         Like :py:meth:`Node.pick()`, only that the entire trail (i.e.
         chain of descendants) relative to `self` is returned.
         """
         try:
-            return next(self.select_trail(criterion, include_root, reverse, skip_subtree))
+            return next(self.select_trail(criteria, include_root, reverse, skip_subtree))
         except StopIteration:
             return []
 
@@ -1871,13 +1917,52 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return node
 
 
-def content(segment: Union[Node, Tuple[Node, ...]]) -> str:
+def content_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
+               select: TrailSelector = LEAF_TRAIL,
+               ignore: TrailSelector = NO_TRAIL) -> str:
     """Returns the string content from a single node or a tuple of Nodes.
     """
-    if isinstance(segment, Node):
-        return segment.content
-    else:
-        return ''.join(nd.content for nd in segment)
+    if isinstance(segment, (StringView, str)):
+        return str(segment)
+    if ignore is NO_TRAIL and (select is LEAF_TRAIL or select is ANY_TRAIL):
+        if isinstance(segment, Node):
+            return segment.content
+        else:
+            return ''.join(nd.content for nd in segment)
+    if isinstance(segment, Node):  segment = (segment,)
+    match_func = create_trail_match_function(select)
+    skip_func = create_trail_match_function(ignore)
+    content_list = []
+    for root in segment:
+        for tr in root.select_trail_if(match_func, include_root=True, skip_func=skip_func):
+            nd = tr[-1]
+            if nd._children or skip_func(tr):  continue
+            content_list.append(nd._result)
+    return ''.join(content_list)
+
+
+def strlen_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
+              select: TrailSelector = LEAF_TRAIL,
+              ignore: TrailSelector = NO_TRAIL) -> int:
+    """Returns the string size from a single node or a tuple of Nodes.
+    """
+    if isinstance(segment, (StringView, str)):
+        return len(segment)
+    if ignore is NO_TRAIL and (select is LEAF_TRAIL or select is ANY_TRAIL):
+        if isinstance(segment, Node):
+            return segment.strlen()
+        else:
+            return sum(nd.strlen() for nd in segment)
+    if isinstance(segment, Node):  segment = (segment,)
+    match_func = create_trail_match_function(select)
+    skip_func = create_trail_match_function(ignore)
+    length = 0
+    for root in segment:
+        for tr in root.select_trail_if(match_func, include_root=True, skip_func=skip_func):
+            nd = tr[-1]
+            if nd._children or skip_func(tr):  continue
+            length += len(nd._result)
+    return length
 
 
 #######################################################################
@@ -2022,24 +2107,24 @@ def ensuing_str(trail: Trail, length: int = -1) -> str:
 
 
 def select_trail_if(start_trail: Trail,
-                    match_function: TrailMatchFunction,
+                    match_func: TrailMatchFunction,
                     include_root: bool = False,
                     reverse: bool = False,
-                    skip_subtree: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
+                    skip_func: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
     """
     Creates an Iterator yielding all `trails` for which the
     `match_function` is true, starting from `trail`.
     """
 
     def recursive(trl):
-        nonlocal match_function, reverse, skip_subtree
-        if match_function(trl):
+        nonlocal match_func, reverse, skip_func
+        if match_func(trl):
             yield trl
         top = trl[-1]
         child_iterator = reversed(top._children) if reverse else top._children
         for child in child_iterator:
             child_trl = trl + [child]
-            if not skip_subtree(child_trl):
+            if not skip_func(child_trl):
                 yield from recursive(child_trl)
 
     trail = start_trail.copy()
@@ -2051,7 +2136,7 @@ def select_trail_if(start_trail: Trail,
         node = trail.pop()
         edge, delta = (0, -1) if reverse else (-1, 1)
         while trail and node is trail[-1]._children[edge]:
-            if match_function(trail):
+            if match_func(trail):
                 yield trail
             node = trail.pop()
         if trail:
@@ -2063,56 +2148,57 @@ def select_trail_if(start_trail: Trail,
 
 
 def select_trail(start_trail: Trail,
-                 criterion: CriteriaType,
+                 criteria: TrailSelector,
                  include_root: bool = False,
                  reverse: bool = False,
-                 skip_subtree: CriteriaType = NO_TRAIL) -> Iterator[Trail]:
+                 skip_subtree: TrailSelector = NO_TRAIL) -> Iterator[Trail]:
     """
     Like `select_trail_if()` but yields the entire trail (i.e. list of
     descendants, the last one being the matching node) instead of just
     the matching nodes.
     """
-    return select_trail_if(start_trail, create_trail_match_function(criterion),
+    return select_trail_if(start_trail, create_trail_match_function(criteria),
                            include_root, reverse, create_trail_match_function(skip_subtree))
 
 
 def pick_trail(start_trail: Trail,
-               criterion: CriteriaType,
+               criteria: TrailSelector,
                include_root: bool = False,
                reverse: bool = False,
-               skip_subtree: CriteriaType = NO_TRAIL) -> Optional[Trail]:
+               skip_subtree: TrailSelector = NO_TRAIL) -> Optional[Trail]:
     """
     Like `Node.pick()`, only that the entire trail (i.e. chain of descendants)
     relative to `self` is returned.
     """
     try:
         return next(select_trail(
-            start_trail, criterion, include_root=include_root, reverse=reverse,
+            start_trail, criteria, include_root=include_root, reverse=reverse,
             skip_subtree=skip_subtree))
     except StopIteration:
         return None
 
 
 def select_from_trail_if(trail: Trail,
-                         match_function: NodeMatchFunction,
-                         reverse: bool=False):
+                         match_func: NodeMatchFunction,
+                         reverse: bool=False) -> Iterator[Node]:
     """Yields all nodes from trail for which the match_function is true."""
     if reverse:
         for nd in reversed(trail):
-            if match_function(nd):
+            if match_func(nd):
                 yield nd
     else:
         for nd in trail:
-            if match_function(nd):
+            if match_func(nd):
                 yield nd
 
 
-def select_from_trail(trail: Trail, criterion: CriteriaType, reverse: bool=False):
+def select_from_trail(trail: Trail, criteria: NodeSelector, reverse: bool=False) \
+        -> Iterator[Node]:
     """Yields all nodes from trail which fulfill the criterion."""
-    return select_from_trail_if(trail, create_match_function(criterion), reverse)
+    return select_from_trail_if(trail, create_match_function(criteria), reverse)
 
 
-def pick_from_trail(trail: Trail, criterion: CriteriaType, reverse: bool=False) \
+def pick_from_trail(trail: Trail, criterion: NodeSelector, reverse: bool=False) \
         -> Optional[Node]:
     """Picks the first node from the trail that fulfils the criterion. Returns `None`
     if the trail does not contain any node fulfilling the criterion."""
@@ -2153,8 +2239,8 @@ ContentMapping = Tuple[List[int], List[Trail]]  # A mapping of character positio
 
 
 def generate_content_mapping(node: Node,
-                             select: CriteriaType = LEAF_TRAIL,
-                             ignore: CriteriaType = NO_TRAIL) -> ContentMapping:
+                             select: TrailSelector = LEAF_TRAIL,
+                             ignore: TrailSelector = NO_TRAIL) -> ContentMapping:
     """
     Generates a trail mapping for all leave-nodes of the tree
     originating in `node`. A trail mapping is an ordered mapping
@@ -2166,30 +2252,37 @@ def generate_content_mapping(node: Node,
 
     :param node: the root of the tree for which a trail mapping shall be
         generated.
-    :param select: only leaf-trails for which this is true will be considered
+    :param select: only leaf-trails for which this is true will be considered.
+        Note that this requires the select-criterion to actually yield leaf-trails.
+        Otherwise, the content-mapping will be empty.
     :param ignore: subtrees or leaves for which ignore is true will be skipped
         as well.
     :returns: The trail mapping for the node.
     """
     match_func, ignore_func = _make_leaf_selectors(select, ignore)
+    # node_based_ignore_func = NO_NODE if ignore == NO_TRAIL else lambda nd: ignore_func([nd])
 
     pos = 0
     pos_list, trl_list = [], []
     if ignore_func([node]):  return [], []
-    for trl in node.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
+    for trl in node.select_trail_if(match_func, include_root=True, skip_func=ignore_func):
+        if trl[-1]._children or ignore_func(trl):  continue  # ignore non-leaf trails
         pos_list.append(pos)
         trl_list.append(trl)
         pos += trl[-1].strlen()
     return pos_list, trl_list
 
 
-def map_pos_to_trail(i: int, tm: ContentMapping) -> Tuple[Trail, int]:
+def map_pos_to_trail(i: int, tm: ContentMapping, left_bias: bool = False) -> Tuple[Trail, int]:
     """Yields the trail and relative position for the absolute
     position `i`.
 
     :param i:   a position in the content of the tree for which the
         trail mapping `cm` was generated
     :param tm:  a trail mapping
+    :param left_bias: yields the location at the end of the previous
+        trail rather than the location at the very beginning of a trail.
+        Default value is "False".
     :returns:   tuple (trail, relative position) where relative
         position is the position of i relative to the actual
         position of the last node in the trail.
@@ -2201,6 +2294,8 @@ def map_pos_to_trail(i: int, tm: ContentMapping) -> Tuple[Trail, int]:
     if i < 0:  raise IndexError(errmsg(i))
     try:
         trl_index = bisect.bisect_right(tm[0], i) - 1
+        if left_bias and trl_index > 0 and i - tm[0][trl_index] == 0:
+            trl_index -= 1
         return tm[1][trl_index], i - tm[0][trl_index]
     except IndexError:
         raise IndexError(errmsg(i))
@@ -2209,7 +2304,7 @@ def map_pos_to_trail(i: int, tm: ContentMapping) -> Tuple[Trail, int]:
 # EXPERIMENTAL!!! #####################################################
 
 @functools.singledispatch
-def insert_node(t, str_pos: int, node: Node, text_type: str = TOKEN_PTYPE):
+def insert_node(t, str_pos: int, node: Node):
     """Add a node at a particular position of string content into the
     tree. This is useful for inserting milestones."""
     raise TypeError(f'First parameter of "insert_node" must be of type DHParser.nodetree.Trail '
@@ -2227,23 +2322,25 @@ def _(t: Trail, str_pos: int, node: Node):
         i = parent.index(leaf)
         if str_pos == 0:
             parent.insert(i, node)
-        elif str_pos == leaf_len:
+            return
+        if str_pos == leaf_len:
             parent.insert(i + 1, node)
-        else:
+            return
+        if leaf.name == TOKEN_PTYPE:
             content = leaf.content
             parent.result = parent.result[:i] + \
                             (Node(leaf.name, content[:str_pos]), node,
                              Node(leaf.name, content[str_pos:])) + \
                             parent.result[i + 1:]
+            return
+    if str_pos == 0:
+        leaf.result = (node, Node(leaf.name, leaf.content))
+    elif str_pos == leaf_len:
+        leaf.result = (Node(leaf.name, leaf.content), node)
     else:
-        if str_pos == 0:
-            leaf.result = (node, Node(leaf.name, leaf.content))
-        elif str_pos == leaf_len:
-            leaf.result = (Node(leaf.name, leaf.content), node)
-        else:
-            content = leaf.content
-            leaf.result = (Node(leaf.name, content[:str_pos]), node,
-                           Node(leaf.name, content[str_pos:]))
+        content = leaf.content
+        leaf.result = (Node(leaf.name, content[:str_pos]), node,
+                       Node(leaf.name, content[str_pos:]))
 
 
 @insert_node.register(tuple)
@@ -2258,21 +2355,214 @@ def _(t: Node, rel_pos: int, node: Node):
     insert_node(tm, rel_pos, node)
 
 
+def split(node: Node, parent: Node, i: int, left_biased: bool = True) -> int:
+    """Splits a node at the given index (in case of a branch-node) or
+    string-position (in case of a leaf-node). Returns the index the
+    right part within the parent node after the split. (This means
+    that with Node.Insert(index, nd) nd will be inserted (exactly at
+    the split location.)
+
+    Examples::
+
+        >>> test_tree = parse_sxpr('(X (A "Hello, ") (B "Peter") (C " Smith"))').with_pos(0)
+        >>> X = copy.deepcopy(test_tree)
+
+        # test edge cases first
+        >>> split(X['B'], X, 0)
+        1
+        >>> print(X.as_sxpr())
+        (X (A "Hello, ") (B "Peter") (C " Smith"))
+        >>> split(X['B'], X, X['B'].strlen())
+        2
+        >>> print(X.as_sxpr())
+        (X (A "Hello, ") (B "Peter") (C " Smith"))
+
+        # standard case
+        >>> split(X['B'], X, 2)
+        2
+        >>> print(X.as_sxpr())
+        (X (A "Hello, ") (B "Pe") (B "ter") (C " Smith"))
+        >>> print(X.pick('B', reverse=True).pos)
+        9
+
+        # use slit() as praparation for adding markup
+        >>> X = copy.deepcopy(test_tree)
+        >>> a = split(X['A'], X, 6)
+        >>> a
+        1
+        >>> b = split(X['C'], X, 1)
+        >>> b
+        4
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (A " ") (B "Peter") (C " ") (C "Smith"))
+        >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
+        >>> X.result = X[:a] + (markup,) + X[b:]
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (em (A " ") (B "Peter") (C " ")) (C "Smith"))
+
+        # a more complex case: add markup to a nested tree
+        >>> X = parse_sxpr('(X (A "Hello, ") (B "Peter") (bold (C " Smith")))').with_pos(0)
+        >>> a = split(X['A'], X, 6)
+        >>> b0 = split(X['bold']['C'], X['bold'], 1)
+        >>> b0
+        1
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (A " ") (B "Peter") (bold (C " ") (C "Smith")))
+        >>> b = split(X['bold'], X, b0)
+        >>> b
+        4
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (A " ") (B "Peter") (bold (C " ")) (bold (C "Smith")))
+        >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
+        >>> X.result = X[:a] + (markup,) + X[b:]
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (em (A " ") (B "Peter") (bold (C " "))) (bold (C "Smith")))
+
+        # use left_bias hint for potentially ambiguous cases:
+        >>> X = parse_sxpr('(X (A ""))')
+        >>> split(X['A'], X, X['A'].strlen())
+        0
+        >>> split(X['A'], X, X['A'].strlen(), left_biased=False)
+        1
+    """
+    assert i >= 0
+    k = parent.index(node) + 1
+    if left_biased:
+        if i == 0:  return k - 1
+        if i == len(node._result):  return k
+    else:
+        if i == len(node._result):  return k
+        if i == 0:  return k - 1
+    right = Node(node.name, node._result[i:])
+    if node.has_attr():  right.with_attr(node.attr)
+    if  right._children:  right._pos = right._result[0]._pos
+    elif node._pos >= 0:  right._pos = node._pos + i
+    node.result = node._result[:i]
+    parent.result = parent._result[:k] + (right,) + parent.result[k:]
+    return k
+
+
+def deep_split(trail: Trail, i: int, left_biased: bool=True,
+               greedy: bool=True,
+               select: TrailSelector = ANY_TRAIL,
+               ignore: TrailSelector = NO_TRAIL) -> int:
+    """Split all nodes from the end of the trail up to,
+    but excluding the first node in the trail.
+
+    Exapmles::
+
+        >>> tree = parse_sxpr('(X (s "") (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t "")))')
+        >>> X = copy.deepcopy(tree)
+        >>> C = X.pick_trail('C')
+        >>> a = deep_split(C, 0)
+        >>> a
+        0
+        >>> F = X.pick_trail('F', reverse=True)
+        >>> b = deep_split(F, F[-1].strlen(), left_biased=False)
+        >>> b
+        3
+        >>> print(X.as_sxpr())
+        (X (s) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t)))
+        >>> a = deep_split(C, 0, greedy=False)
+        >>> a
+        1
+        >>> b = deep_split(F, F[-1].strlen(), left_biased=False, greedy=False)
+        >>> b
+        3
+        >>> print(X.as_sxpr())
+        (X (s) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!")) (B (t)))
+
+        >>> X = copy.deepcopy(tree).with_pos(0)
+        >>> C = X.pick_trail('C')
+        >>> a = deep_split(C, 4)
+        >>> E = X.pick_trail('E')
+        >>> b = deep_split(E, 0, left_biased=False)
+        >>> a, b
+        (2, 3)
+        >>> print(X.as_sxpr())
+        (X (s) (A (C "One,")) (A (C " ") (D "two, ")) (B (E "three, ") (F "four!") (t)))
+        >>> X.result = X[:a] + (Node('em', X[a:b]).with_pos(X[a].pos),) + X[b:]
+        >>> print(X.as_sxpr())
+        (X (s) (A (C "One,")) (em (A (C " ") (D "two, "))) (B (E "three, ") (F "four!") (t)))
+
+    """
+    parent = trail[-1]
+    for idx in range(2, len(trail) + 1):
+        node = parent
+        parent = trail[-idx]
+        i = split(node, parent, i, left_biased)
+        if greedy:
+            if left_biased:
+                if i > 0 and strlen_of(parent.children[:i], select, ignore) == 0:  i = 0
+            else:
+                L = len(parent.children)
+                if i < L and strlen_of(parent.children[i:], select, ignore) == 0:  i = L
+    return i
+
+
+def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
+              left_biased: bool = True, greedy: bool = True,
+              select: TrailSelector = ANY_TRAIL,
+              ignore: TrailSelector = NO_TRAIL) -> int:
+    """Returns the negative index of the first node in the trail, from which
+    on all nodes can be split or do not need to be split, because the
+    split-index lies to the left or right os the node.
+
+    Examples::
+
+    >>> tree = parse_sxpr('(doc (p (:Text "ABC")))')
+    >>> can_split([tree, tree[0], tree[0][0]], 1)
+    -1
+    >>> can_split([tree, tree[0], tree[0][0]], 0)
+    -2
+    >>> can_split([tree, tree[0], tree[0][0]], 3)
+    -2
+    >>> can_split([tree, tree[0], tree[0][0]], 1, splitable={})
+    0
+    """
+
+    # make a shallow copy of the trail's nodes, first.
+    t2 = [copy.copy(nd) for nd in t]
+    for k in range(1, len(t2)):
+        t2[k - 1].result = tuple((t2[k] if nd == t[k] else nd) for nd in t2[k - 1].result)
+    t = t2
+
+    for k in range(len(t) - 1):
+        node = t[-k - 1]
+        if i != 0 and i != len(node._result) and node.name not in splitable:
+            break
+        parent = t[-k - 2]
+        i = split(node, parent, i, left_biased)
+        if greedy:
+            if left_biased:
+                if i > 0 and strlen_of(parent.children[:i], select, ignore) == 0:  i = 0
+            else:
+                L = len(parent.children)
+                if i < L and strlen_of(parent.children[i:], select, ignore) == 0:  i = L
+    else:
+        node = t[0]
+        if i == 0 or i == len(node._result) or node.name in splitable:
+            k += 1
+    return -k
+
+
 @functools.singledispatch
 def markup(t, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
     """EXPERIMENTAL!!!"""
     raise TypeError(f'First parameter of "markup" must be of type DHParser.nodetree.ContentMapping '
                     f'or Node, but not {type(t)}')
 
-
 @markup.register(tuple)
 def _(t: ContentMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
     if start_pos == end_pos:
-        milestone = Node(name, '').with_attr(*attr_dict, **attributes)
-        insert_node(t, start_pos, milestone)
-        return milestone
+            milestone = Node(name, '').with_attr(*attr_dict, **attributes)
+            insert_node(t, start_pos, milestone)
+            return milestone
+    print(t[0])
     trail_A, pos_A = map_pos_to_trail(start_pos, t)
-    trail_B, pos_B = map_pos_to_trail(end_pos, t)
+    trail_B, pos_B = map_pos_to_trail(end_pos, t, left_bias=True)
+    print(pos_A, [nd.name for nd in trail_A])
+    print(pos_B, [nd.name for nd in trail_B])
     assert trail_A
     assert trail_B
     common_ancestor = None
@@ -2280,52 +2570,70 @@ def _(t: ContentMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **
         if a != b:  break
         common_ancestor = a
     assert common_ancestor
-    leaf_A = trail_A[-1]
-    leaf_B = trail_B[-1]
-    if common_ancestor == leaf_A:
-        assert common_ancestor == leaf_B
-        if len(trail_A) <= 1:
-            content = common_ancestor.content
-            new_result = []
-            if pos_A > 0:
-                new_result.append(Node(leaf_A.name, content[:pos_A]))
-            markup_node = Node(name, content[pos_A:pos_B]).with_attr(*attr_dict, **attributes)
-            new_result.append(markup_node)
-            if pos_B < len(content):
-                new_result.append(Node(leaf_B.name, content[:pos_B]))
-            common_ancestor.result = tuple(new_result)
-            return markup_node
-        else:
-            common_ancestor = trail_A[-2]
-            assert common_ancestor == trail_B[-2]
-            branch_A = leaf_A
-            branch_B = leaf_B
-    else:
-        branch_A = trail_A[i]
-        branch_B = trail_B[i]
+    print(common_ancestor.name)
 
-    i = common_ancestor.index(branch_A)
-    k = common_ancestor.index(branch_B)
-    new_result = list(common_ancestor.result[:i])
-    if pos_A > 0 and common_ancestor == trail_A[-2]:
-        new_result.append(Node(leaf_A.name, leaf_A.content[:pos_A]))
-        leaf_A.result = leaf_A.content[pos_A:]
-    markup_node = Node(name, common_ancestor.result[i:k + 1]).with_attr(*attr_dict, **attributes)
-    new_result.append(markup_node)
-    if pos_B < leaf_B.strlen() and common_ancestor == trail_B[-2]:
-        leaf_B.result = leaf_B.content[:pos_B]
-        new_result.append(Node(leaf_B.name, leaf_B.content[pos_B:]))
-    new_result.extend(list(common_ancestor.result[k + 1:]))
-    common_ancestor.result = tuple(new_result)
 
-    if not leaf_A.result:
-        trail_A = next(common_ancestor.select_trail(leaf_A))
-        del trail_A[-2][leaf_A]
-    if not leaf_B.result:
-        trail_B = next(common_ancestor.select_trail(leaf_A, reverse=True))
-        del trail_B[-2][leaf_B]
-
-    return markup_node
+# @markup.register(tuple)
+# def _(t: ContentMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
+#     if start_pos == end_pos:
+#         milestone = Node(name, '').with_attr(*attr_dict, **attributes)
+#         insert_node(t, start_pos, milestone)
+#         return milestone
+#     trail_A, pos_A = map_pos_to_trail(start_pos, t)
+#     trail_B, pos_B = map_pos_to_trail(end_pos, t)
+#     assert trail_A
+#     assert trail_B
+#     common_ancestor = None
+#     for i, (a, b) in enumerate(zip(trail_A, trail_B)):
+#         if a != b:  break
+#         common_ancestor = a
+#     assert common_ancestor
+#     leaf_A = trail_A[-1]
+#     leaf_B = trail_B[-1]
+#     if common_ancestor == leaf_A:
+#         assert common_ancestor == leaf_B
+#         if len(trail_A) <= 1:
+#             content = common_ancestor.content
+#             new_result = []
+#             if pos_A > 0:
+#                 new_result.append(Node(leaf_A.name, content[:pos_A]))
+#             markup_node = Node(name, content[pos_A:pos_B]).with_attr(*attr_dict, **attributes)
+#             new_result.append(markup_node)
+#             if pos_B < len(content):
+#                 new_result.append(Node(leaf_B.name, content[:pos_B]))
+#             common_ancestor.result = tuple(new_result)
+#             return markup_node
+#         else:
+#             common_ancestor = trail_A[-2]
+#             assert common_ancestor == trail_B[-2]
+#             branch_A = leaf_A
+#             branch_B = leaf_B
+#     else:
+#         branch_A = trail_A[i]
+#         branch_B = trail_B[i]
+#
+#     i = common_ancestor.index(branch_A)
+#     k = common_ancestor.index(branch_B)
+#     new_result = list(common_ancestor.result[:i])
+#     if pos_A > 0 and common_ancestor == trail_A[-2]:
+#         new_result.append(Node(leaf_A.name, leaf_A.content[:pos_A]))
+#         leaf_A.result = leaf_A.content[pos_A:]
+#     markup_node = Node(name, common_ancestor.result[i:k + 1]).with_attr(*attr_dict, **attributes)
+#     new_result.append(markup_node)
+#     if pos_B < leaf_B.strlen_of() and common_ancestor == trail_B[-2]:
+#         leaf_B.result = leaf_B.content[:pos_B]
+#         new_result.append(Node(leaf_B.name, leaf_B.content[pos_B:]))
+#     new_result.extend(list(common_ancestor.result[k + 1:]))
+#     common_ancestor.result = tuple(new_result)
+#
+#     if not leaf_A.result:
+#         trail_A = next(common_ancestor.select_trail(leaf_A))
+#         del trail_A[-2][leaf_A]
+#     if not leaf_B.result:
+#         trail_B = next(common_ancestor.select_trail(leaf_A, reverse=True))
+#         del trail_B[-2][leaf_B]
+#
+#     return markup_node
 
 
 @markup.register(Node)
