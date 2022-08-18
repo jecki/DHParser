@@ -908,7 +908,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # tree traversal and node selection #######################################
 
     def __getitem__(self, key: Union[NodeSelector, int, slice]) \
-            -> Union['Node', List['Node']]:
+            -> Union['Node', Tuple['Node', ...]]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
@@ -919,13 +919,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> tree['X']
             Node('X', (Node('c', 'd')))
             >>> tree['b']
-            [Node('b', 'X'), Node('b', 'Y')]
+            (Node('b', 'X'), Node('b', 'Y'))
 
-            >>> from DHParser.toolkit import as_list
-            >>> as_list(tree['b'])
-            [Node('b', 'X'), Node('b', 'Y')]
-            >>> as_list(tree['e'])
-            [Node('e', (Node('X', 'F')))]
+            >>> from DHParser.toolkit import as_list, as_tuple
+            >>> as_tuple(tree['b'])
+            (Node('b', 'X'), Node('b', 'Y'))
+            >>> as_tuple(tree['e'])
+            (Node('e', (Node('X', 'F'))),)
 
         :param key(str): A tag-name (string) or an index or a slice of the 
             child or children that shall be returned.
@@ -943,7 +943,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self._children[key]
         else:
             mf = create_match_function(key)
-            items = [child for child in self._children if mf(child)]
+            items = tuple(child for child in self._children if mf(child))
             if items:
                 return items if len(items) >= 2 else items[0]
             raise KeyError(str(key))
@@ -2447,7 +2447,8 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
                select: TrailSelector = ANY_TRAIL,
                ignore: TrailSelector = NO_TRAIL) -> int:
     """Split all nodes from the end of the trail up to,
-    but excluding the first node in the trail.
+    but excluding the first node in the trail. Returns the
+    index of the split location in the first node of the trail.
 
     Exapmles::
 
@@ -2485,6 +2486,12 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
         >>> print(X.as_sxpr())
         (X (s) (A (C "One,")) (em (A (C " ") (D "two, "))) (B (E "three, ") (F "four!") (t)))
 
+        # edge cases
+        >>> Y = parse_sxpr('(Y "123")')
+        >>> deep_split([Y], 1)
+        1
+        >>> print(Y.as_sxpr())
+        (Y "123")
     """
     parent = trail[-1]
     for idx in range(2, len(trail) + 1):
@@ -2517,8 +2524,14 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
     -2
     >>> can_split([tree, tree[0], tree[0][0]], 3)
     -2
-    >>> can_split([tree, tree[0], tree[0][0]], 1, splitable={})
+    >>> can_split([tree, tree[0], tree[0][0]], 1, splitable=set())
     0
+
+    # edge cases
+    >>> can_split([parse_sxpr('(p "123")')], 1)
+    0
+    >>> can_split([parse_sxpr('(:Text "123")')], 1)
+    -1
     """
 
     # make a shallow copy of the trail's nodes, first.
@@ -2527,7 +2540,7 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
         t2[k - 1].result = tuple((t2[k] if nd == t[k] else nd) for nd in t2[k - 1].result)
     t = t2
 
-    k = -1
+    k = 0
     for k in range(len(t) - 1):
         node = t[-k - 1]
         if i != 0 and i != len(node._result) and node.name not in splitable:
@@ -2547,14 +2560,67 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
     return -k
 
 
-def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
+def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = dict(),
                  splitable: Set[str] = frozenset({TOKEN_PTYPE}),
                  greedy: bool = True,
                  select: TrailSelector = ANY_TRAIL,
                  ignore: TrailSelector = NO_TRAIL):
-    # UNTESTED!
+    """Markup the content from string position i within the last node of
+    the trail up to the very end of the content of the first node of the
+    trail.
+
+    Examples::
+    >>> tree = parse_sxpr('(X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))')
+    >>> X = copy.deepcopy(tree)
+    >>> C_trail = X.pick_trail('C')
+    >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
+    >>> markup_right(C_trail, 2, 'em', dict(), splitable=all_tags)
+    >>> print(X.as_sxpr())
+    (X (A (C "12")) (em (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def")))
+    >>> X = copy.deepcopy(tree)
+    >>> C_trail = X.pick_trail('C')
+    >>> markup_right(C_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> print(X.as_sxpr())
+    (X (A (C "12") (em (C "3") (D "456"))) (em (B (E "789") (F "abc")) (G "def")))
+    >>> X = copy.deepcopy(tree)
+    >>> D_trail = X.pick_trail('D')
+    >>> markup_right(D_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> print(X.as_sxpr())
+    (X (A (C "123") (D "45") (em (D "6"))) (em (B (E "789") (F "abc")) (G "def")))
+    >>> X = copy.deepcopy(tree)
+    >>> D_trail = X.pick_trail('D')
+    >>> markup_right(D_trail, 2, 'em', dict(), splitable=all_tags - {'A', 'D'})
+    >>> print(X.as_sxpr())
+    (X (A (C "123") (D (:Text "45") (em "6"))) (em (B (E "789") (F "abc")) (G "def")))
+    >>> X = copy.deepcopy(tree)
+    >>> E_trail = X.pick_trail('E')
+    >>> markup_right(E_trail, 1, 'em', dict(), splitable=all_tags - {'E'})
+    >>> print(X.as_sxpr())
+    (X (A (C "123") (D "456")) (B (E (:Text "7") (em "89")) (em (F "abc"))) (em (G "def")))
+    >>> X = copy.deepcopy(tree)
+    >>> E_trail = X.pick_trail('E')
+    >>> markup_right(E_trail, 1, 'em', dict(), splitable=all_tags - {'B'})
+    >>> print(X.as_sxpr())
+    (X (A (C "123") (D "456")) (B (E "7") (em (E "89") (F "abc"))) (em (G "def")))
+    >>> X = copy.deepcopy(tree)
+    >>> E_trail = X.pick_trail('E')
+    >>> markup_right(E_trail, 1, 'em', dict(), splitable=all_tags)
+    >>> print(X.as_sxpr())
+    (X (A (C "123") (D "456")) (B (E "7")) (em (B (E "89") (F "abc")) (G "def")))
+
+    # edge cases
+    >>> X = parse_sxpr('(A "123")')
+    >>> markup_right([X], 1, 'em', dict(), splitable={'A'})
+    >>> print(X.as_sxpr())
+    (A (:Text "1") (em "23"))
+    >>> X = parse_sxpr('(A "123")')
+    >>> markup_right([X], 1, 'em', dict(), splitable={})
+    >>> print(X.as_sxpr())
+    (A (:Text "1") (em "23"))
+    """
     assert trail
     k = max(can_split(trail, i, splitable, True, greedy, select, ignore) - 1, -len(trail))
+    # k is parent-index of first node to split
     i = deep_split(trail[k:], i, True, greedy, select, ignore)
 
     nd = Node(name, trail[k]._result[i:]).with_attr(attr_dict)
@@ -2568,7 +2634,7 @@ def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
         trail[k].result = (text_node, nd)
 
     k -= 1
-    while abs(k) < len(trail) - 1:
+    while abs(k) <= len(trail):
         i = trail[k].index(trail[k + 1]) + 1
         if i < len(trail[k]._result):
             nd = Node(name, trail[k]._result[i:]).with_attr(attr_dict)
@@ -2582,7 +2648,59 @@ def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
                  greedy: bool = True,
                  select: TrailSelector = ANY_TRAIL,
                  ignore: TrailSelector = NO_TRAIL):
-    # UNTESTED!
+    """Markup the content from string position i within the last node of
+    the trail up to the very end of the content of the first node of the
+    trail.
+
+    Examples::
+    >>> tree = parse_sxpr('(X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))')
+    >>> X = copy.deepcopy(tree)
+    >>> C_trail = X.pick_trail('C')
+    >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
+    >>> markup_left(C_trail, 2, 'em', dict(), splitable=all_tags)
+    >>> print(X.as_sxpr())
+    (X (em (A (C "12"))) (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
+    >>> X = copy.deepcopy(tree)
+    >>> C_trail = X.pick_trail('C')
+    >>> markup_left(C_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> print(X.as_sxpr())
+    (X (A (em (C "12")) (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
+    >>> X = copy.deepcopy(tree)
+    >>> D_trail = X.pick_trail('D')
+    >>> markup_left(D_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> print(X.as_sxpr())
+    (X (A (em (C "123") (D "45")) (D "6")) (B (E "789") (F "abc")) (G "def"))
+    >>> X = copy.deepcopy(tree)
+    >>> D_trail = X.pick_trail('D')
+    >>> markup_left(D_trail, 2, 'em', dict(), splitable=all_tags - {'A', 'D'})
+    >>> print(X.as_sxpr())
+    (X (A (em (C "123")) (D (em "45") (:Text "6"))) (B (E "789") (F "abc")) (G "def"))
+    >>> X = copy.deepcopy(tree)
+    >>> E_trail = X.pick_trail('E')
+    >>> markup_left(E_trail, 1, 'em', dict(), splitable=all_tags - {'E'})
+    >>> print(X.as_sxpr())
+    (X (em (A (C "123") (D "456"))) (B (E (em "7") (:Text "89")) (F "abc")) (G "def"))
+    >>> X = copy.deepcopy(tree)
+    >>> E_trail = X.pick_trail('E')
+    >>> markup_left(E_trail, 1, 'em', dict(), splitable=all_tags - {'B'})
+    >>> print(X.as_sxpr())
+    (X (em (A (C "123") (D "456"))) (B (em (E "7")) (E "89") (F "abc")) (G "def"))
+    >>> X = copy.deepcopy(tree)
+    >>> E_trail = X.pick_trail('E')
+    >>> markup_left(E_trail, 1, 'em', dict(), splitable=all_tags)
+    >>> print(X.as_sxpr())
+    (X (em (A (C "123") (D "456")) (B (E "7"))) (B (E "89") (F "abc")) (G "def"))
+
+    # edge cases
+    >>> X = parse_sxpr('(A "123")')
+    >>> markup_left([X], 1, 'em', dict(), splitable={'A'})
+    >>> print(X.as_sxpr())
+    (A (em "1") (:Text "23"))
+    >>> X = parse_sxpr('(A "123")')
+    >>> markup_left([X], 1, 'em', dict(), splitable={})
+    >>> print(X.as_sxpr())
+    (A (em "1") (:Text "23"))
+    """
     assert trail
     k = max(can_split(trail, i, splitable, False, greedy, select, ignore) - 1, -len(trail))
     i = deep_split(trail[k:], i, False, greedy, select, ignore)
@@ -2592,12 +2710,12 @@ def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
     if nd._children:
         trail[k].result = (nd,) + trail[k]._result[i:]
     else:
-        text_node = Node(TOKEN_PTYPE, trail[k]._result[:i])
+        text_node = Node(TOKEN_PTYPE, trail[k]._result[i:])
         text_node._pos = trail[k]._pos + i if trail[k]._pos >= 0 else -1
         trail[k].result = (nd, text_node)
 
     k -= 1
-    while abs(k) < len(trail) - 1:
+    while abs(k) <= len(trail):
         i = trail[k].index(trail[k + 1])
         if i > 0:
             nd = Node(name, trail[k]._result[:i]).with_attr(attr_dict)
