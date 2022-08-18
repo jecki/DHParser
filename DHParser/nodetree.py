@@ -2273,16 +2273,16 @@ def generate_content_mapping(node: Node,
     return pos_list, trl_list
 
 
-def map_pos_to_trail(i: int, tm: ContentMapping, left_bias: bool = False) -> Tuple[Trail, int]:
+def map_pos_to_trail(i: int, tm: ContentMapping, left_biased: bool = False) -> Tuple[Trail, int]:
     """Yields the trail and relative position for the absolute
     position `i`.
 
     :param i:   a position in the content of the tree for which the
         trail mapping `cm` was generated
     :param tm:  a trail mapping
-    :param left_bias: yields the location at the end of the previous
-        trail rather than the location at the very beginning of a trail.
-        Default value is "False".
+    :param left_biased: yields the location after the end of the previous
+        trail rather than the location at the very beginning of the
+        next trail. Default value is "False".
     :returns:   tuple (trail, relative position) where relative
         position is the position of i relative to the actual
         position of the last node in the trail.
@@ -2294,7 +2294,7 @@ def map_pos_to_trail(i: int, tm: ContentMapping, left_bias: bool = False) -> Tup
     if i < 0:  raise IndexError(errmsg(i))
     try:
         trl_index = bisect.bisect_right(tm[0], i) - 1
-        if left_bias and trl_index > 0 and i - tm[0][trl_index] == 0:
+        if left_biased and trl_index > 0 and i - tm[0][trl_index] == 0:
             trl_index -= 1
         return tm[1][trl_index], i - tm[0][trl_index]
     except IndexError:
@@ -2507,7 +2507,7 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
     return i
 
 
-def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
+def can_split(t: Trail, i: int, divisable: Set[str] = frozenset({TOKEN_PTYPE}),
               left_biased: bool = True, greedy: bool = True,
               select: TrailSelector = ANY_TRAIL,
               ignore: TrailSelector = NO_TRAIL) -> int:
@@ -2524,7 +2524,7 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
     -2
     >>> can_split([tree, tree[0], tree[0][0]], 3)
     -2
-    >>> can_split([tree, tree[0], tree[0][0]], 1, splitable=set())
+    >>> can_split([tree, tree[0], tree[0][0]], 1, divisable=set())
     0
 
     # edge cases
@@ -2533,6 +2533,7 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
     >>> can_split([parse_sxpr('(:Text "123")')], 1)
     -1
     """
+    if not t:  return 0
 
     # make a shallow copy of the trail's nodes, first.
     t2 = [copy.copy(nd) for nd in t]
@@ -2543,7 +2544,7 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
     k = 0
     for k in range(len(t) - 1):
         node = t[-k - 1]
-        if i != 0 and i != len(node._result) and node.name not in splitable:
+        if i != 0 and i != len(node._result) and node.name not in divisable:
             break
         parent = t[-k - 2]
         i = split(node, parent, i, left_biased)
@@ -2555,13 +2556,13 @@ def can_split(t: Trail, i: int, splitable: Set[str] = frozenset({TOKEN_PTYPE}),
                 if i < L and strlen_of(parent.children[i:], select, ignore) == 0:  i = L
     else:
         node = t[0]
-        if i == 0 or i == len(node._result) or node.name in splitable:
+        if i == 0 or i == len(node._result) or node.name in divisable:
             k += 1
     return -k
 
 
 def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = dict(),
-                 splitable: Set[str] = frozenset({TOKEN_PTYPE}),
+                 divisable: Set[str] = frozenset({TOKEN_PTYPE}),
                  greedy: bool = True,
                  select: TrailSelector = ANY_TRAIL,
                  ignore: TrailSelector = NO_TRAIL):
@@ -2574,52 +2575,52 @@ def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = di
     >>> X = copy.deepcopy(tree)
     >>> C_trail = X.pick_trail('C')
     >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
-    >>> markup_right(C_trail, 2, 'em', dict(), splitable=all_tags)
+    >>> markup_right(C_trail, 2, 'em', dict(), divisable=all_tags)
     >>> print(X.as_sxpr())
     (X (A (C "12")) (em (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def")))
     >>> X = copy.deepcopy(tree)
     >>> C_trail = X.pick_trail('C')
-    >>> markup_right(C_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> markup_right(C_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
     >>> print(X.as_sxpr())
     (X (A (C "12") (em (C "3") (D "456"))) (em (B (E "789") (F "abc")) (G "def")))
     >>> X = copy.deepcopy(tree)
     >>> D_trail = X.pick_trail('D')
-    >>> markup_right(D_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> markup_right(D_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
     >>> print(X.as_sxpr())
     (X (A (C "123") (D "45") (em (D "6"))) (em (B (E "789") (F "abc")) (G "def")))
     >>> X = copy.deepcopy(tree)
     >>> D_trail = X.pick_trail('D')
-    >>> markup_right(D_trail, 2, 'em', dict(), splitable=all_tags - {'A', 'D'})
+    >>> markup_right(D_trail, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
     >>> print(X.as_sxpr())
     (X (A (C "123") (D (:Text "45") (em "6"))) (em (B (E "789") (F "abc")) (G "def")))
     >>> X = copy.deepcopy(tree)
     >>> E_trail = X.pick_trail('E')
-    >>> markup_right(E_trail, 1, 'em', dict(), splitable=all_tags - {'E'})
+    >>> markup_right(E_trail, 1, 'em', dict(), divisable=all_tags - {'E'})
     >>> print(X.as_sxpr())
     (X (A (C "123") (D "456")) (B (E (:Text "7") (em "89")) (em (F "abc"))) (em (G "def")))
     >>> X = copy.deepcopy(tree)
     >>> E_trail = X.pick_trail('E')
-    >>> markup_right(E_trail, 1, 'em', dict(), splitable=all_tags - {'B'})
+    >>> markup_right(E_trail, 1, 'em', dict(), divisable=all_tags - {'B'})
     >>> print(X.as_sxpr())
     (X (A (C "123") (D "456")) (B (E "7") (em (E "89") (F "abc"))) (em (G "def")))
     >>> X = copy.deepcopy(tree)
     >>> E_trail = X.pick_trail('E')
-    >>> markup_right(E_trail, 1, 'em', dict(), splitable=all_tags)
+    >>> markup_right(E_trail, 1, 'em', dict(), divisable=all_tags)
     >>> print(X.as_sxpr())
     (X (A (C "123") (D "456")) (B (E "7")) (em (B (E "89") (F "abc")) (G "def")))
 
     # edge cases
     >>> X = parse_sxpr('(A "123")')
-    >>> markup_right([X], 1, 'em', dict(), splitable={'A'})
+    >>> markup_right([X], 1, 'em', dict(), divisable={'A'})
     >>> print(X.as_sxpr())
     (A (:Text "1") (em "23"))
     >>> X = parse_sxpr('(A "123")')
-    >>> markup_right([X], 1, 'em', dict(), splitable={})
+    >>> markup_right([X], 1, 'em', dict(), divisable=set())
     >>> print(X.as_sxpr())
     (A (:Text "1") (em "23"))
     """
     assert trail
-    k = max(can_split(trail, i, splitable, True, greedy, select, ignore) - 1, -len(trail))
+    k = max(can_split(trail, i, divisable, True, greedy, select, ignore) - 1, -len(trail))
     # k is parent-index of first node to split
     i = deep_split(trail[k:], i, True, greedy, select, ignore)
 
@@ -2644,7 +2645,7 @@ def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = di
 
 
 def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
-                 splitable: Set[str] = frozenset({TOKEN_PTYPE}),
+                 divisable: Set[str] = frozenset({TOKEN_PTYPE}),
                  greedy: bool = True,
                  select: TrailSelector = ANY_TRAIL,
                  ignore: TrailSelector = NO_TRAIL):
@@ -2657,52 +2658,52 @@ def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
     >>> X = copy.deepcopy(tree)
     >>> C_trail = X.pick_trail('C')
     >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
-    >>> markup_left(C_trail, 2, 'em', dict(), splitable=all_tags)
+    >>> markup_left(C_trail, 2, 'em', dict(), divisable=all_tags)
     >>> print(X.as_sxpr())
     (X (em (A (C "12"))) (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
     >>> X = copy.deepcopy(tree)
     >>> C_trail = X.pick_trail('C')
-    >>> markup_left(C_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> markup_left(C_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
     >>> print(X.as_sxpr())
     (X (A (em (C "12")) (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
     >>> X = copy.deepcopy(tree)
     >>> D_trail = X.pick_trail('D')
-    >>> markup_left(D_trail, 2, 'em', dict(), splitable=all_tags - {'A'})
+    >>> markup_left(D_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
     >>> print(X.as_sxpr())
     (X (A (em (C "123") (D "45")) (D "6")) (B (E "789") (F "abc")) (G "def"))
     >>> X = copy.deepcopy(tree)
     >>> D_trail = X.pick_trail('D')
-    >>> markup_left(D_trail, 2, 'em', dict(), splitable=all_tags - {'A', 'D'})
+    >>> markup_left(D_trail, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
     >>> print(X.as_sxpr())
     (X (A (em (C "123")) (D (em "45") (:Text "6"))) (B (E "789") (F "abc")) (G "def"))
     >>> X = copy.deepcopy(tree)
     >>> E_trail = X.pick_trail('E')
-    >>> markup_left(E_trail, 1, 'em', dict(), splitable=all_tags - {'E'})
+    >>> markup_left(E_trail, 1, 'em', dict(), divisable=all_tags - {'E'})
     >>> print(X.as_sxpr())
     (X (em (A (C "123") (D "456"))) (B (E (em "7") (:Text "89")) (F "abc")) (G "def"))
     >>> X = copy.deepcopy(tree)
     >>> E_trail = X.pick_trail('E')
-    >>> markup_left(E_trail, 1, 'em', dict(), splitable=all_tags - {'B'})
+    >>> markup_left(E_trail, 1, 'em', dict(), divisable=all_tags - {'B'})
     >>> print(X.as_sxpr())
     (X (em (A (C "123") (D "456"))) (B (em (E "7")) (E "89") (F "abc")) (G "def"))
     >>> X = copy.deepcopy(tree)
     >>> E_trail = X.pick_trail('E')
-    >>> markup_left(E_trail, 1, 'em', dict(), splitable=all_tags)
+    >>> markup_left(E_trail, 1, 'em', dict(), divisable=all_tags)
     >>> print(X.as_sxpr())
     (X (em (A (C "123") (D "456")) (B (E "7"))) (B (E "89") (F "abc")) (G "def"))
 
     # edge cases
     >>> X = parse_sxpr('(A "123")')
-    >>> markup_left([X], 1, 'em', dict(), splitable={'A'})
+    >>> markup_left([X], 1, 'em', dict(), divisable={'A'})
     >>> print(X.as_sxpr())
     (A (em "1") (:Text "23"))
     >>> X = parse_sxpr('(A "123")')
-    >>> markup_left([X], 1, 'em', dict(), splitable={})
+    >>> markup_left([X], 1, 'em', dict(), divisable=set())
     >>> print(X.as_sxpr())
     (A (em "1") (:Text "23"))
     """
     assert trail
-    k = max(can_split(trail, i, splitable, False, greedy, select, ignore) - 1, -len(trail))
+    k = max(can_split(trail, i, divisable, False, greedy, select, ignore) - 1, -len(trail))
     i = deep_split(trail[k:], i, False, greedy, select, ignore)
 
     nd = Node(name, trail[k]._result[:i]).with_attr(attr_dict)
@@ -2724,31 +2725,52 @@ def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
         k -= 1
 
 
-@functools.singledispatch
-def markup(t, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
-    """EXPERIMENTAL!!!"""
-    raise TypeError(f'First parameter of "markup" must be of type DHParser.nodetree.ContentMapping '
-                    f'or Node, but not {type(t)}')
+def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attributes):
+    """Adds markup to a leaf node, incidentally turning the leaf node into a branch node."""
+    assert not node._children
+    seg_1 = Node(TOKEN_PTYPE, node._result[:start])
+    seg_1._pos = node._pos
+    seg_2 = Node(name, node._result[start:end]).with_attr(*attr_dict, **attributes)
+    seg_2._pos = node._pos + start if node._pos >= 0 else -1
+    seg_3 = Node(TOKEN_PTYPE, node._result[end:])
+    seg_3._pos = node._pos + end if node._pos >= 0 else -1
+    node.result = tuple(nd for nd in (seg_1, seg_2, seg_3) if nd._result)
 
-@markup.register(tuple)
-def _(t: ContentMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
+
+def force_markup(t: ContentMapping, start_pos: int, end_pos: int, name: str, attr_dict: Dict[str, Any],
+      divisable: Set[str] = frozenset({TOKEN_PTYPE}), greedy: bool = True,
+      select: TrailSelector = ANY_TRAIL, ignore: TrailSelector = NO_TRAIL):
     if start_pos == end_pos:
-            milestone = Node(name, '').with_attr(*attr_dict, **attributes)
-            insert_node(t, start_pos, milestone)
-            return milestone
-    print(t[0])
+        milestone = Node(name, '').with_attr(attr_dict)
+        insert_node(t, start_pos, milestone)
+        return
     trail_A, pos_A = map_pos_to_trail(start_pos, t)
-    trail_B, pos_B = map_pos_to_trail(end_pos, t, left_bias=True)
-    print(pos_A, [nd.name for nd in trail_A])
-    print(pos_B, [nd.name for nd in trail_B])
+    trail_B, pos_B = map_pos_to_trail(end_pos, t, left_biased=True)
     assert trail_A
     assert trail_B
     common_ancestor = None
+    i = 0
     for i, (a, b) in enumerate(zip(trail_A, trail_B)):
         if a != b:  break
         common_ancestor = a
     assert common_ancestor
-    print(common_ancestor.name)
+    if not common_ancestor._children:
+        if i == 0 or common_ancestor.name not in divisable:
+            markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
+            return
+        i -= 1
+    stump_A = trail_A[i:]
+    stump_B = trail_B[i:]
+    q = can_split(stump_A[1:], pos_A, divisable, True, greedy, select, ignore)
+    r = can_split(stump_B[1:], pos_A, divisable, False, greedy, select, ignore)
+    if q == len(stump_A) - 1 and r == len(stump_B) -1:
+        i = deep_split(stump_A, pos_A, True, greedy, select, ignore)
+        k = deep_split(stump_B, pos_B, False, greedy, select, ignore)
+        nd = Node(name, common_ancestor[i:k]).with_attr(attr_dict)
+        nd._pos = common_ancestor[i]._pos
+        common_ancestor.result = common_ancestor[:i] + (nd,) + common_ancestor[k:]
+        return
+
 
 
 # @markup.register(tuple)
@@ -2814,10 +2836,7 @@ def _(t: ContentMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **
 #     return markup_node
 
 
-@markup.register(Node)
-def _(t: Node, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
-    tm = generate_content_mapping(t)
-    return markup(tm, start_pos, end_pos, *attr_dict, **attributes)
+
 
 
 
