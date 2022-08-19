@@ -2323,10 +2323,10 @@ def _(t: Trail, str_pos: int, node: Node) -> Node:
         i = parent.index(leaf)
         if str_pos == 0:
             parent.insert(i, node)
-            return
+            return parent
         if str_pos == leaf_len:
             parent.insert(i + 1, node)
-            return
+            return parent
         if leaf.name == TOKEN_PTYPE:
             content = leaf.content
             parent.result = parent.result[:i] + \
