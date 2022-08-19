@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "09209816912c3c12efbd07233f9a14bf"
+    source_hash__ = "ff43ac15aba174b3001eb07c5058ba9d"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -279,7 +279,7 @@ def get_grammar() -> LaTeXGrammar:
     return grammar
     
 def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 
 #######################################################################

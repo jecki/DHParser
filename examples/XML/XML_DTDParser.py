@@ -77,7 +77,7 @@ class XML_DTDGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "3f11d9324aa77a9fd151f45efa298722"
+    source_hash__ = "cd1662e4b959ba3594ba074c594c54e9"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -200,7 +200,7 @@ def get_grammar() -> XML_DTDGrammar:
     return grammar
     
 def parse_XML_DTD(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 
 #######################################################################

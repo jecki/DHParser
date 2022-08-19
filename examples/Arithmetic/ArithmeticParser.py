@@ -70,7 +70,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "2ad420cd962f0f00d69909df3a582685"
+    source_hash__ = "48d1f2ae95c2236fa86e1c17466ba685"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -112,7 +112,7 @@ def get_grammar() -> ArithmeticGrammar:
     return grammar
     
 def parse_Arithmetic(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 
 #######################################################################

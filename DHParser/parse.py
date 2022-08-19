@@ -1577,7 +1577,7 @@ class Grammar:
         Returns:
             Node: The root node to the parse tree.
         """
-        assert source_mapping is None or callable(source_mapping)
+        assert source_mapping is None or callable(source_mapping), source_mapping
 
         @cython.returns(cython.int)
         def tail_pos(predecessors: Union[List[Node], Tuple[Node, ...], None]) -> int:

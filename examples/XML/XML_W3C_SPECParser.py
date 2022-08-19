@@ -97,7 +97,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "4df2e0972236a1c2458ea86eefa8f29d"
+    source_hash__ = "849389162fff5129c9f2101567f242da"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -204,7 +204,7 @@ def get_grammar() -> XML_W3C_SPECGrammar:
     return grammar
     
 def parse_XML_W3C_SPEC(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 
 #######################################################################

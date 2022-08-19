@@ -142,7 +142,7 @@ def get_grammar() -> JSONGrammar:
     return grammar
     
 def parse_JSON(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 
 #######################################################################

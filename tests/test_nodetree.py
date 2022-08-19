@@ -1063,7 +1063,9 @@ class TestMarkupInsertion:
         insert_node(tm, i, milestone)
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
-        assert xml == '<document>In <ref type="subj" target="Charlottenburg_S00231"/>Charlot<lb/>tenburg steht ein Schloss.</document>'
+        assert xml == ('<document>In <ref type="subj" '
+                       'target="Charlottenburg_S00231"/>Charlot<lb/>tenburg steht ein '
+                       'Schloss.</document>')
 
     def test_insert_milestone_2(self):
         empty_tags = set()
@@ -1075,7 +1077,9 @@ class TestMarkupInsertion:
         insert_node(tm, m.start(), milestone)
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
-        assert xml == '<document><app n="g"><lem>silvae</lem><ref type="subj" target="silva_glandifera_S01229"/><rdg wit="A">silvae, </rdg></app> glandiferae</document>'
+        assert xml == ('<document><app n="g"><lem>silvae</lem><ref type="subj" '
+                       'target="silva_glandifera_S01229"/><rdg wit="A">silvae, </rdg></app> '
+                       'glandiferae</document>')
 
     def test_insert_markup_1(self):
         empty_tags = set()
@@ -1084,28 +1088,41 @@ class TestMarkupInsertion:
         assert i >= 0
         k = i + len("Charlottenburg")
         tm = generate_content_mapping(tree)
-        markup(tm, i, k, "ref", type="subj", target="Charlottenburg_S00231")
+        markup(tm, i, k, "ref", { 'type':"subj", 'target':"Charlottenburg_S00231"})
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
-        assert xml == '<document>In <ref type="subj" target="Charlottenburg_S00231">Charlot<lb/>tenburg</ref></document>'
-
-    # def test_insert_markup_2(self):
-    #     empty_tags = set()
-    #     tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-    #     m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
-    #     tm = generate_content_mapping(tree)
-    #     markup(tm, m.start(), m.end(), "ref", type="subj", target="silva_glandifera_S01229")
-    #     xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
-    #                       empty_tags=empty_tags)
-    #     assert xml == '<document><ref type="subj" target="silva_glandifera_S01229"><app n="g"><lem>silvae</lem><rdg wit="A">silvae, </rdg></app> glandiferae</ref></document>'
+        assert xml == ('<document>In <ref type="subj" '
+                       'target="Charlottenburg_S00231">Charlot<lb/>tenburg</ref> steht ein '
+                       'Schloss.</document>')
 
     def test_insert_markup_2(self):
         empty_tags = set()
+        tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
+        tm = generate_content_mapping(tree)
+        markup(tm, m.start(), m.end(), "ref", {'type': "subj", 'target': "silva_glandifera_S01229"})
+        xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
+                          empty_tags=empty_tags)
+        assert xml == ('<document><app n="g"><lem>silvae</lem><ref type="subj" '
+                       'target="silva_glandifera_S01229"><rdg wit="A">silvae, </rdg></ref></app><ref '
+                        'type="subj" target="silva_glandifera_S01229"> glandiferae</ref></document>')
+
+    def test_insert_markup_3(self):
+        empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-        print(tree.as_sxpr())
         m = next(re.finditer(r'Anfang war das Wort', tree.content))
         cm = generate_content_mapping(tree)
         markup(cm, m.start(), m.end(), "a")
+        assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
+            '<doc>Am <outer><a><inner>Anfang</inner> war das Wort</a></outer>.</doc>'
+        empty_tags = set()
+        tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        m = next(re.finditer(r'Am Anfang war', tree.content))
+        cm = generate_content_mapping(tree)
+        markup(cm, m.start(), m.end(), "a")
+        assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
+            '<doc><a>Am </a><outer><a><inner>Anfang</inner> war</a> das Wort</outer>.</doc>'
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

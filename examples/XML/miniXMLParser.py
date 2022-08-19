@@ -93,7 +93,7 @@ class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML source file.
     """
     element = Forward()
-    source_hash__ = "f99d5939cdddcb8ec54618e3e48f1593"
+    source_hash__ = "4eda713a95a992e56e50bebb46ea43a5"
     disposable__ = re.compile('EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -135,7 +135,7 @@ def get_grammar() -> miniXMLGrammar:
     return grammar
     
 def parse_miniXML(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 
 #######################################################################

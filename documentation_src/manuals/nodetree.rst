@@ -389,7 +389,7 @@ as well as a dictionary-like access, with the difference that a "key" may occur
 several times::
 
     >>> sentence['word']
-    [Node('word', 'This'), Node('word', 'is')]
+    (Node('word', 'This'), Node('word', 'is'))
     >>> sentence['phrase']
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
 
