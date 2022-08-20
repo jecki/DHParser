@@ -214,7 +214,7 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
     elif isinstance(criterion, str):
         return lambda nd: nd.name == criterion
     elif callable(criterion):
-        for _, typ in criterion.__annotations__:
+        for typ in criterion.__annotations__.values():
             if typ is not Node:
                 raise ValueError(f'First argument of callable criterion '
                                  f'{criterion} must have type Node, not {typ}!')

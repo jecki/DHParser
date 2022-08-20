@@ -54,7 +54,7 @@ other data-structures than node-trees. Or it must be made sure otherwise that
 the "fallback_compiler"-method will never be called, for example by providing
 "on_NAME"-methods for all possible node-names. This technique has been used in
 the JSON-compiler-example in the "Overview"-section of this manual (see
-`json_compiler`_). 
+:ref:`json_compiler`). 
 
 Using class :py:class:`~compile.Compiler` for merely transforming data or using
 it for deriving different kinds data-structures or even, as with a classical
