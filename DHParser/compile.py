@@ -411,7 +411,7 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
     return result
 
 
-Junction = Tuple[str, CompilerFactory, str]
+Junction = Tuple[str, CompilerFactory, str]  # source stage name, source->target, target stage name
 
 
 def run_pipeline(junctions: Set[Junction],

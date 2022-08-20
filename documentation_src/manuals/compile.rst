@@ -36,7 +36,7 @@ Class Compiler
 Class :py:class:`~compile.Compiler` provides the scaffolding for
 tree-transformations based on the visitor-pattern. Typically, you'd derive a
 custom-compilation class from the "Compiler"-class and add "on_NAME"-methods for
-transforming nodes with a particular name. These methods are calle the
+transforming nodes with a particular name. These methods are called the
 "compilation-methods". It is also possible, though less common, to add
 "attr_ATTRIBUTENAME"-methods that will be called on all those nodes that have an
 attribute of that name. The Compiler-class itself is callable and the
@@ -220,7 +220,7 @@ Most of the magic is contained in the "on_element"-method, which renames the
 "element"-nodes with the tag-name found in its starting- and ending-tag-children
 and then drops these children entirely. (Because they will be dropped anyway,
 it is not necessary to define a compilation-method for the STag and ETag-nodes!)
-Finally, the remaining "content"-child is reduced to the renamend element-node.
+Finally, the remaining "content"-child is reduced to the renamed element-node.
 
 Like all tree-transformations in DHParser, Compilation-methods are free to
 change the tree in-place. If you want to retain the structure of the tree before
@@ -362,7 +362,7 @@ Initializing and Finalizing
 Class compiler provides several hooks to initialize or
 prepare the compilation-process before it is started and to finalize
 it after it has been finished. For initialization, there are two
-overloadable methods:
+methods that can be overloaded:
 
 1. the :py:meth:`~compile.Compiler.reset`-method which is called both by the
    constructor (i.e. "__init__"-method) of the class and at the very beginning
@@ -371,7 +371,7 @@ overloadable methods:
    the compiler is invoked by running the Compile-object.
 
    The reset method should contain all initializations that can be done
-   indepently of the concrete node-tree that is going to be compiled.
+   independently of the concrete node-tree that is going to be compiled.
 
 2. the :py:meth:`~compile.Compiler.prepare`-method which will be called
    just before the first compile-method, i.e. the compile-method of the
@@ -394,16 +394,16 @@ For finalization, there are again two "hooks", although of different kind:
    after the compilation has been finished, but before the
    Compiler.finalize-method is called.
 
-   While it would of course be possible to concentrate all wrap-up task in this
-   methods, the mechanism of the finalizer-list is convenient, because it allows
-   to define a wrap-up tasks as local functions of compilation-methods and defer
-   their execution to the end of the overall compilation-process. Or, in other
-   words, finalizer-tasks can be defined within the context to which they are
-   logically connected. A typical use case are structural changes to the
-   data-tree which could hamper the compilation if not deferred till the very
-   end.
+   While it would of course be possible to concentrate all wrap-up task in the
+   finalizer-method, the mechanism of the finalizer-list can be convenient,
+   because it allows to define a wrap-up tasks as local functions of
+   compilation-methods and defer their execution to the end of the overall
+   compilation-process. Or, in other words, finalizer-tasks can be defined
+   within the context to which they are logically connected. A typical use case
+   are structural changes to the data-tree which could hamper the compilation if
+   not deferred till the very end.
 
-   A disadvantage of finalizers in contrast to the finalization-method, hoewver,
+   A disadvantage of finalizers in contrast to the finalization-method, however,
    is that it becomes harder to keep unexpected side effects of finalizers on
    other finalizers in check if the various finalizers are contextually
    separated from each other.
@@ -412,7 +412,40 @@ For finalization, there are again two "hooks", although of different kind:
 Processing Pipelines
 --------------------
 
+The Standard-pipeline
+^^^^^^^^^^^^^^^^^^^^^
+
+When compiling a document in a domain specific notation or language, DHParser assumes
+the same standard-pipeline of four steps: 
+
+1. *preprocessing*, which is a str -> str transformation. More precisely, it
+   takes a text document as input and yields a text document as well as a
+   source-mapping-table as output. The output document of the preprocessor is
+   usually a modified version of the input document. 
+
+2. *parsing*, which is a str -> node-tree transformation. More precisely, it yields
+   the (potentially already somewhat simplified) concrete syntax-tree of the 
+   input-text. A list of parsing-errors may have been attached to the root-node of
+   that syntax-tree.
+   
+3. *AST-transformation*, which is a node-tree -> node-tree transformation that 
+   converts the concrete syntax-tree (in-place) into the abstract-syntax-tree. Again,
+   errors may have been added to the error-list of the root-node.
+
+4. *compiling*: which is a node-tree -> anything transformation. More precisely, it
+   takes the abstract-syntax-tree as input and yields the compiled data as output. 
+   What format the compiled data is, depends entirely on the compiler. It can be 
+   a another node-tree, but also anything else. The abstract-syntax-tree may be 
+   changed or even destroyed during the compilation. In any case, errors that occur
+   during compilation will again be reported to the root-node of the tree and can
+   later be collected by accessing ``root.errors``
+
+The ...Parser.py-script that is autogenerated by DHParser when compiling an
+EBNF-grammer, provides transformation-functions for each of these steps and
+generators that yield a thread-local-version of each of these
+transformation-functions or callable transformation-classes.
 
 
-
+The extended pipeline
+^^^^^^^^^^^^^^^^^^^^^
 
