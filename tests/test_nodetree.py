@@ -110,6 +110,42 @@ XML_EXAMPLE = '''<?xml version="1.0" encoding="UTF-8"?>
   Some Mixed Content...
 </note>'''
 
+XML_EXAMPLE_2 = '''<TEI xmlns:abb="http://www.abbyy.com/FineReader_xml/FineReader10-schema-v1.xml" xmlns:tei="http://www.tei-c.org/ns/1.0" xmlns:mwg="http://mwg-digital.badw.de">
+  <teiHeader>
+    <!--<fileDesc>
+      <titleStmt>
+        <title>Die römische Agrargeschichte in ihrer Bedeutung für das Staats- und Privatrecht
+          (digitale Edition)</title>
+        <author>Max Weber</author>
+        <editor>Jürgen Deininger</editor>
+        <editor>Bayerische Akademie der Wissenschaften; wissenschaftliche Betreuung: Edith Hanke
+          (für die digitale Edition)</editor>
+      </titleStmt>
+      <editionStmt>
+        <edition>
+          <date>2021-12-01</date>
+        </edition>
+      </editionStmt>
+      <publicationStmt>
+        <p/>
+      </publicationStmt>
+      <sourceDesc>
+        <p/>
+      </sourceDesc>
+    </fileDesc>
+    <encodingDesc>
+      <p>TEI-XML, UTF-8</p>
+    </encodingDesc>
+    <revisionDesc>
+      <listChange>
+        <change>
+          <date>2021-12-01</date>
+          <name>BAdW</name>
+        </change>
+      </listChange>
+    </revisionDesc>-->
+  </teiHeader>
+</TEI>'''
 
 class TestParseXML:
     def test_roundtrip(self):
@@ -192,11 +228,18 @@ class TestParseXML:
         description = tree.pick('rdf:Description')
         assert description.has_attr('bibtex:title')
 
+    def test_comments(self):
+        tree = parse_xml('<xml><!-- comment --></xml>')
+        assert tree.as_sxpr() == '(xml)'
+        tree = parse_xml(XML_EXAMPLE_2)
+        assert True  # yeah, no endless loop!
+
     def test_serialize_xml(self):
         root = RootNode(parse_xml(XML_EXAMPLE))
         root.string_tags.update({':Text'})
         root.empty_tags.update({'priority'})
         assert root.as_xml() == XML_EXAMPLE[XML_EXAMPLE.find('\n') + 1:]
+
 
 
 class TestParseJSON:

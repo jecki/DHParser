@@ -3709,10 +3709,22 @@ def parse_xml(xml: Union[str, StringView],
             restart = s.index(match.end())
         return s[restart:], attributes
 
+    def skip_comment(s: StringView) -> StringView:
+        assert s[:4] == "<!--"
+        i = s.find('-->')
+        if i < 0:
+            if strict_mode:
+                raise ValueError(get_pos_str(s) + " comment is never closed!")
+            else:
+                return s[4:]
+        else:
+            return s[i + 3:]
+
     def skip_special_tag(s: StringView) -> StringView:
         """Skip special tags, e.g. <?...>, <!...>, and return the string
         view at the position of the next normal tag."""
         assert s[:2] in ('<!', '<?')
+        assert s[:4] != '<!--'
         m = s.search(RX_XML_SPECIAL_TAG)
         i = s.index(m.start()) if m else len(s)
         k = s.rfind(">", end=i)
@@ -3788,7 +3800,9 @@ def parse_xml(xml: Union[str, StringView],
                 if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
                     res.append(Node(string_tag, leaf))
                 if s[:1] == "<":
-                    if s[:2] in ("<?", "<!"):
+                    if s[:4] == '<!--':
+                        s = skip_comment(s)
+                    elif s[:2] in ("<?", "<!"):
                         s = skip_special_tag(s)
                     elif s[:2] != "</":
                         s, child = parse_full_content(s)
