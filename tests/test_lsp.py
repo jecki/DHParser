@@ -61,7 +61,7 @@ def type_checked_func(select_test: int, request: RequestMessage, position: Posit
 
 
 class TestLSP:
-    def test_shortlist(self):
+    def test_shortlist1(self):
         long = ['ABBO', 'ABCO', 'ACBO', 'ACDO', 'BAC', 'BB']
         assert shortlist(long, 'A') == (0, 4)
         assert shortlist(long, 'AB') == (0,2)
@@ -73,6 +73,37 @@ class TestLSP:
         assert shortlist(long, 'BBC') == (6, 6)
         assert shortlist(long, 'ABBO') == (0, 1)
         assert shortlist(long, 'AA') == (0, 0)
+
+    def test_shortlist2(self):
+        l = [entry.strip().upper() for entry in
+            '''* GISLEM. Droct.; 20 ((MGMer. III; p. 543,14))
+               * GLOSS. med.; p. 96,19
+               * GLOSS. med. cod. Mon.; p. 24,43
+               * GLOSS. med. cod. Petropol.; p. 273,19
+               * GLOSS. med. cod. Trev.; p.
+               * GLOSS. psalt. Lunaelac.; 150,6
+               * GLOSS. Roger. I A; 4,14 p. 724,20
+               * GLOSS. Roger. I B; 4,17 p. 724,15
+               * GLOSS. Roger. II; 643
+               * GLOSS. Roger. III; 854
+               * GLOSS. Salern.; p. 21,28
+               * GLOSS. Sangall.; 111 ((ed. B. Bischoff, Anecdota. 1984.; p. 48))
+               * GLOSS.; 16 ((Festschrift H. Kolb. 1989.; p. 28))
+            '''.split('\n')]
+        l.sort()
+        a, b = shortlist(l, '* GLOSS. med.'.upper())
+        assert l[a:b] == [
+            '* GLOSS. MED. COD. MON.; P. 24,43',
+            '* GLOSS. MED. COD. PETROPOL.; P. 273,19',
+            '* GLOSS. MED. COD. TREV.; P.',
+            '* GLOSS. MED.; P. 96,19']
+        a, b = shortlist(l, '* GLOSS. med. cod.'.upper())
+        assert l[a:b] == [
+            '* GLOSS. MED. COD. MON.; P. 24,43',
+            '* GLOSS. MED. COD. PETROPOL.; P. 273,19',
+            '* GLOSS. MED. COD. TREV.; P.']
+        a, b = shortlist(l, '* GLOSS. med. cod. P'.upper())
+        assert l[a:b] == ['* GLOSS. MED. COD. PETROPOL.; P. 273,19']
 
     def test_type_validation(self):
         position = Position(line=1, character=2)
