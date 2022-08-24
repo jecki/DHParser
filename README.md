@@ -399,3 +399,5 @@ Vegard Øye: General Parser Combinators in Racket, 2012,
 [tex_stackexchange_latex_parsers]: http://tex.stackexchange.com/questions/4223/what-parsers-for-latex-mathematics-exist-outside-of-the-tex-engines
 
 [XText_website]: https://www.eclipse.org/Xtext/
+
+and many more...
