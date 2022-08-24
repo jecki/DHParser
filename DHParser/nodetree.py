@@ -1595,7 +1595,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 elif src is not None:
                     txt.append(' `(pos %i)' % node.pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(" `(%s)" % ';  '.join(str(err) for err in root.node_errors(node)))
+                err_str = ';  '.join(str(err) for err in root.node_errors(node))
+                err_str = err_str.replace('"', r'\"')
+                txt.append(f' `(err "{err_str}")')
             return "".join(txt)
 
         def closing(node: Node) -> str:

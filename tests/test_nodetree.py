@@ -37,6 +37,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
+from DHParser.error import ERROR
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar
@@ -99,6 +100,20 @@ class TestParseSxpression:
         flat = flatten_sxpr(sxpr)
         assert flat == '(a (b "  ") (d (e "f") (h "i")))'
 
+    def test_sxpression_w_error(self):
+        tree = RootNode(Node('u', 'XXX').with_pos(0))
+        tree.new_error(tree, 'Fehler, "mein Herr"!', ERROR)
+        assert tree.equals(parse_sxpr('(u "XXX")'))
+        sxpr = tree.as_sxpr()
+        assert sxpr == r'''(u `(err "Error (1000): Fehler, \"mein Herr\"!") "XXX")'''
+        tree2 = parse_sxpr(sxpr)
+        assert tree2.as_sxpr() == r'''(u `(err "Error (1000): Fehler, \"mein Herr\"!") "XXX")'''
+        # When backparsing s-expression-serialized trees, errors are parsed as attributes
+        # but not turned into errors in the error-list of the root-node again:
+        assert not tree2.equals(tree)
+        assert not tree.has_attr()
+        assert tree2.attr['err'] == r'''Error (1000): Fehler, \"mein Herr\"!'''
+        assert not tree2.errors
 
 XML_EXAMPLE = '''<?xml version="1.0" encoding="UTF-8"?>
 <note date="2018-06-14">

@@ -28,6 +28,7 @@ main cause of trouble when constructing a context free Grammar.
 
 import asyncio
 import collections
+from collections.abc import Set
 import concurrent.futures
 import copy
 import fnmatch
@@ -353,14 +354,14 @@ def md_codeblock(code: str) -> str:
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
                  junctions=set(), show=set()):
     """
-    Unit tests for a grammar-parser and ast transformations.
+    Unit tests for a grammar-parser and ast-transformations.
     """
     assert isinstance(report, str)
-    assert isinstance(show, set) and all(isinstance(element, str) for element in show), \
-        f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
-    assert isinstance(junctions, set) and all(isinstance(e[0], str) and isinstance(e[2], str)
+    assert isinstance(junctions, Set) and all(isinstance(e[0], str) and isinstance(e[2], str)
                                               and callable(e[1]) for e in junctions), \
-        f"Value {repr(junctions)} passed to parameter 'show' is not a set of compilation-junctions!"
+        f"Value {repr(junctions)} passed to parameter 'junctions' is not a set of compilation-junctions!"
+    assert isinstance(show, Set) and all(isinstance(element, str) for element in show), \
+        f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
 
     output = []
 
@@ -582,7 +583,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     try:
                         if isinstance(targets[stage][0], Node):
                             compare = deserialize(get(tests, stage, test_name))
-                            if not compare.equals(targets[stage][0]):
+                            if compare and not compare.equals(targets[stage][0]):
                                 test_str = flatten_sxpr(targets[stage][0].as_sxpr())
                                 compare_str = flatten_sxpr(compare.as_sxpr())
                                 test_code_str = "\n\t".join(test_code.split("\n"))
