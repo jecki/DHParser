@@ -606,7 +606,7 @@ def recompile_grammar(ebnf_filename: str,
     base, _ = os.path.splitext(ebnf_filename)
     if not parser_name:
         parser_name = base + 'Parser.py'
-    error_file_name = base + '_ebnf_ERRORS.txt'
+    error_file_name = base + '_ebnf_MESSAGES.txt'
     messages = []  # type: Iterable[Error]
     if (not os.path.exists(parser_name) or force
             or grammar_changed(parser_name, ebnf_filename)):

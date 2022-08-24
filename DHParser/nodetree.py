@@ -614,7 +614,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :returns: True, if the tree originating in node `self` is equal by
             value to the tree originating in node `other`.
         """
-        if self.name == other.name and self.compare_attr(other, ignore_attr_order):
+        if self.name == other.name and self.has_equal_attr(other, ignore_attr_order):
             if self._children:
                 return (len(self._children) == len(other._children)
                         and all(a.equals(b, ignore_attr_order)
@@ -887,7 +887,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self.attr.update(attributes)
         return self
 
-    def compare_attr(self, other: 'Node', ignore_order: bool = True) -> bool:
+    def has_equal_attr(self, other: 'Node', ignore_order: bool = True) -> bool:
         """
         Returns True, if `self` and `other` have the same attributes with
         the same attribute values. If `ignore_order` is False, the

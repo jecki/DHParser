@@ -38,7 +38,7 @@ def recompile_grammar(grammar_src, force):
     if not dsl.recompile_grammar(grammar_src, force=force):
         print('\nErrors while recompiling "{}":'.format(grammar_src) +
               '\n--------------------------------------\n\n')
-        with open('{}_ebnf_ERRORS.txt'.format(name)) as f:
+        with open('{}_ebnf_MESSAGES.txt'.format(name)) as f:
             print(f.read())
         sys.exit(1)
 

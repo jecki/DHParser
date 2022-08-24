@@ -22,7 +22,7 @@ cdef class Node:
     # cpdef has_attr(self, attr)
     # cpdef attr(self)
     # cpdef get_attr(self, attribute, default)
-    # cpdef compare_attr(self, other)
+    # cpdef has_equal_attr(self, other)
     # cpdef index(self, what, start, stop)
     # cpdef select_if(self, match_function, include_root, reverse)
     # cpdef select(self, criterion, include_root)

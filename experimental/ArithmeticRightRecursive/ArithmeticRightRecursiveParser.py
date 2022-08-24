@@ -233,7 +233,7 @@ if __name__ == "__main__":
     if os.path.exists(grammar_path):
         if not recompile_grammar(grammar_path, force=False,
                                   notify=lambda:print('recompiling ' + grammar_path)):
-            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_MESSAGES.txt')
             with open(error_file, encoding="utf-8") as f:
                 print(f.read())
             sys.exit(1)
