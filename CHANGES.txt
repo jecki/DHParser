@@ -1,3 +1,13 @@
+DHParser Version 1.1.2 (24.8.2022)
+..................................
+
+- Added (experimental) support for adding markup to a tree.
+  (See nodetree.markup())
+- Added content_of() and strlen_of()-functions to nodetree.py
+  which allow to select only parts of the tree.
+- nodetree-content-map can now also be restricted to parts
+  of a tree.
+
 DHParser Version 1.1.1 (22.7.2022)
 ..................................
 
