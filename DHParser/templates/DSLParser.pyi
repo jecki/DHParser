@@ -20,7 +20,7 @@ def serialize_result(result: Any) -> Union[str, bytes]:
         return repr(result)
 
 
-def process_file(source: str, result_filename: str = '') -> str:
+def process_file(source: str, out_dir: str = '') -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
@@ -28,7 +28,12 @@ def process_file(source: str, result_filename: str = '') -> str:
     extension. Returns the name of the error-messages file or an empty
     string, if no errors or warnings occurred.
     """
+    def gen_dest_name(name):
+        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
+                                     + RESULT_FILE_EXTENSION)
+
     source_filename = source if is_filename(source) else ''
+    result_filename = gen_dest_name(source_filename)
     result, errors = compile_src(source)
     if not has_errors(errors, FATAL):
         if os.path.abspath(source_filename) != os.path.abspath(result_filename):
@@ -55,16 +60,11 @@ def batch_process(file_names: List[str], out_dir: str,
     """
     error_list =  []
 
-    def gen_dest_name(name):
-        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
-                                     + RESULT_FILE_EXTENSION)
-
     def run_batch(submit_func: Callable):
         nonlocal error_list
         err_futures = []
         for name in file_names:
-            dest_name = gen_dest_name(name)
-            err_futures.append(submit_func(process_file, name, dest_name))
+            err_futures.append(submit_func(process_file, name, out_dir))
         for file_name, err_future in zip(file_names, err_futures):
             error_filename = err_future.result()
             if log_func:

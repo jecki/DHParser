@@ -59,6 +59,7 @@ __all__ = ('CompilerError',
            'CompilerFactory',
            'CompilationResult',
            'process_tree',
+           'Junction',
            'run_pipeline',
            'compile_source',
            'visitor_name',
@@ -102,8 +103,7 @@ def attr_visitor_name(attr_name: str) -> str:
         >>> attr_visitor_name('class')
         'attr_class'
     """
-    return 'attr_' + attr_name
-
+    return 'attr_' + attr_name.replace('-', '_').replace('.', '_').replace(':', '_')
 
 
 ROOTNODE_PLACEHOLDER = RootNode()
@@ -240,17 +240,16 @@ class Compiler:
         result = self.finalize(result)
         return result
 
-    def visit_attributes(self, node) -> Node:
+    def visit_attributes(self, node):
         if node.has_attr():
             self.trail.append(node)
             for attribute, value in list(node.attr.items()):
                 try:
                     attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
-                    node = attribute_visitor(node, value) or node
+                    attribute_visitor(node, value) or node
                 except AttributeError:
                     pass
             self.trail.pop()
-        return node
 
     def fallback_compiler(self, node: Node) -> Any:
         """This is a generic compiler function which will be called on
@@ -280,7 +279,7 @@ class Compiler:
                         result.append(nd)
                 node.result = tuple(result)
         if self.has_attribute_visitors:
-            node = self.visit_attributes(node)
+            self.visit_attributes(node)
         return node
 
     def find_compilation_method(self, node_name: str) -> CompilerFunc:

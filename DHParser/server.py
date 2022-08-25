@@ -930,7 +930,7 @@ class Connection:
     def verify_initialization(self, method: str, strict: bool = True) -> RPC_Error_Type:
         """Implements the LSP-initialization logic and returns an rpc-error if
         either initialization went wrong or an rpc-method other than 'initialize'
-        was called on an uninitialized languge server.
+        was called on an uninitialized language server.
         """
         if method == 'initialize':
             if self.lsp_initialized:
