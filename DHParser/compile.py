@@ -482,7 +482,7 @@ def run_pipeline(junctions: Set[Junction],
                                          f'and, therefore, cannot be processed to {t}')
                     results[t] = process_tree(junction[1](), tree)
                     errata[t] = copy.copy(tree.errors_sorted)
-    return {t: (results[t], errata[t]) for t in target_stages}
+    return {t: (results[t], errata[t]) for t in results.keys()}
 
 
 CompilationResult = namedtuple('CompilationResult',
