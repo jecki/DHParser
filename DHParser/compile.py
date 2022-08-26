@@ -429,13 +429,22 @@ def run_pipeline(junctions: Set[Junction],
 
     TODO: Parallelize processing of junctions
     """
+    def cmp_junctions(a, b) -> int:
+        if a[-1] == b[0]:
+            return -11
+        if b[-1] == a[0]:
+            return 1
+        return 0
+
     t_to_j = {j[-1]: j for j in junctions}
     steps = []
     targets = target_stages.copy()
     already_reached = targets.copy() | source_stages.keys()
     while targets:
         try:
-            steps.append([t_to_j[t] for t in targets if t not in source_stages])
+            j_sequence = [t_to_j[t] for t in targets if t not in source_stages]
+            j_sequence.sort(key=functools.cmp_to_key(cmp_junctions))
+            steps.append(j_sequence)
         except KeyError as e:
             raise AssertionError(f"{e.args[0]} is not a valid target.")
         targets = {j[0] for j in steps[-1] if j[0] not in already_reached}

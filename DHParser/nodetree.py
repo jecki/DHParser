@@ -56,7 +56,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    deprecation_warning
+    deprecation_warning, abbreviate_middle
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -1676,7 +1676,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if node.name[0:1] != '?' and node.result:
                     if strict_mode:
                         raise ValueError(
-                            f'Empty element "{node.name}" with content: "{node.content}" !?'
+                            f'Empty element "{node.name}" with content: '
+                            f'"{abbreviate_middle(str(node.result), 40)}" !? '
                             f'Use Node.as_xml(..., strict_mode=False) to suppress this error!')
                 if node.name[0] == '?':  ending = '?>'
                 elif node.result:  ending = '>'
@@ -1836,7 +1837,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == 'xml':
-            return self.as_xml()
+            return self.as_xml(strict_mode=False)
         elif switch == 'json':
             return self.as_json()
         elif switch in ('indented', 'tree'):

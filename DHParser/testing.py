@@ -46,7 +46,7 @@ if sys.version_info >= (3, 6, 0):
 else:
     from collections import OrderedDict
 
-from DHParser.configuration import get_config_value
+from DHParser.configuration import get_config_value, set_config_value
 from DHParser.compile import run_pipeline
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, \
@@ -279,6 +279,8 @@ def get_report(test_unit) -> str:
         return "\n    ".join(lines)
 
     report = []
+    save = get_config_value('xml_attribute_error_handling')
+    set_config_value('xml_attribute_error_handling', 'fix')
     for parser_name, tests in test_unit.items():
         heading = 'Test of parser: "%s"' % parser_name
         report.append('\n\n%s\n%s' % (heading, '=' * len(heading)))
@@ -308,7 +310,7 @@ def get_report(test_unit) -> str:
                     result = tests[stage][test_name]
                     report.append(f'\n### {stage.strip("_")}\n')
                     if isinstance(result, Node):
-                        result_str = cast(Node, result).serialize('ast')
+                        result_str = cast(Node, result).serialize('default')
                     else:
                         result_str = str(result)
                     report.append(indent(result_str))
@@ -326,6 +328,7 @@ def get_report(test_unit) -> str:
             if error:
                 report.append('\n### Error:\n')
                 report.append(error)
+    set_config_value('xml_attribute_error_handling', save)
     return '\n'.join(report)
 
 
