@@ -538,7 +538,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                       f'failed with:\n{str(e)}')
                 t_errors: Dict[str, List[Error]] = {}
                 for stage in (list(transformation_stages) +
-                              [t for t in reversed(targets) if t in show]):
+                              [t for t in targets if t in show]):
                     tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
                     t_errors[stage] = [e for e in targets[stage][1] if e not in old_errors]
                     for e in t_errors[stage]:
