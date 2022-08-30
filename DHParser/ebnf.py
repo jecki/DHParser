@@ -968,7 +968,6 @@ TRANSFORMER_FACTORY = '''
 def _run_{NAME}_AST_transformation(root: RootNode) -> RootNode:
     root = traverse(root, transformation_table={NAME}_AST_transformation_table.copy())
     root.stage = 'ast'
-    root.fileext = '.ast'
     return root
     
 
@@ -1387,10 +1386,9 @@ class EBNFCompiler(Compiler):
                     '        pass',
                     '',
                     '    def finalize(self, result: Any) -> Any:',
-                    '        if isinstance(result, RootNode):',
-                    '            root = cast(RootNode, result)',
+                    '        if isinstance(self.tree, RootNode):',
+                    '            root = cast(RootNode, self.tree)',
                     '            root.stage = "compiled"',
-                    '            root.fileext = ".compiled"',
                     '        return result',
                     '']
         for name in self.rules:

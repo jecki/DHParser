@@ -2794,10 +2794,6 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
     node.result = tuple(nd for nd in (seg_1, seg_2, seg_3) if nd._result)
 
 
-DIVISABLE_SENTINEL = copy.deepcopy(LEAF_PTYPES)
-CHAIN_ATTR_SENTINEL = '<>'
-
-
 SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "divisable" and '\
                          '"chain_attr"-parameters, if - as in this case - markup() is called '\
                          'with a content mapping that has not been generated from a RootNode-'\
@@ -2807,8 +2803,8 @@ SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "div
 def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
            attr_dict: Dict[str, Any] = dict(), greedy: bool = True,
            select: TrailSelector = ANY_TRAIL, ignore: TrailSelector = NO_TRAIL,
-           divisable: Set[str] = DIVISABLE_SENTINEL,
-           chain_attr: str = CHAIN_ATTR_SENTINEL) -> Node:
+           divisable: Set[str] = LEAF_PTYPES,
+           chain_attr: str = "") -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
     with 'name', eventually cutting through 'divisable' nodes. Returns the
     nearest common ancestor of 'start_pos' and 'end_pos'.
@@ -2879,19 +2875,19 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
     i -= 1
     assert common_ancestor
 
-    if divisable is DIVISABLE_SENTINEL:
-        if isinstance(trail_A[0], RootNode):
-            root = cast(RootNode, trail_A[0])
-            divisable = root.divisable_tags[name]
-            if chain_attr is CHAIN_ATTR_SENTINEL:
-                chain_attr = root.chain_attr
-        else:
-            raise ValueError(SENTINEL_ERROR_MESSAGE)
-    elif chain_attr is CHAIN_ATTR_SENTINEL:
-        if isinstance(trail_A[0], RootNode):
-            chain_attr = cast(RootNode, trail_A[0]).chain_attr
-        else:
-            raise ValueError(SENTINEL_ERROR_MESSAGE)
+    # if divisable is DIVISABLE_SENTINEL:
+    #     if isinstance(trail_A[0], RootNode):
+    #         root = cast(RootNode, trail_A[0])
+    #         divisable = root.divisable_tags[name]
+    #         if chain_attr is CHAIN_ATTR_SENTINEL:
+    #             chain_attr = root.chain_attr
+    #     else:
+    #         raise ValueError(SENTINEL_ERROR_MESSAGE)
+    # elif chain_attr is CHAIN_ATTR_SENTINEL:
+    #     if isinstance(trail_A[0], RootNode):
+    #         chain_attr = cast(RootNode, trail_A[0]).chain_attr
+    #     else:
+    #         raise ValueError(SENTINEL_ERROR_MESSAGE)
 
     if chain_attr and chain_attr not in attr_dict:
         attr_dict[chain_attr] = gen_sloppy_chain_ID()
