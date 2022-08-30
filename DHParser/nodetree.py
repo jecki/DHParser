@@ -3255,25 +3255,9 @@ class RootNode(Node):
     :ivar inline_tags: see `Node.as_xml()` for an explanation.
     :ivar string_tags: see `Node.as_xml()` for an explanation.
     :ivar empty_tags: see `Node.as_xml()` for an explanation.
-    :ivar divisable_tags: a defaultdict that maps node-names to sets
-        of names of nodes that can be "divided" when a new node
-        (or XML-tag for that matter) with former name is added that cuts
-        across the boundaries of other tags. The default is that all
-        leaf-node can be divided by any other node or tag. See
-        :py:func:`markup` for examples.
-    :ivar chain_attr: the name of an attribute for a unique id
-        that all nodes share that represent different segments
-        of a node that has been divided in order to avoid overlapping
-        hierarchies.
 
-    :ivar docname: a name for the processed document that may
-        also serve as filename (without extension) when storing
-        a certain stage of the processing pipeline.
+    :ivar docname: a name for the document
     :ivar stage: a name for the current processing stage
-    :ivar dirname: a sub-directory for storing the serialized
-        results of the current processng-stage.
-    :ivar fileext: a file-extension for storing the serialized
-        results of the current processng-stage.
     :ivar serialization_type: The kind of serialization for the
         current processing stage. Can be one of 'XML', 'json',
         'indented', 'S-expression' or 'default'. (The latter picks
@@ -3296,14 +3280,10 @@ class RootNode(Node):
         self.inline_tags: Set[str] = set()
         self.string_tags: Set[str] = set()
         self.empty_tags: Set[str] = set()
-        self.divisable_tags: Dict[str, Set[str]] = collections.defaultdict(default_divisable)
-        self.chain_attr: str = ''  # '_chain'
 
         # meta-data
         self.docname: str = ''
         self.stage: str = ''
-        self.dirname: str = ''
-        self.fileext: str = ''
         self.serialization_type: str = 'default'
 
         if node is not None:
@@ -3349,13 +3329,9 @@ class RootNode(Node):
         duplicate.inline_tags = self.inline_tags
         duplicate.string_tags = self.string_tags
         duplicate.empty_tags = self.empty_tags
-        duplicate.divisable_tags = copy.deepcopy(self.divisable_tags, memodict)
-        duplicate.chain_attr = self.chain_attr
 
         duplicate.docname = self.docname
         duplicate.stage = self.stage
-        duplicate.dirname = self.dirname
-        duplicate.fileext = self.fileext
         duplicate.serialization_type = self.serialization_type
 
         duplicate.name = self.name
@@ -3553,6 +3529,11 @@ class RootNode(Node):
             string_tags=self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
             empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags,
             strict_mode=strict_mode)
+
+    def serialize(self: 'Node', how: str = '') -> str:
+        if not how:
+            how = self.serialization_type or 'default'
+        return super().serialize(how)
 
     def customized_XML(self):
         """
