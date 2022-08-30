@@ -34,7 +34,6 @@ in the (XML-)tree.
 import bisect
 import collections
 import copy
-import dataclasses
 import functools
 import json
 import random
@@ -562,20 +561,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return sum(child.strlen() for child in self._children)
         else:
             return len(self._result)
-
-    # def strpos(self, what: NodeSelector,
-    #            skip: NodeMatchFunction = NO_NODE) -> int:
-    #     """Strin-Pposition of the first child fulfilling 'what' within
-    #     the string-content of self, excluding all children that fulfill 'skip'."""
-    #     i = self.index(what)
-    #     skip_func = create_match_function(skip)
-    #     children = self._children
-    #     pos = 0
-    #     for k in range(i):
-    #         child = children[k]
-    #         if not skip_func(child):
-    #            pos += child.strlen_of(skip_func)
-    #     return pos
 
     def __len__(self):
         raise AssertionError(
@@ -1857,7 +1842,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, ET=None, string_tags: Set[str] = {":Text"}, empty_tags: Set[str] = set()):
+    def as_etree(self, ET=None, string_tags: Set[str] = frozenset({TOKEN_PTYPE}),
+                 empty_tags: Set[str] = frozenset()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
         :param ET: The ElementTree-library to be used. If None, the STL ElemtentTree
@@ -2457,7 +2443,7 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True,
     if  right._children:  right._pos = right._result[0]._pos
     elif node._pos >= 0:  right._pos = node._pos + i
     node.result = node._result[:i]
-    if chain_attr and not node.has_attr(chain_attr):
+    if chain_attr and not node.has_attr(chain_attr) and not node.anonymous:
         chain_ID = gen_sloppy_chain_ID()
         right.attr[chain_attr] = chain_ID
         node.attr[chain_attr] = chain_ID
@@ -2548,8 +2534,17 @@ def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
         -2
         >>> can_split([tree, tree[0], tree[0][0]], 3)
         -2
+        >>> # anonymous nodes, like ":Text" are always divisable
+        >>> can_split([tree, tree[0], tree[0][0]], 1, divisable=set())
+        -1
+        >>> # However, non anonymous nodes aren't ...
+        >>> tree = parse_sxpr('(doc (p (Text "ABC")))')
         >>> can_split([tree, tree[0], tree[0][0]], 1, divisable=set())
         0
+        >>> # ... unless explicitly mentioned
+        >>> tree = parse_sxpr('(doc (p (Text "ABC")))')
+        >>> can_split([tree, tree[0], tree[0][0]], 1, divisable={'Text'})
+        -1
         >>> tree = parse_sxpr('(X (Z "!?") (A (B "123") (C "456")))')
         >>> can_split(tree.pick_trail('B'), 0)
         -2
@@ -2571,7 +2566,7 @@ def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
     k = 0
     for k in range(len(t) - 1):
         node = t[-k - 1]
-        if i != 0 and i != len(node._result) and node.name not in divisable:
+        if i != 0 and i != len(node._result) and not (node.anonymous or node.name in divisable):
             break
         parent = t[-k - 2]
         i = split(node, parent, i, left_biased)
@@ -2582,7 +2577,7 @@ def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
                 L = len(parent.children)
                 if i < L and strlen_of(parent.children[i:], select, ignore) == 0:  i = L
     else:
-        node = t[0]
+        # node = t[0]
         k += 1
     return -k
 
@@ -2799,11 +2794,21 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
     node.result = tuple(nd for nd in (seg_1, seg_2, seg_3) if nd._result)
 
 
+DIVISABLE_SENTINEL = copy.deepcopy(LEAF_PTYPES)
+CHAIN_ATTR_SENTINEL = '<>'
+
+
+SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "divisable" and '\
+                         '"chain_attr"-parameters, if - as in this case - markup() is called '\
+                         'with a content mapping that has not been generated from a RootNode-'\
+                         'object.'
+
+
 def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
            attr_dict: Dict[str, Any] = dict(), greedy: bool = True,
            select: TrailSelector = ANY_TRAIL, ignore: TrailSelector = NO_TRAIL,
-           divisable: Set[str] = LEAF_PTYPES,
-           chain_attr: str = '') -> Node:
+           divisable: Set[str] = DIVISABLE_SENTINEL,
+           chain_attr: str = CHAIN_ATTR_SENTINEL) -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
     with 'name', eventually cutting through 'divisable' nodes. Returns the
     nearest common ancestor of 'start_pos' and 'end_pos'.
@@ -2862,9 +2867,6 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         milestone = Node(name, '').with_attr(attr_dict)
         return insert_node(t, start_pos, milestone)
 
-    if chain_attr and chain_attr not in attr_dict:
-        attr_dict[chain_attr] = gen_sloppy_chain_ID()
-
     trail_A, pos_A = map_pos_to_trail(start_pos, t)
     trail_B, pos_B = map_pos_to_trail(end_pos, t, left_biased=True)
     assert trail_A
@@ -2876,8 +2878,26 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         common_ancestor = a
     i -= 1
     assert common_ancestor
+
+    if divisable is DIVISABLE_SENTINEL:
+        if isinstance(trail_A[0], RootNode):
+            root = cast(RootNode, trail_A[0])
+            divisable = root.divisable_tags[name]
+            if chain_attr is CHAIN_ATTR_SENTINEL:
+                chain_attr = root.chain_attr
+        else:
+            raise ValueError(SENTINEL_ERROR_MESSAGE)
+    elif chain_attr is CHAIN_ATTR_SENTINEL:
+        if isinstance(trail_A[0], RootNode):
+            chain_attr = cast(RootNode, trail_A[0]).chain_attr
+        else:
+            raise ValueError(SENTINEL_ERROR_MESSAGE)
+
+    if chain_attr and chain_attr not in attr_dict:
+        attr_dict[chain_attr] = gen_sloppy_chain_ID()
+
     if not common_ancestor._children:
-        if i == 0 or common_ancestor.name not in divisable:
+        if i == 0 or not (common_ancestor.name in divisable or common_ancestor.anonymous):
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
             return common_ancestor
         i -= 1
@@ -2985,9 +3005,6 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
 #         del trail_B[-2][leaf_B]
 #
 #     return markup_node
-
-
-
 
 
 
@@ -3280,7 +3297,7 @@ class RootNode(Node):
         self.string_tags: Set[str] = set()
         self.empty_tags: Set[str] = set()
         self.divisable_tags: Dict[str, Set[str]] = collections.defaultdict(default_divisable)
-        self.chain_attr: str = '_chain'
+        self.chain_attr: str = ''  # '_chain'
 
         # meta-data
         self.docname: str = ''
@@ -3780,7 +3797,7 @@ def parse_xml(xml: Union[str, StringView],
         m = s.search(RX_XML_SPECIAL_TAG)
         i = s.index(m.start()) if m else len(s)
         k = s.rfind(">", end=i)
-        return s[k+1:] if k >= 0 else s
+        return s[k+1:] if k >= 0 else s[2:]
 
     def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
         """

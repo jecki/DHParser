@@ -1181,6 +1181,18 @@ class TestMarkupInsertion:
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             '<doc><a>Am </a><outer><a><inner>Anfang</inner> war</a> das Wort</outer>.</doc>'
 
+    def test_insert_markup_4(self):
+        empty_tags = set()
+        tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
+        m = next(re.finditer(r'Am Anfang war', tree.content))
+        cm = generate_content_mapping(tree)
+        markup(cm, m.start(), m.end(), "a", chain_attr='_chain')
+        I = tree.pick('a').attr['_chain']
+        assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
+            f'<doc><a _chain="{I}">Am </a><outer><a _chain="{I}"><inner>Anfang</inner> war</a>'\
+            f' das Wort</outer>.</doc>'
+
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
