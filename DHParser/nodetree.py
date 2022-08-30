@@ -3849,10 +3849,13 @@ def parse_xml(xml: Union[str, StringView],
         if solitary:
             if tagname in non_empty_tags:
                 if strict_mode:
-                    raise ValueError(get_pos_str(substring) +
+                    print(get_pos_str(substring) +
                         f' "{tagname}" is used as empty as well as non-empty element!'
-                        f' This can cause errors when re-serializing data as XML!'
-                        f' Use parse_xml(..., strict_mode=False) to suppress this error!')
+                        f' This can cause errors when re-serializing data as XML!')
+                    # raise ValueError(get_pos_str(substring) +
+                    #     f' "{tagname}" is used as empty as well as non-empty element!'
+                    #     f' This can cause errors when re-serializing data as XML!'
+                    #     f' Use parse_xml(..., strict_mode=False) to suppress this error!')
                 non_empty_tags.remove(tagname)
             out_empty_tags.add(tagname)
         else:
