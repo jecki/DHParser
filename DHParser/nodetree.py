@@ -32,9 +32,12 @@ in the (XML-)tree.
 
 
 import bisect
+import collections
 import copy
+import dataclasses
 import functools
 import json
+import random
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
     Tuple, Container, Optional, Dict, Any
@@ -61,6 +64,7 @@ from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
+           'MIXED_MODE_TEXT_PTYPE',
            'REGEXP_PTYPE',
            'EMPTY_PTYPE',
            'LEAF_PTYPES',
@@ -141,9 +145,12 @@ __all__ = ('WHITESPACE_PTYPE',
 
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Text'
+# Node name for plain text in XML-elements that contain both children and plain text
+MIXED_MODE_TEXT_PTYPE = ':Text'
 REGEXP_PTYPE = ':RegExp'
 EMPTY_PTYPE = ':EMPTY'
-LEAF_PTYPES = {WHITESPACE_PTYPE, TOKEN_PTYPE, REGEXP_PTYPE, EMPTY_PTYPE}
+LEAF_PTYPES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_MODE_TEXT_PTYPE,
+                         REGEXP_PTYPE, EMPTY_PTYPE})
 
 ZOMBIE_TAG = "ZOMBIE__"
 
@@ -2360,7 +2367,14 @@ def _(t: Node, rel_pos: int, node: Node) -> Node:
     return insert_node(tm, rel_pos, node)
 
 
-def split(node: Node, parent: Node, i: int, left_biased: bool = True) -> int:
+def gen_sloppy_chain_ID() -> str:
+    return chr(random.randrange(ord('A'), ord('Z') + 1)) + \
+           chr(random.randrange(ord('A'), ord('Z') + 1)) + \
+           chr(random.randrange(ord('A'), ord('Z') + 1))
+
+
+def split(node: Node, parent: Node, i: int, left_biased: bool = True,
+          chain_attr: str='') -> int:
     """Splits a node at the given index (in case of a branch-node) or
     string-position (in case of a leaf-node). Returns the index the
     right part within the parent node after the split. (This means
@@ -2443,6 +2457,10 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True) -> int:
     if  right._children:  right._pos = right._result[0]._pos
     elif node._pos >= 0:  right._pos = node._pos + i
     node.result = node._result[:i]
+    if chain_attr and not node.has_attr(chain_attr):
+        chain_ID = gen_sloppy_chain_ID()
+        right.attr[chain_attr] = chain_ID
+        node.attr[chain_attr] = chain_ID
     parent.result = parent._result[:k] + (right,) + parent.result[k:]
     return k
 
@@ -2450,7 +2468,8 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True) -> int:
 def deep_split(trail: Trail, i: int, left_biased: bool=True,
                greedy: bool=True,
                select: TrailSelector = ANY_TRAIL,
-               ignore: TrailSelector = NO_TRAIL) -> int:
+               ignore: TrailSelector = NO_TRAIL,
+               chain_attr: str = '') -> int:
     """Split all nodes from the end of the trail up to,
     but excluding the first node in the trail. Returns the
     index of the split location in the first node of the trail.
@@ -2502,7 +2521,7 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
     for idx in range(2, len(trail) + 1):
         node = parent
         parent = trail[-idx]
-        i = split(node, parent, i, left_biased)
+        i = split(node, parent, i, left_biased, chain_attr)
         if greedy:
             if left_biased:
                 if i > 0 and strlen_of(parent.children[:i], select, ignore) == 0:  i = 0
@@ -2512,10 +2531,10 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
     return i
 
 
-def can_split(t: Trail, i: int, divisable: Set[str] = frozenset({TOKEN_PTYPE}),
-              left_biased: bool = True, greedy: bool = True,
+def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
               select: TrailSelector = ANY_TRAIL,
-              ignore: TrailSelector = NO_TRAIL) -> int:
+              ignore: TrailSelector = NO_TRAIL,
+              divisable: Set[str] = LEAF_PTYPES) -> int:
     """Returns the negative index of the first node in the trail, from which
     on all nodes can be split or do not need to be split, because the
     split-index lies to the left or right os the node.
@@ -2569,10 +2588,11 @@ def can_split(t: Trail, i: int, divisable: Set[str] = frozenset({TOKEN_PTYPE}),
 
 
 def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = dict(),
-                 divisable: Set[str] = frozenset({TOKEN_PTYPE}),
                  greedy: bool = True,
                  select: TrailSelector = ANY_TRAIL,
-                 ignore: TrailSelector = NO_TRAIL):
+                 ignore: TrailSelector = NO_TRAIL,
+                 divisable: Set[str] = LEAF_PTYPES,
+                 chain_attr: str = ''):
     """Markup the content from string position i within the last node of
     the trail up to the very end of the content of the first node of the
     trail.
@@ -2641,9 +2661,12 @@ def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = di
         (A "123")
     """
     assert trail
-    k = max(can_split(trail, i, divisable, True, greedy, select, ignore) - 1, -len(trail))
+    k = max(can_split(trail, i, True, greedy, select, ignore, divisable) - 1, -len(trail))
     # k is parent-index of first node to split
-    i = deep_split(trail[k:], i, True, greedy, select, ignore)
+    i = deep_split(trail[k:], i, True, greedy, select, ignore, chain_attr)
+
+    if chain_attr and chain_attr not in attr_dict:
+        attr_dict[chain_attr] = gen_sloppy_chain_ID()
 
     nd = Node(name, trail[k]._result[i:]).with_attr(attr_dict)
     if nd._children:
@@ -2666,10 +2689,11 @@ def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = di
 
 
 def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
-                 divisable: Set[str] = frozenset({TOKEN_PTYPE}),
-                 greedy: bool = True,
-                 select: TrailSelector = ANY_TRAIL,
-                 ignore: TrailSelector = NO_TRAIL):
+                greedy: bool = True,
+                select: TrailSelector = ANY_TRAIL,
+                ignore: TrailSelector = NO_TRAIL,
+                divisable: Set[str] = LEAF_PTYPES,
+                chain_attr: str = ''):
     """Markup the content from string position i within the last node of
     the trail up to the very end of the content of the first node of the
     trail.
@@ -2738,8 +2762,11 @@ def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
         (A "123")
     """
     assert trail
-    k = max(can_split(trail, i, divisable, False, greedy, select, ignore) - 1, -len(trail))
-    i = deep_split(trail[k:], i, False, greedy, select, ignore)
+    k = max(can_split(trail, i, False, greedy, select, ignore, divisable) - 1, -len(trail))
+    i = deep_split(trail[k:], i, False, greedy, select, ignore, chain_attr)
+
+    if chain_attr and chain_attr not in attr_dict:
+        attr_dict[chain_attr] = gen_sloppy_chain_ID()
 
     nd = Node(name, trail[k]._result[:i]).with_attr(attr_dict)
     nd._pos = trail[k]._pos
@@ -2773,9 +2800,10 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
 
 
 def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
-           attr_dict: Dict[str, Any] = dict(),
-           divisable: Set[str] = frozenset({TOKEN_PTYPE}), greedy: bool = True,
-           select: TrailSelector = ANY_TRAIL, ignore: TrailSelector = NO_TRAIL) -> Node:
+           attr_dict: Dict[str, Any] = dict(), greedy: bool = True,
+           select: TrailSelector = ANY_TRAIL, ignore: TrailSelector = NO_TRAIL,
+           divisable: Set[str] = LEAF_PTYPES,
+           chain_attr: str = '') -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
     with 'name', eventually cutting through 'divisable' nodes. Returns the
     nearest common ancestor of 'start_pos' and 'end_pos'.
@@ -2833,6 +2861,10 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
     if start_pos == end_pos:
         milestone = Node(name, '').with_attr(attr_dict)
         return insert_node(t, start_pos, milestone)
+
+    if chain_attr and chain_attr not in attr_dict:
+        attr_dict[chain_attr] = gen_sloppy_chain_ID()
+
     trail_A, pos_A = map_pos_to_trail(start_pos, t)
     trail_B, pos_B = map_pos_to_trail(end_pos, t, left_biased=True)
     assert trail_A
@@ -2851,8 +2883,8 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         i -= 1
     stump_A = trail_A[i:]
     stump_B = trail_B[i:]
-    q = can_split(stump_A, pos_A, divisable, True, greedy, select, ignore)
-    r = can_split(stump_B, pos_B, divisable, False, greedy, select, ignore)
+    q = can_split(stump_A, pos_A, True, greedy, select, ignore, divisable)
+    r = can_split(stump_B, pos_B, False, greedy, select, ignore, divisable)
 
     i = -1
     k = -1
@@ -2868,19 +2900,23 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         t = common_ancestor.index(stump_B[1])
         nd = Node(name, common_ancestor[i:t]).with_attr(attr_dict)
         nd._pos = common_ancestor[i]._pos
-        markup_left(stump_B[1:], pos_B, name, attr_dict, divisable, greedy, select, ignore)
+        markup_left(stump_B[1:], pos_B, name, attr_dict, greedy,
+                    select, ignore, divisable, chain_attr)
         common_ancestor.result = common_ancestor[:i] + (nd,) + common_ancestor[t:]
     elif k >= 0:
         t = common_ancestor.index(stump_A[1])
         nd = Node(name, common_ancestor[t + 1:k]).with_attr(attr_dict)
         nd._pos = common_ancestor[t + 1]._pos
-        markup_right(stump_A[1:], pos_A, name, attr_dict, divisable, greedy, select, ignore)
+        markup_right(stump_A[1:], pos_A, name, attr_dict, greedy,
+                     select, ignore, divisable, chain_attr)
         common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[k:]
     else:
         t = common_ancestor.index(stump_A[1])
         u = common_ancestor.index(stump_B[1])
-        markup_right(stump_A[1:], pos_A, name, attr_dict, divisable, greedy, select, ignore)
-        markup_left(stump_B[1:], pos_B, name, attr_dict, divisable, greedy, select, ignore)
+        markup_right(stump_A[1:], pos_A, name, attr_dict, greedy,
+                     select, ignore, divisable, chain_attr)
+        markup_left(stump_B[1:], pos_B, name, attr_dict, greedy,
+                    select, ignore, divisable, chain_attr)
         if u - t > 1:
             nd = Node(name, common_ancestor[t + 1:u]).with_attr(attr_dict)
             nd._pos = common_ancestor[t + 1]._pos
@@ -3147,22 +3183,27 @@ def tree_sanity_check(tree: Node) -> bool:
     return True
 
 
-# #####################################################################
+#######################################################################
 #
 # RootNode - manage global properties of trees, like error messages
 #
 #######################################################################
 
-
 _EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
+
+
+def default_divisable() -> Set[str]:
+    return LEAF_PTYPES
 
 
 class RootNode(Node):
     """The root node for the node-tree is a special kind of node that keeps
     and manages global properties of the tree as a whole. These are first and
     foremost the list off errors that occurred during tree generation
-    (i.e. parsing) or any transformation of the tree. Other properties concern
-    the customization of the XML-serialization.
+    (i.e. parsing) or any transformation of the tree.
+
+    Other properties concern the customization of the XML-serialization and
+    meta-data about the procesed document and processing stage.
 
     Although errors are local properties that occur on a specific point or
     chunk of source code, instead of attaching the errors to the nodes on
@@ -3184,7 +3225,7 @@ class RootNode(Node):
     :ivar error_nodes: A mapping of node-ids to a list of errors that
         occurred on the node with the respective id.
     :ivar error_positions: A mapping of locations to a set of ids of nodes
-        that contain an error at that particular location
+        that contain an error at that particular location.
     :ivar error_flag: the highest warning or error level of all errors
         that occurred.
 
@@ -3197,6 +3238,29 @@ class RootNode(Node):
     :ivar inline_tags: see `Node.as_xml()` for an explanation.
     :ivar string_tags: see `Node.as_xml()` for an explanation.
     :ivar empty_tags: see `Node.as_xml()` for an explanation.
+    :ivar divisable_tags: a defaultdict that maps node-names to sets
+        of names of nodes that can be "divided" when a new node
+        (or XML-tag for that matter) with former name is added that cuts
+        across the boundaries of other tags. The default is that all
+        leaf-node can be divided by any other node or tag. See
+        :py:func:`markup` for examples.
+    :ivar chain_attr: the name of an attribute for a unique id
+        that all nodes share that represent different segments
+        of a node that has been divided in order to avoid overlapping
+        hierarchies.
+
+    :ivar docname: a name for the processed document that may
+        also serve as filename (without extension) when storing
+        a certain stage of the processing pipeline.
+    :ivar stage: a name for the current processing stage
+    :ivar dirname: a sub-directory for storing the serialized
+        results of the current processng-stage.
+    :ivar fileext: a file-extension for storing the serialized
+        results of the current processng-stage.
+    :ivar serialization_type: The kind of serialization for the
+        current processing stage. Can be one of 'XML', 'json',
+        'indented', 'S-expression' or 'default'. (The latter picks
+        the default serialization from the configuration.)
     """
 
     def __init__(self, node: Optional[Node] = None,
@@ -3207,21 +3271,29 @@ class RootNode(Node):
         self._error_set: Set[Error] = set()
         self.error_nodes: Dict[int, List[Error]] = dict()   # id(node) -> error list
         self.error_positions: Dict[int, Set[int]] = dict()  # pos -> set of id(node)
-        self.error_flag = 0
-        self.source = ''
-        # # info on source code (to be carried along all stages of tree-processing)
-        # self.source = source           # type: Union[str, StringView]
-        # if source_mapping is None:
-        #     self.source_mapping = gen_neutral_srcmap_func(source)
-        # else:
-        #     self.source_mapping = source_mapping  # type: SourceMapFunc
-        self.lbreaks = linebreaks(source)  # List[int]
+        self.error_flag: ErrorCode = ErrorCode(0)
+        self.source: Union[str, StringView] = source
+        self.lbreaks: List[int] = linebreaks(source)
+
         # customization for XML-Representation
-        self.inline_tags = set()  # type: Set[str]
-        self.string_tags = set()    # type: Set[str]
-        self.empty_tags = set()   # type: Set[str]
+        self.inline_tags: Set[str] = set()
+        self.string_tags: Set[str] = set()
+        self.empty_tags: Set[str] = set()
+        self.divisable_tags: Dict[str, Set[str]] = collections.defaultdict(default_divisable)
+        self.chain_attr: str = '_chain'
+
+        # meta-data
+        self.docname: str = ''
+        self.stage: str = ''
+        self.dirname: str = ''
+        self.fileext: str = ''
+        self.serialization_type: str = 'default'
+
         if node is not None:
             self.swallow(node, source, source_mapping)
+        else:
+            self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
+                if source_mapping is None else source_mapping
 
     def __str__(self):
         errors = self.errors_sorted
@@ -3236,7 +3308,7 @@ class RootNode(Node):
         old_node_ids = [id(nd) for nd in self.select_if(lambda n: True, include_root=True)]
         duplicate = self.__class__(None)
         if self._children:
-            duplicate._children = copy.deepcopy(self._children)
+            duplicate._children = copy.deepcopy(self._children, memodict)
             duplicate._result = duplicate._children
         else:
             duplicate._children = tuple()
@@ -3247,18 +3319,28 @@ class RootNode(Node):
         if self.has_attr():
             duplicate.attr.update(self._attributes)
             # duplicate._attributes = copy.deepcopy(self._attributes)  # this is blocked by cython
-        duplicate.errors = copy.deepcopy(self.errors)
+        duplicate.errors = copy.deepcopy(self.errors, memodict)
         duplicate._error_set = {error for error in duplicate.errors}
         duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
         duplicate.error_positions = {pos: {map_id.get(i, i) for i in s}
                                      for pos, s in self.error_positions.items()}
         duplicate.source = self.source
         duplicate.source_mapping = self.source_mapping
-        duplicate.lbreaks = copy.deepcopy(self.lbreaks)
+        duplicate.lbreaks = copy.deepcopy(self.lbreaks, memodict)
         duplicate.error_flag = self.error_flag
+
         duplicate.inline_tags = self.inline_tags
         duplicate.string_tags = self.string_tags
         duplicate.empty_tags = self.empty_tags
+        duplicate.divisable_tags = copy.deepcopy(self.divisable_tags, memodict)
+        duplicate.chain_attr = self.chain_attr
+
+        duplicate.docname = self.docname
+        duplicate.stage = self.stage
+        duplicate.dirname = self.dirname
+        duplicate.fileext = self.fileext
+        duplicate.serialization_type = self.serialization_type
+
         duplicate.name = self.name
         return duplicate
 
@@ -3280,10 +3362,8 @@ class RootNode(Node):
         if source and source != self.source:
             self.source = source
             self.lbreaks = linebreaks(source)
-        if source_mapping is None:
-            self.source_mapping = gen_neutral_srcmap_func(source)
-        else:
-            self.source_mapping = source_mapping  # type: SourceMapFunc
+        self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
+            if source_mapping is None else source_mapping
         if self.name != '__not_yet_ready__':
             raise AssertionError('RootNode.swallow() has already been called!')
         if node is None:
@@ -3303,29 +3383,6 @@ class RootNode(Node):
         if self.source:
             add_source_locations(self.errors, self.source_mapping)
         return self
-
-    # def save_error_state(self) -> tuple:
-    #     """Saves the error state. Useful for when backtracking. See
-    #     :py:mod:`parse.Forward` """
-    #     if self.error_flag:
-    #         return (self.errors.copy(),
-    #                 {k: v.copy() for k, v in self.error_nodes.items()},
-    #                 {k: v.copy() for k, v in self.error_positions.items()},
-    #                 self.error_flag)
-    #     else:
-    #         return ()
-    #
-    # def restore_error_state(self, error_state: tuple):
-    #     """Resotores a previously saved error state."""
-    #     if error_state:
-    #         self.errors, self.error_nodes, self.error_positions, self.error_flag = error_state
-    #         self._error_set = set(self.errors)
-    #     else:
-    #         self.errors = []
-    #         self._error_set = set()
-    #         self.error_nodes = dict()
-    #         self.error_positions = dict()
-    #         self.error_flag = 0
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
         """
@@ -3423,10 +3480,6 @@ class RootNode(Node):
         """
         srcId = id(src)
         destId = id(dest)
-        # assert dest._pos <= src._pos, "Cannot reduce %i to %s" % (src._pos, dest._pos)
-        # dest._pos < 0 or dest._pos < src._pos
-        # or dest._pos < src._pos <= dest._pos + len(dest),
-        # "%i %i %i" % (src._pos, dest._pos, len(dest))
         if srcId != destId and srcId in self.error_nodes:
             errorList = self.error_nodes[srcId]
             self.error_nodes.setdefault(destId, []).extend(errorList)
@@ -3434,10 +3487,6 @@ class RootNode(Node):
             for nodeSet in self.error_positions.values():
                 nodeSet.discard(srcId)
                 nodeSet.add(destId)
-            # for e in errorList:  # does not work for some reason
-            #     nodeSet = self.error_positions[e.pos]
-            #     nodeSet.discard(srcId)
-            #     nodeSet.add(destId)
 
     @property
     def errors_sorted(self) -> List[Error]:

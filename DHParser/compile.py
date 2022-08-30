@@ -189,7 +189,7 @@ class Compiler:
         self.finalizers = []  # type: List[Tuple[Callable, Tuple]]
         self.method_dict = {}  # type: Dict[str, CompilerFunc]
 
-    def prepare(self, root: Node) -> None:
+    def prepare(self, root: RootNode) -> None:
         """
         A preparation method that will be called after everything else has
         been initialized and immediately before compilation starts. This method

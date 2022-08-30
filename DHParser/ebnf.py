@@ -102,7 +102,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable
+from typing import Tuple, List, Union, Any, Optional, Callable, cast
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -137,7 +137,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \\
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \\
-    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, RootNode
 '''
 
 
@@ -964,10 +964,19 @@ def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=Tru
 
 
 TRANSFORMER_FACTORY = '''
+
+def _run_{NAME}_AST_transformation(root: RootNode) -> RootNode:
+    root = traverse(root, transformation_table={NAME}_AST_transformation_table.copy())
+    root.stage = 'ast'
+    root.fileext = '.ast'
+    return root
+    
+
 def {NAME}Transformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, transformation_table={NAME}_AST_transformation_table.copy())
+    return _run_{NAME}_AST_transformation
+    # return partial(traverse, transformation_table={NAME}_AST_transformation_table.copy())
 
 
 get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, ident={ID})
@@ -1144,7 +1153,7 @@ class EBNFCompiler(Compiler):
 
     :ivar rules:  Dictionary that maps rule names to a list of Nodes that
             contain symbol-references in the definition of the rule.
-            The first item in the list is the node of the rule-
+            The first item in the list is the node of the rule
             definition itself. Example::
 
                 alternative = a | b
@@ -1157,7 +1166,7 @@ class EBNFCompiler(Compiler):
             to the set of symbols that are directly or indirectly
             referred to in the definition of the symbol.
 
-    :ivar directly_referred_cache: A dictionary that caches the the results
+    :ivar directly_referred_cache: A dictionary that caches the results
             of method `directly_referred_symbols()`, which yields
             the set of symbols that are referred to in the definition
             of a particular symbol.
@@ -1330,14 +1339,6 @@ class EBNFCompiler(Compiler):
         comment_re = self.directives.comment
         rs = repr(comment_re) if comment_re else 'NEVER_MATCH_PATTERN'
         return PREPROCESSOR_FACTORY.format(NAME=self.grammar_name, COMMENT__=rs)
-        # name = self.grammar_name + "Preprocessor"
-        # return "def nop(pos, source_name, source_text):\n"\
-        #        "    return SourceLocation(source_name, source_text, pos)\n\n\n" \
-        #        "def %s(source_text, source_name):\n"\
-        #        "    return PreprocessorResult(\n"\
-        #        "        source_text, source_text,\n"\
-        #        "        partial(nop, source_name=source_name, source_text=source_text))\n" % name \
-        #        + PREPROCESSOR_FACTORY.format(NAME=self.grammar_name)
 
 
     def gen_transformer_skeleton(self) -> str:
@@ -1381,6 +1382,16 @@ class EBNFCompiler(Compiler):
                     '    def reset(self):',
                     '        super().reset()',
                     '        # initialize your variables here, not in the constructor!',
+                    '',
+                    '    def prepare(self, root: RootNode) -> None:',
+                    '        pass',
+                    '',
+                    '    def finalize(self, result: Any) -> Any:',
+                    '        if isinstance(result, RootNode):',
+                    '            root = cast(RootNode, result)',
+                    '            root.stage = "compiled"',
+                    '            root.fileext = ".compiled"',
+                    '        return result',
                     '']
         for name in self.rules:
             method_name = visitor_name(name)
@@ -1521,7 +1532,6 @@ class EBNFCompiler(Compiler):
         `referred_symbols()` only yields reliable results if the collection
         of definitions has been completed.
         """
-
         try:
             return self.referred_symbols_cache[symbol]
         except KeyError:
