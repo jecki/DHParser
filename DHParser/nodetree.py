@@ -3751,6 +3751,8 @@ def parse_xml(xml: Union[str, StringView],
 
     xml = StringView(str(xml))
     non_empty_tags: Set[str] = set()
+    dual_use_notified: Set[str] = set()
+
     if out_empty_tags is EMPTY_TAGS_SENTINEL:
         out_empty_tags = set()
 
@@ -3841,17 +3843,18 @@ def parse_xml(xml: Union[str, StringView],
         Parses the full content of a tag, starting right at the beginning
         of the opening tag and ending right after the closing tag.
         """
-        nonlocal non_empty_tags
+        nonlocal non_empty_tags, dual_use_notified
         res = []  # type: List[Node]
         substring = s
         s, tagname, attrs, solitary = parse_opening_tag(s)
         name, class_name = (tagname.split(":") + [''])[:2]
         if solitary:
             if tagname in non_empty_tags:
-                if strict_mode:
+                if strict_mode and tagname not in dual_use_notified:
                     print(get_pos_str(substring) +
                         f' "{tagname}" is used as empty as well as non-empty element!'
                         f' This can cause errors when re-serializing data as XML!')
+                    dual_use_notified.add(tagname)
                     # raise ValueError(get_pos_str(substring) +
                     #     f' "{tagname}" is used as empty as well as non-empty element!'
                     #     f' This can cause errors when re-serializing data as XML!'
@@ -3860,10 +3863,11 @@ def parse_xml(xml: Union[str, StringView],
             out_empty_tags.add(tagname)
         else:
             if tagname in out_empty_tags:
-                if strict_mode:
+                if strict_mode and tagname not in dual_use_notified:
                     print(get_pos_str(substring) +
                         f' "{tagname}" is used as empty as well as non-empty element!'
                         f' This can cause errors when re-serializing data as XML!')
+                    dual_use_notified.add(tagname)
                     # raise ValueError(get_pos_str(substring) +
                     #     f' "{tagname}" is used as empty as well as non-empty element!'
                     #     f' This can cause errors when re-serializing data as XML!'
