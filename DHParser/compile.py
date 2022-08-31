@@ -243,7 +243,7 @@ class Compiler:
     def visit_attributes(self, node):
         if node.has_attr():
             self.trail.append(node)
-            for attribute, value in list(node.attr.items()):
+            for attribute, value in tuple(node.attr.items()):
                 try:
                     attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
                     attribute_visitor(node, value) or node
