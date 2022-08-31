@@ -1133,7 +1133,7 @@ def merge_adjacent(trail: Trail, condition: Callable, preferred_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
     assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
-    alike. Otherwise a type-error might ensue!
+    alike. Otherwise, a type-error might ensue!
 
     The merged node's name is determined according to the following rule:
 

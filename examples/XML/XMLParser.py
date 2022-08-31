@@ -268,7 +268,10 @@ class XMLTransformer(Compiler):
 
     def on_element(self, node):
         if len(node.children) == 1:
-            return self.on_emptyElement(node['emptyElement'])
+            try:
+                return self.on_emptyElement(node['emptyElement'])
+            except KeyError:  # in case of a malformed tree...
+                return node[0]
         stag = node['STag']
         etag = node['ETag']
         tag_name = stag['Name'].content
