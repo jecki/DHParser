@@ -1774,10 +1774,8 @@ class Grammar:
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
         self.tree__.swallow(result, document, source_mapping)
-        self.tree__.docname = 'UNNAMED_DOCUMENT'
         self.tree__.stage = 'cst'
-        self.tree__.fileext = '.cst'
-        if not self.tree__.source:  self.tree__.source = document
+        # if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
         return self.tree__
 

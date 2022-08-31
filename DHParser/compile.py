@@ -557,7 +557,8 @@ def compile_source(source: str,
 
     # parsing
 
-    syntax_tree = parser(source_text, source_mapping=source_mapping)  # type: RootNode
+    syntax_tree: RootNode = parser(source_text, source_mapping=source_mapping)
+    syntax_tree.docname = source_name if source_name else "DHParser_Document"
     for e in errors:  syntax_tree.add_error(None, e)
     syntax_tree.source = original_text
     syntax_tree.source_mapping = source_mapping

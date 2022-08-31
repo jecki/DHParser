@@ -15,10 +15,14 @@
 import os
 import re
 import sys
-sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../DHParser'))
-# sys.path.insert(0, os.path.abspath('../DHParser/scripts'))
 
+package_path = os.path.abspath('../')
+dhparser_path = os.path.abspath('../DHParser')
+if package_path not in sys.path:
+    sys.path.insert(0, package_path)
+if dhparser_path not in sys.path:
+    sys.path.insert(0, dhparser_path)
+# sys.path.insert(0, os.path.abspath('../DHParser/scripts'))
 
 
 # -- Project information -----------------------------------------------------

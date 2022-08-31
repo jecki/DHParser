@@ -2794,10 +2794,6 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
     node.result = tuple(nd for nd in (seg_1, seg_2, seg_3) if nd._result)
 
 
-DIVISABLE_SENTINEL = copy.deepcopy(LEAF_PTYPES)
-CHAIN_ATTR_SENTINEL = '<>'
-
-
 SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "divisable" and '\
                          '"chain_attr"-parameters, if - as in this case - markup() is called '\
                          'with a content mapping that has not been generated from a RootNode-'\
@@ -2807,8 +2803,8 @@ SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "div
 def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
            attr_dict: Dict[str, Any] = dict(), greedy: bool = True,
            select: TrailSelector = ANY_TRAIL, ignore: TrailSelector = NO_TRAIL,
-           divisable: Set[str] = DIVISABLE_SENTINEL,
-           chain_attr: str = CHAIN_ATTR_SENTINEL) -> Node:
+           divisable: Set[str] = LEAF_PTYPES,
+           chain_attr: str = "") -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
     with 'name', eventually cutting through 'divisable' nodes. Returns the
     nearest common ancestor of 'start_pos' and 'end_pos'.
@@ -2879,19 +2875,19 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
     i -= 1
     assert common_ancestor
 
-    if divisable is DIVISABLE_SENTINEL:
-        if isinstance(trail_A[0], RootNode):
-            root = cast(RootNode, trail_A[0])
-            divisable = root.divisable_tags[name]
-            if chain_attr is CHAIN_ATTR_SENTINEL:
-                chain_attr = root.chain_attr
-        else:
-            raise ValueError(SENTINEL_ERROR_MESSAGE)
-    elif chain_attr is CHAIN_ATTR_SENTINEL:
-        if isinstance(trail_A[0], RootNode):
-            chain_attr = cast(RootNode, trail_A[0]).chain_attr
-        else:
-            raise ValueError(SENTINEL_ERROR_MESSAGE)
+    # if divisable is DIVISABLE_SENTINEL:
+    #     if isinstance(trail_A[0], RootNode):
+    #         root = cast(RootNode, trail_A[0])
+    #         divisable = root.divisable_tags[name]
+    #         if chain_attr is CHAIN_ATTR_SENTINEL:
+    #             chain_attr = root.chain_attr
+    #     else:
+    #         raise ValueError(SENTINEL_ERROR_MESSAGE)
+    # elif chain_attr is CHAIN_ATTR_SENTINEL:
+    #     if isinstance(trail_A[0], RootNode):
+    #         chain_attr = cast(RootNode, trail_A[0]).chain_attr
+    #     else:
+    #         raise ValueError(SENTINEL_ERROR_MESSAGE)
 
     if chain_attr and chain_attr not in attr_dict:
         attr_dict[chain_attr] = gen_sloppy_chain_ID()
@@ -3255,25 +3251,9 @@ class RootNode(Node):
     :ivar inline_tags: see `Node.as_xml()` for an explanation.
     :ivar string_tags: see `Node.as_xml()` for an explanation.
     :ivar empty_tags: see `Node.as_xml()` for an explanation.
-    :ivar divisable_tags: a defaultdict that maps node-names to sets
-        of names of nodes that can be "divided" when a new node
-        (or XML-tag for that matter) with former name is added that cuts
-        across the boundaries of other tags. The default is that all
-        leaf-node can be divided by any other node or tag. See
-        :py:func:`markup` for examples.
-    :ivar chain_attr: the name of an attribute for a unique id
-        that all nodes share that represent different segments
-        of a node that has been divided in order to avoid overlapping
-        hierarchies.
 
-    :ivar docname: a name for the processed document that may
-        also serve as filename (without extension) when storing
-        a certain stage of the processing pipeline.
+    :ivar docname: a name for the document
     :ivar stage: a name for the current processing stage
-    :ivar dirname: a sub-directory for storing the serialized
-        results of the current processng-stage.
-    :ivar fileext: a file-extension for storing the serialized
-        results of the current processng-stage.
     :ivar serialization_type: The kind of serialization for the
         current processing stage. Can be one of 'XML', 'json',
         'indented', 'S-expression' or 'default'. (The latter picks
@@ -3296,14 +3276,10 @@ class RootNode(Node):
         self.inline_tags: Set[str] = set()
         self.string_tags: Set[str] = set()
         self.empty_tags: Set[str] = set()
-        self.divisable_tags: Dict[str, Set[str]] = collections.defaultdict(default_divisable)
-        self.chain_attr: str = ''  # '_chain'
 
         # meta-data
         self.docname: str = ''
         self.stage: str = ''
-        self.dirname: str = ''
-        self.fileext: str = ''
         self.serialization_type: str = 'default'
 
         if node is not None:
@@ -3349,13 +3325,9 @@ class RootNode(Node):
         duplicate.inline_tags = self.inline_tags
         duplicate.string_tags = self.string_tags
         duplicate.empty_tags = self.empty_tags
-        duplicate.divisable_tags = copy.deepcopy(self.divisable_tags, memodict)
-        duplicate.chain_attr = self.chain_attr
 
         duplicate.docname = self.docname
         duplicate.stage = self.stage
-        duplicate.dirname = self.dirname
-        duplicate.fileext = self.fileext
         duplicate.serialization_type = self.serialization_type
 
         duplicate.name = self.name
@@ -3553,6 +3525,11 @@ class RootNode(Node):
             string_tags=self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
             empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags,
             strict_mode=strict_mode)
+
+    def serialize(self: 'Node', how: str = '') -> str:
+        if not how:
+            how = self.serialization_type or 'default'
+        return super().serialize(how)
 
     def customized_XML(self):
         """
