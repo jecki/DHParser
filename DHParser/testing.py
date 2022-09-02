@@ -468,7 +468,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         match_tests = set(tests['match'].keys()) if 'match' in tests else set()
         match_test_keys = {clean_key(k) for k in match_tests}
 
-
         transformation_stages = {key for key in tests if key not in {'match', 'fail'}}
         for stage in transformation_stages:
             transformation_tests = set(tests[stage].keys())
@@ -543,6 +542,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     for e in t_errors[stage]:
                         old_errors.add(e)
                     add_errors_to_errata(t_errors[stage])
+                # keep test-items, so that the order of the items is the same as
+                # in which they are processed in the pipeline.
+                for t in targets:
+                    if t in show:
+                        k = f'__{t}__'
+                        if k in tests:
+                            save = tests[k]
+                            del tests[k]
+                            tests[k] = save
 
             if verbose:
                 infostr = '    match-test "' + test_name + '" ... '
