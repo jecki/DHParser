@@ -204,6 +204,18 @@ class Compiler:
         """
         return result
 
+    def wildcard(self, node: Node) -> Any:
+        """
+        The wildcard method is called nodes for which no other compilation-
+        method has been specified. This allows to check, whether illegal
+        nodes occur in the tree (although, a static structural validation
+        is to be preferred.) or whether a compilation node has been
+        forgotten.
+
+        Per default, wildcard() just redirects to self.fallback_compiler()
+        """
+        return self.fallback_compiler(node)
+
     def __call__(self, root: Node) -> Any:
         """
         Compiles the abstract syntax tree with the root node `node` and
@@ -290,7 +302,10 @@ class Compiler:
             try:
                 method = self.__getattribute__(method_name)
             except AttributeError:
-                method = self.fallback_compiler
+                if self.wildcard != Compiler.wildcard:
+                    method = self.wildcard
+                else:
+                    method = self.fallback_compiler
             self.method_dict[node_name] = method
         return method
 

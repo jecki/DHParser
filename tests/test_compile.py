@@ -70,6 +70,18 @@ class AttrTestCompiler(Compiler):
         del node.attr['tic']
 
 
+class WildcardTestCompiler(Compiler):
+    def on_a(self, node):
+        node = self.fallback_compiler(node)
+        node.name = 'A'
+        return node
+
+    def wildcard(self, node):
+        node = self.fallback_compiler(node)
+        node.name = "x"
+        return node
+
+
 class TestCompilerClass:
     original = parse_sxpr('(A (B "1") (C (D (E "2") (F "3"))))')
 
@@ -117,6 +129,12 @@ class TestCompilerClass:
         compiler = AttrTestCompiler()
         s = compiler.compile(attr_tree)
         assert str(s) == '1 tic: ticced :-)23 tic: ticced :-('
+
+    def test_wildcard(self):
+        tree = parse_sxpr('(a (b (a (c 1) (d 2)) (e 3)) (f 4))')
+        comp = WildcardTestCompiler()
+        tree = comp(tree)
+        assert tree.as_sxpr() == '(A (x (A (x "1") (x "2")) (x "3")) (x "4"))'
 
 
 if __name__ == "__main__":
