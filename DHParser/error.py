@@ -519,7 +519,7 @@ def canonical_error_strings(errors: List[Error]) -> List[str]:
             if source_file_name and is_filename(source_file_name):
                 cwd = os.getcwd()
                 if source_file_name.startswith(cwd):
-                    rel_path = source_file_name[len(cwd)]
+                    rel_path = source_file_name[len(cwd):]
                 else:
                     rel_path = source_file_name
                 err_str = str(err)
