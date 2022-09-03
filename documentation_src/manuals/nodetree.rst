@@ -320,7 +320,7 @@ can be parameterized in order to support mixed-content and empty-tags::
     <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
 
 
-.. _trails:
+.. _paths:
 
 Tree-Traversal
 --------------
@@ -442,95 +442,95 @@ Navigating "uptree"
 ^^^^^^^^^^^^^^^^^^^
 
 Instead of keeping a link within each node to its parent, it is much more
-elegant to keep track of a node's ancestry by using the lineage or "tree-trail"
+elegant to keep track of a node's ancestry by using the lineage or "tree-path"
 which is a simple list of ancestors starting with the root-node and including
 the node itself as its last item. For most search methods such as select() or
-pick(), there exists a pendant that returns this trail instead of just the node
+pick(), there exists a pendant that returns this path instead of just the node
 itself::
 
-    >>> last_trail = sentence.pick_trail('word', reverse=True)
-    >>> last_trail[-1] == last_match
+    >>> last_path = sentence.pick_path('word', reverse=True)
+    >>> last_path[-1] == last_match
     True
-    >>> last_trail[0] == sentence
+    >>> last_path[0] == sentence
     True
-    >>> serialize_trail(last_trail)
+    >>> serialize_path(last_path)
     'sentence <- phrase <- word'
 
-One can also think of a tree-trail as a breadcrumb- or, rather, ant-trail that "points" to a
+One can also think of a tree-path as a breadcrumb-trail or, rather, ant-trail that "points" to a
 particular part of text by marking the path from the root to the node, the
 content of which contains this text. This node does not need to be a leaf node,
 but can be any branch-node on the way from the root to the leaves of the tree.
 When analysing or transforming a tree-structured text, it is often helpful to
-"zoom" in and out of a particular part of text (pointed to by a trail) or to
+"zoom" in and out of a particular part of text (pointed to by a path) or to
 move forward and backward from a particular location (again represented by a
-trail).
+path).
 
-The ``next_trail()`` and ``prev_trail()``-functions allow to move one step
-forward or backward from a given trail::
+The ``next_path()`` and ``prev_path()``-functions allow to move one step
+forward or backward from a given path::
 
-    >>> pointer = prev_trail(last_trail)
-    >>> serialize_trail(pointer, with_content=-1)
+    >>> pointer = prev_path(last_path)
+    >>> serialize_path(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- blank: '
 
-``prev_trail()`` and ``next_trail()`` automatically zoom out by one step, if
+``prev_path()`` and ``next_path()`` automatically zoom out by one step, if
 they move past the first or last child of the last but one node in the list::
 
-    >>> pointer = prev_trail(pointer)
-    >>> serialize_trail(pointer, with_content=-1)
+    >>> pointer = prev_path(pointer)
+    >>> serialize_path(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
-    >>> serialize_trail(prev_trail(pointer), with_content=-1)
+    >>> serialize_path(prev_path(pointer), with_content=-1)
     'sentence:This is Buckingham Palace <- blank: '
 
 Thus::
 
-    >>> next_trail(prev_trail(pointer)) == pointer
+    >>> next_path(prev_path(pointer)) == pointer
     False
-    >>> pointer = prev_trail(pointer)
-    >>> serialize_trail(next_trail(pointer), with_content=-1)
+    >>> pointer = prev_path(pointer)
+    >>> serialize_path(next_path(pointer), with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace'
 
-The reason for this beaviour is that ``prev_trail()`` and ``next_trail()``
-try to move to the trail which contains the string content preceeding or
-succeeding that of the given trail. Therefore, these functions move to the
+The reason for this beaviour is that ``prev_path()`` and ``next_path()``
+try to move to the path which contains the string content preceeding or
+succeeding that of the given path. Therefore, these functions move to the
 next sibling on the same branch, rather traversing the complete tree like the
-``select()`` and ``select_trail()``- methods of the Node-class. However, when
+``select()`` and ``select_path()``- methods of the Node-class. However, when
 moving past the first or last sibling, it is not clear what the next node on the
 same level should be. To keep it easy, the function "zooms out" and returns the
 next sibling of the parent.
 
-It is, of course, possible to zoom back into a trail::
+It is, of course, possible to zoom back into a path::
 
-    >>> serialize_trail(zoom_into_trail(next_trail(pointer), FIRST_CHILD, steps=1), with_content=-1)
+    >>> serialize_path(zoom_into_path(next_path(pointer), FIRST_CHILD, steps=1), with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
 
-Often it is preferable to move through the leaf-nodes and their trails right
-away. Functions like ``next_leaf_trail()`` and ``prev_leaf_trail()`` provide
+Often it is preferable to move through the leaf-nodes and their paths right
+away. Functions like ``next_leaf_path()`` and ``prev_leaf_path()`` provide
 syntactic sugar for this case::
 
-    >>> pointer = next_leaf_trail(pointer)
-    >>> serialize_trail(pointer, with_content=-1)
+    >>> pointer = next_leaf_path(pointer)
+    >>> serialize_path(pointer, with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
 
-It is also possible to inspect just the string content surrounding a trail,
+It is also possible to inspect just the string content surrounding a path,
 rather than its structural environment::
 
     >>> ensuing_str(pointer)
     ' Palace'
     >>> assert foregoing_str(pointer, length=1) == ' ', "Blank expected!"
 
-It is also possible to systematically iterate through the trails forward or
-backward - just like the `node.select_trail()`-method, but starting from an
-arbitraty trail, instead of the one end or the other end of the tree rooted in
+It is also possible to systematically iterate through the paths forward or
+backward - just like the `node.select_path()`-method, but starting from an
+arbitraty path, instead of the one end or the other end of the tree rooted in
 `node`::
 
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
-    >>> pointer = t.pick_trail('G')
-    >>> [serialize_trail(ctx, with_content=1)
-    ...  for ctx in select_trail(pointer, ANY_TRAIL, include_root=True)]
+    >>> pointer = t.pick_path('G')
+    >>> [serialize_path(ctx, with_content=1)
+    ...  for ctx in select_path(pointer, ANY_PATH, include_root=True)]
     ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7', 'A:1234567']
-    >>> [serialize_trail(ctx, with_content=1)
-    ...  for ctx in select_trail(
-    ...      pointer, ANY_TRAIL, include_root=True, reverse=True)]
+    >>> [serialize_path(ctx, with_content=1)
+    ...  for ctx in select_path(
+    ...      pointer, ANY_PATH, include_root=True, reverse=True)]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
 
 Another important difference, besides the starting point, is that the
@@ -538,10 +538,10 @@ Another important difference, besides the starting point, is that the
 (or "depth first"), while the respective methods ot the Node-class traverse the
 tree pre-order. See the difference::
 
-    >>> l = [serialize_trail(ctx, with_content=1) for ctx in t.select_trail(ANY_TRAIL, include_root=True)]
+    >>> l = [serialize_path(ctx, with_content=1) for ctx in t.select_path(ANY_PATH, include_root=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
-    >>> l = [serialize_trail(ctx, with_content=1) for ctx in t.select_trail(ANY_TRAIL, include_root=True, reverse=True)]
+    >>> l = [serialize_path(ctx, with_content=1) for ctx in t.select_path(ANY_PATH, include_root=True, reverse=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
 
@@ -553,25 +553,25 @@ Sometimes it may be more convenient to search for a specific feature in the
 string-content of a text, rather than in the structured tree. For example,
 finding matching brackets in tree-strcutured text can be quite cumbersome if
 brackets are not "tagged" individually. For theses cases it is possible to
-generate a trail mapping that maps text position to the trails of the
-leaf-nodes to which they belong. The trail-mapping can be thought of as a
+generate a path mapping that maps text position to the paths of the
+leaf-nodes to which they belong. The path-mapping can be thought of as a
 "string-view" on the tree::
 
     >>> flat_text = sentence.content
     >>> ctx_mapping = generate_content_mapping(sentence)
-    >>> leaf_positions, trails = ctx_mapping
-    >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in trails))}
+    >>> leaf_positions, paths = ctx_mapping
+    >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in paths))}
     {0: '(word "This")', 4: '(blank " ")', 5: '(word "is")', 7: '(blank " ")', 8: '(word "Buckingham")', 18: '(blank " ")', 19: '(word "Palace")'}
 
 Now let's find all letters that are followed by a whitespace character::
 
     >>> import re; locations = [m.start() for m in re.finditer(r'\w ', flat_text)]
-    >>> targets = [map_pos_to_trail(loc, ctx_mapping) for loc in locations]
+    >>> targets = [map_pos_to_path(loc, ctx_mapping) for loc in locations]
 
-The target returned by `map_pos_to_trail()` is a tuple of the target trail
-and the relative position of the location that falls within this trail::
+The target returned by `map_pos_to_path()` is a tuple of the target path
+and the relative position of the location that falls within this path::
 
-    >>> [(serialize_trail(ctx), relative_pos) for ctx, relative_pos in targets]
+    >>> [(serialize_path(ctx), relative_pos) for ctx, relative_pos in targets]
     [('sentence <- word', 3), ('sentence <- word', 1), ('sentence <- phrase <- word', 9)]
 
 Now, the structured text can be manipulated at the precise locations where
@@ -584,7 +584,7 @@ dots::
     '...s ...s ...m Palace'
 
 The positions resemble the text positions of the text represented by the tree at
-the very moment when the trail mapping is generated, not the source positions
+the very moment when the path mapping is generated, not the source positions
 captured by the `pos`-propery of the node-objects! This also means that the
 mapping becomes outdated the very moment, the tree is being restructured.
 
@@ -725,11 +725,11 @@ class Node
     descendants.
   * :py:meth:`~nodetree.Node.locate`: Finds the leaf-node covering a
     paraticular location of string content of the tree originating in this node.
-  * :py:meth:`~nodetree.Node.select_trail`: Selects :ref:`trails <trails>`
+  * :py:meth:`~nodetree.Node.select_path`: Selects :ref:`paths <paths>`
     from the tree of descendants.
-  * :py:meth:`~nodetree.Node.pick_trail`: Picks a particular trail from
+  * :py:meth:`~nodetree.Node.pick_path`: Picks a particular path from
     the tree of descendants.
-  * :py:meth:`~nodetree.Node.locate_trail`: Finds the trail of the
+  * :py:meth:`~nodetree.Node.locate_path`: Finds the path of the
     leaf-node covering a paraticular location of string content of the tree
     originating in this node.
 
@@ -768,18 +768,18 @@ Reading serialized trees
   accordingly.
 
 
-Traversing trees via trails
+Traversing trees via paths
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* :py:func:`~nodetree.prev_trail`: Returns the :ref:`trail <trails>`
-  preceeding a given trail.
-* :py:func:`~nodetree.next_trail`: Returns the :ref:`trail <trails>`
-  following a given trail.
-* :py:func:`~nodetree.generate_content_mapping`: Generates a trail-mapping
+* :py:func:`~nodetree.prev_path`: Returns the :ref:`path <paths>`
+  preceeding a given path.
+* :py:func:`~nodetree.next_path`: Returns the :ref:`path <paths>`
+  following a given path.
+* :py:func:`~nodetree.generate_content_mapping`: Generates a path-mapping
   for all leaf-nodes of a tree, i.e. a dictionary mapping the current text
   position of each leaf-node (not the source-code position!) to the leaf-node
   itself.
-* :py:func:`~nodetree.map_pos_to_trail`: Returns the leaf-node for a given
+* :py:func:`~nodetree.map_pos_to_path`: Returns the leaf-node for a given
   text position and the number of characters of this position into the leaf-node.
 
 

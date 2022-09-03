@@ -43,7 +43,7 @@ from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc
-from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Trail
+from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerCallable
 from DHParser.parse import Grammar
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -147,7 +147,7 @@ class Compiler:
 
     Object-Variables that are reset after each call of the Compiler-object::
 
-    :ivar trail:  A list of parent nodes that ends with the currently
+    :ivar path:  A list of parent nodes that ends with the currently
                 compiled node.
     :ivar tree: The root of the abstract syntax tree.
     :ivar finalizers:  A stack of tuples (function, parameters) that will be
@@ -182,7 +182,7 @@ class Compiler:
         of the object.
         """
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
-        self.trail = []  # type: Trail
+        self.path = []  # type: Path
         self._dirty_flag = False
         self._debug = get_config_value('debug_compiler')  # type: bool
         self._debug_already_compiled = set()              # type: Set[Node]
@@ -254,14 +254,14 @@ class Compiler:
 
     def visit_attributes(self, node):
         if node.has_attr():
-            self.trail.append(node)
+            self.path.append(node)
             for attribute, value in tuple(node.attr.items()):
                 try:
                     attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
                     attribute_visitor(node, value) or node
                 except AttributeError:
                     pass
-            self.trail.pop()
+            self.path.pop()
 
     def fallback_compiler(self, node: Node) -> Any:
         """This is a generic compiler function which will be called on
@@ -330,9 +330,9 @@ class Compiler:
         if elem[:1] == ':':
             elem = elem[1:] + '__'
         compiler = self.find_compilation_method(elem)
-        self.trail.append(node)
+        self.path.append(node)
         result = compiler(node)     
-        self.trail.pop()
+        self.path.pop()
         if self.has_attribute_visitors:
             node = self.visit_attributes(node)          
         if result is None and self.forbid_returning_None:
@@ -409,8 +409,8 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
             try:
                 result = tp(tree)
             except Exception as e:
-                # node = tp.trail[-1] if hasattr(tp, 'trail') and tp.trail else tree
-                node = getattr(tp, 'trail', [tree])[-1]
+                # node = tp.path[-1] if hasattr(tp, 'path') and tp.path else tree
+                node = getattr(tp, 'path', [tree])[-1]
                 st = traceback.format_list(traceback.extract_tb(e.__traceback__))
                 trace = ''.join(st)  # filter_stacktrace(st)
                 tree.new_error(

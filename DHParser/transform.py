@@ -41,7 +41,7 @@ except ImportError:
 
 from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
-    RootNode, parse_sxpr, flatten_sxpr, Trail
+    RootNode, parse_sxpr, flatten_sxpr, Path
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, \
     deprecation_warning
 
@@ -73,7 +73,7 @@ __all__ = ('TransformationDict',
            'reduce_single_child',
            'replace_or_reduce',
            'change_name',
-           'change_tag_name',
+           # 'change_tag_name',
            'replace_child_names',
            'replace_tag_names',
            'collapse',
@@ -156,11 +156,11 @@ class Filter:
         raise NotImplementedError
 
 
-TransformationProc = Callable[[Trail], None]
+TransformationProc = Callable[[Path], None]
 TransformationDict = Dict[str, Union[Callable, Sequence[Callable]]]
 TransformationCache = Dict[str, Tuple[Sequence[Filter], Sequence[Callable]]]
 TransformationTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
-ConditionFunc = Callable  # Callable[[Trail], bool]
+ConditionFunc = Callable  # Callable[[Path], bool]
 KeyFunc = Callable[[Node], str]
 CriteriaType = Union[int, str, Callable]
 TransformerCallable = Union[Callable[[RootNode], RootNode], partial]
@@ -169,12 +169,12 @@ TransformerCallable = Union[Callable[[RootNode], RootNode], partial]
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     """
     Creates factory functions from transformation-functions that
-    dispatch on the first parameter after the trail parameter.
+    dispatch on the first parameter after the path parameter.
 
     Decorating a transformation-function that has more than merely the
-    ``Trail``-parameter with ``transformation_factory`` creates a
+    ``path``-parameter with ``transformation_factory`` creates a
     function with the same name, which returns a partial-function that
-    takes just the trail-parameter.
+    takes just the path-parameter.
 
     Additionally, there is some syntactic sugar for
     transformation-functions that receive a collection as their second
@@ -187,13 +187,13 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
     Usage::
 
         @transformation_factory(AbstractSet[str])
-        def remove_tokens(trail, tokens):
+        def remove_tokens(path, tokens):
             ...
 
     or, alternatively::
 
         @transformation_factory
-        def remove_tokens(trail, tokens: AbstractSet[str]):
+        def remove_tokens(path, tokens: AbstractSet[str]):
             ...
 
     Example::
@@ -212,7 +212,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
 
     def type_guard(t):
         """Raises an error if type `t` is a generic type or could be mistaken
-        for the type of the canonical first parameter "Trail of
+        for the type of the canonical first parameter "Path" of
         transformation functions. Returns `t`."""
         # if isinstance(t, GenericMeta):
         #     raise TypeError("Generic Type %s not permitted\n in transformation_factory "
@@ -224,10 +224,10 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             raise TypeError("Generic Type %s not permitted\n in transformation_factory "
                             "decorator. Use the equivalent non-generic type instead!"
                             % str(t))
-        if issubtype(Trail, t):
+        if issubtype(Path, t):
             raise TypeError("Sequence type %s not permitted\nin transformation_factory "
                             "decorator, because it could be mistaken for a base class "
-                            "of Trail\nwhich is the type of the canonical first "
+                            "of Path\nwhich is the type of the canonical first "
                             "argument of transformation functions. Try 'tuple' instead!"
                             % str(t))
         return t
@@ -402,9 +402,9 @@ def traverse(root_node: Node,
         assert not any(isinstance(callable, Filter) for callable in callables)
         return filter, callables
 
-    def traverse_recursive(trail):
+    def traverse_recursive(path):
         nonlocal cache
-        node = trail[-1]
+        node = path[-1]
 
         key = key_func(node)
         try:
@@ -425,15 +425,15 @@ def traverse(root_node: Node,
         for filter in filters:
             children = filter(children)
         if children:
-            trail.append(PLACEHOLDER)
+            path.append(PLACEHOLDER)
             for child in children:
-                trail[-1] = child
-                traverse_recursive(trail)  # depth first
-            trail.pop()
+                path[-1] = child
+                traverse_recursive(path)  # depth first
+            path.pop()
 
         for call in sequence:
             try:
-                call(trail)
+                call(path)
             except Exception as ae:
                 raise AssertionError('An exception occurred when transforming "%s" with %s:\n%s'
                                      % (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
@@ -477,16 +477,16 @@ def merge_treetops(node: Node):
 
 
 @transformation_factory(dict)
-def traverse_locally(trail: Trail,
+def traverse_locally(path: Path,
                      transformation_table: Dict,  # actually: TransformationTableType
                      key_func: Callable = key_node_name):  # actually: KeyFunc
     """
-    Transforms the syntax tree starting from the last node in the trail
+    Transforms the syntax tree starting from the last node in the path
     according to the given transformation table. The purpose of this function is
     to apply certain transformations locally, i.e. only for those nodes that
-    have the last node in the trail as their parent node.
+    have the last node in the path as their parent node.
     """
-    traverse(trail[-1], transformation_table, key_func)
+    traverse(path[-1], transformation_table, key_func)
 
 
 def transformation_guard(value) -> None:
@@ -500,116 +500,116 @@ def condition_guard(value) -> bool:
     return value
 
 
-def apply_transformations(trail: Trail, transformation: Union[Callable, Sequence[Callable]]):
-    """Applies a single or a sequence of transformations to a trail."""
+def apply_transformations(path: Path, transformation: Union[Callable, Sequence[Callable]]):
+    """Applies a single or a sequence of transformations to a path."""
     if callable(transformation):
-        transformation_guard(transformation(trail))
+        transformation_guard(transformation(path))
     else:
         assert isinstance(transformation, tuple)
         for trans in cast(tuple, transformation):
-            transformation_guard(trans(trail))
+            transformation_guard(trans(path))
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_if(trail: Trail,
+def apply_if(path: Path,
              transformation: Union[Callable, Tuple[Callable, ...]],
              condition: Callable):
     """Applies a transformation only if a certain condition is met."""
-    if condition_guard(condition(trail)):
-        apply_transformations(trail, transformation)
+    if condition_guard(condition(path)):
+        apply_transformations(path, transformation)
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_ifelse(trail: Trail,
+def apply_ifelse(path: Path,
                  if_transformation: Union[Callable, Tuple[Callable, ...]],
                  else_transformation: Union[Callable, Tuple[Callable, ...]],
                  condition: Callable):
     """Applies a one particular transformation if a certain condition is met
     and another transformation otherwise."""
-    if condition_guard(condition(trail)):
-        apply_transformations(trail, if_transformation)
+    if condition_guard(condition(path)):
+        apply_transformations(path, if_transformation)
     else:
-        apply_transformations(trail, else_transformation)
+        apply_transformations(path, else_transformation)
 
 
 @transformation_factory(collections.abc.Callable, tuple)
-def apply_unless(trail: Trail,
+def apply_unless(path: Path,
                  transformation: Union[Callable, Tuple[Callable, ...]],
                  condition: Callable):
     """Applies a transformation if a certain condition is *not* met."""
-    if not condition_guard(condition(trail)):
-        apply_transformations(trail, transformation)
+    if not condition_guard(condition(path)):
+        apply_transformations(path, transformation)
 
 
 ## boolean operators
 
 
-def always(trail: Trail) -> bool:
-    """Always returns True, no matter what the state of the trail is."""
+def always(path: Path) -> bool:
+    """Always returns True, no matter what the state of the path is."""
     return True
 
 
-def never(trail: Trail) -> bool:
-    """Always returns True, no matter what the state of the trail is."""
+def never(path: Path) -> bool:
+    """Always returns True, no matter what the state of the path is."""
     return False
 
 @transformation_factory(collections.abc.Callable)
-def neg(trail: Trail, bool_func: collections.abc.Callable) -> bool:
-    """Returns the inverted boolean result of `bool_func(trail)`"""
-    return not bool_func(trail)
+def neg(path: Path, bool_func: collections.abc.Callable) -> bool:
+    """Returns the inverted boolean result of `bool_func(path)`"""
+    return not bool_func(path)
 
 
 @transformation_factory(collections.abc.Set)
-def any_of(trail: Trail, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+def any_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
     """Returns True, if any of the bool functions in `bool_func_set` evaluate to True
-    for the given trail."""
-    return any(bf(trail) for bf in bool_func_set)
+    for the given path."""
+    return any(bf(path) for bf in bool_func_set)
 
 
 @transformation_factory(collections.abc.Set)
-def all_of(trail: Trail, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+def all_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
     """Returns True, if all of the bool functions in `bool_func_set` evaluate to True
-    for the given trail."""
-    return all(bf(trail) for bf in bool_func_set)
+    for the given path."""
+    return all(bf(path) for bf in bool_func_set)
 
 
 #######################################################################
 #
-# conditionals that determine whether the trail (or the last node in
-# the trail for that matter) fulfill a specific condition.
+# conditionals that determine whether the path (or the last node in
+# the path for that matter) fulfill a specific condition.
 # ---------------------------------------------------------------------
 #
-# The trail of a node is understood as a list of all parent nodes
+# The path of a node is understood as a list of all parent nodes
 # leading up to and including the node itself. If represented as list,
 # the last element of the list is the node itself.
 #
 #######################################################################
 
 
-def is_single_child(trail: Trail) -> bool:
+def is_single_child(path: Path) -> bool:
     """Returns ``True`` if the current node does not have any siblings."""
-    return len(trail[-2]._children) == 1
+    return len(path[-2]._children) == 1
 
 
 # TODO: ambiguous: named, tagging...
-def is_named(trail: Trail) -> bool:
+def is_named(path: Path) -> bool:
     """Returns ``True`` if the current node's parser is a named parser."""
-    # return not trail[-1].anonymous
-    tn = trail[-1].name
+    # return not path[-1].anonymous
+    tn = path[-1].name
     return bool(tn) and tn[0] != ':'
 
 
-def is_anonymous(trail: Trail) -> bool:
+def is_anonymous(path: Path) -> bool:
     """Returns ``True`` if the current node is anonymous."""
-    # return trail[-1].anonymous
-    tn = trail[-1].name
+    # return path[-1].anonymous
+    tn = path[-1].name
     return not tn or tn[0] == ':'
 
 
-def is_anonymous_leaf(trail: Trail) -> bool:
-    """Returns `True` if trail ends in an anonymous leaf-node"""
-    # return not trail[-1].children and trail[-1].anonymous
-    node = trail[-1]
+def is_anonymous_leaf(path: Path) -> bool:
+    """Returns `True` if path ends in an anonymous leaf-node"""
+    # return not path[-1].children and path[-1].anonymous
+    node = path[-1]
     if node._children:
         return False
     tn = node.name
@@ -619,56 +619,56 @@ def is_anonymous_leaf(trail: Trail) -> bool:
 RX_WHITESPACE = re.compile(r'\s*$')
 
 
-def contains_only_whitespace(trail: Trail) -> bool:
+def contains_only_whitespace(path: Path) -> bool:
     r"""Returns ``True`` for nodes that contain only whitespace regardless
     of the name, i.e. nodes the content of which matches the regular
     expression /\s*/, including empty nodes. Note, that this is not true
     for anonymous whitespace nodes that contain comments."""
-    return bool(RX_WHITESPACE.match(trail[-1].content))
+    return bool(RX_WHITESPACE.match(path[-1].content))
 
 
-def is_empty(trail: Trail) -> bool:
+def is_empty(path: Path) -> bool:
     """Returns ``True`` if the current node's content is empty."""
-    return not trail[-1].result
+    return not path[-1].result
 
 
 @transformation_factory(collections.abc.Set)
-def is_token(trail: Trail, tokens: AbstractSet[str] = frozenset()) -> bool:
+def is_token(path: Path, tokens: AbstractSet[str] = frozenset()) -> bool:
     """
-    Checks whether the last node in the trail has the name ":Text"
+    Checks whether the last node in the path has the name ":Text"
     and it's content matches one of the given tokens. Leading and trailing
     whitespace-tokens will be ignored. In case an empty set of tokens is passed,
     any token is a match.
     """
-    node = trail[-1]
+    node = path[-1]
     return node.name == TOKEN_PTYPE and (not tokens or node.content in tokens)
 
 
 @transformation_factory(collections.abc.Set)
-def is_one_of(trail: Trail, name_set: AbstractSet[str]) -> bool:
+def is_one_of(path: Path, name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's name is one of the given tag names."""
-    return trail[-1].name in name_set
+    return path[-1].name in name_set
 
 
 @transformation_factory(collections.abc.Set)
-def not_one_of(trail: Trail, name_set: AbstractSet[str]) -> bool:
+def not_one_of(path: Path, name_set: AbstractSet[str]) -> bool:
     """Returns true, if the node's name is not one of the given tag names."""
-    return trail[-1].name not in name_set
+    return path[-1].name not in name_set
 
 
 @transformation_factory(str)
-def name_matches(trail: Trail, regexp: str) -> bool:
+def name_matches(path: Path, regexp: str) -> bool:
     """
     Returns true, if the node's name matches the regular
     expression `regexp` completely. For example, ':.*' matches all anonymous nodes.
     """
     if not regexp.endswith('$'):
         regexp = f"(?:{regexp})$"
-    return bool(re.match(regexp, trail[-1].name))
+    return bool(re.match(regexp, path[-1].name))
 
 
 @transformation_factory
-def content_matches(trail: Trail, regexp: str) -> bool:
+def content_matches(path: Path, regexp: str) -> bool:
     """
     Checks a node's content against a regular expression.
 
@@ -677,24 +677,24 @@ def content_matches(trail: Trail, regexp: str) -> bool:
     """
     if not regexp.endswith('$'):
         regexp = f"(?:{regexp})$"
-    return bool(re.match(regexp, trail[-1].content))
+    return bool(re.match(regexp, path[-1].content))
 
 
 @transformation_factory
-def has_content(trail: Trail, content: str) -> bool:
+def has_content(path: Path, content: str) -> bool:
     """Checks a node's content against a given string. This is faster
     than content_matches for mere string comparisons."""
-    return trail[-1].content == content
+    return path[-1].content == content
 
 
 @transformation_factory(str)
-def has_attr(trail: Trail, attr: str, value: Optional[str] = None) -> bool:
+def has_attr(path: Path, attr: str, value: Optional[str] = None) -> bool:
     """
     Returns true, if the node has the attribute ``attr`` and its value
     equals ``value``. If ``value`` is None, True is returned if the attribute
     exists, no matter what it value is.
     """
-    node = trail[-1]
+    node = path[-1]
     if value is None:
         return node.has_attr(attr)
     else:
@@ -702,13 +702,13 @@ def has_attr(trail: Trail, attr: str, value: Optional[str] = None) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_ancestor(trail: Trail,
+def has_ancestor(path: Path,
                  name_set: AbstractSet[str],
                  generations: int = -1,
                  until: Union[AbstractSet[str], str] = frozenset()) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
-    in the trail before the last node in the trail.
+    in the path before the last node in the path.
 
     :param generations: determines how deep `has_ancestor` should dive into
         the ancestry. "1" means only the immediate parents wil be considered,
@@ -720,12 +720,12 @@ def has_ancestor(trail: Trail,
     """
     if until:
         if isinstance(until, str):  until = {until}
-        for i in range(len(trail) - 1, -1, -1):
-            if trail[i].name in until:
+        for i in range(len(path) - 1, -1, -1):
+            if path[i].name in until:
                 break
-        trl = trail[i:]
+        trl = path[i:]
     else:
-        trl = trail
+        trl = path
     if generations <= 0:
         return any(nd.name in name_set for nd in trl)
     for i in range(2, min(generations + 2, len(trl) + 1)):
@@ -735,19 +735,19 @@ def has_ancestor(trail: Trail,
 
 
 @transformation_factory(collections.abc.Set)
-def has_parent(trail: Trail, name_set: AbstractSet[str]) -> bool:
-    """Checks whether the immediate predecessor in the trail has one of the
+def has_parent(path: Path, name_set: AbstractSet[str]) -> bool:
+    """Checks whether the immediate predecessor in the path has one of the
     given tags."""
-    return has_ancestor(trail, name_set, 1)
+    return has_ancestor(path, name_set, 1)
 
 
-def has_children(trail: Trail) -> bool:
-    """Checks whether last node in trail has children."""
-    return bool(trail[-1]._children)
+def has_children(path: Path) -> bool:
+    """Checks whether last node in path has children."""
+    return bool(path[-1]._children)
 
 
 @transformation_factory(collections.abc.Set)
-def has_descendant(trail: Trail, name_set: AbstractSet[str],
+def has_descendant(path: Path, name_set: AbstractSet[str],
                    generations: int = -1,
                    until: Union[AbstractSet[str], str] = frozenset()) -> bool:
     assert generations != 0
@@ -755,32 +755,32 @@ def has_descendant(trail: Trail, name_set: AbstractSet[str],
         if isinstance(until, str):  until = {until}
     else:
         until = frozenset()
-    if trail[-1].name in until:
-        for child in trail[-1]._children:
+    if path[-1].name in until:
+        for child in path[-1]._children:
             if child.name in name_set:
                 return True
         return False
-    for child in trail[-1]._children:
+    for child in path[-1]._children:
         if child.name in name_set:
             return True
         if (generations < 0 or generations > 1) \
-                and has_descendant(trail + [child], name_set, generations - 1, until):
+                and has_descendant(path + [child], name_set, generations - 1, until):
             return True
     return False
 
 
 @transformation_factory(collections.abc.Set)
-def has_child(trail: Trail, name_set: AbstractSet[str]) -> bool:
+def has_child(path: Path, name_set: AbstractSet[str]) -> bool:
     """Checks whether at least one child (i.e. immediate descendant) has one of
     the given tags."""
-    return has_descendant(trail, name_set, 1)
+    return has_descendant(path, name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
-def has_sibling(trail: Trail, name_set: AbstractSet[str]):
-    if len(trail) >= 2:
-        node = trail[-1]
-        for child in trail[-2]._children:
+def has_sibling(path: Path, name_set: AbstractSet[str]):
+    if len(path) >= 2:
+        node = path[-1]
+        for child in path[-2]._children:
             if child != node and child.name in name_set:
                 return True
     return False
@@ -879,98 +879,98 @@ def _reduce_child(node: Node, child: Node, root: RootNode):
 #######################################################################
 
 
-def replace_by_single_child(trail: Trail):
+def replace_by_single_child(path: Path):
     """
     Removes single branch node, replacing it by its immediate descendant.
-    Replacement only takes place, if the last node in the trail has
+    Replacement only takes place, if the last node in the path has
     exactly one child. Attributes will be merged. In case one and the same
     attribute is defined for the child as well as the parent, the child's
     attribute value take precedence.
     """
-    node = trail[-1]
+    node = path[-1]
     if len(node._children) == 1:
-        _replace_by(node, node._children[0], cast(RootNode, trail[0]))
+        _replace_by(node, node._children[0], cast(RootNode, path[0]))
 
 
-def replace_by_children(trail: Trail):
+def replace_by_children(path: Path):
     """
-    Eliminates the last node in the trail by replacing it with its children.
+    Eliminates the last node in the path by replacing it with its children.
     The attributes of this node will be dropped. In case the last node is
-    the root-note (i.e. len(trail) == 1), it will only be eliminated, if
+    the root-note (i.e. len(path) == 1), it will only be eliminated, if
     there is but one child.
 
     WARNING: This should never be followed by move_fringes() in the transformation list!!!
     """
     try:
-        parent = trail[-2]
+        parent = path[-2]
     except IndexError:
-        replace_by_single_child(trail)
+        replace_by_single_child(path)
         return
-    node = trail[-1]
+    node = path[-1]
     if node._children:
         result = parent._children  # type: Tuple[Node, ...]
         i = result.index(node)
         parent._set_result(result[:i] + node._children + result[i + 1:])
 
 
-def reduce_single_child(trail: Trail):
+def reduce_single_child(path: Path):
     """
     Reduces a single branch node by transferring the result of its
     immediate descendant to this node, but keeping this node's parser entry.
-    Reduction only takes place if the last node in the trail has
+    Reduction only takes place if the last node in the path has
     exactly one child. Attributes will be merged. In case one and the same
     attribute is defined for the child as well as the parent, the parent's
     attribute value take precedence.
     """
-    node = trail[-1]
+    node = path[-1]
     if len(node._children) == 1:
-        _reduce_child(node, node._children[0], cast(RootNode, trail[0]))
+        _reduce_child(node, node._children[0], cast(RootNode, path[0]))
 
 
 @transformation_factory(collections.abc.Callable)
-def replace_or_reduce(trail: Trail, condition: Callable = is_named):
+def replace_or_reduce(path: Path, condition: Callable = is_named):
     """
     Replaces node by a single child, if condition is met on child,
     otherwise (i.e. if the child is anonymous) reduces the child.
     """
-    node = trail[-1]
+    node = path[-1]
     if len(node._children) == 1:
         child = node._children[0]
-        if condition(trail):
-            _replace_by(node, child, cast(RootNode, trail[0]))
+        if condition(path):
+            _replace_by(node, child, cast(RootNode, path[0]))
         else:
-            _reduce_child(node, child, cast(RootNode, trail[0]))
+            _reduce_child(node, child, cast(RootNode, path[0]))
 
 
 @transformation_factory(str)
-def change_name(trail: Trail, name: str):
+def change_name(path: Path, name: str):
     """
-    Changes the tag name of the last node in the trail.
+    Changes the tag name of the last node in the path.
 
     Parameters:
-        trail: the trail where the parser shall be replaced
+        path: the path where the parser shall be replaced
         name: The new tag name.
     """
-    node = trail[-1]
+    node = path[-1]
     # # ZOMBIE_TAGS will not be changed, so that errors don't get overlooked
     # if node.name != ZOMBIE_TAG:
     node.name = name
 
 
-@transformation_factory(str)
-def change_tag_name(trail: Trail, name: str):
-    deprecation_warning('"DHParser.transform.change_tag_name()" is deprecated. '
-                        'Use "change_name()" instead!')
-    change_name(trail, name)
+# @transformation_factory(str)
+# def change_tag_name(path: Path, name: str):
+#     deprecation_warning('"DHParser.transform.change_tag_name()" is deprecated. '
+#                         'Use "change_name()" instead!')
+#     change_name(path, name)
 
 
 @transformation_factory(dict)
-def replace_child_names(trail: Trail, replacements: Dict[str, str]):
+def replace_child_names(path: Path, replacements: Dict[str, str]):
     """
-    Replaces the tag names of the children of the last node in the trail
+    Replaces the tag names of the children of the last node in the path
     according to the replacement dictionary.
 
-    :param trail: The current trail (i.e. list of ancestors and current
+    :param path: The current path (i.e. list of ancestors and current
         node)
     :param replacements: A dictionary of name. Each tag name of a child
         node that exists as a key in the dictionary will be replaces by
@@ -978,20 +978,20 @@ def replace_child_names(trail: Trail, replacements: Dict[str, str]):
     """
     # assert ZOMBIE_TAG not in replacements, 'Replacing ZOMBIE_TAGS is not allowed, " \
     #     "because they result from errors that could otherwise be overlooked, subsequently!'
-    for child in trail[-1]._children:
+    for child in path[-1]._children:
         original_name = child.name
         child.name = replacements.get(original_name, original_name)
 
 
 @transformation_factory(dict)
-def replace_tag_names(trail: Trail, replacements: Dict[str, str]):
+def replace_tag_names(path: Path, replacements: Dict[str, str]):
     deprecation_warning('"DHParser.transform.replace_tag_names()" is deprecated. '
                         'Use "replace_child_names()" instead!')
-    replace_child_names(trail, replacements)
+    replace_child_names(path, replacements)
 
 
 @transformation_factory(collections.abc.Callable)
-def flatten(trail: Trail, condition: Callable = is_anonymous, recursive: bool = True):
+def flatten(path: Path, condition: Callable = is_anonymous, recursive: bool = True):
     """
     Flattens all children, that fulfill the given ``condition``
     (default: all unnamed children). Flattening means that wherever a
@@ -1010,24 +1010,24 @@ def flatten(trail: Trail, condition: Callable = is_anonymous, recursive: bool = 
         (1 (+ (2 + (3))))  ->   (1 + 2 + 3)
     """
 
-    node = trail[-1]
+    node = path[-1]
     if node._children:
         new_result = []     # type: List[Node]
-        trail.append(PLACEHOLDER)
+        path.append(PLACEHOLDER)
         for child in node._children:
-            trail[-1] = child
-            if child._children and condition(trail):
+            path[-1] = child
+            if child._children and condition(path):
                 if recursive:
-                    flatten(trail, condition, recursive)
+                    flatten(path, condition, recursive)
                 new_result.extend(child._children)
-                update_attr(node, (child,), cast(RootNode, trail[0]))
+                update_attr(node, (child,), cast(RootNode, path[0]))
             else:
                 new_result.append(child)
-        trail.pop()
+        path.pop()
         node._set_result(tuple(new_result))
 
 
-def collapse(trail: Trail):
+def collapse(path: Path):
     """
     Collapses all sub-nodes of a node by replacing them with the
     string representation of the node. USE WITH CARE!
@@ -1038,7 +1038,7 @@ def collapse(trail: Trail):
     >>> print(flatten_sxpr(tree.as_sxpr()))
     (place "p.26b,18")
     """
-    node = trail[-1]
+    node = path[-1]
     for descendant in node.select_if(lambda nd: nd.has_attr()):
         node.attr.update(descendant.attr)
     node.result = node.content
@@ -1071,7 +1071,7 @@ def fix_content(fixed_content: str) -> MergeRule:
 
 
 @transformation_factory(collections.abc.Callable)
-def collapse_children_if(trail: Trail,
+def collapse_children_if(path: Path,
                          condition: Callable,
                          target_name: str,
                          merge_rule: MergeRule = join_content):
@@ -1090,7 +1090,7 @@ def collapse_children_if(trail: Trail,
     """
     assert isinstance(target_name, str)  # TODO: Delete this when safe
 
-    node = trail[-1]
+    node = path[-1]
     if not node._children:
         return  # do nothing if its a leaf node
     package = []  # type: List[Node]
@@ -1129,7 +1129,7 @@ def collapse_children_if(trail: Trail,
 
 
 @transformation_factory(collections.abc.Callable)
-def merge_adjacent(trail: Trail, condition: Callable, preferred_name: str = ''):
+def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
     assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
@@ -1159,7 +1159,7 @@ def merge_adjacent(trail: Trail, condition: Callable, preferred_name: str = ''):
         >>> print(flatten_sxpr(tree.as_sxpr()))
         (place (abbreviation "p.26") (superscript "b") (mark ",18"))
     """
-    node = trail[-1]
+    node = path[-1]
     children = node._children
     if children:
         new_result = []
@@ -1177,7 +1177,7 @@ def merge_adjacent(trail: Trail, condition: Callable, preferred_name: str = ''):
                     head = adjacent[0]
                     names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
-                    update_attr(head, adjacent[1:], cast(RootNode, trail[0]))
+                    update_attr(head, adjacent[1:], cast(RootNode, path[0]))
                     if preferred_name in names:
                         head.name = preferred_name
                     new_result.append(head)
@@ -1191,17 +1191,17 @@ merge_leaves = merge_adjacent(is_anonymous_leaf)
 
 
 @transformation_factory(collections.abc.Callable)
-def merge_connected(trail: Trail, content: Callable, delimiter: Callable,
+def merge_connected(path: Path, content: Callable, delimiter: Callable,
                     content_name: str = '', delimiter_name: str = ''):
     """
     Merges sequences of content and delimiters. Other than `merge_adjacent()`, which
     does not make this distinction, delimiters at the fringe of content blocks are not
     included in the merge.
 
-    :param trail: The trail, i.e. list of "ancestor" nodes, ranging from the
-        root node (`trail[0]`) to the current node (`trail[-1]`)
-    :param content: Condition to identify content nodes. (Trail -> bool)
-    :param delimiter: Condition to identify delimiter nodes. (Trail -> bool)
+    :param path: The path, i.e. list of "ancestor" nodes, ranging from the
+        root node (`path[0]`) to the current node (`path[-1]`)
+    :param content: Condition to identify content nodes. (Path -> bool)
+    :param delimiter: Condition to identify delimiter nodes. (Path -> bool)
     :param content_name: tag name for the merged content blocks
     :param delimiter_name: tag name for the merged delimiters at the fringe
 
@@ -1209,8 +1209,8 @@ def merge_connected(trail: Trail, content: Callable, delimiter: Callable,
     identify delimiter nodes must never come true for one and the same node!!!
     """
     # first, merge all delimiters
-    merge_adjacent(trail, delimiter, delimiter_name)
-    node = trail[-1]
+    merge_adjacent(path, delimiter, delimiter_name)
+    node = path[-1]
     children = node._children
     if children:
         new_result = []
@@ -1230,7 +1230,7 @@ def merge_connected(trail: Trail, content: Callable, delimiter: Callable,
                     head = adjacent[0]
                     names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
-                    update_attr(head, adjacent[1:], cast(RootNode, trail[0]))
+                    update_attr(head, adjacent[1:], cast(RootNode, path[0]))
                     if content_name in names:
                         head.name = content_name
                     new_result.append(head)
@@ -1269,7 +1269,7 @@ def merge_results(dest: Node, src: Tuple[Node, ...], root: RootNode) -> bool:
 
 @transformation_factory(collections.abc.Callable)
 @cython.locals(a=cython.int, b=cython.int, i=cython.int)
-def move_fringes(trail: Trail, condition: Callable, merge: bool = True):
+def move_fringes(path: Path, condition: Callable, merge: bool = True):
     """
     Moves adjacent nodes on the left and right fringe that fulfill the given condition
     to the parent node. If the `merge`-flag is set, a moved node will be merged with its
@@ -1307,10 +1307,10 @@ def move_fringes(trail: Trail, condition: Callable, merge: bool = True):
 
     WARNING: This function should never follow replace_by_children() in the transformation list!!!
     """
-    node = trail[-1]
-    if len(trail) <= 1 or not node._children:
+    node = path[-1]
+    if len(path) <= 1 or not node._children:
         return
-    parent = trail[-2]
+    parent = path[-2]
 
     assert node in parent._children, \
         ("Node %s (%s) is not among its parent's children, any more! "
@@ -1354,24 +1354,24 @@ def move_fringes(trail: Trail, condition: Callable, merge: bool = True):
 
             if len(before) + len(prevN) > 1:
                 target = before[-1] if before else prevN[0]
-                if merge_results(target, prevN + before, cast(RootNode, trail[0])):
+                if merge_results(target, prevN + before, cast(RootNode, path[0])):
                     before = (target,)
             before = before or prevN
 
             if len(after) + len(nextN) > 1:
                 target = after[0] if after else nextN[-1]
-                if merge_results(target, after + nextN, cast(RootNode, trail[0])):
+                if merge_results(target, after + nextN, cast(RootNode, path[0])):
                     after = (target,)
             after = after or nextN
 
         parent._set_result(parent_children[:a + 1] + before + (node,) + after + parent_children[b:])
 
 
-def left_associative(trail: Trail):
+def left_associative(path: Path):
     """
     Rearranges a flat node with infix operators into a left associative tree.
     """
-    node = trail[-1]
+    node = path[-1]
     if len(node._children) >= 3:
         assert (len(node._children) + 1) % 2 == 0
         rest = list(node._children)
@@ -1385,7 +1385,7 @@ def left_associative(trail: Trail):
 
 
 @transformation_factory(collections.abc.Set)
-def lean_left(trail: Trail, operators: AbstractSet[str]):
+def lean_left(path: Path, operators: AbstractSet[str]):
     """
     Turns a right leaning tree into a left leaning tree:
 
@@ -1405,7 +1405,7 @@ def lean_left(trail: Trail, operators: AbstractSet[str]):
     so grouping nodes must not be eliminated during traversal! This
     must be done in a second pass.
     """
-    node = trail[-1]
+    node = path[-1]
     assert node._children and len(node._children) == 2
     assert node.name in operators
     right = node._children[1]
@@ -1435,85 +1435,85 @@ def lean_left(trail: Trail, operators: AbstractSet[str]):
 
 
 @transformation_factory(collections.abc.Callable)
-def lstrip(trail: Trail, condition: Callable = contains_only_whitespace):
+def lstrip(path: Path, condition: Callable = contains_only_whitespace):
     """Recursively removes all leading child-nodes that fulfill a given condition."""
-    node = trail[-1]
+    node = path[-1]
     i = 1
     while i > 0 and node._children:
         node_children = node._children
-        lstrip(trail + [node_children[0]], condition)
+        lstrip(path + [node_children[0]], condition)
         i, L = 0, len(node_children)
-        while i < L and condition(trail + [node_children[i]]):
+        while i < L and condition(path + [node_children[i]]):
             i += 1
         if i > 0:
             node._set_result(node_children[i:])
 
 
 @transformation_factory(collections.abc.Callable)
-def rstrip(trail: Trail, condition: Callable = contains_only_whitespace):
+def rstrip(path: Path, condition: Callable = contains_only_whitespace):
     """Recursively removes all trailing nodes that fulfill a given condition."""
-    node = trail[-1]
+    node = path[-1]
     i, L = 0, len(node._children)
     while i < L and node._children:
         node_children = node._children
-        rstrip(trail + [node_children[-1]], condition)
+        rstrip(path + [node_children[-1]], condition)
         L = len(node_children)
         i = L
-        while i > 0 and condition(trail + [node_children[i - 1]]):
+        while i > 0 and condition(path + [node_children[i - 1]]):
             i -= 1
         if i < L:
             node._set_result(node_children[:i])
 
 
 @transformation_factory(collections.abc.Callable)
-def strip(trail: Trail, condition: Callable = contains_only_whitespace):
+def strip(path: Path, condition: Callable = contains_only_whitespace):
     """Removes leading and trailing child-nodes that fulfill a given condition."""
-    lstrip(trail, condition)
-    rstrip(trail, condition)
+    lstrip(path, condition)
+    rstrip(path, condition)
 
 
 @transformation_factory  # (slice)
-def keep_children(trail: Trail, section: slice = slice(None)):
+def keep_children(path: Path, section: slice = slice(None)):
     """Keeps only child-nodes which fall into a slice of the result field."""
-    node = trail[-1]
+    node = path[-1]
     if node._children:
         node._set_result(node._children[section])
 
 
 @transformation_factory(collections.abc.Callable)
-def keep_children_if(trail: Trail, condition: Callable):
+def keep_children_if(path: Path, condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
-    node = trail[-1]
+    node = path[-1]
     if node._children:
-        node._set_result(tuple(c for c in node._children if condition(trail + [c])))
+        node._set_result(tuple(c for c in node._children if condition(path + [c])))
 
 
 @transformation_factory(collections.abc.Set)
-def keep_tokens(trail: Trail, tokens: AbstractSet[str] = frozenset()):
+def keep_tokens(path: Path, tokens: AbstractSet[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
-    keep_children_if(trail, partial(is_token, tokens=tokens))
+    keep_children_if(path, partial(is_token, tokens=tokens))
 
 
 @transformation_factory(collections.abc.Set)
-def keep_nodes(trail: Trail, names: AbstractSet[str]):
+def keep_nodes(path: Path, names: AbstractSet[str]):
     """Removes children by tag name."""
-    keep_children_if(trail, partial(is_one_of, name_set=names))
+    keep_children_if(path, partial(is_one_of, name_set=names))
 
 
 @transformation_factory
-def keep_content(trail: Trail, regexp: str):
+def keep_content(path: Path, regexp: str):
     """Removes children depending on their string value."""
-    keep_children_if(trail, partial(content_matches, regexp=regexp))
+    keep_children_if(path, partial(content_matches, regexp=regexp))
 
 
 @transformation_factory(collections.abc.Callable)
-def remove_children_if(trail: Trail, condition: Callable):
+def remove_children_if(path: Path, condition: Callable):
     """Removes all children for which `condition()` returns `True`."""
-    node = trail[-1]
+    node = path[-1]
     if node._children:
-        node._set_result(tuple(c for c in node._children if not condition(trail + [c])))
+        node._set_result(tuple(c for c in node._children if not condition(path + [c])))
 
 
 remove_whitespace = remove_children_if(is_one_of(WHITESPACE_PTYPE))
@@ -1524,9 +1524,9 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 # remove_single_child = apply_if(keep_children(slice(0)), lambda trl: len(trl[-1].children) == 1)
 
 
-# def remove_first(trail: Trail):
+# def remove_first(path: Path):
 #     """Removes the first non-whitespace child."""
-#     node = trail[-1]
+#     node = path[-1]
 #     if node.children:
 #         for i, child in enumerate(node.children):
 #             if child.name != WHITESPACE_PTYPE:
@@ -1536,9 +1536,9 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 #         node.result = node.children[:i] + node.children[i + 1:]
 #
 #
-# def remove_last(trail: Trail):
+# def remove_last(path: Path):
 #     """Removes the last non-whitespace child."""
-#     node = trail[-1]
+#     node = path[-1]
 #     if node.children:
 #         for i, child in enumerate(reversed(node.children)):
 #             if child.name != WHITESPACE_PTYPE:
@@ -1549,9 +1549,9 @@ remove_infix_operator = keep_children(slice(0, None, 2))
 #         node.result = node.children[:i] + node.children[i + 1:]
 
 
-def remove_brackets(trail: Trail):
+def remove_brackets(path: Path):
     """Removes any leading or trailing sequence of whitespaces, tokens or regexps."""
-    children = trail[-1]._children
+    children = path[-1]._children
     if children:
         disposables = LEAF_PTYPES
         i = 0
@@ -1566,38 +1566,38 @@ def remove_brackets(trail: Trail):
                     or (children[k - 1].name == ':Series'
                         and all(c.name in disposables for c in children[k - 1]._children)))):
             k -= 1
-        trail[-1]._set_result(children[i:k])
+        path[-1]._set_result(children[i:k])
 
 
 @transformation_factory(collections.abc.Set)
-def remove_tokens(trail: Trail, tokens: AbstractSet[str] = frozenset()):
+def remove_tokens(path: Path, tokens: AbstractSet[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
-    remove_children_if(trail, partial(is_token, tokens=tokens))
+    remove_children_if(path, partial(is_token, tokens=tokens))
 
 
 @transformation_factory(collections.abc.Set)
-def remove_children(trail: Trail, names: AbstractSet[str]):
+def remove_children(path: Path, names: AbstractSet[str]):
     """Removes children by tag name."""
-    remove_children_if(trail, partial(is_one_of, name_set=names))
+    remove_children_if(path, partial(is_one_of, name_set=names))
 
 
 @transformation_factory
-def remove_content(trail: Trail, regexp: str):
+def remove_content(path: Path, regexp: str):
     """Removes children depending on their string value."""
-    remove_children_if(trail, partial(content_matches, regexp=regexp))
+    remove_children_if(path, partial(content_matches, regexp=regexp))
 
 
 @transformation_factory(collections.abc.Callable)
-def remove_if(trail: Trail, condition: Callable):
+def remove_if(path: Path, condition: Callable):
     """Removes node if condition is `True`"""
-    if condition(trail):
+    if condition(path):
         try:
-            parent = trail[-2]
+            parent = path[-2]
         except IndexError:
             return
-        node = trail[-1]
+        node = path[-1]
         parent._set_result(tuple(nd for nd in parent._children if nd != node))
 
 
@@ -1611,34 +1611,34 @@ def remove_if(trail: Trail, condition: Callable):
 
 
 @transformation_factory(collections.abc.Callable)
-def transform_result(trail: Trail, func: Callable):  # Callable[[ResultType], ResultType]
+def transform_result(path: Path, func: Callable):  # Callable[[ResultType], ResultType]
     """
     Replaces the result of the node. ``func`` takes the node's result
     as an argument an returns the mapped result.
     """
-    node = trail[-1]
+    node = path[-1]
     node.result = func(node.result)
 
 
 @transformation_factory  # (str)
-def replace_content_with(trail: Trail, content: str):  # Callable[[Node], ResultType]
+def replace_content_with(path: Path, content: str):  # Callable[[Node], ResultType]
     """
     Replaces the content of the node with the given text content.
     """
-    node = trail[-1]
+    node = path[-1]
     node.result = content
 
 
-def normalize_whitespace(trail):
+def normalize_whitespace(path):
     """
     Normalizes Whitespace inside a leaf node, i.e. any sequence of
     whitespaces, tabs and line feeds will be replaced by a single
     whitespace. Empty (i.e. zero-length) Whitespace remains empty,
     however.
     """
-    node = trail[-1]
+    node = path[-1]
     assert not node._children
-    if trail[-1].name == WHITESPACE_PTYPE:
+    if path[-1].name == WHITESPACE_PTYPE:
         if node.result:
             node.result = ' '
     else:
@@ -1646,12 +1646,12 @@ def normalize_whitespace(trail):
 
 
 @transformation_factory
-def add_attributes(trail: Trail, attributes: dict):  # Dict[str, str]
+def add_attributes(path: Path, attributes: dict):  # Dict[str, str]
     """
     Adds the attributes in the dictionary to the XML-Attributes of the last node
-    in the given trail.
+    in the given path.
     """
-    trail[-1].attr.update(attributes)
+    path[-1].attr.update(attributes)
 
 
 NodeGenerator = Callable[[], Node]
@@ -1699,27 +1699,27 @@ def node_maker(name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(trail: Trail, names: AbstractSet[str] = frozenset()) -> Tuple[int, ...]:
+def positions_of(path: Path, names: AbstractSet[str] = frozenset()) -> Tuple[int, ...]:
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `names`.
     """
-    return tuple(i for i, c in enumerate(trail[-1]._children) if c.name in names)
+    return tuple(i for i, c in enumerate(path[-1]._children) if c.name in names)
 
 
 @transformation_factory
-def delimiter_positions(trail: Trail):
+def delimiter_positions(path: Path):
     """Returns a tuple of positions "between" all children."""
-    return tuple(range(1, len(trail[-1]._children)))
+    return tuple(range(1, len(path[-1]._children)))
 
 
 PositionType = Union[int, tuple, Callable]
 
 
-def normalize_position_representation(trail: Trail, position: PositionType) -> Tuple[int, ...]:
+def normalize_position_representation(path: Path, position: PositionType) -> Tuple[int, ...]:
     """Converts a position-representation in any of the forms that `PositionType`
     allows into a (possibly empty) tuple of integers."""
     if callable(position):
-        position = position(trail)
+        position = position(path)
     if isinstance(position, int):
         return (position,)
     elif not position:  # empty tuple or None
@@ -1730,7 +1730,7 @@ def normalize_position_representation(trail: Trail, position: PositionType) -> T
 
 
 @transformation_factory(int, tuple, collections.abc.Callable)
-def insert(trail: Trail, position: PositionType, node_factory: Callable):
+def insert(path: Path, position: PositionType, node_factory: Callable):
     """Inserts a delimiter at a specific position within the children. If
     `position` is `None` nothing will be inserted. Position values greater
     or equal the number of children mean that the delimiter will be appended
@@ -1740,10 +1740,10 @@ def insert(trail: Trail, position: PositionType, node_factory: Callable):
 
         insert(pos_of('paragraph'), node_maker('LF', '\\n'))
     """
-    pos_tuple = normalize_position_representation(trail, position)
+    pos_tuple = normalize_position_representation(path, position)
     if not pos_tuple:
         return
-    node = trail[-1]
+    node = path[-1]
     children = list(node._children)
     assert children or not node.result, "Cannot add nodes to a leaf-node!"
     L = len(children)
@@ -1756,9 +1756,9 @@ def insert(trail: Trail, position: PositionType, node_factory: Callable):
 
 
 @transformation_factory(collections.abc.Callable)
-def delimit_children(trail: Trail, node_factory: Callable):
+def delimit_children(path: Path, node_factory: Callable):
     """Add a delimiter drawn from the `node_factory` between all children."""
-    insert(trail, delimiter_positions, node_factory)
+    insert(path, delimiter_positions, node_factory)
 
 
 ########################################################################
@@ -1770,14 +1770,14 @@ def delimit_children(trail: Trail, node_factory: Callable):
 
 # @transformation_factory
 @transformation_factory(str)
-def add_error(trail: Trail, error_msg: str, error_code: ErrorCode = ERROR):
+def add_error(path: Path, error_msg: str, error_code: ErrorCode = ERROR):
     """
     Raises an error unconditionally. This makes sense in case illegal paths are
     encoded in the syntax to provide more accurate error messages.
     """
-    node = trail[-1]
-    assert isinstance(trail[0], RootNode)
-    root = cast(RootNode, trail[0])
+    node = path[-1]
+    assert isinstance(path[0], RootNode)
+    root = cast(RootNode, path[0])
     if not error_msg:
         error_msg = "Syntax Error"
     try:
@@ -1791,29 +1791,29 @@ def add_error(trail: Trail, error_msg: str, error_code: ErrorCode = ERROR):
 
 
 @transformation_factory(collections.abc.Callable)
-def error_on(trail: Trail,
+def error_on(path: Path,
              condition: Callable,
              error_msg: str = '',
              error_code: ErrorCode = ERROR):
     """
     Checks for `condition`; adds an error or warning message if condition is not met.
     """
-    if condition(trail):
+    if condition(path):
         if not error_msg:
             cond_name = condition.__name__ if hasattr(condition, '__name__') \
                 else condition.__class__.__name__ if hasattr(condition, '__class__') \
                 else '<unknown>'
             error_msg = "transform.error_on: Failed to meet condition " + cond_name
-        add_error(trail, error_msg, error_code)
+        add_error(path, error_msg, error_code)
 
 #
 # @transformation_factory(collections.abc.Callable)
-# def warn_on(trail: Trail, condition: Callable, warning: str = ''):
+# def warn_on(path: Path, condition: Callable, warning: str = ''):
 #     """
 #     Checks for `condition`; adds an warning message if condition is not met.
 #     """
-#     node = trail[-1]
-#     if not condition(trail):
+#     node = path[-1]
+#     if not condition(path):
 #         if warning:
 #             node.add_error(warning % node.name if warning.find("%s") > 0 else warning,
 #                            WARNING)
@@ -1821,7 +1821,7 @@ def error_on(trail: Trail,
 #             cond_name = condition.__name__ if hasattr(condition, '__name__') \
 #                         else condition.__class__.__name__ if hasattr(condition, '__class__') \
 #                         else '<unknown>'
-#             trail[0].new_error(node, "transform.warn_on: Failed to meet condition " + cond_name,
+#             path[0].new_error(node, "transform.warn_on: Failed to meet condition " + cond_name,
 #                                  WARNING)
 
 
@@ -1829,31 +1829,31 @@ assert_has_children = error_on(lambda nd: nd._children, 'Element "%s" has no chi
 
 
 @transformation_factory
-def assert_content(trail: Trail, regexp: str):
-    node = trail[-1]
-    if not content_matches(trail, regexp):
-        cast(RootNode, trail[0]).new_error(node, 'Element "%s" violates %s on %s'
-                                             % (node.name, str(regexp), node.content))
+def assert_content(path: Path, regexp: str):
+    node = path[-1]
+    if not content_matches(path, regexp):
+        cast(RootNode, path[0]).new_error(node, 'Element "%s" violates %s on %s'
+                                          % (node.name, str(regexp), node.content))
 
 
 @transformation_factory(collections.abc.Set)
-def require(trail: Trail, child_tags: AbstractSet[str]):
-    node = trail[-1]
+def require(path: Path, child_tags: AbstractSet[str]):
+    node = path[-1]
     for child in node._children:
         if child.name not in child_tags:
-            cast(RootNode, trail[0]).new_error(node, 'Element "%s" is not allowed inside "%s".'
-                                                 % (child.name, node.name))
+            cast(RootNode, path[0]).new_error(node, 'Element "%s" is not allowed inside "%s".'
+                                              % (child.name, node.name))
 
 
 @transformation_factory(collections.abc.Set)
-def forbid(trail: Trail, child_tags: AbstractSet[str]):
-    node = trail[-1]
+def forbid(path: Path, child_tags: AbstractSet[str]):
+    node = path[-1]
     for child in node._children:
         if child.name in child_tags:
-            cast(RootNode, trail[0]).new_error(node, 'Element "%s" cannot be nested inside "%s".'
-                                                 % (child.name, node.name))
+            cast(RootNode, path[0]).new_error(node, 'Element "%s" cannot be nested inside "%s".'
+                                              % (child.name, node.name))
 
 
-def peek(trail: Trail):
-    """For debugging: Prints the last node in the trail as S-expression."""
-    print(trail[-1].as_sxpr(compact=True))
+def peek(path: Path):
+    """For debugging: Prints the last node in the path as S-expression."""
+    print(path[-1].as_sxpr(compact=True))

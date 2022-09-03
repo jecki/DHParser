@@ -320,7 +320,7 @@ class XMLTransformer(Compiler):
         return node
 
     def on_Reference(self, node):
-        replace_by_single_child(self.trail)
+        replace_by_single_child(self.path)
         return node
 
     def on_Comment(self, node):

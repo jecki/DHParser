@@ -154,7 +154,7 @@ returned result of any compilation function is a node.
 the second pattern can be employed in either use-case. In any case, calling
 compilation-methods of child-nodes should always be channeled through one of the
 two methods "fallback_compiler()" or "compile()", because these methods make
-sure the "self.trail"- variable (which keeps the "trail" of nodes from the
+sure the "self.path"- variable (which keeps the "path" of nodes from the
 root-node to the current node) will be updated and that any
 "attr_NAME()"-methods are called, plus a few other things. 
 

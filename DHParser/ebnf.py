@@ -2184,7 +2184,7 @@ class EBNFCompiler(Compiler):
         assert all(isinstance(arg, str) for arg in arguments), str(arguments)
         # remove drop clause for non dropping definitions of forms like "/\w+/~"
         if (parser_class == "Series" and node.name not in self.directives.drop
-            and DROP_REGEXP in self.directives.drop and self.trail[-2].name == "definition"
+            and DROP_REGEXP in self.directives.drop and self.path[-2].name == "definition"
             and all((arg[:12] == 'Drop(RegExp(' or arg[:10] == 'Drop(Text('
                      or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
             arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
@@ -2553,7 +2553,7 @@ class EBNFCompiler(Compiler):
 
 
     def drop_on(self, category):
-        return category in self.directives.drop and self.trail[-2].name != "definition"
+        return category in self.directives.drop and self.path[-2].name != "definition"
 
 
     def TEXT_PARSER(self, text, drop):
@@ -2566,8 +2566,8 @@ class EBNFCompiler(Compiler):
 
     def WSPC_PARSER(self, force_drop=False):
         if ((force_drop or DROP_WSPC in self.directives.drop)
-                and (self.trail[-2].name != "definition"
-                     or self.trail[-1].name == 'literal')):
+                and (self.path[-2].name != "definition"
+                     or self.path[-1].name == 'literal')):
             return 'dwsp__'
         return 'wsp__'
 

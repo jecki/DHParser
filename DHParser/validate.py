@@ -29,10 +29,10 @@ node-trees. EXPERIMENTAL!!! THIS IS STILL A STUB!!!
 import re
 from typing import Callable, Dict
 
-from DHParser.nodetree import Node, RootNode, Trail, ANY_NODE
+from DHParser.nodetree import Node, RootNode, Path, ANY_NODE
 
 
-ValidationFunction = Callable[[Node, Trail], None]  # validate(schema, data)
+ValidationFunction = Callable[[Node, Path], None]  # validate(schema, data)
 SchemaLanguage = Dict[str, ValidationFunction]
 Schema = Node
 
@@ -51,7 +51,7 @@ def abstract_validate(language: SchemaLanguage, schema: Schema, data: Node) -> N
 RX_ANYSTRING = re.compile('.?')
 
 
-def verify_attributes(schema: Node, data: Trail) -> bool:
+def verify_attributes(schema: Node, data: Path) -> bool:
     attributes = schema.get_attr('attributes', '').split(',')
     if isinstance(attributes, str):
         attributes = attributes.split(',')
@@ -74,40 +74,40 @@ def verify_attributes(schema: Node, data: Trail) -> bool:
         assert not value_patterns
 
 
-def leaf(schema: Node, data: Trail) -> None:
+def leaf(schema: Node, data: Path) -> None:
     global Relax
     pass
 
 
-def branch(schema: Node, data: Trail) -> None:
+def branch(schema: Node, data: Path) -> None:
     pass
 
 
-def alternative(schema: Node, data: Trail) -> None:
+def alternative(schema: Node, data: Path) -> None:
     pass
 
 
-def optional(schema: Node, data: Trail) -> None:
+def optional(schema: Node, data: Path) -> None:
     pass
 
 
-def zero_or_more(schema: Node, data: Trail) -> None:
+def zero_or_more(schema: Node, data: Path) -> None:
     pass
 
 
-def one_or_more(schema: Node, data: Trail) -> None:
+def one_or_more(schema: Node, data: Path) -> None:
     pass
 
 
-def series(schema: Node, data: Trail) -> None:
+def series(schema: Node, data: Path) -> None:
     pass
 
 
-def interleave(schema: Node, data: Trail) -> None:
+def interleave(schema: Node, data: Path) -> None:
     pass
 
 
-def forward(schema: Node, data: Trail) -> None:
+def forward(schema: Node, data: Path) -> None:
     pass
 
 

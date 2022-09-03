@@ -1219,7 +1219,7 @@ class Grammar:
 
         call_stack__:  A stack of the tag names and locations of all parsers
                 in the call chain to the currently processed parser during
-                parsing. The call stack can be thought of as a breadcrumb trail.
+                parsing. The call stack can be thought of as a breadcrumb path.
                 This is required for recording the parser history (for debugging)
                 and, eventually, i.e. one day in the future, for tracing through
                 the parsing process.

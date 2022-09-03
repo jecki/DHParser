@@ -29,10 +29,10 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
-    flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_trail, \
-    prev_trail, serialize_trail, generate_content_mapping, map_pos_to_trail, \
-    select_trail_if, select_trail, create_trail_match_function, pick_trail, \
-    LEAF_TRAIL, TOKEN_PTYPE, insert_node, markup, content_of, strlen_of
+    flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
+    prev_path, serialize_path, generate_content_mapping, map_pos_to_path, \
+    select_path_if, select_path, create_path_match_function, pick_path, \
+    LEAF_PATH, TOKEN_PTYPE, insert_node, markup, content_of, strlen_of
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -421,20 +421,20 @@ class TestNode:
                 for node in self.unique_tree.select(ANY_NODE, include_root=True, skip_subtree='f')]
         assert ''.join(tags) == "abdf", ''.join(tags)
 
-    def test_tree_select_trail_if(self):
+    def test_tree_select_path_if(self):
         tree = parse_sxpr(self.unique_nodes_sexpr)
         contexts = []
-        for ctx in tree.select_trail_if(lambda ctx: ctx[-1].name >= 'd',
-                                        include_root=True, reverse=False):
+        for ctx in tree.select_path_if(lambda ctx: ctx[-1].name >= 'd',
+                                       include_root=True, reverse=False):
             contexts.append(''.join(nd.name for nd in ctx))
         assert contexts == ['ad', 'af', 'afg']
         contexts = []
-        for ctx in tree.select_trail_if(lambda ctx: ctx[-1].name >= 'd',
-                                        include_root=True, reverse=True):
+        for ctx in tree.select_path_if(lambda ctx: ctx[-1].name >= 'd',
+                                       include_root=True, reverse=True):
             contexts.append(''.join(nd.name for nd in ctx))
         assert contexts == ['af', 'afg', 'ad']
 
-    def test_select_trail_with_skipping(self):
+    def test_select_path_with_skipping(self):
         tree = parse_sxpr('(a (b c) (d e) (f (g h)))')
         check = []
         contexts = []
@@ -442,20 +442,20 @@ class TestNode:
             nonlocal check
             check.append(''.join(nd.name for nd in ctx))
             return True
-        for ctx in tree.select_trail(select_f, include_root=True):
+        for ctx in tree.select_path(select_f, include_root=True):
             contexts.append(''.join(nd.name for nd in ctx))
         assert check == contexts == ['a', 'ab', 'ad', 'af', 'afg']
         check = []
         contexts = []
-        for ctx in tree.select_trail(select_f, include_root=True, skip_subtree='f'):
+        for ctx in tree.select_path(select_f, include_root=True, skip_subtree='f'):
             contexts.append(''.join(nd.name for nd in ctx))
         assert check == contexts == ['a', 'ab', 'ad', 'af']
 
-    def test_tree_select_trail(self):
+    def test_tree_select_path(self):
         tree = parse_sxpr('(A (B 1) (C (X 1) (Y 1)) (B 2))')
         l = [str(nd) for nd in tree.select('B')]
         assert ''.join(l) == '12'
-        l = [str(ctx[-1]) for ctx in tree.select_trail('B')]
+        l = [str(ctx[-1]) for ctx in tree.select_path('B')]
         assert ''.join(l) == '12'
 
     def test_select_children(self):
@@ -879,29 +879,29 @@ class TestSerialization:
 
 
 class TestSegementExtraction:
-    def test_get_trail(self):
+    def test_get_path(self):
         tree = parse_sxpr('(A (F (X "a") (Y "b")) (G "c"))')
         nd_X = tree.pick('X')
-        ctx = tree.reconstruct_trail(nd_X)
+        ctx = tree.reconstruct_path(nd_X)
         assert [nd.name for nd in ctx] == ['A', 'F', 'X']
         nd_F = tree.pick('F')
         nd_Y = tree.pick('Y')
-        ctx = nd_F.reconstruct_trail(nd_Y)
+        ctx = nd_F.reconstruct_path(nd_Y)
         assert [nd.name for nd in ctx] == ['F', 'Y']
-        ctx = tree.reconstruct_trail(nd_F)
+        ctx = tree.reconstruct_path(nd_F)
         assert [nd.name for nd in ctx] == ['A', 'F']
-        ctx = tree.reconstruct_trail(nd_Y)
+        ctx = tree.reconstruct_path(nd_Y)
         assert [nd.name for nd in ctx] == ['A', 'F', 'Y']
         nd_G = tree.pick('G')
-        ctx = tree.reconstruct_trail(nd_G)
+        ctx = tree.reconstruct_path(nd_G)
         assert [nd.name for nd in ctx] == ['A', 'G']
         not_there = Node('not_there', '')
         try:
-            tree.reconstruct_trail(not_there)
+            tree.reconstruct_path(not_there)
             assert False, "ValueError expected!"
         except ValueError:
             pass
-        assert tree.reconstruct_trail(tree) == [tree]
+        assert tree.reconstruct_path(tree) == [tree]
 
     def test_milestone_segment(self):
         tree = parse_sxpr('(root (left (A "a") (B "b") (C "c")) (middle "-") (right (X "x") (Y "y") (Z "z")))').with_pos(0)
@@ -952,56 +952,56 @@ class TestPositionAssignment:
         assert (tree['G']['N'].pos, tree['G']['P'].pos) == (1, 5)
 
 
-class TestTrailNavigation:
+class TestPathNavigation:
     tree = parse_sxpr('(A (B 1) (C (D 2) (E 3)) (F 4))')
 
-    def test_prev_trail(self):
-        ctx = self.tree.pick_trail('D')
-        c = prev_trail(ctx)
+    def test_prev_path(self):
+        ctx = self.tree.pick_path('D')
+        c = prev_path(ctx)
         assert c[-1].name == 'B'
-        ctx = self.tree.pick_trail('E')
-        c = prev_trail(ctx)
+        ctx = self.tree.pick_path('E')
+        c = prev_path(ctx)
         assert c[-1].name == 'D'
-        ctx = self.tree.pick_trail('F')
-        c = prev_trail(ctx)
+        ctx = self.tree.pick_path('F')
+        c = prev_path(ctx)
         assert c[-1].name == 'C'
-        ctx = self.tree.pick_trail('C')
-        c = prev_trail(ctx)
+        ctx = self.tree.pick_path('C')
+        c = prev_path(ctx)
         assert c[-1].name == 'B'
 
-    def test_next_trail(self):
-        ctx = self.tree.pick_trail('D')
-        c = next_trail(ctx)
+    def test_next_path(self):
+        ctx = self.tree.pick_path('D')
+        c = next_path(ctx)
         assert c[-1].name == 'E'
-        ctx = self.tree.pick_trail('E')
-        c = next_trail(ctx)
+        ctx = self.tree.pick_path('E')
+        c = next_path(ctx)
         assert c[-1].name == 'F'
-        ctx = self.tree.pick_trail('C')
-        c = next_trail(ctx)
+        ctx = self.tree.pick_path('C')
+        c = next_path(ctx)
         assert c[-1].name == 'F'
-        ctx = self.tree.pick_trail('B')
-        c = next_trail(ctx)
+        ctx = self.tree.pick_path('B')
+        c = next_path(ctx)
         assert c[-1].name == 'C'
 
     def test_content_mapping(self):
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
         cm = generate_content_mapping(tree)
         for i in range(len(tree.content)):
-            ctx, rel_pos = map_pos_to_trail(i, cm)
+            ctx, rel_pos = map_pos_to_path(i, cm)
         i = tree.content.find("delta")
-        ctx, rel_pos = map_pos_to_trail(i, cm)
+        ctx, rel_pos = map_pos_to_path(i, cm)
         assert ctx[-1].name == 'F' and rel_pos == 0
         i = tree.content.find("lta")
-        ctx, rel_pos = map_pos_to_trail(i, cm)
+        ctx, rel_pos = map_pos_to_path(i, cm)
         assert ctx[-1].name == 'F' and rel_pos == 2
         i = tree.content.find("a")
-        ctx, rel_pos = map_pos_to_trail(i, cm)
+        ctx, rel_pos = map_pos_to_path(i, cm)
         assert ctx[-1].name == 'B' and rel_pos == 0
         i = tree.content.rfind("a")
-        ctx, rel_pos = map_pos_to_trail(i, cm)
+        ctx, rel_pos = map_pos_to_path(i, cm)
         assert ctx[-1].name == 'F' and rel_pos == 4
         i = tree.content.find("mm")
-        ctx, rel_pos = map_pos_to_trail(i, cm)
+        ctx, rel_pos = map_pos_to_path(i, cm)
         assert ctx[-1].name == 'E' and rel_pos == 2
 
         select, ignore = {'A', 'B', 'D', 'F'}, {'C'}
@@ -1019,27 +1019,27 @@ class TestTrailNavigation:
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(A (B "alpha") (C (D "beta") (E "gamma")) (G "omicron") (F "delta"))'
 
-    def test_standalone_select_trail_if(self):
-        start = self.tree.pick_trail('E')
+    def test_standalone_select_path_if(self):
+        start = self.tree.pick_path('E')
         save = start.copy()
         sequence = []
-        for ctx in select_trail_if(
+        for ctx in select_path_if(
                 start, lambda c: True, include_root=True, reverse=True):
             sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACE', 'ACD', 'AC', 'AB', 'A']
-        assert save == start  # trail passed should not be changed by select_trail
+        assert save == start  # path passed should not be changed by select_path
 
-        start = self.tree.pick_trail('D')
+        start = self.tree.pick_path('D')
         sequence = []
-        for ctx in select_trail_if(
+        for ctx in select_path_if(
                 start, lambda c: True, include_root=True, reverse=False):
             sequence.append(''.join(n.name for n in ctx))
         assert sequence == ['ACD', 'ACE', 'AC', 'AF', 'A']
 
-    def test_standalone_pick_trail(self):
-        start = self.tree.pick_trail('A', include_root=True)
-        anfang = pick_trail(start, LEAF_TRAIL, include_root=True)
-        ende = pick_trail(start, LEAF_TRAIL, include_root=True, reverse=True)
+    def test_standalone_pick_path(self):
+        start = self.tree.pick_path('A', include_root=True)
+        anfang = pick_path(start, LEAF_PATH, include_root=True)
+        ende = pick_path(start, LEAF_PATH, include_root=True, reverse=True)
         assert anfang[-1].name == 'B'
         assert ende[-1].name == 'F'
 

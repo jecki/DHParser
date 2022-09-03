@@ -69,20 +69,20 @@ __all__ = ('WHITESPACE_PTYPE',
            'LEAF_PTYPES',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
-           'Trail',
+           'Path',
            'ResultType',
            'StrictResultType',
            'ChildrenType',
            'NodeMatchFunction',
-           'TrailMatchFunction',
+           'PathMatchFunction',
            'NodeSelector',
-           'TrailSelector',
+           'PathSelector',
            'ANY_NODE',
            'NO_NODE',
            'LEAF_NODE',
-           'ANY_TRAIL',
-           'NO_TRAIL',
-           'LEAF_TRAIL',
+           'ANY_PATH',
+           'NO_PATH',
+           'LEAF_PATH',
            'Node',
            'content_of',
            'strlen_of',
@@ -97,28 +97,28 @@ __all__ = ('WHITESPACE_PTYPE',
            'has_class',
            'add_class',
            'remove_class',
-           'prev_trail',
-           'next_trail',
-           'zoom_into_trail',
-           'leaf_trail',
-           'prev_leaf_trail',
-           'next_leaf_trail',
+           'prev_path',
+           'next_path',
+           'zoom_into_path',
+           'leaf_path',
+           'prev_leaf_path',
+           'next_leaf_path',
            'PickChildFunction',
            'FIRST_CHILD',
            'LAST_CHILD',
-           'select_trail_if',
-           'select_trail',
-           'pick_trail',
+           'select_path_if',
+           'select_path',
+           'pick_path',
            'foregoing_str',
            'ensuing_str',
-           'select_from_trail_if',
-           'select_from_trail',
-           'pick_from_trail',
-           'serialize_trail',
-           'trail_sanity_check',
+           'select_from_path_if',
+           'select_from_path',
+           'pick_from_path',
+           'serialize_path',
+           'path_sanity_check',
            'ContentMapping',
            'generate_content_mapping',
-           'map_pos_to_trail',
+           'map_pos_to_path',
            'insert_node',
            'split',
            'markup',
@@ -168,22 +168,22 @@ ZOMBIE_TAG = "ZOMBIE__"
 # - node itself (equality)
 # - name
 # - one of several names
-# - a function Node -> bool  or  Trail -> bool, respectively
+# - a function Node -> bool  or  Path -> bool, respectively
 re_pattern = Any
 NodeSelector = Union['Node', str, Container[str], Callable, int, re_pattern]
-TrailSelector = Union['Node', str, Container[str], Callable, int, re_pattern]
+PathSelector = Union['Node', str, Container[str], Callable, int, re_pattern]
 
-Trail = List['Node']
+Path = List['Node']
 NodeMatchFunction = Callable[['Node'], bool]
-TrailMatchFunction = Callable[[Trail], bool]
+PathMatchFunction = Callable[[Path], bool]
 
 ANY_NODE = lambda nd: True
 NO_NODE = lambda nd: False
 LEAF_NODE = lambda nd: not nd._children
 
-ANY_TRAIL = lambda trl: True
-NO_TRAIL = lambda trl: False
-LEAF_TRAIL = lambda trl: not trl[-1].children
+ANY_PATH = lambda trl: True
+NO_PATH = lambda trl: False
+LEAF_PATH = lambda trl: not trl[-1].children
 
 
 def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
@@ -234,10 +234,10 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
                     % (repr(criterion), type(criterion)))
 
 
-def create_trail_match_function(criterion: TrailSelector) -> TrailMatchFunction:
+def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
     """
-    Creates a trail-match-function (Trail -> bool) for the given
-    criterion that returns True, if the last node in the trail passed
+    Creates a path-match-function (Path -> bool) for the given
+    criterion that returns True, if the last node in the path passed
     to the function matches the criterion.
 
     See :py:func:`create_match_function()` for a description of the possible
@@ -247,7 +247,7 @@ def create_trail_match_function(criterion: TrailSelector) -> TrailMatchFunction:
         a name or a container (usually a set) of multiple tag names,
         a regular expression pattern or another match function.
 
-    :returns: a match-function (Trail -> bool) for the given criterion.
+    :returns: a match-function (Prail -> bool) for the given criterion.
     """
     if isinstance(criterion, int):
         return lambda trl: id(trl[-1]) == criterion
@@ -265,7 +265,7 @@ def create_trail_match_function(criterion: TrailSelector) -> TrailMatchFunction:
                 is_node_match_func = True
             break
         if is_node_match_func:
-            return lambda trail: criterion(trail[-1])
+            return lambda path: criterion(path[-1])
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda trl: trl[-1].name in cast(Container, criterion)
@@ -275,16 +275,16 @@ def create_trail_match_function(criterion: TrailSelector) -> TrailMatchFunction:
                     % (repr(criterion), type(criterion)))
 
 
-def _make_leaf_selectors(select: TrailSelector,
-                         ignore: TrailSelector) -> Tuple[Callable, Callable]:
-    select_func = create_trail_match_function(select)
-    ignore_func = create_trail_match_function(ignore)
+def _make_leaf_selectors(select: PathSelector,
+                         ignore: PathSelector) -> Tuple[Callable, Callable]:
+    select_func = create_path_match_function(select)
+    ignore_func = create_path_match_function(ignore)
 
-    def general_match_func(trail: Trail) -> bool:
-        return not trail[-1]._children and select_func(trail) and not ignore_func(trail)
+    def general_match_func(path: Path) -> bool:
+        return not path[-1]._children and select_func(path) and not ignore_func(path)
 
-    if select == LEAF_TRAIL and ignore == NO_TRAIL:
-        match_func = LEAF_TRAIL
+    if select == LEAF_PATH and ignore == NO_PATH:
+        match_func = LEAF_PATH
     else:
         match_func = general_match_func
 
@@ -719,21 +719,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # unoptimized
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
-
-    # def content_selection(self, select: TrailSelector,
-    #                       ignore: TrailSelector) -> str:
-    #     """Returns the string content of the tree spanned by node, but includes only
-    #     those leaf-nodes for which 'select_trail()' is true and ignores all subtrees
-    #     and leaves for which 'ignore_tail()' is True, e.g.
-    #     ``tree.content_selection(ignore_trail={'footnote'})`` would only the string-content
-    #     of the main text but ignores all footnotes.
-    #     """
-    #     match_func, ignore_func = _make_leaf_selectors(select, ignore)
-    #     fragments = []
-    #     if ignore_func([self]):  return ''
-    #     for leaf in self.select_trail_if(match_func, include_root=True, skip_subtree=ignore_func):
-    #         fragments.append(leaf[-1]._result)
-    #     return ''.join(fragments)
 
     # node position ###
 
@@ -1235,19 +1220,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return nd
         return None
 
-    # trail selection ###
+    # path selection ###
 
-    def select_trail_if(self, match_func: TrailMatchFunction,
-                        include_root: bool = False,
-                        reverse: bool = False,
-                        skip_func: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
+    def select_path_if(self, match_func: PathMatchFunction,
+                       include_root: bool = False,
+                       reverse: bool = False,
+                       skip_func: PathMatchFunction = NO_PATH) -> Iterator[Path]:
         """
-        Like :py:func:`Node.select_if()` but yields the entire trail (i.e. list
+        Like :py:func:`Node.select_if()` but yields the entire path (i.e. list
         of descendants, the last one being the matching node) instead of just
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
-        receives the complete trail as argument, rather than just the last node!
+        receives the complete path as argument, rather than just the last node!
         """
-        def recursive(trl) -> Iterator[Trail]:
+        def recursive(trl) -> Iterator[Path]:
             nonlocal match_func, reverse, skip_func
             top = trl[-1]
             child_iterator = reversed(top._children) if reverse else top._children
@@ -1266,63 +1251,63 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             yield from recursive(trl)
 
-    def select_trail(self, criteria: TrailSelector,
-                     include_root: bool = False,
-                     reverse: bool = False,
-                     skip_subtree: TrailSelector = NO_TRAIL) -> Iterator[Trail]:
+    def select_path(self, criteria: PathSelector,
+                    include_root: bool = False,
+                    reverse: bool = False,
+                    skip_subtree: PathSelector = NO_PATH) -> Iterator[Path]:
         """
-        Like :py:meth:`Node.select()` but yields the entire trail (i.e. list of
+        Like :py:meth:`Node.select()` but yields the entire path (i.e. list of
         descendants, the last one being the matching node) instead of just
         the matching nodes.
         """
-        return self.select_trail_if(create_trail_match_function(criteria),
-                                    include_root, reverse,
-                                    create_trail_match_function(skip_subtree))
+        return self.select_path_if(create_path_match_function(criteria),
+                                   include_root, reverse,
+                                   create_path_match_function(skip_subtree))
 
-    def pick_trail(self, criteria: TrailSelector,
-                   include_root: bool = False,
-                   reverse: bool = False,
-                   skip_subtree: TrailSelector = NO_TRAIL) -> Trail:
+    def pick_path(self, criteria: PathSelector,
+                  include_root: bool = False,
+                  reverse: bool = False,
+                  skip_subtree: PathSelector = NO_PATH) -> Path:
         """
-        Like :py:meth:`Node.pick()`, only that the entire trail (i.e.
+        Like :py:meth:`Node.pick()`, only that the entire path (i.e.
         chain of descendants) relative to `self` is returned.
         """
         try:
-            return next(self.select_trail(criteria, include_root, reverse, skip_subtree))
+            return next(self.select_path(criteria, include_root, reverse, skip_subtree))
         except StopIteration:
             return []
 
     @cython.locals(location=cython.int, end=cython.int)
-    def locate_trail(self, location: int) -> Trail:
+    def locate_path(self, location: int) -> Path:
         """
-        Like :py:meth:`Node.locate()`, only that the entire trail (i.e.
+        Like :py:meth:`Node.locate()`, only that the entire path (i.e.
         chain of descendants) relative to `self` is returned.
         """
         end = 0
-        for trl in self.select_trail_if(lambda trl: not trl[-1]._children, include_root=True):
+        for trl in self.select_path_if(lambda trl: not trl[-1]._children, include_root=True):
             end += trl[-1].strlen()
             if location < end:
                 return trl
         return []
 
-    def _reconstruct_trail_recursive(self: 'Node', node: 'Node') -> Trail:
+    def _reconstruct_path_recursive(self: 'Node', node: 'Node') -> Path:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
-        the public method `reconstruct_trail`, this method returns the chain of ancestors
+        the public method `reconstruct_path`, this method returns the chain of ancestors
         in reverse order [node, ... , self] and returns None in case `node` does not exist
         in the tree rooted in self instead of raising a Value Error.
-        If `node` equals `self`, any empty trail, i.e. list will be returned.
+        If `node` equals `self`, any empty path, i.e. list will be returned.
         """
         if node in self._children:
             return [node, self]
         for nd in self._children:
-            trl = nd._reconstruct_trail_recursive(node)
+            trl = nd._reconstruct_path_recursive(node)
             if trl:
                 trl.append(self)
                 return trl
         return []
 
-    def reconstruct_trail(self, node: 'Node') -> Trail:
+    def reconstruct_path(self, node: 'Node') -> Path:
         """
         Determines the chain of ancestors of a node that leads up to self.
         :param node: the descendant node, the ancestry of which shall be determined.
@@ -1331,7 +1316,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         if node == self:
             return [node]
-        trl = self._reconstruct_trail_recursive(node)
+        trl = self._reconstruct_path_recursive(node)
         if trl:
             trl.reverse()
             return trl
@@ -1349,15 +1334,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     #     :return: the nearest common ancestor
     #     :raises: ValueError in case `A` and `B` are not both rooted in `self`
     #     """
-    #     trlA = self.reconstruct_trail(A)
-    #     trlB = self.reconstruct_trail(B)
+    #     trlA = self.reconstruct_path(A)
+    #     trlB = self.reconstruct_path(B)
     #     for a,b in zip(trlA, trlB):
     #         if a != b:
     #             break
     #         common_ancestor = a
     #     return common_ancestor
 
-    def milestone_segment(self, begin: Union[Trail, 'Node'], end: Union[Trail, 'Node']) -> 'Node':
+    def milestone_segment(self, begin: Union[Path, 'Node'], end: Union[Path, 'Node']) -> 'Node':
         """
         EXPERIMENTAL!!!
         Picks a segment from a tree beginning with start and ending with end.
@@ -1380,7 +1365,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def right_cut(result: Tuple['Node', ...], index: int, subst: 'Node') -> Tuple['Node', ...]:
             return result[:index] + (subst,)
 
-        def cut(trl: Trail, cut_func: Callable) -> 'Node':
+        def cut(trl: Path, cut_func: Callable) -> 'Node':
             child = trl[-1]
             tainted = False
             for i in range(len(trl) - 1, 0, -1):
@@ -1400,8 +1385,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if begin.pos > end.pos:
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        trlA = self.reconstruct_trail(begin) if isinstance(begin, Node) else begin
-        trlB = self.reconstruct_trail(end) if isinstance(end, Node) else end
+        trlA = self.reconstruct_path(begin) if isinstance(begin, Node) else begin
+        trlB = self.reconstruct_path(end) if isinstance(end, Node) else end
         for a, b in zip(trlA, trlB):
             if a != b:
                 break
@@ -1914,23 +1899,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
 def content_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
-               select: TrailSelector = LEAF_TRAIL,
-               ignore: TrailSelector = NO_TRAIL) -> str:
+               select: PathSelector = LEAF_PATH,
+               ignore: PathSelector = NO_PATH) -> str:
     """Returns the string content from a single node or a tuple of Nodes.
     """
     if isinstance(segment, (StringView, str)):
         return str(segment)
-    if ignore is NO_TRAIL and (select is LEAF_TRAIL or select is ANY_TRAIL):
+    if ignore is NO_PATH and (select is LEAF_PATH or select is ANY_PATH):
         if isinstance(segment, Node):
             return segment.content
         else:
             return ''.join(nd.content for nd in segment)
     if isinstance(segment, Node):  segment = (segment,)
-    match_func = create_trail_match_function(select)
-    skip_func = create_trail_match_function(ignore)
+    match_func = create_path_match_function(select)
+    skip_func = create_path_match_function(ignore)
     content_list = []
     for root in segment:
-        for tr in root.select_trail_if(match_func, include_root=True, skip_func=skip_func):
+        for tr in root.select_path_if(match_func, include_root=True, skip_func=skip_func):
             nd = tr[-1]
             if nd._children or skip_func(tr):  continue
             content_list.append(nd._result)
@@ -1938,23 +1923,23 @@ def content_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
 
 
 def strlen_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
-              select: TrailSelector = LEAF_TRAIL,
-              ignore: TrailSelector = NO_TRAIL) -> int:
+              select: PathSelector = LEAF_PATH,
+              ignore: PathSelector = NO_PATH) -> int:
     """Returns the string size from a single node or a tuple of Nodes.
     """
     if isinstance(segment, (StringView, str)):
         return len(segment)
-    if ignore is NO_TRAIL and (select is LEAF_TRAIL or select is ANY_TRAIL):
+    if ignore is NO_PATH and (select is LEAF_PATH or select is ANY_PATH):
         if isinstance(segment, Node):
             return segment.strlen()
         else:
             return sum(nd.strlen() for nd in segment)
     if isinstance(segment, Node):  segment = (segment,)
-    match_func = create_trail_match_function(select)
-    skip_func = create_trail_match_function(ignore)
+    match_func = create_path_match_function(select)
+    skip_func = create_path_match_function(ignore)
     length = 0
     for root in segment:
-        for tr in root.select_trail_if(match_func, include_root=True, skip_func=skip_func):
+        for tr in root.select_path_if(match_func, include_root=True, skip_func=skip_func):
             nd = tr[-1]
             if nd._children or skip_func(tr):  continue
             length += len(nd._result)
@@ -1968,17 +1953,17 @@ def strlen_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
 #######################################################################
 
 
-# Query trails as paths #############################################
+# path strings ########################################################
 
 ### EXPERIMENTAL
 
-def path_str(trail: Trail) -> str:
-    """Returns the trail a pseudo filepath of tag-names."""
+def path_str(path: Path) -> str:
+    """Returns the path a pseudo filepath of tag-names."""
     tag_list = ['']
-    for node in trail:
+    for node in path:
         assert not node.name.find('/'), 'path_str() not allowed for tag-names containing "/"!'
         tag_list.append(node.name)
-    if trail[-1].children:
+    if path[-1].children:
         tag_list.append('')
     return '/'.join(tag_list)
 
@@ -1992,51 +1977,51 @@ def match_path_str(path_str: str, glob_pattern: str) -> bool:
 
 
 
-# Navigate trails ###################################################
+# Navigate paths #####################################################
 
 @cython.locals(i=cython.int, k=cython.int)
-def prev_trail(trail: Trail) -> Optional[Trail]:
-    """Returns the trail of the predecessor of the last node in the
-    trail. The predecessor is the sibling of the same parent-node
+def prev_path(path: Path) -> Optional[Path]:
+    """Returns the path of the predecessor of the last node in the
+    path. The predecessor is the sibling of the same parent-node
     preceding the node, or, if it already is the first sibling, the parent's
     sibling preceding the parent, or grandparent's sibling and so on.
     In case no predecessor is found, when the first ancestor has been
     reached, `None` is returned.
     """
-    assert isinstance(trail, list)
-    node = trail[-1]
-    for i in range(len(trail) - 2, -1, -1):
-        siblings = trail[i]._children
+    assert isinstance(path, list)
+    node = path[-1]
+    for i in range(len(path) - 2, -1, -1):
+        siblings = path[i]._children
         if node is not siblings[0]:
             for k in range(1, len(siblings)):
                 if node is siblings[k]:
-                    return trail[:i + 1] + [siblings[k - 1]]
-            raise AssertionError('Structural Error: trail[%i] is not the parent of trail[%i]'
+                    return path[:i + 1] + [siblings[k - 1]]
+            raise AssertionError('Structural Error: path[%i] is not the parent of path[%i]'
                                  % (i, i + 1))
-        node = trail[i]
+        node = path[i]
     return None
 
 
 @cython.locals(i=cython.int, k=cython.int)
-def next_trail(trail: Trail) -> Optional[Trail]:
-    """Returns the trail of the successor of the last node in the
-    trail. The successor is the sibling of the same parent Node
+def next_path(path: Path) -> Optional[Path]:
+    """Returns the path of the successor of the last node in the
+    path. The successor is the sibling of the same parent Node
     succeeding the node, or if it already is the last sibling, the
     parent's sibling succeeding the parent, or grand parent's sibling and
     so on. In case no successor is found when the first ancestor has been
     reached, `None` is returned.
     """
-    assert isinstance(trail, list)
-    node = trail[-1]
-    for i in range(len(trail) - 2, -1, -1):
-        siblings = trail[i]._children
+    assert isinstance(path, list)
+    node = path[-1]
+    for i in range(len(path) - 2, -1, -1):
+        siblings = path[i]._children
         if node is not siblings[-1]:
             for k in range(len(siblings) - 2, -1, -1):
                 if node is siblings[k]:
-                    return trail[:i + 1] + [siblings[k + 1]]
-            raise AssertionError('Structural Error: trail[%i] is not the parent of trail[%i]'
+                    return path[:i + 1] + [siblings[k + 1]]
+            raise AssertionError('Structural Error: path[%i] is not the parent of path[%i]'
                                  % (i, i + 1))
-        node = trail[i]
+        node = path[i]
     return None
 
 
@@ -2045,19 +2030,19 @@ LAST_CHILD = lambda nd: nd.result[-1]
 FIRST_CHILD = lambda nd: nd.result[0]
 
 
-def zoom_into_trail(trail: Optional[Trail],
-                    pick_child: PickChildFunction,
-                    steps: int) \
-                      -> Optional[Trail]:
-    """Returns the trail of a descendant that follows `steps` generations
-    up the tree originating in 'trail[-1]`. If `steps` < 0 this will be
+def zoom_into_path(path: Optional[Path],
+                   pick_child: PickChildFunction,
+                   steps: int) \
+                      -> Optional[Path]:
+    """Returns the path of a descendant that follows `steps` generations
+    up the tree originating in 'path[-1]`. If `steps` < 0 this will be
     as many generations as are needed to reach a leaf-node.
     The function `pick_child` determines which branch to follow during each
-    iteration, as long as the top of the trail is not yet a leaf node.
-    A `trail`-parameter value of `None` will simply be passed through.
+    iteration, as long as the top of the path is not yet a leaf node.
+    A `path`-parameter value of `None` will simply be passed through.
     """
-    if trail:
-        trl = trail.copy()
+    if path:
+        trl = path.copy()
         top = trl[-1]
         while top.children and steps != 0:
             top = pick_child(top)
@@ -2067,49 +2052,49 @@ def zoom_into_trail(trail: Optional[Trail],
     return None
 
 
-leaf_trail = functools.partial(zoom_into_trail, steps=-1)
-next_leaf_trail = lambda trl: leaf_trail(next_trail(trl), FIRST_CHILD)
-prev_leaf_trail = lambda trl: leaf_trail(prev_trail(trl), LAST_CHILD)
+leaf_path = functools.partial(zoom_into_path, steps=-1)
+next_leaf_path = lambda trl: leaf_path(next_path(trl), FIRST_CHILD)
+prev_leaf_path = lambda trl: leaf_path(prev_path(trl), LAST_CHILD)
 
 
-def foregoing_str(trail: Trail, length: int = -1) -> str:
+def foregoing_str(path: Path, length: int = -1) -> str:
     """Returns `length` characters from the string content preceding
-    the trail."""
+    the path."""
     N = 0
     l = []
-    trl = prev_trail(trail)
+    trl = prev_path(path)
     while trl and (N < length or length < 0):
         s = trl[-1].content
         l.append(s)
         N += len(s)
-        trl = prev_trail(trl)
+        trl = prev_path(trl)
     foregoing = ''.join(reversed(l))
     return foregoing if length < 0 else foregoing[-length:]
 
 
-def ensuing_str(trail: Trail, length: int = -1) -> str:
+def ensuing_str(path: Path, length: int = -1) -> str:
     """Returns `length` characters from the string content succeeding
-    the trail."""
+    the path."""
     N = 0
     l = []
-    trl = next_trail(trail)
+    trl = next_path(path)
     while trl and (N < length or length < 0):
         s = trl[-1].content
         l.append(s)
         N += len(s)
-        trl = next_trail(trl)
+        trl = next_path(trl)
     following = ''.join(l)
     return following if length < 0 else following[:length]
 
 
-def select_trail_if(start_trail: Trail,
-                    match_func: TrailMatchFunction,
-                    include_root: bool = False,
-                    reverse: bool = False,
-                    skip_func: TrailMatchFunction = NO_TRAIL) -> Iterator[Trail]:
+def select_path_if(start_path: Path,
+                   match_func: PathMatchFunction,
+                   include_root: bool = False,
+                   reverse: bool = False,
+                   skip_func: PathMatchFunction = NO_PATH) -> Iterator[Path]:
     """
-    Creates an Iterator yielding all `trails` for which the
-    `match_function` is true, starting from `trail`.
+    Creates an Iterator yielding all `paths` for which the
+    `match_function` is true, starting from `path`.
     """
 
     def recursive(trl):
@@ -2123,165 +2108,165 @@ def select_trail_if(start_trail: Trail,
             if not skip_func(child_trl):
                 yield from recursive(child_trl)
 
-    trail = start_trail.copy()
-    while trail:
+    path = start_path.copy()
+    while path:
         if include_root:
-            yield from recursive(trail)
+            yield from recursive(path)
         else:
             include_root = True
-        node = trail.pop()
+        node = path.pop()
         edge, delta = (0, -1) if reverse else (-1, 1)
-        while trail and node is trail[-1]._children[edge]:
-            if match_func(trail):
-                yield trail
-            node = trail.pop()
-        if trail:
-            parent = trail[-1]
+        while path and node is path[-1]._children[edge]:
+            if match_func(path):
+                yield path
+            node = path.pop()
+        if path:
+            parent = path[-1]
             i = parent.index(node)
             nearest_sibling = parent._children[i + delta]
-            trail.append(nearest_sibling)
+            path.append(nearest_sibling)
             # include_root = True
 
 
-def select_trail(start_trail: Trail,
-                 criteria: TrailSelector,
-                 include_root: bool = False,
-                 reverse: bool = False,
-                 skip_subtree: TrailSelector = NO_TRAIL) -> Iterator[Trail]:
+def select_path(start_path: Path,
+                criteria: PathSelector,
+                include_root: bool = False,
+                reverse: bool = False,
+                skip_subtree: PathSelector = NO_PATH) -> Iterator[Path]:
     """
-    Like `select_trail_if()` but yields the entire trail (i.e. list of
+    Like `select_path_if()` but yields the entire path (i.e. list of
     descendants, the last one being the matching node) instead of just
     the matching nodes.
     """
-    return select_trail_if(start_trail, create_trail_match_function(criteria),
-                           include_root, reverse, create_trail_match_function(skip_subtree))
+    return select_path_if(start_path, create_path_match_function(criteria),
+                          include_root, reverse, create_path_match_function(skip_subtree))
 
 
-def pick_trail(start_trail: Trail,
-               criteria: TrailSelector,
-               include_root: bool = False,
-               reverse: bool = False,
-               skip_subtree: TrailSelector = NO_TRAIL) -> Optional[Trail]:
+def pick_path(start_path: Path,
+              criteria: PathSelector,
+              include_root: bool = False,
+              reverse: bool = False,
+              skip_subtree: PathSelector = NO_PATH) -> Optional[Path]:
     """
-    Like `Node.pick()`, only that the entire trail (i.e. chain of descendants)
+    Like ``Node.pick()``, only that the entire path (i.e. chain of descendants)
     relative to `self` is returned.
     """
     try:
-        return next(select_trail(
-            start_trail, criteria, include_root=include_root, reverse=reverse,
+        return next(select_path(
+            start_path, criteria, include_root=include_root, reverse=reverse,
             skip_subtree=skip_subtree))
     except StopIteration:
         return None
 
 
-def select_from_trail_if(trail: Trail,
-                         match_func: NodeMatchFunction,
-                         reverse: bool=False) -> Iterator[Node]:
-    """Yields all nodes from trail for which the match_function is true."""
+def select_from_path_if(path: Path,
+                        match_func: NodeMatchFunction,
+                        reverse: bool=False) -> Iterator[Node]:
+    """Yields all nodes from path for which the match_function is true."""
     if reverse:
-        for nd in reversed(trail):
+        for nd in reversed(path):
             if match_func(nd):
                 yield nd
     else:
-        for nd in trail:
+        for nd in path:
             if match_func(nd):
                 yield nd
 
 
-def select_from_trail(trail: Trail, criteria: NodeSelector, reverse: bool=False) \
+def select_from_path(path: Path, criteria: NodeSelector, reverse: bool=False) \
         -> Iterator[Node]:
-    """Yields all nodes from trail which fulfill the criterion."""
-    return select_from_trail_if(trail, create_match_function(criteria), reverse)
+    """Yields all nodes from path which fulfill the criterion."""
+    return select_from_path_if(path, create_match_function(criteria), reverse)
 
 
-def pick_from_trail(trail: Trail, criterion: NodeSelector, reverse: bool=False) \
+def pick_from_path(path: Path, criterion: NodeSelector, reverse: bool=False) \
         -> Optional[Node]:
-    """Picks the first node from the trail that fulfils the criterion. Returns `None`
-    if the trail does not contain any node fulfilling the criterion."""
+    """Picks the first node from the path that fulfils the criterion. Returns `None`
+    if the path does not contain any node fulfilling the criterion."""
     try:
-        return next(select_from_trail(trail, criterion, reverse=reverse))
+        return next(select_from_path(path, criterion, reverse=reverse))
     except StopIteration:
         return None
 
 
-def serialize_trail(trail: Trail, with_content: int = 0, delimiter: str = ' <- ') \
+def serialize_path(path: Path, with_content: int = 0, delimiter: str = ' <- ') \
         -> str:
-    """Serializes a trail as string.
+    """Serializes a path as string.
 
-    :param trail: the trail to be serialized.
-    :param with_content: the number of nodes from the end of the trail for
+    :param path: the path to be serialized.
+    :param with_content: the number of nodes from the end of the path for
         which the content will be displayed next to the name.
     :param delimiter: The delimiter separating the nodes in the returned string.
-    :returns: the string-serialization of the given trail.
+    :returns: the string-serialization of the given path.
     """
     if with_content == 0:
-        lines = [nd.name for nd in trail]
+        lines = [nd.name for nd in path]
     else:
-        n = with_content if with_content > 0 else len(trail)
-        lines = [nd.name for nd in trail[:-n]]
-        lines.extend(nd.name + ':' + str(nd.content) for nd in trail[-n:])
+        n = with_content if with_content > 0 else len(path)
+        lines = [nd.name for nd in path[:-n]]
+        lines.extend(nd.name + ':' + str(nd.content) for nd in path[-n:])
     return delimiter.join(lines)
 
 
-def trail_sanity_check(trail: Trail) -> bool:
-    """Checks whether the nodes following in the trail-list are really
+def path_sanity_check(path: Path) -> bool:
+    """Checks whether the nodes following in the path-list are really
     immediate descendants of each other."""
-    return all(trail[i] in trail[i - 1]._children for i in range(1, len(trail)))
+    return all(path[i] in path[i - 1]._children for i in range(1, len(path)))
 
 
-# Trail-mapping (allowing a "string-view" on syntax-trees) ##########
+# Path-mapping (allowing a "string-view" on syntax-trees) ##########
 
-ContentMapping = Tuple[List[int], List[Trail]]  # A mapping of character positions to trails
+ContentMapping = Tuple[List[int], List[Path]]  # A mapping of character positions to paths
 
 
 def generate_content_mapping(node: Node,
-                             select: TrailSelector = LEAF_TRAIL,
-                             ignore: TrailSelector = NO_TRAIL) -> ContentMapping:
+                             select: PathSelector = LEAF_PATH,
+                             ignore: PathSelector = NO_PATH) -> ContentMapping:
     """
-    Generates a trail mapping for all leave-nodes of the tree
-    originating in `node`. A trail mapping is an ordered mapping
-    of the first text position of every leaf-node to the trail of
+    Generates a path mapping for all leave-nodes of the tree
+    originating in `node`. A path mapping is an ordered mapping
+    of the first text position of every leaf-node to the path of
     this node.
 
-    Trail mappings are a helpful tool when searching substrings in a
+    Path-mappings are a helpful tool when searching substrings in a
     document and then trying to locate them within in the tree.
 
-    :param node: the root of the tree for which a trail mapping shall be
+    :param node: the root of the tree for which a path mapping shall be
         generated.
-    :param select: only leaf-trails for which this is true will be considered.
-        Note that this requires the select-criterion to actually yield leaf-trails.
+    :param select: only leaf-paths for which this is true will be considered.
+        Note that this requires the select-criterion to actually yield leaf-paths.
         Otherwise, the content-mapping will be empty.
     :param ignore: subtrees or leaves for which ignore is true will be skipped
         as well.
-    :returns: The trail mapping for the node.
+    :returns: The path mapping for the node.
     """
     match_func, ignore_func = _make_leaf_selectors(select, ignore)
-    # node_based_ignore_func = NO_NODE if ignore == NO_TRAIL else lambda nd: ignore_func([nd])
+    # node_based_ignore_func = NO_NODE if ignore == NO_PATH else lambda nd: ignore_func([nd])
 
     pos = 0
     pos_list, trl_list = [], []
     if ignore_func([node]):  return [], []
-    for trl in node.select_trail_if(match_func, include_root=True, skip_func=ignore_func):
-        if trl[-1]._children or ignore_func(trl):  continue  # ignore non-leaf trails
+    for trl in node.select_path_if(match_func, include_root=True, skip_func=ignore_func):
+        if trl[-1]._children or ignore_func(trl):  continue  # ignore non-leaf paths
         pos_list.append(pos)
         trl_list.append(trl)
         pos += trl[-1].strlen()
     return pos_list, trl_list
 
 
-def map_pos_to_trail(i: int, tm: ContentMapping, left_biased: bool = False) -> Tuple[Trail, int]:
-    """Yields the trail and relative position for the absolute
+def map_pos_to_path(i: int, tm: ContentMapping, left_biased: bool = False) -> Tuple[Path, int]:
+    """Yields the path and relative position for the absolute
     position `i`.
 
     :param i:   a position in the content of the tree for which the
-        trail mapping `cm` was generated
-    :param tm:  a trail mapping
+        path mapping `cm` was generated
+    :param tm:  a path mapping
     :param left_biased: yields the location after the end of the previous
-        trail rather than the location at the very beginning of the
-        next trail. Default value is "False".
-    :returns:   tuple (trail, relative position) where relative
+        path rather than the location at the very beginning of the
+        next path. Default value is "False".
+    :returns:   tuple (path, relative position) where relative
         position is the position of i relative to the actual
-        position of the last node in the trail.
+        position of the last node in the path.
     :raises:    IndexError if not 0 <= position < length of document
     """
     assert len(tm) == 2
@@ -2304,11 +2289,11 @@ def insert_node(t, str_pos: int, node: Node) -> Node:
     """Add a node at a particular position of string content into the
     tree. This is useful for inserting milestones. Returns the
     parent-node of the inserted node."""
-    raise TypeError(f'First parameter of "insert_node" must be of type DHParser.nodetree.Trail '
+    raise TypeError(f'First parameter of "insert_node" must be of type DHParser.nodetree.Path '
                     f'or ContentMapping or Node, but not {type(t)}')
 
 @insert_node.register(list)
-def _(t: Trail, str_pos: int, node: Node) -> Node:
+def _(t: Path, str_pos: int, node: Node) -> Node:
     assert t
     leaf = t[-1]
     leaf_len = leaf.strlen()
@@ -2343,8 +2328,8 @@ def _(t: Trail, str_pos: int, node: Node) -> Node:
 
 @insert_node.register(tuple)
 def _(t: ContentMapping, rel_pos: int, node: Node) -> Node:
-    trail, pos = map_pos_to_trail(rel_pos, t)
-    return insert_node(trail, pos, node)
+    path, pos = map_pos_to_path(rel_pos, t)
+    return insert_node(path, pos, node)
 
 
 @insert_node.register(Node)
@@ -2451,24 +2436,24 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True,
     return k
 
 
-def deep_split(trail: Trail, i: int, left_biased: bool=True,
+def deep_split(path: Path, i: int, left_biased: bool=True,
                greedy: bool=True,
-               select: TrailSelector = ANY_TRAIL,
-               ignore: TrailSelector = NO_TRAIL,
+               select: PathSelector = ANY_PATH,
+               ignore: PathSelector = NO_PATH,
                chain_attr: str = '') -> int:
-    """Split all nodes from the end of the trail up to,
-    but excluding the first node in the trail. Returns the
-    index of the split location in the first node of the trail.
+    """Split all nodes from the end of the path up to,
+    but excluding the first node in the path. Returns the
+    index of the split location in the first node of the path.
 
     Exapmles::
 
         >>> tree = parse_sxpr('(X (s "") (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t "")))')
         >>> X = copy.deepcopy(tree)
-        >>> C = X.pick_trail('C')
+        >>> C = X.pick_path('C')
         >>> a = deep_split(C, 0)
         >>> a
         0
-        >>> F = X.pick_trail('F', reverse=True)
+        >>> F = X.pick_path('F', reverse=True)
         >>> b = deep_split(F, F[-1].strlen(), left_biased=False)
         >>> b
         3
@@ -2484,9 +2469,9 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
         (X (s) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!")) (B (t)))
 
         >>> X = copy.deepcopy(tree).with_pos(0)
-        >>> C = X.pick_trail('C')
+        >>> C = X.pick_path('C')
         >>> a = deep_split(C, 4)
-        >>> E = X.pick_trail('E')
+        >>> E = X.pick_path('E')
         >>> b = deep_split(E, 0, left_biased=False)
         >>> a, b
         (2, 3)
@@ -2503,10 +2488,10 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
         >>> print(Y.as_sxpr())
         (Y "123")
     """
-    parent = trail[-1]
-    for idx in range(2, len(trail) + 1):
+    parent = path[-1]
+    for idx in range(2, len(path) + 1):
         node = parent
-        parent = trail[-idx]
+        parent = path[-idx]
         i = split(node, parent, i, left_biased, chain_attr)
         if greedy:
             if left_biased:
@@ -2517,11 +2502,11 @@ def deep_split(trail: Trail, i: int, left_biased: bool=True,
     return i
 
 
-def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
-              select: TrailSelector = ANY_TRAIL,
-              ignore: TrailSelector = NO_TRAIL,
+def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
+              select: PathSelector = ANY_PATH,
+              ignore: PathSelector = NO_PATH,
               divisable: Set[str] = LEAF_PTYPES) -> int:
-    """Returns the negative index of the first node in the trail, from which
+    """Returns the negative index of the first node in the path, from which
     on all nodes can be split or do not need to be split, because the
     split-index lies to the left or right os the node.
 
@@ -2546,7 +2531,7 @@ def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
         >>> can_split([tree, tree[0], tree[0][0]], 1, divisable={'Text'})
         -1
         >>> tree = parse_sxpr('(X (Z "!?") (A (B "123") (C "456")))')
-        >>> can_split(tree.pick_trail('B'), 0)
+        >>> can_split(tree.pick_path('B'), 0)
         -2
 
         # edge cases
@@ -2557,7 +2542,7 @@ def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
     """
     if len(t) <= 1:  return 0
 
-    # make a shallow copy of the trail's nodes, first.
+    # make a shallow copy of the path's nodes, first.
     t2 = [copy.copy(nd) for nd in t]
     for k in range(1, len(t2)):
         t2[k - 1].result = tuple((t2[k] if nd == t[k] else nd) for nd in t2[k - 1].result)
@@ -2582,58 +2567,58 @@ def can_split(t: Trail, i: int, left_biased: bool = True, greedy: bool = True,
     return -k
 
 
-def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = dict(),
+def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any] = dict(),
                  greedy: bool = True,
-                 select: TrailSelector = ANY_TRAIL,
-                 ignore: TrailSelector = NO_TRAIL,
+                 select: PathSelector = ANY_PATH,
+                 ignore: PathSelector = NO_PATH,
                  divisable: Set[str] = LEAF_PTYPES,
                  chain_attr: str = ''):
     """Markup the content from string position i within the last node of
-    the trail up to the very end of the content of the first node of the
-    trail.
+    the path up to the very end of the content of the first node of the
+    path.
 
     Examples::
 
         >>> tree = parse_sxpr('(X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))')
         >>> X = copy.deepcopy(tree)
-        >>> C_trail = X.pick_trail('C')
+        >>> C_path = X.pick_path('C')
         >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
-        >>> markup_right(C_trail, 2, 'em', dict(), divisable=all_tags)
+        >>> markup_right(C_path, 2, 'em', dict(), divisable=all_tags)
         >>> print(X.as_sxpr())
         (X (A (C "12")) (em (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
-        >>> C_trail = X.pick_trail('C')
-        >>> markup_right(C_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> C_path = X.pick_path('C')
+        >>> markup_right(C_path, 2, 'em', dict(), divisable=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (C "12") (em (C "3") (D "456"))) (em (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
-        >>> D_trail = X.pick_trail('D')
-        >>> markup_right(D_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> D_path = X.pick_path('D')
+        >>> markup_right(D_path, 2, 'em', dict(), divisable=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "45") (em (D "6"))) (em (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
-        >>> D_trail = X.pick_trail('D')
-        >>> markup_right(D_trail, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
+        >>> D_path = X.pick_path('D')
+        >>> markup_right(D_path, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D (:Text "45") (em "6"))) (em (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
-        >>> E_trail = X.pick_trail('E')
-        >>> markup_right(E_trail, 1, 'em', dict(), divisable=all_tags - {'E'})
+        >>> E_path = X.pick_path('E')
+        >>> markup_right(E_path, 1, 'em', dict(), divisable=all_tags - {'E'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E (:Text "7") (em "89")) (em (F "abc"))) (em (G "def")))
         >>> X = copy.deepcopy(tree)
-        >>> E_trail = X.pick_trail('E')
-        >>> markup_right(E_trail, 1, 'em', dict(), divisable=all_tags - {'B'})
+        >>> E_path = X.pick_path('E')
+        >>> markup_right(E_path, 1, 'em', dict(), divisable=all_tags - {'B'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "7") (em (E "89") (F "abc"))) (em (G "def")))
         >>> X = copy.deepcopy(tree)
-        >>> E_trail = X.pick_trail('E')
-        >>> markup_right(E_trail, 1, 'em', dict(), divisable=all_tags)
+        >>> E_path = X.pick_path('E')
+        >>> markup_right(E_path, 1, 'em', dict(), divisable=all_tags)
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "7")) (em (B (E "89") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
-        >>> G_trail = X.pick_trail('G')
-        >>> markup_right(E_trail, 3, 'em', dict(), divisable=all_tags)
+        >>> G_path = X.pick_path('G')
+        >>> markup_right(E_path, 3, 'em', dict(), divisable=all_tags)
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))
 
@@ -2655,86 +2640,86 @@ def markup_right(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any] = di
         >>> print(X.as_sxpr())
         (A "123")
     """
-    assert trail
-    k = max(can_split(trail, i, True, greedy, select, ignore, divisable) - 1, -len(trail))
+    assert path
+    k = max(can_split(path, i, True, greedy, select, ignore, divisable) - 1, -len(path))
     # k is parent-index of first node to split
-    i = deep_split(trail[k:], i, True, greedy, select, ignore, chain_attr)
+    i = deep_split(path[k:], i, True, greedy, select, ignore, chain_attr)
 
     if chain_attr and chain_attr not in attr_dict:
         attr_dict[chain_attr] = gen_sloppy_chain_ID()
 
-    nd = Node(name, trail[k]._result[i:]).with_attr(attr_dict)
+    nd = Node(name, path[k]._result[i:]).with_attr(attr_dict)
     if nd._children:
-        nd._pos = trail[k]._result[i]._pos
-        trail[k].result = trail[k]._result[:i] + (nd,)
+        nd._pos = path[k]._result[i]._pos
+        path[k].result = path[k]._result[:i] + (nd,)
     elif nd._result:
-        nd._pos = trail[k]._pos + i if trail[k]._pos >= 0 else -1
-        text_node = Node(TOKEN_PTYPE, trail[k]._result[:i])
-        text_node._pos = trail[k]._pos
-        trail[k].result = (text_node, nd) if text_node._result else (nd,)
+        nd._pos = path[k]._pos + i if path[k]._pos >= 0 else -1
+        text_node = Node(TOKEN_PTYPE, path[k]._result[:i])
+        text_node._pos = path[k]._pos
+        path[k].result = (text_node, nd) if text_node._result else (nd,)
 
     k -= 1
-    while abs(k) <= len(trail):
-        i = trail[k].index(trail[k + 1]) + 1
-        if i < len(trail[k]._result):
-            nd = Node(name, trail[k]._result[i:]).with_attr(attr_dict)
-            nd._pos = trail[k]._result[i]._pos
-            trail[k].result = trail[k]._result[:i] + (nd,)
+    while abs(k) <= len(path):
+        i = path[k].index(path[k + 1]) + 1
+        if i < len(path[k]._result):
+            nd = Node(name, path[k]._result[i:]).with_attr(attr_dict)
+            nd._pos = path[k]._result[i]._pos
+            path[k].result = path[k]._result[:i] + (nd,)
         k -= 1
 
 
-def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
+def markup_left(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
-                select: TrailSelector = ANY_TRAIL,
-                ignore: TrailSelector = NO_TRAIL,
+                select: PathSelector = ANY_PATH,
+                ignore: PathSelector = NO_PATH,
                 divisable: Set[str] = LEAF_PTYPES,
                 chain_attr: str = ''):
     """Markup the content from string position i within the last node of
-    the trail up to the very end of the content of the first node of the
-    trail.
+    the path up to the very end of the content of the first node of the
+    path.
 
     Examples::
 
         >>> tree = parse_sxpr('(X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))')
         >>> X = copy.deepcopy(tree)
-        >>> C_trail = X.pick_trail('C')
+        >>> C_path = X.pick_path('C')
         >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
-        >>> markup_left(C_trail, 2, 'em', dict(), divisable=all_tags)
+        >>> markup_left(C_path, 2, 'em', dict(), divisable=all_tags)
         >>> print(X.as_sxpr())
         (X (em (A (C "12"))) (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
-        >>> C_trail = X.pick_trail('C')
-        >>> markup_left(C_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> C_path = X.pick_path('C')
+        >>> markup_left(C_path, 2, 'em', dict(), divisable=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (em (C "12")) (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
-        >>> C_trail = X.pick_trail('C')
-        >>> markup_left(C_trail, 0, 'em', dict(), divisable=all_tags - {'A'})
+        >>> C_path = X.pick_path('C')
+        >>> markup_left(C_path, 0, 'em', dict(), divisable=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
-        >>> D_trail = X.pick_trail('D')
-        >>> markup_left(D_trail, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> D_path = X.pick_path('D')
+        >>> markup_left(D_path, 2, 'em', dict(), divisable=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (em (C "123") (D "45")) (D "6")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
-        >>> D_trail = X.pick_trail('D')
-        >>> markup_left(D_trail, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
+        >>> D_path = X.pick_path('D')
+        >>> markup_left(D_path, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
         >>> print(X.as_sxpr())
         (X (A (em (C "123")) (D (em "45") (:Text "6"))) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
-        >>> E_trail = X.pick_trail('E')
-        >>> markup_left(E_trail, 1, 'em', dict(), divisable=all_tags - {'E'})
+        >>> E_path = X.pick_path('E')
+        >>> markup_left(E_path, 1, 'em', dict(), divisable=all_tags - {'E'})
         >>> print(X.as_sxpr())
         (X (em (A (C "123") (D "456"))) (B (E (em "7") (:Text "89")) (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
-        >>> E_trail = X.pick_trail('E')
-        >>> markup_left(E_trail, 1, 'em', dict(), divisable=all_tags - {'B'})
+        >>> E_path = X.pick_path('E')
+        >>> markup_left(E_path, 1, 'em', dict(), divisable=all_tags - {'B'})
         >>> print(X.as_sxpr())
         (X (em (A (C "123") (D "456"))) (B (em (E "7")) (E "89") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
-        >>> E_trail = X.pick_trail('E')
-        >>> markup_left(E_trail, 1, 'em', dict(), divisable=all_tags)
+        >>> E_path = X.pick_path('E')
+        >>> markup_left(E_path, 1, 'em', dict(), divisable=all_tags)
         >>> print(X.as_sxpr())
         (X (em (A (C "123") (D "456")) (B (E "7"))) (B (E "89") (F "abc")) (G "def"))
 
@@ -2756,29 +2741,29 @@ def markup_left(trail: Trail, i: int, name: str, attr_dict: Dict[str, Any],
         >>> print(X.as_sxpr())
         (A "123")
     """
-    assert trail
-    k = max(can_split(trail, i, False, greedy, select, ignore, divisable) - 1, -len(trail))
-    i = deep_split(trail[k:], i, False, greedy, select, ignore, chain_attr)
+    assert path
+    k = max(can_split(path, i, False, greedy, select, ignore, divisable) - 1, -len(path))
+    i = deep_split(path[k:], i, False, greedy, select, ignore, chain_attr)
 
     if chain_attr and chain_attr not in attr_dict:
         attr_dict[chain_attr] = gen_sloppy_chain_ID()
 
-    nd = Node(name, trail[k]._result[:i]).with_attr(attr_dict)
-    nd._pos = trail[k]._pos
+    nd = Node(name, path[k]._result[:i]).with_attr(attr_dict)
+    nd._pos = path[k]._pos
     if nd._children:
-        trail[k].result = (nd,) + trail[k]._result[i:]
+        path[k].result = (nd,) + path[k]._result[i:]
     elif nd._result:
-        text_node = Node(TOKEN_PTYPE, trail[k]._result[i:])
-        text_node._pos = trail[k]._pos + i if trail[k]._pos >= 0 else -1
-        trail[k].result = (nd, text_node) if text_node._result else (nd,)
+        text_node = Node(TOKEN_PTYPE, path[k]._result[i:])
+        text_node._pos = path[k]._pos + i if path[k]._pos >= 0 else -1
+        path[k].result = (nd, text_node) if text_node._result else (nd,)
 
     k -= 1
-    while abs(k) <= len(trail):
-        i = trail[k].index(trail[k + 1])
+    while abs(k) <= len(path):
+        i = path[k].index(path[k + 1])
         if i > 0:
-            nd = Node(name, trail[k]._result[:i]).with_attr(attr_dict)
-            nd._pos = trail[k]._pos
-            trail[k].result = (nd,) + trail[k]._result[i:]
+            nd = Node(name, path[k]._result[:i]).with_attr(attr_dict)
+            nd._pos = path[k]._pos
+            path[k].result = (nd,) + path[k]._result[i:]
         k -= 1
 
 
@@ -2802,7 +2787,7 @@ SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "div
 
 def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
            attr_dict: Dict[str, Any] = dict(), greedy: bool = True,
-           select: TrailSelector = ANY_TRAIL, ignore: TrailSelector = NO_TRAIL,
+           select: PathSelector = ANY_PATH, ignore: PathSelector = NO_PATH,
            divisable: Set[str] = LEAF_PTYPES,
            chain_attr: str = "") -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
@@ -2863,29 +2848,29 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         milestone = Node(name, '').with_attr(attr_dict)
         return insert_node(t, start_pos, milestone)
 
-    trail_A, pos_A = map_pos_to_trail(start_pos, t)
-    trail_B, pos_B = map_pos_to_trail(end_pos, t, left_biased=True)
-    assert trail_A
-    assert trail_B
+    path_A, pos_A = map_pos_to_path(start_pos, t)
+    path_B, pos_B = map_pos_to_path(end_pos, t, left_biased=True)
+    assert path_A
+    assert path_B
     common_ancestor = None
     i = 0
-    for i, (a, b) in enumerate(zip(trail_A, trail_B)):
+    for i, (a, b) in enumerate(zip(path_A, path_B)):
         if a != b:  break
         common_ancestor = a
     i -= 1
     assert common_ancestor
 
     # if divisable is DIVISABLE_SENTINEL:
-    #     if isinstance(trail_A[0], RootNode):
-    #         root = cast(RootNode, trail_A[0])
+    #     if isinstance(path_A[0], RootNode):
+    #         root = cast(RootNode, path_A[0])
     #         divisable = root.divisable_tags[name]
     #         if chain_attr is CHAIN_ATTR_SENTINEL:
     #             chain_attr = root.chain_attr
     #     else:
     #         raise ValueError(SENTINEL_ERROR_MESSAGE)
     # elif chain_attr is CHAIN_ATTR_SENTINEL:
-    #     if isinstance(trail_A[0], RootNode):
-    #         chain_attr = cast(RootNode, trail_A[0]).chain_attr
+    #     if isinstance(path_A[0], RootNode):
+    #         chain_attr = cast(RootNode, path_A[0]).chain_attr
     #     else:
     #         raise ValueError(SENTINEL_ERROR_MESSAGE)
 
@@ -2897,8 +2882,8 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
             return common_ancestor
         i -= 1
-    stump_A = trail_A[i:]
-    stump_B = trail_B[i:]
+    stump_A = path_A[i:]
+    stump_B = path_B[i:]
     q = can_split(stump_A, pos_A, True, greedy, select, ignore, divisable)
     r = can_split(stump_B, pos_B, False, greedy, select, ignore, divisable)
 
@@ -2946,20 +2931,20 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
 #         milestone = Node(name, '').with_attr(*attr_dict, **attributes)
 #         insert_node(t, start_pos, milestone)
 #         return milestone
-#     trail_A, pos_A = map_pos_to_trail(start_pos, t)
-#     trail_B, pos_B = map_pos_to_trail(end_pos, t)
-#     assert trail_A
-#     assert trail_B
+#     path_A, pos_A = map_pos_to_path(start_pos, t)
+#     path_B, pos_B = map_pos_to_path(end_pos, t)
+#     assert path_A
+#     assert path_B
 #     common_ancestor = None
-#     for i, (a, b) in enumerate(zip(trail_A, trail_B)):
+#     for i, (a, b) in enumerate(zip(path_A, path_B)):
 #         if a != b:  break
 #         common_ancestor = a
 #     assert common_ancestor
-#     leaf_A = trail_A[-1]
-#     leaf_B = trail_B[-1]
+#     leaf_A = path_A[-1]
+#     leaf_B = path_B[-1]
 #     if common_ancestor == leaf_A:
 #         assert common_ancestor == leaf_B
-#         if len(trail_A) <= 1:
+#         if len(path_A) <= 1:
 #             content = common_ancestor.content
 #             new_result = []
 #             if pos_A > 0:
@@ -2971,34 +2956,34 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
 #             common_ancestor.result = tuple(new_result)
 #             return markup_node
 #         else:
-#             common_ancestor = trail_A[-2]
-#             assert common_ancestor == trail_B[-2]
+#             common_ancestor = path_A[-2]
+#             assert common_ancestor == path_B[-2]
 #             branch_A = leaf_A
 #             branch_B = leaf_B
 #     else:
-#         branch_A = trail_A[i]
-#         branch_B = trail_B[i]
+#         branch_A = path_A[i]
+#         branch_B = path_B[i]
 #
 #     i = common_ancestor.index(branch_A)
 #     k = common_ancestor.index(branch_B)
 #     new_result = list(common_ancestor.result[:i])
-#     if pos_A > 0 and common_ancestor == trail_A[-2]:
+#     if pos_A > 0 and common_ancestor == path_A[-2]:
 #         new_result.append(Node(leaf_A.name, leaf_A.content[:pos_A]))
 #         leaf_A.result = leaf_A.content[pos_A:]
 #     markup_node = Node(name, common_ancestor.result[i:k + 1]).with_attr(*attr_dict, **attributes)
 #     new_result.append(markup_node)
-#     if pos_B < leaf_B.strlen_of() and common_ancestor == trail_B[-2]:
+#     if pos_B < leaf_B.strlen_of() and common_ancestor == path_B[-2]:
 #         leaf_B.result = leaf_B.content[:pos_B]
 #         new_result.append(Node(leaf_B.name, leaf_B.content[pos_B:]))
 #     new_result.extend(list(common_ancestor.result[k + 1:]))
 #     common_ancestor.result = tuple(new_result)
 #
 #     if not leaf_A.result:
-#         trail_A = next(common_ancestor.select_trail(leaf_A))
-#         del trail_A[-2][leaf_A]
+#         path_A = next(common_ancestor.select_path(leaf_A))
+#         del path_A[-2][leaf_A]
 #     if not leaf_B.result:
-#         trail_B = next(common_ancestor.select_trail(leaf_A, reverse=True))
-#         del trail_B[-2][leaf_B]
+#         path_B = next(common_ancestor.select_path(leaf_A, reverse=True))
+#         del path_B[-2][leaf_B]
 #
 #     return markup_node
 
@@ -3125,7 +3110,7 @@ class FrozenNode(Node):
     tree-transformation and should not occur in the product of the
     transformation anymore. This can be verified with
     :py:func:`tree_sanity_check()`. Or, as comparison criterion for
-    content equality when picking or selecting nodes or trails from
+    content equality when picking or selecting nodes or paths from
     a tree (see :py:func:`create_match_function()`).
     """
 

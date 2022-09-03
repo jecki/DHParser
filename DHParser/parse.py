@@ -886,7 +886,7 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
 
 
 def has_non_autocaptured_symbols(ptrail: List[Parser]) -> Optional[bool]:
-    """Returns True, if the parser-trail contains a Capture-Parser that is not
+    """Returns True, if the parser-path contains a Capture-Parser that is not
     shielded by a Retrieve-Parser. This is the case for captured symbols
     that are not "auto-captured" by a Retrieve-Parser.
     """
@@ -1238,7 +1238,7 @@ class Grammar:
 
         call_stack__:  A stack of the tag names and locations of all parsers
                 in the call chain to the currently processed parser during
-                parsing. The call stack can be thought of as a breadcrumb trail.
+                parsing. The call stack can be thought of as a breadcrumb path.
                 This is required for recording the parser history (for debugging)
                 and, eventually, i.e. one day in the future, for tracing through
                 the parsing process.

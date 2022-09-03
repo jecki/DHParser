@@ -64,7 +64,7 @@ Declarative Tree-Transformation
 -------------------------------
 
 Declarative tree-transformations are realized via functions that take a
-:ref:`trail <trails>` as argument and which are organized in a dictionary that
+:ref:`path <paths>` as argument and which are organized in a dictionary that
 maps tag-names to sequences of such transformation functions which are called on
 every node with that tag-name. The tree as a whole is traversed depth-first.
 Module :py:mod:`DHParser.transform` provides a large number of predefined
@@ -164,7 +164,7 @@ node that has one of the tag-names in the key::
 Three things are important to know about :py:func:`~transform.traverse`:
 
 1. Trees are transformed depth first. So, when a transformation is called on a
-   particular node, or rather trail (see :ref:_trails), all children of that
+   particular node, or rather path (see :ref:_paths), all children of that
    node have already been transformed.
 
 2. As any other tree transformation method in DHParser, function
@@ -190,10 +190,10 @@ arithmetic example, we would not expect module :py:mod:`DHParser.transform` to
 already contain such an operation (although in this particular case, in fact, it
 does). But we can write a suitable transformation on our own, easily::
 
-   >>> from DHParser.nodetree import Node, Trail
-   >>> def left_associative(trail: Trail):
+   >>> from DHParser.nodetree import Node, Path
+   >>> def left_associative(path: Path):
    ...     "Re-arranges a flat node with infix operators into a left associative tree."
-   ...     node = trail[-1]
+   ...     node = path[-1]
    ...     if len(node._children) >= 3:
    ...         assert (len(node._children) + 1) % 2 == 0
    ...         rest = list(node._children)
@@ -205,19 +205,19 @@ does). But we can write a suitable transformation on our own, easily::
    ...             left = Node(infix.name, (left, right))
    ...         node.result = (left,)
 
-A transformation function is a function with the tree-trail as single argument
-and no return value. The tree-trail is the list of all nodes on the path from
+A transformation function is a function with the tree-path as single argument
+and no return value. The tree-path is the list of all nodes on the path from
 the root node of the tree up to and including the node that shall be
 transformed. It is good practice that transformations only change the last node
-in the trail-list and its children (which have already been transformed by the
+in the path and its children (which have already been transformed by the
 time this node has been reached by :py:func:`~transform.traverse`), but not any
-parents or siblings in the trail. The trail, rather than the node alone, is
+parents or siblings in the path. The path, rather than the node alone, is
 passed to transformation function only in order to enable it to query the
 parents or siblings in order to allow the transformation to make choices
-depending on the trail. This said, it sometimes makes sense to deviate from this
+depending on the path. This said, it sometimes makes sense to deviate from this
 rule, none the less.
 
-The just defined function does nothing if the last node in the trail-list (which
+The just defined function does nothing if the last node in the path (which
 is the node that is just being visited during the tree-traversal and which the
 transformation-function should operate on) has three or more children. If so, it
 is assumed that the children form a sequence of value interspersed with dyadic
@@ -313,7 +313,7 @@ transformation-table of the LaTeX-Parser example::
         "text, urlstring": collapse,
         "ESCAPED": [apply_ifelse(transform_result(lambda result: result[1:]),
                                  replace_content_with('~'),
-                                 lambda trail: '~' not in trail[-1].content)],
+                                 lambda path: '~' not in path[-1].content)],
         "UMLAUT": replace_Umlaut,
         "QUOTEMARK": replace_quotationmark,
         ":Whitespace, _WSPC, S": streamline_whitespace,
@@ -394,8 +394,8 @@ the "paragraph"-parser at the beginning or the end. This is achieved with the
 :py:func:`DHParser.transform.strip`-primitive. Like the
 :py:func:`DHParser.transform.replace_content_with`-primitive it takes an
 argument, only this time, the argument is another primitive (applied to the
-current trail of the node under inspection), namely
-:py:func:`DHParser.transform.is_one_of`, which returns true if the trail passed
+current path of the node under inspection), namely
+:py:func:`DHParser.transform.is_one_of`, which returns true if the path passed
 to it ends with a node the name of which is one of a set of names. In this case
 this is the set with the single element "S": ``strip(is_one_of({'S'}))``.
 
@@ -440,18 +440,18 @@ condition. Note that the the boolean condition is stated as the last term in the
 list of paramters of the ``apply_if_else``-operator! In this case the
 boolean-primitive is defined inline as a lambda function::
     
-    lambda trail: '~' not in trail[-1].content
+    lambda path: '~' not in path[-1].content
 
 Just like the transformation-functions proper, boolean-primitives
 (or "probing functions") take the whole
-trail (i.e. a list of all nodes starting with the root and ending with the node
+path (i.e. a list of all nodes starting with the root and ending with the node
 under inspection) as argument, but - different from the transformation-functions
 - they return a boolean value. The
 :py:func:`DHParser.transform.transform_result`-primitive takes a function as an
 argument to which the result of a Node (i.e. a string or a tuple of child-Nodes)
 is passed and that returns the transformed result. The
 :py:func:`DHParser.transform.replace_content_with`-primitive replaces the result
-of the last node in the trail with the given string content. Observe the subtle
+of the last node in the path with the given string content. Observe the subtle
 difference between the two primities: `replace_content_with` always yields a
 leaf node with string content but no children.
 
@@ -470,14 +470,14 @@ fail tolerant parsing <generic_fail_tolerant_parsing>`.
 Transformation Functions
 ------------------------
 
-A transformation function is a function that takes the trail of a node
+A transformation function is a function that takes the path of a node
 (i.e. the list of nodes that connects the node with the root of the
 tree, starting with the root and ending with the node) as single argument
 and has no return value.
 
 By convention transformation functions should only make changes to the
 node and descending nodes, but not to its siblings or any nodes further
-down the tree. The trail, rather than the node, is passed as argument
+down the tree. The path, rather than the node, is passed as argument
 in order to allow the inspection of the environment of the node. And,
 well, in rare cases it makes sense to deviate from the just mentioned rule.
 
@@ -489,14 +489,14 @@ it is best, not to change the ancestry.
 
 Generally speaking, transformation function will see the effects of
 any other transfomration further up the tree (i.e. those affecting
-the last node in the trail and its descendants) or earlier in the
+the last node in the path and its descendants) or earlier in the
 list of transformations assigned to an entry in the transformation-table.
 
 See the section on :ref:`debugging <debugging_transformations>`, below,
 for an example of what can happen when this is not taken into consideration.
 
 There is a special kind of transformation functions, called "probing
-functions", that take the trail as an argument but return a boolean
+functions", that take the path as an argument but return a boolean
 value. Probing functions should not make any changes to the tree.
 Also, it does not make sense to add probing functions directly to a list
 of transformation-function in the transformation table. Rather, probing
@@ -523,15 +523,15 @@ However, since this makes the transformation-table less readable,
 :py:mod:`DHParser.transform` provides the
 :py:func:`DHParser.transform.transformation_factory`-decorator that
 must be added to the definition of transformation functions that
-have further arguments after the `trail`-argument. Example::
+have further arguments after the `path`-argument. Example::
 
     >>> from collections.abc import Callable
     >>> from DHParser.transform import transformation_factory
     >>> @transformation_factory
-    ... def remove_children_if(trail: Trail, condition: Callable):
-    ...     node = trail[-1]
+    ... def remove_children_if(path: Path, condition: Callable):
+    ...     node = path[-1]
     ...     if node.children:
-    ...         node.result = tuple(c for c in node.children if not condition(trail + [c]))
+    ...         node.result = tuple(c for c in node.children if not condition(path + [c]))
 
 The decorator must be parameterized with the type of the second argument, unless
 this argument has already been annotated with the type. Now, it is possible
@@ -542,7 +542,7 @@ to rewrite the transformation table above as::
 While the transformations with parameters in transformation table look like
 functions calls where the first argument is missing, they are actually
 calls to the transformation_factory decorator that returns a partial function
-where all arguments are fixed execpt the "trails"-argument at the beginning
+where all arguments are fixed execpt the "paths"-argument at the beginning
 of the argument sequence. However, transformation functions with parameters
 can still be called like regular functions, if the first parameter is given.
 In this case the ``transformation_factory``-decorator simply passes the
@@ -558,12 +558,12 @@ the call through to the original function. The ``transformation_factory``-decora
 
 The distinction between function call and partial function generation
 is made on the basis of the type of the first argument.
-If the first argument is of type ``Trail`` (defined as ``List[Node]``)
+If the first argument is of type ``Path`` (defined as ``List[Node]``)
 the call is passed through, otherwise a partial function is generated.
 This places some subtle restrictions on the type of the first parameter
 (i.e. second argument) of a paramterized transformation function in so
 far as this must not be a type that could be mistaken for the type
-``Trail`` of a subtype of ``Trail``. As a rule of thumb it is advisable
+``Path`` of a subtype of ``Path``. As a rule of thumb it is advisable
 to avoid lists as types of the first parameter (or second argument,
 respectively) and use tuples or sets instead if a container type is needed.
 
@@ -577,8 +577,8 @@ transformation functions with the same decorator ``transformation_factory``::
     >>> from typing import AbstractSet
     >>> from collections.abc import Set
     >>> @transformation_factory(Set)
-    ... def is_one_of(trail: Trail, name_set: AbstractSet[str]) -> bool:
-    ...     return trail[-1].name in name_set
+    ... def is_one_of(path: Path, name_set: AbstractSet[str]) -> bool:
+    ...     return path[-1].name in name_set
 
 This example also shows that the type parameter of the
 ``transformation_factory``-argument overrides the type annotation, which
@@ -587,14 +587,14 @@ technical reasons.
 
 
 .. hint:: Transformation functions usually either assume that the
-   trail on which they are called ends with e leaf-node or with
+   path on which they are called ends with e leaf-node or with
    a branch-node but do not make much sense in the other case.
    It is therefore good practie to check this as a pre-condition
    with an if-clause (see function ``remove_children_if`` above)
    or an assert-statement::
 
-       >>> def normalize_whitespace(trail):
-       ...     node = trail[-1]
+       >>> def normalize_whitespace(path):
+       ...     node = path[-1]
        ...     assert not node.children
        ...     node.result = re.sub(r'\\s+', ' ', node.content)
 
@@ -616,8 +616,8 @@ of badly ordered transformation-rules::
     >>> import copy
     >>> from DHParser.transform import collapse
     >>> from DHParser.nodetree import parse_sxpr
-    >>> def duplicate_children(trail: Trail):
-    ...     node = trail[-1]
+    >>> def duplicate_children(path: Path):
+    ...     node = path[-1]
     ...     if node.children:
     ...         node.result = node.children + node.children
     >>> trans_table = { 'bag': [collapse, duplicate_children] }  # <-- bad mistake
@@ -641,7 +641,7 @@ prints the tree as S-expression::
 
 Thus, we can see the tree that the ``collapse``-function leaves behind and which
 the the ``duplicate_children``-functions receives as input. Since the collapse
-functions "collapses" the last node of the trail into a leaf-node. Therefore,
+functions "collapses" the last node of the path into a leaf-node. Therefore,
 the function ``duplicate_children`` does not receive a node with children
 that could be duplicated. We could remedy the situation by changing the the
 order of the transformations functions::
@@ -672,14 +672,14 @@ Basic Re-Arranging Transformations
 These transformations change und usually simplify the structure of the
 tree but do not touch the string-content of the node-tree. When speaking
 of the "node" a transformation function operates on in the following,
-we always mean the last node in the trail that is passed to the
+we always mean the last node in the path that is passed to the
 transformation function as argument.
 
 
 * :py:func:`~transform.replace_by_single_child`: Replaces a node with its
   single child, in case it has exactly one chile. Thus, ``(a (b "x"))``
   becomes ``(b "x")``, if the function is called on node "a", e.g. the
-  trail ending with "a".
+  path ending with "a".
 
 * :py:func:`~transform.replace_by_children`: Replaces a node by all of its
   children, if possible, e.g. ``(root (a (b "x") (c "y")))`` ->
@@ -749,7 +749,7 @@ Content-Changing Transformations
 * :py:func:`~transform.remove_tokens`: Removes and tokens, i.e. anonymous Text-nodes,
   e.g. ``(plus (number "5") (:Text "+") (number 3))`` -> ``(plus (number "5") (number 3))``
 
-* :py:func:`~transform.remove_if`: Removes the last node of the trail from ist parent'S
+* :py:func:`~transform.remove_if`: Removes the last node of the path from ist parent'S
   children. (Note: This transformation breaks the rule not to touch a node's parent's 
   children-tuple! But, depending on the use case, the meaning of the transformation 
   might become clearer when using "remove_if" on the node to be removed rather than 
