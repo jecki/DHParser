@@ -1972,23 +1972,23 @@ def strlen_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
 
 ### EXPERIMENTAL
 
-def as_path(trail: Trail) -> str:
+def path_str(trail: Trail) -> str:
     """Returns the trail a pseudo filepath of tag-names."""
     tag_list = ['']
     for node in trail:
-        assert not node.name.find('/'), 'as_path() not allowed for tag-names containing "/"!'
+        assert not node.name.find('/'), 'path_str() not allowed for tag-names containing "/"!'
         tag_list.append(node.name)
     if trail[-1].children:
         tag_list.append('')
     return '/'.join(tag_list)
 
 
-def match_path(path: str, glob_pattern: str) -> bool:
-    """Matches a trail as path against a glob-pattern."""
+def match_path_str(path_str: str, glob_pattern: str) -> bool:
+    """Matches a path_str against a glob-pattern."""
     from fnmatch import fnmatchcase
     if glob_pattern[0:1] not in ("/", "*"):
         glob_pattern = "*/" + glob_pattern
-    return fnmatchcase(path, glob_pattern)
+    return fnmatchcase(path_str, glob_pattern)
 
 
 
