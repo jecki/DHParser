@@ -111,6 +111,7 @@ PreprocessorResult = namedtuple('PreprocessorResult',
 
 FindIncludeFunc = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                         functools.partial]
+DeriveFileNameFunc = Union[Callable[[str], str], functools.partial]  # include name -> file name
 PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
                          functools.partial]
 Tokenizer = Union[Callable[[str], Tuple[str, List[Error]]], functools.partial]
@@ -336,7 +337,14 @@ def make_preprocessor(tokenizer: Tokenizer) -> PreprocessorFunc:
 
 
 def gen_find_include_func(rx: Union[str, Any],
-                          comment_rx: Optional[Union[str, Any]] = None) -> FindIncludeFunc:
+                          comment_rx: Optional[Union[str, Any]] = None,
+                          derive_file_name: DeriveFileNameFunc = lambda name: name) \
+                          -> FindIncludeFunc:
+    """Generates a function to find include-statements in a file.
+
+    :param rx: A regular expression (either as string or compiled
+        regular expression)
+    """
     if isinstance(rx, str):  rx = re.compile(rx)
     if isinstance(comment_rx, str):  comment_rx = re.compile(comment_rx)
 
@@ -345,7 +353,8 @@ def gen_find_include_func(rx: Union[str, Any],
         m = rx.search(text, begin)
         if m:
             begin = m.start()
-            return IncludeInfo(begin, m.end() - begin, m.group('name'))
+            file_name = derive_file_name(m.group('name'))
+            return IncludeInfo(begin, m.end() - begin, file_name)
         else:
             return IncludeInfo(-1, 0, '')
 
