@@ -40,7 +40,7 @@ try:
 except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
-from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source, visitor_name
+from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source
 from DHParser.configuration import access_thread_locals, get_config_value, \
     NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
@@ -1391,8 +1391,9 @@ class EBNFCompiler(Compiler):
                     '            root.stage = "compiled"',
                     '        return result',
                     '']
+        c = Compiler()
         for name in self.rules:
-            method_name = visitor_name(name)
+            method_name = c.visitor_name(name)
             if name == self.root_symbol:
                 compiler += ['    def ' + method_name + '(self, node):',
                              '        return self.fallback_compiler(node)', '']

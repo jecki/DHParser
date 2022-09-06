@@ -651,22 +651,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self._children = tuple()
                 self._result = result
 
-    def _init_child_pos(self):
-        """Initialize position values of children with potentially
-        unassigned positions, i.e. child.pos < 0."""
-        children = self._children  # type: Tuple['Node', ...]
-        if children:
-            offset = self._pos
-            prev = children[0]
-            if prev._pos < 0:
-                prev.with_pos(offset)
-            for child in children[1:]:
-                if child._pos < 0:
-                    offset = offset + prev.strlen()
-                    child.with_pos(offset)
-                else:
-                    offset = child._pos
-                prev = child
+    # def _init_child_pos(self):
+    #     """Initialize position values of children with potentially
+    #     unassigned positions, i.e. child.pos < 0."""
+    #     children = self._children  # type: Tuple['Node', ...]
+    #     if children:
+    #         offset = self._pos
+    #         prev = children[0]
+    #         if prev._pos < 0:
+    #             prev.with_pos(offset)
+    #         for child in children[1:]:
+    #             if child._pos < 0:
+    #                 offset = offset + prev.strlen()
+    #                 child.with_pos(offset)
+    #             else:
+    #                 offset = child._pos
+    #             prev = child
 
     @property
     def result(self) -> StrictResultType:
@@ -680,7 +680,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         self._set_result(result)
         # fix position values for children that are added after the parsing process
         if self._pos >= 0:
-            self._init_child_pos()
+            # self._init_child_pos()
+            pos = self._pos
+            self._pos = -1
+            self.with_pos(pos)
 
     @property
     def children(self) -> ChildrenType:
@@ -742,6 +745,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> node.pos
             10
 
+            >>> tree = parse_sxpr('(a (b (c "0") (d (e "1")(f "2"))) (g "3"))')
+            >>> _ = tree.with_pos(0)
+            >>> [(nd.name, nd.pos) for nd in tree.select(ANY_NODE, include_root=True)]
+            [('a', 0), ('b', 0), ('c', 0), ('d', 1), ('e', 1), ('f', 2), ('g', 3)]
+
         :param pos: The position assigned to be assigned to the node.
             Value must be >= 0.
         :returns: the node itself (for convenience).
@@ -753,13 +761,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # assert self._pos < 0 or self.pos == pos, ("pos mismatch %i != %i at Node: %s"
         #                                           % (self._pos, pos, repr(self)))
         if pos != self._pos >= 0:
-            raise AssertionError(f"Position value {self._pos} cannot be "
+            raise AssertionError(f"Position value {self._pos} of node {self.name} cannot be "
                                  f"reassigned to a different value ({pos})!")
         assert pos >= 0, "Negative value %i not allowed!"
         if self._pos < 0:
             self._pos = pos
+            for nd in self.select(ANY_NODE, include_root=False):
+                if nd._pos < 0:
+                    if nd._children:
+                        nd._pos = pos
+                    else:
+                        nd._pos = pos
+                        pos += len(nd._result)
+                else:
+                    pos = nd._pos + nd.strlen()
             # recursively adjust pos-values of all children
-            self._init_child_pos()
+            # self._init_child_pos()
         return self
 
     # (XML-)attributes ###
@@ -1139,6 +1156,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ['(a (b "X") (X (c "d")) (e (X "F")))']
             >>> flatten_sxpr(next(tree.select("X", False)).as_sxpr())
             '(X (c "d"))'
+            >>> tree = parse_sxpr('(a (b (c "") (d (e "")(f ""))) (g ""))')
+            >>> [nd.name for nd in tree.select(ANY_NODE)]
+            ['b', 'c', 'd', 'e', 'f', 'g']
         """
         return self.select_if(create_match_function(criteria), include_root, reverse,
                               create_match_function(skip_subtree))

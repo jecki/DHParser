@@ -61,9 +61,7 @@ __all__ = ('CompilerError',
            'process_tree',
            'Junction',
            'run_pipeline',
-           'compile_source',
-           'visitor_name',
-           'attr_visitor_name')
+           'compile_source')
 
 
 class CompilerError(Exception):
@@ -74,36 +72,6 @@ class CompilerError(Exception):
     reported as an error.
     """
     pass
-
-
-def visitor_name(node_name: str) -> str:
-    """
-    Returns the visitor_method name for `name`, e.g.::
-
-        >>> visitor_name('expression')
-        'on_expression'
-        >>> visitor_name('!--')
-        'on_212d2d'
-    """
-    if re.match(r'\w+$', node_name):
-        return 'on_' + node_name
-    else:
-        letters = []
-        for ch in node_name:
-            if not re.match(r'\w', ch):
-                ch = hex(ord(ch))[2:]
-            letters.append(ch)
-        return 'on_' + ''.join(letters)
-
-
-def attr_visitor_name(attr_name: str) -> str:
-    """
-    Returns the visitor_method name for `attr_name`, e.g.::
-
-        >>> attr_visitor_name('class')
-        'attr_class'
-    """
-    return 'attr_' + attr_name.replace('-', '_').replace('.', '_').replace(':', '_')
 
 
 ROOTNODE_PLACEHOLDER = RootNode()
@@ -189,6 +157,36 @@ class Compiler:
         self.finalizers = []  # type: List[Tuple[Callable, Tuple]]
         self.method_dict = {}  # type: Dict[str, CompilerFunc]
 
+    def visitor_name(self, node_name: str) -> str:
+        """
+        Returns the visitor_method name for `name`, e.g.::
+
+            >>> c = Compiler()
+            >>> c.visitor_name('expression')
+            'on_expression'
+            >>> c.visitor_name('!--')
+            'on_212d2d'
+        """
+        if re.match(r'\w+$', node_name):
+            return 'on_' + node_name
+        else:
+            letters = []
+            for ch in node_name:
+                if not re.match(r'\w', ch):
+                    ch = hex(ord(ch))[2:]
+                letters.append(ch)
+            return 'on_' + ''.join(letters)
+
+    def attr_visitor_name(self, attr_name: str) -> str:
+        """
+        Returns the visitor_method name for `attr_name`, e.g.::
+
+            >>> c = Compiler()
+            >>> c.attr_visitor_name('class')
+            'attr_class'
+        """
+        return 'attr_' + attr_name.replace('-', '_').replace('.', '_').replace(':', '_')
+
     def prepare(self, root: RootNode) -> None:
         """
         A preparation method that will be called after everything else has
@@ -257,7 +255,7 @@ class Compiler:
             self.path.append(node)
             for attribute, value in tuple(node.attr.items()):
                 try:
-                    attribute_visitor = self.__getattribute__(attr_visitor_name(attribute))
+                    attribute_visitor = self.__getattribute__(self.attr_visitor_name(attribute))
                     attribute_visitor(node, value) or node
                 except AttributeError:
                     pass
@@ -298,7 +296,7 @@ class Compiler:
         try:
             method = self.method_dict[node_name]
         except KeyError:
-            method_name = visitor_name(node_name)
+            method_name = self.visitor_name(node_name)
             try:
                 method = self.__getattribute__(method_name)
             except AttributeError:
