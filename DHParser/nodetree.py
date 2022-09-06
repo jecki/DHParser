@@ -2905,17 +2905,15 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         attr_dict[chain_attr] = gen_sloppy_chain_ID()
 
     if not common_ancestor._children:
-        if i == 0 or not (common_ancestor.name in divisable or common_ancestor.anonymous):
-            markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
-            return common_ancestor
-        else:
-            markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
+        markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
+        if i != 0 and (common_ancestor.name in divisable or common_ancestor.anonymous):
             i -= 1
             assert path_A[i] == path_B[i]
             ur_ancestor = path_A[i]
-            k = ur_ancestor.index(common_ancestor)
-            ur_ancestor.result = ur_ancestor[:k] + common_ancestor.children + ur_ancestor[k + 1:]
+            t = ur_ancestor.index(common_ancestor)
+            ur_ancestor.result = ur_ancestor[:t] + common_ancestor.children + ur_ancestor[t + 1:]
             return ur_ancestor
+        return common_ancestor
 
     stump_A = path_A[i:]
     stump_B = path_B[i:]
