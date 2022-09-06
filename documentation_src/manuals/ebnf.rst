@@ -2164,7 +2164,7 @@ XML-Parser with a little mistake::
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
     3:21: Error (1010): '`>`' expected by parser 'ETag', but »litle>\n   ...« found instead!
-    5:5: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
+    5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 
 
 Since our original mini-XML-grammar did not contain any

@@ -84,6 +84,7 @@ __all__ = ('TransformationDict',
            'transform_result',
            'replace_content_with',
            'add_attributes',
+           'del_attributes',
            'normalize_whitespace',
            'merge_adjacent',
            'merge_leaves',
@@ -1648,10 +1649,28 @@ def normalize_whitespace(path):
 @transformation_factory
 def add_attributes(path: Path, attributes: dict):  # Dict[str, str]
     """
-    Adds the attributes in the dictionary to the XML-Attributes of the last node
-    in the given path.
+    Adds the attributes in the given dictionary to the XML-attributes
+    of the last node in the given path.
     """
     path[-1].attr.update(attributes)
+
+
+@transformation_factory
+def del_attributes(path: Path, attributes: set = frozenset()):  # Set[str]
+    """
+    Removes XML-attributes from the last node in the given path.
+    If the given set is empty, all attributes will be deleted.
+    """
+    node = path[-1]
+    if node.has_attr():
+        if attributes:
+            for attr in attributes:
+                try:
+                    del node.attr[attr]
+                except KeyError:
+                    pass
+        else:
+            node.attr = dict()
 
 
 NodeGenerator = Callable[[], Node]

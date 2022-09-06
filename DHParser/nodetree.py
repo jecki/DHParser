@@ -1088,7 +1088,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         for i, child in enumerate(self._children[start:stop]):
             if mf(child):
                 return i + start
-        raise ValueError("Node identified by '%s' not among child-nodes." % repr(selector))
+        raise ValueError("Node identified by '%s' not among child-nodes."
+                         % abbreviate_middle(repr(selector), 60))
 
     @cython.locals(i=cython.int)
     def indices(self, selector: NodeSelector) -> Tuple[int, ...]:
@@ -2587,7 +2588,7 @@ def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
     return -k
 
 
-def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any] = dict(),
+def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
                  greedy: bool = True,
                  select: PathSelector = ANY_PATH,
                  ignore: PathSelector = NO_PATH,
@@ -2805,8 +2806,11 @@ SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "div
                          'object.'
 
 
+EMPTY_DICT_SENTINEL = dict()
+
+
 def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
-           attr_dict: Dict[str, Any] = dict(), greedy: bool = True,
+           attr_dict: Dict[str, Any] = EMPTY_DICT_SENTINEL, greedy: bool = True,
            select: PathSelector = ANY_PATH, ignore: PathSelector = NO_PATH,
            divisable: Set[str] = LEAF_PTYPES,
            chain_attr: str = "") -> Node:
@@ -2864,6 +2868,7 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         >>> print(flatten_sxpr(X.as_sxpr()))
         (X (l ",") (em (l ".") (A (O "123") (P "456")) (m "!?") (B (Q "789") (R "abc")) (n "+")) (n "-"))
     """
+    if attr_dict == EMPTY_DICT_SENTINEL:  attr_dict = dict()  # new empty dict
     if start_pos == end_pos:
         milestone = Node(name, '').with_attr(attr_dict)
         return insert_node(t, start_pos, milestone)
@@ -2877,6 +2882,8 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
     for i, (a, b) in enumerate(zip(path_A, path_B)):
         if a != b:  break
         common_ancestor = a
+    else:
+        i += 1
     i -= 1
     assert common_ancestor
 
@@ -2901,7 +2908,15 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         if i == 0 or not (common_ancestor.name in divisable or common_ancestor.anonymous):
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
             return common_ancestor
-        i -= 1
+        else:
+            markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
+            i -= 1
+            assert path_A[i] == path_B[i]
+            ur_ancestor = path_A[i]
+            k = ur_ancestor.index(common_ancestor)
+            ur_ancestor.result = ur_ancestor[:k] + common_ancestor.children + ur_ancestor[k + 1:]
+            return ur_ancestor
+
     stump_A = path_A[i:]
     stump_B = path_B[i:]
     q = can_split(stump_A, pos_A, True, greedy, select, ignore, divisable)
