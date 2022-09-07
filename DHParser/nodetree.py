@@ -120,6 +120,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'generate_content_mapping',
            'map_index',
            'map_pos_to_path',
+           'reconstruct_content_mapping',
            'iterate_paths',
            'insert_node',
            'split',
@@ -580,17 +581,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # def __hash__(self):
     #     return hash(self.name)  # very bad idea!
 
-    @property
-    def tag_name(self) -> str:
-        deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
-                            'Use "Node.name" instead!')
-        return self.name
-
-    @tag_name.setter
-    def tag_name(self, name: str):
-        deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
-                            'Use "Node.name" instead!')
-        self.name = name
+    # @property
+    # def tag_name(self) -> str:
+    #     deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
+    #                         'Use "Node.name" instead!')
+    #     return self.name
+    #
+    # @tag_name.setter
+    # def tag_name(self, name: str):
+    #     deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
+    #                         'Use "Node.name" instead!')
+    #     self.name = name
 
     def equals(self, other: 'Node', ignore_attr_order: bool = True) -> bool:
         """
@@ -2212,6 +2213,22 @@ def pick_from_path(path: Path, criterion: NodeSelector, reverse: bool=False) \
         return None
 
 
+def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Node, int]:
+    """Returns the last common ancestor of path_A, path_B and its index
+    in the path. If there is no common ancestor (None, undefined integer)
+    is returned.
+    """
+    common_ancestor = None
+    i = 0
+    for i, (a, b) in enumerate(zip(path_A, path_B)):
+        if a != b:  break
+        common_ancestor = a
+    else:
+        i += 1
+    i -= 1
+    return common_ancestor, i
+
+
 def serialize_path(path: Path, with_content: int = 0, delimiter: str = ' <- ') \
         -> str:
     """Serializes a path as string.
@@ -2324,6 +2341,74 @@ def iterate_paths(cm: ContentMapping, a: int, b: int, left_biased: bool = False)
     index_b = map_index(cm, b, left_biased)
     for i in range(index_a, index_b + 1):
         yield cm[1][i]
+
+
+def reconstruct_content_mapping(cm: ContentMapping, start_index: int, end_index: int,
+                                select: PathSelector = LEAF_PATH,
+                                ignore: PathSelector = NO_PATH):
+    """Reconstructs a particular section of the context mapping. The context
+    mapping will be reconstructed in place.
+
+    >>> tree = parse_sxpr('(a (b (c "123") (d "456")) (e (f (g "789") (h "ABC")) (i "DEF")))')
+    >>> cm = generate_content_mapping(tree)
+    >>> cm[0]
+    [0, 3, 6, 9, 12]
+    >>> [[nd.name for nd in path] for path in cm[1]]
+    [['a', 'b', 'c'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
+    >>> b = tree.pick('b')
+    >>> b.result = (b[0], Node('x', 'xyz'), b[1])
+    >>> reconstruct_content_mapping(cm, 0, 1)
+    >>> cm[0]
+    [0, 3, 6, 9, 12, 15]
+    >>> [[nd.name for nd in path] for path in cm[1]]
+    [['a', 'b', 'c'], ['a', 'b', 'x'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
+    >>> reconstruct_content_mapping(cm, 2, 3)
+    >>> cm[0]
+    [0, 3, 6, 9, 12, 15]
+    >>> [[nd.name for nd in path] for path in cm[1]]
+    [['a', 'b', 'c'], ['a', 'b', 'x'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
+    >>> reconstruct_content_mapping(cm, 0, 5)
+    >>> cm[0]
+    [0, 3, 6, 9, 12, 15]
+    >>> [[nd.name for nd in path] for path in cm[1]]
+    [['a', 'b', 'c'], ['a', 'b', 'x'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
+    """
+    start_path = cm[1][start_index]
+    end_path = cm[1][end_index]
+    common_ancestor, i = find_common_ancestor(start_path, end_path)
+    assert common_ancestor
+    while start_index > 0 and cm[1][start_index - 1][i:i + 1] == [common_ancestor]:
+        start_index -= 1
+    last = len(cm[1]) - 1
+    while end_index < last and cm[1][end_index + 1][i:i + 1] == [common_ancestor]:
+        end_index += 1
+
+    offsets, paths = generate_content_mapping(common_ancestor, select, ignore)
+    assert offsets[0] == 0
+    start_pos = cm[0][start_index]
+    offsets = [offset + start_pos for offset in offsets]
+    stump = start_path[:i]
+    paths = [stump + path for path in paths]
+
+    off_head = cm[0][:start_index]
+    if offsets[-1] != cm[0][end_index]:
+        shift = offsets[-1] - cm[0][end_index]
+        off_tail = [offset + shift for offset in cm[0][end_index + 1:]]
+    else:
+        off_tail = cm[0][end_index + 1:]
+
+    path_head = cm[1][:start_index]
+    path_tail = cm[1][end_index + 1:]
+
+    cm[0].clear()
+    cm[0].extend(off_head)
+    cm[0].extend(offsets)
+    cm[0].extend(off_tail)
+
+    cm[1].clear()
+    cm[1].extend(path_head)
+    cm[1].extend(paths)
+    cm[1].extend(path_tail)
 
 
 # Support for adding markup (EXPERIMENTAL!!!) #########################
@@ -2832,11 +2917,11 @@ SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "div
 EMPTY_DICT_SENTINEL = dict()
 
 
-def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
+def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
            attr_dict: Dict[str, Any] = EMPTY_DICT_SENTINEL, greedy: bool = True,
            select: PathSelector = ANY_PATH, ignore: PathSelector = NO_PATH,
            divisable: Set[str] = LEAF_PTYPES,
-           chain_attr: str = "") -> Node:
+           chain_attr: str = "", cleanup: bool = False) -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
     with 'name', eventually cutting through 'divisable' nodes. Returns the
     nearest common ancestor of 'start_pos' and 'end_pos'.
@@ -2894,21 +2979,17 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
     if attr_dict is EMPTY_DICT_SENTINEL:  attr_dict = dict()  # new empty dict
     if start_pos == end_pos:
         milestone = Node(name, '').with_attr(attr_dict)
-        return insert_node(t, start_pos, milestone)
+        common_ancestor = insert_node(cm, start_pos, milestone)
+        assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
+        return common_ancestor
 
-    path_A, pos_A = map_pos_to_path(t, start_pos)
-    path_B, pos_B = map_pos_to_path(t, end_pos, left_biased=True)
+    path_A, pos_A = map_pos_to_path(cm, start_pos)
+    path_B, pos_B = map_pos_to_path(cm, end_pos, left_biased=True)
     assert path_A
     assert path_B
-    common_ancestor = None
-    i = 0
-    for i, (a, b) in enumerate(zip(path_A, path_B)):
-        if a != b:  break
-        common_ancestor = a
-    else:
-        i += 1
-    i -= 1
+    common_ancestor, i = find_common_ancestor(path_A, path_B)
     assert common_ancestor
+    assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
 
     # if divisable is DIVISABLE_SENTINEL:
     #     if isinstance(path_A[0], RootNode):
@@ -2930,24 +3011,28 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
     if not common_ancestor._children:
         markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
         if i != 0 and (common_ancestor.name in divisable or common_ancestor.anonymous):
-            i -= 1
-            assert path_A[i] == path_B[i]
-            ur_ancestor = path_A[i]
+            ur_ancestor = path_A[i -1]
             t = ur_ancestor.index(common_ancestor)
             ur_ancestor.result = ur_ancestor[:t] + common_ancestor.children + ur_ancestor[t + 1:]
-            return ur_ancestor
+            common_ancestor = ur_ancestor
+        if cleanup:
+            reconstruct_content_mapping(
+                cm, map_index(cm, start_pos), map_index(cm, end_pos, left_biased=True),
+                select, ignore)
+        assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
         return common_ancestor
 
     stump_A = path_A[i:]
     stump_B = path_B[i:]
+
     q = can_split(stump_A, pos_A, True, greedy, select, ignore, divisable)
     r = can_split(stump_B, pos_B, False, greedy, select, ignore, divisable)
 
     i = -1
     k = -1
-    if abs(q) == len(stump_A) - 1:
+    if q < abs(q) == len(stump_A) - 1:
         i = deep_split(stump_A, pos_A, True, greedy, select, ignore)
-    if abs(r) == len(stump_B) - 1:
+    if r < abs(r) == len(stump_B) - 1:
         k = deep_split(stump_B, pos_B, False, greedy, select, ignore)
     if i >= 0 and k >= 0:
         nd = Node(name, common_ancestor[i:k]).with_attr(attr_dict)
@@ -2978,6 +3063,12 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
             nd = Node(name, common_ancestor[t + 1:u]).with_attr(attr_dict)
             nd._pos = common_ancestor[t + 1]._pos
             common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[u:]
+
+    if cleanup:
+        reconstruct_content_mapping(
+            cm, map_index(cm, start_pos), map_index(cm, end_pos, left_biased=True),
+            select, ignore)
+    assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
     return common_ancestor
 
 
