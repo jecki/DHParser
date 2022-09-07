@@ -175,7 +175,7 @@ class TestParseXML:
         tree = parse_xml('<a>alpha <b>beta</b> gamma</a>')
         assert flatten_sxpr(tree.as_sxpr()) == '(a (:Text "alpha ") (b "beta") (:Text " gamma"))'
         tree = parse_xml(' <a>  <b>beta</b>  </a> ')
-        assert flatten_xml(tree.as_xml()) == \
+        assert flatten_xml(tree.as_xml(string_tags=set())) == \
                '<a><ANONYMOUS_Text__>  </ANONYMOUS_Text__><b>beta</b>' \
                '<ANONYMOUS_Text__>  </ANONYMOUS_Text__></a>'
         assert tree.as_xml(inline_tags={'a'}, string_tags={':Text'}) == '<a>  <b>beta</b>  </a>'
@@ -1195,7 +1195,6 @@ class TestMarkupInsertion:
             f' das Wort</outer>.</doc>'
 
     def test_insert_markup_5(self):
-        empty_tags = set()
         tree = parse_xml('<text><hi rend="i">X</hi>34, 53 ... Q. Aelius Tubero tribunus plebis</text>')
         i = tree.content.find('Q.')
         k = tree.content.find('Tubero') + len('Tubero')
@@ -1203,6 +1202,15 @@ class TestMarkupInsertion:
         markup(cm, i, k, "a")
         assert tree.as_xml(inline_tags={'text'}, string_tags={TOKEN_PTYPE}) == \
             '<text><hi rend="i">X</hi>34, 53 ... <a>Q. Aelius Tubero</a> tribunus plebis</text>'
+
+    def test_insert_markup_6(self):
+        tree = parse_xml('<cell>This is Albert Einstein speaking</cell>')
+        i = tree.content.find('Albert Einstein')
+        k = i + len('Albert Einstein')
+        cm = generate_content_mapping(tree)
+        markup(cm, i, k-1, 'a', cleanup=True)
+        markup(cm, i + len('Albert'), len(tree.content), 'b')
+        print(tree.as_xml())
 
 if __name__ == "__main__":
     from DHParser.testing import runner

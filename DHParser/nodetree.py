@@ -3400,7 +3400,7 @@ class RootNode(Node):
 
         # customization for XML-Representation
         self.inline_tags: Set[str] = set()
-        self.string_tags: Set[str] = set()
+        self.string_tags: Set[str] = {TOKEN_PTYPE}
         self.empty_tags: Set[str] = set()
 
         # meta-data
