@@ -566,7 +566,7 @@ leaf-nodes to which they belong. The path-mapping can be thought of as a
 Now let's find all letters that are followed by a whitespace character::
 
     >>> import re; locations = [m.start() for m in re.finditer(r'\w ', flat_text)]
-    >>> targets = [map_pos_to_path(loc, ctx_mapping) for loc in locations]
+    >>> targets = [map_pos_to_path(ctx_mapping, loc) for loc in locations]
 
 The target returned by `map_pos_to_path()` is a tuple of the target path
 and the relative position of the location that falls within this path::

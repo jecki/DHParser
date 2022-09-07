@@ -2277,7 +2277,7 @@ def generate_content_mapping(node: Node,
     return pos_list, path_list
 
 
-def map_index(pos: int, cm: ContentMapping, left_biased: bool = False) -> int:
+def map_index(cm: ContentMapping, pos: int, left_biased: bool = False) -> int:
     """Yields the index for the path in given context-mapping that contains
     the position ``pos``."""
     assert len(cm) == 2
@@ -2293,7 +2293,7 @@ def map_index(pos: int, cm: ContentMapping, left_biased: bool = False) -> int:
     return path_index
 
 
-def map_pos_to_path(pos: int, cm: ContentMapping, left_biased: bool = False) -> Tuple[Path, int]:
+def map_pos_to_path(cm: ContentMapping, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
     """Yields the path and relative position for the absolute
     position ``pos``.
 
@@ -2303,26 +2303,25 @@ def map_pos_to_path(pos: int, cm: ContentMapping, left_biased: bool = False) -> 
     :param left_biased: yields the location after the end of the previous
         path rather than the location at the very beginning of the
         next path. Default value is "False".
-    :returns:   tuple (path, relative position) where relative
-        position is the position of i relative to the actual
-        position of the last node in the path.
+    :returns:   tuple (path, offset) where the offset is the position of
+        ``pos`´ relative to the actual position of the last node in the path.
     :raises:    IndexError if not 0 <= position < length of document
     """
-    path_index = map_index(pos, cm, left_biased)
+    path_index = map_index(cm, pos, left_biased)
     return cm[1][path_index], pos - cm[0][path_index]
 
 
-def iterate_paths(a: int, b: int, cm: ContentMapping, left_biased: bool = False) \
+def iterate_paths(cm: ContentMapping, a: int, b: int, left_biased: bool = False) \
         -> Iterator[Path]:
     """Yields all paths from a to b.
 
     >>> tree = parse_sxpr('(a (b "123") (c (d "456") (e "789")) (f "ABC"))')
     >>> cm = generate_content_mapping(tree)
-    >>> [[nd.name for nd in p] for p in  (iterate_paths(1, 12, cm))]
+    >>> [[nd.name for nd in p] for p in iterate_paths(cm, 1, 12)]
     [['a', 'b'], ['a', 'c', 'd'], ['a', 'c', 'e'], ['a', 'f']]
     """
-    index_a = map_index(a, cm, left_biased)
-    index_b = map_index(b, cm, left_biased)
+    index_a = map_index(cm, a, left_biased)
+    index_b = map_index(cm, b, left_biased)
     for i in range(index_a, index_b + 1):
         yield cm[1][i]
 
@@ -2373,7 +2372,7 @@ def _(t: Path, str_pos: int, node: Node) -> Node:
 
 @insert_node.register(tuple)
 def _(t: ContentMapping, rel_pos: int, node: Node) -> Node:
-    path, pos = map_pos_to_path(rel_pos, t)
+    path, pos = map_pos_to_path(t, rel_pos)
     return insert_node(path, pos, node)
 
 
@@ -2897,8 +2896,8 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         milestone = Node(name, '').with_attr(attr_dict)
         return insert_node(t, start_pos, milestone)
 
-    path_A, pos_A = map_pos_to_path(start_pos, t)
-    path_B, pos_B = map_pos_to_path(end_pos, t, left_biased=True)
+    path_A, pos_A = map_pos_to_path(t, start_pos)
+    path_B, pos_B = map_pos_to_path(t, end_pos, left_biased=True)
     assert path_A
     assert path_B
     common_ancestor = None
@@ -2988,8 +2987,8 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
 #         milestone = Node(name, '').with_attr(*attr_dict, **attributes)
 #         insert_node(t, start_pos, milestone)
 #         return milestone
-#     path_A, pos_A = map_pos_to_path(start_pos, t)
-#     path_B, pos_B = map_pos_to_path(end_pos, t)
+#     path_A, pos_A = map_pos_to_path(t, start_pos)
+#     path_B, pos_B = map_pos_to_path(t, end_pos)
 #     assert path_A
 #     assert path_B
 #     common_ancestor = None

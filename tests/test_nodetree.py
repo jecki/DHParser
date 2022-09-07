@@ -987,21 +987,21 @@ class TestPathNavigation:
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
         cm = generate_content_mapping(tree)
         for i in range(len(tree.content)):
-            ctx, rel_pos = map_pos_to_path(i, cm)
+            ctx, rel_pos = map_pos_to_path(cm, i)
         i = tree.content.find("delta")
-        ctx, rel_pos = map_pos_to_path(i, cm)
+        ctx, rel_pos = map_pos_to_path(cm, i)
         assert ctx[-1].name == 'F' and rel_pos == 0
         i = tree.content.find("lta")
-        ctx, rel_pos = map_pos_to_path(i, cm)
+        ctx, rel_pos = map_pos_to_path(cm, i)
         assert ctx[-1].name == 'F' and rel_pos == 2
         i = tree.content.find("a")
-        ctx, rel_pos = map_pos_to_path(i, cm)
+        ctx, rel_pos = map_pos_to_path(cm, i)
         assert ctx[-1].name == 'B' and rel_pos == 0
         i = tree.content.rfind("a")
-        ctx, rel_pos = map_pos_to_path(i, cm)
+        ctx, rel_pos = map_pos_to_path(cm, i)
         assert ctx[-1].name == 'F' and rel_pos == 4
         i = tree.content.find("mm")
-        ctx, rel_pos = map_pos_to_path(i, cm)
+        ctx, rel_pos = map_pos_to_path(cm, i)
         assert ctx[-1].name == 'E' and rel_pos == 2
 
         select, ignore = {'A', 'B', 'D', 'F'}, {'C'}
