@@ -118,7 +118,9 @@ __all__ = ('WHITESPACE_PTYPE',
            'path_sanity_check',
            'ContentMapping',
            'generate_content_mapping',
+           'map_index',
            'map_pos_to_path',
+           'iterate_paths',
            'insert_node',
            'split',
            'markup',
@@ -2265,23 +2267,39 @@ def generate_content_mapping(node: Node,
     # node_based_ignore_func = NO_NODE if ignore == NO_PATH else lambda nd: ignore_func([nd])
 
     pos = 0
-    pos_list, trl_list = [], []
+    pos_list, path_list = [], []
     if ignore_func([node]):  return [], []
     for trl in node.select_path_if(match_func, include_root=True, skip_func=ignore_func):
         if trl[-1]._children or ignore_func(trl):  continue  # ignore non-leaf paths
         pos_list.append(pos)
-        trl_list.append(trl)
+        path_list.append(trl)
         pos += trl[-1].strlen()
-    return pos_list, trl_list
+    return pos_list, path_list
 
 
-def map_pos_to_path(i: int, tm: ContentMapping, left_biased: bool = False) -> Tuple[Path, int]:
+def map_index(pos: int, cm: ContentMapping, left_biased: bool = False) -> int:
+    """Yields the index for the path in given context-mapping that contains
+    the position ``pos``."""
+    assert len(cm) == 2
+    errmsg = lambda i: f'Illegal position value {i}. ' \
+                       f'Must be 0 <= position < length of text!'
+    if pos < 0:  raise IndexError(errmsg(pos))
+    try:
+        path_index = bisect.bisect_right(cm[0], pos) - 1
+        if left_biased and path_index > 0 and pos - cm[0][path_index] == 0:
+            path_index -= 1
+    except IndexError:
+        raise IndexError(errmsg(pos))
+    return path_index
+
+
+def map_pos_to_path(pos: int, cm: ContentMapping, left_biased: bool = False) -> Tuple[Path, int]:
     """Yields the path and relative position for the absolute
-    position `i`.
+    position ``pos``.
 
-    :param i:   a position in the content of the tree for which the
+    :param pos:   a position in the content of the tree for which the
         path mapping `cm` was generated
-    :param tm:  a path mapping
+    :param cm:  a path mapping
     :param left_biased: yields the location after the end of the previous
         path rather than the location at the very beginning of the
         next path. Default value is "False".
@@ -2290,17 +2308,23 @@ def map_pos_to_path(i: int, tm: ContentMapping, left_biased: bool = False) -> Tu
         position of the last node in the path.
     :raises:    IndexError if not 0 <= position < length of document
     """
-    assert len(tm) == 2
-    errmsg = lambda i: f'Illegal position value {i}. ' \
-                       f'Must be 0 <= position < length of text!'
-    if i < 0:  raise IndexError(errmsg(i))
-    try:
-        trl_index = bisect.bisect_right(tm[0], i) - 1
-        if left_biased and trl_index > 0 and i - tm[0][trl_index] == 0:
-            trl_index -= 1
-        return tm[1][trl_index], i - tm[0][trl_index]
-    except IndexError:
-        raise IndexError(errmsg(i))
+    path_index = map_index(pos, cm, left_biased)
+    return cm[1][path_index], pos - cm[0][path_index]
+
+
+def iterate_paths(a: int, b: int, cm: ContentMapping, left_biased: bool = False) \
+        -> Iterator[Path]:
+    """Yields all paths from a to b.
+
+    >>> tree = parse_sxpr('(a (b "123") (c (d "456") (e "789")) (f "ABC"))')
+    >>> cm = generate_content_mapping(tree)
+    >>> [[nd.name for nd in p] for p in  (iterate_paths(1, 12, cm))]
+    [['a', 'b'], ['a', 'c', 'd'], ['a', 'c', 'e'], ['a', 'f']]
+    """
+    index_a = map_index(a, cm, left_biased)
+    index_b = map_index(b, cm, left_biased)
+    for i in range(index_a, index_b + 1):
+        yield cm[1][i]
 
 
 # Support for adding markup (EXPERIMENTAL!!!) #########################
@@ -2868,7 +2892,7 @@ def markup(t: ContentMapping, start_pos: int, end_pos: int, name: str,
         >>> print(flatten_sxpr(X.as_sxpr()))
         (X (l ",") (em (l ".") (A (O "123") (P "456")) (m "!?") (B (Q "789") (R "abc")) (n "+")) (n "-"))
     """
-    if attr_dict == EMPTY_DICT_SENTINEL:  attr_dict = dict()  # new empty dict
+    if attr_dict is EMPTY_DICT_SENTINEL:  attr_dict = dict()  # new empty dict
     if start_pos == end_pos:
         milestone = Node(name, '').with_attr(attr_dict)
         return insert_node(t, start_pos, milestone)
