@@ -1617,7 +1617,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_xml(self, src: str = None,
                indentation: int = 2,
                inline_tags: Set[str] = frozenset(),
-               string_tags: Set[str] = frozenset(),
+               string_tags: Set[str] = frozenset(TOKEN_PTYPE),
                empty_tags: Set[str] = frozenset(),
                strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
@@ -2908,12 +2908,6 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
     node.result = tuple(nd for nd in (seg_1, seg_2, seg_3) if nd._result)
 
 
-SENTINEL_ERROR_MESSAGE = 'markup() requires that values are assigned to its "divisable" and '\
-                         '"chain_attr"-parameters, if - as in this case - markup() is called '\
-                         'with a content mapping that has not been generated from a RootNode-'\
-                         'object.'
-
-
 EMPTY_DICT_SENTINEL = dict()
 
 
@@ -2980,7 +2974,7 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     if start_pos == end_pos:
         milestone = Node(name, '').with_attr(attr_dict)
         common_ancestor = insert_node(cm, start_pos, milestone)
-        assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
+        assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
         return common_ancestor
 
     path_A, pos_A = map_pos_to_path(cm, start_pos)
@@ -2989,7 +2983,7 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     assert path_B
     common_ancestor, i = find_common_ancestor(path_A, path_B)
     assert common_ancestor
-    assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
+    assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
 
     # if divisable is DIVISABLE_SENTINEL:
     #     if isinstance(path_A[0], RootNode):
@@ -3068,7 +3062,7 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
         reconstruct_content_mapping(
             cm, map_index(cm, start_pos), map_index(cm, end_pos, left_biased=True),
             select, ignore)
-    assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
+    assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
     return common_ancestor
 
 

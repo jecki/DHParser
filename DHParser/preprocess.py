@@ -343,7 +343,8 @@ def gen_find_include_func(rx: Union[str, Any],
     """Generates a function to find include-statements in a file.
 
     :param rx: A regular expression (either as string or compiled
-        regular expression)
+        regular expression) to catch the names of the includes in
+        a document. The expression should catch
     """
     if isinstance(rx, str):  rx = re.compile(rx)
     if isinstance(comment_rx, str):  comment_rx = re.compile(comment_rx)
