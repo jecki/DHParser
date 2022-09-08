@@ -465,9 +465,9 @@ def split_header(data: BytesType) -> Tuple[BytesType, BytesType, BytesType]:
 def strip_header_delimiter(data: bytes) -> Tuple[str, ...]:
     i = max(data.find(b'\n'), data.find(b'\r'))
     if i >= 0:
-        return (data[:i].rstrip().decode(), '\n', data[i:].lstrip().decode())
+        return data[:i].rstrip().decode(), '\n', data[i:].lstrip().decode()
     else:
-        return (data.decode(),)
+        return data.decode(),
 
 
 def pp_transmission(data: bytes) -> Tuple[str, ...]:
@@ -498,16 +498,16 @@ class ExecutionEnvironment:
     """Class ExecutionEnvironment provides methods for executing server tasks
     in separate processes, threads, as asynchronous task or as simple function.
 
-    :var process_executor:  A process-pool-executor for cpu-bound tasks
-    :var thread_executor:   A thread-pool-executor for blocking tasks
-    :var submit_pool:  A secondary process-pool-executor to submit tasks
+    :ivar process_executor:  A process-pool-executor for cpu-bound tasks
+    :ivar thread_executor:   A thread-pool-executor for blocking tasks
+    :ivar submit_pool:  A secondary process-pool-executor to submit tasks
         synchronously and thread-safe.
-    :var submit_ppol_lock:  A threading.Lock to ensure that submissions to
+    :ivar submit_ppol_lock:  A threading.Lock to ensure that submissions to
         the submit_pool will be thread_safe
-    :var loop:  The asynchronous event loop for running coroutines
-    :var log_file:  The name of the log-file to which error messages are
+    :ivar loop:  The asynchronous event loop for running coroutines
+    :ivar log_file:  The name of the log-file to which error messages are
         written if an executor raises a Broken-Error.
-    :var _closed:  A Flag that is set to True after the `shutdown-method
+    :ivar _closed:  A Flag that is set to True after the `shutdown-method
         has been called. After that any call to the `execute()`-method
         yields an error.
     """
@@ -968,6 +968,80 @@ class Connection:
             append_log(self.log_file, *args, echo=self.echo_log)
 
 
+def pick_value(rpc: bytes, key: bytes) -> Optional[Value]:
+    i = rpc.find(key)
+    if i < 0:  return None
+    i = rpc.find(b':', i)
+    if i < 0: return None
+    k = rpc.find(b',', i)
+    if k < 0:
+        k = rpc.find(b'}', i)
+        if k < 0: return None
+    a = rpc.find(b'"', i, k)
+    if a < 0:
+        a = i + 1
+        b = k
+    else:
+        a += 1
+        b = rpc.find(b'"', a)
+        if b < 0: return None
+    return rpc[a:b]
+
+
+class LogFilter:
+    """A filter for logging json-rpc-messages."""
+    def __init__(self,
+                 allow_methods: Set[str] = frozenset(),
+                 forbid_methods: Set[str] = frozenset()):
+        self.configure(allow_methods, forbid_methods)
+
+    def configure(self,
+                  allow_methods: Set[str] = frozenset(),
+                  forbid_methods: Set[str] = frozenset()):
+        self.allow: Set[bytes] = {bytes(s.strip('"'), encoding='utf-8') for s in allow_methods}
+        self.forbid: Set[bytes] = {bytes(s.strip('"'), encoding='utf-8') for s in forbid_methods}
+        self.forbid_ids: Set[int] = set()
+
+    def pick_id(self, rpc: bytes) -> Optional[int]:
+        try:
+            rpc_id = int(pick_value(rpc, b'"id"'))
+        except (ValueError, TypeError):
+            rpc_id = None
+        return rpc_id
+
+    def block_id(self, rpc: bytes):
+        rpc_id = self.pick_id(rpc)
+        if rpc_id:
+            self.forbid_ids.add(rpc_id)
+
+    def id_was_blocked(self, rpc: bytes) -> bool:
+        rpc_id = self.pick_id(rpc)
+        if rpc_id in self.forbid_ids:
+            self.forbid_ids.remove(rpc_id)
+            return True
+        return False
+
+    def can_pass(self, rpc_data: BytesType) -> bool:
+        rpc = bytes(rpc_data)
+        if rpc.find(b'"jsonrpc"') >= 0:
+            method = pick_value(rpc, b'"method"')
+            if method:
+                if self.allow:
+                    if method in self.allow:
+                        return True
+                    else:
+                        self.block_id(rpc)
+                        return False
+                else:
+                    if method in self.forbid:
+                        self.block_id(rpc)
+                        return False
+                    else:
+                        return True
+            else:
+                return not self.id_was_blocked(rpc)
+        return True
+
 def connection_cb_dummy(connection: Connection) -> None:
     pass
 
@@ -981,51 +1055,53 @@ class Server:
     LSP-functionality via the rpc_functions-parameter to the
     constructor of this class.
 
-    :var server_name: A name for the server. Defaults to
+    :ivar server_name: A name for the server. Defaults to
         `CLASSNAME_OBJECTID`
-    :var strict_lsp: Enforce Language-Server-Protocol on json-rpc-calls.
+    :ivar strict_lsp: Enforce Language-Server-Protocol on json-rpc-calls.
         If `False` json-rpc calls will be processed even without prior
         initialization, just like plain data or http calls.
-    :var cpu_bound: Set of function names of functions that are cpu-bound
+    :ivar cpu_bound: Set of function names of functions that are cpu-bound
         and will be run in separate processes.
-    :var blocking: Set of functions that contain blocking calls
+    :ivar blocking: Set of functions that contain blocking calls
         (e.g. IO-calls) and will therefore be run in separate threads.
-    :var rpc_table: Table mapping LSP-method names to Python functions
-    :var known_methods: Set of all known LSP-methods. This includes the
+    :ivar rpc_table: Table mapping LSP-method names to Python functions
+    :ivar known_methods: Set of all known LSP-methods. This includes the
         methods in the rpc-table and the four initialization methods,
         `initialize()`, `initialized()`, `shutdown()`, `exit`
-    :var connection_callback: A callback function that is called with the
+    :ivar connection_callback: A callback function that is called with the
         connection object as argument when a connection to a client is
         established
-    :var max_data_size: Maximal size of a data chunk that can be read by
+    :ivar max_data_size: Maximal size of a data chunk that can be read by
         the server at a time.
-    :var stage:  The operation stage, the server is in. Can be on of the four
+    :ivar stage:  The operation stage, the server is in. Can be on of the four
         values: `SERVER_OFFLINE`, `SERVER_STARTING`, `SERVER_ONLINE`,
         `SERVER_TERMINATING`
-    :var host: The host, the server runs on, e.g. "127.0.0.1"
-    :var port: The port of the server, e.g. 8890
-    :var server: The asyncio.Server if the server is online, or `None`.
-    :var serving_task: The task in which the asyncio.Server is run.
-    :var stop_response:  The response string that is written to the stream
+    :ivar host: The host, the server runs on, e.g. "127.0.0.1"
+    :ivar port: The port of the server, e.g. 8890
+    :ivar server: The asyncio.Server if the server is online, or `None`.
+    :ivar serving_task: The task in which the asyncio.Server is run.
+    :ivar stop_response:  The response string that is written to the stream
         as answer to a stop request.
-    :var service_calls:  A set of names of functions that can be called
+    :ivar service_calls:  A set of names of functions that can be called
         as "service calls" from a second connection, even if another
         connection is still open.
-    :var echo_log: Read from the global configuration. If True, any log
+    :ivar echo_log: Read from the global configuration. If True, any log
         message will also be echoed on the console.
-    :var log_file: The file-name of the server-log.
-    :var use_jsonrpc_header: Read from the global configuration. If True,
+    :ivar log_file: The file-name of the server-log.
+    :ivar log_filter: A filter to allow or block logging of specific
+        json-rpc calls.
+    :ivar use_jsonrpc_header: Read from the global configuration. If True,
         jsonrpc-calls or responses will always be preceeded by a simple header
         of the form: `Content-Length: {NUM}\\n\\n`, where `{NUM}`
         stands for the byte-size of the rpc-package.
-    :var exec: An instance of the execution environment that delegates tasks
+    :ivar exec: An instance of the execution environment that delegates tasks
         to separate processes, threads, asynchronous tasks or simple function
         calls.
-    :var connection: An instance of the connection class representing the
+    :ivar connection: An instance of the connection class representing the
         data of the current connection or None, if there is no connection at
         the moment. There can be only one connection to the server at a time!
-    :var kill_switch: If True, the server will be shut down.
-    :var loop: The asyncio event loop within which the asyncio stream server
+    :ivar kill_switch: If True, the server will be shut down.
+    :ivar loop: The asyncio event loop within which the asyncio stream server
         is run.
     """
     def __init__(self, rpc_functions: RPC_Type,
@@ -1096,6 +1172,7 @@ class Server:
         self._echo_log = get_config_value('echo_server_log')  # type: bool
         self.use_jsonrpc_header = get_config_value('jsonrpc_header')  # type: bool
         self._log_file = ''       # type: str
+        self.log_filter = LogFilter()
         if get_config_value('log_server'):
             self.start_logging()
 
@@ -1283,7 +1360,8 @@ class Server:
             response = JSONRPC_HEADER_BYTES % len(response) + response
         if self.log_file:  # avoid data decoding if logging is off
             timestamp = str(datetime.now())[11:-3]
-            self.log(f'RESPONSE {timestamp}: ', *pp_transmission(response), '\n\n')
+            if self.log_filter.can_pass(response):
+                self.log(f'RESPONSE {timestamp}: ', *pp_transmission(response), '\n\n')
         try:
             writer.write(response)
             await writer.drain()
@@ -1293,7 +1371,8 @@ class Server:
                 self.connection.alive = False
 
     def amend_service_call(self, func_name: str, func: Callable, argument: Union[Tuple, Dict],
-                           err_func: Callable, html: bool = False) -> Tuple[Callable, Union[Tuple, Dict]]:
+                           err_func: Callable, html: bool = False) \
+            -> Tuple[Callable, Union[Tuple, Dict]]:
         if argument is None:
             argument = ()
         if getattr(func, '__self__', None) == self:
@@ -1614,7 +1693,8 @@ class Server:
 
             if self.log_file:   # avoid decoding if logging is off
                 timestamp = str(datetime.now())[11:-3]
-                self.log(f'RECEIVE {timestamp}: ', *pp_transmission(data), '\n\n')
+                if self.log_filter.can_pass(data):
+                    self.log(f'RECEIVE {timestamp}: ', *pp_transmission(data), '\n\n')
 
             if self.connection is None or not self.connection.alive:
                 break
