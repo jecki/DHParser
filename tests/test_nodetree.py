@@ -1204,13 +1204,17 @@ class TestMarkupInsertion:
             '<text><hi rend="i">X</hi>34, 53 ... <a>Q. Aelius Tubero</a> tribunus plebis</text>'
 
     def test_insert_markup_6(self):
-        tree = parse_xml('<cell>This is Albert Einstein speaking</cell>')
+        tree = parse_xml('<cell><:Text>This is Albert Einstein speaking</:Text></cell>')
         i = tree.content.find('Albert Einstein')
         k = i + len('Albert Einstein')
         cm = generate_content_mapping(tree)
-        markup(cm, i, k-1, 'a', cleanup=True)
-        markup(cm, i + len('Albert'), len(tree.content), 'b')
-        print(tree.as_xml())
+        markup(cm, i, k, 'a', cleanup=True)
+        print(tree.as_xml(string_tags=set()))
+        markup(cm, i + len('Albert') + 1, len(tree.content), 'b', cleanup=True)
+        i = tree.content.find('ert')
+        k = tree.content.find('king')
+        markup(cm, i, k, 'c', cleanup=True)
+        # print(tree.as_xml(string_tags=set()))
 
 if __name__ == "__main__":
     from DHParser.testing import runner

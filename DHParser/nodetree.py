@@ -2256,7 +2256,7 @@ def path_sanity_check(path: Path) -> bool:
 
 # Path-mapping (allowing a "string-view" on syntax-trees) ##########
 
-ContentMapping = Tuple[List[int], List[Path]]  # A mapping of character positions to paths
+ContentMapping = Tuple[List[Path], List[int]]  # A mapping of character positions to paths
 
 
 def generate_content_mapping(node: Node,
