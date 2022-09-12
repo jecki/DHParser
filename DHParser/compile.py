@@ -139,9 +139,9 @@ class Compiler:
     """
 
     def __init__(self):
-        self.has_attribute_visitors = any(field[0:5] == 'attr_' and callable(getattr(self, field))
+        self.has_attribute_visitors: bool = any(field[0:5] == 'attr_' and callable(getattr(self, field))
                                           for field in dir(self))
-        self.forbid_returning_None = True  # type: bool
+        self.forbid_returning_None: bool = True
         self.reset()
 
     def reset(self):

@@ -1656,7 +1656,7 @@ def add_attributes(path: Path, attributes: dict):  # Dict[str, str]
 
 
 @transformation_factory
-def del_attributes(path: Path, attributes: set = frozenset()):  # Set[str]
+def del_attributes(path: Path, attributes: collections.abc.Set = frozenset()):  # Set[str]
     """
     Removes XML-attributes from the last node in the given path.
     If the given set is empty, all attributes will be deleted.

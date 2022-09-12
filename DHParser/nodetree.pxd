@@ -30,12 +30,12 @@ cdef class Node:
     # cpdef pick(self, criterion, reverse)
     # cpdef locate(self, location)
     # cpdef find_parend(self, node)
-    # cpdef select_trail_if(self, match_function, include_root, reverse)
-    # cpdef select_trail(self, criterion, include_root)
+    # cpdef select_path_if(self, match_function, include_root, reverse)
+    # cpdef select_path(self, criterion, include_root)
     # cpdef pick_content(self, criterion, reverse)
     # cpdef locate_content(self, location)
-    # cpdef _reconstruct_trail_recursive(self, node)
-    # cpdef reconstruct_trail(self, node)
+    # cpdef _reconstruct_path_recursive(self, node)
+    # cpdef reconstruct_path(self, node)
     # cpdef milestone_segment(self, begin, end)
     # cdef evaluate(self, actions)
     # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
@@ -61,6 +61,9 @@ cdef class RootNode(Node):
     cdef public set inline_tags
     cdef public set string_tags
     cdef public set empty_tags
+    cdef public str docname
+    cdef public str stage
+    cdef public str serialization_type
 
     # cpdef swallow(self, node)
     # cpdef add_error(self, node, error)
