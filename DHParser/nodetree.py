@@ -2220,9 +2220,13 @@ def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Node, int]:
     """
     common_ancestor = None
     i = 0
+    last_a = [path_A[0]]
+    last_b = [path_B[0]]
     for i, (a, b) in enumerate(zip(path_A, path_B)):
-        if a != b:  break
+        if a != b or a not in last_a or b not in last_b:  break
         common_ancestor = a
+        last_a = a
+        last_b = b
     else:
         i += 1
     i -= 1
@@ -2256,7 +2260,32 @@ def path_sanity_check(path: Path) -> bool:
 
 # Path-mapping (allowing a "string-view" on syntax-trees) ##########
 
-ContentMapping = Tuple[List[Path], List[int]]  # A mapping of character positions to paths
+ContentMapping = Tuple[List[int], List[Path]]  # A mapping of character positions to paths
+
+
+def pp_content_mapping(cm: ContentMapping) -> str:
+    """Pretty-prints a content mapping. The format is:
+    Test-Position -> List of node-names, the last node as S-expression without
+    outer brackets
+    Example::
+
+    >>> tree = parse_sxpr('(a (b "123") (c (d "45") (e "67")))')
+    >>> cm = generate_content_mapping(tree)
+    >>> print(pp_content_mapping(cm))
+    0 -> a, b "123"
+    3 -> a, c, d "45"
+    5 -> a, c, e "67"
+    """
+    assert len(cm[0]) == len(cm[1])
+    lines = []
+    for i in range(len(cm[0])):
+        pathnr = cm[0][i]
+        path = [nd.name for nd in cm[1][i][:-1]]
+        last = cm[1][i][-1]
+        path.append(flatten_sxpr(last.as_sxpr())[1:-1])
+        s = ', '.join(s for s in path)
+        lines.append(f'{pathnr} -> {s}')
+    return '\n'.join(lines)
 
 
 def generate_content_mapping(node: Node,
@@ -2291,6 +2320,7 @@ def generate_content_mapping(node: Node,
         pos_list.append(pos)
         path_list.append(trl)
         pos += trl[-1].strlen()
+    assert len(pos_list) == len(path_list)
     return pos_list, path_list
 
 
@@ -2351,27 +2381,63 @@ def reconstruct_content_mapping(cm: ContentMapping, start_index: int, end_index:
 
     >>> tree = parse_sxpr('(a (b (c "123") (d "456")) (e (f (g "789") (h "ABC")) (i "DEF")))')
     >>> cm = generate_content_mapping(tree)
-    >>> cm[0]
-    [0, 3, 6, 9, 12]
-    >>> [[nd.name for nd in path] for path in cm[1]]
-    [['a', 'b', 'c'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
+    >>> print(pp_content_mapping(cm))
+    0 -> a, b, c "123"
+    3 -> a, b, d "456"
+    6 -> a, e, f, g "789"
+    9 -> a, e, f, h "ABC"
+    12 -> a, e, i "DEF"
     >>> b = tree.pick('b')
     >>> b.result = (b[0], Node('x', 'xyz'), b[1])
     >>> reconstruct_content_mapping(cm, 0, 1)
-    >>> cm[0]
-    [0, 3, 6, 9, 12, 15]
-    >>> [[nd.name for nd in path] for path in cm[1]]
-    [['a', 'b', 'c'], ['a', 'b', 'x'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
-    >>> reconstruct_content_mapping(cm, 2, 3)
-    >>> cm[0]
-    [0, 3, 6, 9, 12, 15]
-    >>> [[nd.name for nd in path] for path in cm[1]]
-    [['a', 'b', 'c'], ['a', 'b', 'x'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
-    >>> reconstruct_content_mapping(cm, 0, 5)
-    >>> cm[0]
-    [0, 3, 6, 9, 12, 15]
-    >>> [[nd.name for nd in path] for path in cm[1]]
-    [['a', 'b', 'c'], ['a', 'b', 'x'], ['a', 'b', 'd'], ['a', 'e', 'f', 'g'], ['a', 'e', 'f', 'h'], ['a', 'e', 'i']]
+    >>> print(pp_content_mapping(cm))
+    0 -> a, b, c "123"
+    3 -> a, b, x "xyz"
+    6 -> a, b, d "456"
+    9 -> a, e, f, g "789"
+    12 -> a, e, f, h "ABC"
+    15 -> a, e, i "DEF"
+    >>> common_ancestor = markup(cm, 10, 16, 'Y', cleanup=False)
+    >>> print(common_ancestor.as_sxpr())
+    (e (f (g (:Text "7") (Y "89")) (Y (h "ABC"))) (i (Y "D") (:Text "EF")))
+    >>> print(pp_content_mapping(cm))
+    0 -> a, b, c "123"
+    3 -> a, b, x "xyz"
+    6 -> a, b, d "456"
+    9 -> a, e, f, g (:Text "7") (Y "89")
+    12 -> a, e, f, h "ABC"
+    15 -> a, e, i (Y "D") (:Text "EF")
+    >>> a = map_index(cm, 10)
+    >>> b = map_index(cm, 16, left_biased=True)
+    >>> a, b
+    (3, 5)
+    >>> reconstruct_content_mapping(cm, 3, 5)
+    >>> print(pp_content_mapping(cm))
+    0 -> a, b, c "123"
+    3 -> a, b, x "xyz"
+    6 -> a, b, d "456"
+    9 -> a, e, f, g, :Text "7"
+    10 -> a, e, f, g, Y "89"
+    12 -> a, e, f, Y, h "ABC"
+    15 -> a, e, i, Y "D"
+    16 -> a, e, i, :Text "EF"
+
+    >>> tree = parse_sxpr('(a (b (c "123") (d "456")) (e (f (g "789") (h "ABC")) (i "DEF")))')
+    >>> cm = generate_content_mapping(tree)
+    >>> common_ancestor = markup(cm, 0, 6, 'Y', cleanup=False)
+    >>> print(common_ancestor.as_sxpr())
+    (b (Y (c "123") (d "456")))
+    >>> a = map_index(cm, 0)
+    >>> b = map_index(cm, 6, left_biased=True)
+    >>> a, b
+    (0, 1)
+    >>> reconstruct_content_mapping(cm, a, b)
+    >>> print(pp_content_mapping(cm))
+    0 -> a, b, Y, c "123"
+    3 -> a, b, Y, d "456"
+    6 -> a, e, f, g "789"
+    9 -> a, e, f, h "ABC"
+    12 -> a, e, i "DEF"
     """
     start_path = cm[1][start_index]
     end_path = cm[1][end_index]
@@ -2391,8 +2457,9 @@ def reconstruct_content_mapping(cm: ContentMapping, start_index: int, end_index:
     paths = [stump + path for path in paths]
 
     off_head = cm[0][:start_index]
-    if offsets[-1] != cm[0][end_index]:
-        shift = offsets[-1] - cm[0][end_index]
+    followup_offset = offsets[-1] + paths[-1][-1].strlen()
+    if end_index < len(cm[0]) - 1 and followup_offset != cm[0][end_index + 1]:
+        shift = followup_offset - cm[0][end_index + 1]
         off_tail = [offset + shift for offset in cm[0][end_index + 1:]]
     else:
         off_tail = cm[0][end_index + 1:]
@@ -2796,6 +2863,8 @@ def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
             path[k].result = path[k]._result[:i] + (nd,)
         k -= 1
 
+    assert not any(nd.name == ':Text' and nd.children for nd in path)
+
 
 def markup_left(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
@@ -2895,6 +2964,8 @@ def markup_left(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
             path[k].result = (nd,) + path[k]._result[i:]
         k -= 1
 
+    assert not any(nd.name == ':Text' and nd.children for nd in path)
+
 
 def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attributes):
     """Adds markup to a leaf node, incidentally turning the leaf node into a branch node."""
@@ -2915,7 +2986,7 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
            attr_dict: Dict[str, Any] = EMPTY_DICT_SENTINEL, greedy: bool = True,
            select: PathSelector = ANY_PATH, ignore: PathSelector = NO_PATH,
            divisable: Set[str] = LEAF_PTYPES,
-           chain_attr: str = "", cleanup: bool = False) -> Node:
+           chain_attr: str = "", cleanup: bool = True) -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
     with 'name', eventually cutting through 'divisable' nodes. Returns the
     nearest common ancestor of 'start_pos' and 'end_pos'.
@@ -3005,15 +3076,15 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     if not common_ancestor._children:
         markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
         if i != 0 and (common_ancestor.name in divisable or common_ancestor.anonymous):
-            ur_ancestor = path_A[i -1]
+            ur_ancestor = path_A[i - 1]
             t = ur_ancestor.index(common_ancestor)
             ur_ancestor.result = ur_ancestor[:t] + common_ancestor.children + ur_ancestor[t + 1:]
             common_ancestor = ur_ancestor
+        assert not (common_ancestor.name == ':Text' and common_ancestor.children)
         if cleanup:
             reconstruct_content_mapping(
                 cm, map_index(cm, start_pos), map_index(cm, end_pos, left_biased=True),
                 select, ignore)
-        assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children), common_ancestor.as_sxpr()
         return common_ancestor
 
     stump_A = path_A[i:]
@@ -3062,6 +3133,8 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
         reconstruct_content_mapping(
             cm, map_index(cm, start_pos), map_index(cm, end_pos, left_biased=True),
             select, ignore)
+        cmp = generate_content_mapping(path_A[0])
+        assert cmp == cm
     assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
     return common_ancestor
 
