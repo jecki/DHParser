@@ -2324,6 +2324,7 @@ def generate_content_mapping(node: Node,
     return pos_list, path_list
 
 
+@cython.locals(pos=cython.int, path_index=cython.int, last=cython.int)
 def map_index(cm: ContentMapping, pos: int, left_biased: bool = False) -> int:
     """Yields the index for the path in given context-mapping that contains
     the position ``pos``."""
@@ -2364,6 +2365,7 @@ def map_pos_to_path(cm: ContentMapping, pos: int, left_biased: bool = False) -> 
     return cm[1][path_index], pos - cm[0][path_index]
 
 
+@cython.locals(a=cython.int, b=cython.int, index_a=cython.int, index_b=cython.int)
 def iterate_paths(cm: ContentMapping, a: int, b: int, left_biased: bool = False) \
         -> Iterator[Path]:
     """Yields all paths from a to b.
@@ -2379,6 +2381,7 @@ def iterate_paths(cm: ContentMapping, a: int, b: int, left_biased: bool = False)
         yield cm[1][i]
 
 
+@cython.locals(i=cython.int, start_index=cython.int, end_index=cython.int, offset=cython.int)
 def reconstruct_content_mapping(cm: ContentMapping, start_index: int, end_index: int,
                                 select: PathSelector = LEAF_PATH,
                                 ignore: PathSelector = NO_PATH):
@@ -2546,6 +2549,7 @@ def gen_sloppy_chain_ID() -> str:
            chr(random.randrange(ord('A'), ord('Z') + 1))
 
 
+@cython.locals(i=cython.int, k=cython.int)
 def split(node: Node, parent: Node, i: int, left_biased: bool = True,
           chain_attr: str='') -> int:
     """Splits a node at the given index (in case of a branch-node) or
@@ -2638,6 +2642,7 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True,
     return k
 
 
+@cython.locals(i=cython.int, L=cython.int)
 def deep_split(path: Path, i: int, left_biased: bool=True,
                greedy: bool=True,
                select: PathSelector = ANY_PATH,
@@ -2704,6 +2709,7 @@ def deep_split(path: Path, i: int, left_biased: bool=True,
     return i
 
 
+@cython.locals(i=cython.int, k=cython.int, L=cython.int)
 def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
               select: PathSelector = ANY_PATH,
               ignore: PathSelector = NO_PATH,
@@ -2769,6 +2775,7 @@ def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
     return -k
 
 
+@cython.locals(i=cython.int, k=cython.int)
 def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
                  greedy: bool = True,
                  select: PathSelector = ANY_PATH,
@@ -2872,6 +2879,7 @@ def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
     assert not any(nd.name == ':Text' and nd.children for nd in path)
 
 
+@cython.locals(i=cython.int, k=cython.int)
 def markup_left(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
                 select: PathSelector = ANY_PATH,
@@ -2988,6 +2996,7 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
 EMPTY_DICT_SENTINEL = dict()
 
 
+@cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
 def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
            attr_dict: Dict[str, Any] = EMPTY_DICT_SENTINEL, greedy: bool = True,
            select: PathSelector = ANY_PATH, ignore: PathSelector = NO_PATH,
@@ -3062,20 +3071,6 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     assert common_ancestor
     assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
 
-    # if divisable is DIVISABLE_SENTINEL:
-    #     if isinstance(path_A[0], RootNode):
-    #         root = cast(RootNode, path_A[0])
-    #         divisable = root.divisable_tags[name]
-    #         if chain_attr is CHAIN_ATTR_SENTINEL:
-    #             chain_attr = root.chain_attr
-    #     else:
-    #         raise ValueError(SENTINEL_ERROR_MESSAGE)
-    # elif chain_attr is CHAIN_ATTR_SENTINEL:
-    #     if isinstance(path_A[0], RootNode):
-    #         chain_attr = cast(RootNode, path_A[0]).chain_attr
-    #     else:
-    #         raise ValueError(SENTINEL_ERROR_MESSAGE)
-
     assert not chain_attr or chain_attr not in attr_dict
     if chain_attr:
         attr_dict[chain_attr] = gen_sloppy_chain_ID()
@@ -3105,8 +3100,16 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     k = -1
     if q < abs(q) == len(stump_A) - 1:
         i = deep_split(stump_A, pos_A, False, greedy, select, ignore)
+        # since deep_split yields the outermost indest, shift i to the right past all empty nodes
+        L = len(common_ancestor.children) - 1
+        while i < L and common_ancestor[i].strlen() == 0:
+            i += 1
     if r < abs(r) == len(stump_B) - 1:
         k = deep_split(stump_B, pos_B, True, greedy, select, ignore)
+        # since deep_split yields the outermost indest, shift k to the left past all empty nodes
+        while k > 0 and common_ancestor[k - 1].strlen() == 0:
+            k -= 1
+
     if i >= 0 and k >= 0:
         attr_dict.pop(chain_attr, None)
         nd = Node(name, common_ancestor[i:k]).with_attr(attr_dict)
