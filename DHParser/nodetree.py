@@ -2333,8 +2333,14 @@ def map_index(cm: ContentMapping, pos: int, left_biased: bool = False) -> int:
     if pos < 0:  raise IndexError(errmsg(pos))
     try:
         path_index = bisect.bisect_right(cm[0], pos) - 1
-        if left_biased and path_index > 0 and pos - cm[0][path_index] == 0:
-            path_index -= 1
+        if left_biased:
+            while path_index > 0 and pos - cm[0][path_index] == 0:
+                path_index -= 1
+        else:  # TODO: Is this part really needed?
+            last = len(cm[0]) - 1
+            pivot = cm[0][path_index]
+            while path_index < last and cm[0][path_index + 1] == pivot:
+                path_index += 1
     except IndexError:
         raise IndexError(errmsg(pos))
     return path_index
@@ -2704,7 +2710,7 @@ def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
               divisable: Set[str] = LEAF_PTYPES) -> int:
     """Returns the negative index of the first node in the path, from which
     on all nodes can be split or do not need to be split, because the
-    split-index lies to the left or right os the node.
+    split-index lies to the left or right of the node.
 
     Examples::
 
@@ -3070,10 +3076,12 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     #     else:
     #         raise ValueError(SENTINEL_ERROR_MESSAGE)
 
-    if chain_attr and chain_attr not in attr_dict:
+    assert not chain_attr or chain_attr not in attr_dict
+    if chain_attr:
         attr_dict[chain_attr] = gen_sloppy_chain_ID()
 
     if not common_ancestor._children:
+        attr_dict.pop(chain_attr, None)
         markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
         if i != 0 and (common_ancestor.name in divisable or common_ancestor.anonymous):
             ur_ancestor = path_A[i - 1]
@@ -3090,16 +3098,17 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     stump_A = path_A[i:]
     stump_B = path_B[i:]
 
-    q = can_split(stump_A, pos_A, True, greedy, select, ignore, divisable)
-    r = can_split(stump_B, pos_B, False, greedy, select, ignore, divisable)
+    q = can_split(stump_A, pos_A, False, greedy, select, ignore, divisable)
+    r = can_split(stump_B, pos_B, True, greedy, select, ignore, divisable)
 
     i = -1
     k = -1
     if q < abs(q) == len(stump_A) - 1:
-        i = deep_split(stump_A, pos_A, True, greedy, select, ignore)
+        i = deep_split(stump_A, pos_A, False, greedy, select, ignore)
     if r < abs(r) == len(stump_B) - 1:
-        k = deep_split(stump_B, pos_B, False, greedy, select, ignore)
+        k = deep_split(stump_B, pos_B, True, greedy, select, ignore)
     if i >= 0 and k >= 0:
+        attr_dict.pop(chain_attr, None)
         nd = Node(name, common_ancestor[i:k]).with_attr(attr_dict)
         nd._pos = common_ancestor[i]._pos
         common_ancestor.result = common_ancestor[:i] + (nd,) + common_ancestor[k:]
@@ -3133,74 +3142,8 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
         reconstruct_content_mapping(
             cm, map_index(cm, start_pos), map_index(cm, end_pos, left_biased=True),
             select, ignore)
-        cmp = generate_content_mapping(path_A[0])
-        assert cmp == cm
     assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
     return common_ancestor
-
-
-# @markup.register(tuple)
-# def _(t: ContentMapping, start_pos: int, end_pos: int, name: str, *attr_dict, **attributes) -> Node:
-#     if start_pos == end_pos:
-#         milestone = Node(name, '').with_attr(*attr_dict, **attributes)
-#         insert_node(t, start_pos, milestone)
-#         return milestone
-#     path_A, pos_A = map_pos_to_path(t, start_pos)
-#     path_B, pos_B = map_pos_to_path(t, end_pos)
-#     assert path_A
-#     assert path_B
-#     common_ancestor = None
-#     for i, (a, b) in enumerate(zip(path_A, path_B)):
-#         if a != b:  break
-#         common_ancestor = a
-#     assert common_ancestor
-#     leaf_A = path_A[-1]
-#     leaf_B = path_B[-1]
-#     if common_ancestor == leaf_A:
-#         assert common_ancestor == leaf_B
-#         if len(path_A) <= 1:
-#             content = common_ancestor.content
-#             new_result = []
-#             if pos_A > 0:
-#                 new_result.append(Node(leaf_A.name, content[:pos_A]))
-#             markup_node = Node(name, content[pos_A:pos_B]).with_attr(*attr_dict, **attributes)
-#             new_result.append(markup_node)
-#             if pos_B < len(content):
-#                 new_result.append(Node(leaf_B.name, content[:pos_B]))
-#             common_ancestor.result = tuple(new_result)
-#             return markup_node
-#         else:
-#             common_ancestor = path_A[-2]
-#             assert common_ancestor == path_B[-2]
-#             branch_A = leaf_A
-#             branch_B = leaf_B
-#     else:
-#         branch_A = path_A[i]
-#         branch_B = path_B[i]
-#
-#     i = common_ancestor.index(branch_A)
-#     k = common_ancestor.index(branch_B)
-#     new_result = list(common_ancestor.result[:i])
-#     if pos_A > 0 and common_ancestor == path_A[-2]:
-#         new_result.append(Node(leaf_A.name, leaf_A.content[:pos_A]))
-#         leaf_A.result = leaf_A.content[pos_A:]
-#     markup_node = Node(name, common_ancestor.result[i:k + 1]).with_attr(*attr_dict, **attributes)
-#     new_result.append(markup_node)
-#     if pos_B < leaf_B.strlen_of() and common_ancestor == path_B[-2]:
-#         leaf_B.result = leaf_B.content[:pos_B]
-#         new_result.append(Node(leaf_B.name, leaf_B.content[pos_B:]))
-#     new_result.extend(list(common_ancestor.result[k + 1:]))
-#     common_ancestor.result = tuple(new_result)
-#
-#     if not leaf_A.result:
-#         path_A = next(common_ancestor.select_path(leaf_A))
-#         del path_A[-2][leaf_A]
-#     if not leaf_B.result:
-#         path_B = next(common_ancestor.select_path(leaf_A, reverse=True))
-#         del path_B[-2][leaf_B]
-#
-#     return markup_node
-
 
 
 # Attribute handling ##################################################

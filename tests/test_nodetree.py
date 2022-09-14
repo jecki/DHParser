@@ -32,7 +32,8 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
     prev_path, serialize_path, generate_content_mapping, map_pos_to_path, \
     select_path_if, select_path, create_path_match_function, pick_path, \
-    LEAF_PATH, TOKEN_PTYPE, insert_node, markup, content_of, strlen_of
+    LEAF_PATH, TOKEN_PTYPE, insert_node, markup, content_of, strlen_of, \
+    pp_content_mapping, map_index
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -1019,6 +1020,19 @@ class TestPathNavigation:
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(A (B "alpha") (C (D "beta") (E "gamma")) (G "omicron") (F "delta"))'
 
+    def test_map_index(self):
+        tree = parse_xml('<doc>alpha<a><lb/></a><pb/> beta</doc>')
+        cm = generate_content_mapping(tree)
+        assert map_index(cm, 5, left_biased=False) == 3
+        assert map_index(cm, 5, left_biased=True) == 0
+        path, i = map_pos_to_path(cm, 5, left_biased=False)
+        assert path == cm[1][3]
+        assert i == 0
+        path, i = map_pos_to_path(cm, 5, left_biased=True)
+        assert path == cm[1][0]
+        assert i == 5
+
+
     def test_standalone_select_path_if(self):
         start = self.tree.pick_path('E')
         save = start.copy()
@@ -1204,17 +1218,41 @@ class TestMarkupInsertion:
             '<text><hi rend="i">X</hi>34, 53 ... <a>Q. Aelius Tubero</a> tribunus plebis</text>'
 
     def test_insert_markup_6(self):
-        tree = parse_xml('<cell><:Text>This is Albert Einstein speaking</:Text></cell>')
-        i = tree.content.find('Albert Einstein')
-        k = i + len('Albert Einstein')
+        tree = parse_xml('<doc>wenn wir bei <hi rend="italic">Cicero</hi><note type="footnote" n="29)">'
+            '<pb n="225"/>In Verr. acc. 1. 3, 120. </note> die meist nicht erhebli<lb/>chen Zahlen</doc>')
+        m = re.search(r'Cicero', tree.content)
+        a, b = m.start(), m.end()
         cm = generate_content_mapping(tree)
-        markup(cm, i, k, 'a', cleanup=True)
-        print(tree.as_xml(string_tags=set()))
-        markup(cm, i + len('Albert') + 1, len(tree.content), 'b', cleanup=True)
-        i = tree.content.find('ert')
-        k = tree.content.find('king')
-        markup(cm, i, k, 'c', cleanup=True)
-        # print(tree.as_xml(string_tags=set()))
+        markup(cm, a, b, 'ref', cleanup=True)
+        assert flatten_sxpr(tree.as_sxpr()) == '(doc (:Text "wenn wir bei ") '\
+            '(hi `(rend "italic") (ref "Cicero")) (note `(type "footnote") `(n "29)") '\
+            '(pb `(n "225")) (:Text "In Verr. acc. 1. 3, 120. ")) '\
+            '(:Text " die meist nicht erhebli") (lb) (:Text "chen Zahlen"))'
+
+    def test_insert_markup_7(self):
+        tree= parse_xml('<doc>Zugleich traf sie für <pb n="219"/>den ager compascuus folgende Bestimmung '
+            '(Z. 14, 15 nach <hi rend="italic">Momm</hi><lb/><hi rend="italic">sens</hi>'
+            '<note type="comment" n="53"><pb n="219"/>Offenbar</note> nach:</doc>')
+        m = re.search(r'Mommsen', tree.content)
+        a, b = m.start(), m.end()
+        cm = generate_content_mapping(tree)
+        markup(cm, a, b, 'ref', cleanup=True)
+        assert flatten_sxpr(tree.as_sxpr()) == '(doc (:Text "Zugleich traf sie für ") '\
+            '(pb `(n "219")) (:Text "den ager compascuus folgende Bestimmung '\
+            '(Z. 14, 15 nach ") (ref (hi `(rend "italic") "Momm") (lb)) (hi `(rend "italic") '\
+            '(ref "sen") (:Text "s")) (note `(type "comment") `(n "53") (pb `(n "219")) '\
+            '(:Text "Offenbar")) (:Text " nach:"))'
+
+    def test_insert_markup_8(self):
+        tree = parse_xml('<item><pb n="283" ed="A"></pb><hi rend="italic">Beaudouin</hi>. Études'
+            '<note type="comment" n="10">Im Titel heißt es: Étude. </note> sur le jus Italicum '
+            '(Nouvelle revue historique V, 1881, p. 145ff.). </item>')
+        m = re.search('Beaudouin. Études', tree.content)
+        a, b = m.start(), m.end()
+        cm = generate_content_mapping(tree)
+        markup(cm, a, b, 'ref', cleanup=True)
+        print(tree.as_xml())
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
