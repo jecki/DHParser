@@ -2709,7 +2709,7 @@ def deep_split(path: Path, i: int, left_biased: bool=True,
     return i
 
 
-@cython.locals(i=cython.int, k=cython.int, L=cython.int)
+@cython.locals(i=cython.int, L=cython.int)   # k=cython.int does not work!!!
 def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
               select: PathSelector = ANY_PATH,
               ignore: PathSelector = NO_PATH,
