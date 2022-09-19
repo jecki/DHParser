@@ -289,7 +289,7 @@ def validate_type(val: Any, typ):
     ...     validate_type(bad_json_data, Position)
     ... except TypeError as e:
     ...     print(e)
-    Type error(s) in dictionary of type <class 'json_validation.Position'>:
+    Type error(s) in dictionary of type <class 'DHParser.json_validation.Position'>:
     Field character: 'A' is not a <class 'int'>, but a <class 'str'>
     """
     if isinstance(typ, _TypedDictMeta):
@@ -395,7 +395,7 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
     ...     validate_TypedDict(p, Position)
     ... except TypeError as e:
     ...     print(e)
-    Type error(s) in dictionary of type <class 'json_validation.Position'>:
+    Type error(s) in dictionary of type <class 'DHParser.json_validation.Position'>:
     Missing required keys: {'character'}
 
     :param D: the dictionary to be validated
@@ -487,9 +487,9 @@ def type_check(func: Callable, check_return_type: bool = True) -> Callable:
     ... except TypeError as e:
     ...     print(e)
     Parameter "rng" of function "middle_line" failed the type-check, because:
-    Type error(s) in dictionary of type <class 'json_validation.Range'>:
-    Field start: '1' is not of <class 'json_validation.Position'>, but of type <class 'int'>
-    Field end: '8' is not of <class 'json_validation.Position'>, but of type <class 'int'>
+    Type error(s) in dictionary of type <class 'DHParser.json_validation.Range'>:
+    Field start: '1' is not of <class 'DHParser.json_validation.Position'>, but of type <class 'int'>
+    Field end: '8' is not of <class 'DHParser.json_validation.Position'>, but of type <class 'int'>
 
     :param func: The function, the parameters and return value of which shall
         be type-checked during runtime.

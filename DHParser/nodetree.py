@@ -31,15 +31,16 @@ in the (XML-)tree.
 """
 
 
+from __future__ import annotations
+
 import bisect
-import collections
 import copy
 import functools
 import json
 import random
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
-    Tuple, Container, Optional, Dict, Any
+    Tuple, Container, Optional, Dict, Any, TypeAlias
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -58,7 +59,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    deprecation_warning, abbreviate_middle
+    abbreviate_middle
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -117,6 +118,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'serialize_path',
            'path_sanity_check',
            'ContentMapping',
+           'pp_content_mapping',
            'generate_content_mapping',
            'map_index',
            'map_pos_to_path',
@@ -172,13 +174,13 @@ ZOMBIE_TAG = "ZOMBIE__"
 # - name
 # - one of several names
 # - a function Node -> bool  or  Path -> bool, respectively
-re_pattern = Any
-NodeSelector = Union['Node', str, Container[str], Callable, int, re_pattern]
-PathSelector = Union['Node', str, Container[str], Callable, int, re_pattern]
+re_pattern: TypeAlias = Any
+NodeSelector: TypeAlias = Union['Node', str, Container[str], Callable, int, re_pattern]
+PathSelector: TypeAlias = Union['Node', str, Container[str], Callable, int, re_pattern]
 
-Path = List['Node']
-NodeMatchFunction = Callable[['Node'], bool]
-PathMatchFunction = Callable[[Path], bool]
+Path: TypeAlias = List['Node']
+NodeMatchFunction: TypeAlias = Callable[['Node'], bool]
+PathMatchFunction: TypeAlias = Callable[[Path], bool]
 
 ANY_NODE = lambda nd: True
 NO_NODE = lambda nd: False
@@ -396,9 +398,9 @@ def restore_tag_name(tag_name: str) -> str:
 #
 #######################################################################
 
-ChildrenType = Tuple['Node', ...]
-StrictResultType = Union[ChildrenType, StringView, str]
-ResultType = Union[StrictResultType, 'Node']
+ChildrenType: TypeAlias = Tuple['Node', ...]
+StrictResultType: TypeAlias = Union[ChildrenType, StringView, str]
+ResultType: TypeAlias = Union[StrictResultType, 'Node']
 
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
@@ -2049,7 +2051,7 @@ def next_path(path: Path) -> Optional[Path]:
     return None
 
 
-PickChildFunction = Callable[[Node], Node]
+PickChildFunction: TypeAlias = Callable[[Node], Node]
 LAST_CHILD = lambda nd: nd.result[-1]
 FIRST_CHILD = lambda nd: nd.result[0]
 
@@ -2260,7 +2262,7 @@ def path_sanity_check(path: Path) -> bool:
 
 # Path-mapping (allowing a "string-view" on syntax-trees) ##########
 
-ContentMapping = Tuple[List[int], List[Path]]  # A mapping of character positions to paths
+ContentMapping: TypeAlias = Tuple[List[int], List[Path]]  # A mapping of character positions to paths
 
 
 def pp_content_mapping(cm: ContentMapping) -> str:
@@ -2352,13 +2354,13 @@ def map_pos_to_path(cm: ContentMapping, pos: int, left_biased: bool = False) -> 
     position ``pos``.
 
     :param pos:   a position in the content of the tree for which the
-        path mapping `cm` was generated
+        path mapping ``cm`` was generated
     :param cm:  a path mapping
     :param left_biased: yields the location after the end of the previous
         path rather than the location at the very beginning of the
         next path. Default value is "False".
     :returns:   tuple (path, offset) where the offset is the position of
-        ``pos`´ relative to the actual position of the last node in the path.
+        ``pos`` relative to the actual position of the last node in the path.
     :raises:    IndexError if not 0 <= position < length of document
     """
     path_index = map_index(cm, pos, left_biased)
@@ -2648,32 +2650,35 @@ def deep_split(path: Path, i: int, left_biased: bool=True,
                select: PathSelector = ANY_PATH,
                ignore: PathSelector = NO_PATH,
                chain_attr: str = '') -> int:
-    """Split all nodes from the end of the path up to,
-    but excluding the first node in the path. Returns the
-    index of the split location in the first node of the path.
+    """Split all nodes from the end of the path up to the i-th element,
+    but excluding the first node in the path. Returns the index of the
+    split-location in the first node of the path.
 
     Exapmles::
 
-        >>> tree = parse_sxpr('(X (s "") (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t "")))')
+        >>> from DHParser.toolkit import printw
+        >>> tree = parse_sxpr('(X (s "") (A (u "") (C "One, ") (D "two, ")) '
+        ...                   '(B (E "three, ") (F "four!") (t "")))')
         >>> X = copy.deepcopy(tree)
         >>> C = X.pick_path('C')
         >>> a = deep_split(C, 0)
         >>> a
-        0
+        1
         >>> F = X.pick_path('F', reverse=True)
         >>> b = deep_split(F, F[-1].strlen(), left_biased=False)
         >>> b
         3
-        >>> print(X.as_sxpr())
-        (X (s) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t)))
+        >>> printw(X.as_sxpr())
+        (X (s) (A (u) (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t)))
         >>> a = deep_split(C, 0, greedy=False)
         >>> a
-        1
+        2
         >>> b = deep_split(F, F[-1].strlen(), left_biased=False, greedy=False)
         >>> b
-        3
-        >>> print(X.as_sxpr())
-        (X (s) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!")) (B (t)))
+        4
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (s) (A (u)) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!"))
+         (B (t)))
 
         >>> X = copy.deepcopy(tree).with_pos(0)
         >>> C = X.pick_path('C')
@@ -2682,11 +2687,13 @@ def deep_split(path: Path, i: int, left_biased: bool=True,
         >>> b = deep_split(E, 0, left_biased=False)
         >>> a, b
         (2, 3)
-        >>> print(X.as_sxpr())
-        (X (s) (A (C "One,")) (A (C " ") (D "two, ")) (B (E "three, ") (F "four!") (t)))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (s) (A (u) (C "One,")) (A (C " ") (D "two, ")) (B (E "three, ") (F "four!")
+         (t)))
         >>> X.result = X[:a] + (Node('em', X[a:b]).with_pos(X[a].pos),) + X[b:]
-        >>> print(X.as_sxpr())
-        (X (s) (A (C "One,")) (em (A (C " ") (D "two, "))) (B (E "three, ") (F "four!") (t)))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (s) (A (u) (C "One,")) (em (A (C " ") (D "two, "))) (B (E "three, ")
+         (F "four!") (t)))
 
         # edge cases
         >>> Y = parse_sxpr('(Y "123")')
@@ -2696,11 +2703,12 @@ def deep_split(path: Path, i: int, left_biased: bool=True,
         (Y "123")
     """
     parent = path[-1]
-    for idx in range(2, len(path) + 1):
+    last_index = len(path)
+    for idx in range(2, last_index + 1):
         node = parent
         parent = path[-idx]
         i = split(node, parent, i, left_biased, chain_attr)
-        if greedy:
+        if greedy and idx < last_index:
             if left_biased:
                 if i > 0 and strlen_of(parent.children[:i], select, ignore) == 0:  i = 0
             else:
@@ -3003,58 +3011,108 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
            divisable: Set[str] = LEAF_PTYPES,
            chain_attr: str = "", cleanup: bool = True) -> Node:
     """ "Markups" the span [start_pos, end_pos] by adding one or more Node's
-    with 'name', eventually cutting through 'divisable' nodes. Returns the
-    nearest common ancestor of 'start_pos' and 'end_pos'.
+    with ``name``, eventually cutting through ``divisable`` nodes. Returns the
+    nearest common ancestor of ``start_pos`` and ``end_pos``.
+
+    :param cm:  A context mapping of the document (or a part therof) where the
+        markup shall be inserted. See :py:func:`generate_content_mapping`
+    :param start_pos:  The string-position of the first character to be marked
+        up. Note that this is the position in the string-content of the tree
+        over which the content mapping has been generated and not the position
+        in the XML or any other serialization of the tree!
+    :param end_pos:  The string-position of the last character to be included
+        in the markup. Be aware that other than in slicing of Python lists
+        or strings where the beginning and ending define an half-open intervall,
+        the character indexed by end_pos is included in the markup, i.e.
+        [start_pos, end_pos] define a closed intervall for markup.
+        Also note that ``end_pos`` is the position in the string-content of the tree
+        over which the content mapping has been generated and not the position
+        in the XML or any other serialization of the tree!
+    :param name:  The name, or "tag-name" in XML-terminology, of the element
+        (or tag) to be added.
+    :param attr_dict: A dictionary of attributes that will be added to the newly
+        created tag.
+    :param greedy: If True, markup will try to avoid dividing elements by
+        including empty elements at the beginning or end of an element that
+        would otherwise need to be split.
+    :param select: The path selector that was used for including elements
+        in the content mapping. This must always be the same 'selector'
+        that has been passed to :py:func:`generate_content_mapping`
+    :param ignore: The path selector that was used for excluding sub-trees
+        from the content mapping. This must always be the same 'ignore'-selector
+        that has been passed to :py:func:`generate_content_mapping`
+    :param divisable: A set of names of elements which may be split in order
+        to add the markup. If the markup-function reaches elements that cannot
+        be split. it will instead split the markup-element instead to cover the
+        string to be marked up, completely.
+    :param chain_attr: The name of a "chain"-attribute that will receive an
+        identifier to retrive split-up markups. All elements belonging to the
+        same markup will have the same attribute-value. (This is done sloppily,
+        i.e. there is a low probability that two different "chains" will
+        receive the same identifier!)
+    :param cleanup: Update the content mapping after the markup has been finished.
+        Should always be true, if you reuse the same content mapping for further
+        markups in the same range or other purpuses.
 
     Examples::
 
+        >>> from DHParser.toolkit import printw
         >>> tree = parse_sxpr('(X (l ",.") (A (O "123") (P "456")) (m "!?") '
         ...                   ' (B (Q "789") (R "abc")) (n "+-"))')
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 2, 8, 'em')
-        >>> print(X.as_sxpr())
-        (X (l ",.") (A (em (O "123") (P "456"))) (m "!?") (B (Q "789") (R "abc")) (n "+-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",.") (A (em (O "123") (P "456"))) (m "!?") (B (Q "789") (R "abc"))
+         (n "+-"))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 2, 10, 'em')
-        >>> print(X.as_sxpr())
-        (X (l ",.") (em (A (O "123") (P "456")) (m "!?")) (B (Q "789") (R "abc")) (n "+-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",.") (em (A (O "123") (P "456")) (m "!?")) (B (Q "789") (R "abc"))
+         (n "+-"))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 5, 10, 'em', divisable={'A'})
-        >>> print(X.as_sxpr())
-        (X (l ",.") (A (O "123")) (em (A (P "456")) (m "!?")) (B (Q "789") (R "abc")) (n "+-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",.") (A (O "123")) (em (A (P "456")) (m "!?")) (B (Q "789") (R "abc"))
+         (n "+-"))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 2, 13, 'em')
-        >>> print(X.as_sxpr())
-        (X (l ",.") (em (A (O "123") (P "456")) (m "!?")) (B (em (Q "789")) (R "abc")) (n "+-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",.") (em (A (O "123") (P "456")) (m "!?")) (B (em (Q "789")) (R "abc"))
+         (n "+-"))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 5, 16, 'em')
-        >>> print(X.as_sxpr())
-        (X (l ",.") (A (O "123") (em (P "456"))) (em (m "!?") (B (Q "789") (R "abc"))) (n "+-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",.") (A (O "123") (em (P "456"))) (em (m "!?") (B (Q "789") (R "abc")))
+         (n "+-"))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 5, 13, 'em')
-        >>> print(flatten_sxpr(X.as_sxpr()))
-        (X (l ",.") (A (O "123") (em (P "456"))) (em (m "!?")) (B (em (Q "789")) (R "abc")) (n "+-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",.") (A (O "123") (em (P "456"))) (em (m "!?")) (B (em (Q "789"))
+         (R "abc")) (n "+-"))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 6, 12, 'em')
-        >>> print(flatten_sxpr(X.as_sxpr()))
-        (X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) (em (m "!?")) (B (Q (em "78") (:Text "9")) (R "abc")) (n "+-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) (em (m "!?"))
+         (B (Q (em "78") (:Text "9")) (R "abc")) (n "+-"))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 1, 17, 'em')
-        >>> print(flatten_sxpr(X.as_sxpr()))
-        (X (l (:Text ",") (em ".")) (em (A (O "123") (P "456")) (m "!?") (B (Q "789") (R "abc"))) (n (em "+") (:Text "-")))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l (:Text ",") (em ".")) (em (A (O "123") (P "456")) (m "!?") (B (Q "789")
+         (R "abc"))) (n (em "+") (:Text "-")))
         >>> X = copy.deepcopy(tree)
         >>> t = generate_content_mapping(X)
         >>> _ = markup(t, 1, 17, 'em', divisable={'l', 'n'})
-        >>> print(flatten_sxpr(X.as_sxpr()))
-        (X (l ",") (em (l ".") (A (O "123") (P "456")) (m "!?") (B (Q "789") (R "abc")) (n "+")) (n "-"))
+        >>> printw(X.as_sxpr(flatten_threshold=-1))
+        (X (l ",") (em (l ".") (A (O "123") (P "456")) (m "!?") (B (Q "789") (R "abc"))
+         (n "+")) (n "-"))
     """
     if attr_dict is EMPTY_DICT_SENTINEL:  attr_dict = dict()  # new empty dict
     if start_pos == end_pos:
@@ -3100,15 +3158,15 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
     k = -1
     if q < abs(q) == len(stump_A) - 1:
         i = deep_split(stump_A, pos_A, False, greedy, select, ignore)
-        # since deep_split yields the outermost indest, shift i to the right past all empty nodes
-        L = len(common_ancestor.children) - 1
-        while i < L and common_ancestor[i].strlen() == 0:
-            i += 1
+        # # since deep_split yields the outermost index, shift i to the right past all empty nodes
+        # L = len(common_ancestor.children) - 1
+        # while i < L and common_ancestor[i].strlen() == 0:
+        #     i += 1
     if r < abs(r) == len(stump_B) - 1:
         k = deep_split(stump_B, pos_B, True, greedy, select, ignore)
-        # since deep_split yields the outermost indest, shift k to the left past all empty nodes
-        while k > 0 and common_ancestor[k - 1].strlen() == 0:
-            k -= 1
+        # # since deep_split yields the outermost index, shift k to the left past all empty nodes
+        # while k > 0 and common_ancestor[k - 1].strlen() == 0:
+        #     k -= 1
 
     if i >= 0 and k >= 0:
         attr_dict.pop(chain_attr, None)

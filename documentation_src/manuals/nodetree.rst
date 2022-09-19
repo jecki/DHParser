@@ -197,7 +197,8 @@ nodes according to the offset of the string values from the main field::
     </phrase>
     >>> essentials[-1].pos, essentials.content.find('Palace')
     (11, 11)
-    >>> essentials.result = tuple(child for child in essentials.children if child.name != 'blank')
+    >>> essentials.result = tuple(child for child in essentials.children
+    ...                           if child.name != 'blank')
     >>> print(essentials.as_xml(src=essentials.content))
     <phrase line="1" col="1">
       <word line="1" col="1">Buckingham</word>
@@ -226,7 +227,8 @@ specialized :py:meth:`~nodetree.Node.as_sxpr`-,
 :py:meth:`~nodetree.Node.as_json`- and
 :py:meth:`~nodetree.Node.as_xml()`-methods::
 
-    >>> s = '(sentence (word "This") (blank " ") (word "is") (blank " ") (phrase (word "Buckingham") (blank " ") (word "Palace")))'
+    >>> s = ('(sentence (word "This") (blank " ") (word "is") (blank " ") '
+    ...      '(phrase (word "Buckingham") (blank " ") (word "Palace")))')
     >>> sentence = parse_sxpr(s)
     >>> print(sentence.serialize(how='indented'))
     sentence
@@ -277,8 +279,9 @@ information is inevitable if, like in the example above, more than one tag is
 listed in the `string_tags`-set passed to the
 :py:meth:`~nodetree.Node.as_xml`-method. Deserializing the XML-string yields::
 
-    >>> tree = parse_xml('<sentence>This is <phrase>Buckingham Palace</phrase></sentence>',
-    ...                  string_tag='MIXED')
+    >>> tree = parse_xml(
+    ...    '<sentence>This is <phrase>Buckingham Palace</phrase></sentence>',
+    ...    string_tag='MIXED')
     >>> print(tree.serialize(how='indented'))
     sentence
       MIXED "This is "
@@ -346,8 +349,10 @@ Navigating "downtree"
 There are a number of useful functions to help navigating a tree spanned by a
 node and finding particular nodes within in a tree::
 
-    >>> list(sentence.select('word'))
-    [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'), Node('word', 'Palace')]
+    >>> from DHParser import printw
+    >>> printw(list(sentence.select('word')))
+    [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'),
+     Node('word', 'Palace')]
     >>> list(sentence.select(lambda node: node.content == ' '))
     [Node('blank', ' '), Node('blank', ' '), Node('blank', ' ')]
 
@@ -367,8 +372,9 @@ references to its parent. As a last resort (because it is slow) the node's
 parent can be found by the `find_parent`-function which must be executed ony
 ancestor of the node::
 
-    >>> sentence.find_parent(last_match)
-    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+    >>> printw(sentence.find_parent(last_match))
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
+     Node('word', 'Palace')))
 
 Sometimes, one only wants to select or pick particular children of a node. Apart
 from accessing these via `node.children`, there is a tuple-like access to the
@@ -376,8 +382,9 @@ immediate children via indices and slices::
 
     >>> sentence[0]
     Node('word', 'This')
-    >>> sentence[-1]
-    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+    >>> printw(sentence[-1])
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
+     Node('word', 'Palace')))
     >>> sentence[0:3]
     (Node('word', 'This'), Node('blank', ' '), Node('word', 'is'))
     >>> sentence.index('blank')
@@ -390,8 +397,9 @@ several times::
 
     >>> sentence['word']
     (Node('word', 'This'), Node('word', 'is'))
-    >>> sentence['phrase']
-    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+    >>> printw(sentence['phrase'])
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
+     Node('word', 'Palace')))
 
 Be aware that always all matching values will be returned and that the return
 type can accordingly be either a tuple of Nodes or a single Node! An IndexError
@@ -411,8 +419,10 @@ order to select children with an arbitrary condition::
 
     >>> tuple(sentence.select_children(lambda nd: nd.content.find('s') >= 0))
     (Node('word', 'This'), Node('word', 'is'))
-    >>> sentence.pick_child(lambda nd: nd.content.find('i') >= 0, reverse=True)
-    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace')))
+    >>> printw(sentence.pick_child(lambda nd: nd.content.find('i') >= 0,
+    ...                            reverse=True))
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
+     Node('word', 'Palace')))
 
 Often, one is neither interested in selecting form the children of a node, nor
 from the entire subtree, but from a certain "depth-range" of a tree-structure.
@@ -500,7 +510,8 @@ next sibling of the parent.
 
 It is, of course, possible to zoom back into a path::
 
-    >>> serialize_path(zoom_into_path(next_path(pointer), FIRST_CHILD, steps=1), with_content=-1)
+    >>> serialize_path(zoom_into_path(next_path(pointer), FIRST_CHILD, steps=1),
+    ...                with_content=-1)
     'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
 
 Often it is preferable to move through the leaf-nodes and their paths right
@@ -525,25 +536,30 @@ arbitraty path, instead of the one end or the other end of the tree rooted in
 
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
     >>> pointer = t.pick_path('G')
-    >>> [serialize_path(ctx, with_content=1)
-    ...  for ctx in select_path(pointer, ANY_PATH, include_root=True)]
-    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7', 'A:1234567']
-    >>> [serialize_path(ctx, with_content=1)
-    ...  for ctx in select_path(
-    ...      pointer, ANY_PATH, include_root=True, reverse=True)]
-    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
+    >>> printw([serialize_path(ctx, with_content=1)
+    ...         for ctx in select_path(pointer, ANY_PATH, include_root=True)])
+    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7',
+     'A:1234567']
+    >>> printw([serialize_path(ctx, with_content=1)
+    ...         for ctx in select_path(
+    ...             pointer, ANY_PATH, include_root=True, reverse=True)])
+    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3',
+     'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
 
 Another important difference, besides the starting point, is that the
 `select()`-generators of the `nodetree`-module traverse the tree post-order
 (or "depth first"), while the respective methods ot the Node-class traverse the
 tree pre-order. See the difference::
 
-    >>> l = [serialize_path(ctx, with_content=1) for ctx in t.select_path(ANY_PATH, include_root=True)]
+    >>> l = [serialize_path(ctx, with_content=1)
+    ...      for ctx in t.select_path(ANY_PATH, include_root=True)]
     >>> l[l.index('A <- G:4'):]
     ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
-    >>> l = [serialize_path(ctx, with_content=1) for ctx in t.select_path(ANY_PATH, include_root=True, reverse=True)]
-    >>> l[l.index('A <- G:4'):]
-    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3', 'A <- C <- D <- E:2', 'A <- B:1']
+    >>> l = [serialize_path(ctx, with_content=1)
+    ...      for ctx in t.select_path(ANY_PATH, include_root=True, reverse=True)]
+    >>> printw(l[l.index('A <- G:4'):])
+    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3',
+     'A <- C <- D <- E:2', 'A <- B:1']
 
 
 Flat-String-Navigation
@@ -551,7 +567,7 @@ Flat-String-Navigation
 
 Sometimes it may be more convenient to search for a specific feature in the
 string-content of a text, rather than in the structured tree. For example,
-finding matching brackets in tree-strcutured text can be quite cumbersome if
+finding matching brackets in tree-structured text can be quite cumbersome if
 brackets are not "tagged" individually. For theses cases it is possible to
 generate a path mapping that maps text position to the paths of the
 leaf-nodes to which they belong. The path-mapping can be thought of as a
@@ -559,9 +575,19 @@ leaf-nodes to which they belong. The path-mapping can be thought of as a
 
     >>> flat_text = sentence.content
     >>> ctx_mapping = generate_content_mapping(sentence)
-    >>> leaf_positions, paths = ctx_mapping
-    >>> {k: v for k, v in zip(leaf_positions, (ctx[-1].as_sxpr() for ctx in paths))}
-    {0: '(word "This")', 4: '(blank " ")', 5: '(word "is")', 7: '(blank " ")', 8: '(word "Buckingham")', 18: '(blank " ")', 19: '(word "Palace")'}
+    >>> print(pp_content_mapping(ctx_mapping))
+    0 -> sentence, word "This"
+    4 -> sentence, blank " "
+    5 -> sentence, word "is"
+    7 -> sentence, blank " "
+    8 -> sentence, phrase, word "Buckingham"
+    18 -> sentence, phrase, blank " "
+    19 -> sentence, phrase, word "Palace"
+
+Note that the path in the first line of the output is different from the path
+in the third line, although the sequence of node-names that appears in the
+pretty-printed version shown here is the same, i.e. "sentence, word", because
+the paths really consist of different Nodes, albeit with the same names.
 
 Now let's find all letters that are followed by a whitespace character::
 
@@ -587,6 +613,19 @@ The positions resemble the text positions of the text represented by the tree at
 the very moment when the path mapping is generated, not the source positions
 captured by the `pos`-propery of the node-objects! This also means that the
 mapping becomes outdated the very moment, the tree is being restructured.
+
+Adding Markup
+-------------
+
+A common challenge when processing tree structured text-data consists in
+adding new nodes that covers certain ranges of the string content that
+may already be covered by other elements. This is the same problem as adding
+further markup to an existing XML or HTML-document. In trivial cases like::
+
+    >>> trivial_xml = ("<trivial>Please mark up Stadt München in Bavaria "
+    ...                "in this sentence.</trvial>")
+
+we would hardely need any help by a library to markup the string "Stadt München".
 
 
 Error Messages
@@ -628,7 +667,8 @@ replaced some of the words partially with "..."::
 
     >>> import re
     >>> len([document.new_error(node, "word contains illegal characters") 
-    ...      for node in document.select('word') if re.fullmatch(r'\w*', node.content) is None])
+    ...      for node in document.select('word')
+    ...          if re.fullmatch(r'\w*', node.content) is None])
     3
     >>> for error in document.errors_sorted:  print(error)
     1:1: Error (1000): word contains illegal characters
@@ -792,7 +832,8 @@ Attribute-handling
   attribute of a node.
 * :py:func:`~nodetree.ad_token_to_attr`: Removes a token from a particular
   attribute of a node.
-* :py:func:`~nodetree.has_class`, :py:func:`~nodetree.has_class`, :py:func:`~nodetree.has_class`: the same as above, only that these methods
+* :py:func:`~nodetree.has_class`, :py:func:`~nodetree.has_class`,
+  :py:func:`~nodetree.has_class`: the same as above, only that these methods
   manipulate the tokens specifically of the class-attribute
 
 

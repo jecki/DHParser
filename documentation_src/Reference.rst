@@ -9,7 +9,7 @@ Module ``ebnf``
    :members:
 
 Module ``nodetree``
----------------------
+-------------------
 
 .. automodule:: nodetree
    :members:

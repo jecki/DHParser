@@ -2839,7 +2839,7 @@ class Counted(UnaryParser):
     >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
     '(root (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
     >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
-    '(ZOMBIE__ `(1:1: Error (1040): Parser did not match!))'
+    '(ZOMBIE__ `(err "1:1: Error (1040): Parser did not match!"))'
     >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
     >>> result = Grammar(moves)('AAABABB')
     >>> result.name, result.content

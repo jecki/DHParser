@@ -97,6 +97,8 @@ __all__ = ('typing',
            'concurrent_ident',
            'unrepr',
            'abbreviate_middle',
+           'wrap_str_nicely',
+           'printw',
            'escape_formatstr',
            'as_identifier',
            'as_list',
@@ -333,7 +335,11 @@ def deprecated(message: str) -> Callable:
         ... def bad():
         ...     pass
         >>> bad()
-        This function is deprecated!
+        Traceback (most recent call last):
+          File "/home/eckhart/Entwicklung/DHParser/DHParser/toolkit.py", line 321, in deprecation_warning
+            raise DeprecationWarning(message)
+        DeprecationWarning: This function is deprecated!
+        <BLANKLINE>
     """
     assert isinstance(message, str)
     def decorator(f: Callable) -> Callable:
@@ -496,6 +502,75 @@ def abbreviate_middle(s: str, max_length: int) -> str:
         b = max_length // 2 - 3  # type: int
         s = s[:a] + ' ... ' + s[-b:] if length > 40 else s
     return s
+
+
+@cython.locals(wrap_column=cython.int, tolerance=cython.int, a=cython.int, i=cython.int, k=cython.int, m=cython.int)
+def wrap_str_nicely(s: str, wrap_column: int=79, tolerance: int=24,
+                    wrap_chars: str=")]>, ") -> str:
+    """Line-wraps an output string at 'wrap_column'. Tries to
+    find a suitable point for wrapping, i.e. after any of the
+    wrap_characters. Examples::
+
+    >>> s = ('(X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) '
+    ...      '(em (m "!?")) (B (Q (em "78") (:Text "9")) (R "abc")) '
+    ...      '(n "+-"))')
+    >>> print(wrap_str_nicely(s))
+    (X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) (em (m "!?"))
+     (B (Q (em "78") (:Text "9")) (R "abc")) (n "+-"))
+    >>> s = ('(X (s) (A (u) (C "One,")) (em (A (C " ") (D "two, ")))'
+    ...      '(B (E "three, ") (F "four!") (t))))')
+    >>> print(wrap_str_nicely(s))
+    (X (s) (A (u) (C "One,")) (em (A (C " ") (D "two, ")))(B (E "three, ")
+     (F "four!") (t))))
+    >>> s = ("[Node('word', 'This'), Node('word', 'is'), "
+    ...      "Node('word', 'Buckingham'), Node('word', 'Palace')]")
+    >>> print(wrap_str_nicely(s))
+    [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'),
+     Node('word', 'Palace')]
+    >>> s = ("Node('phrase', (Node('word', 'Buckingham'), "
+    ...      "Node('blank', ' '), Node('word', 'Palace')))")
+    >>> print(wrap_str_nicely(s))
+    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
+     Node('word', 'Palace')))
+    """
+    assert 2 <= tolerance
+    assert wrap_column > tolerance
+    if len(s) <= wrap_column or s.rfind('\n') >= 0:  return s
+    parts = []
+    a = 0
+    i = wrap_column
+    while i < len(s):
+        for ch in wrap_chars:
+            m = i
+            while s[m] == ch:  m -= 1
+            if i - m > tolerance // 2:
+                continue
+            k = s.rfind(ch, a, m)
+            probe = s[k + 1]
+            while k < i and s[k + 1] in wrap_chars and s[k + 1] != ' ':  k += 1
+            if i - k <= tolerance:
+                parts.append(s[a:k + 1])
+                a = k + 1
+                i = k + 1 + wrap_column
+                break
+        else:
+            parts.append(s[a:i])
+            a = i
+            i += wrap_column
+    if a < len(s) - 1:  parts.append(s[a:])
+    return '\n'.join(parts)
+
+
+def printw(s: Any, wrap_column: int=79, tolerance: int=24,
+           wrap_chars: str=")]>, "):
+    """Prints the string or other object nicely wrapped.
+    See :py:func:`wrap_str_nicely`."""
+    if isinstance(s, (list, tuple, dict)) and wrap_chars == ")]>, ":
+        wrap_chars = ",)]> "
+        s = repr(s)
+    elif not isinstance(s, str):
+        s = repr(s)
+    print(wrap_str_nicely(s, wrap_column, tolerance, wrap_chars))
 
 
 def escape_formatstr(s: str) -> str:

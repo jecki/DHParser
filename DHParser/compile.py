@@ -85,7 +85,7 @@ class Compiler:
     syntax tree (AST) as argument and return the compiled code in a
     format chosen by the compiler itself.
 
-    Subclasses implementing a compiler must define `on_XXX()`-methods
+    Subclasses implementing a compiler must define ``on_XXX()``-methods
     for each node name that can occur in the AST where 'XXX' is the
     node's name(for unnamed nodes it is the node's ptype without the
     leading colon ':').
@@ -94,47 +94,50 @@ class Compiler:
     argument. Other than in the AST transformation, which runs depth-first,
     compiler methods are called forward moving starting with the root
     node, and they are responsible for compiling the child nodes
-    themselves. This should be done by invoking the `compile(node)`-
-    method which will pick the right `on_XXX`-method. It is not
-    recommended to call the `on_XXX`-methods directly.
+    themselves. This should be done by invoking the ``compile(node)``-
+    method which will pick the right ``on_XXX()``-method or,
+    more commonly, by calling ``fallback_compiler()``-methods which
+    compiles of child-nodes and updates the tuple of children according
+    to the results. It is not recommended to call the ``on_XXX()``-methods
+    directly!
 
     Variables that are (re-)set only in the constructor and retain their
-    value if changed during subesquent calls::
+    value if changed during subesquent calls:
 
     :ivar forbid_returning_None:  Default value: True. Most of the time,
-            if a compiler-method (i.e. on_XXX()) returns None, this is
-            a mistake due to a forgotten return statement. The method
-            compile() checks for this mistake and raises an error if
-            a compiler-method returns None. However, some compilers require
-            the possibility to return None-values. In this case
-            ``forbis_returing_None`` should be set to False in the constructor
-            of the derived class.
+        if a compiler-method (i.e. on_XXX()) returns None, this is
+        a mistake due to a forgotten return statement. The method
+        compile() checks for this mistake and raises an error if
+        a compiler-method returns None. However, some compilers require
+        the possibility to return None-values. In this case
+        ``forbis_returing_None`` should be set to False in the constructor
+        of the derived class.
 
-            (Another Alternativ would be to return a sentinel object instead of
-            None.)
+        (Another Alternativ would be to return a sentinel object instead of
+        None.)
 
-    Object-Variables that are reset after each call of the Compiler-object::
+    Object-Variables that are reset after each call of the Compiler-object:
 
     :ivar path:  A list of parent nodes that ends with the currently
-                compiled node.
+        compiled node.
     :ivar tree: The root of the abstract syntax tree.
     :ivar finalizers:  A stack of tuples (function, parameters) that will be
-                called in reverse order after compilation.
+        called in reverse order after compilation.
 
     :ivar has_attribute_visitors:  A flag indicating that the class has
-                attribute-visitor-methods which are named 'attr_ATTRIBUTENAME'
-                and will be called if the currently processed node has one
-                or more attributes for which such visitors exist.
+        attribute-visitor-methods which are named 'attr_ATTRIBUTENAME'
+        and will be called if the currently processed node has one
+        or more attributes for which such visitors exist.
 
     :ivar _dirty_flag:  A flag indicating that the compiler has already been
-                called at least once and that therefore all compilation
-                variables must be reset when it is called again.
+        called at least once and that therefore all compilation
+        variables must be reset when it is called again.
     :ivar _debug: A flag indicating that debugging is turned on. The value
-                for this flag is read before each call of the configuration
-                (see debugging section in DHParser.configuration).
-                If debugging is turned on the compiler class raises en
-                error if there is an attempt to be compile one and the same
-                node a second time..
+        for this flag is read before each call of the configuration
+        (see debugging section in :py:mod:`DHParser.configuration`).
+        If debugging is turned on the compiler class raises en
+        error if there is an attempt to be compiled one and the same
+        node a second time.
     :ivar _debug_already_compiled: A set of nodes that have already been compiled.
     """
 

@@ -54,7 +54,7 @@ def run_doctests(module):
     print('DOCTEST ' + module)
     # exec('import DHParser.' + module, namespace)
     exec('from DHParser import ' + module, namespace)
-    mod = getattr(namespace['DHParser'], module)
+    mod = namespace[module]
     result = doctest.testmod(mod)
     return result.failed
 
@@ -139,7 +139,7 @@ def run_tests(doctests=True, unittests=True):
     os.chdir(os.path.join(scriptdir, '..'))
 
     done, not_done = [], []
-    with instantiate_executor(get_config_value('test_parallelization'),
+    with instantiate_executor(False and get_config_value('test_parallelization'),
                               concurrent.futures.ProcessPoolExecutor) as pool:
         results = []
 
@@ -149,15 +149,15 @@ def run_tests(doctests=True, unittests=True):
             for doc_path in doc_paths:
                 for filename in os.listdir(doc_path):
                     if filename.endswith('.rst'):
-                        results.append(pool.submit(
-                            run_doctests_rst, os.path.join(doc_path, filename)))
+                        filepath = os.path.join(doc_path, filename)
+                        results.append((filepath, pool.submit(run_doctests_rst, filepath)))
 
             # module doctests
             for filename in os.listdir('DHParser'):
                 if filename.endswith('.py') and filename not in \
                         ("foreign_typing.py", "shadow_cython.py", "versionnumber.py",
                          "__init__.py"):
-                    results.append(pool.submit(run_doctests, filename[:-3]))
+                    results.append((filename[:-3], pool.submit(run_doctests, filename[:-3])))
 
         if unittests:
             # unit tests
@@ -167,10 +167,18 @@ def run_tests(doctests=True, unittests=True):
                         if filename.endswith('.py') and (filename.startswith('test_') or
                                                          filename.startswith('notest')):
                             command = interpreter + os.path.join('tests', filename)
-                            results.append(pool.submit(run_unittests, command))
-        done, not_done = concurrent.futures.wait(results, timeout=120)
+                            results.append((command, pool.submit(run_unittests, command)))
+        done, not_done = concurrent.futures.wait([r[1] for r in results], timeout=180)
 
     os.chdir(cwd)
+    for test, result in results:
+        r_exception = result.exception()
+        if r_exception:
+            print(f'"{test}" failed with exception: {repr(r_exception)}')
+            _ = result.result()  # raise the exception
+        r_code = result.result()
+        if r_code != 0:
+            print(f'"{test}" failed with result: {r_code}')
     assert not not_done, str(not_done)
 
 
