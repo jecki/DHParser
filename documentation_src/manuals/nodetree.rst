@@ -622,10 +622,47 @@ adding new nodes that covers certain ranges of the string content that
 may already be covered by other elements. This is the same problem as adding
 further markup to an existing XML or HTML-document. In trivial cases like::
 
-    >>> trivial_xml = ("<trivial>Please mark up Stadt München in Bavaria "
-    ...                "in this sentence.</trvial>")
+    >>> trivial_xml = parse_xml("<trivial>Please mark up Stadt München "
+    ...     "in Bavaria in this sentence.</trivial>")
 
-we would hardely need any help by a library to markup the string "Stadt München".
+we would hardly need any help by a library to markup a string "Stadt München".
+But both to find certain sub-strings and to mark them up can easily become
+complicated::
+
+    >>> hard_xml = parse_xml("<trivial>Please mark up Stadt\\n<lb/>"
+    ...     "<location><em>München</em> in Bavaria</location> in this "
+    ...     "sentence.</trivial>")
+    >>> very_hard_xml = parse_xml("<trivial>Please mark up Stadt\\n<lb/>"
+    ...     "<location><em>München</em><footnote>'Stadt <em>München</em>'"
+    ...     " is German for 'City of Munich'</footnote> in Bavaria"
+    ...     "</location> in this sentence.</trivial>")
+
+Let's start with the simplemost case to see how searching and marking
+strings works with DHParser::
+
+    >>> match = re.search(r"Stadt\s+München", trivial_xml.content)
+    >>> mapping = generate_content_mapping(trivial_xml)
+    >>> _ = markup(mapping, match.start(), match.end(), "foreign",
+    ...            {'lang': 'de'})
+    >>> printw(trivial_xml.as_xml(inline_tags={'trivial'}))
+    <trivial>Please mark up <foreign lang="de">Stadt München</foreign>
+     in Bavaria in this sentence.</trivial>
+
+In order to search for the text-string, a regular exprestion is used
+rather than a simple search for "Stadt München", because we cannot
+assume that it appears in exactly the same form in the text. For
+example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
+
+Now, let's try the next more complicated case::
+
+    >>> match = re.search(r"Stadt\s+München", trivial_xml.content)
+    >>> mapping = generate_content_mapping(trivial_xml)
+    >>> _ = markup(mapping, match.start(), match.end(), "foreign",
+    ...            {'lang': 'de'})
+    >>> printw(trivial_xml.as_xml(inline_tags={'trivial'}))
+    <trivial>Please mark up <foreign lang="de">Stadt München</foreign>
+     in Bavaria in this sentence.</trivial>
+
 
 
 Error Messages

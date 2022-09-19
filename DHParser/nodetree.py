@@ -3054,6 +3054,9 @@ def markup(cm: ContentMapping, start_pos: int, end_pos: int, name: str,
         Should always be true, if you reuse the same content mapping for further
         markups in the same range or other purpuses.
 
+    :returns: The nearest (from the top of the tree) node within which the
+        entire markup lies.
+
     Examples::
 
         >>> from DHParser.toolkit import printw
