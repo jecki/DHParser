@@ -74,7 +74,8 @@ except ImportError:
     cython_optimized = False
     import DHParser.externallibs.shadow_cython as cython
 
-from DHParser.configuration import access_thread_locals, get_config_value, NEVER_MATCH_PATTERN
+from DHParser.configuration import access_thread_locals, get_config_value, set_config_value, \
+    NEVER_MATCH_PATTERN
 from DHParser.stringview import StringView
 
 
@@ -342,12 +343,13 @@ def deprecated(message: str) -> Callable:
         >>> @deprecated('This function is deprecated!')
         ... def bad():
         ...     pass
-        >>> bad()
-        Traceback (most recent call last):
-          File "/home/eckhart/Entwicklung/DHParser/DHParser/toolkit.py", line 321, in deprecation_warning
-            raise DeprecationWarning(message)
-        DeprecationWarning: This function is deprecated!
-        <BLANKLINE>
+        >>> save = get_config_value('deprecation_policy')
+        >>> set_config_value('deprecation_policy', 'fail')
+        >>> try: bad()
+        ... except DeprecationWarning as w:  print(w)
+        This function is deprecated!
+        >>> set_config_value('deprecation_policy', save)
+
     """
     assert isinstance(message, str)
     def decorator(f: Callable) -> Callable:
@@ -515,9 +517,16 @@ def abbreviate_middle(s: str, max_length: int) -> str:
 @cython.locals(wrap_column=cython.int, tolerance=cython.int, a=cython.int, i=cython.int, k=cython.int, m=cython.int)
 def wrap_str_nicely(s: str, wrap_column: int=79, tolerance: int=24,
                     wrap_chars: str=")]>, ") -> str:
-    """Line-wraps an output string at 'wrap_column'. Tries to
-    find a suitable point for wrapping, i.e. after any of the
-    wrap_characters. Examples::
+    r"""Line-wraps a single-line output string at 'wrap_column'. Tries to
+    find a suitable point for wrapping, i.e. after any of the wrap_characters.
+
+    If the strings spans multiple lines, the existing linebreaks will be kept
+    and no rewrapping takes place. In order to enforce rewrapping of multiline
+    strings, use: ``wrap_str_nicely(repr(s)[1:-1])``. (repr() replaces
+    linebreaks by the \\n-marker. The slicing [1:-1] removes the opening
+    and closing angular quotation marks that repr adds.
+
+    Examples::
 
     >>> s = ('(X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) '
     ...      '(em (m "!?")) (B (Q (em "78") (:Text "9")) (R "abc")) '
@@ -540,6 +549,16 @@ def wrap_str_nicely(s: str, wrap_column: int=79, tolerance: int=24,
     >>> print(wrap_str_nicely(s))
     Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
      Node('word', 'Palace')))
+    >>> s = ('<hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign>'
+    ...      '<location><foreign lang="de"><em>München</em></foreign> '
+    ...      'in Bavaria</location> in this sentence.</hard>')
+    >>> print(wrap_str_nicely(s))
+    <hard>Please mark up <foreign lang="de">Stadt
+    <lb/></foreign><location><foreign lang="de"><em>München</em></foreign> in Bavaria</location> in this sentence.</hard>
+    >>> print(wrap_str_nicely(repr(s)[1:-1]))  # repr to ignore the linebreaks
+    <hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign><location>
+    <foreign lang="de"><em>München</em></foreign> in Bavaria</location>
+     in this sentence.</hard>
     """
     assert 2 <= tolerance
     assert wrap_column > tolerance

@@ -629,13 +629,13 @@ we would hardly need any help by a library to markup a string "Stadt München".
 But both to find certain sub-strings and to mark them up can easily become
 complicated::
 
-    >>> hard_xml = parse_xml("<trivial>Please mark up Stadt\\n<lb/>"
+    >>> hard_xml = parse_xml("<hard>Please mark up Stadt\n<lb/>"
     ...     "<location><em>München</em> in Bavaria</location> in this "
-    ...     "sentence.</trivial>")
-    >>> very_hard_xml = parse_xml("<trivial>Please mark up Stadt\\n<lb/>"
+    ...     "sentence.</hard>")
+    >>> very_hard_xml = parse_xml("<veryhard>Please mark up Stadt\n<lb/>"
     ...     "<location><em>München</em><footnote>'Stadt <em>München</em>'"
     ...     " is German for 'City of Munich'</footnote> in Bavaria"
-    ...     "</location> in this sentence.</trivial>")
+    ...     "</location> in this sentence.</veryhard>")
 
 Let's start with the simplemost case to see how searching and marking
 strings works with DHParser::
@@ -655,13 +655,15 @@ example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
 
 Now, let's try the next more complicated case::
 
-    >>> match = re.search(r"Stadt\s+München", trivial_xml.content)
-    >>> mapping = generate_content_mapping(trivial_xml)
+    >>> match = re.search(r"Stadt\s+München", hard_xml.content)
+    >>> mapping = generate_content_mapping(hard_xml)
     >>> _ = markup(mapping, match.start(), match.end(), "foreign",
     ...            {'lang': 'de'})
-    >>> printw(trivial_xml.as_xml(inline_tags={'trivial'}))
-    <trivial>Please mark up <foreign lang="de">Stadt München</foreign>
-     in Bavaria in this sentence.</trivial>
+    >>> xml_str = hard_xml.as_xml(inline_tags={'hard'}, empty_tags={'lb'})
+    >>> printw(repr(xml_str)[1:-1])
+    <hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign><location>
+    <foreign lang="de"><em>München</em></foreign> in Bavaria</location>
+     in this sentence.</hard>
 
 
 
