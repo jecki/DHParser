@@ -2264,6 +2264,57 @@ def path_sanity_check(path: Path) -> bool:
 
 ContentMapping: TypeAlias = Tuple[List[int], List[Path]]  # A mapping of character positions to paths
 
+class ContentMapping:
+    """
+    ContentMapping represents a path mapping of the string-content of all or a
+    specific selection leave-nodes of a tree. A path mapping is an ordered
+    mapping of the first text position of every (selected) leaf-node to the
+    path of this node.
+
+    Path-mappings allow the search for substrings in the string content of
+    a document and then locating them in the structured tree.
+
+    :param node: the root of the tree for which a path mapping shall be
+        generated.
+    :param select: only leaf-paths for which this is true will be considered.
+        Note that this requires the select-criterion to actually yield leaf-paths.
+        Otherwise, the content-mapping will be empty.
+    :param ignore: subtrees or leaves for which ignore is true will be skipped
+        as well.
+    """
+
+    def __init__(self, origin: Node,
+                 select: PathSelector = LEAF_PATH,
+                 ignore: PathSelector = NO_PATH,
+                 greedy: bool = True,
+                 chain_attr: str = ''):
+        self.pos_list: List[int] = []
+        self.path_list: List[Path] = []
+        self.origin: Node = origin    # named origin to avoid unspoken assumption that this must be a RootNode-object!
+        slf, igf = _make_leaf_selectors(select, ignore)
+        self.select_func: PathMatchFunction = slf
+        self.ignore_func: PathMatchFunction = igf
+        self.ignore: PathSelector = ignore
+        self.greedy: bool = greedy
+        self.chain_attr: str = chain_attr
+        self._generate_mapping()
+
+    def _generate_mapping(self):
+        pos = 0
+        if self.ignore_func([self.origin]):
+            self.pos_list = []
+            self.path_list = []
+            return
+        for trl in self.origin.select_path_if(
+                self.match_func, include_root=True, skip_func=self.ignore_func):
+            if trl[-1]._children or self.ignore_func(trl):  continue  # ignore non-leaf paths
+            self.pos_list.append(pos)
+            self.path_list.append(trl)
+            pos += trl[-1].strlen()
+        assert len(self.pos_list) == len(self.path_list)
+
+
+
 
 def pp_content_mapping(cm: ContentMapping) -> str:
     """Pretty-prints a content mapping. The format is:
