@@ -47,13 +47,15 @@ column-number
 
 """
 
+from __future__ import annotations
+
 from collections import namedtuple
 import functools
 import os
 from typing import Iterable, Iterator, Union, List, Sequence, Dict, Callable
 
 from DHParser.stringview import StringView
-from DHParser.toolkit import linebreaks, line_col, is_filename
+from DHParser.toolkit import linebreaks, line_col, is_filename, TypeAlias
 
 
 __all__ = ('SourceMap',
@@ -169,8 +171,7 @@ SourceLocation = namedtuple('SourceLocation',
      'pos',  # type: int
     ], module=__name__)
 
-SourceMapFunc = Union[Callable[[int], SourceLocation],
-                      functools.partial]
+SourceMapFunc: TypeAlias = Union[Callable[[int], SourceLocation], functools.partial]
 
 
 #######################################################################

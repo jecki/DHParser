@@ -28,6 +28,8 @@ cannot completely be described entirely with context-free grammars.
 """
 
 
+from __future__ import annotations
+
 import bisect
 from collections import namedtuple
 import functools
@@ -37,7 +39,7 @@ from typing import Union, Optional, Callable, Tuple, List, Any
 from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
     add_source_locations
 from DHParser.stringview import StringView
-from DHParser.toolkit import re
+from DHParser.toolkit import re, TypeAlias
 
 
 __all__ = ('RX_TOKEN_NAME',
@@ -109,12 +111,13 @@ PreprocessorResult = namedtuple('PreprocessorResult',
     module=__name__)
 
 
-FindIncludeFunc = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
-                        functools.partial]
-DeriveFileNameFunc = Union[Callable[[str], str], functools.partial]  # include name -> file name
-PreprocessorFunc = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
-                         functools.partial]
-Tokenizer = Union[Callable[[str], Tuple[str, List[Error]]], functools.partial]
+FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
+                                   functools.partial]
+DeriveFileNameFunc: TypeAlias = Union[Callable[[str], str], functools.partial]  # include name -> file name
+PreprocessorFunc: TypeAlias = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
+                                    functools.partial]
+Tokenizer: TypeAlias = Union[Callable[[str], Tuple[str, List[Error]]],
+                             functools.partial]
 
 # a functions that merely adds preprocessor tokens to a source text
 

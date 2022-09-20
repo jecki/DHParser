@@ -51,6 +51,8 @@ Example::
                                          transformer, compiler)
 """
 
+from __future__ import annotations
+
 import collections
 import contextlib
 import html
@@ -67,7 +69,7 @@ from DHParser.configuration import access_presets, finalize_presets, get_config_
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.nodetree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
-from DHParser.toolkit import escape_ctrl_chars, abbreviate_middle
+from DHParser.toolkit import escape_ctrl_chars, abbreviate_middle, TypeAlias
 
 __all__ = ('CallItem',
            'start_logging',
@@ -87,7 +89,7 @@ __all__ = ('CallItem',
            'log_parsing_history')
 
 
-CallItem = Tuple[str, int]      # call stack item: (name, location)
+CallItem: TypeAlias = Tuple[str, int]      # call stack item: (name, location)
 
 
 #######################################################################

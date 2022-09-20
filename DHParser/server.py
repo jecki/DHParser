@@ -50,6 +50,8 @@ For the specification and implementation of the language server protocol, see:
 <https://langserver.org/>
 """
 
+from __future__ import annotations
+
 import asyncio
 from concurrent.futures import Future, Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
@@ -80,7 +82,7 @@ from DHParser.nodetree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
     json_encode_string, json_rpc, json_dumps, identify_python, normalize_docstring, md5, \
-    is_html_name
+    is_html_name, TypeAlias
 from DHParser.versionnumber import __version__
 
 
@@ -123,11 +125,11 @@ __all__ = ('RPC_Table',
            'has_server_stopped')
 
 
-RPC_Table = Dict[str, Callable]
-RPC_Type = Union[RPC_Table, List[Callable], Callable]
-RPC_Error_Type = Optional[Tuple[int, str]]
-BytesType = Union[bytes, bytearray]
-ConnectionCallback = Callable[['Connection'], None]
+RPC_Table: TypeAlias = Dict[str, Callable]
+RPC_Type: TypeAlias = Union[RPC_Table, List[Callable], Callable]
+RPC_Error_Type: TypeAlias = Optional[Tuple[int, str]]
+BytesType: TypeAlias = Union[bytes, bytearray]
+ConnectionCallback: TypeAlias = Callable[['Connection'], None]
 
 RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'
 # b'\s*(?:{|\[|"|\d|true|false|null)'

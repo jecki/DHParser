@@ -26,15 +26,18 @@ validation (i.e. validation according to a grammar-like schema) of
 node-trees. EXPERIMENTAL!!! THIS IS STILL A STUB!!!
 """
 
+from __future__ import annotations
+
 import re
 from typing import Callable, Dict
 
 from DHParser.nodetree import Node, RootNode, Path, ANY_NODE
+from DHParser.toolkit import TypeAlias
 
 
-ValidationFunction = Callable[[Node, Path], None]  # validate(schema, data)
-SchemaLanguage = Dict[str, ValidationFunction]
-Schema = Node
+ValidationFunction: TypeAlias = Callable[[Node, Path], None]  # validate(schema, data)
+SchemaLanguage: TypeAlias = Dict[str, ValidationFunction]
+Schema: TypeAlias = Node
 
 
 def is_schema(schema: Node, language: SchemaLanguage) -> bool:

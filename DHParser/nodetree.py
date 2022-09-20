@@ -52,11 +52,6 @@ try:
 except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
-try:
-    from typing import TypeAlias
-except ImportError:
-    from DHParser.externallibs.typing_extensions import TypeAlias
-
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, SourceMapFunc, has_errors, only_errors
@@ -64,7 +59,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle
+    abbreviate_middle, TypeAlias
 
 
 __all__ = ('WHITESPACE_PTYPE',

@@ -26,13 +26,14 @@ used for any kind of tree transformations, not necessarily only
 for CST -> AST transformations.
 """
 
+from __future__ import annotations
 
 import collections.abc
 from functools import partial, singledispatch, reduce
 import inspect
 import operator
 from typing import AbstractSet, ByteString, Callable, cast, Container, Dict, \
-    Tuple, List, Sequence, Union, Text, Optional
+    Tuple, List, Sequence, Union, Optional
 
 try:
     import cython
@@ -43,7 +44,7 @@ from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode, parse_sxpr, flatten_sxpr, Path
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, \
-    deprecation_warning
+    deprecation_warning, TypeAlias
 
 
 __all__ = ('TransformationDict',
@@ -157,14 +158,14 @@ class Filter:
         raise NotImplementedError
 
 
-TransformationProc = Callable[[Path], None]
-TransformationDict = Dict[str, Union[Callable, Sequence[Callable]]]
-TransformationCache = Dict[str, Tuple[Sequence[Filter], Sequence[Callable]]]
-TransformationTableType = Dict[str, Union[Sequence[Callable], TransformationDict]]
-ConditionFunc = Callable  # Callable[[Path], bool]
-KeyFunc = Callable[[Node], str]
-CriteriaType = Union[int, str, Callable]
-TransformerCallable = Union[Callable[[RootNode], RootNode], partial]
+TransformationProc: TypeAlias = Callable[[Path], None]
+TransformationDict: TypeAlias = Dict[str, Union[Callable, Sequence[Callable]]]
+TransformationCache: TypeAlias = Dict[str, Tuple[Sequence[Filter], Sequence[Callable]]]
+TransformationTableType: TypeAlias = Dict[str, Union[Sequence[Callable], TransformationDict]]
+ConditionFunc: TypeAlias = Callable  # Callable[[Path], bool]
+KeyFunc: TypeAlias = Callable[[Node], str]
+CriteriaType: TypeAlias = Union[int, str, Callable]
+TransformerCallable: TypeAlias = Union[Callable[[RootNode], RootNode], partial]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
@@ -211,6 +212,12 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             does not have type annotations.
     """
 
+    def real_type(t):
+        """get type from string alias, e.g. "Dict" -> typing.Dict."""
+        if isinstance(t, str):          # ensure compatibility with python versions
+            return eval(t.replace('unicode', 'str'))  # with alternative type handling.
+        return t
+
     def type_guard(t):
         """Raises an error if type `t` is a generic type or could be mistaken
         for the type of the canonical first parameter "Path" of
@@ -219,8 +226,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         #     raise TypeError("Generic Type %s not permitted\n in transformation_factory "
         #                     "decorator. Use the equivalent non-generic type instead!"
         #                     % str(t))
-        if isinstance(t, str):          # ensure compatibility with python versions
-            t = eval(t.replace('unicode', 'str'))  # with alternative type handling.
+        t = real_type(t)
         if isgenerictype(t):
             raise TypeError("Generic Type %s not permitted\n in transformation_factory "
                             "decorator. Use the equivalent non-generic type instead!"
@@ -243,13 +249,13 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
             "No type information on second parameter found! Please, use type " \
             "annotation or provide the type information via transformer-decorator."
         f = singledispatch(f)
-        p1type = params[0].annotation
+        p1type = real_type(params[0].annotation)
         if t1 is None:
             t1 = type_guard(p1type)
         elif issubtype(p1type, type_guard(t1)):
             try:
                 if len(params) == 1 and issubtype(p1type, Container) \
-                        and not (issubtype(p1type, Text) or issubtype(p1type, ByteString)):
+                        and not (issubtype(p1type, str) or issubtype(p1type, ByteString)):
                     def gen_special(*args):
                         c = set(args) if issubtype(p1type, AbstractSet) else \
                             tuple(args) if issubtype(p1type, Sequence) else args

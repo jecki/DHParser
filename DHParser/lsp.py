@@ -23,15 +23,17 @@ EXPERIMENTAL!!!
 """
 
 
+from __future__ import annotations
+
 import bisect
 from enum import Enum, IntEnum
 
 from typing import Union, List, Tuple, Optional, Dict, Any, \
     Iterator, Iterable, Callable
 try:
-    from typing_extensions import Generic, TypeVar, Literal
+    from typing_extensions import Generic, TypeVar, Literal, TypeAlias
 except ImportError:
-    from DHParser.externallibs.typing_extensions import Generic, TypeVar, Literal
+    from DHParser.externallibs.typing_extensions import Generic, TypeVar, Literal, TypeAlias
 
 from DHParser.json_validation import TypedDict, GenericTypedDict, \
     validate_type, type_check

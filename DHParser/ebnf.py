@@ -24,6 +24,8 @@ Various flavors of EBNF- of PEG- (Parsing-Expression-Grammar) notations
 are supported.
 """
 
+from __future__ import annotations
+
 from functools import partial
 import keyword
 import os
@@ -59,7 +61,7 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOM
     flatten_sxpr
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
-    ThreadLocalSingletonFactory
+    ThreadLocalSingletonFactory, TypeAlias
 from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
@@ -907,10 +909,10 @@ def transform_ebnf(cst: RootNode) -> RootNode:
 ########################################################################
 
 
-PreprocessorFactoryFunc = Callable[[], PreprocessorFunc]
-ParserFactoryFunc = Callable[[], Grammar]
-TransformerFactoryFunc = Callable[[], TransformerCallable]
-CompilerFactoryFunc = Callable[[], Compiler]
+PreprocessorFactoryFunc: TypeAlias = Callable[[], PreprocessorFunc]
+ParserFactoryFunc: TypeAlias = Callable[[], Grammar]
+TransformerFactoryFunc: TypeAlias = Callable[[], TransformerCallable]
+CompilerFactoryFunc: TypeAlias = Callable[[], Compiler]
 
 PREPROCESSOR_FACTORY = '''
 
@@ -1006,7 +1008,7 @@ DROP_REGEXP      = 'regexps'
 DROP_VALUES      = {DROP_STRINGS, DROP_BACKTICKED, DROP_WSPC, DROP_REGEXP}
 
 # Representation of Python code or, rather, something that will be output as Python code
-ReprType = Union[str, unrepr]
+ReprType: TypeAlias = Union[str, unrepr]
 
 
 VALID_DIRECTIVES = {

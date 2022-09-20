@@ -18,14 +18,17 @@
 
 """
 Module ``toolkit`` contains utility functions that are needed across
-several of the the other DHParser-Modules Helper functions that are not
+several of the other DHParser-Modules Helper functions that are not
 needed in more than one module are best placed within that module and
-not in the toolkit-module. An acceptable exception from this rule are
+not in the toolkit-module. An acceptable exception to this rule are
 functions that are very generic.
 """
 
+from __future__ import annotations
+
 import ast
 import bisect
+import collections.abc
 import concurrent.futures
 import functools
 import hashlib
@@ -57,6 +60,10 @@ try:
 except ImportError:
     class Protocol:
         pass
+try:
+    from typing import TypeAlias
+except ImportError:
+    from DHParser.externallibs.typing_extensions import TypeAlias
 
 try:
     import cython
@@ -75,6 +82,7 @@ __all__ = ('typing',
            're',
            'dataclasses',
            'Protocol',
+           'TypeAlias',
            'cython_optimized',
            'identify_python',
            'identity',
@@ -747,26 +755,30 @@ def issubtype(sub_type, base_type) -> bool:
     with new Python-versions.
     """
     def origin(t) -> tuple:
+        def fix(t: Any) -> Any:
+            return {'Dict': dict, 'Tuple': tuple, 'List': list}.get(t, t)
         try:
+            if isinstance(t, str):  t = eval(t)
             ot = t.__origin__
             if ot is Union:
                 try:
-                    return tuple((a.__origin__ if a.__origin__ is not None else a)
+                    return tuple((fix(a.__origin__) if a.__origin__ is not None else fix(a))
                                  for a in t.__args__)
                 except AttributeError:
                     try:
-                        return tuple((a.__origin__ if a.__origin__ is not None else a)
+                        return tuple((fix(a.__origin__) if a.__origin__ is not None else fix(a))
                                      for a in t.__union_args__)
                     except AttributeError:
                         return t.__args__
         except AttributeError:
             if t == 'unicode':  # work-around for cython bug
                 return str,
-            return t,
-        return (ot,) if ot is not None else (t,)
+            return fix(t),
+        return (fix(ot),) if ot is not None else (fix(t),)
     true_st = origin(sub_type)
     true_bt = origin(base_type)[0]
     return any(issubclass(st, true_bt) for st in true_st)
+
 
 
 def isgenerictype(t):
@@ -1038,8 +1050,8 @@ def expand_table(compact_table: Dict) -> Dict:
 #######################################################################
 
 
-JSON_Type = Union[Dict, Sequence, str, int, float, None]
-JSON_Dict = Dict[str, JSON_Type]
+JSON_Type: TypeAlias = Union[Dict, Sequence, str, int, float, None]
+JSON_Dict: TypeAlias = Dict[str, JSON_Type]
 
 
 class JSONstr:

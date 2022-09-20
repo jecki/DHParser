@@ -43,7 +43,7 @@ except ImportError:
     _GenericAlias = GenericMeta
     _SpecialForm = Any
 try:
-   from typing_extensions import get_origin
+   from DHParser.externallibs.typing_extensions import get_origin
 except ImportError:
     def get_origin(typ):
         try:
@@ -138,6 +138,8 @@ def _new_typed_dict(meta, name, bases, ns) -> dict:
 
     total = True
     for field, field_type in own_annotations.items():
+        # if isinstance(field_type, ForwardRef):
+        #     file_type = eval(field_type.__forward_arg__)
         if get_origin(field_type) is Union \
                 and type(None) in field_type.__args__:
             optional_keys.add(field)

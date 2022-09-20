@@ -34,6 +34,8 @@ See module ``ebnf`` for a sample of the implementation of a
 compiler object.
 """
 
+from __future__ import annotations
+
 from collections import namedtuple
 import copy
 import functools
@@ -50,7 +52,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename, re
+from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias
 
 
 __all__ = ('CompilerError',
@@ -75,7 +77,7 @@ class CompilerError(Exception):
 
 
 ROOTNODE_PLACEHOLDER = RootNode()
-CompilerFunc = Callable[[Node], Any]
+CompilerFunc: TypeAlias = Callable[[Node], Any]
 
 
 class Compiler:
@@ -365,8 +367,8 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 # processing pipeline support #########################################
 
 
-CompilerCallable = Union[Compiler, Callable[[RootNode], Any], functools.partial]
-CompilerFactory = Union[Callable[[], CompilerCallable], functools.partial]
+CompilerCallable: TypeAlias = Union[Compiler, Callable[[RootNode], Any], functools.partial]
+CompilerFactory: TypeAlias = Union[Callable[[], CompilerCallable], functools.partial]
 
 
 def filter_stacktrace(stacktrace: List[str]) -> List[str]:
@@ -426,7 +428,7 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
     return result
 
 
-Junction = Tuple[str, CompilerFactory, str]  # source stage name, source->target, target stage name
+Junction: TypeAlias = Tuple[str, CompilerFactory, str]  # source stage name, source->target, target stage name
 
 
 def run_pipeline(junctions: Set[Junction],

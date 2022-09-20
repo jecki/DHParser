@@ -32,6 +32,8 @@ for an example.
 
 """
 
+from __future__ import annotations
+
 from bisect import bisect_left
 from collections import defaultdict, namedtuple
 import copy
@@ -63,7 +65,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
-    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col
+    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
 
 
 __all__ = ('ParserError',
@@ -201,10 +203,10 @@ class ParserError(Exception):
         return pe
 
 
-PatternMatchType = Union[RxPatternType, str, Callable, 'Parser']
-ErrorMessagesType = List[Tuple[PatternMatchType, str]]
-ResumeList = Sequence[PatternMatchType]  # list of strings or regular expressions
-ReentryPointAlgorithm = Callable[[StringView, int, int], Tuple[int, int]]
+PatternMatchType: TypeAlias = Union[RxPatternType, str, Callable, 'Parser']
+ErrorMessagesType: TypeAlias = List[Tuple[PatternMatchType, str]]
+ResumeList: TypeAlias = Sequence[PatternMatchType]  # list of strings or regular expressions
+ReentryPointAlgorithm: TypeAlias = Callable[[StringView, int, int], Tuple[int, int]]
 # (text, start point, end point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
 
@@ -373,14 +375,14 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
-ParsingResult = Tuple[Optional[Node], int]
-MemoizationDict = Dict[int, ParsingResult]
+ParsingResult: TypeAlias = Tuple[Optional[Node], int]
+MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
-ApplyFunc = Callable[[List['Parser']], Optional[bool]]
+ApplyFunc: TypeAlias = Callable[[List['Parser']], Optional[bool]]
 # The return value of `True` stops any further application
-FlagFunc = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
-ParseFunc = Callable[['Parser', int], ParsingResult]
-ParserTrail = List['Parser']
+FlagFunc: TypeAlias = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
+ParseFunc: TypeAlias = Callable[['Parser', int], ParsingResult]
+ParserTrail: TypeAlias = List['Parser']
 
 
 class Parser:
@@ -3867,7 +3869,7 @@ class Capture(ContextSensitive):
         return errors
 
 
-MatchVariableFunc = Callable[[Union[StringView, str], List[str]], Optional[str]]
+MatchVariableFunc: TypeAlias = Callable[[Union[StringView, str], List[str]], Optional[str]]
 # (text, stack) -> value, where:
 # text is the following text for be parsed
 # stack is a stack of stored variables (for a particular symbol)

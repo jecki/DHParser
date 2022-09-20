@@ -25,6 +25,7 @@ Usually, however, unexpected failure to match a certain string is the
 main cause of trouble when constructing a context free Grammar.
 """
 
+from __future__ import annotations
 
 import asyncio
 import collections
@@ -55,10 +56,10 @@ from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
-from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG, EMPTY_PTYPE
+from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, all_descendants, trace_history
 from DHParser.transform import traverse, remove_children
-from DHParser.toolkit import load_if_file, re, re_find, concurrent_ident, instantiate_executor
+from DHParser.toolkit import load_if_file, re, re_find, instantiate_executor, TypeAlias
 
 
 __all__ = ('unit_from_config',
@@ -793,7 +794,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
 
 
 RX_DEFINITION_OR_SECTION = re.compile(r'(?:^|\n)[ \t]*(\w+(?=[ \t]*=)|#:.*(?=\n|$|#))')
-SymbolsDictType = Dict[str, List[str]]
+SymbolsDictType: TypeAlias = Dict[str, List[str]]
 
 ALL_SYMBOLS = 'ALL_SYMBOLS'
 
