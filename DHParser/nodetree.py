@@ -1227,6 +1227,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         source code position that the pos-attribute represents). If
         the location lies outside the node's string content, `None` is
         returned.
+
+        See also :py:class:`ContentMapping` for a more
+        general approach to locating string positions within the tree.
         """
         end = 0
         for nd in self.select_if(lambda nd: not nd._children, include_root=True):
@@ -2266,21 +2269,49 @@ ContentMapping: TypeAlias = Tuple[List[int], List[Path]]  # A mapping of charact
 
 class ContentMapping:
     """
-    ContentMapping represents a path mapping of the string-content of all or a
+    ContentMapping represents a path-mapping of the string-content of all or a
     specific selection leave-nodes of a tree. A path mapping is an ordered
     mapping of the first text position of every (selected) leaf-node to the
     path of this node.
 
-    Path-mappings allow the search for substrings in the string content of
-    a document and then locating them in the structured tree.
+    Path-mappings allow to search the flat document with regular expressions or
+    simple text search and then changing the tree at the appropriate places,
+    for example by adding markup (i.e. nodes) in these places.
 
-    :param node: the root of the tree for which a path mapping shall be
-        generated.
-    :param select: only leaf-paths for which this is true will be considered.
-        Note that this requires the select-criterion to actually yield leaf-paths.
-        Otherwise, the content-mapping will be empty.
-    :param ignore: subtrees or leaves for which ignore is true will be skipped
-        as well.
+    The ConntentMapping class provides methods for adding markup-nodes.
+    In cases where the new markup-nodes cut across the existing tree-hierarchy,
+    the markup-method takes care of splitting up either the newly created or
+    some of the existing nodes to fit in the markup.
+
+    Location-related instance variables:
+
+    :ivar orogin: The orogin of the tree for which a path mapping shall be
+        generated. This can be a branch of another tree and therefore does not
+        need to be a RootNode-object.
+    :ivar select_func: Only leaf-paths for which this is true will be considered when
+        generating the content-mapping. Note that this requires the
+        select-criterion to actually yield leaf-paths. Otherwise, the
+        content-mapping will be empty.
+    :ivar ignore_func: Sub-trees or leaves for which ignore is true will be skipped
+        as well. Together, the select- and ignore-functions define which parts of
+        the trees are included in the mapping.
+    :ivar content: The string content of the selected parts of the tree.
+
+    Markup-related instance variables
+
+    :ivar greedy: If True, the algorithm for adding markup minimizes the number
+        of required cuts by switching child and parent nodes if the markup fills
+        up a node completely as well as including empty nodes in the markup.
+        In any the case string content of the added markup remains the same, but
+        it might cover more tags than strictly necessary.
+    :ivar chain_attr: An attribute that will receive one and the same identifier as
+        value for all nodes belonging to the chain of on split-up node.
+
+    Internal instance variables:
+
+    :ivar path_list: A list of paths covering the selected leaves of the tree from
+        left to right.
+    :ivar pos_list: The list of positions of the paths in ``path_list``
     """
 
     def __init__(self, origin: Node,
@@ -2290,30 +2321,45 @@ class ContentMapping:
                  chain_attr: str = ''):
         self.pos_list: List[int] = []
         self.path_list: List[Path] = []
-        self.origin: Node = origin    # named origin to avoid unspoken assumption that this must be a RootNode-object!
+        self.origin: Node = origin
         slf, igf = _make_leaf_selectors(select, ignore)
         self.select_func: PathMatchFunction = slf
         self.ignore_func: PathMatchFunction = igf
-        self.ignore: PathSelector = ignore
+        self.content: str = ''
         self.greedy: bool = greedy
         self.chain_attr: str = chain_attr
         self._generate_mapping()
 
     def _generate_mapping(self):
         pos = 0
+        content_list = []
         if self.ignore_func([self.origin]):
             self.pos_list = []
             self.path_list = []
             return
         for trl in self.origin.select_path_if(
-                self.match_func, include_root=True, skip_func=self.ignore_func):
+                self.select_func, include_root=True, skip_func=self.ignore_func):
             if trl[-1]._children or self.ignore_func(trl):  continue  # ignore non-leaf paths
             self.pos_list.append(pos)
             self.path_list.append(trl)
+            content_list.append(trl[-1].content)
             pos += trl[-1].strlen()
+        self.content = ''.join(content_list)
         assert len(self.pos_list) == len(self.path_list)
 
+    def __str__(self):
+        """Pretty-prints the content mapping. The format is:
+        Test-Position -> List of node-names, the last node as S-expression without
+        outer brackets
+        Example::
 
+        >>> tree = parse_sxpr('(a (b "123") (c (d "45") (e "67")))')
+        >>> cm = generate_content_mapping(tree)
+        >>> print(pp_content_mapping(cm))
+        0 -> a, b "123"
+        3 -> a, c, d "45"
+        5 -> a, c, e "67"
+        """
 
 
 def pp_content_mapping(cm: ContentMapping) -> str:
