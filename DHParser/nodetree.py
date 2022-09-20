@@ -40,7 +40,7 @@ import json
 import random
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
-    Tuple, Container, Optional, Dict, Any, TypeAlias
+    Tuple, Container, Optional, Dict, Any
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -51,6 +51,11 @@ try:
     import cython
 except ImportError:
     import DHParser.externallibs.shadow_cython as cython
+
+try:
+    from typing import TypeAlias
+except ImportError:
+    from DHParser.externallibs.typing_extensions import TypeAlias
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
