@@ -138,9 +138,26 @@ def _new_typed_dict(meta, name, bases, ns) -> dict:
 
     total = True
     for field, field_type in own_annotations.items():
-        # if isinstance(field_type, ForwardRef):
-        #     file_type = eval(field_type.__forward_arg__)
-        if get_origin(field_type) is Union \
+        if isinstance(field_type, ForwardRef):
+            field_type_str = field_type.__forward_arg__
+            if field_type_str[:5] == 'Union':
+                i = 5
+                while i >= 0:
+                    i = field_type_str.find('None', i + 1)
+                    if i >= 0:
+                        rest = field_type_str[i + 5:]
+                        if rest.count('[') >= rest.count(']'):
+                            optional_keys.add(field)
+                            total = False
+                            i = -1
+                    else:
+                        required_keys.add(field)
+            elif field_type_str[:8] == 'Optional':
+                optional_keys.add(field)
+                total = False
+            else:
+                required_keys.add(field)
+        elif get_origin(field_type) is Union \
                 and type(None) in field_type.__args__:
             optional_keys.add(field)
             total = False
