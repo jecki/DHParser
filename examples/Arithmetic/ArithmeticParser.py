@@ -96,7 +96,7 @@ class ArithmeticGrammar(Grammar):
     root__ = expression
     
 
-_raw_grammar = ThreadLocalSingletonFactory(ArithmeticGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(ArithmeticGrammar)
 
 def get_grammar() -> ArithmeticGrammar:
     grammar = _raw_grammar()

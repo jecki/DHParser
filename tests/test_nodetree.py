@@ -545,16 +545,16 @@ class TestNode:
         t2 = copy.deepcopy(tree_copy)
         res2 = compiler(t2)
         diff = ''.join([a for a, b in zip(res1, res2) if a != b])
-        assert diff.isnumeric()  # differences should only be ID-Numbers
+        assert not diff or diff.isnumeric()  # differences should at most be ID-Numbers
         tree_copy = copy.deepcopy(tree)
         transform(tree_copy)
         res3 = compiler(tree_copy)
         diff = ''.join([a for a, b in zip(res2, res3) if a != b])
-        assert diff.isnumeric()  # differences should only be ID-Numbers
+        assert not diff or diff.isnumeric()  # differences should only be ID-Numbers
         transform(tree)
         res4 = compiler(tree)
         diff = ''.join([a for a, b in zip(res3, res4) if a != b])
-        assert diff.isnumeric()  # differences should only be ID-Numbers
+        assert not diff or diff.isnumeric()  # differences should only be ID-Numbers
 
     def test_len_and_pos(self):
         """Test len-property of Node."""

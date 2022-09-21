@@ -130,7 +130,7 @@ class jsonGrammar(Grammar):
     root__ = json
     
 
-_raw_grammar = ThreadLocalSingletonFactory(jsonGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(jsonGrammar)
 
 def get_grammar() -> jsonGrammar:
     grammar = _raw_grammar()

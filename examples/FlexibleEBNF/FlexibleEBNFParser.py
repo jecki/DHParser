@@ -167,7 +167,7 @@ class FlexibleEBNFGrammar(Grammar):
     root__ = syntax
     
 
-_raw_grammar = ThreadLocalSingletonFactory(FlexibleEBNFGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(FlexibleEBNFGrammar)
 
 def get_grammar() -> FlexibleEBNFGrammar:
     grammar = _raw_grammar()

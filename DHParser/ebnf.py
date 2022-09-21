@@ -945,7 +945,7 @@ def preprocess_{NAME}(source):
 
 GRAMMAR_FACTORY = '''
 
-_raw_grammar = ThreadLocalSingletonFactory({NAME}Grammar, ident={ID})
+_raw_grammar = ThreadLocalSingletonFactory({NAME}Grammar)
 
 def get_grammar() -> {NAME}Grammar:
     grammar = _raw_grammar()
@@ -980,7 +980,7 @@ def {NAME}Transformer() -> TransformerCallable:
     # return partial(traverse, transformation_table={NAME}_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory({NAME}Transformer, ident={ID})
+get_transformer = ThreadLocalSingletonFactory({NAME}Transformer)
 
 
 def transform_{NAME}(cst):
@@ -989,7 +989,7 @@ def transform_{NAME}(cst):
 
 
 COMPILER_FACTORY = '''
-get_compiler = ThreadLocalSingletonFactory({NAME}Compiler, ident={ID})
+get_compiler = ThreadLocalSingletonFactory({NAME}Compiler)
 
 
 def compile_{NAME}(ast):
@@ -1280,7 +1280,7 @@ class EBNFCompiler(Compiler):
                     '::': 'Pop', ':?': 'Pop', ':': 'Retrieve'}
 
     def __init__(self, grammar_name="DSL", grammar_source=""):
-        self.grammar_id = 0  # type: int
+        self.grammar_id: str = ''
         super(EBNFCompiler, self).__init__()  # calls the reset()-method
         self.set_grammar_name(grammar_name, grammar_source)
 
@@ -1307,7 +1307,6 @@ class EBNFCompiler(Compiler):
         self.defined_directives = dict()       # type: Dict[str, List[Node]]
         self.consumed_custom_errors = set()    # type: Set[str]
         self.consumed_skip_rules = set()       # type: Set[str]
-        self.grammar_id += 1
 
 
     @property
@@ -1328,6 +1327,7 @@ class EBNFCompiler(Compiler):
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
         self.grammar_name = grammar_name or "NameUnknown"
         self.grammar_source = load_if_file(grammar_source)
+        if self.grammar_source:  self.grammar_id = md5(self.grammar_source)
         return self
 
     # methods for generating skeleton code for preprocessor, transformer, and compiler

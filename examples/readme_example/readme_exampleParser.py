@@ -86,7 +86,7 @@ class readme_exampleGrammar(Grammar):
     root__ = key_store
     
 
-_raw_grammar = ThreadLocalSingletonFactory(readme_exampleGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(readme_exampleGrammar)
 
 def get_grammar() -> readme_exampleGrammar:
     grammar = _raw_grammar()

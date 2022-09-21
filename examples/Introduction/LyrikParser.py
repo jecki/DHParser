@@ -133,7 +133,7 @@ class LyrikGrammar(Grammar):
     root__ = Dokument
     
 
-_raw_grammar = ThreadLocalSingletonFactory(LyrikGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(LyrikGrammar)
 
 def get_grammar() -> LyrikGrammar:
     grammar = _raw_grammar()

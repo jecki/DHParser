@@ -263,7 +263,7 @@ class LaTeXGrammar(Grammar):
     root__ = TreeReduction(latexdoc, CombinedParser.MERGE_TREETOPS)
     
 
-_raw_grammar = ThreadLocalSingletonFactory(LaTeXGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(LaTeXGrammar)
 
 def get_grammar() -> LaTeXGrammar:
     grammar = _raw_grammar()

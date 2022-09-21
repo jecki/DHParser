@@ -139,7 +139,7 @@ def run_tests(doctests=True, unittests=True):
     os.chdir(os.path.join(scriptdir, '..'))
 
     done, not_done = [], []
-    with instantiate_executor(False and get_config_value('test_parallelization'),
+    with instantiate_executor(get_config_value('test_parallelization'),
                               concurrent.futures.ProcessPoolExecutor) as pool:
         results = []
 

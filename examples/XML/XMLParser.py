@@ -151,7 +151,7 @@ class XMLGrammar(Grammar):
     root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
     
 
-_raw_grammar = ThreadLocalSingletonFactory(XMLGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(XMLGrammar)
 
 def get_grammar() -> XMLGrammar:
     grammar = _raw_grammar()

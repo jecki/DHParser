@@ -188,7 +188,7 @@ class XML_W3C_SPECGrammar(Grammar):
     root__ = document
     
 
-_raw_grammar = ThreadLocalSingletonFactory(XML_W3C_SPECGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(XML_W3C_SPECGrammar)
 
 def get_grammar() -> XML_W3C_SPECGrammar:
     grammar = _raw_grammar()

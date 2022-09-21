@@ -143,7 +143,7 @@ class FixedEBNFGrammar(Grammar):
     root__ = syntax
     
 
-_raw_grammar = ThreadLocalSingletonFactory(FixedEBNFGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(FixedEBNFGrammar)
 
 def get_grammar() -> FixedEBNFGrammar:
     grammar = _raw_grammar()

@@ -119,7 +119,7 @@ class miniXMLGrammar(Grammar):
     root__ = document
     
 
-_raw_grammar = ThreadLocalSingletonFactory(miniXMLGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(miniXMLGrammar)
 
 def get_grammar() -> miniXMLGrammar:
     grammar = _raw_grammar()

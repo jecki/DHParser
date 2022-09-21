@@ -184,7 +184,7 @@ class XML_DTDGrammar(Grammar):
     root__ = document
     
 
-_raw_grammar = ThreadLocalSingletonFactory(XML_DTDGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(XML_DTDGrammar)
 
 def get_grammar() -> XML_DTDGrammar:
     grammar = _raw_grammar()
