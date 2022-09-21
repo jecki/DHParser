@@ -32,10 +32,9 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
-    prev_path, serialize_path, generate_content_mapping, map_pos_to_path, \
+    prev_path, serialize_path, ContentMapping, \
     select_path_if, select_path, create_path_match_function, pick_path, \
-    LEAF_PATH, TOKEN_PTYPE, insert_node, markup, content_of, strlen_of, \
-    pp_content_mapping, map_index
+    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -988,23 +987,23 @@ class TestPathNavigation:
 
     def test_content_mapping(self):
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
-        cm = generate_content_mapping(tree)
+        cm = ContentMapping(tree)
         for i in range(len(tree.content)):
-            ctx, rel_pos = map_pos_to_path(cm, i)
-        i = tree.content.find("delta")
-        ctx, rel_pos = map_pos_to_path(cm, i)
+            ctx, rel_pos = cm.map_pos_to_path(i)
+        i = cm.content.find("delta")
+        ctx, rel_pos = cm.map_pos_to_path(i)
         assert ctx[-1].name == 'F' and rel_pos == 0
-        i = tree.content.find("lta")
-        ctx, rel_pos = map_pos_to_path(cm, i)
+        i = cm.content.find("lta")
+        ctx, rel_pos = cm.map_pos_to_path(i)
         assert ctx[-1].name == 'F' and rel_pos == 2
-        i = tree.content.find("a")
-        ctx, rel_pos = map_pos_to_path(cm, i)
+        i = cm.content.find("a")
+        ctx, rel_pos = cm.map_pos_to_path(i)
         assert ctx[-1].name == 'B' and rel_pos == 0
-        i = tree.content.rfind("a")
-        ctx, rel_pos = map_pos_to_path(cm, i)
+        i = cm.content.rfind("a")
+        ctx, rel_pos = cm.map_pos_to_path(i)
         assert ctx[-1].name == 'F' and rel_pos == 4
         i = tree.content.find("mm")
-        ctx, rel_pos = map_pos_to_path(cm, i)
+        ctx, rel_pos = cm.map_pos_to_path(i)
         assert ctx[-1].name == 'E' and rel_pos == 2
 
         select, ignore = {'A', 'B', 'D', 'F'}, {'C'}
@@ -1016,22 +1015,21 @@ class TestPathNavigation:
         assert content_of(tree, select, ignore | {'A'}) == ""
         assert strlen_of(tree, select, ignore | {'A'}) == 0
 
-        mapping = generate_content_mapping(tree, select, ignore)
-        insert_node(mapping, content.find('delta'),
-                    Node('G', 'omicron'))
+        mapping = ContentMapping(tree, select, ignore)
+        mapping.insert_node(content.find('delta'), Node('G', 'omicron'))
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(A (B "alpha") (C (D "beta") (E "gamma")) (G "omicron") (F "delta"))'
 
     def test_map_index(self):
         tree = parse_xml('<doc>alpha<a><lb/></a><pb/> beta</doc>')
-        cm = generate_content_mapping(tree)
-        assert map_index(cm, 5, left_biased=False) == 3
-        assert map_index(cm, 5, left_biased=True) == 0
-        path, i = map_pos_to_path(cm, 5, left_biased=False)
-        assert path == cm[1][3]
+        cm = ContentMapping(tree)
+        assert cm.map_index(5, left_biased=False) == 3
+        assert cm.map_index(5, left_biased=True) == 0
+        path, i = cm.map_pos_to_path(5, left_biased=False)
+        assert path == cm.path_list[3]
         assert i == 0
-        path, i = map_pos_to_path(cm, 5, left_biased=True)
-        assert path == cm[1][0]
+        path, i = cm.map_pos_to_path(5, left_biased=True)
+        assert path == cm.path_list[0]
         assert i == 5
 
 
@@ -1135,8 +1133,8 @@ class TestMarkupInsertion:
         assert i >= 0
         milestone = Node("ref", "").with_attr(type="subj", target="Charlottenburg_S00231")
         empty_tags.add("ref")
-        tm = generate_content_mapping(tree)
-        insert_node(tm, i, milestone)
+        tm = ContentMapping(tree)
+        tm.insert_node(i, milestone)
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
         assert xml == ('<document>In <ref type="subj" '
@@ -1149,8 +1147,8 @@ class TestMarkupInsertion:
         m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
         milestone = Node("ref", "").with_attr(type="subj", target="silva_glandifera_S01229")
         empty_tags.add("ref")
-        tm = generate_content_mapping(tree)
-        insert_node(tm, m.start(), milestone)
+        tm = ContentMapping(tree)
+        tm.insert_node(m.start(), milestone)
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
         assert xml == ('<document><app n="g"><lem>silvae</lem><ref type="subj" '
@@ -1163,8 +1161,8 @@ class TestMarkupInsertion:
         i = tree.content.find("Charlottenburg")
         assert i >= 0
         k = i + len("Charlottenburg")
-        tm = generate_content_mapping(tree)
-        markup(tm, i, k, "ref", { 'type':"subj", 'target':"Charlottenburg_S00231"})
+        tm = ContentMapping(tree)
+        tm.markup(i, k, "ref", { 'type':"subj", 'target':"Charlottenburg_S00231"})
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
         assert xml == ('<document>In <ref type="subj" '
@@ -1175,8 +1173,8 @@ class TestMarkupInsertion:
         empty_tags = set()
         tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
-        tm = generate_content_mapping(tree)
-        markup(tm, m.start(), m.end(), "ref", {'type': "subj", 'target': "silva_glandifera_S01229"})
+        tm = ContentMapping(tree)
+        tm.markup(m.start(), m.end(), "ref", {'type': "subj", 'target': "silva_glandifera_S01229"})
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
         assert xml == ('<document><app n="g"><lem>silvae</lem><ref type="subj" '
@@ -1187,15 +1185,15 @@ class TestMarkupInsertion:
         empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = next(re.finditer(r'Anfang war das Wort', tree.content))
-        cm = generate_content_mapping(tree)
-        markup(cm, m.start(), m.end(), "a")
+        cm = ContentMapping(tree)
+        cm.markup(m.start(), m.end(), "a")
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             '<doc>Am <outer><a><inner>Anfang</inner> war das Wort</a></outer>.</doc>'
         empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = next(re.finditer(r'Am Anfang war', tree.content))
-        cm = generate_content_mapping(tree)
-        markup(cm, m.start(), m.end(), "a")
+        cm = ContentMapping(tree)
+        cm.markup(m.start(), m.end(), "a")
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             '<doc><a>Am </a><outer><a><inner>Anfang</inner> war</a> das Wort</outer>.</doc>'
 
@@ -1203,8 +1201,8 @@ class TestMarkupInsertion:
         empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = next(re.finditer(r'Am Anfang war', tree.content))
-        cm = generate_content_mapping(tree)
-        markup(cm, m.start(), m.end(), "a", chain_attr='_chain')
+        cm = ContentMapping(tree, chain_attr_name='_chain')
+        cm.markup(m.start(), m.end(), "a")
         I = tree.pick('a').attr['_chain']
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             f'<doc><a _chain="{I}">Am </a><outer><a _chain="{I}"><inner>Anfang</inner> war</a>'\
@@ -1214,8 +1212,8 @@ class TestMarkupInsertion:
         tree = parse_xml('<text><hi rend="i">X</hi>34, 53 ... Q. Aelius Tubero tribunus plebis</text>')
         i = tree.content.find('Q.')
         k = tree.content.find('Tubero') + len('Tubero')
-        cm = generate_content_mapping(tree)
-        markup(cm, i, k, "a")
+        cm = ContentMapping(tree)
+        cm.markup(i, k, "a")
         assert tree.as_xml(inline_tags={'text'}, string_tags={TOKEN_PTYPE}) == \
             '<text><hi rend="i">X</hi>34, 53 ... <a>Q. Aelius Tubero</a> tribunus plebis</text>'
 
@@ -1224,8 +1222,8 @@ class TestMarkupInsertion:
             '<pb n="225"/>In Verr. acc. 1. 3, 120. </note> die meist nicht erhebli<lb/>chen Zahlen</doc>')
         m = re.search(r'Cicero', tree.content)
         a, b = m.start(), m.end()
-        cm = generate_content_mapping(tree)
-        markup(cm, a, b, 'ref', cleanup=True)
+        cm = ContentMapping(tree, auto_cleanup=True)
+        cm.markup(a, b, 'ref')
         assert flatten_sxpr(tree.as_sxpr()) == '(doc (:Text "wenn wir bei ") '\
             '(hi `(rend "italic") (ref "Cicero")) (note `(type "footnote") `(n "29)") '\
             '(pb `(n "225")) (:Text "In Verr. acc. 1. 3, 120. ")) '\
@@ -1237,8 +1235,8 @@ class TestMarkupInsertion:
             '<note type="comment" n="53"><pb n="219"/>Offenbar</note> nach:</doc>')
         m = re.search(r'Mommsen', tree.content)
         a, b = m.start(), m.end()
-        cm = generate_content_mapping(tree)
-        markup(cm, a, b, 'ref', cleanup=True)
+        cm = ContentMapping(tree, auto_cleanup=True)
+        cm.markup(a, b, 'ref')
         assert flatten_sxpr(tree.as_sxpr()) == '(doc (:Text "Zugleich traf sie für ") '\
             '(pb `(n "219")) (:Text "den ager compascuus folgende Bestimmung '\
             '(Z. 14, 15 nach ") (ref (hi `(rend "italic") "Momm") (lb)) (hi `(rend "italic") '\
@@ -1251,8 +1249,8 @@ class TestMarkupInsertion:
             '(Nouvelle revue historique V, 1881, p. 145ff.). </item>')
         m = re.search('Beaudouin. Études', tree.content)
         a, b = m.start(), m.end()
-        cm = generate_content_mapping(tree)
-        markup(cm, a, b, 'ref', cleanup=True)
+        cm = ContentMapping(tree, auto_cleanup=True)
+        cm.markup(a, b, 'ref')
         assert tree.as_xml(inline_tags={'item'}) == '<item><pb n="283" ed="A"></pb>'\
             '<ref><hi rend="italic">Beaudouin</hi>. Études</ref><note type="comment" n="10">'\
             'Im Titel heißt es: Étude. </note> sur le jus Italicum (Nouvelle revue historique '\
