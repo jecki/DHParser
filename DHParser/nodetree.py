@@ -118,7 +118,6 @@ __all__ = ('WHITESPACE_PTYPE',
            'serialize_path',
            'path_sanity_check',
            'ContentMapping',
-           'reconstruct_content_mapping',
            'insert_node',
            'split',
            'markup',
@@ -2242,17 +2241,22 @@ def path_sanity_check(path: Path) -> bool:
     return all(path[i] in path[i - 1]._children for i in range(1, len(path)))
 
 
-def insert_node(path: Path, rel_pos: int, node: Node) -> Node:
+# splitting and insertion of nodes ####################################
+
+
+def insert_node(leaf_path: Path, rel_pos: int, node: Node,
+                divisable_leaves: Container = LEAF_PTYPES) -> Node:
     """Inserts a node at a specific position into the last or
-    eventually second but last node in the path. Returns the
+    eventually second but last node in the path. The path must be
+    a "leaf"-path, i.e. a path that ends in a leaf. Returns the
     parent of the newly inserted node."""
-    assert path
-    leaf = path[-1]
+    assert leaf_path
+    leaf = leaf_path[-1]
     leaf_len = leaf.strlen()
     assert not leaf.children
     assert rel_pos <= leaf_len
-    if len(path) >= 2:
-        parent = path[-2]
+    if len(leaf_path) >= 2:
+        parent = leaf_path[-2]
         i = parent.index(leaf)
         if rel_pos == 0:
             parent.insert(i, node)
@@ -2260,7 +2264,7 @@ def insert_node(path: Path, rel_pos: int, node: Node) -> Node:
         if rel_pos == leaf_len:
             parent.insert(i + 1, node)
             return parent
-        if leaf.name == TOKEN_PTYPE:
+        if leaf.name in divisable_leaves:
             content = leaf.content
             parent.result = parent.result[:i] + \
                             (Node(leaf.name, content[:rel_pos]), node,
@@ -2278,7 +2282,110 @@ def insert_node(path: Path, rel_pos: int, node: Node) -> Node:
     return leaf
 
 
-# ContentMapping: A "string-view" and on node-trees ###################
+
+EMPTY_DICT_SENTINEL = dict()
+
+
+@cython.locals(i=cython.int, k=cython.int)
+def split(node: Node, parent: Node, i: int, left_biased: bool = True,
+          chain_attr: dict = EMPTY_DICT_SENTINEL) -> int:
+    """Splits a node at the given index (in case of a branch-node) or
+    string-position (in case of a leaf-node). Returns the index of the
+    right part within the parent node after the split. (This means
+    that with ``node.insert(index, nd)`` nd will be inserted (exactly at
+    the split location.)
+
+    Non-anonymous node that have been split will be marked by updateing
+    their attribute-dictionary with the chain_attr-dictionary if given.
+
+    Examples::
+
+        >>> test_tree = parse_sxpr('(X (A "Hello, ") (B "Peter") (C " Smith"))').with_pos(0)
+        >>> X = copy.deepcopy(test_tree)
+
+        # test edge cases first
+        >>> split(X['B'], X, 0)
+        1
+        >>> print(X.as_sxpr())
+        (X (A "Hello, ") (B "Peter") (C " Smith"))
+        >>> split(X['B'], X, X['B'].strlen())
+        2
+        >>> print(X.as_sxpr())
+        (X (A "Hello, ") (B "Peter") (C " Smith"))
+
+        # standard case
+        >>> split(X['B'], X, 2)
+        2
+        >>> print(X.as_sxpr())
+        (X (A "Hello, ") (B "Pe") (B "ter") (C " Smith"))
+        >>> print(X.pick('B', reverse=True).pos)
+        9
+
+        # use slit() as praparation for adding markup
+        >>> X = copy.deepcopy(test_tree)
+        >>> a = split(X['A'], X, 6)
+        >>> a
+        1
+        >>> b = split(X['C'], X, 1)
+        >>> b
+        4
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (A " ") (B "Peter") (C " ") (C "Smith"))
+        >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
+        >>> X.result = X[:a] + (markup,) + X[b:]
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (em (A " ") (B "Peter") (C " ")) (C "Smith"))
+
+        # a more complex case: add markup to a nested tree
+        >>> X = parse_sxpr('(X (A "Hello, ") (B "Peter") (bold (C " Smith")))').with_pos(0)
+        >>> a = split(X['A'], X, 6)
+        >>> b0 = split(X['bold']['C'], X['bold'], 1)
+        >>> b0
+        1
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (A " ") (B "Peter") (bold (C " ") (C "Smith")))
+        >>> b = split(X['bold'], X, b0)
+        >>> b
+        4
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (A " ") (B "Peter") (bold (C " ")) (bold (C "Smith")))
+        >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
+        >>> X.result = X[:a] + (markup,) + X[b:]
+        >>> print(X.as_sxpr())
+        (X (A "Hello,") (em (A " ") (B "Peter") (bold (C " "))) (bold (C "Smith")))
+
+        # use left_bias hint for potentially ambiguous cases:
+        >>> X = parse_sxpr('(X (A ""))')
+        >>> split(X['A'], X, X['A'].strlen())
+        0
+        >>> split(X['A'], X, X['A'].strlen(), left_biased=False)
+        1
+    """
+    assert i >= 0
+    k = parent.index(node) + 1
+    if left_biased:
+        if i == 0:  return k - 1
+        if i == len(node._result):  return k
+    else:
+        if i == len(node._result):  return k
+        if i == 0:  return k - 1
+    right = Node(node.name, node._result[i:])
+    if node.has_attr():  right.with_attr(node.attr)
+    if  right._children:  right._pos = right._result[0]._pos
+    elif node._pos >= 0:  right._pos = node._pos + i
+    node.result = node._result[:i]
+    if chain_attr and chain_attr is not EMPTY_DICT_SENTINEL and not node.anonymous:
+        node.attr.update(chain_attr)
+    parent.result = parent._result[:k] + (right,) + parent.result[k:]
+    return k
+
+
+#######################################################################
+#
+# ContentMapping: A "string-view" on node-trees
+#
+#######################################################################
+
 
 def _make_leaf_selectors(select: PathSelector,
                          ignore: PathSelector) -> Tuple[Callable, Callable]:
@@ -2347,13 +2454,13 @@ class ContentMapping:
                  select: PathSelector = LEAF_PATH,
                  ignore: PathSelector = NO_PATH,
                  greedy: bool = True,
-                 chain_attr: str = ''):
+                 chain_attr_name: str = ''):
         self.origin: Node = origin
         slf, igf = _make_leaf_selectors(select, ignore)
         self.select_func: PathMatchFunction = slf
         self.ignore_func: PathMatchFunction = igf
         self.greedy: bool = greedy
-        self.chain_attr: str = chain_attr
+        self.chain_attr_name: str = chain_attr_name
         content, pos_list, path_list = self._generate_mapping(origin)
         self.content: str = content
         self.pos_list: List[int] = pos_list
@@ -2505,7 +2612,7 @@ class ContentMapping:
         >>> b = cm.map_index(16, left_biased=True)
         >>> a, b
         (3, 5)
-        >>> reconstruct_content_mapping(cm, 3, 5)
+        >>> cm.reconstruct_content_mapping(3, 5)
         >>> print(cm)
         0 -> a, b, c "123"
         3 -> a, b, x "xyz"
@@ -2821,97 +2928,97 @@ def gen_sloppy_chain_ID() -> str:
            chr(random.randrange(ord('A'), ord('Z') + 1))
 
 
-@cython.locals(i=cython.int, k=cython.int)
-def split(node: Node, parent: Node, i: int, left_biased: bool = True,
-          chain_attr: str='') -> int:
-    """Splits a node at the given index (in case of a branch-node) or
-    string-position (in case of a leaf-node). Returns the index the
-    right part within the parent node after the split. (This means
-    that with Node.Insert(index, nd) nd will be inserted (exactly at
-    the split location.)
-
-    Examples::
-
-        >>> test_tree = parse_sxpr('(X (A "Hello, ") (B "Peter") (C " Smith"))').with_pos(0)
-        >>> X = copy.deepcopy(test_tree)
-
-        # test edge cases first
-        >>> split(X['B'], X, 0)
-        1
-        >>> print(X.as_sxpr())
-        (X (A "Hello, ") (B "Peter") (C " Smith"))
-        >>> split(X['B'], X, X['B'].strlen())
-        2
-        >>> print(X.as_sxpr())
-        (X (A "Hello, ") (B "Peter") (C " Smith"))
-
-        # standard case
-        >>> split(X['B'], X, 2)
-        2
-        >>> print(X.as_sxpr())
-        (X (A "Hello, ") (B "Pe") (B "ter") (C " Smith"))
-        >>> print(X.pick('B', reverse=True).pos)
-        9
-
-        # use slit() as praparation for adding markup
-        >>> X = copy.deepcopy(test_tree)
-        >>> a = split(X['A'], X, 6)
-        >>> a
-        1
-        >>> b = split(X['C'], X, 1)
-        >>> b
-        4
-        >>> print(X.as_sxpr())
-        (X (A "Hello,") (A " ") (B "Peter") (C " ") (C "Smith"))
-        >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
-        >>> X.result = X[:a] + (markup,) + X[b:]
-        >>> print(X.as_sxpr())
-        (X (A "Hello,") (em (A " ") (B "Peter") (C " ")) (C "Smith"))
-
-        # a more complex case: add markup to a nested tree
-        >>> X = parse_sxpr('(X (A "Hello, ") (B "Peter") (bold (C " Smith")))').with_pos(0)
-        >>> a = split(X['A'], X, 6)
-        >>> b0 = split(X['bold']['C'], X['bold'], 1)
-        >>> b0
-        1
-        >>> print(X.as_sxpr())
-        (X (A "Hello,") (A " ") (B "Peter") (bold (C " ") (C "Smith")))
-        >>> b = split(X['bold'], X, b0)
-        >>> b
-        4
-        >>> print(X.as_sxpr())
-        (X (A "Hello,") (A " ") (B "Peter") (bold (C " ")) (bold (C "Smith")))
-        >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
-        >>> X.result = X[:a] + (markup,) + X[b:]
-        >>> print(X.as_sxpr())
-        (X (A "Hello,") (em (A " ") (B "Peter") (bold (C " "))) (bold (C "Smith")))
-
-        # use left_bias hint for potentially ambiguous cases:
-        >>> X = parse_sxpr('(X (A ""))')
-        >>> split(X['A'], X, X['A'].strlen())
-        0
-        >>> split(X['A'], X, X['A'].strlen(), left_biased=False)
-        1
-    """
-    assert i >= 0
-    k = parent.index(node) + 1
-    if left_biased:
-        if i == 0:  return k - 1
-        if i == len(node._result):  return k
-    else:
-        if i == len(node._result):  return k
-        if i == 0:  return k - 1
-    right = Node(node.name, node._result[i:])
-    if node.has_attr():  right.with_attr(node.attr)
-    if  right._children:  right._pos = right._result[0]._pos
-    elif node._pos >= 0:  right._pos = node._pos + i
-    node.result = node._result[:i]
-    if chain_attr and not node.has_attr(chain_attr) and not node.anonymous:
-        chain_ID = gen_sloppy_chain_ID()
-        right.attr[chain_attr] = chain_ID
-        node.attr[chain_attr] = chain_ID
-    parent.result = parent._result[:k] + (right,) + parent.result[k:]
-    return k
+# @cython.locals(i=cython.int, k=cython.int)
+# def split(node: Node, parent: Node, i: int, left_biased: bool = True,
+#           chain_attr: str='') -> int:
+#     """Splits a node at the given index (in case of a branch-node) or
+#     string-position (in case of a leaf-node). Returns the index of the
+#     right part within the parent node after the split. (This means
+#     that with ``node.insert(index, nd)`` nd will be inserted (exactly at
+#     the split location.)
+#
+#     Examples::
+#
+#         >>> test_tree = parse_sxpr('(X (A "Hello, ") (B "Peter") (C " Smith"))').with_pos(0)
+#         >>> X = copy.deepcopy(test_tree)
+#
+#         # test edge cases first
+#         >>> split(X['B'], X, 0)
+#         1
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello, ") (B "Peter") (C " Smith"))
+#         >>> split(X['B'], X, X['B'].strlen())
+#         2
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello, ") (B "Peter") (C " Smith"))
+#
+#         # standard case
+#         >>> split(X['B'], X, 2)
+#         2
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello, ") (B "Pe") (B "ter") (C " Smith"))
+#         >>> print(X.pick('B', reverse=True).pos)
+#         9
+#
+#         # use slit() as praparation for adding markup
+#         >>> X = copy.deepcopy(test_tree)
+#         >>> a = split(X['A'], X, 6)
+#         >>> a
+#         1
+#         >>> b = split(X['C'], X, 1)
+#         >>> b
+#         4
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello,") (A " ") (B "Peter") (C " ") (C "Smith"))
+#         >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
+#         >>> X.result = X[:a] + (markup,) + X[b:]
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello,") (em (A " ") (B "Peter") (C " ")) (C "Smith"))
+#
+#         # a more complex case: add markup to a nested tree
+#         >>> X = parse_sxpr('(X (A "Hello, ") (B "Peter") (bold (C " Smith")))').with_pos(0)
+#         >>> a = split(X['A'], X, 6)
+#         >>> b0 = split(X['bold']['C'], X['bold'], 1)
+#         >>> b0
+#         1
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello,") (A " ") (B "Peter") (bold (C " ") (C "Smith")))
+#         >>> b = split(X['bold'], X, b0)
+#         >>> b
+#         4
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello,") (A " ") (B "Peter") (bold (C " ")) (bold (C "Smith")))
+#         >>> markup = Node('em', X[a:b]).with_pos(X[a].pos)
+#         >>> X.result = X[:a] + (markup,) + X[b:]
+#         >>> print(X.as_sxpr())
+#         (X (A "Hello,") (em (A " ") (B "Peter") (bold (C " "))) (bold (C "Smith")))
+#
+#         # use left_bias hint for potentially ambiguous cases:
+#         >>> X = parse_sxpr('(X (A ""))')
+#         >>> split(X['A'], X, X['A'].strlen())
+#         0
+#         >>> split(X['A'], X, X['A'].strlen(), left_biased=False)
+#         1
+#     """
+#     assert i >= 0
+#     k = parent.index(node) + 1
+#     if left_biased:
+#         if i == 0:  return k - 1
+#         if i == len(node._result):  return k
+#     else:
+#         if i == len(node._result):  return k
+#         if i == 0:  return k - 1
+#     right = Node(node.name, node._result[i:])
+#     if node.has_attr():  right.with_attr(node.attr)
+#     if  right._children:  right._pos = right._result[0]._pos
+#     elif node._pos >= 0:  right._pos = node._pos + i
+#     node.result = node._result[:i]
+#     if chain_attr and not node.has_attr(chain_attr) and not node.anonymous:
+#         chain_ID = gen_sloppy_chain_ID()
+#         right.attr[chain_attr] = chain_ID
+#         node.attr[chain_attr] = chain_ID
+#     parent.result = parent._result[:k] + (right,) + parent.result[k:]
+#     return k
 
 
 @cython.locals(i=cython.int, L=cython.int)
@@ -3269,9 +3376,6 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
     seg_3 = Node(TOKEN_PTYPE, node._result[end:])
     seg_3._pos = node._pos + end if node._pos >= 0 else -1
     node.result = tuple(nd for nd in (seg_1, seg_2, seg_3) if nd._result)
-
-
-EMPTY_DICT_SENTINEL = dict()
 
 
 @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
