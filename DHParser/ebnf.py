@@ -172,7 +172,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, EBNFPreprocessor)
 
 
-get_ebnf_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_ebnf_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_ebnf(ebnf: str, source_name="source") -> PreprocessorResult:
@@ -935,7 +935,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_{NAME}(source):

@@ -162,17 +162,15 @@ def identity(x):
     return x
 
 
-if __name__ == "__main__":
-    global_id_counter = multiprocessing.Value('L', 0)
+
+global_id_counter: int = 0
 
 
 def gen_id() -> int:
-    """Generates a unique id."""
+    """Generates a unique id. (Not thread-safe!)"""
     global global_id_counter
-    with global_id_counter.get_lock():
-        next_id = global_id_counter.value + 1
-        global_id_counter.value = next_id
-    return next_id
+    global_id_counter += 1
+    return global_id_counter
 
 
 class ThreadLocalSingletonFactory:
@@ -185,6 +183,8 @@ class ThreadLocalSingletonFactory:
         self.class_or_factory = class_or_factory
         self.singleton_name = "{NAME}_{ID:08d}_singleton".format(
             NAME=name or class_or_factory.__name__, ID=ident if ident >= 0 else gen_id())
+        THREAD_LOCALS = access_thread_locals()
+        assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name
 
     def __call__(self):
         THREAD_LOCALS = access_thread_locals()

@@ -98,7 +98,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 #######################################################################
@@ -171,7 +171,7 @@ class ts2pythonGrammar(Grammar):
     root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
     
 
-_raw_grammar = ThreadLocalSingletonFactory(ts2pythonGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(ts2pythonGrammar)
 
 def get_grammar() -> ts2pythonGrammar:
     grammar = _raw_grammar()
@@ -210,7 +210,7 @@ def ts2pythonTransformer() -> TransformerCallable:
     return partial(traverse, transformation_table=ts2python_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(ts2pythonTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(ts2pythonTransformer)
 
 
 def transform_ts2python(cst):
@@ -697,7 +697,7 @@ class ts2pythonCompiler(Compiler):
         return identifier
 
 
-get_compiler = ThreadLocalSingletonFactory(ts2pythonCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(ts2pythonCompiler)
 
 
 def compile_ts2python(ast):
