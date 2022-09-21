@@ -115,7 +115,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'select_from_path_if',
            'select_from_path',
            'pick_from_path',
-           'serialize_path',
+           'pp_path',
            'path_sanity_check',
            'insert_node',
            'split',
@@ -2222,7 +2222,7 @@ def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Node, int]:
     return common_ancestor, i
 
 
-def serialize_path(path: Path, with_content: int = 0, delimiter: str = ' <- ') \
+def pp_path(path: Path, with_content: int = 0, delimiter: str = ' <- ') \
         -> str:
     """Serializes a path as string.
 
@@ -2911,7 +2911,7 @@ class ContentMapping:
         return '\n'.join(lines)
 
     @cython.locals(pos=cython.int, path_index=cython.int, last=cython.int)
-    def map_index(self, pos: int, left_biased: bool = False) -> int:
+    def get_path_index(self, pos: int, left_biased: bool = False) -> int:
         """Yields the index for the path in given context-mapping that contains
         the position ``pos``.
 
@@ -2928,9 +2928,9 @@ class ContentMapping:
 
         >>> tree = parse_sxpr('(a (b "123") (c (d "45") (e "67")))')
         >>> cm = ContentMapping(tree)
-        >>> i = cm.map_index(4)
+        >>> i = cm.get_path_index(4)
         >>> path = cm.path_list[i]
-        >>> print(serialize_path(path, 1, ', '))
+        >>> print(pp_path(path, 1, ', '))
         a, c, d "45"
         """
         errmsg = lambda i: f'Illegal position value {i}. ' \
@@ -2950,16 +2950,16 @@ class ContentMapping:
             raise IndexError(errmsg(pos))
         return path_index
 
-    def map_pos_to_path(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
+    def get_path_and_offset(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
         """Yields the path and relative position for the absolute
-        position ``pos``. See :py:meth:`ContentMappin.map_index` for the description
+        position ``pos``. See :py:meth:`ContentMappin.get_path_index` for the description
         of the parameters.
 
         :returns:   tuple (path, offset) where the offset is the position of
             ``pos`` relative to the actual position of the last node in the path.
         :raises:    IndexError if not 0 <= position < length of document
         """
-        path_index = self.map_index(pos, left_biased)
+        path_index = self.get_path_index(pos, left_biased)
         return self.path_list[path_index], pos - self.pos_list[path_index]
 
     @cython.locals(a=cython.int, b=cython.int, index_a=cython.int, index_b=cython.int)
@@ -2973,13 +2973,13 @@ class ContentMapping:
         >>> [[nd.name for nd in p] for p in cm.iterate_paths(1, 12)]
         [['a', 'b'], ['a', 'c', 'd'], ['a', 'c', 'e'], ['a', 'f']]
         """
-        index_a = self.map_index(start_pos, left_biased)
-        index_b = self.map_index(end_pos, left_biased)
+        index_a = self.get_path_index(start_pos, left_biased)
+        index_b = self.get_path_index(end_pos, left_biased)
         for i in range(index_a, index_b + 1):
             yield self.path_list[i]
 
     @cython.locals(i=cython.int, start_index=cython.int, end_index=cython.int, offset=cython.int)
-    def reconstruct_content_mapping(self, first_index: int, last_index: int):
+    def rebuild_mapping(self, first_index: int, last_index: int):
         """Reconstructs a particular section of the context mapping.
 
         >>> tree = parse_sxpr('(a (b (c "123") (d "456")) (e (f (g "789") (h "ABC")) (i "DEF")))')
@@ -2992,7 +2992,7 @@ class ContentMapping:
         12 -> a, e, i "DEF"
         >>> b = tree.pick('b')
         >>> b.result = (b[0], Node('x', 'xyz'), b[1])
-        >>> cm.reconstruct_content_mapping(0, 1)
+        >>> cm.rebuild_mapping(0, 1)
         >>> print(cm)
         0 -> a, b, c "123"
         3 -> a, b, x "xyz"
@@ -3011,11 +3011,11 @@ class ContentMapping:
         9 -> a, e, f, g (:Text "7") (Y "89")
         12 -> a, e, f, h "ABC"
         15 -> a, e, i (Y "D") (:Text "EF")
-        >>> a = cm.map_index(10)
-        >>> b = cm.map_index(16, left_biased=True)
+        >>> a = cm.get_path_index(10)
+        >>> b = cm.get_path_index(16, left_biased=True)
         >>> a, b
         (3, 5)
-        >>> cm.reconstruct_content_mapping(3, 5)
+        >>> cm.rebuild_mapping(3, 5)
         >>> print(cm)
         0 -> a, b, c "123"
         3 -> a, b, x "xyz"
@@ -3031,11 +3031,11 @@ class ContentMapping:
         >>> common_ancestor = cm.markup(0, 6, 'Y')
         >>> print(common_ancestor.as_sxpr())
         (b (Y (c "123") (d "456")))
-        >>> a = cm.map_index(0)
-        >>> b = cm.map_index(6, left_biased=True)
+        >>> a = cm.get_path_index(0)
+        >>> b = cm.get_path_index(6, left_biased=True)
         >>> a, b
         (0, 1)
-        >>> cm.reconstruct_content_mapping(a, b)
+        >>> cm.rebuild_mapping(a, b)
         >>> print(cm)
         0 -> a, b, Y, c "123"
         3 -> a, b, Y, d "456"
@@ -3089,11 +3089,11 @@ class ContentMapping:
         eventually second but last node in the path from the context mapping
         that covers this position. Returns the parent of the newly inserted
         node."""
-        index = self.map_index(pos)
+        index = self.get_path_index(pos)
         path = self.path_list[index]
         rel_pos = pos - self.pos_list[index]
         parent = insert_node(path, rel_pos, node)
-        self.reconstruct_content_mapping(index, index)
+        self.rebuild_mapping(index, index)
         return parent
 
 
@@ -3196,8 +3196,8 @@ class ContentMapping:
             common_ancestor = self.insert_node(start_pos, milestone)
             return common_ancestor
 
-        path_A, pos_A = self.map_pos_to_path(start_pos)
-        path_B, pos_B = self.map_pos_to_path(end_pos, left_biased=True)
+        path_A, pos_A = self.get_path_and_offset(start_pos)
+        path_B, pos_B = self.get_path_and_offset(end_pos, left_biased=True)
         assert path_A
         assert path_B
         common_ancestor, i = find_common_ancestor(path_A, path_B)
@@ -3219,8 +3219,8 @@ class ContentMapping:
                 common_ancestor = ur_ancestor
             assert not (common_ancestor.name == ':Text' and common_ancestor.children)
             if self.auto_cleanup:
-                self.reconstruct_content_mapping(self.map_index(start_pos),
-                                                 self.map_index(end_pos, left_biased=True))
+                self.rebuild_mapping(self.get_path_index(start_pos),
+                                     self.get_path_index(end_pos, left_biased=True))
             return common_ancestor
 
         stump_A = path_A[i:]
@@ -3274,8 +3274,8 @@ class ContentMapping:
                 common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[u:]
 
         if self.auto_cleanup:
-            self.reconstruct_content_mapping(self.map_index(start_pos),
-                                             self.map_index(end_pos, left_biased=True))
+            self.rebuild_mapping(self.get_path_index(start_pos),
+                                 self.get_path_index(end_pos, left_biased=True))
         assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
         return common_ancestor
 

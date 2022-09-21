@@ -32,7 +32,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
-    prev_path, serialize_path, ContentMapping, \
+    prev_path, pp_path, ContentMapping, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -989,21 +989,21 @@ class TestPathNavigation:
         tree = parse_sxpr('(A (B alpha) (C (D beta) (E gamma)) (F delta))')
         cm = ContentMapping(tree)
         for i in range(len(tree.content)):
-            ctx, rel_pos = cm.map_pos_to_path(i)
+            ctx, rel_pos = cm.get_path_and_offset(i)
         i = cm.content.find("delta")
-        ctx, rel_pos = cm.map_pos_to_path(i)
+        ctx, rel_pos = cm.get_path_and_offset(i)
         assert ctx[-1].name == 'F' and rel_pos == 0
         i = cm.content.find("lta")
-        ctx, rel_pos = cm.map_pos_to_path(i)
+        ctx, rel_pos = cm.get_path_and_offset(i)
         assert ctx[-1].name == 'F' and rel_pos == 2
         i = cm.content.find("a")
-        ctx, rel_pos = cm.map_pos_to_path(i)
+        ctx, rel_pos = cm.get_path_and_offset(i)
         assert ctx[-1].name == 'B' and rel_pos == 0
         i = cm.content.rfind("a")
-        ctx, rel_pos = cm.map_pos_to_path(i)
+        ctx, rel_pos = cm.get_path_and_offset(i)
         assert ctx[-1].name == 'F' and rel_pos == 4
         i = tree.content.find("mm")
-        ctx, rel_pos = cm.map_pos_to_path(i)
+        ctx, rel_pos = cm.get_path_and_offset(i)
         assert ctx[-1].name == 'E' and rel_pos == 2
 
         select, ignore = {'A', 'B', 'D', 'F'}, {'C'}
@@ -1023,12 +1023,12 @@ class TestPathNavigation:
     def test_map_index(self):
         tree = parse_xml('<doc>alpha<a><lb/></a><pb/> beta</doc>')
         cm = ContentMapping(tree)
-        assert cm.map_index(5, left_biased=False) == 3
-        assert cm.map_index(5, left_biased=True) == 0
-        path, i = cm.map_pos_to_path(5, left_biased=False)
+        assert cm.get_path_index(5, left_biased=False) == 3
+        assert cm.get_path_index(5, left_biased=True) == 0
+        path, i = cm.get_path_and_offset(5, left_biased=False)
         assert path == cm.path_list[3]
         assert i == 0
-        path, i = cm.map_pos_to_path(5, left_biased=True)
+        path, i = cm.get_path_and_offset(5, left_biased=True)
         assert path == cm.path_list[0]
         assert i == 5
 

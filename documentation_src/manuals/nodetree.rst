@@ -463,7 +463,7 @@ itself::
     True
     >>> last_path[0] == sentence
     True
-    >>> serialize_path(last_path)
+    >>> pp_path(last_path)
     'sentence <- phrase <- word'
 
 One can also think of a tree-path as a breadcrumb-trail or, rather, ant-trail that "points" to a
@@ -479,25 +479,25 @@ The ``next_path()`` and ``prev_path()``-functions allow to move one step
 forward or backward from a given path::
 
     >>> pointer = prev_path(last_path)
-    >>> serialize_path(pointer, with_content=-1)
-    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- blank: '
+    >>> pp_path(pointer, with_content=-1)
+    'sentence "This is Buckingham Palace" <- phrase "Buckingham Palace" <- blank " "'
 
 ``prev_path()`` and ``next_path()`` automatically zoom out by one step, if
 they move past the first or last child of the last but one node in the list::
 
     >>> pointer = prev_path(pointer)
-    >>> serialize_path(pointer, with_content=-1)
-    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
-    >>> serialize_path(prev_path(pointer), with_content=-1)
-    'sentence:This is Buckingham Palace <- blank: '
+    >>> pp_path(pointer, with_content=-1)
+    'sentence "This is Buckingham Palace" <- phrase "Buckingham Palace" <- word "Buckingham"'
+    >>> pp_path(prev_path(pointer), with_content=-1)
+    'sentence "This is Buckingham Palace" <- blank " "'
 
 Thus::
 
     >>> next_path(prev_path(pointer)) == pointer
     False
     >>> pointer = prev_path(pointer)
-    >>> serialize_path(next_path(pointer), with_content=-1)
-    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace'
+    >>> pp_path(next_path(pointer), with_content=-1)
+    'sentence "This is Buckingham Palace" <- phrase "Buckingham Palace"'
 
 The reason for this beaviour is that ``prev_path()`` and ``next_path()``
 try to move to the path which contains the string content preceeding or
@@ -510,17 +510,17 @@ next sibling of the parent.
 
 It is, of course, possible to zoom back into a path::
 
-    >>> serialize_path(zoom_into_path(next_path(pointer), FIRST_CHILD, steps=1),
+    >>> pp_path(zoom_into_path(next_path(pointer), FIRST_CHILD, steps=1),
     ...                with_content=-1)
-    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+    'sentence "This is Buckingham Palace" <- phrase "Buckingham Palace" <- word "Buckingham"'
 
 Often it is preferable to move through the leaf-nodes and their paths right
 away. Functions like ``next_leaf_path()`` and ``prev_leaf_path()`` provide
 syntactic sugar for this case::
 
     >>> pointer = next_leaf_path(pointer)
-    >>> serialize_path(pointer, with_content=-1)
-    'sentence:This is Buckingham Palace <- phrase:Buckingham Palace <- word:Buckingham'
+    >>> pp_path(pointer, with_content=-1)
+    'sentence "This is Buckingham Palace" <- phrase "Buckingham Palace" <- word "Buckingham"'
 
 It is also possible to inspect just the string content surrounding a path,
 rather than its structural environment::
@@ -536,30 +536,30 @@ arbitraty path, instead of the one end or the other end of the tree rooted in
 
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
     >>> pointer = t.pick_path('G')
-    >>> printw([serialize_path(ctx, with_content=1)
+    >>> printw([pp_path(ctx, with_content=1)
     ...         for ctx in select_path(pointer, ANY_PATH, include_root=True)])
-    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7',
-     'A:1234567']
-    >>> printw([serialize_path(ctx, with_content=1)
+    ['A <- G "4"', 'A <- H "56"', 'A <- H <- I "5"', 'A <- H <- J "6"',
+     'A <- K "7"', 'A "1234567"']
+    >>> printw([pp_path(ctx, with_content=1)
     ...         for ctx in select_path(
     ...             pointer, ANY_PATH, include_root=True, reverse=True)])
-    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3',
-     'A <- C <- D <- E:2', 'A <- B:1', 'A:1234567']
+    ['A <- G "4"', 'A <- C "23"', 'A <- C <- D "23"', 'A <- C <- D <- F "3"',
+     'A <- C <- D <- E "2"', 'A <- B "1"', 'A "1234567"']
 
 Another important difference, besides the starting point, is that the
 `select()`-generators of the `nodetree`-module traverse the tree post-order
 (or "depth first"), while the respective methods ot the Node-class traverse the
 tree pre-order. See the difference::
 
-    >>> l = [serialize_path(ctx, with_content=1)
+    >>> l = [pp_path(ctx, with_content=1)
     ...      for ctx in t.select_path(ANY_PATH, include_root=True)]
-    >>> l[l.index('A <- G:4'):]
-    ['A <- G:4', 'A <- H:56', 'A <- H <- I:5', 'A <- H <- J:6', 'A <- K:7']
-    >>> l = [serialize_path(ctx, with_content=1)
+    >>> l[l.index('A <- G "4"'):]
+    ['A <- G "4"', 'A <- H "56"', 'A <- H <- I "5"', 'A <- H <- J "6"', 'A <- K "7"']
+    >>> l = [pp_path(ctx, with_content=1)
     ...      for ctx in t.select_path(ANY_PATH, include_root=True, reverse=True)]
-    >>> printw(l[l.index('A <- G:4'):])
-    ['A <- G:4', 'A <- C:23', 'A <- C <- D:23', 'A <- C <- D <- F:3',
-     'A <- C <- D <- E:2', 'A <- B:1']
+    >>> printw(l[l.index('A <- G "4"'):])
+    ['A <- G "4"', 'A <- C "23"', 'A <- C <- D "23"', 'A <- C <- D <- F "3"',
+     'A <- C <- D <- E "2"', 'A <- B "1"']
 
 
 Flat-String-Navigation
@@ -574,8 +574,8 @@ leaf-nodes to which they belong. The path-mapping can be thought of as a
 "string-view" on the tree::
 
     >>> flat_text = sentence.content
-    >>> ctx_mapping = generate_content_mapping(sentence)
-    >>> print(pp_content_mapping(ctx_mapping))
+    >>> ctx_mapping = ContentMapping(sentence)
+    >>> print(ctx_mapping)
     0 -> sentence, word "This"
     4 -> sentence, blank " "
     5 -> sentence, word "is"
@@ -592,12 +592,13 @@ the paths really consist of different Nodes, albeit with the same names.
 Now let's find all letters that are followed by a whitespace character::
 
     >>> import re; locations = [m.start() for m in re.finditer(r'\w ', flat_text)]
-    >>> targets = [map_pos_to_path(ctx_mapping, loc) for loc in locations]
+    >>> targets = [ctx_mapping.get_path_and_offset(loc) for loc in locations]
 
-The target returned by `map_pos_to_path()` is a tuple of the target path
-and the relative position of the location that falls within this path::
+The target returned by :py:meth:`~nodetree.ContentMapping.get_path_and_offset`
+is a tuple of the target path and the relative position of the location that
+falls within this path::
 
-    >>> [(serialize_path(ctx), relative_pos) for ctx, relative_pos in targets]
+    >>> [(pp_path(ctx), relative_pos) for ctx, relative_pos in targets]
     [('sentence <- word', 3), ('sentence <- word', 1), ('sentence <- phrase <- word', 9)]
 
 Now, the structured text can be manipulated at the precise locations where
@@ -641,9 +642,9 @@ Let's start with the simplemost case to see how searching and marking
 strings works with DHParser::
 
     >>> match = re.search(r"Stadt\s+München", trivial_xml.content)
-    >>> mapping = generate_content_mapping(trivial_xml)
-    >>> _ = markup(mapping, match.start(), match.end(), "foreign",
-    ...            {'lang': 'de'})
+    >>> mapping = ContentMapping(trivial_xml)
+    >>> _ = mapping.markup(match.start(), match.end(), "foreign",
+    ...                    {'lang': 'de'})
     >>> printw(trivial_xml.as_xml(inline_tags={'trivial'}))
     <trivial>Please mark up <foreign lang="de">Stadt München</foreign>
      in Bavaria in this sentence.</trivial>
@@ -656,9 +657,9 @@ example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
 Now, let's try the next more complicated case::
 
     >>> match = re.search(r"Stadt\s+München", hard_xml.content)
-    >>> mapping = generate_content_mapping(hard_xml)
-    >>> _ = markup(mapping, match.start(), match.end(), "foreign",
-    ...            {'lang': 'de'})
+    >>> mapping = ContentMapping(hard_xml)
+    >>> _ = mapping.markup(match.start(), match.end(), "foreign",
+    ...                    {'lang': 'de'})
     >>> xml_str = hard_xml.as_xml(inline_tags={'hard'}, empty_tags={'lb'})
     >>> printw(repr(xml_str)[1:-1])
     <hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign><location>
@@ -858,7 +859,7 @@ Traversing trees via paths
   for all leaf-nodes of a tree, i.e. a dictionary mapping the current text
   position of each leaf-node (not the source-code position!) to the leaf-node
   itself.
-* :py:func:`~nodetree.map_pos_to_path`: Returns the leaf-node for a given
+* :py:func:`~nodetree.get_path_and_offset`: Returns the leaf-node for a given
   text position and the number of characters of this position into the leaf-node.
 
 
