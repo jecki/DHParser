@@ -289,7 +289,7 @@ def grammar_provider(ebnf_src: str,
     if log_name and is_logging():  append_log(log_name, grammar_src)
     imports = DHPARSER_IMPORTS  
     grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
-                                            r'get_(?:\w+_)?grammar$')
+                                            r'get_grammar$')  # r'get_(?:\w+_)?grammar$'
     if callable(grammar_factory):
         grammar_factory.python_src__ = grammar_src
         return grammar_factory

@@ -146,7 +146,6 @@ this grammar into executable Python-code, we use the high-level-function
 
     >>> from DHParser.dsl import create_parser
     >>> parser = create_parser(grammar, branding="JSON")
-    >>> print(parser.python_src__)
     >>> syntax_tree = parser(testdata)
     >>> syntax_tree.content
     '{"array": [1, 2.0, "a string"], "number": -1.3e+25, "bool": false}'

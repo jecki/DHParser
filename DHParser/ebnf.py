@@ -1286,7 +1286,7 @@ class EBNFCompiler(Compiler):
 
 
     def reset(self):
-        super(EBNFCompiler, self).reset()
+        super().reset()
         self.python_src = ''                   # type: str
         self.re_flags = set()                  # type: Set[str]
         self.rules = OrderedDict()             # type: OrderedDict[str, List[Node]]
@@ -2655,7 +2655,6 @@ class EBNFCompiler(Compiler):
         return self.WSPC_PARSER()
 
 
-
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     THREAD_LOCALS = access_thread_locals()
     try:
@@ -2664,7 +2663,6 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         return compiler
     except AttributeError:
         compiler = EBNFCompiler(grammar_name, grammar_source)
-        compiler.set_grammar_name(grammar_name, grammar_source)
         THREAD_LOCALS.ebnf_compiler_singleton = compiler
         return compiler
 
