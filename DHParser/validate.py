@@ -26,8 +26,6 @@ validation (i.e. validation according to a grammar-like schema) of
 node-trees. EXPERIMENTAL!!! THIS IS STILL A STUB!!!
 """
 
-from __future__ import annotations
-
 import re
 from typing import Callable, Dict
 

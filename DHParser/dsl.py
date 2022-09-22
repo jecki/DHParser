@@ -20,8 +20,6 @@ Module ``dsl`` contains high-level functions for the compilation
 of domain specific languages based on an EBNF-grammar.
 """
 
-from __future__ import annotations
-
 import functools
 import inspect
 import os

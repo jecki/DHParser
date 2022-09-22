@@ -24,8 +24,6 @@ and `moving_forward__`, `most_recent_error__`-hooks in the
 Grammar-object.
 """
 
-from __future__ import annotations
-
 from typing import Tuple, Optional, List, Iterable, Union
 
 try:

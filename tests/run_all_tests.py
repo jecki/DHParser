@@ -177,7 +177,7 @@ def run_tests(doctests=True, unittests=True):
             print(f'"{test}" failed with exception: {repr(r_exception)}')
             _ = result.result()  # raise the exception
         r_code = result.result()
-        if r_code != 0:
+        if r_code != 0 and r_code is not None:
             print(f'"{test}" failed with result: {r_code}')
     assert not not_done, str(not_done)
 

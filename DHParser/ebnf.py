@@ -24,8 +24,6 @@ Various flavors of EBNF- of PEG- (Parsing-Expression-Grammar) notations
 are supported.
 """
 
-from __future__ import annotations
-
 from functools import partial
 import keyword
 import os
@@ -1240,10 +1238,6 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
-
-    :ivar grammar_id: a unique id for every compiled grammar. (Required for
-            disambiguation of of thread local variables storing
-            compiled texts.)
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1280,7 +1274,6 @@ class EBNFCompiler(Compiler):
                     '::': 'Pop', ':?': 'Pop', ':': 'Retrieve'}
 
     def __init__(self, grammar_name="DSL", grammar_source=""):
-        self.grammar_id: str = ''
         super(EBNFCompiler, self).__init__()  # calls the reset()-method
         self.set_grammar_name(grammar_name, grammar_source)
 
@@ -1327,7 +1320,6 @@ class EBNFCompiler(Compiler):
             grammar_name = os.path.splitext(os.path.basename(grammar_source))[0]
         self.grammar_name = grammar_name or "NameUnknown"
         self.grammar_source = load_if_file(grammar_source)
-        if self.grammar_source:  self.grammar_id = md5(self.grammar_source)
         return self
 
     # methods for generating skeleton code for preprocessor, transformer, and compiler
@@ -1360,7 +1352,7 @@ class EBNFCompiler(Compiler):
             transformations = '[]'
             transtable.append('    "' + name + '": %s,' % transformations)
         transtable += ['}', '']
-        transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
+        transtable += [TRANSFORMER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(transtable)
 
 
@@ -1402,7 +1394,7 @@ class EBNFCompiler(Compiler):
             else:
                 compiler += ['    # def ' + method_name + '(self, node):',
                              '    #     return node', '']
-        compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)]
+        compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
     def verify_transformation_table(self, transtable):
@@ -1856,7 +1848,7 @@ class EBNFCompiler(Compiler):
             declarations.append(f'root__ = RegExp(r"{NEVER_MATCH_PATTERN}")')
         declarations.append('')
         self.python_src = '\n    '.join(declarations) \
-                          + GRAMMAR_FACTORY.format(NAME=self.grammar_name, ID=self.grammar_id)
+                          + GRAMMAR_FACTORY.format(NAME=self.grammar_name)
         return self.python_src
 
 

@@ -29,8 +29,6 @@ this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
 """
 
-from __future__ import annotations
-
 import sys
 import threading
 from typing import Dict, Any

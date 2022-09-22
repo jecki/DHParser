@@ -25,8 +25,6 @@ Usually, however, unexpected failure to match a certain string is the
 main cause of trouble when constructing a context free Grammar.
 """
 
-from __future__ import annotations
-
 import asyncio
 import collections
 from collections.abc import Set

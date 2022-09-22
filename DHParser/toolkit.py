@@ -24,8 +24,6 @@ not in the toolkit-module. An acceptable exception to this rule are
 functions that are very generic.
 """
 
-from __future__ import annotations
-
 import ast
 import bisect
 import collections.abc
@@ -87,7 +85,7 @@ __all__ = ('typing',
            'cython_optimized',
            'identify_python',
            'identity',
-           'gen_id',
+           # 'gen_id',
            'ThreadLocalSingletonFactory',
            'RX_NEVER_MATCH',
            'RX_ENTITY',
@@ -166,11 +164,11 @@ def identity(x):
 global_id_counter: int = 0
 
 
-def gen_id() -> str:
-    """Generates a unique id. (Not thread-safe!)"""
-    global global_id_counter
-    global_id_counter += 1
-    return str(global_id_counter)
+# def gen_id() -> str:
+#     """Generates a unique id. (Not thread-safe!)"""
+#     global global_id_counter
+#     global_id_counter += 1
+#     return str(global_id_counter)
 
 
 class ThreadLocalSingletonFactory:
@@ -182,7 +180,7 @@ class ThreadLocalSingletonFactory:
     def __init__(self, class_or_factory, name: str = "", *, ident: str = ""):
         self.class_or_factory = class_or_factory
         self.singleton_name = "{NAME}_{ID}_singleton".format(
-            NAME=name or class_or_factory.__name__, ID=ident if ident else gen_id())
+            NAME=name or class_or_factory.__name__, ID=str(id(self)))
         THREAD_LOCALS = access_thread_locals()
         assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name
 

@@ -34,8 +34,6 @@ See module ``ebnf`` for a sample of the implementation of a
 compiler object.
 """
 
-from __future__ import annotations
-
 from collections import namedtuple
 import copy
 import functools
