@@ -32,6 +32,8 @@ for an example.
 
 """
 
+from __future__ import annotations
+
 from bisect import bisect_left
 from collections import defaultdict, namedtuple
 import copy

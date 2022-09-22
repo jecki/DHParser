@@ -51,6 +51,8 @@ Example::
                                          transformer, compiler)
 """
 
+from __future__ import annotations
+
 import collections
 import contextlib
 import html

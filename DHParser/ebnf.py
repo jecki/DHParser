@@ -24,6 +24,8 @@ Various flavors of EBNF- of PEG- (Parsing-Expression-Grammar) notations
 are supported.
 """
 
+from __future__ import annotations
+
 from functools import partial
 import keyword
 import os

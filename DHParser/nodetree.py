@@ -30,6 +30,8 @@ which simplifies the programming of algorithms that run on the data stored
 in the (XML-)tree.
 """
 
+from __future__ import annotations
+
 import bisect
 import copy
 import functools

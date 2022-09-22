@@ -22,6 +22,8 @@ the Language Server Protocol. See:
 EXPERIMENTAL!!!
 """
 
+from __future__ import annotations
+
 import bisect
 from enum import Enum, IntEnum
 

@@ -24,6 +24,8 @@ not in the toolkit-module. An acceptable exception to this rule are
 functions that are very generic.
 """
 
+from __future__ import annotations
+
 import ast
 import bisect
 import collections.abc

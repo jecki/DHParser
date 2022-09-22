@@ -219,4 +219,4 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 todo_include_todos = True
 
 # Do not substitute type aliases by full type expression!
-autodoc_type_aliases = {'AgentAssignment': 'AgentAssignment'}
+autodoc_type_aliases = {'PathSelector': 'PathSelector'}

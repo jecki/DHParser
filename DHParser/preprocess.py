@@ -27,6 +27,8 @@ for some domain specific languages, most notably those that
 cannot completely be described entirely with context-free grammars.
 """
 
+from __future__ import annotations
+
 import bisect
 from collections import namedtuple
 import functools

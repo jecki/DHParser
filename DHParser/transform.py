@@ -26,6 +26,8 @@ used for any kind of tree transformations, not necessarily only
 for CST -> AST transformations.
 """
 
+from __future__ import annotations
+
 import collections.abc
 from functools import partial, singledispatch, reduce
 import inspect

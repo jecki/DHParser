@@ -50,6 +50,8 @@ For the specification and implementation of the language server protocol, see:
 <https://langserver.org/>
 """
 
+from __future__ import annotations
+
 import asyncio
 from concurrent.futures import Future, Executor, ThreadPoolExecutor, ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
