@@ -1,13 +1,22 @@
-DHParser Verion 1.1.3
-.....................
+DHParser Version 1.2 (26.9.2022)
+................................
 
-- refactoring of names: Trail -> Path, trail -> path, because path
-  is much more salient and cannot as easily be confused with root
+- BACKWARD INCOMPATIBLE CHANGE: refactoring of names:
+  Trail -> Path, trail -> path, because path is much more
+  salient and cannot as easily be confused with root
+- BACKWARD INCOMPATIBLE CHANGE: nodetree.py: content mapping
+  and markup refactored by introducing class ContentMapping.
+  This makes using content mappings and adding markup easier
+  and yield more readable code.
 - compiler.py moved visitor_name() and attr_visitor_name() to
   class Compiler. This makes it possible to overload these methods,
-  which can become usefull, when a single method should handle
+  which can become useful, when a single method should handle
   several different nodes or attributes - similar to the way tree
   traversal is handeled in transform.py
+- added wildcard()-method to class compiler.Compiler. This allows
+  to track missing on_XXX()-methods as well as implementing a
+  dispatch mechanism that calls one and the same method for several
+  node-names (like in module DHParser.travers)
 
 DHParser Version 1.1.2 (24.8.2022)
 ..................................

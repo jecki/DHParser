@@ -573,8 +573,8 @@ generate a path mapping that maps text position to the paths of the
 leaf-nodes to which they belong. The path-mapping can be thought of as a
 "string-view" on the tree::
 
-    >>> flat_text = sentence.content
     >>> ctx_mapping = ContentMapping(sentence)
+    >>> flat_text = ctx_mapping.content
     >>> print(ctx_mapping)
     0 -> sentence, word "This"
     4 -> sentence, blank " "
