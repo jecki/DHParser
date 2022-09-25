@@ -2979,7 +2979,17 @@ class ContentMapping:
 
     @cython.locals(i=cython.int, start_index=cython.int, end_index=cython.int, offset=cython.int)
     def rebuild_mapping(self, first_index: int, last_index: int):
-        """Reconstructs a particular section of the context mapping.
+        """Reconstructs a particular section of the context mapping after the
+        underlying tree has been restructured.
+
+        :param first_index: The index (not the position within the string-content!)
+            of the first path that has been affected by restruturing of the tree.
+            Use :py:meth:`ContentMapping.get_path_index` to determine the path-index
+            if only the position is known.
+        :param last_index: The index (not the position within the string-content!)
+            of the last path that has been affected by restruturing of the tree.
+            Use :py:meth:`ContentMapping.get_path_index` to determine the path-index
+            if only the position is known.
 
         >>> tree = parse_sxpr('(a (b (c "123") (d "456")) (e (f (g "789") (h "ABC")) (i "DEF")))')
         >>> cm = ContentMapping(tree)

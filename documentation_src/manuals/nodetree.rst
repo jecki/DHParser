@@ -531,7 +531,7 @@ rather than its structural environment::
 
 It is also possible to systematically iterate through the paths forward or
 backward - just like the `node.select_path()`-method, but starting from an
-arbitraty path, instead of the one end or the other end of the tree rooted in
+arbitrary path, instead of the one end or the other end of the tree rooted in
 `node`::
 
     >>> t = parse_sxpr('(A (B 1) (C (D (E 2) (F 3))) (G 4) (H (I 5) (J 6)) (K 7))')
@@ -574,7 +574,7 @@ leaf-nodes to which they belong. The path-mapping can be thought of as a
 "string-view" on the tree::
 
     >>> ctx_mapping = ContentMapping(sentence)
-    >>> flat_text = ctx_mapping.content
+    >>> flat_text = ctx_mapping.content  # equals sentence.content in this case
     >>> print(ctx_mapping)
     0 -> sentence, word "This"
     4 -> sentence, blank " "
@@ -598,7 +598,7 @@ The target returned by :py:meth:`~nodetree.ContentMapping.get_path_and_offset`
 is a tuple of the target path and the relative position of the location that
 falls within this path::
 
-    >>> [(pp_path(ctx), relative_pos) for ctx, relative_pos in targets]
+    >>> [(pp_path(path), relative_pos) for path, relative_pos in targets]
     [('sentence <- word', 3), ('sentence <- word', 1), ('sentence <- phrase <- word', 9)]
 
 Now, the structured text can be manipulated at the precise locations where
@@ -606,14 +606,88 @@ string search yielded a match. Let's turn our text into a little riddle by
 replacing the letters of the leaf-nodes before the match locations with three
 dots::
 
-    >>> for ctx, pos in targets: ctx[-1].result = '...' + ctx[-1].content[pos:]
+    >>> for path, pos in targets: 
+    ...     path[-1].result = '...' + path[-1].content[pos:]
     >>> str(sentence)
     '...s ...s ...m Palace'
 
 The positions resemble the text positions of the text represented by the tree at
 the very moment when the path mapping is generated, not the source positions
-captured by the `pos`-propery of the node-objects! This also means that the
-mapping becomes outdated the very moment, the tree is being restructured.
+captured by the `pos`-property of the node-objects! This also means that the
+mapping becomes outdated, when the tree is being restructured. Unless you use
+the methods provided by :py:class:`~nodetree.ContentMapping` itself in order 
+to make changes to the tree, you need to either call 
+:py:meth:`~nodetree.ContentMapping.rebuild_mapping` to update the content
+mapping at the affected places or instantiate an entirely new content mapping.
+
+A very powerful feature of context mappings is that they allow to restrict 
+the string view onto the document tree to selected parts of the tree, which 
+makes it possible to exclude these parts from the search, e.g.::
+
+    >>> xml = '''<doc><p>In München<footnote>"München" is the German name
+    ... of the city of Munich</footnote> is a Hofbräuhaus</p></doc>'''
+    >>> tree = parse_xml(xml)
+
+Now, assume you would like to find all occurrences of "München" in the main
+text but not in the footnotes, then you can issue a context mapping that
+ignores all footnotes::
+
+    >>> cm = ContentMapping(tree, ignore={'footnote'})
+    >>> list(re.finditer('München', cm.content))
+    [<re.Match object; span=(3, 10), match='München'>]
+
+In contrast, the search in the string-content of the entire tree yields::
+    
+    >>> printw(list(re.finditer('München', tree.content)))
+    [<re.Match object; span=(3, 10), match='München'>, <re.Match object; span=(11,
+     18), match='München'>]
+
+Although, the string locations in a context mappings that has been restricted
+to certain parts of the tree have shifted with respect to the string locations 
+in the full document tree, there is no need to worry that the mapped location
+within the tree had changed::
+
+    >>> tree_pos = tree.content.find('Hofbräuhaus')
+    >>> print(tree_pos)
+    66
+    >>> tm = ContentMapping(tree)
+    >>> tm.content.find('Hofbräuhaus')  # should be the same as above
+    66
+    >>> cm_pos = cm.content.find('Hofbräuhaus')
+    >>> print(cm_pos)
+    16
+
+The string-position is not the same, because the mapping ``cm`` omits the
+footnote-text. Yet, the path and offset within the tree remain the same.
+(Remember that the ``:Text``-nodes are "anonymous" nodes that the XML-parser
+inserts for the character data of XML-elements with `mixed content`_.)::
+
+    >>> cm_path, cm_offset = cm.get_path_and_offset(cm_pos)
+    >>> print(pp_path(cm_path, delimiter=', '), '->', cm_offset)
+    doc, p, :Text -> 6
+    >>> tm_path, tm_offset = tm.get_path_and_offset(tree_pos)
+    >>> print(pp_path(tm_path, delimiter=', '), '->', tm_offset)
+    doc, p, :Text -> 6
+    >>> assert tm_path == cm_path  # paths are really the same sequence of nodes
+
+This can easily be confirmed by looking at the complete mappings in direct 
+comparison. First the unrestricted mapping::
+
+    >>> print(tm)
+    0 -> doc, p, :Text "In München"
+    10 -> doc, p, footnote '"München" is the German name' "of the city of Munich"
+    60 -> doc, p, :Text " is a Hofbräuhaus"
+
+Now, the mapping that omits the footnotes::
+
+    >>> print(cm)
+    0 -> doc, p, :Text "In München"
+    10 -> doc, p, :Text " is a Hofbräuhaus"
+
+Note, that the numbers at the beginning of each line represent the string position
+which is different for the same path, but this has no bearing on the offsets which
+count from the content-mapping-specific position of each path in the content mapping.
+
 
 Adding Markup
 -------------
@@ -638,7 +712,7 @@ complicated::
     ...     " is German for 'City of Munich'</footnote> in Bavaria"
     ...     "</location> in this sentence.</veryhard>")
 
-Let's start with the simplemost case to see how searching and marking
+Let's start with the simple most case to see how searching and marking
 strings works with DHParser::
 
     >>> match = re.search(r"Stadt\s+München", trivial_xml.content)
@@ -649,7 +723,7 @@ strings works with DHParser::
     <trivial>Please mark up <foreign lang="de">Stadt München</foreign>
      in Bavaria in this sentence.</trivial>
 
-In order to search for the text-string, a regular exprestion is used
+In order to search for the text-string, a regular expression is used
 rather than a simple search for "Stadt München", because we cannot
 assume that it appears in exactly the same form in the text. For
 example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
@@ -910,3 +984,4 @@ root-node or swallow a a tree originating in a common node later.
 
 
 .. _ElementTree: https://docs.python.org/3/library/xml.etree.elementtree.html
+.. _mixed content: https://www.w3.org/TR/xml/#sec-mixed-content
