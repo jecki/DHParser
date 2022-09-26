@@ -711,7 +711,45 @@ allows paths that are not leaf-path. The leaf_paths-filter is a simple, though s
 costly in terms of speed, means of turning any criteria into a "criteria is true for
 path AND path is a leaf-path"-coindition.
 
-Now, let's look for the string "München" in the footnotes only.
+Now, let's look for the string "München" in the footnotes only::
+
+    >>> i = fm.content.find('München')
+    >>> path, offset = fm.get_path_and_offset(i)
+    >>> pp_path(path, 1)
+    'doc <- p <- footnote <- em "München"'
+    >>> print(offset)
+    0
+
+We can now manipulate the tree through the path and offset. Let's insert the word
+"Stadt" in front of "München". We do so by changeing the result of the leaf node
+of the path to the term at the given offset::
+
+    >>> path[-1].result = path[-1].result[:offset] + "Stadt " + \
+    ...                   path[-1].result[offset:]
+
+In this particular case, because the offset is zero, we could also have written
+``"Stadt " + path[-1].result``, but the formular above also works for the general
+case where cannot be sure that the offset will always be 0.
+
+We expect that the change is reflected in the tree at the right position, i.e.
+inside the footnote::
+
+    >>> printw(tree.as_xml(inline_tags={'doc'}))
+    <doc><p>In München<footnote><em>Stadt München</em> is the German
+    name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>
+
+As mentioned earlier, the content mapping should be considered tainted if the
+underlying tree has been changed by any other means than the methods of the
+ContentMapping-obejct itself. In order to rebuild the affected path of the
+content mapping :py:meth:`ContentMapping.rebuild_mapping` must be called for
+the affected sections of the content mapping which are defined by the first
+and last path index of the content mapping where a change has taken place::
+
+    >>> k = fm.get_path_index(i)
+    >>> fm.rebuild_mapping(k, k)
+    >>> print(fm)
+    0 -> doc, p, footnote, em "Stadt München"
+    13 -> doc, p, footnote, :Text " is the German" "name of the city of Munich"
 
 Adding Markup
 -------------

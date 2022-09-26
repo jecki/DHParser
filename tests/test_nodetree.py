@@ -30,7 +30,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
-    prev_path, pick_from_path, pp_path, ContentMapping, \
+    prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -1124,7 +1124,7 @@ class TestMarkupInsertion:
         assert content_of(tree, ignore='fn') == 'This is a text'
         assert content_of(tree, select='fn') == 'footnote'
 
-    def test_ContentMapping(self):
+    def test_ContentMapping_constructor(self):
         tree = parse_xml('<doc><p>In München<footnote><em>München</em> is the '
             'German name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>')
         try:
@@ -1134,6 +1134,20 @@ class TestMarkupInsertion:
             pass
         cm = ContentMapping(tree, select=lambda pth: pick_from_path(pth, 'footnote')
                                                      and not pth[-1].children)
+
+    def test_ContentMapping_rebuild_mapping(self):
+        tree = parse_xml('<doc><p>In München<footnote><em>München</em> is the '
+            'German name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>')
+        fm = ContentMapping(tree, select=leaf_paths('footnote'), ignore=NO_PATH)
+        i = fm.content.find('München')
+        path, offset = fm.get_path_and_offset(i)
+        path[-1].result = path[-1].result[:offset] + "Stadt " + path[-1].result[offset:]
+        assert tree.as_xml(inline_tags={'doc'}) == ('<doc><p>In München<footnote>'
+            '<em>Stadt München</em> is the German name of the city of Munich</footnote> '
+            'is a Hofbräuhaus</p></doc>')
+        k = fm.get_path_index(i)
+        fm.rebuild_mapping(k, k)
+        assert fm.pos_list == [0, 13]
 
     def test_insert_milestone_1(self):
         empty_tags = set()

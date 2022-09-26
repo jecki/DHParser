@@ -2908,7 +2908,7 @@ class ContentMapping:
         self.pos_list: List[int] = pos_list
         self.path_list: List[Path] = path_list
 
-    def _generate_mapping(self, origin) \
+    def _generate_mapping(self, origin, stump: Path = []) \
             -> Tuple[str, List[int], List[Path]]:
         """Generates the string content, list of positions and list of paths
         for the given origin taking into account ``self.select_func`` and
@@ -2917,10 +2917,11 @@ class ContentMapping:
         content_list = []
         path_list = []
         pos_list = []
+        select_func = (lambda pth: self.select_func(stump + pth)) if stump else self.select_func
         if self.ignore_func([origin]):
             return '', [], []
         for trl in origin.select_path_if(
-                self.select_func, include_root=True, skip_func=self.ignore_func):
+                select_func, include_root=True, skip_func=self.ignore_func):
             #  if self.ignore_func(trl):  continue
             pos_list.append(pos)
             path_list.append(trl)
@@ -3104,13 +3105,13 @@ class ContentMapping:
         while last_index < last and self.path_list[last_index + 1][i:i + 1] == [common_ancestor]:
             last_index += 1
 
-        content, offsets, paths = self._generate_mapping(common_ancestor)
+        stump = start_path[:i]
+        content, offsets, paths = self._generate_mapping(common_ancestor, stump)
         assert offsets[0] == 0
         start_pos = self.pos_list[first_index]
         end_pos = self.pos_list[last_index] + self.path_list[last_index][-1].strlen()
         offsets = [offset + start_pos for offset in offsets]
-        stump = start_path[:i]
-        paths = [stump + path for path in paths]
+        if stump:  paths = [stump + path for path in paths]
 
         off_head = self.pos_list[:first_index]
         followup_offset = offsets[-1] + paths[-1][-1].strlen()
