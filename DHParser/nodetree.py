@@ -120,6 +120,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'split',
            'deep_split',
            'can_split',
+           'leaf_paths',
            'ContentMapping',
            'FrozenNode',
            'EMPTY_NODE',
@@ -2758,13 +2759,20 @@ def markup_left(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
     assert not any(nd.name == ':Text' and nd.children for nd in path)
 
 
-def _make_leaf_selectors(select: PathSelector,
-                         ignore: PathSelector) -> Tuple[Callable, Callable]:
+def _breed_leaf_selector(select: PathSelector,
+                                ignore: PathSelector) -> Tuple[Callable, Callable]:
     select_func = create_path_match_function(select)
     ignore_func = create_path_match_function(ignore)
 
     def general_match_func(path: Path) -> bool:
-        return not path[-1]._children and select_func(path) and not ignore_func(path)
+        if path[-1]._children:
+            if select_func(path):
+                raise ValueError(f'Selector "{select}" should yield only leaf-paths! But '
+                    f'the last element "{path[-1].name}" of path "{pp_path(path)}" has '
+                    f'children: {", ".join(child.name for child in path[-1].children)}! '
+                    f'Use leaf_path({select}) to circumvent this error.')
+            return False
+        return select_func(path) and not ignore_func(path)
 
     if select == LEAF_PATH and ignore == NO_PATH:
         match_func = LEAF_PATH
@@ -2772,6 +2780,39 @@ def _make_leaf_selectors(select: PathSelector,
         match_func = general_match_func
 
     return match_func, ignore_func
+
+
+def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
+    """Creates a path-match function that matches only and all leaf path
+    for those paths that the criterion matches. Warning: This may be
+    slower than a custom algorithm that matches only leaf-poth right
+    from the start. Example::
+
+    >>> xml = '''<doc><p>In München<footnote><em>München</em> is the German
+    ... name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>'''
+    >>> tree = parse_xml(xml)
+    >>> for path in tree.select_path(leaf_paths('footnote')):
+    ...    pp_path(path, 1)
+    'doc <- p <- footnote <- em "München"'
+    'doc <- p <- footnote <- :Text " is the German\\nname of the city of Munich"'
+
+    Compare this with the result without the leaf_paths-filter::
+
+    >>> for path in tree.select_path('footnote'):
+    ...    pp_path(path, 1)
+    'doc <- p <- footnote "München is the German\\nname of the city of Munich"'
+    """
+
+    match_func = create_path_match_function(criterion)
+
+    def leaf_match_func(path: Path) -> bool:
+        if path[-1]._children:  return False
+        for i in range(len(path), 0, -1):
+            if match_func(path[:i]):
+                return True
+        return False
+
+    return leaf_match_func
 
 
 class ContentMapping:
@@ -2796,12 +2837,12 @@ class ContentMapping:
         generated. This can be a branch of another tree and therefore does not
         need to be a RootNode-object.
     :ivar select_func: Only leaf-paths for which this is true will be considered when
-        generating the content-mapping. Note that this requires the
-        select-criterion to actually yield leaf-paths. Otherwise, the
-        content-mapping will be empty.
-    :ivar ignore_func: Sub-trees or leaves for which ignore is true will be skipped
-        as well. Together, the select- and ignore-functions define which parts of
-        the trees are included in the mapping.
+        generating the content-mapping. This function integrates both the select-
+        and ignore-criteria passed to the constructor of the class. Note that the
+        select-criterion must only accept leaf-paths. Otherwise a ValueError will
+        be raised.
+    :ivar ignore_func: The ignore function derives from the ignore-parameter of
+        the "__init__()"-construcotr of class ContentMapping.
     :ivar content: The string content of the selected parts of the tree.
 
     Markup-related instance variables
@@ -2841,9 +2882,9 @@ class ContentMapping:
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
         self.origin: Node = origin
-        slf, igf = _make_leaf_selectors(select, ignore)
-        self.select_func: PathMatchFunction = slf
-        self.ignore_func: PathMatchFunction = igf
+        select_func, ignore_func = _breed_leaf_selector(select, ignore)
+        self.select_func: PathMatchFunction = select_func
+        self.ignore_func: PathMatchFunction = ignore_func
         self.greedy: bool = greedy
         if isinstance(divisability, Dict):
             if '*' not in divisability:  divisability['*'] = set()
@@ -2867,7 +2908,8 @@ class ContentMapping:
         self.pos_list: List[int] = pos_list
         self.path_list: List[Path] = path_list
 
-    def _generate_mapping(self, origin) -> Tuple[str, List[int], List[Path]]:
+    def _generate_mapping(self, origin) \
+            -> Tuple[str, List[int], List[Path]]:
         """Generates the string content, list of positions and list of paths
         for the given origin taking into account ``self.select_func`` and
         ``self.ignore_func`` as constraints."""
@@ -2879,7 +2921,7 @@ class ContentMapping:
             return '', [], []
         for trl in origin.select_path_if(
                 self.select_func, include_root=True, skip_func=self.ignore_func):
-            if trl[-1]._children or self.ignore_func(trl):  continue  # ignore non-leaf paths
+            #  if self.ignore_func(trl):  continue
             pos_list.append(pos)
             path_list.append(trl)
             content_list.append(trl[-1].content)

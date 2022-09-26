@@ -30,7 +30,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
-    prev_path, pp_path, ContentMapping, \
+    prev_path, pick_from_path, pp_path, ContentMapping, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -1118,11 +1118,22 @@ class TestMarkupInsertion:
 </app> glandiferae</document>'''
     testdata_3 = '''<doc>Am <outer><inner>Anfang</inner> war das Wort</outer>.</doc>'''
 
-    def test_content(self):
+    def test_content_of(self):
         tree = parse_xml('<p>This is<fn>footnote</fn> a text</p>')
         assert content_of(tree) == 'This isfootnote a text'
         assert content_of(tree, ignore='fn') == 'This is a text'
         assert content_of(tree, select='fn') == 'footnote'
+
+    def test_ContentMapping(self):
+        tree = parse_xml('<doc><p>In München<footnote><em>München</em> is the '
+            'German name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>')
+        try:
+            cm = ContentMapping(tree, select='footnote')
+            assert False, "ValueError expected"
+        except ValueError as e:
+            pass
+        cm = ContentMapping(tree, select=lambda pth: pick_from_path(pth, 'footnote')
+                                                     and not pth[-1].children)
 
     def test_insert_milestone_1(self):
         empty_tags = set()

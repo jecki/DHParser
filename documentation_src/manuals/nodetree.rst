@@ -624,23 +624,31 @@ A very powerful feature of context mappings is that they allow to restrict
 the string view onto the document tree to selected parts of the tree, which 
 makes it possible to exclude these parts from the search, e.g.::
 
-    >>> xml = '''<doc><p>In München<footnote>"München" is the German name
-    ... of the city of Munich</footnote> is a Hofbräuhaus</p></doc>'''
+    >>> xml = '''<doc><p>In München<footnote><em>München</em> is the German
+    ... name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>'''
     >>> tree = parse_xml(xml)
 
 Now, assume you would like to find all occurrences of "München" in the main
 text but not in the footnotes, then you can issue a context mapping that
 ignores all footnotes::
 
-    >>> cm = ContentMapping(tree, ignore={'footnote'})
+    >>> cm = ContentMapping(tree, select=LEAF_PATH, ignore={'footnote'})
     >>> list(re.finditer('München', cm.content))
     [<re.Match object; span=(3, 10), match='München'>]
 
-In contrast, the search in the string-content of the entire tree yields::
+In order to restrict the content mapping to certain parts of the tree, the
+ContentMapping-class takes a same pair of path selectors similar to the
+"criteria" and "skip_subtree" parameters of :py:meth:`Node.select_path`
+and :py:meth:`Node.pick`. However, there is a subtle but important difference:
+The "select"-parameter of the ContentMapping-class must only accept leaf-paths!
+Otherwise a ValueError will be raised.
+
+In contrast to the restricted content mapping, the search in the
+string-content of the entire tree yields::
     
     >>> printw(list(re.finditer('München', tree.content)))
-    [<re.Match object; span=(3, 10), match='München'>, <re.Match object; span=(11,
-     18), match='München'>]
+    [<re.Match object; span=(3, 10), match='München'>, <re.Match object; span=(10,
+     17), match='München'>]
 
 Although, the string locations in a context mappings that has been restricted
 to certain parts of the tree have shifted with respect to the string locations 
@@ -649,10 +657,10 @@ within the tree had changed::
 
     >>> tree_pos = tree.content.find('Hofbräuhaus')
     >>> print(tree_pos)
-    66
+    64
     >>> tm = ContentMapping(tree)
     >>> tm.content.find('Hofbräuhaus')  # should be the same as above
-    66
+    64
     >>> cm_pos = cm.content.find('Hofbräuhaus')
     >>> print(cm_pos)
     16
@@ -675,8 +683,9 @@ comparison. First the unrestricted mapping::
 
     >>> print(tm)
     0 -> doc, p, :Text "In München"
-    10 -> doc, p, footnote '"München" is the German name' "of the city of Munich"
-    60 -> doc, p, :Text " is a Hofbräuhaus"
+    10 -> doc, p, footnote, em "München"
+    17 -> doc, p, footnote, :Text " is the German" "name of the city of Munich"
+    58 -> doc, p, :Text " is a Hofbräuhaus"
 
 Now, the mapping that omits the footnotes::
 
@@ -688,6 +697,21 @@ Note, that the numbers at the beginning of each line represent the string positi
 which is different for the same path, but this has no bearing on the offsets which
 count from the content-mapping-specific position of each path in the content mapping.
 
+Conversely, we could also have restricted the content mapping only to the footnote(s)::
+
+    >>> fm = ContentMapping(tree, select=leaf_paths('footnote'), ignore=NO_PATH)
+    >>> print(fm)
+    0 -> doc, p, footnote, em "München"
+    7 -> doc, p, footnote, :Text " is the German" "name of the city of Munich"
+
+Here, the parameter ``ignore=NO_PATH`` has to be understood as "from the selected paths
+do not ignore any paths". Note, the :py:func:`leaf_path`-filter used to define the
+value of the select-argument. ContentMapping raises a ValueError if the select-criterion
+allows paths that are not leaf-path. The leaf_paths-filter is a simple, though slightly
+costly in terms of speed, means of turning any criteria into a "criteria is true for
+path AND path is a leaf-path"-coindition.
+
+Now, let's look for the string "München" in the footnotes only.
 
 Adding Markup
 -------------
