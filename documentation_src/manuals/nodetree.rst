@@ -288,10 +288,10 @@ listed in the `string_tags`-set passed to the
       phrase "Buckingham Palace"
 
 
-ElementTree-Export
-------------------
+ElementTree-Exchange
+--------------------
 
-Although DHParser offers rich support for tree-transformation, he whish may
+Although DHParser offers rich support for tree-transformation, the wish may
 arise to use standard XML-tools for tree-transformation as an alternative or
 supplement to the tools DHParser offers. One way to do so, would be to serialize
 the tree of :py:class:`~snytaxtree.Node`-objects, then use the XML-tools and,
@@ -302,7 +302,7 @@ Python-libraries for XML. In order to make this as easy as possible trees of
 :py:class:`~snytaxtree.Node`-objects can be converted to `ElementTree`_-objects
 either from the python standard library or from the `lxml <https://lxml.de/>`_-library
 
-    >>> import xml.etree.ElementTree as ET
+    >>> import xml.etree.ElementTree as ET  # for lxml write: from lxml import etree as ET
     >>> et = sentence.as_etree(ET)
     >>> ET.dump(et)
     <sentence><word>This</word><blank> </blank><word>is</word><blank> </blank><phrase><word>Buckingham</word><blank> </blank><word>Palace</word></phrase></sentence>
@@ -790,17 +790,80 @@ rather than a simple search for "Stadt München", because we cannot
 assume that it appears in exactly the same form in the text. For
 example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
 
-Now, let's try the next more complicated case::
+Now, let's try the next more complicated case. Because we will try
+different configurations, we use copyied of the tree "hard_xml"::
 
-    >>> match = re.search(r"Stadt\s+München", hard_xml.content)
-    >>> mapping = ContentMapping(hard_xml)
+    >>> hard_xml_copy = copy.deepcopy(hard_xml)
+    >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
+    >>> mapping = ContentMapping(hard_xml_copy)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})
-    >>> xml_str = hard_xml.as_xml(inline_tags={'hard'}, empty_tags={'lb'})
-    >>> printw(repr(xml_str)[1:-1])
-    <hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign><location>
-    <foreign lang="de"><em>München</em></foreign> in Bavaria</location>
-     in this sentence.</hard>
+    >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
+    >>> print(xml_str)
+    <hard>
+      Please mark up
+      <foreign lang="de">
+        Stadt
+        <lb/>
+      </foreign>
+      <location>
+        <foreign lang="de">
+          <em>München</em>
+        </foreign>
+        in Bavaria
+      </location>
+      in this sentence.
+    </hard>
+
+
+As can be seen the <foreign>-tag is split into two parts, because the markup
+runs across the border of another tag, in this case <location>. Note, that the
+<lb/>-tag lies inside the <foreign>-tag. But that makes sense, because it would
+also have been inside the <foreign>-tag, had there been no <location>-tag and
+no need to split. (Per default, the algorithm behaves somewhat "greedy", which,
+however can be configered with a parameter with the same name passed to the
+constructor of class ContentMapping.)
+
+But what if you don't wand the <foreign>-tag to be split up in two or more parts,
+as the case may be. Well, in this case, you need to allow those tags, the
+broders of which the new markup runs across, to be split by that markup::
+
+    >>> hard_xml_copy = copy.deepcopy(hard_xml)
+    >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
+    >>> divisability_map = {'foreign': {'location', ':Text'},
+    ...                     '*': {':Text'}}
+    >>> mapping = ContentMapping(hard_xml_copy, divisability=divisability_map)
+    >>> _ = mapping.markup(match.start(), match.end(), "foreign",
+    ...                    {'lang': 'de'})
+    >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
+    >>> print(xml_str)
+    <hard>
+      Please mark up
+      <foreign lang="de">
+        Stadt
+        <lb/>
+        <location>
+          <em>München</em>
+        </location>
+      </foreign>
+      <location>
+        in Bavaria
+      </location>
+      in this sentence.
+    </hard>
+
+See the difference? This time the <foreign>-element remains intact, while the
+<location>-element has been split. This behaviour can be configures by the
+divisability-map that is passed to the parameter ``divisability`` of the
+ContentMapping-constructor. It maps elements (or, rather, their names)
+to sets of elements that can be cut by them. The asterix ``*`` is a wildcard
+and contains those elements that can be cut by any other element. An element
+that does not appear in the value-set anywhere in the mapping cannot be cut
+by any other element. It is also possible to pass a simple set of element-names
+instead of a dictionary to the divisability-parameter. In this case any element
+with a name in this set can be cut by any other element. Any element the name of
+which is not a member of the set cannot be cut when markup is added.
+
 
 
 

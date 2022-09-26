@@ -1601,7 +1601,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_xml(self, src: str = None,
                indentation: int = 2,
                inline_tags: Set[str] = frozenset(),
-               string_tags: Set[str] = frozenset(TOKEN_PTYPE),
+               string_tags: Set[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
                empty_tags: Set[str] = frozenset(),
                strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
@@ -1835,7 +1835,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, ET=None, string_tags: Set[str] = frozenset({TOKEN_PTYPE}),
+    def as_etree(self, ET=None, string_tags: Set[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
                  empty_tags: Set[str] = frozenset()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
@@ -1885,7 +1885,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return element
 
     @staticmethod
-    def from_etree(et, string_tag: str = ':Text') -> 'Node':
+    def from_etree(et, string_tag: str = MIXED_MODE_TEXT_PTYPE) -> 'Node':
         """Converts a standard-library- or lxml-ElementTree to a tree of nodes.
 
         :param et:  the root element-object of the ElementTree

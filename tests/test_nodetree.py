@@ -1013,7 +1013,7 @@ class TestPathNavigation:
         assert content_of(tree, select, ignore | {'A'}) == ""
         assert strlen_of(tree, select, ignore | {'A'}) == 0
 
-        mapping = ContentMapping(tree, select, ignore)
+        mapping = ContentMapping(tree, leaf_paths(select), ignore)
         mapping.insert_node(content.find('delta'), Node('G', 'omicron'))
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(A (B "alpha") (C (D "beta") (E "gamma")) (G "omicron") (F "delta"))'
