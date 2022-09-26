@@ -2384,6 +2384,7 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True,
     node.result = node._result[:i]
     if chain_attr and not node.anonymous:
         node.attr.update(chain_attr)
+        right.attr.update(chain_attr)
     parent.result = parent._result[:k] + (right,) + parent.result[k:]
     return k
 
@@ -3286,9 +3287,11 @@ class ContentMapping:
         i = -1
         k = -1
         if q < abs(q) == len(stump_A) - 1:
-            i = deep_split(stump_A, pos_A, False, self.greedy, self.select_func, self.ignore_func)
+            i = deep_split(stump_A, pos_A, False, self.greedy, self.select_func,
+                           self.ignore_func, self.chain_attr_name)
         if r < abs(r) == len(stump_B) - 1:
-            k = deep_split(stump_B, pos_B, True, self.greedy, self.select_func, self.ignore_func)
+            k = deep_split(stump_B, pos_B, True, self.greedy, self.select_func,
+                           self.ignore_func, self.chain_attr_name)
 
         if i >= 0 and k >= 0:
             attr_dict.pop(self.chain_attr_name, None)

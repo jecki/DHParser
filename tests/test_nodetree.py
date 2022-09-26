@@ -1149,6 +1149,18 @@ class TestMarkupInsertion:
         fm.rebuild_mapping(k, k)
         assert fm.pos_list == [0, 13]
 
+    def test_chain_attr(self):
+        tree = parse_xml("<hard>Please mark up Stadt\n<lb/><location><em>München</em> "
+                         "in Bavaria</location> in this sentence.</hard>")
+        divisability_map = {'foreign': {'location', ':Text'},
+                                        '*': {':Text'}}
+        mapping = ContentMapping(tree, divisability=divisability_map,
+                                 chain_attr_name = "chain")
+        match = re.search(r"Stadt\s+München", mapping.content)
+        _ = mapping.markup(match.start(), match.end(), "foreign", {'lang': 'de'})
+        xml_str = tree.as_xml(empty_tags={'lb'})
+        print(xml_str)
+
     def test_insert_milestone_1(self):
         empty_tags = set()
         tree = parse_xml(self.testdata_1, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)

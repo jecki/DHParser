@@ -587,7 +587,7 @@ leaf-nodes to which they belong. The path-mapping can be thought of as a
 Note that the path in the first line of the output is different from the path
 in the third line, although the sequence of node-names that appears in the
 pretty-printed version shown here is the same, i.e. "sentence, word", because
-the paths really consist of different Nodes, albeit with the same names.
+the paths really consist of different Nodes.
 
 Now let's find all letters that are followed by a whitespace character::
 
@@ -777,8 +777,8 @@ complicated::
 Let's start with the simple most case to see how searching and marking
 strings works with DHParser::
 
-    >>> match = re.search(r"Stadt\s+München", trivial_xml.content)
     >>> mapping = ContentMapping(trivial_xml)
+    >>> match = re.search(r"Stadt\s+München", mapping.content)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})
     >>> printw(trivial_xml.as_xml(inline_tags={'trivial'}))
@@ -794,8 +794,8 @@ Now, let's try the next more complicated case. Because we will try
 different configurations, we use copyied of the tree "hard_xml"::
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
-    >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
     >>> mapping = ContentMapping(hard_xml_copy)
+    >>> match = re.search(r"Stadt\s+München", mapping.content)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})
     >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
@@ -829,10 +829,10 @@ as the case may be. Well, in this case, you need to allow those tags, the
 broders of which the new markup runs across, to be split by that markup::
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
-    >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
     >>> divisability_map = {'foreign': {'location', ':Text'},
     ...                     '*': {':Text'}}
     >>> mapping = ContentMapping(hard_xml_copy, divisability=divisability_map)
+    >>> match = re.search(r"Stadt\s+München", mapping.content)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})
     >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
@@ -863,6 +863,34 @@ by any other element. It is also possible to pass a simple set of element-names
 instead of a dictionary to the divisability-parameter. In this case any element
 with a name in this set can be cut by any other element. Any element the name of
 which is not a member of the set cannot be cut when markup is added.
+
+In cases where markup overlaps element-borders, it is unavoidable to decide which
+element will be divided and which not. It is a general limitation of tree strcutures
+that they do not allow overlapping hierarchies. In this particular example, it would
+most probably be more reasonable to keep the <location>-element intact, because
+locatons should probably be recognisable as units, while this does not really seem
+to matter for a foreign language annotation.
+
+The case may arise, though, where you cannot avoid splitting elements that form
+units. At this point you probably should consider using an entirely different
+data-structure, say, a graph. But if this is not an option,
+:py:mod:`DHParser.nodetree` allows you to mark split elements as belonging
+to the same "chain" of elements. In order to do so you can pass a ``chain_attr_name``
+to the constructor of class ContentMapping. This is an (arbitrary) name for an
+attribute which will contain a unique short string that all elements (of the
+same name) belonging to one and the same chain share with each other,
+but not with any other elements. Let's try this on the previous example::
+
+    >>> hard_xml_copy = copy.deepcopy(hard_xml)
+    >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
+    >>> divisability_map = {'foreign': {'location', ':Text'},
+    ...                     '*': {':Text'}}
+    >>> mapping = ContentMapping(hard_xml_copy, divisability=divisability_map,
+    ...                          chain_attr_name="chain")
+    >>> _ = mapping.markup(match.start(), match.end(), "foreign",
+    ...                    {'lang': 'de'})
+    >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
+    >>> print(xml_str)
 
 
 
