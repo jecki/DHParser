@@ -751,6 +751,29 @@ and last path index of the content mapping where a change has taken place::
     0 -> doc, p, footnote, em "Stadt München"
     13 -> doc, p, footnote, :Text " is the German" "name of the city of Munich"
 
+**Limitations**: As of now, a limitation of the content mappings provided
+by :py:mod:`DHParser.nodetree` consists in the fact that they remain
+completely agnostic with respect to any textual meaning of the nodes.
+For example assume that the node-name "pB" signifies a page break, which
+implies that there is a gap between the two parts separated by the page
+break. However, because this is considered part of the meaning
+of "pb" it may not be required by the encoding guide-lines for the
+documnet that a gap, say, a blank character or a linefeed is also
+redundantly encoded in the string content of the document as well.
+(It may even be forbidden to do so!) But then a search on the
+string content may miss phrases separated by a page break::
+
+    >>> tree = parse_xml('<doc>... New<pb/>York ...</doc>')
+    >>> print(tree.content)
+    ... NewYork ...
+    >>> re.search('New\s+York', tree.content)
+
+Currently, the only remedy is to either allow redundant encoding
+of textual meanings withing the string-content or adding specific
+nodes that ccarry the redundant textual meanings within their
+string-contnet and removing them again, after searches etc. have
+been finished.
+
 Adding Markup
 -------------
 
