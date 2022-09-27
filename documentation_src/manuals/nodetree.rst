@@ -992,53 +992,53 @@ for this phrase and add the required location markup::
       in this sentence.
     </doc>
 
-  The <location>-element covers the entire span, including the footnote. This
-  is to be expected as changes are always carried out on the full tree. Only,
-  the mapping is restricted to certain parts of the document. Usually, this
-  is also the desired behaviour, though, admittedly, depending on the use case
-  another behavior (e.g. splitting the <location>-element into one part before
-  the <footnote>-elemnt and one part after that element) might be preferable.
-  Such cases are not covered by the markup-method of class ContentMapping.
+The <location>-element covers the entire span, including the footnote. This
+is to be expected as changes are always carried out on the full tree. Only,
+the mapping is restricted to certain parts of the document. Usually, this
+is also the desired behaviour, though, admittedly, depending on the use case
+another behavior (e.g. splitting the <location>-element into one part before
+the <footnote>-elemnt and one part after that element) might be preferable.
+Such cases are not covered by the markup-method of class ContentMapping.
 
-  Because, the <location>-element did not need to be split, it does not need
-  and therefore does not have a "chain"-attribute.
+Because, the <location>-element did not need to be split, it does not need
+and therefore does not have a "chain"-attribute.
 
-  Next, let's add the <foreign>-element. (We substitue the value of its 
-  chain-attribute, so that the doctest does not break, when another random
-  key is picked!)::
+Next, let's add the <foreign>-element. (We substitue the value of its 
+chain-attribute, so that the doctest does not break, when another random
+key is picked!)::
 
-      >>> m = re.search(r'Stadt\s+München', cm.content)
-      >>> _ = cm.markup(m.start(), m.end(), 'foreign', lang="de")
-      >>> chain_val = tree.pick('foreign').get_attr('chain', '')
-      >>> for foreign in tree.select('foreign'):  
-      ...     if foreign.has_attr('chain') and foreign.attr['chain'] == chain_val:
-      ...         foreign.attr['chain'] = 'MSJ'       
-      >>> print(tree.as_xml(empty_tags={'lb'}))
-      <doc>
-        Please mark up
+    >>> m = re.search(r'Stadt\s+München', cm.content)
+    >>> _ = cm.markup(m.start(), m.end(), 'foreign', lang="de")
+    >>> chain_val = tree.pick('foreign').get_attr('chain', '')
+    >>> for foreign in tree.select('foreign'):  
+    ...     if foreign.has_attr('chain') and foreign.attr['chain'] == chain_val:
+    ...         foreign.attr['chain'] = 'MSJ'       
+    >>> print(tree.as_xml(empty_tags={'lb'}))
+    <doc>
+      Please mark up
+      <foreign lang="de" chain="MSJ">
+        Stadt
+        <lb/>
+      </foreign>
+      <location>
         <foreign lang="de" chain="MSJ">
-          Stadt
-          <lb/>
+          <em>München</em>
         </foreign>
-        <location>
-          <foreign lang="de" chain="MSJ">
-            <em>München</em>
-          </foreign>
-          <footnote>
-            'Stadt
-            <em>München</em>
-            ' is German for 'City of Munich'
-          </footnote>
-          in Bavaria
-        </location>
-        in this sentence.
-      </doc>
+        <footnote>
+          'Stadt
+          <em>München</em>
+          ' is German for 'City of Munich'
+        </footnote>
+        in Bavaria
+      </location>
+      in this sentence.
+    </doc>
 
-  Here again, one might ask, why the <foreign>-tag contains the <lb>-tag, but
-  the choice makes sense, because if put together again, it should cover the 
-  complete stretch including the line-break. Again, different use cases and
-  different choices are imaginable which, however, are not covered by the 
-  :py:meth:`ContentMapping.markup`-method.
+Here again, one might ask, why the <foreign>-tag contains the <lb>-tag, but
+the choice makes sense, because if put together again, it should cover the 
+complete stretch including the line-break. Again, different use cases and
+different choices are imaginable which, however, are not covered by the 
+:py:meth:`ContentMapping.markup`-method.
 
 
 Error Messages
