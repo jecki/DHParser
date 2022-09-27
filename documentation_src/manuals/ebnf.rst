@@ -587,8 +587,8 @@ probably use a preprocessor or some kind of "semantic actions"
 to handle such cases. There is some support for either of these
 in DHParser.)
 
-Coding significant Whitespace in EBNF-Grammars
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Significant Whitespace
+^^^^^^^^^^^^^^^^^^^^^^
 
 A reasonable approach to coding whitespace is to use one
 particular symbol for each kind of whitespace. Those kinds of
@@ -815,8 +815,8 @@ you'd have to insert a symbol for whitespace. The same problem
 exists when it comes to allowing comments, because you'd
 probably allow to insert comments in as many places as possible.
 
-DHParser's support for insignificant whitespace and comments
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+insignificant whitespace
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Coding insignificant whitespace and comments is exactly the
 same as coding significant whitespace and comments and does not
@@ -1165,8 +1165,8 @@ Of course, this example is rather wanton and the grammar can easily be rewritten
 without the lookback-operators.
 
 
-Locating errors and customizing error messages
-----------------------------------------------
+Error Messages
+--------------
 
 Providing users with proper error information is one of the most tenacious
 problem when implementing the parser for a domain specific language.
@@ -1233,8 +1233,8 @@ do little to remedy this situation, however. In this example,
 it would just be as confusing to learn that expression->\`+\` failed
 at the end of the parsed string.
 
-Marking mandatory items with "§"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Mandatory items "§"
+^^^^^^^^^^^^^^^^^^^
 
 Thus, "farthest fail"-method is not very suitable for explaining
 the failure or pinpointing which parser really was the culprit.
@@ -1294,8 +1294,8 @@ only after the grammar has reached a certain amount of maturity, because
 changing the grammer ofter requires re-adjusting customized error messages
 and resume-clauses as well, which can become tedious.
 
-Customizing error messages
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Custom error messages
+^^^^^^^^^^^^^^^^^^^^^
 
 While the error messages produced by the use of the §-marker are often
 quite understandable for the engineer designing the grammar of a DSL,
@@ -1400,8 +1400,8 @@ compilation make possible by fail-tolerant parsers.
 
 .. _generic_fail_tolerant_parsing:
 
-A generic method for fail-tolerant parsing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Generic approach
+^^^^^^^^^^^^^^^^
 
 Fail tolerant parsing means that:
 
@@ -1481,8 +1481,8 @@ forgotten. So, to be absolutely sure, one would have to consider
 different follow-up sequences, say empty lines, keywords that mark
 new parts of the document and the like.
 
-DHParser's support for fail-tolerant parsing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Skip and Resume
+^^^^^^^^^^^^^^^
 
 DHParser offers two constructs for fail-tolerant parsing which are
 quite similar to the just described technique. However, they do not
@@ -1776,15 +1776,14 @@ by skipping larger portions of the text is probably negligble or at any
 rate smaller than the harm done by introducing consequential errors as
 a result of poorly choosen resumption rules.
 
-Context sensitive parsers and semantic actions
-----------------------------------------------
+Context sensitive parsers
+-------------------------
 
 DHParser does by intention not contain support for semantic actions, because
 these can introduce a context-sensitivity that can be hard to handle with a
-recursive descent parser and compiler-generation, where semtantiv actions
-might become useful is not the main domain of application for DHParser.
-(In case you are worried: There are a few documented but unadvertised loopholes
-that can be (mis-)used for semantic actions, though...)
+recursive descent parser. And compiler-generation, where semantic actions
+are mostly needed, is not the main domain of application for DHParser.
+(There are a few loopholes that can be (mis-)used for semantic actions, though...)
 
 Sometimes, however, it would be ever so comfortable to break out of the
 paradigm of context free grammars - if only just a little bit. For example,
@@ -1989,8 +1988,8 @@ Here, the outer double braces "{{" and "}}" open up and close a new code block a
 discarded as delimiters during the AST-transformation, while the opening and closing braces
 within the code block are simply that: opening and closing braces.
 
-Advanced context sensitive parsers
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Advanced usages
+^^^^^^^^^^^^^^^
 
 Apart from the Pop- and Retrieve-operator, DHParser offers a third retrieval operator that,
 like the Pop-operator, "pops" that last value from the stack and matches either this value
@@ -2138,8 +2137,8 @@ this error:
    ``tree = { INDENT node DEDENT }+ /\\s*/ EOF [DEDENT]``
 
 
-Error resumption with context sensitive parsers
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The problem of error resumption
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Resuming parsing after an error has occurred is complicated
 because, if done bady, it can lead to consequential errors, i.e.

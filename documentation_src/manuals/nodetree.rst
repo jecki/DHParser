@@ -562,19 +562,23 @@ tree pre-order. See the difference::
      'A <- C <- D <- E "2"', 'A <- B "1"']
 
 
-Flat-String-Navigation
-^^^^^^^^^^^^^^^^^^^^^^
+Content Mappings
+----------------
 
-Sometimes it may be more convenient to search for a specific feature in the
-string-content of a text, rather than in the structured tree. For example,
-finding matching brackets in tree-structured text can be quite cumbersome if
-brackets are not "tagged" individually. For theses cases it is possible to
-generate a path mapping that maps text position to the paths of the
-leaf-nodes to which they belong. The path-mapping can be thought of as a
-"string-view" on the tree::
+Basics
+^^^^^^
+
+For finding a passage in the text or identifying certain textual features
+like, for exmple, matching brakets, traverisng the tree is not really an 
+option, if only, because a passage may extend over several nodes, possibly
+even on different levels of the tree hierarchy. For such cases it is possible to
+generate a content mapping that maps text positions within the pure string-content
+to the paths of the leaf-nodes to which they belong. This mapping 
+can be thought of as a "string-view" on the tree::
 
     >>> ctx_mapping = ContentMapping(sentence)
-    >>> flat_text = ctx_mapping.content  # equals sentence.content in this case
+    >>> print(ctx_mapping.content)
+    This is Buckingham Palace
     >>> print(ctx_mapping)
     0 -> sentence, word "This"
     4 -> sentence, blank " "
@@ -591,8 +595,15 @@ the paths really consist of different Nodes.
 
 Now let's find all letters that are followed by a whitespace character::
 
-    >>> import re; locations = [m.start() for m in re.finditer(r'\w ', flat_text)]
+    >>> import re 
+    >>> locations = [m.start() for m in re.finditer(r'\w ', ctx_mapping.content)]
     >>> targets = [ctx_mapping.get_path_and_offset(loc) for loc in locations]
+
+.. tip::
+    Other than the node's content property, the content mappings content
+    field is not generated on the fly every time it is retrieved, but
+    only when instantiating or reubuilding the mapping. Performancewise
+    it is advisable to always use the content mapping's content field.
 
 The target returned by :py:meth:`~nodetree.ContentMapping.get_path_and_offset`
 is a tuple of the target path and the relative position of the location that
@@ -619,6 +630,10 @@ the methods provided by :py:class:`~nodetree.ContentMapping` itself in order
 to make changes to the tree, you need to either call 
 :py:meth:`~nodetree.ContentMapping.rebuild_mapping` to update the content
 mapping at the affected places or instantiate an entirely new content mapping.
+
+
+Restricted Mappings
+^^^^^^^^^^^^^^^^^^^
 
 A very powerful feature of context mappings is that they allow to restrict 
 the string view onto the document tree to selected parts of the tree, which 
@@ -751,7 +766,11 @@ and last path index of the content mapping where a change has taken place::
     0 -> doc, p, footnote, em "Stadt München"
     13 -> doc, p, footnote, :Text " is the German" "name of the city of Munich"
 
-**Limitations**: As of now, a limitation of the content mappings provided
+
+Limitations
+^^^^^^^^^^^
+
+As of now, a limitation of the content mappings provided
 by :py:mod:`DHParser.nodetree` consists in the fact that they remain
 completely agnostic with respect to any textual meaning of the nodes.
 For example assume that the node-name "pB" signifies a page break, which
@@ -763,9 +782,9 @@ redundantly encoded in the string content of the document as well.
 (It may even be forbidden to do so!) But then a search on the
 string content may miss phrases separated by a page break::
 
-    >>> tree = parse_xml('<doc>... New<pb/>York ...</doc>')
+    >>> tree = parse_xml('<doc>xyz New<pb/>York xyz</doc>')
     >>> print(tree.content)
-    ... NewYork ...
+    xyz NewYork xyz
     >>> re.search('New\s+York', tree.content)
 
 Currently, the only remedy is to either allow redundant encoding
@@ -774,12 +793,13 @@ nodes that ccarry the redundant textual meanings within their
 string-contnet and removing them again, after searches etc. have
 been finished.
 
+
 Adding Markup
 -------------
 
 A common challenge when processing tree structured text-data consists in
-adding new nodes that covers certain ranges of the string content that
-may already be covered by other elements. This is the same problem as adding
+adding new nodes that cover certain ranges of the string content that
+may already have been covered by other elements. This is the same problem as adding
 further markup to an existing XML or HTML-document. In trivial cases like::
 
     >>> trivial_xml = parse_xml("<trivial>Please mark up Stadt München "
@@ -792,12 +812,8 @@ complicated::
     >>> hard_xml = parse_xml("<hard>Please mark up Stadt\n<lb/>"
     ...     "<location><em>München</em> in Bavaria</location> in this "
     ...     "sentence.</hard>")
-    >>> very_hard_xml = parse_xml("<veryhard>Please mark up Stadt\n<lb/>"
-    ...     "<location><em>München</em><footnote>'Stadt <em>München</em>'"
-    ...     " is German for 'City of Munich'</footnote> in Bavaria"
-    ...     "</location> in this sentence.</veryhard>")
 
-Let's start with the simple most case to see how searching and marking
+Let's start with the simple case to see how searching and marking
 strings works with DHParser::
 
     >>> mapping = ContentMapping(trivial_xml)
@@ -813,7 +829,7 @@ rather than a simple search for "Stadt München", because we cannot
 assume that it appears in exactly the same form in the text. For
 example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
 
-Now, let's try the next more complicated case. Because we will try
+Now, let's try the more complicated case. Because we will try
 different configurations, we use copyied of the tree "hard_xml"::
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
@@ -837,7 +853,6 @@ different configurations, we use copyied of the tree "hard_xml"::
       </location>
       in this sentence.
     </hard>
-
 
 As can be seen the <foreign>-tag is split into two parts, because the markup
 runs across the border of another tag, in this case <location>. Note, that the
@@ -912,11 +927,119 @@ but not with any other elements. Let's try this on the previous example::
     ...                          chain_attr_name="chain")
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})
+    >>> loc_1 = hard_xml_copy.pick('location')
+    >>> chain_key = loc_1.attr['chain']
+    >>> for loc in hard_xml_copy.select('location'):
+    ...     assert loc.attr['chain'] == chain_key
+    ...     loc.attr['chain'] = 'ICK'  # to make the output below deterministic
     >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
     >>> print(xml_str)
+    <hard>
+      Please mark up
+      <foreign lang="de">
+        Stadt
+        <lb/>
+        <location chain="ICK">
+          <em>München</em>
+        </location>
+      </foreign>
+      <location chain="ICK">
+        in Bavaria
+      </location>
+      in this sentence.
+    </hard>
 
+Markup plays well together with restricted content mappings as the following example
+may show::
 
+    >>> tree = parse_xml("<doc>Please mark up Stadt\n<lb/>"
+    ...     "<em>München</em><footnote>'Stadt <em>München</em>'"
+    ...     " is German for 'City of Munich'</footnote> in Bavaria"
+    ...     " in this sentence.</doc>")
 
+Let's assume we'd like to markup locations and text-passages in foreign laguages, 
+but only in the main text and not within footnotes and the like. For that purpose, 
+we build a context mapping that is restricted to non-footnote-text::
+
+    >>> cm = ContentMapping(tree, select=LEAF_PATH, ignore='footnote',
+    ...                     chain_attr_name='chain')
+    >>> print(cm.content)
+    Please mark up Stadt
+    München in Bavaria in this sentence.
+
+Now, let's assume for the sake of the example that we have list of location names 
+to be marked up that contains the phrase "München in Bavaria". So, we search
+for this phrase and add the required location markup::
+
+    >>> m = re.search(r"München\s+in\s+Bavaria", cm.content)
+    >>> print(m)
+    <re.Match object; span=(21, 39), match='München in Bavaria'>
+
+    >>> _ = cm.markup(m.start(), m.end(), 'location')
+    >>> print(tree.as_xml(empty_tags={'lb'}))
+    <doc>
+      Please mark up Stadt
+      <lb/>
+      <location>
+        <em>München</em>
+        <footnote>
+          'Stadt
+          <em>München</em>
+          ' is German for 'City of Munich'
+        </footnote>
+        in Bavaria
+      </location>
+      in this sentence.
+    </doc>
+
+  The <location>-element covers the entire span, including the footnote. This
+  is to be expected as changes are always carried out on the full tree. Only,
+  the mapping is restricted to certain parts of the document. Usually, this
+  is also the desired behaviour, though, admittedly, depending on the use case
+  another behavior (e.g. splitting the <location>-element into one part before
+  the <footnote>-elemnt and one part after that element) might be preferable.
+  Such cases are not covered by the markup-method of class ContentMapping.
+
+  Because, the <location>-element did not need to be split, it does not need
+  and therefore does not have a "chain"-attribute.
+
+  Next, let's add the <foreign>-element. (We substitue the value of its 
+  chain-attribute, so that the doctest does not break, when another random
+  key is picked!)::
+
+  >>> m = re.search(r'Stadt\s+München', cm.content)
+  >>> _ = cm.markup(m.start(), m.end(), 'foreign', lang="de")
+  >>> chain_val = tree.pick('foreign').get_attr('chain', '')
+  >>> for foreign in tree.select('foreign'):  
+  ...     if foreign.has_attr('chain') and foreign.attr['chain'] == chain_val:
+  ...         foreign.attr['chain'] = 'MSJ'       
+  >>> print(tree.as_xml(empty_tags={'lb'}))
+  <doc>
+    Please mark up
+    <foreign lang="de" chain="MSJ">
+      Stadt
+      <lb/>
+    </foreign>
+    <location>
+      <foreign lang="de" chain="MSJ">
+        <em>München</em>
+      </foreign>
+      <footnote>
+        'Stadt
+        <em>München</em>
+        ' is German for 'City of Munich'
+      </footnote>
+      in Bavaria
+    </location>
+    in this sentence.
+  </doc>
+
+  Here again, one might ask, why the <foreign>-tag contains the <lb>-tag, but
+  the choice makes sense, because if put together again, it should cover the 
+  complete stretch including the line-break. Again, different use cases and
+  different choices are imaginable which, however, are not covered by the 
+  :py:meth:`ContentMapping.markup`-method.
+  
 
 Error Messages
 --------------
