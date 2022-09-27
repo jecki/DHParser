@@ -1007,39 +1007,39 @@ for this phrase and add the required location markup::
   chain-attribute, so that the doctest does not break, when another random
   key is picked!)::
 
-  >>> m = re.search(r'Stadt\s+München', cm.content)
-  >>> _ = cm.markup(m.start(), m.end(), 'foreign', lang="de")
-  >>> chain_val = tree.pick('foreign').get_attr('chain', '')
-  >>> for foreign in tree.select('foreign'):  
-  ...     if foreign.has_attr('chain') and foreign.attr['chain'] == chain_val:
-  ...         foreign.attr['chain'] = 'MSJ'       
-  >>> print(tree.as_xml(empty_tags={'lb'}))
-  <doc>
-    Please mark up
-    <foreign lang="de" chain="MSJ">
-      Stadt
-      <lb/>
-    </foreign>
-    <location>
-      <foreign lang="de" chain="MSJ">
-        <em>München</em>
-      </foreign>
-      <footnote>
-        'Stadt
-        <em>München</em>
-        ' is German for 'City of Munich'
-      </footnote>
-      in Bavaria
-    </location>
-    in this sentence.
-  </doc>
+      >>> m = re.search(r'Stadt\s+München', cm.content)
+      >>> _ = cm.markup(m.start(), m.end(), 'foreign', lang="de")
+      >>> chain_val = tree.pick('foreign').get_attr('chain', '')
+      >>> for foreign in tree.select('foreign'):  
+      ...     if foreign.has_attr('chain') and foreign.attr['chain'] == chain_val:
+      ...         foreign.attr['chain'] = 'MSJ'       
+      >>> print(tree.as_xml(empty_tags={'lb'}))
+      <doc>
+        Please mark up
+        <foreign lang="de" chain="MSJ">
+          Stadt
+          <lb/>
+        </foreign>
+        <location>
+          <foreign lang="de" chain="MSJ">
+            <em>München</em>
+          </foreign>
+          <footnote>
+            'Stadt
+            <em>München</em>
+            ' is German for 'City of Munich'
+          </footnote>
+          in Bavaria
+        </location>
+        in this sentence.
+      </doc>
 
   Here again, one might ask, why the <foreign>-tag contains the <lb>-tag, but
   the choice makes sense, because if put together again, it should cover the 
   complete stretch including the line-break. Again, different use cases and
   different choices are imaginable which, however, are not covered by the 
   :py:meth:`ContentMapping.markup`-method.
-  
+
 
 Error Messages
 --------------
