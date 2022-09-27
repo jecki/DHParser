@@ -794,8 +794,8 @@ string-contnet and removing them again, after searches etc. have
 been finished.
 
 
-Adding Markup
--------------
+Markup insertion
+----------------
 
 A common challenge when processing tree structured text-data consists in
 adding new nodes that cover certain ranges of the string content that
