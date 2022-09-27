@@ -300,7 +300,7 @@ possibly, to deserialize the transformed XML again.
 A more efficient method, however, is to utilize any of the various
 Python-libraries for XML. In order to make this as easy as possible trees of
 :py:class:`~snytaxtree.Node`-objects can be converted to `ElementTree`_-objects
-either from the python standard library or from the `lxml <https://lxml.de/>`_-library
+either from the python standard library or from the `lxml <https://lxml.de/>`_-library::
 
     >>> import xml.etree.ElementTree as ET  # for lxml write: from lxml import etree as ET
     >>> et = sentence.as_etree(ET)
@@ -1070,7 +1070,7 @@ the string representation of the syntax-tree originating in `sentence`. Before
 any errors can be added the source-position fields of the nodes of the tree must
 have be been initialized. Usually, this is done by the parser. Since the
 syntax-tree in this example does not stem from a parsing-process, we have to do
-it manually:
+it manually::
 
     >>> _ = document.with_pos(0)
 
@@ -1133,14 +1133,14 @@ elements::
     True
 
 The same logic of treating blank separated sequences of strings as sets can also
-be applied to other attributes:
+be applied to other attributes::
 
     >>> car = Node('car', 'Porsche')
     >>> add_token_to_attr(car, "Linda Peter", 'owner')
     >>> car.attr['owner']
     'Linda Peter'
 
-Or, more generally, to strings containing whitespace-separated substrings:
+Or, more generally, to strings containing whitespace-separated substrings::
 
     >>> add_token('Linda Paula', 'Peter Paula')
     'Linda Paula Peter'
