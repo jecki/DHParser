@@ -2819,7 +2819,7 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
 class ContentMapping:
     """
     ContentMapping represents a path-mapping of the string-content of all or a
-    specific selection leave-nodes of a tree. A path mapping is an ordered
+    specific selection of the leave-nodes of a tree. A content-mapping is an ordered
     mapping of the first text position of every (selected) leaf-node to the
     path of this node.
 
@@ -2827,7 +2827,7 @@ class ContentMapping:
     simple text search and then changing the tree at the appropriate places,
     for example by adding markup (i.e. nodes) in these places.
 
-    The ConntentMapping class provides methods for adding markup-nodes.
+    The ContentMapping class provides methods for adding markup-nodes.
     In cases where the new markup-nodes cut across the existing tree-hierarchy,
     the markup-method takes care of splitting up either the newly created or
     some of the existing nodes to fit in the markup.

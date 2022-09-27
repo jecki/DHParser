@@ -1261,7 +1261,7 @@ and column numbers and adding error messages. RootNode-objects can either
 be initialized with a code node that will then be replaced by the
 root-node or swallow a a tree originating in a common node later.
 
-* :py:class:`~snytaxtree.RootNode`: additional functionality for a tree of nodes
+* :py:class:`~nodetree.RootNode`: additional functionality for a tree of nodes
 
   * :py:attr:`~nodetree.RootNode.errors`:  a list of errors
   * :py:attr:`~nodetree.RootNode.errors_sorted`: the errors sorted by their
@@ -1281,6 +1281,28 @@ root-node or swallow a a tree originating in a common node later.
   * :py:meth:`~nodetree.RootNode.customized_XML`: Serializes the tree as XML
     taking into account the XML-customization attributes of the RootNode-object.
 
+
+class ContentMapping
+^^^^^^^^^^^^^^^^^^^^
+
+    ContentMapping represents a path-mapping of the string-content of all or a
+    specific selection of the leave-nodes of a tree. A content-mapping is an ordered
+    mapping of the first text position of every (selected) leaf-node to the
+    path of this node.
+
+    The class provides methods for mapping string positions to paths and offsets
+    (relative to the beginning of the leaf-node of the path)
+
+* :py:class:`~nodetree.ContentMapping`: Mapping the tree to its string-content
+
+    * :py:meth:`~nodetree.ContentMapping.get_path_and_offset`: Maps positions in
+      string-content of the ContentMapping to the leaf-path into which they fall
+    * :py:meth:`~nodetree.ContentMapping.iterate_paths`: Yields all paths from
+      position ``start_pos`` up to and including position ``end_pos``.
+    * :py:meth:`~nodetree.ContentMapping.insert_node`: Inserts a node at a
+      particular text-position.
+    * :py:meth:`~nodetree.ContentMapping.markup`: Adds markup (i.e. an element)
+      to a particular stretch of text.
 
 .. _ElementTree: https://docs.python.org/3/library/xml.etree.elementtree.html
 .. _mixed content: https://www.w3.org/TR/xml/#sec-mixed-content
