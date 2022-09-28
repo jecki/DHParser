@@ -35,7 +35,8 @@ Class Compiler
 
 Class :py:class:`~compile.Compiler` provides the scaffolding for
 tree-transformations based on the visitor-pattern. Typically, you'd derive a
-custom-compilation class from the "Compiler"-class and add "on_NAME"-methods for
+custom-compilation class from the "Compiler"-class and add "on_NAME"-methods
+(or "node-handlers") for
 transforming nodes with a particular name. These methods are called the
 "compilation-methods". It is also possible, though less common, to add
 "attr_ATTRIBUTENAME"-methods that will be called on all those nodes that have an
@@ -156,7 +157,31 @@ compilation-methods of child-nodes should always be channeled through one of the
 two methods "fallback_compiler()" or "compile()", because these methods make
 sure the "self.path"- variable (which keeps the "path" of nodes from the
 root-node to the current node) will be updated and that any
-"attr_NAME()"-methods are called, plus a few other things. 
+"attr_NAME()"-methods are called.
+
+Most importantly, the "fallback_compiler"-method ensures that changes in the
+composition of ancestor-nodes a) do not mess up the tree traversal and b) do
+not overwrite node-objects returned by the node-handlers. The algorithm of
+"fallback_compiler" runs through the tuple of children in the state at
+the time the call is issued. If during this pass the tuple of children is
+exchanged by a modified tuple of children, for example because a child is
+dropped from the tree, this will not affect the tuple of children that
+"fallback_compiler" iterates over. So all children's handlers will be
+called even if a child is dropped and the result of its handler will
+subseqauently be ignored. By the same token, handlers of children added
+during the pass will not be called. Once, the pass is finished, the children
+still present in the tuple (and only those!) will be replaced by the result
+of their handler. This may sound complicated, but it is - as I believe -
+more or less the behaviour that you would intuitively expect.
+
+However that may be, in order to keep
+the compiler-structure clean and comprehensible, it is generally advisable
+manipulate only the child-composition of the node or its descendants in a
+handler but not that of its parent or farther ancestor(s). Still, as rules are there to be
+broken, it can sometimes become necessary to ignore this advice. The algorithm
+that "fallback_compiler" employ for tree-traversal allow you to ignore it
+safely. It is stille dangerous and, therefore, expressly not recommended to
+manipulate the sibling-composition!
 
 It is not necessary to call the compilation-methods of the child-nodes right at
 the beginning of the compilation-method as these patterns suggest, or to call
@@ -387,9 +412,11 @@ For finalization, there are again two "hooks", although of different kind:
    compilations (whatever that may be) as parameter and returns the
    (possibly) altered result. The purpose of the finalize method is to
    perform wrap-up-tasks that require access to the complete
-   compilation-result, before they can be performed.
+   compilation-result, before they can be performed. This is the preferred
+   place for coding finalizations.
 
-2. a list of finalizers ("Compiler.finalizers"). This is a list of
+2. a list of finalizers ("Compiler.finalizers"). This feature is EXPERIMENTAL
+   AND MAY BE REMOVED IN THE FUTURE. It consists of a list of
    pairs (function, parameter-tuple), which will be executed in order
    after the compilation has been finished, but before the
    Compiler.finalize-method is called.
