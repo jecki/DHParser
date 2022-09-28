@@ -548,7 +548,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def __len__(self):
         raise AssertionError(
-            "len() on Node-objects would be too mbiguous! Please use either "
+            "len() on Node-objects would be too ambiguous! Please use either "
             "node.strlen() to query the string-length of the contained text, "
             "or len(node.children) to query the number of child nodes.")
 
@@ -845,7 +845,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             "Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})"
 
         :param attr_dict:  a dictionary of attribute keys and values
-        :param attributes: alternatively, a squences of keyword parameters
+        :param attributes: alternatively, a sequences of keyword parameters
         :return: `self`
         """
         if attr_dict:
@@ -1598,7 +1598,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
         return flatten_sxpr(sxpr, flatten_threshold)
 
-    def as_xml(self, src: str = None,
+    def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: Set[str] = frozenset(),
                string_tags: Set[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
@@ -3844,7 +3844,7 @@ class RootNode(Node):
         return self.name != '__not_yet_ready__' \
             and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
 
-    def as_xml(self, src: str = None,
+    def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: Set[str] = _EMPTY_SET_SENTINEL,
                string_tags: Set[str] = _EMPTY_SET_SENTINEL,
@@ -3857,7 +3857,7 @@ class RootNode(Node):
             empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags,
             strict_mode=strict_mode)
 
-    def serialize(self: 'Node', how: str = '') -> str:
+    def serialize(self, how: str = '') -> str:
         if not how:
             how = self.serialization_type or 'default'
         return super().serialize(how)
