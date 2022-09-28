@@ -48,7 +48,7 @@ For nodes for which no "on_NAME"-method has been defined, class compile simply
 calls the compilation-methods for all children (if any) and updates the node's
 result-tuple with the return values of the children's compilation-call that are
 not None. This :py:meth:`~compile.Compiler.fallback_compiler`-method silently
-assumes that the compilation methods do return a (transformed)- node. Since the
+assumes that the compilation methods do return a (transformed) node. Since the
 fallback-method fails in any case where the result of a child's compilation is
 not a Node, the fallback-method must be overridden for compilers that yield
 other data-structures than node-trees. Or it must be made sure otherwise that
@@ -159,7 +159,7 @@ sure the "self.path"- variable (which keeps the "path" of nodes from the
 root-node to the current node) will be updated and that any
 "attr_NAME()"-methods are called.
 
-Most importantly, the "fallback_compiler"-method ensures that changes in the
+The "fallback_compiler"-method furthermore ensures that changes in the
 composition of ancestor-nodes a) do not mess up the tree traversal and b) do
 not overwrite node-objects returned by the node-handlers. The algorithm of
 "fallback_compiler" runs through the tuple of children in the state at
@@ -183,10 +183,13 @@ that "fallback_compiler" employ for tree-traversal allow you to ignore it
 safely. It is stille dangerous and, therefore, expressly not recommended to
 manipulate the sibling-composition!
 
-It is not necessary to call the compilation-methods of the child-nodes right at
-the beginning of the compilation-method as these patterns suggest, or to call
-them at all. Rather, the compilation-method decides when and for which children
-the compilation-methods will be called. 
+It is not necessary to call the handlers of the child-nodes right at
+the beginning of the handler as these patterns suggest, or to call
+them at all. Rather, the compilation-method decides if and when and, possibly,
+also for which children the compilation-methods will be called. Other,
+than the traversal implemented in :py:mod:`~transfom`, which is always
+depth-first, the order of the traversal can be determined freely and may
+even vary for different sub-trees.
 
 With this in mind the following code that compiles the XML-syntax-tree into 
 the XML-data-tree should be easy to understand::
@@ -254,8 +257,8 @@ before calling the Compiler-object. Still, compilation-methods must always
 return the result of the compilation! In cases where the return value of
 a compilation-method is a Node-object, it is not necessary (i.e. nowhere
 silently assumed) that the returned node-object is the same as the node-object
-that has been passed as a parameter. It can be an entirely freshly constructed
-Node-object. 
+that has been passed as a parameter. It can be a newly constructed
+Node-object, as well.
 
 Observe the use of a reset()-method: This method is called by the
 __call__-method of :py:class:`~compile.Compiler` before the compilation starts
@@ -416,7 +419,7 @@ For finalization, there are again two "hooks", although of different kind:
    place for coding finalizations.
 
 2. a list of finalizers ("Compiler.finalizers"). This feature is EXPERIMENTAL
-   AND MAY BE REMOVED IN THE FUTURE. It consists of a list of
+   and may be removed in the future! The list is a list of
    pairs (function, parameter-tuple), which will be executed in order
    after the compilation has been finished, but before the
    Compiler.finalize-method is called.
