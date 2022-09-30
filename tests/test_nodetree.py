@@ -32,7 +32,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
-    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of
+    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -105,7 +105,7 @@ class TestParseSxpression:
         tree.new_error(tree, 'Fehler, "mein Herr"!', ERROR)
         assert tree.equals(parse_sxpr('(u "XXX")'))
         sxpr = tree.as_sxpr()
-        assert sxpr == r'''(u `(err "Error (1000): Fehler, \"mein Herr\"!") "XXX")'''
+        assert sxpr == r'''(u `(err "Error (1000): Fehler, \"mein Herr\"!") "XXX")''', sxpr
         tree2 = parse_sxpr(sxpr)
         assert tree2.as_sxpr() == r'''(u `(err "Error (1000): Fehler, \"mein Herr\"!") "XXX")'''
         # When backparsing s-expression-serialized trees, errors are parsed as attributes
@@ -1149,6 +1149,14 @@ class TestMarkupInsertion:
         fm.rebuild_mapping(k, k)
         assert fm.pos_list == [0, 13]
 
+    def test_chain_id(self):
+        s = set()
+        for i in range(1000):
+            cid = gen_chain_ID()
+            assert cid not in s
+            s.add(cid)
+            print(cid)
+
     def test_chain_attr_1(self):
         tree = parse_xml("<hard>Please mark up Stadt\n<lb/><location><em>München</em> "
                          "in Bavaria</location> in this sentence.</hard>")
@@ -1159,7 +1167,9 @@ class TestMarkupInsertion:
         match = re.search(r"Stadt\s+München", mapping.content)
         _ = mapping.markup(match.start(), match.end(), "foreign", {'lang': 'de'})
         xml_str = tree.as_xml(empty_tags={'lb'})
-        print(xml_str)
+        # print(xml_str)
+        chains = {loc.attr['chain'] for loc in tree.select('location')}
+        assert len(chains) == 1
 
     # def test_chain_attr_2(self):
     #     tree = parse_xml("<doc>Please mark up Stadt\n<lb/>"

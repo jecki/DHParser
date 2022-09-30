@@ -347,8 +347,10 @@ class Error:
             prefix = self.orig_doc + ':'
         else:  prefix = ''
         if self.line > 0:
-            prefix += "%i:%i: " % (max(self.line, 0), max(self.column, 0))
-        return prefix + "%s (%i): %s" % (self.severity, self.code, self.message)
+            # prefix += "%i:%i: " % (max(self.line, 0), max(self.column, 0))
+            prefix += f"{max(self.line, 0)}:{max(self.column, 0)}: "
+        # return prefix + "%s (%i): %s" % (self.severity, self.code, self.message)
+        return prefix + f"{self.severity} ({self.code}): {self.message}"
 
     def __repr__(self):
         return 'Error("%s", %s, %i, %i, %i, %i)' \

@@ -777,7 +777,7 @@ def issubtype(sub_type, base_type) -> bool:
         def fix(t: Any) -> Any:
             return {'Dict': dict, 'Tuple': tuple, 'List': list}.get(t, t)
         try:
-            if isinstance(t, str):  t = eval(t)
+            if isinstance(t, (str, bytes)):  t = eval(t)
             ot = t.__origin__
             if ot is Union:
                 try:

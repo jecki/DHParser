@@ -216,6 +216,8 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         """get type from string alias, e.g. "Dict" -> typing.Dict."""
         if isinstance(t, str):          # ensure compatibility with python versions
             return eval(t.replace('unicode', 'str'))  # with alternative type handling.
+        elif isinstance(t, ByteString):
+            return eval(t.replace(b'unicode', b'str'))
         return t
 
     def type_guard(t):

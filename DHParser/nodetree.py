@@ -2288,9 +2288,18 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
     return leaf
 
 
+chain_id_counter = [0, 0, 0]
+
+
 def gen_chain_ID() -> str:
-    cid = ''.join(chr(random.randrange(ord('A'), ord('Z') + 1))
-                  for i in range(3))
+    # cid = ''.join(chr(random.randrange(ord('A'), ord('Z') + 1))
+    #               for i in range(3))
+    global chain_id_counter
+    cid = ''.join(chr(c + ord('A')) for c in chain_id_counter)
+    chain_id_counter = [(c + (i + 1) * 3) % 26
+                        for i, c in enumerate(chain_id_counter)]
+    if all(c == 0 for c in chain_id_counter):
+        chain_id_counter.append(0)
     return cid
 
 
