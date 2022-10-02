@@ -2301,7 +2301,7 @@ def reset_chain_ID(chain_length: int = 3):
     deterministic results.
 
     :param chain_length: The staring length of the letter-chain used
-        as id
+        as ID value
     """
     global chain_id, chain_step, chain_len, chain_modulo
     assert chain_length >= 3
@@ -3194,7 +3194,7 @@ class ContentMapping:
     @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
     def markup(self, start_pos: int, end_pos: int, name: str,
                *attr_dict, **attributes) -> Node:
-        """ Marks the span [start_pos, end_pos] up by adding one or more Node's
+        """ Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisable`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
 
@@ -3283,6 +3283,7 @@ class ContentMapping:
         """
         assert not attr_dict or (len(attr_dict) == 1 and isinstance(attr_dict[0], Dict)), \
             f'{attr_dict} is not a valid attribute-dictionary!'
+        assert end_pos >= start_pos
         attr_dict = attr_dict[0] if attr_dict else {}
         attr_dict.update(attributes)
         if start_pos == end_pos:

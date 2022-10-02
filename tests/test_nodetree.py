@@ -1313,6 +1313,21 @@ class TestMarkupInsertion:
             'Im Titel heißt es: Étude. </note> sur le jus Italicum (Nouvelle revue historique '\
             'V, 1881, p. 145ff.). </item>'
 
+    def test_maskup_borderline_cases(self):
+        ### borderline cases
+        tree = parse_xml('<doc>Hello, <em>World</em>!</doc>')
+        X = copy.deepcopy(tree)
+        t = ContentMapping(X)
+        _ = t.markup(3, 4, 'b')
+        assert X.as_xml(inline_tags={'doc'}) \
+            == '<doc>Hel<b>l</b>o, <em>World</em>!</doc>'
+
+        X = copy.deepcopy(tree)
+        t = ContentMapping(X)
+        _ = t.markup(3, 3, 'b')
+        assert X.as_xml(inline_tags={'doc'}, empty_tags={'b'}) \
+               == '<doc>Hel<b/>lo, <em>World</em>!</doc>'
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
