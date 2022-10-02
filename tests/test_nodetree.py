@@ -1151,11 +1151,12 @@ class TestMarkupInsertion:
 
     def test_chain_id(self):
         s = set()
-        for i in range(1000):
+        for i in range(200_000):
             cid = gen_chain_ID()
             assert cid not in s
             s.add(cid)
-            print(cid)
+            assert len(cid) <= 4
+        assert len(s) == 200_000
 
     def test_chain_attr_1(self):
         tree = parse_xml("<hard>Please mark up Stadt\n<lb/><location><em>München</em> "

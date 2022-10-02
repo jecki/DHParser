@@ -121,6 +121,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'deep_split',
            'can_split',
            'leaf_paths',
+           'reset_chain_ID',
            'ContentMapping',
            'FrozenNode',
            'EMPTY_NODE',
@@ -2288,19 +2289,50 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
     return leaf
 
 
-chain_id_counter = [0, 0, 0]
+chain_id = 4231
+chain_step = 4231
+chain_len = 3
+chain_modulo = 23 ** chain_len
+chain_letters = "ABCDEFGHKLMNPQRSTUVWXYZ"
+
+
+def reset_chain_ID(chain_length: int = 3):
+    """For testing and debugging, reset the chain_id counter to ensure
+    deterministic results.
+
+    :param chain_length: The staring length of the letter-chain used
+        as id
+    """
+    global chain_id, chain_step, chain_len, chain_modulo
+    assert chain_length >= 3
+    multiplier = 23 ** (chain_length - 3)
+    chain_id = 4231 * multiplier
+    chain_step = 4231 * multiplier
+    chain_len = chain_length
+    chain_modulo = 23 ** chain_len
 
 
 def gen_chain_ID() -> str:
-    # cid = ''.join(chr(random.randrange(ord('A'), ord('Z') + 1))
-    #               for i in range(3))
-    global chain_id_counter
-    cid = ''.join(chr(c + ord('A')) for c in chain_id_counter)
-    chain_id_counter = [(c + (i + 1) * 3) % 26
-                        for i, c in enumerate(chain_id_counter)]
-    if all(c == 0 for c in chain_id_counter):
-        chain_id_counter.append(0)
-    return cid
+    """Generate a unique chain-ID for marking splitted nodes or tags,
+    for that matter.
+
+    Chain-IDs in different threads or processes can be identical. It is assumed
+    that one tree is not processed by several threads at the same time."""
+    global chain_id, chain_step, chain_len, chain_modulo
+    chain_id = (chain_id + chain_step) % chain_modulo
+    if chain_id == chain_step:
+        chain_step = chain_step * 23 - 1
+        chain_id = chain_step
+        chain_len += 1
+        chain_modulo *= 23
+    c = chain_id
+    cid = []
+    while c > 0:
+        cid.append(chain_letters[c % 23])
+        c = c // 23
+    while len(cid) < chain_len:
+        cid.append('A')
+    return ''.join(cid)
 
 
 @cython.locals(i=cython.int, k=cython.int)

@@ -919,6 +919,8 @@ attribute which will contain a unique short string that all elements (of the
 same name) belonging to one and the same chain share with each other,
 but not with any other elements. Let's try this on the previous example::
 
+    >>> reset_chain_ID()  # just to ensure deterministic ID values for doctest
+
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
     >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
     >>> divisability_map = {'foreign': {'location', ':Text'},
@@ -927,11 +929,6 @@ but not with any other elements. Let's try this on the previous example::
     ...                          chain_attr_name="chain")
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})
-    >>> loc_1 = hard_xml_copy.pick('location')
-    >>> chain_key = loc_1.attr['chain']
-    >>> for loc in hard_xml_copy.select('location'):
-    ...     assert loc.attr['chain'] == chain_key
-    ...     loc.attr['chain'] = 'ICK'  # to make the output below deterministic
     >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
     >>> print(xml_str)
     <hard>
@@ -939,11 +936,11 @@ but not with any other elements. Let's try this on the previous example::
       <foreign lang="de">
         Stadt
         <lb/>
-        <location chain="ICK">
+        <location chain="VZT">
           <em>München</em>
         </location>
       </foreign>
-      <location chain="ICK">
+      <location chain="VZT">
         in Bavaria
       </location>
       in this sentence.
@@ -1009,19 +1006,15 @@ key is picked!)::
 
     >>> m = re.search(r'Stadt\s+München', cm.content)
     >>> _ = cm.markup(m.start(), m.end(), 'foreign', lang="de")
-    >>> chain_val = tree.pick('foreign').get_attr('chain', '')
-    >>> for foreign in tree.select('foreign'):  
-    ...     if foreign.has_attr('chain') and foreign.attr['chain'] == chain_val:
-    ...         foreign.attr['chain'] = 'MSJ'       
     >>> print(tree.as_xml(empty_tags={'lb'}))
     <doc>
       Please mark up
-      <foreign lang="de" chain="MSJ">
+      <foreign lang="de" chain="RZC">
         Stadt
         <lb/>
       </foreign>
       <location>
-        <foreign lang="de" chain="MSJ">
+        <foreign lang="de" chain="RZC">
           <em>München</em>
         </foreign>
         <footnote>
