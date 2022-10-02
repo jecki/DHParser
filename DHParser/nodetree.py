@@ -3063,9 +3063,11 @@ class ContentMapping:
             yield self.path_list[i]
 
     @cython.locals(i=cython.int, start_index=cython.int, end_index=cython.int, offset=cython.int)
-    def rebuild_mapping(self, first_index: int, last_index: int):
+    def rebuild_mapping_from_path_indices(self, first_index: int, last_index: int):
         """Reconstructs a particular section of the context mapping after the
-        underlying tree has been restructured.
+        underlying tree has been restructured. Ohter than
+        :py:meth:`ContentMappin.rebuild_mapping`, the section that needs repairing
+        if here defined by the path indices and not the string positions.
 
         :param first_index: The index (not the position within the string-content!)
             of the first path that has been affected by restruturing of the tree.
@@ -3086,7 +3088,7 @@ class ContentMapping:
         12 -> a, e, i "DEF"
         >>> b = tree.pick('b')
         >>> b.result = (b[0], Node('x', 'xyz'), b[1])
-        >>> cm.rebuild_mapping(0, 1)
+        >>> cm.rebuild_mapping_from_path_indices(0, 1)
         >>> print(cm)
         0 -> a, b, c "123"
         3 -> a, b, x "xyz"
@@ -3109,7 +3111,7 @@ class ContentMapping:
         >>> b = cm.get_path_index(16, left_biased=True)
         >>> a, b
         (3, 5)
-        >>> cm.rebuild_mapping(3, 5)
+        >>> cm.rebuild_mapping_from_path_indices(3, 5)
         >>> print(cm)
         0 -> a, b, c "123"
         3 -> a, b, x "xyz"
@@ -3129,7 +3131,7 @@ class ContentMapping:
         >>> b = cm.get_path_index(6, left_biased=True)
         >>> a, b
         (0, 1)
-        >>> cm.rebuild_mapping(a, b)
+        >>> cm.rebuild_mapping_from_path_indices(a, b)
         >>> print(cm)
         0 -> a, b, Y, c "123"
         3 -> a, b, Y, d "456"
@@ -3178,6 +3180,18 @@ class ContentMapping:
         self.path_list.extend(paths)
         self.path_list.extend(path_tail)
 
+    def rebuild_mapping(self, start_pos: int, end_pos: int):
+        """Reconstructs a particular section of the context mapping after the
+        underlying tree has been restructured.
+
+        :param start_pos: The string position of the beginning of the text-area
+            that has been affected by earlier changes.
+        :param end_pos: The string position of the ending of the text-area
+            that has been affected by earlier changes."""
+        first_index = self.get_path_index(start_pos)
+        last_index = self.get_path_index(end_pos)
+        self.rebuild_mapping_from_path_indices(first_index, last_index)
+
     def insert_node(self, pos: int, node: Node) -> Node:
         """Inserts a node at a specific position into the last or
         eventually second but last node in the path from the context mapping
@@ -3187,7 +3201,7 @@ class ContentMapping:
         path = self.path_list[index]
         rel_pos = pos - self.pos_list[index]
         parent = insert_node(path, rel_pos, node)
-        self.rebuild_mapping(index, index)
+        self.rebuild_mapping_from_path_indices(index, index)
         return parent
 
 
@@ -3314,8 +3328,8 @@ class ContentMapping:
                 common_ancestor = ur_ancestor
             assert not (common_ancestor.name == ':Text' and common_ancestor.children)
             if self.auto_cleanup:
-                self.rebuild_mapping(self.get_path_index(start_pos),
-                                     self.get_path_index(end_pos, left_biased=True))
+                self.rebuild_mapping_from_path_indices(self.get_path_index(start_pos),
+                                                       self.get_path_index(end_pos, left_biased=True))
             return common_ancestor
 
         stump_A = path_A[i:]
@@ -3371,8 +3385,8 @@ class ContentMapping:
                 common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[u:]
 
         if self.auto_cleanup:
-            self.rebuild_mapping(self.get_path_index(start_pos),
-                                 self.get_path_index(end_pos, left_biased=True))
+            self.rebuild_mapping_from_path_indices(self.get_path_index(start_pos),
+                                                   self.get_path_index(end_pos, left_biased=True))
         assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
         return common_ancestor
 

@@ -760,8 +760,7 @@ content mapping :py:meth:`ContentMapping.rebuild_mapping` must be called for
 the affected sections of the content mapping which are defined by the first
 and last path index of the content mapping where a change has taken place::
 
-    >>> k = fm.get_path_index(i)
-    >>> fm.rebuild_mapping(k, k)
+    >>> fm.rebuild_mapping(i, i)
     >>> print(fm)
     0 -> doc, p, footnote, em "Stadt München"
     13 -> doc, p, footnote, :Text " is the German" "name of the city of Munich"
