@@ -796,9 +796,15 @@ been finished.
 Markup insertion
 ----------------
 
-A common challenge when processing tree structured text-data consists in
-adding new nodes that cover certain ranges of the string content that
-may already have been covered by other elements. This is the same problem as adding
+Class :py:class:`ContentMapping` provides a powerful markup-methods
+that allows you to add markup at any position you like simply by
+passing the start- and end-position in the string-representation of
+the document-tree and "automagically" taking care of such perils
+as cross-cutting tag-boundaries or overlapping hierarchies.
+
+This solves a common challenge when processing tree structured text-data
+which consists in adding new nodes that cover certain ranges of the string content that
+may already have been covered by other elements. The problem ia the same as adding
 further markup to an existing XML or HTML-document. In trivial cases like::
 
     >>> trivial_xml = parse_xml("<trivial>Please mark up Stadt München "

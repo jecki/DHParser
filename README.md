@@ -30,11 +30,14 @@ Features
 
 * Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
 
-* Digital Humanities features, like support for XML-workflows
+* Workflow-support
+
+* XML-support like mapping flat-text to the DOM-tree ("node-tree" in DHParser's 
+  terminology) and adding markup
 
 * No dependencies except the Python Standard Library
 
-* Soon to come: Extensive documentation and documented examples
+* Work in progress: Extensive documentation and documented examples
 
 
 Ease of use

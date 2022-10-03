@@ -521,8 +521,8 @@ with the functions: :py:func:`~nodetree.parse_sxpr`,
 :py:func:`~nodetree.parse_xml` is not restricted to de-serialization but can
 parse any XML into a tree of nodes.
 
-XML-connection
-^^^^^^^^^^^^^^
+XML-support
+^^^^^^^^^^^
 
 Since DHParser has been build with Digital-Humanities-applications in mind, it
 offers two further methods to connect to X-technologies. The methods
@@ -530,6 +530,42 @@ offers two further methods to connect to X-technologies. The methods
 allow direct transfer to and from the xml-ElementTrees of either the Python
 standard-library or the lxml-package. This can become useful if you need full
 support for XPath, XQuery and XSLT, which DHParser does not provide on its own.
+
+On the other hand DHParser's node-trees (the equivalent of XML-DOM-trees),
+provide their own set of navigation-functions which, depending on the use
+case, can be way more comfortable to use than the common X-technologies.
+Most of these functions are provided as methods of :py:class:`~nodetree.Node`
+such as :py:meth:`~nodetree.Node.select` and :py:meth:`~nodetree.Node.select_path`.
+For a comprehensive description see the section on :ref:`tree-traversal <paths>`
+in the referance manual of :py:mod:`~nodetree`.
+
+An particularly useful tool when processing text in tree-structures are content mappings
+as provided by :py:class:`~nodetree.ContentMapping`. Content mappings allow to map positions
+in the flat-string-representation of the document encoded in a DOM-tree to
+paths and locations within the tree. Thus, it becomes possible to search for strings
+in the document with regular expressions or simple string-search::
+
+    >>> from DHParser.nodetree import parse_xml, ContentMapping, pp_path
+    >>> tree = parse_xml('<doc>This is <em>New</em> York, not "old" York</doc>')
+    >>> cm = ContentMapping(tree)
+    >>> ny_pos = cm.content.find('New York')
+    >>> path, offset = cm.get_path_and_offset(ny_pos)
+    >>> pp_path(path)
+    'doc <- em'
+    >>> print(offset)
+    0
+
+This is supplemented by a powerful markup-funciotn (:py:meth:`~nodetree.ContentMapping.markup`)
+to which the string position of the text to be marked up can be passed. No worries
+about tags lying in between::
+
+    >>> parent = cm.markup(ny_pos, ny_pos + len('New York'), 'location')
+    >>> print(parent.as_xml(inline_tags='doc'))
+    <doc>This is <location><em>New</em> York</location>, not "old" York</doc>
+
+This works even if the markup overlaps existing tag-borders. Overlapping
+hierarchies are handled automatically by splitting overlapping elements.
+Check it out!
 
 
 Test-driven grammar development
