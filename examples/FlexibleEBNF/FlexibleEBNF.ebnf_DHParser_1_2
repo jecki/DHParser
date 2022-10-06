@@ -1,12 +1,23 @@
 # EBNF-Grammar in EBNF
 
-# This is faster version of EBNF relying on fixed constants for delimiters,
-# rather than variables that are captured on first use as in "EBNF.ebnf".
-# Different syntactical variants are not detected by the grammar itself,
-# but need to be configured either by adjusting the definitions of DEF, OR,
-# AND, ENDL, RNG_OPEN, RNG_CLOSE, RNG_DELIM, CH_LEADIN, TIMES, RE_LEADIN,
-# RE_LEADOUT either within this grammar definition or in the Grammar-object
-# changing the `text`-field of the respective parser objects.
+# This grammar is tuned for flexibility, that is, it supports as many
+# different flavors of EBNF as possible. However, this flexibility
+# comes at the cost of some ambiguities. In particular:
+#
+#    1. the alternative OR-operator / could be mistaken for the start
+#       of a regular expression and vice versa, and
+#    2. character ranges [a-z] can be mistaken for optional blocks
+#       and vice versa
+#
+# A strategy to avoid these ambiguities is to do all of the following:
+#
+#     - replace the free_char-parser by a never matching parser
+#     - if this is done, it is safe to replace the char_range_heuristics-
+#       parser by an always matching parser
+#     - replace the regex_heuristics by an always matching parser
+#
+# Ambiguities can also be avoided by NOT using all the syntactic variants
+# made possible by this EBNF-grammar within one and the same EBNF-document
 
 @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
     # comments can be either C-Style: /* ... */
@@ -16,10 +27,10 @@
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
-# @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+@ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
-# re-entry-rules to resume parsing after a syntax-error
- 
+# re-entry-rules for resuming after parsing-error
+
 @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
 @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
 
@@ -30,16 +41,16 @@
                            'due to inconsistent use of the comma as a delimiter\nfor the elements '
                            'of a sequence.'
 
+
 #: top-level
 
 syntax     = ~ { definition | directive } EOF
-definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
+definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   # component  = (regexp | literals | procedure | symbol !DEF)
-  # component  = literals | procedure | expression
-  component  = regexp | literals | procedure | symbol !DEF
-             | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
+  component  = regexp | literals | procedure | symbol !_DEF
+             | "(" expression ")"  | RAISE_EXPR_WO_BRACKETS expression
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
@@ -48,9 +59,9 @@ FOLLOW_UP  = `@` | symbol | EOF
 
 #: components
 
-expression = sequence { OR~ sequence }
+expression = sequence { :OR~ sequence }
 sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
-             { AND~ ["§"] ( interleave | lookaround ) }
+             { !`@` !(symbol :DEF) :AND~ ["§"] ( interleave | lookaround ) }
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
 difference = term ["-" § (oneormore | pure_elem)]
@@ -61,11 +72,11 @@ term       = oneormore | counted | repetition | option | pure_elem
 
 countable  = option | oneormore | element
 pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
-element    = [retrieveop] symbol !DEF          # negative lookahead to be sure it's not a definition
+element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure it's not a definition
            | literal
            | plaintext
            | regexp
-           # | char_range
+           | char_range
            | character ~
            | any_char
            | whitespace
@@ -87,12 +98,11 @@ retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, '
 group      = "(" no_range §expression ")"
 oneormore  = "{" no_range expression "}+" | element "+"
 repetition = "{" no_range §expression "}" | element "*" no_range
-option     = # !char_range
-             "[" §expression "]" | element "?"
-counted    = countable range | countable TIMES~ multiplier | multiplier TIMES~ §countable
+option     = !char_range "[" §expression "]" | element "?"
+counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~ §countable
 
-range      = RNG_OPEN~ multiplier [ RNG_DELIM~ multiplier ] RNG_CLOSE~
-no_range   = !multiplier | &multiplier TIMES
+range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
+no_range   = !multiplier | &multiplier :TIMES
 multiplier = /[1-9]\d*/~
 
 
@@ -103,48 +113,55 @@ literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
            | /´(?:(?<!\\)\\´|[^´])*?´/~
-regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
 char_range = `[` &char_range_heuristics
                  [`^`] (character | free_char) { [`-`] character | free_char } "]"
-character  = CH_LEADIN HEXCODE
-free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
+character  = :CH_LEADIN HEXCODE
+free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
 
-
 #: delimiters
 
-EOF = !/./
+EOF = !/./ [:?ENDL] [:?DEF] [:?OR] [:?AND]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
-DEF        = `=`
-OR         = `|`
-AND        = ``
-ENDL       = ``
+DEF        = _DEF
+_DEF       = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!
+OR         = `|` | `/` !regex_heuristics
+AND        =  `,` | ``
+ENDL       = `;` | ``
 
-RNG_OPEN   = `{`
-RNG_CLOSE  = `}`
+RNG_BRACE  = :BRACE_SIGN
+BRACE_SIGN = `{` | `(`
 RNG_DELIM  = `,`
 TIMES      = `*`
 
-RE_LEADIN  = `/`
+RE_LEADIN  = `/` &regex_heuristics | `^/`
 RE_LEADOUT = `/`
 
-CH_LEADIN  = `0x`
-
+CH_LEADIN  = `0x` | `#x`
 
 #: heuristics
 
-char_range_heuristics  = ! ( /[\n\t ]/
+char_range_heuristics  = ! ( /[\n]/ | more_than_one_blank
                            | ~ literal_heuristics
-                           | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+                           | ~ [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+more_than_one_blank    = /[^ \]]*[ ][^ \]]*[ ]/
 literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
                        | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
                        | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
                        | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
                        | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
-
+regex_heuristics       = ! ( / +`[^`]*` +\//
+                           | / +´[^´]*´ +\//
+                           | / +'[^']*' +\//
+                           | / +"[^"]*" +\//
+                           | / +\w+ +\// )
+                         ( /[^\/\n*?+\\]*[*?+\\][^\/\n]*\//
+                         | /[^\w]+\//
+                         | /[^ ]/ )
 
 #: basic-regexes
 

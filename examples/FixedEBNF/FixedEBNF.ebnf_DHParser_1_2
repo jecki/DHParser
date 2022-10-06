@@ -112,7 +112,6 @@ free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
 
-
 #: delimiters
 
 EOF = !/./
@@ -131,7 +130,6 @@ RE_LEADIN  = `/`
 RE_LEADOUT = `/`
 
 CH_LEADIN  = `0x`
-
 
 #: heuristics
 

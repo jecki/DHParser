@@ -826,7 +826,7 @@ EBNF_AST_transformation_table = {
         [flatten, remove_tokens('@', '=', ',', '(', ')'),
          remove_children("RAISE_EXPR_WO_BRACKETS")],
     "procedure":
-        [remove_tokens('()'), reduce_single_child],
+        [remove_tokens('()', '(', ')'), reduce_single_child],
     "literals":
         [replace_by_single_child],
     "definition":
