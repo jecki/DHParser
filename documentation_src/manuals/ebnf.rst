@@ -1960,7 +1960,7 @@ This function takes the following text as well as the stack of previous value of
 the symbol that is being retrieved as an argument and it must return either
 a strech of matched text of ``None`` to indicate a non-match. The function
 ``matching_bracket()`` is already defined in :py:mod:`DHParser.parse`. Slightly
-simplifies to cover only the case of curly braces, it looks like this::
+simplified to cover only the case of curly braces, it looks like this::
 
     >>> from typing import List, Optional
     >>> def matching_bracket(text: str, stack: List[str]) -> Optional[str]:
