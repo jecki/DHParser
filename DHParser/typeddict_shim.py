@@ -73,22 +73,6 @@ __all__ = ['NotRequired', 'TypedDict', 'GenericTypedDict', '_TypedDictMeta',
            'GenericMeta', 'get_origin', 'Literal']
 
 
-def resolve_forward_refs(T: type, Ur_T: type = None) -> type:
-    """Resolves all forward references found in T."""
-    if isinstance(T, ForwardRef):
-        if Ur_T is None:  Ur_T = T
-        if sys.version_info >= (3, 9, 0):
-            recursive_guard = set()
-            T = T._evaluate(globals(), sys.modules[Ur_T.__module__].__dict__, recursive_guard)
-        else:
-           T = T._evaluate(globals(), sys.modules[Ur_T.__module__].__dict__)
-        T = resolve_forward_refs(T, Ur_T)
-    elif str(T).find('ForwardRef') >= 0:
-        if Ur_T is None:  Ur_T = T
-        T.__args__ = tuple(resolve_forward_refs(arg, Ur_T) for arg in T.__args__)
-    return T
-
-
 # The following functions have been copied from the Python
 # standard libraries typing-module. They have been adapted
 # to support a more flexible version of TypedDict
