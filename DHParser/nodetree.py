@@ -39,7 +39,7 @@ import json
 import random
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
-    Tuple, Container, Optional, Dict, Any, Optional
+    Tuple, Container, Optional, Dict, Any
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
