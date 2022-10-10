@@ -1,6 +1,6 @@
 """typeddict_shim.py - A version of typed-dict that supports
    Required / NotRequired -fields across all version of Python
-   from 3.6 onward.
+   from 3.7 onward.
 
 Until Python version 3.10, the STL's TypeDict merely supports
 classifying all fields of a TypedDict class as either required
@@ -29,6 +29,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied. See the License for the specific language governing
 permissions and limitations under the License.
+
+This module has been copied and slightly adjusted from:
+https://github.com/jecki/ts2python
 """
 
 from __future__ import annotations
