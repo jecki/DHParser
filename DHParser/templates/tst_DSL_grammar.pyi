@@ -41,7 +41,7 @@ def recompile_grammar(grammar_src, force):
     dsl.restore_server_script(grammar_src)
 
 
-def run_grammar_tests(fn_pattern, get_grammar, get_transformer, get_compiler):
+def run_grammar_tests(fn_pattern, get_grammar, get_transformer):
     if fn_pattern.find('/') >= 0 or fn_pattern.find('\\') >= 0:
         testdir, fn_pattern = os.path.split(fn_pattern)
         if not testdir.startswith('/') or not testdir[1:2] == ':':

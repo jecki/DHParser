@@ -1147,7 +1147,7 @@ class TestMarkupInsertion:
             'is a Hofbräuhaus</p></doc>')
         k = fm.get_path_index(i)
         fm.rebuild_mapping_slice(k, k)
-        assert fm.pos_list == [0, 13]
+        assert fm._pos_list == [0, 13]
 
     def test_chain_id(self):
         s = set()

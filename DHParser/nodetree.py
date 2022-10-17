@@ -2874,6 +2874,12 @@ class ContentMapping:
     the markup-method takes care of splitting up either the newly created or
     some of the existing nodes to fit in the markup.
 
+    Public instance variables:
+
+    :ivar _path_list: A list of paths covering the selected leaves of the tree from
+        left to right.
+    :ivar _pos_list: The list of positions of the paths in ``path_list``
+
     Location-related instance variables:
 
     :ivar orogin: The orogin of the tree for which a path mapping shall be
@@ -2910,7 +2916,7 @@ class ContentMapping:
         If the markup-method reaches nodes that cannot be split, it will split
         the markup-node instead to cover the string to be marked up, completely.
 
-    Internal instance variables:
+    Content-related instance variables:
 
     :ivar path_list: A list of paths covering the selected leaves of the tree from
         left to right.
@@ -2948,8 +2954,8 @@ class ContentMapping:
 
         content, pos_list, path_list = self._generate_mapping(origin)
         self.content: str = content
-        self.pos_list: List[int] = pos_list
-        self.path_list: List[Path] = path_list
+        self._pos_list: List[int] = pos_list
+        self._path_list: List[Path] = path_list
 
     def _generate_mapping(self, origin, stump: Path = []) \
             -> Tuple[str, List[int], List[Path]]:
@@ -2984,16 +2990,24 @@ class ContentMapping:
         3 -> a, c, d "45"
         5 -> a, c, e "67"
         """
-        assert len(self.pos_list) == len(self.path_list)
+        assert len(self._pos_list) == len(self._path_list)
         lines = []
-        for i in range(len(self.pos_list)):
-            position = self.pos_list[i]
-            path = [nd.name for nd in self.path_list[i][:-1]]
-            last = self.path_list[i][-1]
+        for i in range(len(self._pos_list)):
+            position = self._pos_list[i]
+            path = [nd.name for nd in self._path_list[i][:-1]]
+            last = self._path_list[i][-1]
             path.append(flatten_sxpr(last.as_sxpr())[1:-1])
             s = ', '.join(s for s in path)
             lines.append(f'{position} -> {s}')
         return '\n'.join(lines)
+
+    @property
+    def path_list(self) -> List[path]:
+        return self._path_list
+
+    @property
+    def pos_list(self) -> List[int]:
+        return self._pos_list
 
     @cython.locals(pos=cython.int, path_index=cython.int, last=cython.int)
     def get_path_index(self, pos: int, left_biased: bool = False) -> int:
@@ -3022,14 +3036,14 @@ class ContentMapping:
                            f'Must be 0 <= position < length of text!'
         if pos < 0:  raise IndexError(errmsg(pos))
         try:
-            path_index = bisect.bisect_right(self.pos_list, pos) - 1
+            path_index = bisect.bisect_right(self._pos_list, pos) - 1
             if left_biased:
-                while path_index > 0 and pos - self.pos_list[path_index] == 0:
+                while path_index > 0 and pos - self._pos_list[path_index] == 0:
                     path_index -= 1
             else:
-                last = len(self.pos_list) - 1
-                pivot = self.pos_list[path_index]
-                while path_index < last and self.pos_list[path_index + 1] == pivot:
+                last = len(self._pos_list) - 1
+                pivot = self._pos_list[path_index]
+                while path_index < last and self._pos_list[path_index + 1] == pivot:
                     path_index += 1
         except IndexError:
             raise IndexError(errmsg(pos))
@@ -3045,7 +3059,7 @@ class ContentMapping:
         :raises:    IndexError if not 0 <= position < length of document
         """
         path_index = self.get_path_index(pos, left_biased)
-        return self.path_list[path_index], pos - self.pos_list[path_index]
+        return self._path_list[path_index], pos - self._pos_list[path_index]
 
     @cython.locals(a=cython.int, b=cython.int, index_a=cython.int, index_b=cython.int)
     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
@@ -3061,7 +3075,7 @@ class ContentMapping:
         index_a = self.get_path_index(start_pos, left_biased)
         index_b = self.get_path_index(end_pos, left_biased)
         for i in range(index_a, index_b + 1):
-            yield self.path_list[i]
+            yield self._path_list[i]
 
     @cython.locals(i=cython.int, start_index=cython.int, end_index=cython.int, offset=cython.int)
     def rebuild_mapping_slice(self, first_index: int, last_index: int):
@@ -3140,46 +3154,46 @@ class ContentMapping:
         9 -> a, e, f, h "ABC"
         12 -> a, e, i "DEF"
         """
-        start_path = self.path_list[first_index]
-        end_path = self.path_list[last_index]
+        start_path = self._path_list[first_index]
+        end_path = self._path_list[last_index]
         common_ancestor, i = find_common_ancestor(start_path, end_path)
         assert common_ancestor
-        while first_index > 0 and self.path_list[first_index - 1][i:i + 1] == [common_ancestor]:
+        while first_index > 0 and self._path_list[first_index - 1][i:i + 1] == [common_ancestor]:
             first_index -= 1
-        last = len(self.path_list) - 1
-        while last_index < last and self.path_list[last_index + 1][i:i + 1] == [common_ancestor]:
+        last = len(self._path_list) - 1
+        while last_index < last and self._path_list[last_index + 1][i:i + 1] == [common_ancestor]:
             last_index += 1
 
         stump = start_path[:i]
         content, offsets, paths = self._generate_mapping(common_ancestor, stump)
         assert offsets[0] == 0
-        start_pos = self.pos_list[first_index]
-        end_pos = self.pos_list[last_index] + self.path_list[last_index][-1].strlen()
+        start_pos = self._pos_list[first_index]
+        end_pos = self._pos_list[last_index] + self._path_list[last_index][-1].strlen()
         offsets = [offset + start_pos for offset in offsets]
         if stump:  paths = [stump + path for path in paths]
 
-        off_head = self.pos_list[:first_index]
+        off_head = self._pos_list[:first_index]
         followup_offset = offsets[-1] + paths[-1][-1].strlen()
-        if last_index < len(self.pos_list) - 1 and followup_offset != self.pos_list[last_index + 1]:
-            shift = followup_offset - self.pos_list[last_index + 1]
-            off_tail = [offset + shift for offset in self.pos_list[last_index + 1:]]
+        if last_index < len(self._pos_list) - 1 and followup_offset != self._pos_list[last_index + 1]:
+            shift = followup_offset - self._pos_list[last_index + 1]
+            off_tail = [offset + shift for offset in self._pos_list[last_index + 1:]]
         else:
-            off_tail = self.pos_list[last_index + 1:]
+            off_tail = self._pos_list[last_index + 1:]
 
-        path_head = self.path_list[:first_index]
-        path_tail = self.path_list[last_index + 1:]
+        path_head = self._path_list[:first_index]
+        path_tail = self._path_list[last_index + 1:]
 
         self.content = ''.join([self.content[:start_pos], content, self.content[end_pos:]])
 
-        self.pos_list.clear()
-        self.pos_list.extend(off_head)
-        self.pos_list.extend(offsets)
-        self.pos_list.extend(off_tail)
+        self._pos_list.clear()
+        self._pos_list.extend(off_head)
+        self._pos_list.extend(offsets)
+        self._pos_list.extend(off_tail)
 
-        self.path_list.clear()
-        self.path_list.extend(path_head)
-        self.path_list.extend(paths)
-        self.path_list.extend(path_tail)
+        self._path_list.clear()
+        self._path_list.extend(path_head)
+        self._path_list.extend(paths)
+        self._path_list.extend(path_tail)
 
     def rebuild_mapping(self, start_pos: int, end_pos: int):
         """Reconstructs a particular section of the context mapping after the
@@ -3199,8 +3213,8 @@ class ContentMapping:
         that covers this position. Returns the parent of the newly inserted
         node."""
         index = self.get_path_index(pos)
-        path = self.path_list[index]
-        rel_pos = pos - self.pos_list[index]
+        path = self._path_list[index]
+        rel_pos = pos - self._pos_list[index]
         parent = insert_node(path, rel_pos, node)
         self.rebuild_mapping_slice(index, index)
         return parent
@@ -3390,6 +3404,21 @@ class ContentMapping:
                                        self.get_path_index(end_pos, left_biased=True))
         assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
         return common_ancestor
+
+
+# class LocalContentMapping:
+#     """A context-mapping (see :py:class:`ContentMapping`) that does not span
+#     the complete tree, but a section between two path."""
+#
+#     def __init__(self, start_path: Path, end_path: Path,
+#                  select: PathSelector = LEAF_PATH,
+#                  ignore: PathSelector = NO_PATH,
+#                  greedy: bool = True,
+#                  divisability: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
+#                  chain_attr_name: str = '',
+#                  auto_cleanup: bool = True):
+#         ancestor, index = find_common_ancestor(start_path, end_path)
+
 
 
 # Attribute handling ##################################################
