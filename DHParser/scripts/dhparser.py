@@ -98,16 +98,17 @@ def create_project(path: str):
     create_file(name + '.ebnf', EBNF_TEMPLATE.replace('GRAMMAR_NAME', name, 1))
     create_file('README.md', README_TEMPLATE.format(name=name))
     reldhparserdir = os.path.relpath(dhparserdir, os.path.abspath('.'))
-    create_file('tst_%s_grammar.py' % name, GRAMMAR_TEST_TEMPLATE.format(
-        name=name, reldhparserdir=str(split_path(reldhparserdir))[1:-1]))
+    grammar_test_py = GRAMMAR_TEST_TEMPLATE.format(
+        name=name, reldhparserdir=str(split_path(reldhparserdir))[1:-1])
+    create_file(f'tst_{name}_grammar.py', grammar_test_py)
     create_file('example.dsl', 'Life is but a walking shadow\n')
-    os.chmod('tst_%s_grammar.py' % name, 0o755)
+    os.chmod(f'tst_{name}_grammar.py', 0o755)
     # os.chmod('%sServer.py' % name, 0o755)
     # The following is left to the user as an exercise
     # print('Creating file "%s".' % (name + 'Parser.py'))
     # recompile_grammar(name + '.ebnf', force=True)
-    print('\nNow generate a DSL-parser from the EBNF-grammar by running\n'
-          '\n    python tst_%s_gramar.py\n' % name)
+    print(f'\nNow generate a DSL-parser from the EBNF-grammar by running\n'
+          f'\n    python tst_{name}_gramar.py\n')
     os.chdir(curr_dir)
 
 
