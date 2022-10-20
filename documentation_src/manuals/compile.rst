@@ -475,7 +475,86 @@ EBNF-grammar provides transformation-functions for each of these steps and
 generators that yield a thread-local-version of each of these
 transformation-functions or callable transformation-classes.
 
+Module :py:mod:`DHParser.compile` provides the helper function 
+:py:func:`DHParser.compile.compile_source` that calls these four stages in
+sequence and collects the result, i.e. the output of the last stage, the
+error messages, if any, and, optionally, the AST-tree. Example::
+
+   >>> from DHParser.compile import compile_source
+   >>> json_str = '{"test": ["This", "is", 1, "JSON", "test"]}'
+   >>> json, errors, ast = compile_source(json_str, None, 
+   ...                                    json_parser, 
+   ...                                    lambda tree: traverse(tree, json_AST_trans), 
+   ...                                    simplifiedJSONCompiler(),
+   ...                                    preserve_AST=True)
+   >>> json
+   {'test': ['This', 'is', 1.0, 'JSON', 'test']}
+   >>> errors
+   []
+   >>> print(ast.as_sxpr())
+   (json
+     (object
+       (member
+         (string "test")
+         (array
+           (string "This")
+           (string "is")
+           (other_literal "1")
+           (string "JSON")
+           (string "test")))))
+
+Subsequent stages of the processing pipeline will only be called if no fatal errors 
+have occurred in any of the earlier stages. This means that when designing the
+AST-transformation, the compiler and, if the extended pipeline (see below) is used,
+any further processing stages, it should be provided for the case that the input
+is faulty stemming from earlier stages can to some degree (determined by your assignment
+or seriousness to different possible errors) be faulty.
 
 The extended pipeline
 ^^^^^^^^^^^^^^^^^^^^^
 
+There are many contexts where the four above-mentioned stages are not sufficient. In
+the digital humanities, for example, it is typical that the data is passed through 
+many different tree-processing stages, before it is transformed into a form that is
+not a tree, any more. And it is not at all uncommon that this processing pipeline
+is bifurcated as the following schema, taken from the 
+`Medieval Latin dictionary <https://mlw.badw.de>`_
+or the `Bavarian Academy of Sciences and Humanities <https://www.badw.de>`_, shows::
+
+    ----------------    
+    | source (DSL) |
+    ---------------- 
+           |
+           |--- Parsing
+           |
+        -------
+        | CST |
+        -------
+           |
+           |--- AST-Transformation
+           |
+        -------
+        | AST |
+        -------
+           |
+           |--- data-consolidation
+           |
+      ------------
+      | data-XML |
+      ------------
+           |
+           |--- output-transformation
+           |    
+     -------------- print-transform. ------------- TeX-compilation -----------
+     | output-XML |----------------->| print-XML |---------------->| ConTeXt |
+     --------------                  -------------                 -----------
+           |
+           |--- HTML-Transformation
+           |
+        --------
+        | HTML |
+        --------
+
+In this particular example, there is no preprocessing stage. The first three remaining stages
+are covered by the "standard pipeline" (i.e. parsing, AST-transformation, compilation).
+The following stages, starting from data-XML, form the extended pipeline.

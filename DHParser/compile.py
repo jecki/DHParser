@@ -57,6 +57,7 @@ from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias
 
 __all__ = ('CompilerError',
            'Compiler',
+           'ParserCallable',
            'CompilerCallable',
            'CompilerFactory',
            'CompilationResult',
@@ -366,9 +367,130 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 
 # processing pipeline support #########################################
 
-
+ParserCallable: TypeAlias = Union[Grammar, Callable[[str], RootNode], functools.partial]
 CompilerCallable: TypeAlias = Union[Compiler, Callable[[RootNode], Any], functools.partial]
 CompilerFactory: TypeAlias = Union[Callable[[], CompilerCallable], functools.partial]
+
+
+CompilationResult = namedtuple('CompilationResult',
+    ['result',      # type: Optional[Any]
+     'messages',    # type: List[Error]
+     'AST'],        # type: Optional[RootNode]
+    module=__name__)
+
+
+def compile_source(source: str,
+                   preprocessor: Optional[PreprocessorFunc],
+                   parser: ParserCallable,
+                   transformer: TransformerCallable,
+                   compiler: CompilerCallable,
+                   *, preserve_AST: bool = False) -> CompilationResult:
+    """Compiles a source in four stages:
+
+    1. Pre-Processing (if needed)
+    2. Parsing
+    3. AST-transformation
+    4. Compiling.
+
+    The later stages AST-transformation, compilation will only be invoked if
+    no fatal errors occurred in any of the earlier stages of the processing
+    pipeline.
+
+    :param source: The input text for compilation or a the name of a
+            file containing the input text.
+    :param preprocessor:  text -> text. A preprocessor function
+            or None, if no preprocessor is needed.
+    :param parser:  A parsing function or grammar class
+    :param transformer:  A transformation function that takes
+            the root-node of the concrete syntax tree as an argument and
+            transforms it (in place) into an abstract syntax tree.
+    :param compiler: A compiler function or compiler class
+            instance
+    :param preserve_AST: Preserves the AST-tree.
+
+    :returns: The result of the compilation as a 3-tuple
+        (result, errors, abstract syntax tree). In detail:
+
+        1. The result as returned by the compiler or ``None`` in case of failure
+        2. A list of error or warning messages
+        3. The root-node of the abstract syntax tree if `preserve_ast` is True
+           or `None` otherwise.
+    """
+    ast = None  # type: Optional[Node]
+    try:
+        original_text = load_if_file(source)  # type: str
+    except (FileNotFoundError, IOError) as e:
+        return CompilationResult(None, [Error(str(e), 0, COMPILER_CRASH)], None)
+    source_name = source if is_filename(source) else ''
+    log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
+    if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
+        # log only for custom parser/transformer/compilers
+        log_syntax_trees = get_config_value('log_syntax_trees')
+    else:
+        log_syntax_trees = set()
+
+    # preprocessing
+
+    errors = []
+    if preprocessor is None:
+        source_text = original_text  # type: str
+        source_mapping = gen_neutral_srcmap_func(source_text, source_name)
+            # lambda i: SourceLocation(source_name, 0, i)    # type: SourceMapFunc
+    else:
+        _, source_text, source_mapping, errors = preprocessor(original_text, source_name)
+
+    if has_errors(errors, FATAL):
+        return CompilationResult(None, errors, None)
+
+    # parsing
+
+    syntax_tree: RootNode = parser(source_text, source_mapping=source_mapping)
+    syntax_tree.docname = source_name if source_name else "DHParser_Document"
+    for e in errors:  syntax_tree.add_error(None, e)
+    syntax_tree.source = original_text
+    syntax_tree.source_mapping = source_mapping
+    if 'cst' in log_syntax_trees:
+        log_ST(syntax_tree, log_file_name + '.cst')
+    if parser.history_tracking__:
+        log_parsing_history(parser, log_file_name)
+
+    # assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \
+    #     str(syntax_tree) # Ony valid if neither tokens or whitespace are dropped early
+
+    result = None
+    if not is_fatal(syntax_tree.error_flag):
+
+        # AST-transformation
+
+        if is_error(syntax_tree.error_flag):
+            # catch Python exception, because if an error has occurred
+            # earlier, the syntax tree might not look like expected,
+            # which could (fatally) break AST transformations.
+            try:
+                syntax_tree = transformer(syntax_tree)
+            except Exception as e:
+                syntax_tree.new_error(syntax_tree,
+                                      "AST-Transformation failed due to earlier parser errors. "
+                                      "Crash Message: %s: %s" % (e.__class__.__name__, str(e)),
+                                      AST_TRANSFORM_CRASH)
+        else:
+            syntax_tree = transformer(syntax_tree)
+
+        if 'ast' in log_syntax_trees:
+            log_ST(syntax_tree, log_file_name + '.ast')
+
+        if not is_fatal(syntax_tree.error_flag):
+            if preserve_AST:
+                ast = copy.deepcopy(syntax_tree)
+
+            # Compilation
+
+            result = process_tree(compiler, syntax_tree)
+
+    messages = syntax_tree.errors_sorted  # type: List[Error]
+    # Obsolete, because RootNode adjusts error locations whenever an error is added:
+    # adjust_error_locations(messages, original_text, source_mapping)
+    return CompilationResult(result, messages, ast)
 
 
 def filter_stacktrace(stacktrace: List[str]) -> List[str]:
@@ -501,127 +623,6 @@ def run_pipeline(junctions: Set[Junction],
                     results[t] = process_tree(junction[1](), tree)
                     errata[t] = copy.copy(tree.errors_sorted)
     return {t: (results[t], errata[t]) for t in results.keys()}
-
-
-CompilationResult = namedtuple('CompilationResult',
-    ['result',      # type: Optional[Any]
-     'messages',    # type: List[Error]
-     'AST'],        # type: Optional[RootNode]
-    module=__name__)
-
-
-def compile_source(source: str,
-                   preprocessor: Optional[PreprocessorFunc],
-                   parser: Grammar,
-                   transformer: TransformerCallable,
-                   compiler: CompilerCallable,
-                   *, preserve_AST: bool = False) -> CompilationResult:
-    """Compiles a source in four stages:
-
-    1. Pre-Processing (if needed)
-    2. Parsing
-    3. AST-transformation
-    4. Compiling.
-
-    The later stages AST-transformation, compilation will only be invoked if
-    no fatal errors occurred in any of the earlier stages of the processing
-    pipeline.
-
-    :param source: The input text for compilation or a the name of a
-            file containing the input text.
-    :param preprocessor:  text -> text. A preprocessor function
-            or None, if no preprocessor is needed.
-    :param parser:  A parsing function or grammar class
-    :param transformer:  A transformation function that takes
-            the root-node of the concrete syntax tree as an argument and
-            transforms it (in place) into an abstract syntax tree.
-    :param compiler: A compiler function or compiler class
-            instance
-    :param preserve_AST: Preserves the AST-tree.
-
-    :returns: The result of the compilation as a 3-tuple
-        (result, errors, abstract syntax tree). In detail:
-
-        1. The result as returned by the compiler or ``None`` in case of failure
-        2. A list of error or warning messages
-        3. The root-node of the abstract syntax tree if `preserve_ast` is True
-           or `None` otherwise.
-    """
-    ast = None  # type: Optional[Node]
-    try:
-        original_text = load_if_file(source)  # type: str
-    except (FileNotFoundError, IOError) as e:
-        return CompilationResult(None, [Error(str(e), 0, COMPILER_CRASH)], None)
-    source_name = source if is_filename(source) else ''
-    log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
-    if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
-        # log only for custom parser/transformer/compilers
-        log_syntax_trees = get_config_value('log_syntax_trees')
-    else:
-        log_syntax_trees = set()
-
-    # preprocessing
-
-    errors = []
-    if preprocessor is None:
-        source_text = original_text  # type: str
-        source_mapping = gen_neutral_srcmap_func(source_text, source_name)
-            # lambda i: SourceLocation(source_name, 0, i)    # type: SourceMapFunc
-    else:
-        _, source_text, source_mapping, errors = preprocessor(original_text, source_name)
-
-    if has_errors(errors, FATAL):
-        return CompilationResult(None, errors, None)
-
-    # parsing
-
-    syntax_tree: RootNode = parser(source_text, source_mapping=source_mapping)
-    syntax_tree.docname = source_name if source_name else "DHParser_Document"
-    for e in errors:  syntax_tree.add_error(None, e)
-    syntax_tree.source = original_text
-    syntax_tree.source_mapping = source_mapping
-    if 'cst' in log_syntax_trees:
-        log_ST(syntax_tree, log_file_name + '.cst')
-    if parser.history_tracking__:
-        log_parsing_history(parser, log_file_name)
-
-    # assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \
-    #     str(syntax_tree) # Ony valid if neither tokens or whitespace are dropped early
-
-    result = None
-    if not is_fatal(syntax_tree.error_flag):
-
-        # AST-transformation
-
-        if is_error(syntax_tree.error_flag):
-            # catch Python exception, because if an error has occurred
-            # earlier, the syntax tree might not look like expected,
-            # which could (fatally) break AST transformations.
-            try:
-                syntax_tree = transformer(syntax_tree)
-            except Exception as e:
-                syntax_tree.new_error(syntax_tree,
-                                      "AST-Transformation failed due to earlier parser errors. "
-                                      "Crash Message: %s: %s" % (e.__class__.__name__, str(e)),
-                                      AST_TRANSFORM_CRASH)
-        else:
-            syntax_tree = transformer(syntax_tree)
-
-        if 'ast' in log_syntax_trees:
-            log_ST(syntax_tree, log_file_name + '.ast')
-
-        if not is_fatal(syntax_tree.error_flag):
-            if preserve_AST:
-                ast = copy.deepcopy(syntax_tree)
-
-            # Compilation
-
-            result = process_tree(compiler, syntax_tree)
-
-    messages = syntax_tree.errors_sorted  # type: List[Error]
-    # Obsolete, because RootNode adjusts error locations whenever an error is added:
-    # adjust_error_locations(messages, original_text, source_mapping)
-    return CompilationResult(result, messages, ast)
 
 
 # TODO: Verify compiler against grammar,
