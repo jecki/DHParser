@@ -1,0 +1,1 @@
+Warning (620): Exception <class 'ValueError'> while compiling AST-Transformation: No object matching /(?:\w+_)?AST_transformation_table$/ defined in source code.

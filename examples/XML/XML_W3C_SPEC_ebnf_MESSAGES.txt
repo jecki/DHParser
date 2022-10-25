@@ -1,0 +1,14 @@
+15:1: Warning (670): Rule "Names" is not connected to parser root "document" !
+17:1: Warning (670): Rule "Nmtokens" is not connected to parser root "document" !
+50:1: Warning (670): Rule "extSubset" is not connected to parser root "document" !
+51:1: Warning (670): Rule "extSubsetDecl" is not connected to parser root "document" !
+78:20: Warning (710): Alternative "ID" should not precede "IDREF" where it occurs at the beginning! Reorder to avoid warning.
+78:20: Warning (710): Alternative "IDREF" should not precede "IDREFS" where it occurs at the beginning! Reorder to avoid warning.
+78:20: Warning (710): Alternative "NMTOKEN" should not precede "NMTOKENS" where it occurs at the beginning! Reorder to avoid warning.
+93:1: Warning (670): Rule "conditionalSect" is not connected to parser root "document" !
+94:1: Warning (670): Rule "includeSect" is not connected to parser root "document" !
+95:1: Warning (670): Rule "ignoreSect" is not connected to parser root "document" !
+96:1: Warning (670): Rule "ignoreSectContents" is not connected to parser root "document" !
+97:1: Warning (670): Rule "Ignore" is not connected to parser root "document" !
+114:1: Warning (670): Rule "TextDecl" is not connected to parser root "document" !
+115:1: Warning (670): Rule "extParsedEnt" is not connected to parser root "document" !

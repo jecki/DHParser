@@ -510,6 +510,12 @@ any further processing stages, it should be provided for the case that the input
 is faulty stemming from earlier stages can to some degree (determined by your assignment
 or seriousness to different possible errors) be faulty.
 
+Function :py:func:`DHParser.compile.process_tree` is a convenient helper function
+that calls a given processing stage only, if the tree handed over from the last stage
+does not contain any fatal errors. Thus, a sequence of processing stages can be
+written as a sequence of calls of :py:func:`DHParser.compile.process_tree` without
+the need of any if clauses the check the results for fatal errors after each call.
+
 The extended pipeline
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -555,6 +561,56 @@ or the `Bavarian Academy of Sciences and Humanities <https://www.badw.de>`_, sho
         | HTML |
         --------
 
-In this particular example, there is no preprocessing stage. The first three remaining stages
-are covered by the "standard pipeline" (i.e. parsing, AST-transformation, compilation).
-The following stages, starting from data-XML, form the extended pipeline.
+In this particular example, there is no preprocessing stage. The first three
+remaining stages are covered by the "standard pipeline" (i.e. parsing,
+AST-transformation, compilation). The following stages, starting from data-XML,
+form the extended pipeline.
+
+In order to support extended processing pipeline :py:mod:`DHParser.compile` uses
+the very simple concept of junctions, where a junctions is the connection of an
+earlier stage (origin) in the the pipeline to a following stage (target) via a
+transformation or compilation function. Pipelines are created by providing
+junctions from for each intermediate stage from the starting stage (usually the
+last stage of the standard pipline) to one or more ending stages. Bifurcations a
+created simply by providing to different junctions starting from the same origin
+stage. (It is not allowed to have more than one junction for one and the same
+target stages.)
+
+The stages are identified by the names which may be chosen arbitrarily as long
+as each name is used for one and the same stage, only. Technically, a junction
+is a triple of the name of the origin stage, a factory function that returns a
+transformation-callable and the name of the target stage. A (potentially
+bifurcated) pipeline is then simply a set of junctions that covers all routes
+from the starting stage(s) of the pipeline to its ending stage(s).
+
+We will illustrate this by extending our example of simplified json-compiler to a 
+processing pipeline. So far the standard pipeline of our json-compiler (although
+we did not bother to call it thus) yields the json-data in form of Python-objects.
+Now let's assume, we'd like to add two further processing stages, one which yields
+the json-data as a human-readable pretty-printed json-string, 
+the other which yields it as a compact bytearry, ready for transmission over
+some kind of connection. This is how our extension of the standard-pipeline looks 
+like::
+
+            |
+      -------------  pretty-print  -----------------------
+      | json-data |--------------->| human readable json |
+      -------------                -----------------------
+            |
+            |--- ugly-print
+            |
+    -----------------
+    | one-line json |
+    -----------------
+            |
+            |--- bytearry-convert
+            |
+   --------------------
+   | transmission obj |
+   --------------------
+
+Now, before we define the necessary junctions for this pipeline, there is one
+peculiarty regarding the pipeline-processing-support by DHParser to be pointed 
+to out. DHParser assumes all stages of the pipeline but the very last one of
+each branch to yield tree data which resembles the typical use case of most
+Digital-Humanities-projects.
