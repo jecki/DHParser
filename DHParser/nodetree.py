@@ -179,13 +179,24 @@ Path: TypeAlias = List['Node']
 NodeMatchFunction: TypeAlias = Callable[['Node'], bool]
 PathMatchFunction: TypeAlias = Callable[[Path], bool]
 
-ANY_NODE = lambda nd: True
-NO_NODE = lambda nd: False
-LEAF_NODE = lambda nd: not nd._children
+def affirm(whatever) -> bool:
+    return True
 
-ANY_PATH = lambda trl: True
-NO_PATH = lambda trl: False
-LEAF_PATH = lambda trl: not trl[-1].children
+def deny(whatever) -> bool:
+    return False
+
+ANY_NODE = affirm
+NO_NODE = deny
+ANY_PATH = affirm
+NO_PATH = deny
+
+
+def LEAF_NODE(nd: Node) -> bool:
+    return not nd._children
+
+
+def LEAF_PATH(path: Path) -> bool:
+    return not path[-1].children
 
 
 def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
@@ -222,8 +233,12 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
     elif isinstance(criterion, str):
         return lambda nd: nd.name == criterion
     elif callable(criterion):
-        for typ in criterion.__annotations__.values():
-            if typ is not Node:
+        annotations = criterion.__annotations__.items()
+        if len(annotations) > 2:
+            raise ValueError(f'Signature of callable criterion must be f(nd: Node) -> bool, '
+                             f'not {list(annotations)}')
+        for name, typ in annotations:
+            if typ is not Node and typ != 'Node' and name != 'return':
                 raise ValueError(f'First argument of callable criterion '
                                  f'{criterion} must have type Node, not {typ}!')
             break  # only read the first argument
