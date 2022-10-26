@@ -3783,6 +3783,9 @@ class RootNode(Node):
             self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
                 if source_mapping is None else source_mapping
 
+        # Data resembling the compiled tree. Default is the tree itself.
+        self.data = self
+
     def __str__(self):
         errors = self.errors_sorted
         if errors:
@@ -3824,6 +3827,9 @@ class RootNode(Node):
         duplicate.docname = self.docname
         duplicate.stage = self.stage
         duplicate.serialization_type = self.serialization_type
+
+        if self.data != self:
+            duplicate.data = copy.deepcopy(self.data)
 
         duplicate.name = self.name
         return duplicate
@@ -3867,6 +3873,16 @@ class RootNode(Node):
         if self.source:
             add_source_locations(self.errors, self.source_mapping)
         return self
+
+    def drop_tree(self, data: Any):
+        """Drops the swallowed tree in favor of the (non-tree) data resulting
+        from the compilation of the tree. The data can then be retrieved from
+        the field ``self.data``, which before the tree has been dropped contains
+        a reference to the tree itself.
+        """
+        if data != self:
+            self.data = data
+            self.result = "TREE HAS BEEN DESTROYED!"
 
     def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
         """

@@ -48,7 +48,7 @@ else:
     from collections import OrderedDict
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.compile import run_pipeline
+from DHParser.compile import run_pipeline, extract_data
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
@@ -593,10 +593,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if len(errata) == errflag and transformation_stages:
                 for stage in transformation_stages:
                     try:
-                        if isinstance(targets[stage][0], Node):
+                        data = extract_data(targets[stage][0])
+                        if isinstance(data, Node):
                             compare = deserialize(get(tests, stage, test_name))
-                            if compare and not compare.equals(targets[stage][0]):
-                                test_str = flatten_sxpr(targets[stage][0].as_sxpr())
+                            if compare and not compare.equals(data):
+                                test_str = flatten_sxpr(data.as_sxpr())
                                 compare_str = flatten_sxpr(compare.as_sxpr())
                                 test_code_str = "\n\t".join(test_code.split("\n"))
                                 errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
@@ -606,7 +607,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         else:
                             compare = get(tests, stage, test_name).strip('\n')
                             if compare:
-                                test_str = targets[stage][0]
+                                test_str = str(data)
                                 if stage in ('match', 'fail', 'ast', 'cst'):
                                     test_str = normalize_code(test_str, full_normalization=False)
                                 else:

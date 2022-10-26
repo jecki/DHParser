@@ -63,6 +63,7 @@ __all__ = ('CompilerError',
            'CompilationResult',
            'process_tree',
            'Junction',
+           'extract_data',
            'run_pipeline',
            'compile_source')
 
@@ -553,6 +554,14 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
 Junction: TypeAlias = Tuple[str, CompilerFactory, str]  # source stage name, source->target, target stage name
 
 
+def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
+    """Retrieves the data from the given tree or just passes the data through
+    if argument ``tree_or_data`` is not of type RootNode."""
+    if isinstance(tree_or_data, RootNode):
+        return cast(RootNode, tree_or_data).data
+    return tree_or_data
+
+
 def run_pipeline(junctions: Set[Junction],
                  source_stages: Dict[str, RootNode],
                  target_stages: Set[str]) -> Dict[str, Tuple[Any, List[Error]]]:
@@ -622,9 +631,7 @@ def run_pipeline(junctions: Set[Junction],
                                          f'and, therefore, cannot be processed to {t}')
                     results[t] = process_tree(junction[1](), tree)
                     errata[t] = copy.copy(tree.errors_sorted)
-    return {t: (results[t].data if isinstance(results[t], Node) and hasattr(results[t], 'data')
-                else results[t],
-                errata[t]) for t in results.keys()}
+    return {t: (extract_data(results[t]), errata[t]) for t in results.keys()}
 
 
 # TODO: Verify compiler against grammar,
