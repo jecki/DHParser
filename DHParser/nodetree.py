@@ -4026,20 +4026,6 @@ class RootNode(Node):
             how = self.serialization_type or 'default'
         return super().serialize(how)
 
-    def customized_XML(self):
-        """
-        DEPRECATED!!!
-
-        Returns a customized XML representation of the tree.
-        See the docstring of `Node.as_xml()` for an explanation of the
-        customizations.
-        """
-        import warnings
-        warnings.warn('RootNode.customized_XML is deprecated, use RootNode.as_xml() instead!',
-                      DeprecationWarning)
-        return self.as_xml(inline_tags=self.inline_tags,
-                           string_tags=self.string_tags,
-                           empty_tags=self.empty_tags)
 
 
 #######################################################################
