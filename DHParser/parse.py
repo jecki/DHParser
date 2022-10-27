@@ -1279,7 +1279,7 @@ class Grammar:
     parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()        # type: Dict[str, ResumeList]
     skip_rules__ = dict()          # type: Dict[str, ResumeList]
-    error_messages__ = dict()      # type: Dict[str, Tuple[PatternMatchType, str]]
+    error_messages__ = dict()      # type: Dict[str, Sequence[PatternMatchType, str]]
     disposable__ = RX_NEVER_MATCH  # type: RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*'  or r'#.*(?:\n|$)' if combined with horizontal wspc
@@ -1380,7 +1380,7 @@ class Grammar:
             parser.grammar = self
 
 
-    def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
+    def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
 
         :param root: If not None, this is going to be the root parser of the grammar.

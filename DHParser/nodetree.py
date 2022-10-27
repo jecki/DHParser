@@ -38,8 +38,8 @@ import functools
 import json
 import random
 import sys
-from typing import Callable, cast, Iterator, Sequence, List, Set, Union, \
-    Tuple, Container, Optional, Dict, Any
+from typing import Callable, cast, Iterator, Sequence, List, Set, AbstractSet, \
+    Union, Tuple, Container, Optional, Dict, Any
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -1617,9 +1617,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
-               inline_tags: Set[str] = frozenset(),
-               string_tags: Set[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
-               empty_tags: Set[str] = frozenset(),
+               inline_tags: AbstractSet[str] = frozenset(),
+               string_tags: AbstractSet[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
+               empty_tags: AbstractSet[str] = frozenset(),
                strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
 
@@ -1852,8 +1852,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, ET=None, string_tags: Set[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
-                 empty_tags: Set[str] = frozenset()):
+    def as_etree(self, ET=None, string_tags: AbstractSet[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
+                 empty_tags: AbstractSet[str] = frozenset()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
         :param ET: The ElementTree-library to be used. If None, the STL ElemtentTree
@@ -2219,7 +2219,7 @@ def pick_from_path(path: Path, criterion: NodeSelector, reverse: bool=False) \
         return None
 
 
-def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Node, int]:
+def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Optional[Node], int]:
     """Returns the last common ancestor of path_A, path_B and its index
     in the path. If there is no common ancestor (None, undefined integer)
     is returned.
@@ -2527,7 +2527,7 @@ def deep_split(path: Path, i: int, left_biased: bool=True,
 def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
               match_func: PathMatchFunction = ANY_PATH,
               skip_func: PathMatchFunction = NO_PATH,
-              divisable: Set[str] = LEAF_PTYPES) -> int:
+              divisable: AbstractSet[str] = LEAF_PTYPES) -> int:
     """Returns the negative index of the first node in the path, from which
     on all nodes can be split or do not need to be split, because the
     split-index lies to the left or right of the node.
@@ -2612,7 +2612,7 @@ def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
                  greedy: bool = True,
                  match_func: PathMatchFunction = ANY_PATH,
                  skip_func: PathMatchFunction = NO_PATH,
-                 divisable: Set[str] = LEAF_PTYPES,
+                 divisable: AbstractSet[str] = LEAF_PTYPES,
                  chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -2718,7 +2718,7 @@ def markup_left(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
                 match_func: PathMatchFunction = ANY_PATH,
                 skip_func: PathMatchFunction = NO_PATH,
-                divisable: Set[str] = LEAF_PTYPES,
+                divisable: AbstractSet[str] = LEAF_PTYPES,
                 chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -2920,7 +2920,7 @@ class ContentMapping:
         value for all nodes belonging to the chain of on split-up node.
     :ivar auto_cleanup: Update the content mapping after the markup has been finished.
         Should always be true, if it is intended to reuse the same content mapping
-        for further markups in the same range or other purpuses.
+        for further markups in the same range or other purposes.
     :param divisability: A dictionary that contains the information which tags
         (or nodes as identified by their name) are "harder" than other tags. Each
         key-tag in the dictionary is harder than (i.e. is  allowed to split up) up
@@ -2952,7 +2952,7 @@ class ContentMapping:
         self.greedy: bool = greedy
         if isinstance(divisability, Dict):
             if '*' not in divisability:  divisability['*'] = set()
-            self.divisability = divisability
+            self.divisability: Dict[str, Container] = divisability
         elif isinstance(divisability, str):
             for delimiter in (';', ',', ' '):
                 lst = divisability.split(delimiter)
@@ -3017,7 +3017,7 @@ class ContentMapping:
         return '\n'.join(lines)
 
     @property
-    def path_list(self) -> List[path]:
+    def path_list(self) -> List[Path]:
         return self._path_list
 
     @property
@@ -3700,7 +3700,7 @@ def tree_sanity_check(tree: Node) -> bool:
 _EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
 
 
-def default_divisable() -> Set[str]:
+def default_divisable() -> AbstractSet[str]:
     return LEAF_PTYPES
 
 
@@ -3768,9 +3768,9 @@ class RootNode(Node):
         self.lbreaks: List[int] = linebreaks(source)
 
         # customization for XML-Representation
-        self.inline_tags: Set[str] = set()
-        self.string_tags: Set[str] = {TOKEN_PTYPE}
-        self.empty_tags: Set[str] = set()
+        self.inline_tags: AbstractSet[str] = set()
+        self.string_tags: AbstractSet[str] = {TOKEN_PTYPE}
+        self.empty_tags: AbstractSet[str] = set()
 
         # meta-data
         self.docname: str = ''
@@ -4026,9 +4026,9 @@ class RootNode(Node):
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
-               inline_tags: Set[str] = _EMPTY_SET_SENTINEL,
-               string_tags: Set[str] = _EMPTY_SET_SENTINEL,
-               empty_tags: Set[str] = _EMPTY_SET_SENTINEL,
+               inline_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
+               string_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
+               empty_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
                strict_mode: bool=True) -> str:
         return super().as_xml(
             src, indentation,

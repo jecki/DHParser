@@ -442,7 +442,7 @@ class HeuristicEBNFGrammar(Grammar):
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
 
-    def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
+    def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
         Grammar.__init__(self, root, static_analysis)
         self.free_char_parsefunc__ = self.free_char._parse
         self.char_range_heuristics_parsefunc__ = self.char_range_heuristics._parse
@@ -733,7 +733,7 @@ class ConfigurableEBNFGrammar(Grammar):
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
 
-    def __init__(self, root: Parser = None, static_analysis: Optional[bool] = None) -> None:
+    def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
         Grammar.__init__(self, root, static_analysis)
         self.mode__ = 'fixed'
 

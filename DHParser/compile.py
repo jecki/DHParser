@@ -249,8 +249,8 @@ class Compiler:
             self.reset()
         self._dirty_flag = True
         self.tree = cast(RootNode, root) if isinstance(root, RootNode) else RootNode(root)
-        self.prepare(root)
-        result = self.compile(root)
+        self.prepare(self.tree)
+        result = self.compile(self.tree)
         while self.finalizers:
             task, parameters = self.finalizers.pop()
             task(*parameters)
@@ -263,7 +263,7 @@ class Compiler:
             for attribute, value in tuple(node.attr.items()):
                 try:
                     attribute_visitor = self.__getattribute__(self.attr_visitor_name(attribute))
-                    attribute_visitor(node, value) or node
+                    attribute_visitor(node, value)
                 except AttributeError:
                     pass
             self.path.pop()
@@ -339,7 +339,7 @@ class Compiler:
         result = compiler(node)     
         self.path.pop()
         if self.has_attribute_visitors:
-            node = self.visit_attributes(node)          
+            self.visit_attributes(node)          
         if result is None and self.forbid_returning_None:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
