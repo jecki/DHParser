@@ -1,7 +1,7 @@
 Compiling
 =========
 
-Module ``compile`` provides the scaffolding for further tree-processing stages
+Module :py:mod:`compile` provides the scaffolding for further tree-processing stages
 after the AST-transformation as well as for the compilation of syntax or
 document-trees to different kinds of data.
 
@@ -9,7 +9,7 @@ The most simple case is the one where there is only one further processing-stage
 after AST-Transformation and this last stage is called "compilation" no matter
 whether its outcome is another and now final tree-structure representing the
 processed source document or a different kind of data structure. For this
-purpose module ``compile`` provides the class :py:class:`~compile.Compiler` as
+purpose module :py:mod:`compile` provides the class :py:class:`~compile.Compiler` as
 scaffolding. 
 
 Just as with the transformation-table for the AST-transformation, using the

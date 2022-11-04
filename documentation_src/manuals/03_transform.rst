@@ -1,7 +1,7 @@
 AST-Transformation
 ==================
 
-Module ``transform`` provides means for quasi-declarative transformation of
+Module :py:mod:`transform` provides means for quasi-declarative transformation of
 trees, with a focus of transforming concrete syntax trees to abstract syntax
 trees or, more generally, simplifying and streamlining syntax trees in a much
 for fine-grained manner than is possible at the parsing stage (see
@@ -358,7 +358,7 @@ it contains as its single child node.
 
 The same effect can also be achieved by early tree-reduction during the parsing
 stage (see :ref:`Simplifying Trees <simplifying_syntax_trees>` in the
-documentation of the :doc:`ebnf`-module.) by listing the symbol
+documentation of the :doc:`01_ebnf`-module.) by listing the symbol
 "_known_environment" in the ``@disposable``-directeive at the beginning of the
 grammar. In cases as simple as this one, it is preferable way to eliminate
 superfluous nodes as early as possible by using the ``@disposable``-directive.

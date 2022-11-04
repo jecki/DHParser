@@ -16,18 +16,18 @@ for big projects. (The workflow for the latter is described in the
 with many examples in the doctrings of its various modules. The following
 reading-order is recommended to understand DHParser:
 
-:doc:`ebnf <manuals/ebnf>` - Although DHParser also offers a Python-interface for specifying
+:doc:`ebnf <manuals/01_ebnf>` - Although DHParser also offers a Python-interface for specifying
    grammers (similar to pyparsing_), the recommended way of using DHParser
    is by specifying the grammar in EBNF_. Here it is described how grammars
    are specified in EBNF_ and how parsers can be auto-generated from these
    grammars and how they are used to parse text.
 
-:doc:`nodetree <manuals/nodetree>` - Syntax-trees are the central data-structure of any
+:doc:`nodetree <manuals/02_nodetree>` - Syntax-trees are the central data-structure of any
    parsing system. The description to this modules explains how syntax-trees
    are represented within DHParser, how they can be manipulated, queried
    and serialized or deserialized as XML, S-expressions or json.
 
-:doc:`transform <manuals/transform>` - It is not untypical for digital humanities applications
+:doc:`transform <manuals/03_transform>` - It is not untypical for digital humanities applications
    that document tress are transformed again and again to produce different
    representations of research data or various output forms. DHParser
    supplies the scaffolding for two different types of tree transformations,
@@ -41,7 +41,7 @@ reading-order is recommended to understand DHParser:
    specified transformation is the ``EBNF_AST_transformation_table`` within
    DHParser's ebnf-module.)
 
-:doc:`compile <manuals/compile>` - The compile-module offers an object-oriented scaffolding
+:doc:`compile <manuals/04_compile>` - The compile-module offers an object-oriented scaffolding
    for the `visitor pattern`_ that is more suitable for complex
    transformations that make heavy use of algorithms as well as
    transformations from trees to non-tree objects like program code.

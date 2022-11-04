@@ -1,7 +1,7 @@
 EBNF-Grammars
 =============
 
-Module ``ebnf`` provides an EBNF-parser-generator that compiles an
+Module :py:mod:`ebnf` provides an EBNF-parser-generator that compiles an
 EBNF-Grammar into Python-code that can be executed to parse source text
 conforming to this grammar into concrete syntax trees.
 
