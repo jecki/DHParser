@@ -459,12 +459,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             difference to ``str(node)`` is that ``node.content`` does
             not add the error messages to the returned string. READ ONLY!
 
-    :ivar len: The full length of the node's string result if the
-            node is a leaf node or, otherwise, the length of the concatenated
-            string result's of its descendants. The figure always represents
-            the length before AST-transformation and will never change
-            through AST-transformation. READ ONLY!
-
     :ivar pos: the position of the node within the parsed text.
 
             The default value of ``pos`` is -1 meaning invalid by default.
@@ -3416,82 +3410,82 @@ class ContentMapping:
         return common_ancestor
 
 
-# class LocalContentMapping(ContentMapping):
-#     """A context-mapping (see :py:class:`ContentMapping`) that does not span
-#     the complete tree, but a section between two paths.
-#
-#     EXPERIMENTAL AND UNTESTED!!!
-#     """
-#
-#     def __init__(self, start_path: Path, end_path: Path,
-#                  select: PathSelector = LEAF_PATH,
-#                  ignore: PathSelector = NO_PATH,
-#                  greedy: bool = True,
-#                  divisability: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
-#                  chain_attr_name: str = '',
-#                  auto_cleanup: bool = True):
-#         ancestor, index = find_common_ancestor(start_path, end_path)
-#         super().__init__(self, ancestor, select, ignore, greedy, divisability,
-#                          chain_attr_name, auto_cleanup)
-#         self.stump: Path = start_path[:index]
-#         start_path_tail = start_path[index:]
-#         end_path_tail = end_path[index:]
-#         for i in range(len(self._path_list)):
-#             if self._path_list[i] == start_path_tail:
-#                 self.first_index = i
-#                 break
-#         else:
-#             self.first_index = 0
-#         for k in range(i, len(self._path_list)):
-#             if self._path_list[k] == end_path_tail:
-#                 self.last_index = k
-#                 break
-#         else:
-#             self.last_index = len(self._path_list) - 1
-#         self.pos_offset: int = strlen_of(tuple(path[-1] for path in self._path_list[:i]))
-#         pathL, posL = self._gen_local_path_and_pos_list()
-#         self.local_path_list: List[Path] = pathL
-#         self.local_pos_list: List[int] = posL
-#
-#     def _gen_local_path_and_pos_list(self):
-#         return ([(self.stump + path) for path in self._path_list[i:k + 1]],
-#                 [pos - self.pos_offset for pos in self._pos_list[i:k + 1]])
-#
-#     @ContentMapping.path_list.getter
-#     def _(self) -> List[Path]:
-#         return self.local_path_list
-#
-#     @ContentMapping.pos_list.getter
-#     def _(self) -> List[int]:
-#         return self.local_pos_list
-#
-#     def get_path_index(self, pos: int, left_biased: bool = False) -> int:
-#         return super().get_path_index(self, pos + self.pos_offset, left_biased) - self.first_index
-#
-#     def get_path_and_offset(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
-#         pth, off = super().get_path_and_offset(self, pos + self.pos_offset, left_biased)
-#         return pth, off - self.pos_offset
-#
-#     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
-#             -> Iterator[Path]:
-#         yield from super().iterate_paths(
-#             self, start_pos + self.pos_offset, end_pos + self.pos_offset, left_biased)
-#
-#     def rebuild_mapping_slice(self, first_index: int, last_index: int):
-#         super().rebuild_mapping_slice(first_index + self.first_index,
-#                                       last_index + self.first_index)
-#         self.local_path_list, self.local_pos_list = self._gen_local_path_and_pos_list()
-#
-#     def rebuild_mapping(self, start_pos: int, end_pos: int):
-#         super().rebuild_mapping(start_pos + self.pos_offset, end_pos + self.pos_offset)
-#
-#     def insert_node(self, pos: int, node: Node) -> Node:
-#         return super().insert_node(pod + self.pos_offset, node)
-#
-#     def markup(self, start_pos: int, end_pos: int, name: str,
-#                *attr_dict, **attributes) -> Node:
-#         return super().markup(pos + self.pos_offset, end_pos + self.pos_offset, name,
-#                               *attr_dict, **attributes)
+class LocalContentMapping(ContentMapping):
+    """A context-mapping (see :py:class:`ContentMapping`) that does not span
+    the complete tree, but a section between two paths.
+
+    EXPERIMENTAL AND UNTESTED!!!
+    """
+
+    def __init__(self, start_path: Path, end_path: Path,
+                 select: PathSelector = LEAF_PATH,
+                 ignore: PathSelector = NO_PATH,
+                 greedy: bool = True,
+                 divisability: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
+                 chain_attr_name: str = '',
+                 auto_cleanup: bool = True):
+        ancestor, index = find_common_ancestor(start_path, end_path)
+        super().__init__(self, ancestor, select, ignore, greedy, divisability,
+                         chain_attr_name, auto_cleanup)
+        self.stump: Path = start_path[:index]
+        start_path_tail = start_path[index:]
+        end_path_tail = end_path[index:]
+        for i in range(len(self._path_list)):
+            if self._path_list[i] == start_path_tail:
+                self.first_index = i
+                break
+        else:
+            self.first_index = 0
+        for k in range(i, len(self._path_list)):
+            if self._path_list[k] == end_path_tail:
+                self.last_index = k
+                break
+        else:
+            self.last_index = len(self._path_list) - 1
+        self.pos_offset: int = strlen_of(tuple(path[-1] for path in self._path_list[:i]))
+        pathL, posL = self._gen_local_path_and_pos_list()
+        self.local_path_list: List[Path] = pathL
+        self.local_pos_list: List[int] = posL
+
+    def _gen_local_path_and_pos_list(self):
+        return ([(self.stump + path) for path in self._path_list[i:k + 1]],
+                [pos - self.pos_offset for pos in self._pos_list[i:k + 1]])
+
+    @ContentMapping.path_list.getter
+    def _(self) -> List[Path]:
+        return self.local_path_list
+
+    @ContentMapping.pos_list.getter
+    def _(self) -> List[int]:
+        return self.local_pos_list
+
+    def get_path_index(self, pos: int, left_biased: bool = False) -> int:
+        return super().get_path_index(self, pos + self.pos_offset, left_biased) - self.first_index
+
+    def get_path_and_offset(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
+        pth, off = super().get_path_and_offset(self, pos + self.pos_offset, left_biased)
+        return pth, off - self.pos_offset
+
+    def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
+            -> Iterator[Path]:
+        yield from super().iterate_paths(
+            self, start_pos + self.pos_offset, end_pos + self.pos_offset, left_biased)
+
+    def rebuild_mapping_slice(self, first_index: int, last_index: int):
+        super().rebuild_mapping_slice(first_index + self.first_index,
+                                      last_index + self.first_index)
+        self.local_path_list, self.local_pos_list = self._gen_local_path_and_pos_list()
+
+    def rebuild_mapping(self, start_pos: int, end_pos: int):
+        super().rebuild_mapping(start_pos + self.pos_offset, end_pos + self.pos_offset)
+
+    def insert_node(self, pos: int, node: Node) -> Node:
+        return super().insert_node(pod + self.pos_offset, node)
+
+    def markup(self, start_pos: int, end_pos: int, name: str,
+               *attr_dict, **attributes) -> Node:
+        return super().markup(pos + self.pos_offset, end_pos + self.pos_offset, name,
+                              *attr_dict, **attributes)
 
 
 # Attribute handling ##################################################
