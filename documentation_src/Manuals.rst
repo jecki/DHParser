@@ -41,7 +41,7 @@ reading-order is recommended to understand DHParser:
    specified transformation is the ``EBNF_AST_transformation_table`` within
    DHParser's ebnf-module.)
 
-:py:mod:`compile` - The compile-module offers an object-oriented scaffolding
+:doc:`compile <manuals/compile>` - The compile-module offers an object-oriented scaffolding
    for the `visitor pattern`_ that is more suitable for complex
    transformations that make heavy use of algorithms as well as
    transformations from trees to non-tree objects like program code.

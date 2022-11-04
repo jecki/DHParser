@@ -28,8 +28,7 @@ The different parsing functions are callable descendants of class
 within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
 for an example.
 
->>> from DHParser.parse import * 
-
+    >>> from DHParser.parse import *
 """
 
 from __future__ import annotations
@@ -145,8 +144,8 @@ class ParserError(Exception):
     occurred, the parser guard can resume the parsing process.
 
     Currently, the only case when a ``ParserError`` is thrown (and not some
-    different kind of error like ``UnknownParserError``) is when a `Series`-
-    or `Interleave`-parser detects a missing mandatory element.
+    different kind of error like ``UnknownParserError``) is when a :py:class:`Series`
+    or :py:class:`Interleave`-parser detects a missing mandatory element.
     """
     def __init__(self,
                  parser: 'Parser',
@@ -181,7 +180,7 @@ class ParserError(Exception):
 
     def new_PE(self, **kwargs):
         """Returns a new ParserError object with the same attribute values
-        as `self`, except those that are reassigned in `**kwargs`.::
+        as ``self``, except those that are reassigned in ``kwargs``.::
 
             >>> pe = ParserError(Parser(), Node('test', ""), 0, 0, Error("", 0), first_throw=True)
             >>> pe_derived = pe.new_PE(first_throw = False)
@@ -227,15 +226,15 @@ def reentry_point(rest: StringView,
     the re-entry point by what follows rather than by what text precedes the point.)
 
     REMARK: The algorithm assumes that any stretch of the document that matches
-    `comment_regex` is actually a comment. It is possible to define grammars,
+    ``comment_regex`` is actually a comment. It is possible to define grammars,
     where the use of comments is restricted to certain areas and that allow to
-    use constructs that look like comments (i.e. will be matched by `comment_regex`)
+    use constructs that look like comments (i.e. will be matched by ``comment_regex``)
     but are none in other areas. For example::
 
             my_string = "# This is not a comment"; foo()  # This is a comment
             bar()
 
-    Here the reentry-algorithm would overlook `foo()` and jump directly to `bar()`.
+    Here the reentry-algorithm would overlook ``foo()`` and jump directly to ``bar()``.
     However, since the reentry-algorithm only needs to be good enough to do its
     work, this seems acceptable.
 
@@ -263,7 +262,7 @@ def reentry_point(rest: StringView,
     @cython.locals(a=cython.int, b=cython.int)
     def next_comment() -> Tuple[int, int]:
         """Returns the [start, end[ intervall of the next comment in the text.
-        The comment-iterator start at the beginning of the `rest` of the
+        The comment-iterator start at the beginning of the ``rest`` of the
         document and is reset for each search rule.
         """
         nonlocal rest, comments
@@ -278,9 +277,9 @@ def reentry_point(rest: StringView,
 
     @cython.locals(start=cython.int)
     def str_search(s, start: int = 0) -> Tuple[int, int]:
-        """Returns the starting position of the next occurrence of `s` in
-        the `rest` of the document beginning with `start` and the length
-        of the match, which in this case is always the length of `s` itself.
+        """Returns the starting position of the next occurrence of ``s`` in
+        the ``rest`` of the document beginning with ``start`` and the length
+        of the match, which in this case is always the length of ``s`` itself.
         If there is no match, the returned starting position will be -1.
         """
         nonlocal rest
@@ -289,8 +288,8 @@ def reentry_point(rest: StringView,
     @cython.locals(start=cython.int, end=cython.int)
     def rx_search(rx, start: int = 0) -> Tuple[int, int]:
         """Returns the staring position and the length of the next match of
-        the regular expression `rx` in the `rest` of the document, starting
-        with `start`.
+        the regular expression ``rx`` in the ``rest`` of the document, starting
+        with ``start``.
         If there is no match, the returned starting position will be -1.
         """
         nonlocal rest
@@ -302,7 +301,7 @@ def reentry_point(rest: StringView,
 
     def algorithm_search(func: ReentryPointAlgorithm, start: int = 0):
         """Returns the next match as a tuple of position and length that
-        the reentry-point-search-function `func` yields.
+        the reentry-point-search-function ``func`` yields.
         """
         nonlocal rest
         return func(rest, start, start + search_window)
@@ -310,7 +309,7 @@ def reentry_point(rest: StringView,
     @cython.returns(cython.int)
     @cython.locals(a=cython.int, b=cython.int, k=cython.int, length=cython.int)
     def entry_point(search_func, search_rule) -> int:
-        """Returns the next reentry-point outside a comment that `search_func`
+        """Returns the next reentry-point outside a comment that ``search_func``
         yields. If no reentry point is found, the first position after the
         end of the text ("upper limit") is returned."""
         a, b = next_comment()
@@ -379,7 +378,7 @@ ParsingResult: TypeAlias = Tuple[Optional[Node], int]
 MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
 ApplyFunc: TypeAlias = Callable[[List['Parser']], Optional[bool]]
-# The return value of `True` stops any further application
+# The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc: TypeAlias = Callable[['Parser', int], ParsingResult]
 ParserTrail: TypeAlias = List['Parser']
@@ -400,7 +399,7 @@ class Parser:
 
     There are two different types of parsers:
 
-    1. *Named parsers* for which a name is set in field `parser.pname`.
+    1. *Named parsers* for which a name is set in field ``parser.pname``.
        The results produced by these parsers can later be retrieved in
        the AST by the parser name.
 
@@ -413,15 +412,15 @@ class Parser:
 
     If the parser matches it returns a tuple consisting of a node
     representing the root of the concrete syntax tree resulting from the
-    match as well as the substring `text[i:]` where i is the length of
+    match as well as the substring ``text[i:]`` where i is the length of
     matched text (which can be zero in the case of parsers like
-    `ZeroOrMore` or `Option`). If `i > 0` then the parser has "moved
-    forward".
+    :py:class:`ZeroOrMore` or :py:class:`Option`). If ``i > 0`` then the
+    parser has "moved forward".
 
-    If the parser does not match it returns `(None, text). **Note** that
-    this is not the same as an empty match `("", text)`. Any empty match
-    can for example be returned by the `ZeroOrMore`-parser in case the
-    contained parser is repeated zero times.
+    If the parser does not match it returns ``(None, text)``. **Note** that
+    this is not the same as an empty match ``("", text)``. Any empty match
+    can for example be returned by the :py:class:`ZeroOrMore`-parser in case
+    the contained parser is repeated zero times.
 
     Attributes and Properties:
 
@@ -431,19 +430,19 @@ class Parser:
                 anonymous nodes. For performance
                 reasons this is implemented as an object variable rather
                 than a property. This property should always be equal to
-                `self.name[0] == ":"`.
+                ``self.name[0] == ":"``.
 
         drop_content: A property (for performance reasons implemented as
                 simple field) that, if set, induces the parser not to return
                 the parsed content or subtree if it has matched but the
-                dummy `EMPTY_NODE`. In effect the parsed content will be
+                dummy ``EMPTY_NODE``. In effect the parsed content will be
                 dropped from the concrete syntax tree already. Only
                 anonymous (or pseudo-anonymous) parsers are allowed to
                 drop content.
 
         node_name: The name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
-                `pname`, otherwise it is the name of the parser's type
+                ``pname``, otherwise it is the name of the parser's type
                 prefixed with a colon ":".
 
         eq_class: A unique number for the class of functionally
@@ -458,9 +457,9 @@ class Parser:
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
-        proxied: The original `_parse()`-method is stored here, if a
+        proxied: The original ``_parse()``-method is stored here, if a
                 proxy (e.g. a tracing debugger) is installed via the
-                `set_proxy()`-method.
+                ``set_proxy()``-method.
 
         _grammar:  A reference to the Grammar object to which the parser
                 is attached.
@@ -468,7 +467,7 @@ class Parser:
         _symbol:  The name of the closest named parser to which this
                 parser is connected in a grammar. If pname is not the
                 empty string, this will become the same as pname, when
-                the property `symbol` is read for the first time.
+                the property ``symbol`` is read for the first time.
     """
 
     def __init__(self) -> None:
@@ -490,8 +489,8 @@ class Parser:
     def __deepcopy__(self, memo):
         """Deepcopy method of the parser. Upon instantiation of a Grammar-
         object, parsers will be deep-copied to the Grammar object. If a
-        derived parser-class changes the signature of the `__init__`-constructor,
-        `__deepcopy__`-method must be replaced (i.e. overridden without
+        derived parser-class changes the signature of the ``__init__``-constructor,
+        ``__deepcopy__``-method must be replaced (i.e. overridden without
         calling the same method from the superclass) by the derived class.
         """
         duplicate = self.__class__()
@@ -525,7 +524,7 @@ class Parser:
 
     @property
     def repr(self) -> str:
-        """Returns the parser's name if it has a name and self.__repr___() otherwise."""
+        """Returns the parser's name if it has a name and ``self.__repr__()`` otherwise."""
         return self.pname if self.pname else self.__repr__()
 
     def gen_memoization_dict(self) -> dict:
@@ -535,8 +534,8 @@ class Parser:
 
     def reset(self):
         """Initializes or resets any parser variables. If overwritten,
-        the `reset()`-method of the parent class must be called from the
-        `reset()`-method of the derived class."""
+        the ``reset()``-method of the parent class must be called from the
+        ``reset()``-method of the derived class."""
         # global _GRAMMAR_PLACEHOLDER
         # grammar = self._grammar
         self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
@@ -545,7 +544,7 @@ class Parser:
     def __call__(self: 'Parser', location: int) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
-        done in the overridden method `_parse()`. This wrapper-method can be thought of
+        done in the overridden method ``_parse()``. This wrapper-method can be thought of
         as a "parser guard", because it guards the parsing process.
         """
         grammar = self._grammar
@@ -671,22 +670,22 @@ class Parser:
 
     @cython.locals(location=cython.int)
     def _parse(self, location: int) -> ParsingResult:
-        """Applies the parser to the given `text` and returns a node with
+        """Applies the parser to the given ``text`` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
         raise NotImplementedError
 
     def is_optional(self) -> Optional[bool]:
-        """Returns `True`, if the parser can never fail, i.e. never yields
-        `None`, instead of a node. Returns `False`, if the parser can fail.
-        Returns `None` if it is not known whether the parser can fail.
+        """Returns ``True``, if the parser can never fail, i.e. never yields
+        ``None``, instead of a node. Returns ``False``, if the parser can fail.
+        Returns ``None`` if it is not known whether the parser can fail.
         """
         return None
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
-        """Sets a proxy that replaces the _parse()-method. Call `set_proxy`
-        with `None` to remove a previously set proxy. Typical use case is
-        the installation of a tracing debugger. See module `trace`.
+        """Sets a proxy that replaces the _parse()-method. Call ``set_proxy``
+        with ``None`` to remove a previously set proxy. Typical use case is
+        the installation of a tracing debugger. See module ``trace``.
         """
         if proxy is None:
             self._parse_proxy = self._parse
@@ -700,7 +699,7 @@ class Parser:
             self._parse_proxy = cast(ParseFunc, proxy)
 
     def name(self, pname: str, disposable: bool = False) -> 'Parser':
-        """Sets the parser name to `pname` and returns `self`."""
+        """Sets the parser name to ``pname`` and returns ``self``."""
         self.pname = pname
         self.disposable = disposable
         if disposable:
@@ -757,21 +756,21 @@ class Parser:
 
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
-        Applies function `func(parser)` recursively to this parser and all
-        descendant parsers as long as `func()` returns `None` or `False`.
-        Traversal is pre-order. Stops the further application of `func` and
-        returns `True` once `func` has returned `True`.
+        Applies function ``func(parser)`` recursively to this parser and all
+        descendant parsers as long as ``func()`` returns ``None`` or ``False``.
+        Traversal is pre-order. Stops the further application of ``func`` and
+        returns ``True`` once ``func`` has returned ``True``.
 
-        If `func` has been applied to all descendant parsers without issuing
-        a stop signal by returning `True`, `False` is returned.
+        If ``func`` has been applied to all descendant parsers without issuing
+        a stop signal by returning ``True``, ``False`` is returned.
 
-        This use of the return value allows to use the `apply`-method both
+        This use of the return value allows to use the ``apply``-method both
         to issue tests on all descendant parsers (including self) which may be
         decided already after some parsers have been visited without any need
-        to visit further parsers. At the same time `apply` can be used to simply
+        to visit further parsers. At the same time ``apply`` can be used to simply
         apply a procedure to all descendant parsers (including self) without
         worrying about forgetting the return value of procedure, because a
-        return value of `None` means "carry on".
+        return value of ``None`` means "carry on".
         """
         for pctx in self.descendants():
             if func(pctx):
@@ -789,7 +788,7 @@ class Parser:
         It is a serious mistake, though, if two functionally non-equivalent
         parsers have the same signature.
 
-        By returning `id(self)` this mistake will become impossible, but
+        By returning ``id(self)`` this mistake will become impossible, but
         it will turn signature-based memoization-optimization off for
         this parser.
         """
@@ -814,7 +813,7 @@ class Parser:
         memoization in cases of code repetition in the grammar.
 
         DO NOT OVERRIDE THIS METHOD. In order to implement a
-        signature function, the protected method `_signature`
+        signature function, the protected method ``_signature``
         should be overridden instead.
         """
         return self.pname if self.pname else self._signature()
@@ -830,7 +829,7 @@ class Parser:
 
 
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
-    """Duplicates all attributes of the Parser-class from `src` to `duplicate`."""
+    """Duplicates all attributes of the Parser-class from ``src`` to ``duplicate``."""
     duplicate.pname = src.pname
     duplicate.disposable = src.disposable
     duplicate.drop_content = src.drop_content
@@ -840,7 +839,7 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser):
 
 def determine_eq_classes(root: Parser):
     """Sorts the parsers originating in root (imperfectly) into equivalence
-    classes and assigns respective the class identifier to the `eq_class`-field
+    classes and assigns respective the class identifier to the ``eq_class``-field
     of each parser."""
     eq_classes: Dict[Hashable, int] = {}
 
@@ -855,7 +854,7 @@ def determine_eq_classes(root: Parser):
 
 
 def Drop(parser: Parser) -> Parser:
-    """Returns the parser with the `parser.drop_content`-property set to `True`."""
+    """Returns the parser with the ``parser.drop_content``-property set to ``True``."""
     assert parser.disposable, "Parser must be anonymous to be allowed to drop ist content."
     if isinstance(parser, Forward):
         cast(Forward, parser).parser.drop_content = True
@@ -880,7 +879,7 @@ def get_parser_placeholder() -> Parser:
 
 
 def is_parser_placeholder(parser: Optional[Parser]) -> bool:
-    """Returns True, if `parser` is `None` or merely a placeholder for a parser."""
+    """Returns True, if ``parser`` is ``None`` or merely a placeholder for a parser."""
     return not parser or parser.ptype == ":Parser"
 
 
@@ -930,9 +929,9 @@ def mixin_comment(whitespace: str, comment: str) -> str:
 def mixin_nonempty(whitespace: str) -> str:
     r"""
     Returns a regular expression pattern that matches only if the regular
-    expression pattern `whitespace` matches AND if the match is not empty.
+    expression pattern ``whitespace`` matches AND if the match is not empty.
 
-    If `whitespace`  does not match the empty string '', anyway,
+    If ``whitespace``  does not match the empty string '', anyway,
     then it will be returned unaltered.
 
     WARNING: ``mixin_nonempty()`` does not work for regular expressions the matched
@@ -942,7 +941,7 @@ def mixin_nonempty(whitespace: str) -> str:
     In particular, it does not work for fixed size regular expressions,
     that is / / or /   / or /\t/ won't work, but / */ or /\s*/ or /\s+/
     do work. There is no test for this. Fixed-size regular expressions
-    run through `mixin_nonempty` will not match at anymore if they are applied
+    run through ``mixin_nonempty`` will not match at anymore if they are applied
     to the beginning or the middle of a sequence of whitespaces!
 
     In order to be safe, your whitespace regular expressions should follow
@@ -1005,7 +1004,7 @@ class Grammar:
     ways of connecting parsers to grammar objects: Either by passing
     the root parser object to the constructor of a Grammar object
     ("direct instantiation"), or by assigning the root parser to the
-    class variable "root__" of a descendant class of class Grammar.
+    class variable ``root__`` of a descendant class of class Grammar.
 
     Example for direct instantiation of a grammar::
 
@@ -1024,7 +1023,7 @@ class Grammar:
        constructor of the Parser object explicitly, but it suffices to
        assign them to class variables, which results in better
        readability of the Python code.
-       See classmethod `Grammar._assign_parser_names__()`
+       See classmethod :py:meth:`Grammar._assign_parser_names__`
 
     3. The parsers in the class do not necessarily need to be connected
        to one single root parser, which is helpful for testing and when
@@ -1033,7 +1032,7 @@ class Grammar:
     As a consequence, though, it is highly recommended that a Grammar
     class should not define any other variables or methods with names
     that are legal parser names. A name ending with a double
-    underscore '__' is *not* a legal parser name and can safely be
+    underscore ``__`` is *not* a legal parser name and can safely be
     used.
 
     Example::
@@ -1054,13 +1053,13 @@ class Grammar:
     Upon instantiation the parser objects are deep-copied to the
     Grammar object and assigned to object variables of the same name.
     For any parser that is directly assigned to a class variable the
-    field `parser.pname` contains the variable name after instantiation
+    field ``parser.pname`` contains the variable name after instantiation
     of the Grammar class. The parser will nevertheless remain anonymous
     with respect to the tag names of the nodes it generates, if its name
-    is matched by the `disposable__` regular expression.
+    is matched by the ``disposable__`` regular expression.
     If one and the same parser is assigned to several class variables
-    such as, for example, the parser `expression` in the example above,
-    which is also assigned to `root__`, the first name sticks.
+    such as, for example, the parser ``expression`` in the example above,
+    which is also assigned to ``root__``, the first name sticks.
 
     Grammar objects are callable. Calling a grammar object with a UTF-8
     encoded document, initiates the parsing of the document with the
@@ -1074,20 +1073,21 @@ class Grammar:
     (no comments, horizontal right aligned whitespace) don't fit:
 
     Class Attributes:
-        root__:  The root parser of the grammar. Theoretically, all parsers of the
+
+    :cvar root\__:  The root parser of the grammar. Theoretically, all parsers of the
                  grammar should be reachable by the root parser. However, for testing
                  of yet incomplete grammars class Grammar does not assume that this
                  is the case.
 
-        resume_rules__: A mapping of parser names to a list of regular expressions
+    :cvar resume_rules\__: A mapping of parser names to a list of regular expressions
                 that act as rules to find the reentry point if a ParserError was
                 thrown during the execution of the parser with the respective name.
 
-        skip_rules__: A mapping of parser names to a list of regular expressions
+    :cvar skip_rules\__: A mapping of parser names to a list of regular expressions
                 that act as rules to find the reentry point if a ParserError was
                 thrown during the execution of the parser with the respective name.
 
-        error_messages__: A mapping of parser names to a Tuple of regalar expressions
+    :cvar error_messages\__: A mapping of parser names to a Tuple of regalar expressions
                 and error messages. If a mandatory violation error occurs on a
                 specific symbol (i.e. parser name) and any of the regular expressions
                 matches the error message of the first matching expression is used
@@ -1096,18 +1096,18 @@ class Grammar:
                 where a semi-colon ";" is expected) with more informative error
                 messages.
 
-        disposable__: A regular expression to identify names of parsers that are
+    :cvar disposable\__: A regular expression to identify names of parsers that are
                 assigned to class fields but shall nevertheless yield anonymous
                 nodes (i.e. nodes the tag name of which starts with a colon ":"
                 followed by the parser's class name).
 
-        parser_initialization__:  Before the grammar class (!) has been initialized,
+    :cvar parser_initialization\__:  Before the grammar class (!) has been initialized,
                  which happens upon the first time it is instantiated (see
-                 `:func:_assign_parser_names()` for an explanation), this class
+                 :py:meth:`_assign_parser_names` for an explanation), this class
                  field contains a value other than "done". A value of "done" indicates
                  that the class has already been initialized.
 
-        static_analysis_pending__: True as long as no static analysis (see the method
+    :cvar static_analysis_pending\__: True as long as no static analysis (see the method
                 with the same name for more information) has been done to check
                 parser tree for correctness. Static analysis
                 is done at instantiation and the flag is then set to false, but it
@@ -1115,161 +1115,163 @@ class Grammar:
                 (by DHParser.ebnf.EBNFCompiler) and then be set to false in the
                 definition of the grammar class already.
 
-        static_analysis_errors__: A list of errors and warnings that were found in the
+    :cvar static_analysis_errors\__: A list of errors and warnings that were found in the
                 static analysis
 
-        parser_names__: The list of the names of all named parsers defined in the
+    :cvar parser_names\__: The list of the names of all named parsers defined in the
                 grammar class
 
-        python_src__:  For the purpose of debugging and inspection, this field can
+    :cvar python_src\__:  For the purpose of debugging and inspection, this field can
                  take the python src of the concrete grammar class
-                 (see `dsl.grammar_provider`).
+                 (see :py:func:`dsl.grammar_provider`).
 
     Instance Attributes:
-        all_parsers__:  A set of all parsers connected to this grammar object
 
-        comment_rx__:  The compiled regular expression for comments. If no
+    :ivar all_parsers\__:  A set of all parsers connected to this grammar object
+
+    :ivar comment_rx\__:  The compiled regular expression for comments. If no
                 comments have been defined, it defaults to RX_NEVER_MATCH
                 This instance-attribute will only be defined if a class-attribute
                 with the same name does not already exist!
 
-        start_parser__:  During parsing, the parser with which the parsing process
-                was started (see method `__call__`) or `None` if no parsing process
+    :ivar start_parser\__:  During parsing, the parser with which the parsing process
+                was started (see method ``__call__``) or ``None`` if no parsing process
                 is running.
 
-        unconnected_parsers__: A list of parsers that are not connected to the
+    :ivar unconnected_parsers\__: A list of parsers that are not connected to the
                 root parser. This list of parsers is collected during instantiation.
 
-        resume_parsers__: A list of parsers that appear either in a resume-rule
+    :ivar resume_parsers\__: A list of parsers that appear either in a resume-rule
                 or a skip-rule. This is a subset of ``unconnected_parsers__``
 
-        _dirty_flag__:  A flag indicating that the Grammar has been called at
+    :ivar _dirty_flag\__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
                 when it is called again.
 
-        text__: The text that is currently been parsed or that has mose recently
+    :ivar text\__: The text that is currently been parsed or that has mose recently
                been parsed.
 
-        document__:  A string view on the text that has most recently been parsed
+    :ivar document\__:  A string view on the text that has most recently been parsed
                 or that is currently being parsed.
 
-        document_length__:  the length of the document.
+    :ivar document_length\__:  the length of the document.
 
-        document_lbreaks__ (property):  list of linebreaks within the document,
+    :ivar document_lbreaks\__: (property) list of linebreaks within the document,
                 starting with -1 and ending with EOF. This helps to generate line
                 and column number for history recording and will only be
                 initialized if :attr:`history_tracking__` is true.
 
-        tree__: The root-node of the parsing tree. This variable is available
+    :ivar tree\__: The root-node of the parsing tree. This variable is available
                for error-reporting already during parsing  via
                ``self.grammar.tree__.add_error``, but it references the full
                parsing tree only after parsing has been finished.
 
-        _reversed__:  the same text in reverse order - needed by the `Lookbehind`-
+    :ivar _reversed\__:  the same text in reverse order - needed by the ``Lookbehind``-
                 parsers.
 
-        variables__:  A mapping for variable names to a stack of their respective
-                string values - needed by the :class:`Capture`-, :class:`Retrieve`-
-                and :class:`Pop`-parsers.
+    :ivar variables\__:  A mapping for variable names to a stack of their respective
+                string values - needed by the :py:class:`Capture`-, :py:class:`Retrieve`-
+                and :py:class:`Pop`-parsers.
 
-        rollback__:  A list of tuples (location, rollback-function) that are
-                deposited by the :class:`Capture`- and :class:`Pop`-parsers.
+    :ivar rollback\__:  A list of tuples (location, rollback-function) that are
+                deposited by the :py:class:`Capture`- and :py:class:`Pop`-parsers.
                 If the parsing process reaches a dead end then all
                 rollback-functions up to the point to which it retreats will be
                 called and the state of the variable stack restored accordingly.
 
-        last_rb__loc__:  The last, i.e. most advanced location in the text
+    :ivar last_rb__loc\__:  The last, i.e. most advanced location in the text
                 where a variable changing operation occurred. If the parser
-                backtracks to a location at or before last_rb__loc__ (i.e.
-                location < last_rb__loc__) then a rollback of all variable
+                backtracks to a location at or before ``last_rb__loc__`` (i.e.
+                ``location < last_rb__loc__``) then a rollback of all variable
                 changing operations is necessary that occurred after the
                 location to which the parser backtracks. This is done by
-                calling method :func:`rollback_to__(location)`.
+                calling method :py:meth:`rollback_to__` ``(location)``.
 
-        :ivar ff_pos__: The "farthest fail", i.e. the highest location in the
+    :ivar ff_pos\__: The "farthest fail", i.e. the highest location in the
                 document where a parser failed. This gives a good indication
                 where and why parsing failed, if the grammar did not match
                 a text.
 
-        :ivar ff_parser__: The parser that failed at the "farthest fail"-location
-                `ff_pos__`
+    :ivar ff_parser\__: The parser that failed at the "farthest fail"-location
+                ``ff_pos__``
 
-        suspend_memoization__: A flag that if set suspends memoization of
+    :ivar suspend_memoization\__: A flag that if set suspends memoization of
                 results from returning parsers. This flag is needed by the
-                left-recursion handling algorithm (see `Parser.__call__`
-                and `Forward.__call__`) as well as the context-sensitive
-                parsers (see function `Grammar.push_rollback__()`).
+                left-recursion handling algorithm (see :py:meth:`Parser.__call__`
+                and :py:meth:`Forward.__call__`) as well as the context-sensitive
+                parsers (see function :py:meth:`Grammar.push_rollback__`).
 
-        left_recursion__: Turns on left-recursion handling. This prevents the
+    :ivar left_recursion\__: Turns on left-recursion handling. This prevents the
                 recursive descent parser to get caught in an infinite loop
                 (resulting in a maximum recursion depth reached error) when
                 the grammar definition contains left recursions.
 
-        associated_symbol_cache__: A cache for the associated_symbol__()-method.
+    :ivar associated_symbol_cache\__: A cache for the :py:meth:`associated_symbol__` -method.
 
         # mirrored class attributes:
 
-        static_analysis_pending__: A pointer to the class attribute of the same name.
+    :ivar static_analysis_pending\__: A pointer to the class attribute of the same name.
                 (See the description above.) If the class is instantiated with a
                 parser, this pointer will be overwritten with an instance variable
                 that serves the same function.
 
-        static_analysis_errors__: A pointer to the class attribute of the same name.
+    :ivar static_analysis_errors\__: A pointer to the class attribute of the same name.
                 (See the description above.) If the class is instantiated with a
                 parser, this pointer will be overwritten with an instance variable
                 that serves the same function.
 
-        # tracing and debugging support
+    Tacing and debugging support:
 
-        # These parameters are needed by the debugging functions in module
-        # `trace.py`. They should not be manipulated by the users of class
-        #  Grammar directly.
+    The following parameters are needed by the debugging functions in module
+    ``trace.py``. They should not be manipulated by the users of class
+    Grammar directly.
 
-        history_tracking__:  A flag indicating that the parsing history is
+    :ivar history_tracking\__:  A flag indicating that the parsing history is
                 being tracked. This flag should not be manipulated by the
-                user. Use `trace.set_tracer(grammar, trace.trace_history)` to
+                user. Use :py:func:`trace.set_tracer` ``(grammar, trace.trace_history)`` to
                 turn (full) history tracking on and
-                `trace.set_tracer(grammar, None)` to turn it off. Default is off.
+                :py:func:`trace.set_tracer` ``(grammar, None)`` to turn it off.
+                Default is off.
 
-        resume_notices__: A flag indicating that resume messages are generated
+    :ivar resume_notices\__: A flag indicating that resume messages are generated
                 in addition to the error messages, in case the parser was able
-                to resume after an error. Use `trace.resume_notices(grammar)` to
-                turn resume messages on and `trace.set_tracer(grammar, None)`
+                to resume after an error. Use :py:func:`trace.resume_notices` ``(grammar)``
+                to turn resume messages on and :py:func:`trace.set_tracer` ``(grammar, None)``
                 to turn resume messages (as well as history recording) off.
                 Default is off.
 
-        call_stack__:  A stack of the tag names and locations of all parsers
+    :ivar call_stack\__:  A stack of the tag names and locations of all parsers
                 in the call chain to the currently processed parser during
                 parsing. The call stack can be thought of as a breadcrumb path.
                 This is required for recording the parser history (for debugging)
                 and, eventually, i.e. one day in the future, for tracing through
                 the parsing process.
 
-        history__:  A list of history records. A history record is appended to
+    :ivar history\__:  A list of history records. A history record is appended to
                 the list each time a parser either matches, fails or if a
-                parser-error occurs. See class `log.HistoryRecord`. History
+                parser-error occurs. See class :py:class:`log.HistoryRecord`. History
                 records store copies of the current call stack.
 
-        moving_forward__: This flag indicates that the parsing process is currently
+    :ivar moving_forward\__: This flag indicates that the parsing process is currently
                 moving forward. It is needed to reduce noise in history recording
                 and should not be considered as having a valid value if history
-                recording is turned off! (See :func:`Parser.__call__`)
+                recording is turned off! (See :py:meth:`Parser.__call__`)
 
-        most_recent_error__: The most recent parser error that has occurred
-                or `None`. This can be read by tracers. See module `trace`
+    :ivar most_recent_error\__: The most recent parser error that has occurred
+                or ``None``. This can be read by tracers. See module :py:mod:`trace`
 
 
-        # Configuration parameters.
+    Configuration parameters:
 
-        # The values of these parameters are copied from the global configuration
-        # in the constructor of the Grammar object. (see mpodule `configuration.py`)
+    The values of these parameters are copied from the global configuration
+    in the constructor of the Grammar object. (see mpodule :py:mod:`configuration`)
 
-        max_parser_dropouts__: Maximum allowed number of retries after errors
+    :ivar max_parser_dropouts\__: Maximum allowed number of retries after errors
                 where the parser would exit before the complete document has
                 been parsed. Default is 1, as usually the retry-attemts lead
                 to a proliferation of senseless error messages.
 
-        reentry_search_window__: The number of following characters that the
+    :ivar reentry_search_window\__: The number of following characters that the
                 parser considers when searching a reentry point when a syntax error
                 has been encountered. Default is 10.000 characters.
     """
@@ -1292,7 +1294,7 @@ class Grammar:
     @classmethod
     def _assign_parser_names__(cls):
         """
-        Initializes the `parser.pname` fields of those
+        Initializes the ``parser.pname`` fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.::
 
@@ -1302,7 +1304,7 @@ class Grammar:
 
         After the call of this method symbol.pname == "symbol" holds.
         Parser names starting or ending with a double underscore like
-        ``root__`` will be ignored. See :func:`sane_parser_name()`
+        ``root__`` will be ignored. See :py:func:`sane_parser_name`
 
         This is done only once, upon the first instantiation of the
         grammar class!
@@ -1569,15 +1571,13 @@ class Grammar:
         """
         Parses a document with parser-combinators.
 
-        Args:
-            document (str): The source text to be parsed.
-            start_parser (str or Parser): The name of the parser with which
-                to start. This is useful for testing particular parsers
-                (i.e. particular parts of the EBNF-Grammar.)
-            complete_match (bool): If True, an error is generated, if
-                `start_parser` did not match the entire document.
-        Returns:
-            Node: The root node to the parse tree.
+        :param document: The source text to be parsed.
+        :param start_parser: The name of the parser (or the parser-object itself)
+            with which to start. This is useful for testing particular parsers
+            (i.e. particular parts of the EBNF-Grammar.)
+        :param complete_match: If True, an error is generated, if
+            ``start_parser`` did not match the entire document.
+        :return: The root node of the parse-tree alias "concrete-syntax-tree".
         """
         assert source_mapping is None or callable(source_mapping), source_mapping
 
@@ -1811,7 +1811,7 @@ class Grammar:
     def push_rollback__(self, location, func):
         """
         Adds a rollback function that either removes or re-adds
-        values on the variable stack (`self.variables`) that have been
+        values on the variable stack (``self.variables``) that have been
         added (or removed) by Capture or Pop Parsers, the results of
         which have been dismissed.
         """
@@ -1833,7 +1833,7 @@ class Grammar:
 
     def rollback_to__(self, location):
         """
-        Rolls back the variable stacks (`self.variables`) to its
+        Rolls back the variable stacks (``self.variables``) to its
         state at an earlier location in the parsed document.
         """
         while self.rollback__ and self.rollback__[-1][0] >= location:
@@ -1864,9 +1864,9 @@ class Grammar:
 
 
     def associated_symbol__(self, parser: Parser) -> Parser:
-        r"""Returns the closest named parser that contains `parser`.
-        If `parser` is a named parser itself, `parser` is returned.
-        If `parser` is not connected to any symbol in the Grammar,
+        r"""Returns the closest named parser that contains ``parser``.
+        If ``parser`` is a named parser itself, ``parser`` is returned.
+        If ``parser`` is not connected to any symbol in the Grammar,
         an AttributeError is raised.
 
         >>> word = Series(RegExp(r'\w+'), Whitespace(r'\s*'))
@@ -1985,14 +1985,12 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     Returns an error message for errors in the parser configuration,
     e.g. errors that result in infinite loops.
 
-    Args:
-        parser (Parser):  The parser where the error was noticed. Note
+    :param parser:  The parser where the error was noticed. Note
             that this is not necessarily the parser that caused the
             error but only where the error became apparent.
-        error_str (str):  A short string describing the error.
-    Returns:
-        str: An error message including the call stack if history
-        tacking has been turned in the grammar object.
+    :param  error_str:  A short string describing the error.
+    :return: An error message string including the call stack if
+        history tracking has been enabled in the grammar object.
     """
     msg = ["DSL parser specification error:", error_str, 'Caught by parser "%s".' % str(parser)]
     if parser.grammar.history__:
@@ -2283,8 +2281,8 @@ class Whitespace(RegExp):
 
 
 def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
-    """Updates the "scanner" of a grammar by overwriting the `text` or
-    `regex`-fields of some of or all of its leaf parsers with new values.
+    """Updates the "scanner" of a grammar by overwriting the ``text`` or
+    ``regex``-fields of some of or all of its leaf parsers with new values.
     This works, of course, only for those parsers that are assigned
     to a symbol in the Grammar class.
 
@@ -2292,12 +2290,12 @@ def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
         shall be updated.
     :param leaf_parsers: A mapping of parser names onto strings that
         are interpreted as plain text (if the parser name refers to
-        a `Text`-parser or as regular expressions, if the parser name
-        refers to a `RegExp`-parser)
+        a :py:class:`Text`-parser or as regular expressions, if the parser name
+        refers to a :py:class:`RegExp`-parser)
 
     :raises AttributeError: in case a leaf parser name in the
-        dictionary does not exist or does not refer to a `Text`
-        or `RegExp`-parser.
+        dictionary does not exist or does not refer to a :py:class:`Text`
+        or :py:class:`RegExp`-parser.
     """
     for pname, t in leaf_parsers.items():
         parser = grammar[pname]
@@ -2355,7 +2353,7 @@ class CombinedParser(Parser):
         """
         Generates a return node if a single node has been returned from
         any descendant parsers. Anonymous empty nodes will be dropped.
-        If `self` is an unnamed parser, a non-empty descendant node
+        If ``self`` is an unnamed parser, a non-empty descendant node
         will be passed through. If the descendant node is anonymous,
         it will be dropped and only its result will be kept.
         In all other cases a new node will be
@@ -2612,8 +2610,8 @@ class UnaryParser(CombinedParser):
     Base class of all unary parsers, i.e. parser that contains
     one and only one other parser, like the optional parser for example.
 
-    The UnaryOperator base class supplies __deepcopy__ and apply
-    methods for unary parsers. The __deepcopy__ method needs
+    The UnaryOperator base class supplies ``__deepcopy__()`` and
+    methods for unary parsers. The ``__deepcopy__()``-method needs
     to be overwritten, however, if the constructor of a derived class
     has additional parameters.
     """
@@ -2642,8 +2640,8 @@ class NaryParser(CombinedParser):
     contains one or more other parsers, like the alternative
     parser for example.
 
-    The NaryOperator base class supplies __deepcopy__ and apply methods
-    for n-ary parsers. The __deepcopy__ method needs to be overwritten,
+    The NaryOperator base class supplies ``__deepcopy__()`` and methods
+    for n-ary parsers. The ``__deepcopy__()``-method needs to be overwritten,
     however, if the constructor of a derived class takes additional
     parameters.
     """
@@ -2722,9 +2720,9 @@ class Option(UnaryParser):
 
 class ZeroOrMore(Option):
     r"""
-    `ZeroOrMore` applies a parser repeatedly as long as this parser
-    matches. Like `Option` the `ZeroOrMore` parser always matches. In
-    case of zero repetitions, the empty match `((), text)` is returned.
+    ``ZeroOrMore`` applies a parser repeatedly as long as this parser
+    matches. Like :py:class:`Option` the ``ZeroOrMore`` parser always matches. In
+    case of zero repetitions, the empty match ``((), text)`` is returned.
 
     Examples::
 
@@ -2763,9 +2761,9 @@ class ZeroOrMore(Option):
 
 class OneOrMore(UnaryParser):
     r"""
-    `OneOrMore` applies a parser repeatedly as long as this parser
-    matches. Other than `ZeroOrMore` which always matches, at least
-    one match is required by `OneOrMore`.
+    ``OneOrMore`` applies a parser repeatedly as long as this parser
+    matches. Other than :py:class:`ZeroOrMore` which always matches, at least
+    one match is required by ``OneOrMore``.
 
     Examples::
 
@@ -2818,7 +2816,7 @@ INFINITE = 2**30
 
 
 def to_interleave(parser: Parser) -> Parser:
-    """Converts a `Counted`-parser into an `Interleave`-parser. Any other
+    """Converts a :py:clas:`Counted`-parser into an :py:class:`Interleave`-parser. Any other
     parser is simply passed through."""
     if isinstance(parser, Counted):
         return Interleave(cast(Counted, parser).parser,
@@ -2831,26 +2829,26 @@ class Counted(UnaryParser):
     the parser must at least match the lower bound number of repetitions and it can
     at most match the upper bound number of repetitions.
 
-    Examples:
+    Examples::
 
-    >>> A2_4 = Counted(Text('A'), (2, 4))
-    >>> A2_4
-    `A`{2,4}
-    >>> Grammar(A2_4)('AA').as_sxpr()
-    '(root (:Text "A") (:Text "A"))'
-    >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
-    '(root (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
-    >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
-    '(ZOMBIE__ `(err "1:1: Error (1040): Parser did not match!"))'
-    >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
-    >>> result = Grammar(moves)('AAABABB')
-    >>> result.name, result.content
-    ('root', 'AAABABB')
-    >>> moves = Counted(Text('A'), (2, 3)) * Counted(Text('B'), (2, 3))
-    >>> moves
-    `A`{2,3} ° `B`{2,3}
-    >>> Grammar(moves)('AAABB').as_sxpr()
-    '(root (:Text "A") (:Text "A") (:Text "A") (:Text "B") (:Text "B"))'
+        >>> A2_4 = Counted(Text('A'), (2, 4))
+        >>> A2_4
+        `A`{2,4}
+        >>> Grammar(A2_4)('AA').as_sxpr()
+        '(root (:Text "A") (:Text "A"))'
+        >>> Grammar(A2_4)('AAAAA', complete_match=False).as_sxpr()
+        '(root (:Text "A") (:Text "A") (:Text "A") (:Text "A"))'
+        >>> Grammar(A2_4)('A', complete_match=False).as_sxpr()
+        '(ZOMBIE__ `(err "1:1: Error (1040): Parser did not match!"))'
+        >>> moves = OneOrMore(Counted(Text('A'), (1, 3)) + Counted(Text('B'), (1, 3)))
+        >>> result = Grammar(moves)('AAABABB')
+        >>> result.name, result.content
+        ('root', 'AAABABB')
+        >>> moves = Counted(Text('A'), (2, 3)) * Counted(Text('B'), (2, 3))
+        >>> moves
+        `A`{2,3} ° `B`{2,3}
+        >>> Grammar(moves)('AAABB').as_sxpr()
+        '(root (:Text "A") (:Text "A") (:Text "A") (:Text "B") (:Text "B"))'
 
     While a Counted-parser could be treated as a special case of Interleave-parser,
     defining a dedicated class makes the purpose clearer and runs slightly faster.
@@ -3001,7 +2999,7 @@ class MandatoryNary(NaryParser):
         This is a helper function that abstracts functionality that is
         needed by the Interleave-parser as well as the Series-parser.
 
-        :param text_: the point, where the mandatory violation happend.
+        :param location: the point, where the mandatory violation happend.
                 As usual the string view represents the remaining text from
                 this point.
         :param failed_on_lookahead: True if the violating parser was a
@@ -3086,7 +3084,7 @@ class MandatoryNary(NaryParser):
 def combined_mandatory(left: Parser, right: Parser) -> int:
     """
     Returns the position of the first mandatory element (if any) when
-    parsers `left` and `right` are joined to a sequence.
+    parsers ``left`` and ``right`` are joined to a sequence.
     """
     left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
         if isinstance(left, Series) else (NO_MANDATORY, 1)
@@ -3160,7 +3158,7 @@ class Series(MandatoryNary):
                         + [parser.repr for parser in self.parsers[self.mandatory:]])
 
     # The following operator definitions add syntactical sugar, so one can write:
-    # `RE('\d+') + Optional(RE('\.\d+)` instead of `Series(RE('\d+'), Optional(RE('\.\d+))`
+    # ``RE('\d+') + Optional(RE('\.\d+)`` instead of ``Series(RE('\d+'), Optional(RE('\.\d+))``
 
     def __add__(self, other: Parser) -> 'Series':
         if self.pname or other.pname:
@@ -3270,8 +3268,8 @@ class Alternative(NaryParser):
         return '(' + ' | '.join(parser.repr for parser in self.parsers) + ')'
 
     # The following operator definitions add syntactical sugar, so one can write:
-    # `RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')` instead of:
-    # `Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))`
+    # ``RE('\d+') + RE('\.') + RE('\d+') | RE('\d+')`` instead of:
+    # ``Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))``
 
     def __or__(self, other: Parser) -> 'Alternative':
         if self.pname or other.pname:
@@ -3521,7 +3519,7 @@ class Interleave(MandatoryNary):
 
     def _prepare_combined(self, other: Parser) \
             -> Tuple[Tuple[Parser, ...], int, List[Tuple[int, int]]]:
-        """Returns the other's parsers and repetitions if `other` is an Interleave-parser,
+        """Returns the other's parsers and repetitions if ``other`` is an Interleave-parser,
         otherwise returns ((other,),), [(1, 1])."""
         other = to_interleave(other)
         other_parsers = cast('Interleave', other).parsers if isinstance(other, Interleave) \
@@ -3752,7 +3750,7 @@ class ContextSensitive(UnaryParser):
     parser and location anymore, but would need to be a function
     parser, location and variable (stack-)state.)
     DHParser blocks memoization for context-sensitive-parsers
-    (see `Parser.__call__()` and `Forward.__call__()`). As
+    (see :py:meth:`Parser.__call__` and :py:meth:`Forward.__call__`). As
     a consequence the parsing time cannot be assumed to be strictly
     proportional to the size of the document, anymore. Therefore,
     it is recommended to use context-sensitive-parsers sparingly.
@@ -3787,9 +3785,9 @@ class ContextSensitive(UnaryParser):
         (either of the two equivalent criteria len(text) == len(rest) or
         node.strlen() == 0) identifies this case. This reduction needs to be
         compensated for, if blocking of memoization is determined by the
-        rollback-location as in `Forward.__call__()` where a formula like::
+        rollback-location as in :py:meth:`Forward.__call__` where a formula like::
 
-            location <= (grammar.last_rb__loc__ + int(text._len == rest._len)
+            location = (grammar.last_rb__loc__ + int(text._len == rest._len)
 
         determines whether memoization should be blocked.
         """
@@ -3879,11 +3877,11 @@ MatchVariableFunc: TypeAlias = Callable[[Union[StringView, str], List[str]], Opt
 # Match functions, the name of which starts with 'optional_', must never return
 # None, but should return the empty string if no match occurs.
 # Match functions, the name of which does not start with 'optional_', should
-# on the contrary always return `None` if no match occurs!
+# on the contrary always return ``None`` if no match occurs!
 
 
 def last_value(text: Union[StringView, str], stack: List[str]) -> Optional[str]:
-    """Matches `text` with the most recent value on the capture stack.
+    """Matches ``text`` with the most recent value on the capture stack.
     This is the default case when retrieving captured substrings."""
     try:
         value = stack[-1]
@@ -3893,8 +3891,8 @@ def last_value(text: Union[StringView, str], stack: List[str]) -> Optional[str]:
 
 
 def optional_last_value(text: Union[StringView, str], stack: List[str]) -> Optional[str]:
-    """Matches `text` with the most recent value on the capture stack or
-    with the empty string, i.e. `optional_match` never returns `None` but
+    """Matches ``text`` with the most recent value on the capture stack or
+    with the empty string, i.e. ``optional_match`` never returns ``None`` but
     either the value on the stack or the empty string.
 
     Use case: Implement shorthand notation for matching tags, i.e.:
@@ -3920,17 +3918,16 @@ class Retrieve(ContextSensitive):
     variable. As a variable in this context means a stack of values,
     the last value will be compared with the following text. It will not
     be removed from the stack! (This is the difference between the
-    `Retrieve` and the `Pop` parser.)
-    The constructor parameter `symbol` determines which variable is
+    ``Retrieve`` and the :py:class:`Pop` parser.)
+    The constructor parameter ``symbol`` determines which variable is
     used.
 
-    Attributes:
-        symbol: The parser that has stored the value to be retrieved, in
-            other words: "the observed parser"
-        match_func: a procedure that through which the processing to the
-            retrieved symbols is channeled. In the simplest case it merely
-            returns the last string stored by the observed parser. This can
-            be (mis-)used to execute any kind of semantic action.
+    :ivar symbol: The parser that has stored the value to be retrieved, in
+        other words: "the observed parser"
+    :ivar match_func: a procedure that through which the processing to the
+        retrieved symbols is channeled. In the simplest case it merely
+        returns the last string stored by the observed parser. This can
+        be (mis-)used to execute any kind of semantic action.
     """
 
     def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
@@ -3986,10 +3983,10 @@ class Retrieve(ContextSensitive):
         """
         Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
-        the following text. Returns a Node containing the value or `None`
+        the following text. Returns a Node containing the value or ``None``
         accordingly.
         """
-        # `or self.parser.parser.pname` needed, because Forward-Parsers do not have a pname
+        # ``or self.parser.parser.pname`` needed, because Forward-Parsers do not have a pname
         text = self.grammar.document__[location:]
         try:
             stack = self.grammar.variables__[self.symbol_pname]
@@ -4017,10 +4014,10 @@ class Pop(Retrieve):
     Matches if the following text starts with the value of a particular
     variable. As a variable in this context means a stack of values,
     the last value will be compared with the following text. Other
-    than the `Retrieve`-parser, the `Pop`-parser removes the value
+    than the :py:class:`Retrieve`-parser, the ``Pop``-parser removes the value
     from the stack in case of a match.
 
-    The constructor parameter `symbol` determines which variable is
+    The constructor parameter ``symbol`` determines which variable is
     used.
     """
     def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
@@ -4075,7 +4072,7 @@ class Synonym(UnaryParser):
         jahr       = JAHRESZAHL
         JAHRESZAHL = /\d\d\d\d/
 
-    Otherwise the first line could not be represented by any parser
+    Otherwise, the first line could not be represented by any parser
     class, in which case it would be unclear whether the parser
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
@@ -4112,19 +4109,19 @@ class Forward(UnaryParser):
     Forward declarations are needed for parsers that are recursively
     nested, e.g.::
 
-        class Arithmetic(Grammar):
-            '''
-            expression =  term  { ("+" | "-") term }
-            term       =  factor  { ("*" | "/") factor }
-            factor     =  INTEGER | "("  expression  ")"
-            INTEGER    =  /\d+/~
-            '''
-            expression = Forward()
-            INTEGER    = RE('\\d+')
-            factor     = INTEGER | TKN("(") + expression + TKN(")")
-            term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
-            expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
-            root__     = expression
+        >>> class Arithmetic(Grammar):
+        ...     '''
+        ...     expression =  term  { ("+" | "-") term }
+        ...     term       =  factor  { ("*" | "/") factor }
+        ...     factor     =  INTEGER | "("  expression  ")"
+        ...     INTEGER    =  /\d+/~
+        ...     '''
+        ...     expression = Forward()
+        ...     INTEGER    = RE('\\d+')
+        ...     factor     = INTEGER | TKN("(") + expression + TKN(")")
+        ...     term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
+        ...     expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
+        ...     root__     = expression
 
     :ivar recursion_counter:  Mapping of places to how often the parser
             has already been called recursively at this place. This
@@ -4135,15 +4132,15 @@ class Forward(UnaryParser):
     def __init__(self):
         super(Forward, self).__init__(get_parser_placeholder())
         # self.parser = get_parser_placeholder  # type: Parser
-        self.cycle_reached = False  # type: bool
+        self.cycle_reached: bool = False
 
     def reset(self):
         super(Forward, self).reset()
-        self.recursion_counter = dict()  # type: Dict[int, int]
+        self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
     def name(self, pname: str, disposable: bool = False) -> 'Parser':
-        """Sets the parser name to `pname` and returns `self`."""
+        """Sets the parser name to ``pname`` and returns ``self``."""
         assert not pname, "Forward-parser mustn't have a name. "\
             'Use pname="" when calling  Forward.name()'
         super().name(pname, disposable)
@@ -4164,14 +4161,14 @@ class Forward(UnaryParser):
     @cython.locals(location=cython.int, depth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: int) -> ParsingResult:
         """
-        Overrides `Parser.__call__`, because Forward is not an independent parser
-        but merely a redirects the call to another parser. Other than parser
-        `Synonym`, which might be a meaningful marker for the syntax tree,
+        Overrides :py:meth:`Parser.__call__`, because Forward is not an independent parser
+        but merely redirects the call to another parser. Other than parser
+        :py:class:`Synonym`, which might be a meaningful marker for the syntax tree,
         parser Forward should never appear in the syntax tree.
 
-        `Forward.__call__` also takes care of (most of) the left recursion
+        :py:meth:`Forward.__call__` also takes care of (most of) the left recursion
         handling. In order to do so it (unfortunately) has to duplicate some code
-        from `Parser.__call__`.
+        from :py:meth:`Parser.__call__`.
 
         The algorithm roughly follows:
         https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
@@ -4233,7 +4230,7 @@ class Forward(UnaryParser):
 
                     # discard next_result if it is not the longest match and return
                     if next_result[1] <= result[1]:  # also true, if no match
-                        # Since the result of the last parser call (`next_result`) is discarded,
+                        # Since the result of the last parser call (``next_result``) is discarded,
                         # any variables captured by this call should be "rolled back", too.
                         while len(grammar.rollback__) > rb_stack_size:
                             _, rb_func = grammar.rollback__.pop()
@@ -4264,13 +4261,13 @@ class Forward(UnaryParser):
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
-        """`set_proxy` has no effects on Forward-objects!"""
+        """``set_proxy`` has no effects on Forward-objects!"""
         return
 
     def __cycle_guard(self, func, alt_return):
         """
-        Returns the value of `func()` or `alt_return` if a cycle has
-        been reached (which can happen if `func` calls methods of
+        Returns the value of ``func()`` or ``alt_return`` if a cycle has
+        been reached (which can happen if ``func`` calls methods of
         child parsers).
         """
         if self.cycle_reached:
@@ -4289,12 +4286,11 @@ class Forward(UnaryParser):
 
     @property
     def repr(self) -> str:
-        """Returns the parser's name if it has a name or repr(self) if not."""
+        """Returns the parser's name if it has a name or ``repr(self)`` if not."""
         return self.parser.pname if self.parser.pname else self.__repr__()
 
     def set(self, parser: Parser):
-        """
-        Sets the parser to which the calls to this Forward-object
+        """Sets the parser to which the calls to this Forward-object
         shall be delegated.
         """
         self.parser = parser

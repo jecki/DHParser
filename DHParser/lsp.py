@@ -48,7 +48,7 @@ from DHParser.json_validation import TypedDict, GenericTypedDict, \
 # general #############################################################
 
 # def get_lsp_methods(cls: Any, prefix: str= 'lsp_') -> List[str]:
-#     """Returns the language-server-protocol-method-names from class `cls`.
+#     """Returns the language-server-protocol-method-names from class ``cls``.
 #     Methods are selected based on the prefix and their name converted in
 #     accordance with the LSP-specification."""
 #     return [gen_lsp_name(fn, prefix) for fn in lsp_candidates(cls, prefix)]
@@ -84,8 +84,8 @@ def gen_lsp_table(lsp_funcs_or_instance: Union[Iterable[Callable], Any],
     of a class that implement the language server protocol.
     The dictionary keys are derived from the function name by replacing an
     underscore _ with a slash / and a single capital S with a $-sign.
-    if `prefix` is not the empty string only functions or methods that start
-    with `prefix` will be added to the table. The prefix will be removed
+    if ``prefix`` is not the empty string only functions or methods that start
+    with ``prefix`` will be added to the table. The prefix will be removed
     before converting the functions' name to a dictionary key.
 
     >>> class LSP:

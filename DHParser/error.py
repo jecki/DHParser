@@ -454,7 +454,7 @@ def is_fatal(code: Union[Error, int]) -> bool:
 #             orig_pos: int = -1, line: int = -1, column: int = -1) -> Error:
 #     """
 #     Syntactic sugar for creating Error-objects that contain only a warning.
-#     Raises a ValueError if `code` is not within the range for warnings.
+#     Raises a ValueError if `code`` is not within the range for warnings.
 #     """
 #     if not is_warning(code):
 #         raise ValueError("Tried to create a warning with a error code {}. "
@@ -464,8 +464,8 @@ def is_fatal(code: Union[Error, int]) -> bool:
 
 def has_errors(messages: Iterable[Error], level: int = ERROR) -> bool:
     """
-    Returns True, if at least one entry in `messages` has at
-    least the given error `level`.
+    Returns True, if at least one entry in ``messages`` has at
+    least the given error ``level``.
     """
     for err_obj in messages:
         if err_obj.code >= level:

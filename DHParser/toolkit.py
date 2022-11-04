@@ -528,37 +528,37 @@ def wrap_str_nicely(s: str, wrap_column: int=79, tolerance: int=24,
 
     Examples::
 
-    >>> s = ('(X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) '
-    ...      '(em (m "!?")) (B (Q (em "78") (:Text "9")) (R "abc")) '
-    ...      '(n "+-"))')
-    >>> print(wrap_str_nicely(s))
-    (X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) (em (m "!?"))
-     (B (Q (em "78") (:Text "9")) (R "abc")) (n "+-"))
-    >>> s = ('(X (s) (A (u) (C "One,")) (em (A (C " ") (D "two, ")))'
-    ...      '(B (E "three, ") (F "four!") (t))))')
-    >>> print(wrap_str_nicely(s))
-    (X (s) (A (u) (C "One,")) (em (A (C " ") (D "two, ")))(B (E "three, ")
-     (F "four!") (t))))
-    >>> s = ("[Node('word', 'This'), Node('word', 'is'), "
-    ...      "Node('word', 'Buckingham'), Node('word', 'Palace')]")
-    >>> print(wrap_str_nicely(s))
-    [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'),
-     Node('word', 'Palace')]
-    >>> s = ("Node('phrase', (Node('word', 'Buckingham'), "
-    ...      "Node('blank', ' '), Node('word', 'Palace')))")
-    >>> print(wrap_str_nicely(s))
-    Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
-     Node('word', 'Palace')))
-    >>> s = ('<hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign>'
-    ...      '<location><foreign lang="de"><em>München</em></foreign> '
-    ...      'in Bavaria</location> in this sentence.</hard>')
-    >>> print(wrap_str_nicely(s))
-    <hard>Please mark up <foreign lang="de">Stadt
-    <lb/></foreign><location><foreign lang="de"><em>München</em></foreign> in Bavaria</location> in this sentence.</hard>
-    >>> print(wrap_str_nicely(repr(s)[1:-1]))  # repr to ignore the linebreaks
-    <hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign><location>
-    <foreign lang="de"><em>München</em></foreign> in Bavaria</location>
-     in this sentence.</hard>
+        >>> s = ('(X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) '
+        ...      '(em (m "!?")) (B (Q (em "78") (:Text "9")) (R "abc")) '
+        ...      '(n "+-"))')
+        >>> print(wrap_str_nicely(s))
+        (X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) (em (m "!?"))
+         (B (Q (em "78") (:Text "9")) (R "abc")) (n "+-"))
+        >>> s = ('(X (s) (A (u) (C "One,")) (em (A (C " ") (D "two, ")))'
+        ...      '(B (E "three, ") (F "four!") (t))))')
+        >>> print(wrap_str_nicely(s))
+        (X (s) (A (u) (C "One,")) (em (A (C " ") (D "two, ")))(B (E "three, ")
+         (F "four!") (t))))
+        >>> s = ("[Node('word', 'This'), Node('word', 'is'), "
+        ...      "Node('word', 'Buckingham'), Node('word', 'Palace')]")
+        >>> print(wrap_str_nicely(s))
+        [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'),
+         Node('word', 'Palace')]
+        >>> s = ("Node('phrase', (Node('word', 'Buckingham'), "
+        ...      "Node('blank', ' '), Node('word', 'Palace')))")
+        >>> print(wrap_str_nicely(s))
+        Node('phrase', (Node('word', 'Buckingham'), Node('blank', ' '),
+         Node('word', 'Palace')))
+        >>> s = ('<hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign>'
+        ...      '<location><foreign lang="de"><em>München</em></foreign> '
+        ...      'in Bavaria</location> in this sentence.</hard>')
+        >>> print(wrap_str_nicely(s))
+        <hard>Please mark up <foreign lang="de">Stadt
+        <lb/></foreign><location><foreign lang="de"><em>München</em></foreign> in Bavaria</location> in this sentence.</hard>
+        >>> print(wrap_str_nicely(repr(s)[1:-1]))  # repr to ignore the linebreaks
+        <hard>Please mark up <foreign lang="de">Stadt\n<lb/></foreign><location>
+        <foreign lang="de"><em>München</em></foreign> in Bavaria</location>
+         in this sentence.</hard>
     """
     assert 2 <= tolerance
     assert wrap_column > tolerance
@@ -1046,9 +1046,10 @@ def expand_table(compact_table: Dict) -> Dict:
     Expands a table by separating keywords that are tuples or strings
     containing comma separated words into single keyword entries with
     the same values. Returns the expanded table.
-    Example:
-    >>> expand_table({"a, b": 1, ('d','e','f'):5, "c":3})
-    {'a': 1, 'b': 1, 'd': 5, 'e': 5, 'f': 5, 'c': 3}
+    Example::
+
+        >>> expand_table({"a, b": 1, ('d','e','f'):5, "c":3})
+        {'a': 1, 'b': 1, 'd': 5, 'e': 5, 'f': 5, 'c': 3}
     """
 
     expanded_table = {}  # type: Dict
@@ -1074,10 +1075,12 @@ JSON_Dict: TypeAlias = Dict[str, JSON_Type]
 
 
 class JSONstr:
-    """JSONStr is a special type that encapsulates already serialized
-    json-chunks in json object-trees. `json_dumps` will insert the content
+    """
+    JSONStr is a special type that encapsulates already serialized
+    json-chunks in json object-trees. ``json_dumps`` will insert the content
     of a JSONStr-object literally, rather than serializing it as other
-    objects."""
+    objects.
+    """
     __slots__ = ['serialized_json']
 
     def __repr__(self):
@@ -1089,8 +1092,8 @@ class JSONstr:
 
 
 class JSONnull:
-    """JSONnull is a special type that is serialized as "null" by `json_dumps`.
-    This can be used whenever it is inconvenient to use `None` as the null-value.
+    """JSONnull is a special type that is serialized as ``null`` by ``json_dumps``.
+    This can be used whenever it is inconvenient to use ``None`` as the null-value.
     """
     __slots__ = []
 
@@ -1127,9 +1130,9 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
         '{"jsonrpc":"2.0","method":"report_size","params":{"width":640,"height":400"},"id":null}'
 
     :param obj: A json-object (or a tree of json-objects) to be serialized
-    :param cls: The class of a custom json-encoder berived from `json.JSONEncoder`
-    :param partially_serialized: If True, `JSONStr`-objects within the json tree
-        will be encoded (by inserting their content). If False, `JSONStr`-objects
+    :param cls: The class of a custom json-encoder berived from ``json.JSONEncoder``
+    :param partially_serialized: If True, :py:class:`JSONStr`-objects within the json tree
+        will be encoded (by inserting their content). If False, :py:class:`JSONStr`-objects
         will raise a TypeError, but encoding will be faster.
     :return: The string-serialized form of the json-object.
     """

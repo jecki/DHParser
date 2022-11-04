@@ -35,20 +35,20 @@ For ease of use module ``log`` defines a context-manager ``logging``
 to which either ``False`` (turn off logging), a log directory name or
 ``True`` for the default logging directory is passed as argument.
 The other components of DHParser check whether logging is on and
-write log files in the the logging directory accordingly. Usually,
+write log files in the logging directory accordingly. Usually,
 this will be concrete and abstract syntax trees as well as the full
 and abbreviated parsing history.
 
 Example::
 
-    from DHParser import compile_source, logging, set_config_value
-
+    from DHParser import compile_source, start_logging, set_config_value
     start_logging("LOGS")
     set_config_value('log_syntax_trees', {'cst', 'ast'})
     set_config_value('history_tracking', True)
     set_config_value('resume_notices', True)
     result, errors, ast = compile_source(source, preprocessor, grammar,
                                          transformer, compiler)
+
 """
 
 from __future__ import annotations
@@ -99,7 +99,7 @@ CallItem: TypeAlias = Tuple[str, int]      # call stack item: (name, location)
 #######################################################################
 
 def start_logging(dirname: str = "LOGS"):
-    """Turns logging on an sets the log-directory to `dirname`.
+    """Turns logging on and sets the log-directory to ``dirname``.
     The log-directory, if it does not already exist, will be created
     lazily, i.e. only when logging actually starts."""
     access_presets()
@@ -138,21 +138,21 @@ def log_dir(path: str = "") -> str:
     ATTENTION: The log-dir is stored thread locally, which means the log-dir
     as well as the information whether logging is turned on or off will not
     automatically be transferred to any subprocesses. This needs to be done
-    explicitly. (See `testing.grammar_suite()` for an example, how this can
+    explicitly. (See :py:func:`testing.grammar_suite` for an example, how this can
     be done.
 
     Parameters:
         path:   The directory path. If empty, the configured value will be
-            used: `configuration.get_config_value('log_dir')`.
+            used, i.e. ``configuration.get_config_value('log_dir')``.
 
     Returns:
-        str - name of the logging directory or '' if logging is turned off.
+        str - name of the logging directory or "" if logging is turned off.
     """
     dirname = path if path else get_config_value('log_dir')
     if not dirname:
         return ''
     dirname = os.path.normpath(dirname)
-    # `try ... except` rather than `if os.path.exists(...)` for thread-safety
+    # ``try ... except`` rather than ``if os.path.exists(...)`` for thread-safety
     try:
         os.mkdir(dirname)
         info_file_name = os.path.join(dirname, 'info.txt')
@@ -218,16 +218,16 @@ def create_log(log_name: str) -> str:
 
 
 def append_log(log_name: str, *strings, echo: bool = False) -> None:
-    """Appends one or more strings to the log-file with the name `log_name`,
+    """Appends one or more strings to the log-file with the name ``log_name``,
     if logging is turned on and log_name is not the empty string, or
-    `log_name` contains path information.
+    ``log_name`` contains path information.
 
     :param log_name: The name of the log file. The file must already exist.
-        (See: `create_log()` above).
+        (See: :py:func:`create_log` above).
     :param strings: One or more strings that will be written to the log-file.
         No delimiters will be added, i.e. all delimiters like blanks or
         linefeeds need to be added explicitly to the list of strings, before
-        calling `append_log()`.
+        calling :py:func:`append_log`.
     :param echo: If True, the log message will be echoed on the terminal.
         In this case the message will even be echoed if logging is turned off.
     """
@@ -306,7 +306,7 @@ class HistoryRecord:
     A parsing step is "completed" when the last one of a nested
     sequence of parser-calls returns. The call stack including
     the last parser call will be frozen in the ``HistoryRecord``-
-    object. In addition a reference to the generated leaf node
+    object. In addition, a reference to the generated leaf node
     (if any) will be stored and the result status of the last
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
@@ -529,7 +529,7 @@ class HistoryRecord:
 
 def log_ST(syntax_tree, log_file_name) -> bool:
     """
-    Writes an S-expression-representation of the `syntax_tree` to a file,
+    Writes an S-expression-representation of the ``syntax_tree`` to a file,
     if logging is turned on. Returns True, if logging was turned on and
     log could be written. Returns False, if logging was turned off.
     Raises a FileSystem error if writing the log failed for some reason.

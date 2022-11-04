@@ -64,7 +64,7 @@ __all__ = ('DefinitionError',
 @functools.lru_cache()
 def read_template(template_name: str) -> str:
     """
-    Reads a script-template from a template file named `template_name`
+    Reads a script-template from a template file named ``template_name``
     in the template-directory and returns it as a string.
     """
     with open(os.path.join(DHPARSER_DIR, 'templates', template_name), 'r', encoding='utf-8') as f:
@@ -138,7 +138,7 @@ class CompilationError(DSLException):
 def error_str(messages: Iterable[Error]) -> str:
     """
     Returns all true errors (i.e. not just warnings) from the
-    `messages` as a concatenated multiline string.
+    ``messages`` as a concatenated multiline string.
     """
     return '\n\n'.join(str(m) for m in messages if is_error(m.code))
 
@@ -146,7 +146,7 @@ def error_str(messages: Iterable[Error]) -> str:
 def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
     """
     Returns a grammar object and the source code of the grammar, from
-    the given `grammar`-data which can be either a file name, ebnf-code,
+    the given ``grammar``-data which can be either a file name, ebnf-code,
     python-code, a Grammar-derived grammar class or an instance of
     such a class (i.e. a grammar object already).
     """
@@ -298,7 +298,7 @@ def grammar_provider(ebnf_src: str,
 
 def create_parser(ebnf_src: str, branding="DSL", additional_code: str = '') -> Grammar:
     """Compiles the ebnf source into a callable Grammar-object. This is
-    essentially syntactic sugar for `grammar_provider(ebnf)()`.
+    essentially syntactic sugar for ``grammar_provider(ebnf)()``.
     """
     grammar_factory = grammar_provider(ebnf_src, branding, additional_code)
     grammar = grammar_factory()
@@ -307,7 +307,7 @@ def create_parser(ebnf_src: str, branding="DSL", additional_code: str = '') -> G
 
 
 def split_source(file_name: str, file_content: str) -> List[str]:
-    """Splits the `file_content` into the seven sections: intro, imports,
+    """Splits the ``file_content`` into the seven sections: intro, imports,
     preprocessor_py, parser_py, ast_py, compiler_py, outro.
     Raises a value error, if the number of sections if not equal to 7.
     """
@@ -323,7 +323,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         Tuple[PreprocessorFactoryFunc, ParserFactoryFunc,
               TransformerFactoryFunc, CompilerFactoryFunc]:
     """
-    Extracts a compiler suite from file or string `compiler_suite`
+    Extracts a compiler suite from file or string ``compiler_suite``
     and returns it as a tuple (preprocessor, parser, ast, compiler).
 
     Returns:
@@ -424,7 +424,7 @@ def compile_on_disk(source_file: str,
     skeletons for a preprocessor, AST transformation table, and compiler.
     If the Python script already exists only the parser name in the
     script will be updated. (For this to work, the different names
-    need to be delimited section marker blocks.). `compile_on_disk()`
+    need to be delimited section marker blocks.). :py:func:`compile_on_disk`
     returns a list of error messages or an empty list if no errors
     occurred.
 

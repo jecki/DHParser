@@ -516,7 +516,7 @@ class ConfigurableEBNFGrammar(Grammar):
     Different syntactical variants can be configured either by adjusting
     the definitions of DEF, OR, AND, ENDL, RNG_OPEN, RNG_CLOSE, RNG_DELIM,
     CH_LEADIN, TIMES, RE_LEADIN, RE_LEADOUT either within this grammar
-    definition or in the Grammar-object changing the `text`-field of the
+    definition or in the Grammar-object changing the ``text``-field of the
     respective parser objects.
 
     EBNF-Definition of the Grammar::
@@ -1060,8 +1060,8 @@ class EBNFDirectives:
             expression. The closest match is the point of reentry
             for after a parsing error has error occurred. Other
             than the skip field, this configures resuming after
-            the failing parser (`parser.Series` or `parser.Interleave`)
-            has returned.
+            the failing parser (:py:class:`parser.Series`
+            or :py:class:`parser.Interleave`) has returned.
     :ivar disposable: A regular expression to identify "disposable" symbols,
             i.e. symbols that will not appear as tag-names. Instead
             the nodes produced by the parsers associated with these
@@ -1076,7 +1076,7 @@ class EBNFDirectives:
     :ivar super_ws: Cache for the "super whitespace" which
             is a regular expression that merges whitespace and
             comments. This property should only be accessed after
-            the `whitespace` and `comment` field have been filled
+            the ``whitespace``- and ``comment``-field have been filled
             with the values parsed from the EBNF source.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
@@ -1116,8 +1116,8 @@ class EBNFDirectives:
 
 
 class EBNFCompilerError(CompilerError):
-    """Error raised by `EBNFCompiler` class. (Not compilation errors
-    in the strict sense, see `CompilationError` in module ``dsl.py``)"""
+    """Error raised by :py:class:`EBNFCompiler` class. (Not compilation errors
+    in the strict sense, see :py:class:`dsl.CompilationError` in module :py:mod:`dsl`)"""
     pass
 
 
@@ -1136,12 +1136,13 @@ class EBNFCompiler(Compiler):
     abstract syntax tree from an EBNF-specification of a formal language.
     The returned value is the Python-source-code of a Grammar class for
     this language that can be used to parse texts in this language.
-    See classes `parser.Compiler` and `parser.Grammar` for more information.
+    See classes :py:class:`compile.Compiler` and :py:class:`parser.Grammar`
+    for more information.
 
     Additionally, class EBNFCompiler provides helper methods to generate
     code-skeletons for a preprocessor, AST-transformation and full
     compilation of the formal language. These method's names start with
-    the prefix `gen_`.
+    the prefix ``gen_``.
 
     :ivar current_symbols:  During compilation, a list containing the root
             node of the currently compiled definition as first element
@@ -1168,7 +1169,7 @@ class EBNFCompiler(Compiler):
             referred to in the definition of the symbol.
 
     :ivar directly_referred_cache: A dictionary that caches the results
-            of method `directly_referred_symbols()`, which yields
+            of method :py:meth:`directly_referred_symbols`, which yields
             the set of symbols that are referred to in the definition
             of a particular symbol.
 
@@ -1183,11 +1184,11 @@ class EBNFCompiler(Compiler):
     :ivar variables:  A set of symbols names that are used with the
             Pop or Retrieve operator. Because the values of these
             symbols need to be captured they are called variables.
-            See `test_parser.TestPopRetrieve` for an example.
+            See ``test_parser.TestPopRetrieve`` for an example.
 
     :ivar forward:  A set of symbols that require a forward operator.
 
-    :ivar definitions:  A dictionary of definitions. Other than `rules`
+    :ivar definitions:  A dictionary of definitions. Other than ``rules``
             this maps the symbols to their compiled definienda.
 
     :ivar required_keywords: A list of keywords (like ``comment__`` or
@@ -1219,9 +1220,9 @@ class EBNFCompiler(Compiler):
             allows to add a compiler error in those cases where (i) an
             error message has been defined but will never used or (ii)
             an error message is accidently used twice. For examples, see
-            `test_ebnf.TestErrorCustomization`.
+            ``test_ebnf.TestErrorCustomization``.
 
-    :ivar consumed_skip_rules: The same as `consumed_custom_errors` only for
+    :ivar consumed_skip_rules: The same as ``consumed_custom_errors`` only for
             in-series-resume-rules (aka 'skip-rules') for Series-parsers.
 
     :ivar re_flags:  A set of regular expression flags to be added to all
