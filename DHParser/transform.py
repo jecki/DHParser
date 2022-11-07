@@ -487,7 +487,7 @@ def merge_treetops(node: Node):
 
 @transformation_factory(dict)
 def traverse_locally(path: Path,
-                     transformation_table: Dict,  # actually: TransformationTableType
+                     transformation_table: dict,  # actually: TransformationTableType
                      key_func: Callable = key_node_name):  # actually: KeyFunc
     """
     Transforms the syntax tree starting from the last node in the path
@@ -1048,7 +1048,7 @@ def collapse(path: Path):
     (place "p.26b,18")
     """
     node = path[-1]
-    for descendant in node.select_if(lambda nd: nd.has_attr()):
+    for descendant in node.select_if(Node.has_attr):
         node.attr.update(descendant.attr)
     node.result = node.content
 

@@ -43,7 +43,10 @@ import traceback
 assert sys.version_info >= (3, 5, 3), "DHParser requires at least Python-Version 3.5.3!"
 
 try:
-    import regex as re
+    if sys.version.find('PyPy') >= 0:
+        import re  # regex might not work with PyPy reliably: https://pypi.org/project/regex/
+    else:
+        import regex as re
 except ImportError:
     import re
 
@@ -70,6 +73,9 @@ try:
     cython_optimized = cython.compiled  # type: bool
     if cython_optimized:  # not ?
         import DHParser.externallibs.shadow_cython as cython
+    cint = cython.int
+except NameError:
+    cint = int
 except ImportError:
     cython_optimized = False
     import DHParser.externallibs.shadow_cython as cython
@@ -950,8 +956,8 @@ def linebreaks(text: Union[StringView, str]) -> List[int]:
     return lbr
 
 
-@cython.locals(line=cython.int, column=cython.int, pos=cython.int)
-def line_col(lbreaks: List[int], pos: int) -> Tuple[int, int]:
+@cython.locals(line=cython.int, column=cython.int)
+def line_col(lbreaks: List[int], pos: cint) -> Tuple[cint, cint]:
     """
     Returns the position within a text as (line, column)-tuple based
     on a list of all line breaks, including -1 and EOF.

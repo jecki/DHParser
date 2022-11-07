@@ -18,7 +18,7 @@ cdef class Node:
     cpdef _set_result(self, result)
     cpdef _leaf_data(self)
     # cpdef pos(self)
-    cpdef with_pos(self, pos)
+    cpdef object with_pos(self, pos)
     # cpdef has_attr(self, attr)
     # cpdef attr(self)
     # cpdef get_attr(self, attribute, default)
@@ -46,7 +46,7 @@ cdef class Node:
 
 
 cdef class FrozenNode(Node):
-    cpdef with_pos(self, pos)
+    cpdef object with_pos(self, pos)
 
 
 cdef class RootNode(Node):
@@ -64,13 +64,6 @@ cdef class RootNode(Node):
     cdef public str docname
     cdef public str stage
     cdef public str serialization_type
-
-    # cpdef swallow(self, node)
-    # cpdef add_error(self, node, error)
-    # cpdef new_error(self, node, message, code)
-    # cpdef get_errors(self, node)
-    cpdef customized_XML(self)
+    cdef public object data
 
 
-# cpdef parse_sxpr(sxpr)
-# cpdef parse_xml(xml, ignore_pos)

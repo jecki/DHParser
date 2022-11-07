@@ -74,7 +74,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, LaTeXPreprocessor)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident="1")
 
 
 #######################################################################
@@ -92,7 +92,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "e7f9979dd243430578b4f2ddafc33a5a"
+    source_hash__ = "bcdb542574d9667e3309f02188558b50"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -447,7 +447,7 @@ def LaTeXTransformer() -> TransformerCallable:
     threads or processes."""
     return partial(traverse, transformation_table=LaTeX_AST_transformation_table.copy())
 
-get_transformer = ThreadLocalSingletonFactory(LaTeXTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(LaTeXTransformer, ident="1")
 
 def transform_LaTeX(cst):
     get_transformer()(cst)
@@ -825,7 +825,7 @@ class LaTeXCompiler(Compiler):
     #     return node
 
 
-get_compiler = ThreadLocalSingletonFactory(LaTeXCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(LaTeXCompiler, ident="1")
 
 def compile_LaTeX(ast):
     return get_compiler()(ast)

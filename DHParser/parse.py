@@ -42,8 +42,12 @@ from typing import Callable, cast, List, Tuple, Set, Dict, \
 
 try:
     import cython
+    cint = cython.int
+except NameError:
+    cint = int
 except ImportError:
     import DHParser.externallibs.shadow_cython as cython
+    cint = int
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -148,14 +152,14 @@ class ParserError(Exception):
     or :py:class:`Interleave`-parser detects a missing mandatory element.
     """
     def __init__(self,
-                 parser: 'Parser',
+                 parser: Parser,
                  node: Node,
                  node_orig_len: int,
                  location: int,
                  error: Error, *,
                  first_throw: bool):
         assert node is not None
-        self.parser = parser  # type: 'Parser'
+        self.parser = parser  # type: Parser
         self.node = node      # type: Node
         self.node_orig_len = node_orig_len  # type: int
         self.location = location  # type: int
@@ -541,7 +545,7 @@ class Parser:
         self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
 
     @cython.locals(location=cython.int, next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
-    def __call__(self: 'Parser', location: int) -> ParsingResult:
+    def __call__(self: Parser, location: int) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
         done in the overridden method ``_parse()``. This wrapper-method can be thought of
@@ -644,14 +648,14 @@ class Parser:
 
         return node, next_location
 
-    def __add__(self, other: 'Parser') -> 'Series':
+    def __add__(self, other: Parser) -> 'Series':
         """The + operator generates a series-parser that applies two
         parsers in sequence."""
         if isinstance(other, Series):
             return cast('Series', other).__radd__(self)
         return Series(self, other)
 
-    def __or__(self, other: 'Parser') -> 'Alternative':
+    def __or__(self, other: Parser) -> 'Alternative':
         """The | operator generates an alternative parser that applies
         the first parser and, if that does not match, the second parser.
         """
@@ -659,7 +663,7 @@ class Parser:
             return cast('Alternative', other).__ror__(self)
         return Alternative(self, other)
 
-    def __mul__(self, other: 'Parser') -> 'Interleave':
+    def __mul__(self, other: Parser) -> 'Interleave':
         """The * operator generates an interleave-parser that applies
         the first parser and the second parser in any possible order
         until both match.
@@ -698,7 +702,7 @@ class Parser:
                 assert proxy.__self__ == self
             self._parse_proxy = cast(ParseFunc, proxy)
 
-    def name(self, pname: str, disposable: bool = False) -> 'Parser':
+    def name(self, pname: str, disposable: bool = False) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
         self.pname = pname
         self.disposable = disposable
@@ -720,7 +724,7 @@ class Parser:
             raise AttributeError('Parser placeholder does not have a grammar!')
 
     @grammar.setter
-    def grammar(self, grammar: 'Grammar'):
+    def grammar(self, grammar: Grammar):
         try:
             if is_grammar_placeholder(self._grammar):
                 self._grammar = grammar
@@ -733,7 +737,7 @@ class Parser:
         except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
-    def sub_parsers(self) -> Tuple['Parser', ...]:
+    def sub_parsers(self) -> Tuple[Parser, ...]:
         """Returns the list of sub-parsers if there are any.
         Overridden by Unary, Nary and Forward.
         """
@@ -2627,7 +2631,7 @@ class UnaryParser(CombinedParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def sub_parsers(self) -> Tuple['Parser', ...]:
+    def sub_parsers(self) -> Tuple[Parser, ...]:
         return (self.parser,)
 
     def _signature(self) -> Hashable:
@@ -2659,7 +2663,7 @@ class NaryParser(CombinedParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def sub_parsers(self) -> Tuple['Parser', ...]:
+    def sub_parsers(self) -> Tuple[Parser, ...]:
         return self.parsers
 
     def _signature(self) -> Hashable:
@@ -3759,9 +3763,7 @@ class ContextSensitive(UnaryParser):
     def gen_memoization_dict(self) -> dict:
         return BlackHoleDict()
 
-    @cython.returns(cython.int)
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _rollback_location(self, location: int, location_: int) -> int:
+    def _rollback_location(self, location: cint, location_: cint) -> cint:
         """
         Determines the rollback location for context-sensitive parsers, i.e.
         parsers that either manipulate (store or change) or use variables.
@@ -3959,8 +3961,8 @@ class Retrieve(ContextSensitive):
             # return cast(Forward, self.parser).parser.name
         return self.node_name
 
-    @cython.locals(location=cython.int, location_=cython.int)
-    def _parse(self, location: int) -> ParsingResult:
+    @cython.locals(location_=cython.int)
+    def _parse(self, location: cint) -> ParsingResult:
         # auto-capture on first use if symbol was not captured before
         if len(self.grammar.variables__[self.symbol_pname]) == 0:
             node, location_ = self.parser(location)   # auto-capture value
@@ -3978,8 +3980,7 @@ class Retrieve(ContextSensitive):
     def __repr__(self):
         return ':' + self.parser.repr
 
-    @cython.locals(location=cython.int)
-    def retrieve_and_match(self, location: int) -> ParsingResult:
+    def retrieve_and_match(self, location: cint) -> ParsingResult:
         """
         Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
@@ -4139,7 +4140,7 @@ class Forward(UnaryParser):
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
-    def name(self, pname: str, disposable: bool = False) -> 'Parser':
+    def name(self, pname: str, disposable: bool = False) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
         assert not pname, "Forward-parser mustn't have a name. "\
             'Use pname="" when calling  Forward.name()'

@@ -39,19 +39,20 @@ from typing import Optional, Union, Iterable, Tuple, List, cast
 try:
     import cython
     cython_optimized = cython.compiled  # type: bool
+    cint = cython.int
+except NameError:
+    cint = int
 except ImportError:
     # import DHParser.Shadow as cython
     cython_optimized = False
     import DHParser.externallibs.shadow_cython as cython
+    cint = int
 
 
 __all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW', 'TextBuffer')
 
 
-@cython.cfunc
-@cython.returns(cython.int)
-@cython.locals(begin=cython.int, end=cython.int)
-def first_char(text: str, begin: int, end: int, chars: str) -> int:
+def first_char(text: str,  begin: cint, end: cint, chars: str) -> cint:
     """Returns the index of the first non-whitespace character in string
      `text` within the bounds [begin, end].
     """
@@ -60,10 +61,7 @@ def first_char(text: str, begin: int, end: int, chars: str) -> int:
     return begin
 
 
-@cython.cfunc
-@cython.returns(cython.int)
-@cython.locals(begin=cython.int, end=cython.int)
-def last_char(text: str, begin: int, end: int, chars: str) -> int:
+def last_char(text: str, begin: cint, end: cint, chars: str) -> cint:
     """Returns the index of the last non-whitespace character in string
     `text` within the bounds [begin, end].
     """
@@ -72,10 +70,7 @@ def last_char(text: str, begin: int, end: int, chars: str) -> int:
     return end
 
 
-@cython.cfunc
-@cython.returns(cython.int)
-@cython.locals(index=cython.int, length=cython.int)
-def pack_index(index: int, length: int) -> int:
+def pack_index(index: cint, length: cint) -> cint:
     """Transforms `index` into a positive index counting from the beginning
     of the string, capping it at the boundaries [0, len].
     Examples:
@@ -90,24 +85,20 @@ def pack_index(index: int, length: int) -> int:
     index = index if index >= 0 else index + length
     return 0 if index < 0 else length if index > length else index
 
-
-@cython.cfunc
-@cython.returns((cython.int, cython.int))
-@cython.locals(cbegin=cython.int, cend=cython.int, length=cython.int)
 def fast_real_indices(begin: Optional[int],
                       end: Optional[int],
-                      length: int) -> Tuple[int, int]:
+                      length: cint) -> Tuple[cint, cint]:
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
-    cbegin = 0 if begin is None else begin
-    cend = length if end is None else end
+    cbegin: cint = 0 if begin is None else begin
+    cend: cint = length if end is None else end
     return pack_index(cbegin, length), pack_index(cend, length)
 
 
 def real_indices(begin: Optional[int],
                  end: Optional[int],
-                 length: int) -> Tuple[int, int]:
+                 length: cint) -> Tuple[cint, cint]:
     """Python callable real-indices function for testing."""
     return fast_real_indices(begin, end, length)
 
@@ -159,7 +150,7 @@ class StringView:  # collections.abc.Sized
 
     @cython.locals(_len=cython.int)
     def __eq__(self, other) -> bool:
-        """PERFORMANCE WARNING: This create copies of the compared string-slices!"""
+        """PERFORMANCE WARNING: This creates copies of the compared string-slices!"""
         # one string copy could be avoided by using find...
         # return len(other) == self._len and str(self) == str(other)
         _len = self._len
@@ -181,29 +172,29 @@ class StringView:  # collections.abc.Sized
         """PERFORMANCE WARNING: This creates a copy of the string-slice!"""
         return hash(str(self))
 
-    def __add__(self, other) -> Union[str, 'StringView']:
+    def __add__(self, other) -> Union[str, StringView]:
         if isinstance(other, str):
             return str(self) + other
         else:
             return StringView(str(self) + str(other))
 
-    def __radd__(self, other) -> Union[str, 'StringView']:
+    def __radd__(self, other) -> Union[str, StringView]:
         if isinstance(other, str):
             return other + str(self)
         else:
             return StringView(str(other) + str(self))
 
     @cython.locals(start=cython.int, stop=cython.int, _begin=cython.int, _index=cython.int)
-    def __getitem__(self, index: Union[slice, int]) -> 'StringView':
+    def __getitem__(self, index: Union[slice, int]) -> StringView:
         # assert isinstance(index, slice), "As of now, StringView only allows slicing."
         # assert index.step is None or index.step == 1, \
         #     "Step sizes other than 1 are not yet supported by StringView"
         try:
             start, stop = fast_real_indices(index.start, index.stop, self._len)
-            _begin = self._begin  # type: int
+            _begin = self._begin
             return StringView(self._text, _begin + start, _begin + stop)
         except AttributeError:
-            _index = index  # type: int
+            _index = index
             if _index >= self._len:
                 raise IndexError("StringView index %i out of range 0 - %i" % (_index, self._len))
             _begin = self._begin
@@ -271,10 +262,9 @@ class StringView:  # collections.abc.Sized
             _start, _end = fast_real_indices(start, end, self._len)
             return max(self._text.rfind(sub, _begin + _start, _begin + _end) - _begin, -1)
 
-    @cython.locals(start=cython.int)
     def startswith(self,
                    prefix: str,
-                   start: int = 0,
+                   start: cint = 0,
                    end: Optional[int] = None) -> bool:
         """Return True if S starts with the specified prefix, False otherwise.
         With optional `start`, test S beginning at that position.
@@ -284,10 +274,9 @@ class StringView:  # collections.abc.Sized
         end = self._end if end is None else self._begin + end
         return self._text.startswith(prefix, start, end)
 
-    @cython.locals(start=cython.int)
     def endswith(self,
                  suffix: str,
-                 start: int = 0,
+                 start: cint = 0,
                  end: Optional[int] = None) -> bool:
         """Return True if S ends with the specified suffix, False otherwise.
         With optional `start`, test S beginning at that position.
@@ -297,8 +286,7 @@ class StringView:  # collections.abc.Sized
         end = self._end if end is None else self._begin + end
         return self._text.endswith(suffix, start, end)
 
-    @cython.locals(flags=cython.int)
-    def match(self, regex, flags: int = 0):
+    def match(self, regex, flags: cint = 0):
         """Executes `regex.match` on the StringView object and returns the
         result, which is either a match-object or None. Keep in mind that
         match.end(), match.span() etc. are mapped to the underlying text,
@@ -306,8 +294,7 @@ class StringView:  # collections.abc.Sized
         """
         return regex.match(self._text, pos=self._begin, endpos=self._end)
 
-    @cython.locals(absolute_index=cython.int)
-    def index(self, absolute_index: int) -> int:
+    def index(self, absolute_index: cint) -> int:
         """Converts an index for a string watched by a StringView object
         to an index relative to the string view object, e.g.::
 
@@ -349,7 +336,7 @@ class StringView:  # collections.abc.Sized
         return regex.finditer(self._text, pos=self._begin, endpos=self._end)
 
     @cython.locals(begin=cython.int, end=cython.int)
-    def strip(self, chars: str = ' \n\r\t') -> 'StringView':
+    def strip(self, chars: str = ' \n\r\t') -> StringView:
         """Returns a copy of the StringView `self` with leading and trailing
         whitespace removed.
         """
@@ -358,19 +345,19 @@ class StringView:  # collections.abc.Sized
         return self if begin == 0 and end == self._len else self[begin:end]
 
     @cython.locals(begin=cython.int)
-    def lstrip(self, chars=' \n\t') -> 'StringView':
+    def lstrip(self, chars=' \n\t') -> StringView:
         """Returns a copy of `self` with leading whitespace removed."""
         begin = first_char(self._text, self._begin, self._end, chars) - self._begin
         return self if begin == 0 else self[begin:]
 
     @cython.locals(end=cython.int)
-    def rstrip(self, chars=' \n\t') -> 'StringView':
+    def rstrip(self, chars=' \n\t') -> StringView:
         """Returns a copy of `self` with trailing whitespace removed."""
         end = last_char(self._text, self._begin, self._end, chars) - self._begin
         return self if end == self._len else self[:end]
 
     @cython.locals(length=cython.int, i=cython.int, k=cython.int)
-    def split(self, sep=None) -> List[Union['StringView', str]]:
+    def split(self, sep=None): ## -> List[Union[StringView, str]]:
         """Returns a list of the words in `self`, using `sep` as the
         delimiter string.  If `sep` is not specified or is None, any
         whitespace string is a separator and empty strings are
@@ -411,10 +398,10 @@ class TextBuffer:
     indexing or slicing.
     """
 
-    def __init__(self, text: Union[str, StringView], version: int = 0):
+    def __init__(self, text: Union[str, StringView], version: cint = 0):
         self._text = text       # type: Union[str, StringView]
         self._buffer = []       # type: List[Union[str, StringView]]
-        self.version = version if version >= 0 else 0  # type: int
+        self.version = version if version >= 0 else 0
 
     def _lazy_init(self):
         self._buffer = [line.strip('\r') for line in self._text.split('\n')]
@@ -447,8 +434,7 @@ class TextBuffer:
             self._lazy_init()
         return len(self._buffer)
 
-    @cython.locals(l1=cython.int, c1=cython.int, l2=cython.int, c2=cython.int)
-    def update(self, l1: int, c1: int, l2: int, c2: int, replacement: Union[str, StringView]):
+    def update(self, l1: cint, c1: cint, l2: cint, c2: cint, replacement: Union[str, StringView]):
         """Replaces the text-range from line and column (l1, c1) to
         line and column (l2, c2) with the replacement-string.
         """
@@ -463,8 +449,7 @@ class TextBuffer:
         self._text = ''  # invalidate single-string copy
         self.version += 1
 
-    @cython.locals(version=cython.int)
-    def text_edits(self, edits: Union[list, dict], version: int = -1):
+    def text_edits(self, edits: Union[list, dict], version: cint = -1):
         """Incorporates the one or more text-edits or change-events into the text.
         A Text-Edit is a dictionary of this form::
 

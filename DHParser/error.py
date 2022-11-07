@@ -462,7 +462,7 @@ def is_fatal(code: Union[Error, int]) -> bool:
 #     return Error(message, pos, code, orig_pos, line, column)
 
 
-def has_errors(messages: Iterable[Error], level: int = ERROR) -> bool:
+def has_errors(messages: Iterable[Error], level: ErrorCode = ERROR) -> bool:
     """
     Returns True, if at least one entry in ``messages`` has at
     least the given error ``level``.
@@ -473,7 +473,7 @@ def has_errors(messages: Iterable[Error], level: int = ERROR) -> bool:
     return False
 
 
-def only_errors(messages: Iterable[Error], level: int = ERROR) -> Iterator[Error]:
+def only_errors(messages: Iterable[Error], level: ErrorCode = ERROR) -> Iterator[Error]:
     """
     Returns an Iterator that yields only those messages that have
     at least the given error level.

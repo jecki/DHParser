@@ -46,8 +46,12 @@ else:
 
 try:
     import cython
+    cint = cython.int
+except NameError:
+    cint = int
 except ImportError:
     import DHParser.externallibs.shadow_cython as cython
+    cint = int
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
@@ -486,7 +490,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     __slots__ = '_result', '_children', '_pos', 'name', '_attributes'
 
     def __init__(self, name: str,
-                 result: Union[Tuple['Node', ...], 'Node', StringView, str],
+                 result: Union[Tuple[Node, ...], Node, StringView, str],
                  leafhint: bool = False) -> None:
         """
         Initializes the ``Node``-object with a tag name and the result of a
@@ -509,8 +513,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # Assignment to self.result initializes the attr _result and children
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
-            self._result = result        # type: Union[Tuple['Node', ...], StringView, str]
-            self._children = tuple()     # type: Tuple['Node', ...]
+            self._result = result        # type: Union[Tuple[Node, ...], StringView, str]
+            self._children = tuple()     # type: Tuple[Node, ...]
         else:
             self._set_result(result)
         self.name = name         # type: str
@@ -583,7 +587,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     #                         'Use "Node.name" instead!')
     #     self.name = name
 
-    def equals(self, other: 'Node', ignore_attr_order: bool = True) -> bool:
+    def equals(self, other: Node, ignore_attr_order: bool = True) -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
         if their tag name is the same, if their results are equal and
@@ -623,7 +627,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # node content ###
 
-    def _set_result(self, result: Union[Tuple['Node', ...], 'Node', StringView, str]):
+    def _set_result(self, result: Union[Tuple[Node, ...], Node, StringView, str]):
         """
         Sets the result of a node without assigning the position.
         An assignment to the `result`-property is to be preferred,
@@ -647,7 +651,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # def _init_child_pos(self):
     #     """Initialize position values of children with potentially
     #     unassigned positions, i.e. child.pos < 0."""
-    #     children = self._children  # type: Tuple['Node', ...]
+    #     children = self._children  # type: Tuple[Node, ...]
     #     if children:
     #         offset = self._pos
     #         prev = children[0]
@@ -725,7 +729,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             raise AssertionError("Position value not initialized! Use Node.with_pos()")
         return self._pos
 
-    def with_pos(self, pos: int) -> 'Node':
+    def with_pos(self, pos: cint) -> Node:
         """
         Initializes the node's position value. Usually, the parser takes
         care of assigning the positions in the document to the nodes of
@@ -841,7 +845,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.attr.get(attribute, default)
         return default
 
-    def with_attr(self, *attr_dict, **attributes) -> 'Node':
+    def with_attr(self, *attr_dict, **attributes) -> Node:
         """
         Adds the attributes which are passed to `with_attr()` either as an
         attribute dictionary or as keyword parameters to the node's attributes
@@ -874,7 +878,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self.attr.update(attributes)
         return self
 
-    def has_equal_attr(self, other: 'Node', ignore_order: bool = True) -> bool:
+    def has_equal_attr(self, other: Node, ignore_order: bool = True) -> bool:
         """
         Returns True, if `self` and `other` have the same attributes with
         the same attribute values. If `ignore_order` is False, the
@@ -895,7 +899,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # tree traversal and node selection #######################################
 
     def __getitem__(self, key: Union[NodeSelector, int, slice]) \
-            -> Union['Node', Tuple['Node', ...]]:
+            -> Union[Node, Tuple[Node, ...]]:
         """
         Returns the child node with the given index if ``key`` is
         an integer or all child-nodes with the given tag name. Examples::
@@ -937,7 +941,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def __setitem__(self,
                     key: Union[NodeSelector, slice, int],
-                    value: Union['Node', Sequence['Node']]):
+                    value: Union[Node, Sequence[Node]]):
         """
         Changes one or more children of a branch-node.
         :raises:
@@ -1008,7 +1012,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self.result = after
 
     def get(self, key: Union[int, slice, NodeSelector],
-            surrogate: Union['Node', Sequence['Node']]) -> Union['Node', Sequence['Node']]:
+            surrogate: Union[Node, Sequence[Node]]) -> Union[Node, Sequence[Node]]:
         """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
         child with the given index or name exists, the ``surrogate`` is
@@ -1043,7 +1047,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return True
         return False
 
-    def remove(self, node: 'Node'):
+    def remove(self, node: Node):
         """Removes `node` from the children of the node."""
         if not self.children:
             raise ValueError('Node.remove(x): Called on a node without children')
@@ -1052,7 +1056,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if len(self.result) >= i:
             raise ValueError('Node.remove(x): x not among children')
 
-    def insert(self, index: int, node: 'Node'):
+    def insert(self, index: int, node: Node):
         """Inserts a node at position `index`"""
         if not self.children and self._result:
             raise ValueError('Node.insert(i, node): Called on a leaf-node')
@@ -1095,14 +1099,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select_if(self, match_func: NodeMatchFunction,
                   include_root: bool = False, reverse: bool = False,
-                  skip_func: NodeMatchFunction = NO_NODE) -> Iterator['Node']:
+                  skip_func: NodeMatchFunction = NO_NODE) -> Iterator[Node]:
         """
         Generates an iterator over all nodes in the tree for which
         `match_function()` returns True. See the more general function
         :py:meth:`Node.select()` for a detailed description and examples.
         The tree is traversed pre-order by the iterator.
         """
-        def recursive(nd: Node) -> Iterator['Node']:
+        def recursive(nd: Node) -> Iterator[Node]:
             nonlocal match_func, reverse, skip_func
             child_iterator = reversed(nd._children) if reverse else nd._children
             for child in child_iterator:
@@ -1120,7 +1124,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def select(self, criteria: NodeSelector,
                include_root: bool = False, reverse: bool = False,
-               skip_subtree: NodeSelector = NO_NODE) -> Iterator['Node']:
+               skip_subtree: NodeSelector = NO_NODE) -> Iterator[Node]:
         """
         Generates an iterator over all nodes in the tree that fulfill the
         given criterion. See :py:func:`create_match_function()` for a
@@ -1158,7 +1162,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                               create_match_function(skip_subtree))
 
     def select_children(self, criteria: NodeSelector, reverse: bool = False) \
-            -> Iterator['Node']:
+            -> Iterator[Node]:
         """Returns an iterator over all direct children of a node that
         fulfil the given `criterion`. See :py:meth:`Node.select()` for a description
         of the parameters.
@@ -1175,7 +1179,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pick(self, criteria: NodeSelector,
              include_root: bool = False,
              reverse: bool = False,
-             skip_subtree: NodeSelector = NO_NODE) -> Optional['Node']:
+             skip_subtree: NodeSelector = NO_NODE) -> Optional[Node]:
         """
         Picks the first (or last if run in reverse mode) descendant that
         fulfils the given criterion. See :py:func:`create_match_function()`
@@ -1191,7 +1195,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return None
 
     def pick_child(self, criteria: NodeSelector, reverse: bool = False) \
-            -> Optional['Node']:
+            -> Optional[Node]:
         """
         Picks the first child (or last if run in reverse mode) descendant
         that fulfils the given criterion. See :py:func:`create_match_function()`
@@ -1207,8 +1211,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except StopIteration:
             return None
 
-    @cython.locals(location=cython.int, end=cython.int)
-    def locate(self, location: int) -> Optional['Node']:
+    @cython.locals(end=cython.int)
+    def locate(self, location: cint) -> Optional[Node]:
         """
         Returns the leaf-Node that covers the given ``location``, where
         location is the actual position within ``self.content`` (not the
@@ -1226,7 +1230,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return nd
         return None
 
-    def find_parent(self, node) -> Optional['Node']:
+    def find_parent(self, node) -> Optional[Node]:
         """
         Finds and returns the parent of `node` within the tree represented
         by `self`. If the tree does not contain `node`, the value `None`
@@ -1294,8 +1298,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except StopIteration:
             return []
 
-    @cython.locals(location=cython.int, end=cython.int)
-    def locate_path(self, location: int) -> Path:
+    @cython.locals(end=cython.int)
+    def locate_path(self, location: cint) -> Path:
         """
         Like :py:meth:`Node.locate()`, only that the entire path (i.e.
         chain of descendants) relative to `self` is returned.
@@ -1307,7 +1311,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return trl
         return []
 
-    def _reconstruct_path_recursive(self: 'Node', node: 'Node') -> Path:
+    def _reconstruct_path_recursive(self, node: Node) -> Path:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
         the public method `reconstruct_path`, this method returns the chain of ancestors
@@ -1324,7 +1328,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return trl
         return []
 
-    def reconstruct_path(self, node: 'Node') -> Path:
+    def reconstruct_path(self, node: Node) -> Path:
         """
         Determines the chain of ancestors of a node that leads up to self.
         :param node: the descendant node, the ancestry of which shall be determined.
@@ -1343,7 +1347,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # milestone support ### EXPERIMENTAL!!! ###
 
-    # def find_nearest_common_ancestor(self, A: 'Node', B: 'Node') -> 'Node':
+    # def find_nearest_common_ancestor(self, A: Node, B: Node) -> Node:
     #     """
     #     Finds the nearest common ancestor of the two nodes A and B.
     #     :param A: a node in the tree
@@ -1359,7 +1363,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     #         common_ancestor = a
     #     return common_ancestor
 
-    def milestone_segment(self, begin: Union[Path, 'Node'], end: Union[Path, 'Node']) -> 'Node':
+    def milestone_segment(self, begin: Union[Path, Node], end: Union[Path, Node]) -> Node:
         """
         EXPERIMENTAL!!!
         Picks a segment from a tree beginning with start and ending with end.
@@ -1369,20 +1373,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :return: a tree(-segment) encompassing all nodes from the opening
             milestone up to and including the closing milestone.
         """
-        def index(parent: 'Node', nd: 'Node') -> int:
+        def index(parent: Node, nd: Node) -> int:
             children = parent._children
             for i in range(len(children)):
                 if nd == children[i]:
                     return i
             raise ValueError
 
-        def left_cut(result: Tuple['Node', ...], index: int, subst: 'Node') -> Tuple['Node', ...]:
+        def left_cut(result: Tuple[Node, ...], index: int, subst: Node) -> Tuple[Node, ...]:
             return (subst,) + result[index + 1:]
 
-        def right_cut(result: Tuple['Node', ...], index: int, subst: 'Node') -> Tuple['Node', ...]:
+        def right_cut(result: Tuple[Node, ...], index: int, subst: Node) -> Tuple[Node, ...]:
             return result[:index] + (subst,)
 
-        def cut(trl: Path, cut_func: Callable) -> 'Node':
+        def cut(trl: Path, cut_func: Callable) -> Node:
             child = trl[-1]
             tainted = False
             for i in range(len(trl) - 1, 0, -1):
@@ -1754,7 +1758,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return jo
 
     @staticmethod
-    def from_json_obj(json_obj: Union[Dict, Sequence]) -> 'Node':
+    def from_json_obj(json_obj: Union[Dict, Sequence]) -> Node:
         """Converts a JSON-object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
@@ -1794,7 +1798,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # serialization meta-method ###
 
     @cython.locals(vsize=cython.int, i=cython.int, threshold=cython.int)
-    def serialize(self: 'Node', how: str = 'default') -> str:
+    def serialize(self, how: str = 'default') -> str:
         """
         Serializes the tree originating in the node `self` either as
         S-expression, XML, JSON, or in compact form. Possible values for
@@ -1894,7 +1898,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return element
 
     @staticmethod
-    def from_etree(et, string_tag: str = MIXED_MODE_TEXT_PTYPE) -> 'Node':
+    def from_etree(et, string_tag: str = MIXED_MODE_TEXT_PTYPE) -> Node:
         """Converts a standard-library- or lxml-ElementTree to a tree of nodes.
 
         :param et:  the root element-object of the ElementTree
@@ -2343,9 +2347,9 @@ def gen_chain_ID() -> str:
     return ''.join(cid)
 
 
-@cython.locals(i=cython.int, k=cython.int)
-def split(node: Node, parent: Node, i: int, left_biased: bool = True,
-          chain_attr: Optional[Dict] = None) -> int:
+@cython.locals(k=cython.int)
+def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
+          chain_attr: Optional[dict] = None) -> int:
     """Splits a node at the given index (in case of a branch-node) or
     string-position (in case of a leaf-node). Returns the index of the
     right part within the parent node after the split. (This means
@@ -2431,6 +2435,7 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True,
     if  right._children:  right._pos = right._result[0]._pos
     elif node._pos >= 0:  right._pos = node._pos + i
     node.result = node._result[:i]
+    # if chain_attr and not node.anonymous:
     if chain_attr and not node.anonymous:
         node.attr.update(chain_attr)
         right.attr.update(chain_attr)
@@ -2438,8 +2443,8 @@ def split(node: Node, parent: Node, i: int, left_biased: bool = True,
     return k
 
 
-@cython.locals(i=cython.int, L=cython.int)
-def deep_split(path: Path, i: int, left_biased: bool=True,
+@cython.locals(L=cython.int)
+def deep_split(path: Path, i: cint, left_biased: bool=True,
                greedy: bool=True,
                match_func: PathMatchFunction = ANY_PATH,
                skip_func: PathMatchFunction = NO_PATH,
@@ -2515,8 +2520,8 @@ def deep_split(path: Path, i: int, left_biased: bool=True,
     return i
 
 
-@cython.locals(i=cython.int, L=cython.int)   # k=cython.int does not work!!!
-def can_split(t: Path, i: int, left_biased: bool = True, greedy: bool = True,
+@cython.locals(L=cython.int)   # k=cython.int does not work!!!
+def can_split(t: Path, i: cint, left_biased: bool = True, greedy: bool = True,
               match_func: PathMatchFunction = ANY_PATH,
               skip_func: PathMatchFunction = NO_PATH,
               divisable: AbstractSet[str] = LEAF_PTYPES) -> int:
@@ -2599,8 +2604,8 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
 #
 #######################################################################
 
-@cython.locals(i=cython.int, k=cython.int)
-def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
+@cython.locals(k=cython.int)
+def markup_right(path: Path, i: cint, name: str, attr_dict: Dict[str, Any],
                  greedy: bool = True,
                  match_func: PathMatchFunction = ANY_PATH,
                  skip_func: PathMatchFunction = NO_PATH,
@@ -2705,8 +2710,8 @@ def markup_right(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
     assert not any(nd.name == ':Text' and nd.children for nd in path)
 
 
-@cython.locals(i=cython.int, k=cython.int)
-def markup_left(path: Path, i: int, name: str, attr_dict: Dict[str, Any],
+@cython.locals(k=cython.int)
+def markup_left(path: Path, i: cint, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
                 match_func: PathMatchFunction = ANY_PATH,
                 skip_func: PathMatchFunction = NO_PATH,
@@ -3010,8 +3015,8 @@ class ContentMapping:
     def pos_list(self) -> List[int]:
         return self._pos_list
 
-    @cython.locals(pos=cython.int, path_index=cython.int, last=cython.int)
-    def get_path_index(self, pos: int, left_biased: bool = False) -> int:
+    @cython.locals(path_index=cython.int, last=cython.int)
+    def get_path_index(self, pos: cint, left_biased: bool = False) -> int:
         """Yields the index for the path in given context-mapping that contains
         the position ``pos``.
 
@@ -3063,7 +3068,7 @@ class ContentMapping:
         return self._path_list[path_index], pos - self._pos_list[path_index]
 
     @cython.locals(a=cython.int, b=cython.int, index_a=cython.int, index_b=cython.int)
-    def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
+    def iterate_paths(self, start_pos: cint, end_pos: cint, left_biased: bool = False) \
             -> Iterator[Path]:
         """Yields all paths from position ``start_pos`` up to and including
         position ``end_pos``. Example::
@@ -3078,8 +3083,8 @@ class ContentMapping:
         for i in range(index_a, index_b + 1):
             yield self._path_list[i]
 
-    @cython.locals(i=cython.int, start_index=cython.int, end_index=cython.int, offset=cython.int)
-    def rebuild_mapping_slice(self, first_index: int, last_index: int):
+    @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
+    def rebuild_mapping_slice(self, first_index: cint, last_index: cint):
         """Reconstructs a particular section of the context mapping after the
         underlying tree has been restructured. Ohter than
         :py:meth:`ContentMappin.rebuild_mapping`, the section that needs repairing
@@ -3224,7 +3229,7 @@ class ContentMapping:
 
 
     @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
-    def markup(self, start_pos: int, end_pos: int, name: str,
+    def markup(self, start_pos: cint, end_pos: cint, name: str,
                *attr_dict, **attributes) -> Node:
         """ Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisable`` nodes. Returns the
@@ -3443,11 +3448,11 @@ class LocalContentMapping(ContentMapping):
         else:
             self.last_index = len(self._path_list) - 1
         self.pos_offset: int = strlen_of(tuple(path[-1] for path in self._path_list[:i]))
-        pathL, posL = self._gen_local_path_and_pos_list()
+        pathL, posL = self._gen_local_path_and_pos_list(i, k)
         self.local_path_list: List[Path] = pathL
         self.local_pos_list: List[int] = posL
 
-    def _gen_local_path_and_pos_list(self):
+    def _gen_local_path_and_pos_list(self, i: cint, k: cint):
         return ([(self.stump + path) for path in self._path_list[i:k + 1]],
                 [pos - self.pos_offset for pos in self._pos_list[i:k + 1]])
 
@@ -3647,14 +3652,14 @@ class FrozenNode(Node):
     def pos(self):
         return -1
 
-    def with_pos(self, pos: int) -> 'Node':
+    def with_pos(self, pos: cint) -> Node:
         raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 
     def to_json_obj(self) -> List:
         raise NotImplementedError("Frozen nodes cannot and be serialized as JSON!")
 
     @staticmethod
-    def from_json_obj(json_obj: Union[Dict, Sequence]) -> 'Node':
+    def from_json_obj(json_obj: Union[Dict, Sequence]) -> Node:
         raise NotImplementedError("Frozen nodes cannot be deserialized from JSON!")
 
 
@@ -3829,7 +3834,7 @@ class RootNode(Node):
     def swallow(self, node: Optional[Node],
                 source: Union[str, StringView] = '',
                 source_mapping: Optional[SourceMapFunc] = None) \
-            -> 'RootNode':
+            -> RootNode:
         """
         Put `self` in the place of `node` by copying all its data.
         Returns self.
@@ -3876,7 +3881,7 @@ class RootNode(Node):
             self.data = data
             self.result = "TREE HAS BEEN DESTROYED!"
 
-    def add_error(self, node: Optional[Node], error: Error) -> 'RootNode':
+    def add_error(self, node: Optional[Node], error: Error) -> RootNode:
         """
         Adds an Error object to the tree, locating it at a specific node.
         """
@@ -3921,7 +3926,7 @@ class RootNode(Node):
     def new_error(self,
                   node: Node,
                   message: str,
-                  code: ErrorCode = ERROR) -> 'RootNode':
+                  code: ErrorCode = ERROR) -> RootNode:
         """
         Adds an error to this tree, locating it at a specific node.
 
@@ -3989,7 +3994,7 @@ class RootNode(Node):
         errors.sort(key=lambda e: e.pos)
         return errors
 
-    def error_safe(self, level: int = ERROR) -> 'RootNode':
+    def error_safe(self, level: ErrorCode = ERROR) -> RootNode:
         """
         Asserts that the given tree does not contain any errors with a
         code equal or higher than the given level.
