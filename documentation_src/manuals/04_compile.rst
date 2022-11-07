@@ -482,12 +482,12 @@ error messages, if any, and, optionally, the AST-tree. Example::
 
    >>> from DHParser.compile import compile_source
    >>> json_str = '{"test": ["This", "is", 1, "JSON", "test"]}'
-   >>> json, errors, ast = compile_source(json_str, None, 
-   ...                                    json_parser, 
-   ...                                    lambda tree: traverse(tree, json_AST_trans), 
-   ...                                    simplifiedJSONCompiler(),
-   ...                                    preserve_AST=True)
-   >>> json
+   >>> json_objs, errors, ast = compile_source(json_str, None, 
+   ...                              json_parser, 
+   ...                              lambda tree: traverse(tree, json_AST_trans),
+   ...                              simplifiedJSONCompiler(),
+   ...                              preserve_AST=True)
+   >>> json_objs
    {'test': ['This', 'is', 1.0, 'JSON', 'test']}
    >>> errors
    []
@@ -571,7 +571,7 @@ the very simple concept of junctions, where a junctions is the connection of an
 earlier stage (origin) in the the pipeline to a following stage (target) via a
 transformation or compilation function. Pipelines are created by providing
 junctions from for each intermediate stage from the starting stage (usually the
-last stage of the standard pipline) to one or more ending stages. Bifurcations a
+last stage of the standard pipeline) to one or more ending stages. Bifurcations a
 created simply by providing to different junctions starting from the same origin
 stage. (It is not allowed to have more than one junction for one and the same
 target stages.)
@@ -597,7 +597,7 @@ like::
       | json-data |--------------->| human readable json |
       -------------                -----------------------
             |
-            |--- ugly-print
+            |--- compact-print
             |
     -----------------
     | one-line json |
@@ -609,7 +609,95 @@ like::
    | transmission obj |
    --------------------
 
-Let's define the necessary junctions "pretty-print", "ugly-print" and
+Let's define the necessary junctions "pretty-print", "compact-print" and
 "bytearray-convert". Each junction is a 3-tuple of 1) the name of input stage, 2)
 a compilation functions that either transforms the input-tree produces some
-other kind of output and 3) the name of the ouput stage. 
+other kind of output and 3) the name of the output stage.
+
+A restriction of junctions in DHParser consists in the fact that the input data
+for the compilation functions must always be the root-node of a tree. This
+restriction is due to the fact that the standard case for
+transformation-pipelines in the Digital Humanities is that of chains of
+tree-transformations. However, in some cases, as in this example, the data
+already has a different form than a tree at earlier stages of the pipeline. In
+order to cover those cases, DHParser uses the trick to attach the data to the
+root-node of the last tree stage and then passing the root-node with the
+attached data to the next junction. The RootNode thus serves as a pod for
+passing the non-tree data further on through the data. This trick has the
+benefit that the methods for error reporting that the
+:py:class:`DHParser.nodetree.RootNode`-class provides can also be used for the
+non-tree-stages of the pipeline. In our example already the first stage of the
+extended data is not a nodetree, any more. So we need to attach it to the
+root-node of the last tree-stage, which in this case is the AST:: 
+
+   >>> ast.data = json_objs
+   >>> source_stages = {'json': ast}
+   
+Now let's define the "pretty-print"-compilation function and the respective junction::
+
+   >>> import json
+   >>> from DHParser.nodetree import RootNode
+   >>> def pretty_print(input: RootNode) -> str:
+   ...     try:
+   ...         return json.dumps(input.data, indent=2)
+   ...     except TypeError as e:
+   ...         input.new_error(input, "JSON-Error: " + str(e))
+   >>> pretty_print_junction = ('json', lambda : pretty_print, 'pretty-json')
+
+Any errors can simply be attached to the RootNode-obeject that is passed to the
+compilation-function!
+
+Since "pretty_print" yields a final state, it does not need to return a tree, but it may
+yield any data-type. This is different for the intermediary junction "compact-print".
+Here, the transformed data must be attached to the RootNode, again::
+
+   >>> def compact_print(input: RootNode) -> RootNode:
+   ...     try:
+   ...         input.data = json.dumps(input.data)
+   ...     except TypeError as e:
+   ...         input.new_error(input, "JSON-Error: " + str(e))
+   ...     return input
+   >>> compact_print_junction = ('json', lambda : compact_print, 'compact-json')
+
+The "byte-array"-convert-junction that takes the output from the last step, the
+compact-json, as input can be defined as follows::
+
+   >>> def bytearray_convert(input: RootNode) -> bytes:
+   ...     return input.data.encode('utf-8')
+   >>> bytearray_convert_junction = ('compact-json', lambda : bytearray_convert, 'byte-stream')
+
+Finally, all junctions must be passed to the :py:func:`~compile.run_pipeline`-function 
+which automatically constructs the bifurcated pipeline from the given junctions and passes
+the input-data through all bifurcations of the pipeline::
+
+   >>> from DHParser.compile import run_pipeline
+   >>> target_stages={"pretty-json", "byte-stream"}
+   >>> results = run_pipeline({pretty_print_junction, compact_print_junction, 
+   ...                         bytearray_convert_junction},
+   ...                         source_stages, target_stages)
+
+Note, that ``source_stages`` is a mapping the of source-stage-names to the
+source-stage's data, while ``target-stages`` is merely a set of names of all
+final stages.
+
+The results are a mapping of all target AND intermediary stages to 2-tuples of
+the output-data of the respective stage (or None, if any fatal error has
+occurred) and a potentially empty error list::
+
+   >>> for target in sorted(list(target_stages)):
+   ...    print(target, results[target][0])
+   byte-stream b'{"test": ["This", "is", 1.0, "JSON", "test"]}'
+   pretty-json {
+     "test": [
+       "This",
+       "is",
+       1.0,
+       "JSON",
+       "test"
+     ]
+   }
+
+A nice feature of extended pipelines is their integration with the
+testing-framework (see :py:mod:`~testing`): All stages of an extended pipeline
+can be unit-tested with DHParser's unit-testing framework for grammars as long
+as the results of these stages can be serialized with ``str()``.

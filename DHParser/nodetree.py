@@ -3871,7 +3871,7 @@ class RootNode(Node):
             add_source_locations(self.errors, self.source_mapping)
         return self
 
-    def drop_tree(self, data: Any):
+    def continue_with_data(self, data: Any):
         """Drops the swallowed tree in favor of the (non-tree) data resulting
         from the compilation of the tree. The data can then be retrieved from
         the field ``self.data``, which before the tree has been dropped contains
