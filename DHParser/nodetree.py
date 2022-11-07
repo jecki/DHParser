@@ -3463,7 +3463,7 @@ class LocalContentMapping(ContentMapping):
         return super().get_path_index(self, pos + self.pos_offset, left_biased) - self.first_index
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
-        pth, off = super().get_path_and_offset(self, pos + self.pos_offset, left_biased)
+        pth, off = super().get_path_and_offset(pos + self.pos_offset, left_biased)
         return pth, off - self.pos_offset
 
     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
@@ -3480,11 +3480,11 @@ class LocalContentMapping(ContentMapping):
         super().rebuild_mapping(start_pos + self.pos_offset, end_pos + self.pos_offset)
 
     def insert_node(self, pos: int, node: Node) -> Node:
-        return super().insert_node(pod + self.pos_offset, node)
+        return super().insert_node(pos + self.pos_offset, node)
 
     def markup(self, start_pos: int, end_pos: int, name: str,
                *attr_dict, **attributes) -> Node:
-        return super().markup(pos + self.pos_offset, end_pos + self.pos_offset, name,
+        return super().markup(start_pos + self.pos_offset, end_pos + self.pos_offset, name,
                               *attr_dict, **attributes)
 
 
@@ -3742,6 +3742,9 @@ class RootNode(Node):
         current processing stage. Can be one of 'XML', 'json',
         'indented', 'S-expression' or 'default'. (The latter picks
         the default serialization from the configuration.)
+
+    :ivar data: Compiled data. If the data still is a tree this
+        simnply contains a reference to self.
     """
 
     def __init__(self, node: Optional[Node] = None,

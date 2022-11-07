@@ -609,8 +609,7 @@ like::
    | transmission obj |
    --------------------
 
-Now, before we define the necessary junctions for this pipeline, there is one
-peculiarty regarding the pipeline-processing-support by DHParser to be pointed 
-to out. DHParser assumes all stages of the pipeline but the very last one of
-each branch to yield tree data which resembles the typical use case of most
-Digital-Humanities-projects.
+Let's define the necessary junctions "pretty-print", "ugly-print" and
+"bytearray-convert". Each junction is a 3-tuple of 1) the name of input stage, 2)
+a compilation functions that either transforms the input-tree produces some
+other kind of output and 3) the name of the ouput stage. 
