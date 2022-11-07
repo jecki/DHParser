@@ -148,11 +148,11 @@ __all__ = ('SourceMap',
 # SourceMap.__module__ = __name__
 
 SourceMap = namedtuple('SourceMap',
-    ['original_name',  # type: str
-     'positions',  # type: List[int]
-     'offsets',  # type: List[int]
-     'file_names',  # type: List[str]
-     'originals_dict',  # type: Dict[str, Union[str, StringView]]
+    ['original_name',  ## type: str
+     'positions',      ## type: List[int]
+     'offsets',        ## type: List[int]
+     'file_names',     ## type: List[str]
+     'originals_dict', ## type: Dict[str, Union[str, StringView]]
     ], module=__name__)
 
 # class SourceLocation(NamedTuple):
@@ -166,9 +166,9 @@ SourceMap = namedtuple('SourceMap',
 #      ('pos', int)])
 
 SourceLocation = namedtuple('SourceLocation',
-    ['original_name',  # type: str
-     'original_text',  # type: Union[str, StringView]
-     'pos',  # type: int
+    ['original_name',  ## type: str
+     'original_text',  ## type: Union[str, StringView]
+     'pos',            ## type: int
     ], module=__name__)
 
 SourceMapFunc: TypeAlias = Union[Callable[[int], SourceLocation], functools.partial]

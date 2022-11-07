@@ -40,15 +40,6 @@ from functools import lru_cache
 from typing import Callable, cast, List, Tuple, Set, Dict, \
     DefaultDict, Sequence, Union, Optional, Iterator, Hashable
 
-try:
-    import cython
-    cint = cython.int
-except NameError:
-    cint = int
-except ImportError:
-    import DHParser.externallibs.shadow_cython as cython
-    cint = int
-
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, \
@@ -69,6 +60,15 @@ from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
+
+try:
+    import cython
+    cint: TypeAlias = cython.int
+except NameError:
+    cint: TypeAlias = int
+except ImportError:
+    import DHParser.externallibs.shadow_cython as cython
+    cint: TypeAlias = int
 
 
 __all__ = ('ParserError',
@@ -969,9 +969,9 @@ def mixin_nonempty(whitespace: str) -> str:
 
 # collections.namedtuple needed for Cython compatibility
 AnalysisError = namedtuple('AnalysisError',
-    ['symbol',  # type: str
-     'parser',  # type: Parser
-     'error'    # type: Error
+    ['symbol',  ## type: str
+     'parser',  ## type: Parser
+     'error'    ## type: Error
     ], module=__name__)
 
 

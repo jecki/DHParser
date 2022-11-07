@@ -374,9 +374,9 @@ CompilerFactory: TypeAlias = Union[Callable[[], CompilerCallable], functools.par
 
 
 CompilationResult = namedtuple('CompilationResult',
-    ['result',      # type: Optional[Any]
-     'messages',    # type: List[Error]
-     'AST'],        # type: Optional[RootNode]
+    ['result',      ## type: Optional[Any]
+     'messages',    ## type: List[Error]
+     'AST'],        ## type: Optional[RootNode]
     module=__name__)
 
 

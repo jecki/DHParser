@@ -35,18 +35,22 @@ declarations to more fully exploit the benefits of the Cython-compiler.
 from __future__ import annotations
 
 from typing import Optional, Union, Iterable, Tuple, List, cast
+try:
+    from typing import TypeAlias
+except ImportError:
+    from DHParser.externallibs.typing_extensions import TypeAlias
 
 try:
     import cython
     cython_optimized = cython.compiled  # type: bool
-    cint = cython.int
+    cint: TypeAlias = cython.int
 except NameError:
-    cint = int
+    cint: TypeAlias = int
 except ImportError:
     # import DHParser.Shadow as cython
     cython_optimized = False
     import DHParser.externallibs.shadow_cython as cython
-    cint = int
+    cint: TypeAlias = int
 
 
 __all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW', 'TextBuffer')

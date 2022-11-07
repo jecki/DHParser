@@ -85,9 +85,9 @@ RX_TOKEN = re.compile(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d'
 
 # collections.namedtuple needed for Cython compatbility
 IncludeInfo = namedtuple('IncludeInfo',
-    ['begin',       # type: int
-     'length',      # type: int
-     'file_name'],  # type: str
+    ['begin',       ## type: int
+     'length',      ## type: int
+     'file_name'],  ## type: str
     module=__name__)
 
 
@@ -103,10 +103,10 @@ def has_includes(sm: SourceMap) -> bool:
 
 # collections.namedtuple needed for Cython compatbility
 PreprocessorResult = namedtuple('PreprocessorResult',
-    ['original_text',      # type: Union[str, StringView]
-     'preprocessed_text',  # type: Union[str, StringView]
-     'back_mapping',       # type: SourceMapFunc
-     'errors'],            # type: List[Error]
+    ['original_text',      ## type: Union[str, StringView]
+     'preprocessed_text',  ## type: Union[str, StringView]
+     'back_mapping',       ## type: SourceMapFunc
+     'errors'],            ## type: List[Error]
     module=__name__)
 
 

@@ -44,15 +44,6 @@ if sys.version_info >= (3, 6, 0):
 else:
     from collections import OrderedDict
 
-try:
-    import cython
-    cint = cython.int
-except NameError:
-    cint = int
-except ImportError:
-    import DHParser.externallibs.shadow_cython as cython
-    cint = int
-
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, SourceMapFunc, has_errors, only_errors
@@ -61,6 +52,15 @@ from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias
+
+try:
+    import cython
+    cint: TypeAlias = cython.int
+except NameError:
+    cint: TypeAlias = int
+except ImportError:
+    import DHParser.externallibs.shadow_cython as cython
+    cint: TypeAlias = int
 
 
 __all__ = ('WHITESPACE_PTYPE',
