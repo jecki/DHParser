@@ -2649,6 +2649,14 @@ class EBNFCompiler(Compiler):
     def on_whitespace(self, node: Node) -> str:
         return self.WSPC_PARSER()
 
+    def on_parser(self, node: Node) -> str:
+        assert 1 <= len(node.children) <= 2, node.as_sxpr()
+        name = self.compile(node['name'])
+        if 'argument' in node:
+            argument = self.compile(node['argument'])
+            return f'{name}({argument})'
+        else:
+            return f'{name}()'
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     THREAD_LOCALS = access_thread_locals()

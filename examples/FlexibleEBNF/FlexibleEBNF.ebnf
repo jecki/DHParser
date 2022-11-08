@@ -81,6 +81,7 @@ element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure 
            | any_char
            | whitespace
            | group
+           | parser                             # a user-defined parser
 
 
 ANY_SUFFIX = /[?*+]/
@@ -107,6 +108,10 @@ multiplier = /[1-9]\d*/~
 
 
 #: leaf-elements
+
+parser     = "@" name "(" [argument] ")"        # a user defined parser
+  argument = literal | name
+  name     = SYM_REGEX ~                        # name of Parser class or (factory) function
 
 symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
