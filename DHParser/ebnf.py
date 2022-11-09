@@ -118,10 +118,10 @@ try:
 except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \\
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \\
+    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
     compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \\
     remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, traverse, \\
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \\
@@ -370,7 +370,7 @@ class HeuristicEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "53a3fd3179fbfe74548b526a58def282"
+    source_hash__ = "e6d7b1125c464e928175aee7a068f744"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -389,19 +389,19 @@ class HeuristicEBNFGrammar(Grammar):
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
-    CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")))
-    RE_LEADOUT = Capture(Text("/"))
-    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")))
-    TIMES = Capture(Text("*"))
-    RNG_DELIM = Capture(Text(","))
-    BRACE_SIGN = Capture(Alternative(Text("{"), Text("(")))
-    RNG_BRACE = Capture(Retrieve(BRACE_SIGN))
-    ENDL = Capture(Alternative(Text(";"), Text("")))
-    AND = Capture(Alternative(Text(","), Text("")))
-    OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))))
+    CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")), zero_length_warning=False)
+    RE_LEADOUT = Capture(Text("/"), zero_length_warning=False)
+    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")), zero_length_warning=False)
+    TIMES = Capture(Text("*"), zero_length_warning=False)
+    RNG_DELIM = Capture(Text(","), zero_length_warning=False)
+    BRACE_SIGN = Capture(Alternative(Text("{"), Text("(")), zero_length_warning=False)
+    RNG_BRACE = Capture(Retrieve(BRACE_SIGN), zero_length_warning=True)
+    ENDL = Capture(Alternative(Text(";"), Text("")), zero_length_warning=False)
+    AND = Capture(Alternative(Text(","), Text("")), zero_length_warning=False)
+    OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))), zero_length_warning=False)
     _DEF = Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": "))
-    DEF = Capture(Synonym(_DEF))
-    EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
+    DEF = Capture(Synonym(_DEF), zero_length_warning=False)
+    EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrtfv`´\'"(){}\\[\\]/\\\\]'))
@@ -411,6 +411,9 @@ class HeuristicEBNFGrammar(Grammar):
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
+    name = Series(SYM_REGEX, dwsp__)
+    argument = Alternative(literal, name)
+    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))
     multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
     no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
     range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
@@ -434,7 +437,7 @@ class HeuristicEBNFGrammar(Grammar):
     definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group, parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
@@ -663,7 +666,7 @@ class ConfigurableEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "2a7080d665065a348ede8b21c6bb3448"
+    source_hash__ = "e1154ad391275e611b1d84e5cb2471b1"
     disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -678,9 +681,6 @@ class ConfigurableEBNFGrammar(Grammar):
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
-    regex_heuristics = Alternative(RegExp('[^ ]'), RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]/'))
-    literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
-    char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n\\t ]'), Series(dwsp__, literal_heuristics), Series(Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
     CH_LEADIN = Text("0x")
     RE_LEADOUT = Text("/")
     RE_LEADIN = Text("/")
@@ -697,11 +697,13 @@ class ConfigurableEBNFGrammar(Grammar):
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
     character = Series(CH_LEADIN, HEXCODE)
-    char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)), Series(Text("]"), dwsp__))
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
+    name = Series(SYM_REGEX, dwsp__)
+    argument = Alternative(literal, name)
+    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))
     multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
     no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), TIMES))
     range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
@@ -725,7 +727,7 @@ class ConfigurableEBNFGrammar(Grammar):
     definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
@@ -869,6 +871,10 @@ EBNF_AST_transformation_table = {
     "free_char":
         [],
     (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
+        [reduce_single_child],
+    "parser":
+        [remove_tokens('@', '(', ')')],
+    "name, argument":
         [reduce_single_child],
     "RAISE_EXPR_WO_BRACKETS":
         [add_error("PEG Expressions in directives must be enclosed in barckets (...)",
@@ -1181,6 +1187,12 @@ class EBNFCompiler(Compiler):
     :ivar symbols:  A mapping of symbol names to their usages (not
             their definition!) in the EBNF source.
 
+    :ivar py_symbols:  A set of symbols that are referred to in the
+            grammar, but are (or must be) defined in Python-code
+            outside the Grammar-class resulting from the compilation
+            of the EBNF-source, as, for example, references to
+            user-defined custom-parsers. (See :py:class:`~parse.Custom`)
+
     :ivar variables:  A set of symbols names that are used with the
             Pop or Retrieve operator. Because the values of these
             symbols need to be captured they are called variables.
@@ -1292,6 +1304,7 @@ class EBNFCompiler(Compiler):
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
+        self.py_symbols = []                   # type: List[str]
         self.variables = {}                    # type: Dict[str, List[Node]]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
@@ -1479,7 +1492,9 @@ class EBNFCompiler(Compiler):
             s = nd.content[1:-1]  # remove quotation marks
             return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
         elif nd.name == 'procedure':
-            return unrepr(nd.content)
+            proc_name = nd.content
+            self.py_symbols.append(proc_name)
+            return unrepr(proc_name)
         elif nd.name == 'symbol':
             referred_symbol = nd.content.strip()
             self.referred_by_directive.add(referred_symbol)
@@ -1893,15 +1908,22 @@ class EBNFCompiler(Compiler):
                 any((e.code >= FATAL or e.code == MALFORMED_REGULAR_EXPRESSION)
                     for e in self.tree.errors):
             errors = []
+            # circumvent name-errors for external symbols
+            tmpl = "def {name}(*args, **kwargs):\n    return ERR('')\n"
+            probe_src = '\n'.join([DHPARSER_IMPORTS, '\n'] +
+                                  [tmpl.format(name=name) for name in self.py_symbols] +
+                                  [python_src])
             try:
                 grammar_class = compile_python_object(
-                    DHPARSER_IMPORTS + python_src, (self.grammar_name or "DSL") + "Grammar")
+                    probe_src, (self.grammar_name or "DSL") + "Grammar")
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',
                     'static_analysis_pending__ = []  # type: List[bool]', 1)
-            except NameError:
-                pass  # undefined names in the grammar are already caught and reported
+            except NameError as ne:
+                if ne.name not in self.symbols:
+                    # undefined symbols in the grammar have already been caught and reported
+                    raise(ne)
             except GrammarError as ge:
                 errors = ge.errors
                 if not has_errors([e.error for e in errors], ERROR):
@@ -2652,11 +2674,24 @@ class EBNFCompiler(Compiler):
     def on_parser(self, node: Node) -> str:
         assert 1 <= len(node.children) <= 2, node.as_sxpr()
         name = self.compile(node['name'])
+        if name not in ('Custom', 'Error', 'ERR'):
+            self.py_symbols.append(name)
+        if name == 'Error':  name = 'ERR'
         if 'argument' in node:
             argument = self.compile(node['argument'])
+            if argument[0:1] not in ('"', "'"):
+                self.py_symbols.append(argument)
             return f'{name}({argument})'
         else:
             return f'{name}()'
+
+    def on_name(self, node: Node) -> str:
+        assert not node.children
+        return node.content
+
+    def on_argument(self, node: Node) -> str:
+        assert not node.children
+        return node.content
 
 def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
     THREAD_LOCALS = access_thread_locals()

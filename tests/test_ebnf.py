@@ -286,7 +286,6 @@ class TestParserNameOverwriteBug:
         assert not st.error_flag
 
 
-
 class TestSemanticValidation:
     def check(self, minilang, bool_filter=lambda x: x):
         grammar = get_ebnf_grammar()
@@ -1774,6 +1773,68 @@ class TestInclude:
         assert not tree.errors
         # print(tree.as_sxpr())
 
+
+class TestCustomParsers:
+    arithmetic_ebnf = '''
+    @ whitespace  = vertical             
+    @ literalws   = right                
+    @ comment     = /#.*/                
+    @ ignorecase  = False     
+    @ reduction   = merge_treetops           
+    @ drop        = whitespace, strings    
+
+    expression = term  { (add | sub) term}
+    term       = factor { (div | mul) factor}
+    factor     = [NEG] (number | group)
+        NEG    = `-`
+    group      = "(" expression ")"
+
+    add        = "+"
+    sub       = "-"
+    mul        = "*"
+    div        = "/"
+
+    number     = @Custom(parse_number) ~'''
+    py_parse_number = r'''
+def parse_number(s):
+    i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), s.find('*'), s.find('/'))
+            if k >= 0)
+    if i < 0:  i = len(s)
+    try:
+        float(str(s[:i]))
+    except ValueError:
+        return None
+    return Node('NUMBER', s[:i])
+    '''
+    py_parse_number_class = r'''
+class ParserNumber(Parser):
+    def _parse(self, location):
+        s = self.grammar.document__[location:]
+        i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), s.find('*'), s.find('/'))
+                if k >= 0)
+        if i < 0:  i = len(s)
+        try:
+            float(str(s[:i]))
+        except ValueError:
+            return None, location
+        return Node('NUMBER', s[:i]), location + i        
+    '''
+
+    def test_custom_parser_func(self):
+        src, errors, ast = compile_ebnf(self.arithmetic_ebnf)
+        parser = create_parser(self.arithmetic_ebnf, additional_code=self.py_parse_number)
+        tree = parser('2 - (3 * -4.145E+5)')
+        assert not tree.errors
+
+    def test_custom_parser_class(self):
+        arithmetic_ebnf = self.arithmetic_ebnf.replace('@Custom(parse_number)', '@ParserNumber()')
+        src, errors, ast = compile_ebnf(arithmetic_ebnf)
+        parser = create_parser(arithmetic_ebnf, additional_code=self.py_parse_number_class)
+        tree = parser('2 - (3 * -4.145E+5)')
+        assert not tree.errors
+
+class TestErrors:
+    pass  # TODO: Tests for parse.ERR-PseudoParser
 
 if __name__ == "__main__":
     from DHParser.testing import runner

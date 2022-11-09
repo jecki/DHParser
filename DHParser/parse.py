@@ -87,6 +87,7 @@ __all__ = ('ParserError',
            'Never',
            'AnyChar',
            'PreprocessorToken',
+           'ERR',
            'Text',
            'DropText',
            'RegExp',
@@ -2118,6 +2119,39 @@ class PreprocessorToken(Parser):
         return None, location
 
 
+class ERR(Parser):
+    """ERR is a pseudo-parser does not consume any text, but adds an error
+    message at the current location."""
+
+    def __init__(self, err_msg: str, err_code: ErrorCode=ERROR) -> None:
+        super(ERR, self).__init__()
+        if err_msg[0:1].isdigit():
+            i = err_msg.find(':')
+            if i >= 0:
+                try:
+                    # if error code has been specified in the string...
+                    err_code = int(err_msg[:i])
+                    # ... override tehe err_code parameter
+                    err_msg = err_msg[i + 1:]
+                except ValueError:
+                    pass
+        self.err_msg = err_msg
+        self.err_code = err_code
+
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__(self.err_msg, self.err_code)
+        copy_parser_base_attrs(self, duplicate)
+        return duplicate
+
+    def _parse(self, location: cint) -> ParsingResult:
+        node = Node(ZOMBIE_TAG, '').with_pos(location)
+        self.grammar.tree__.new_error(node, self.err_msg, self.err_code)
+        return node, location
+
+    def __repr__(self):
+        return f'ERR("{self.err_msg}", {self.err_code})'
+
+
 ########################################################################
 #
 # Text and Regular Expression parser classes (leaf classes)
@@ -2625,8 +2659,9 @@ class Custom(CombinedParser):
     1:1: Error (1040): Parser "root" stopped before end, at: »abcd« Terminating parser.
     """
 
-    def __init__(self, parse_func: CustomParseFunc) -> None:
+    def __init__(self, parse_func: Union[CustomParseFunc, str]) -> None:
         super(Custom, self).__init__()
+        if isinstance(parse_func, str):  parse_func = globals().get(parse_func, parse_func)
         assert callable(parse_func), f"Not a CustomParseFunc: {parse_func}"
         self.parse_func: CustomParseFunc = parse_func
 
@@ -2640,7 +2675,7 @@ class Custom(CombinedParser):
         try:
             node = self.parse_func(self.grammar.document__[location:])
         except Exception as e:
-            node = Node(self.node_name, '')
+            node = Node(self.node_name, '').with_pos(location)
             self.grammar.tree__.new_error(node, f"Custom parser {self.parse_func} crashed: {e}",
                                           CUSTOM_PARSER_FAILURE)
         if node is None:
@@ -2660,6 +2695,11 @@ class Custom(CombinedParser):
 
     def _signature(self) -> Hashable:
         return self.__class__.__name__, id(self.parse_func)
+
+    def __repr__(self):
+        pf = self.parse_func
+        pfname = getattr(pf, '__name__', getattr(pf.__class__, '__name__', str(pf)))
+        return f'Custom({pfname})'
 
 
 class UnaryParser(CombinedParser):
@@ -4047,7 +4087,7 @@ class Retrieve(ContextSensitive):
                 # returns a None match if parser is optional but there was no value to retrieve
                 return None, location
             else:
-                node = Node(tn, '', True)  # .with_pos(self.grammar.document_length__ - text.__len__())
+                node = Node(tn, '', True).with_pos(location)
                 self.grammar.tree__.new_error(
                     node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
                     UNDEFINED_RETRIEVE)

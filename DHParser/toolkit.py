@@ -264,7 +264,7 @@ class unrepr:
     """
     unrepr encapsulates a string representing a python function in such
     a way that the representation of the string yields the function call
-    itself rather then a string representing the function call and delimited
+    itself rather than a string representing the function call and delimited
     by quotation marks.
 
     Example:
