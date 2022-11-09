@@ -1930,6 +1930,11 @@ class EBNFCompiler(Compiler):
                     python_src = python_src.replace(
                         'static_analysis_pending__ = [True]',
                         'static_analysis_pending__ = []  # type: List[bool]', 1)
+            except TypeError as te:
+                if not (errors or self.tree.errors):
+                    # it is not merley a consequential error
+                    # of an already reported error
+                    raise te
             for sym, _, err in errors:
                 symdef_node = self.rules[sym][0]
                 err.pos = self.rules[sym][0].pos

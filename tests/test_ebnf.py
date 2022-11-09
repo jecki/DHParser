@@ -1834,7 +1834,37 @@ class ParserNumber(Parser):
         assert not tree.errors
 
 class TestErrors:
-    pass  # TODO: Tests for parse.ERR-PseudoParser
+    numbers = """@whitespace = vertical
+    document = { ~ number | error } ~ EOF
+    number = /[1-9]\d*/~
+    error  = !EOF @Error("Not a valid Number!") /.*?(?=\s|$)/  # skip to next whitespace
+    EOF = !/./
+    """
+
+    def test_error(self):
+        parser = create_parser(self.numbers)
+        tree = parser("2 3 4")
+        assert not tree.errors
+        tree = parser("2 X 3 Y 4")
+        assert len(tree.errors) == 2
+        assert tree.as_sxpr() == """(document
+  (number
+    (:RegExp "2")
+    (:Whitespace " "))
+  (error
+    (ZOMBIE__ `(err "1:3: Error (1000): Not a valid Number!"))
+    (:RegExp "X"))
+  (:Whitespace " ")
+  (number
+    (:RegExp "3")
+    (:Whitespace " "))
+  (error
+    (ZOMBIE__ `(err "1:7: Error (1000): Not a valid Number!"))
+    (:RegExp "Y"))
+  (:Whitespace " ")
+  (number "4")
+  (EOF))"""
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
