@@ -137,20 +137,6 @@ RE_LEADOUT = `/`
 
 CH_LEADIN  = `0x`
 
-
-##: heuristics
-
-# char_range_heuristics  = ! ( /[\n\t ]/
-#                            | ~ literal_heuristics
-#                            | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
-# literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
-#                        | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
-#                        | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
-#                        | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
-#                        | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-# regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
-
-
 #: basic-regexes
 
 RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../

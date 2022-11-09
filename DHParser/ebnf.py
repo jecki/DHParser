@@ -274,6 +274,7 @@ class HeuristicEBNFGrammar(Grammar):
                    | any_char
                    | whitespace
                    | group
+                   | parser                             # a user-defined parser
 
 
         ANY_SUFFIX = /[?*+]/
@@ -301,6 +302,10 @@ class HeuristicEBNFGrammar(Grammar):
 
         #: leaf-elements
 
+        parser     = "@" name "(" [argument] ")"        # a user defined parser
+          argument = literal | name
+          name     = SYM_REGEX ~                        # name of Parser class or (factory) function
+
         symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
         literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
                    | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
@@ -317,7 +322,7 @@ class HeuristicEBNFGrammar(Grammar):
 
         #: delimiters
 
-        EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+        EOF = !/./ [:?ENDL] [:?DEF] [:?OR] [:?AND]      # [:?DEF], [:?OR], ... clear stack by eating stored value
                    [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
 
         DEF        = _DEF
@@ -532,9 +537,9 @@ class ConfigurableEBNFGrammar(Grammar):
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
         @ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
         @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
-        @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+        # @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
-        # re-entry-rules for resuming after parsing-error
+        # re-entry-rules to resume parsing after a syntax-error
 
         @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
         @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
@@ -552,7 +557,10 @@ class ConfigurableEBNFGrammar(Grammar):
         definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
         directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
-          component  = literals | procedure | expression
+          # component  = (regexp | literals | procedure | symbol !DEF)
+          # component  = literals | procedure | expression
+          component  = regexp | literals | procedure | symbol !DEF
+                     | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
           literals   = { literal }+                       # string chaining, only allowed in directives!
           procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
@@ -574,7 +582,7 @@ class ConfigurableEBNFGrammar(Grammar):
 
         countable  = option | oneormore | element
         pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
-        element    = [retrieveop] symbol !DEF          # negative lookahead to be sure it's not a definition
+        element    = [retrieveop] symbol !DEF           # negative lookahead to be sure it's not a definition
                    | literal
                    | plaintext
                    | regexp
@@ -583,6 +591,7 @@ class ConfigurableEBNFGrammar(Grammar):
                    | any_char
                    | whitespace
                    | group
+                   | parser                             # a user defined parser
 
 
         ANY_SUFFIX = /[?*+]/
@@ -611,6 +620,10 @@ class ConfigurableEBNFGrammar(Grammar):
 
         #: leaf-elements
 
+        parser     = "@" name "(" [argument] ")"        # a user defined parser
+          argument = literal | name
+          name     = SYM_REGEX ~                        # name of Parser class or (factory) function
+
         symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
         literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
                    | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
@@ -618,12 +631,13 @@ class ConfigurableEBNFGrammar(Grammar):
                    | /´(?:(?<!\\)\\´|[^´])*?´/~
         regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
         # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-        char_range = `[` &char_range_heuristics
-                         [`^`] (character | free_char) { [`-`] character | free_char } "]"
+        # char_range = `[` &char_range_heuristics
+        #                  [`^`] (character | free_char) { [`-`] character | free_char } "]"
         character  = CH_LEADIN HEXCODE
         free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
         any_char   = "."
         whitespace = /~/~                               # insignificant whitespace
+
 
         #: delimiters
 
@@ -644,24 +658,16 @@ class ConfigurableEBNFGrammar(Grammar):
 
         CH_LEADIN  = `0x`
 
-        #: heuristics
-
-        char_range_heuristics  = ! ( /[\n\t ]/
-                                   | ~ literal_heuristics
-                                   | [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
-        literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
-                               | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
-                               | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
-                               | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
-                               | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
-        regex_heuristics       = /[^ ]/ | /[^\/\n*?+\\]*[*?+\\][^\/\n]\//
-
-
         #: basic-regexes
 
         RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
         SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
         HEXCODE    = /[A-Fa-f0-9]{1,8}/
+
+
+        #: error-markers
+
+        RAISE_EXPR_WO_BRACKETS = ``
     """
     countable = Forward()
     element = Forward()
