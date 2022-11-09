@@ -261,7 +261,7 @@ that has been passed as a parameter. It can be a newly constructed
 Node-object, as well.
 
 Observe the use of a reset()-method: This method is called by the
-__call__-method of :py:class:`~compile.Compiler` before the compilation starts
+``__call__``-method of :py:class:`~compile.Compiler` before the compilation starts
 and should be used to reset any object-variables which may still contain values
 from the last compilation-run to their default values. 
 
@@ -482,8 +482,8 @@ error messages, if any, and, optionally, the AST-tree. Example::
 
    >>> from DHParser.compile import compile_source
    >>> json_str = '{"test": ["This", "is", 1, "JSON", "test"]}'
-   >>> json_objs, errors, ast = compile_source(json_str, None, 
-   ...                              json_parser, 
+   >>> json_objs, errors, ast = compile_source(json_str, None,
+   ...                              json_parser,
    ...                              lambda tree: traverse(tree, json_AST_trans),
    ...                              simplifiedJSONCompiler(),
    ...                              preserve_AST=True)
@@ -571,7 +571,7 @@ the very simple concept of junctions, where a junctions is the connection of an
 earlier stage (origin) in the the pipeline to a following stage (target) via a
 transformation or compilation function. Pipelines are created by providing
 junctions from for each intermediate stage from the starting stage (usually the
-last stage of the standard pipeline) to one or more ending stages. Bifurcations a
+last stage of the standard pipline) to one or more ending stages. Bifurcations a
 created simply by providing to different junctions starting from the same origin
 stage. (It is not allowed to have more than one junction for one and the same
 target stages.)
@@ -628,11 +628,11 @@ benefit that the methods for error reporting that the
 :py:class:`DHParser.nodetree.RootNode`-class provides can also be used for the
 non-tree-stages of the pipeline. In our example already the first stage of the
 extended data is not a nodetree, any more. So we need to attach it to the
-root-node of the last tree-stage, which in this case is the AST:: 
+root-node of the last tree-stage, which in this case is the AST::
 
    >>> ast.data = json_objs
    >>> source_stages = {'json': ast}
-   
+
 Now let's define the "pretty-print"-compilation function and the respective junction::
 
    >>> import json
@@ -666,13 +666,13 @@ compact-json, as input can be defined as follows::
    ...     return input.data.encode('utf-8')
    >>> bytearray_convert_junction = ('compact-json', lambda : bytearray_convert, 'byte-stream')
 
-Finally, all junctions must be passed to the :py:func:`~compile.run_pipeline`-function 
+Finally, all junctions must be passed to the :py:func:`~compile.run_pipeline`-function
 which automatically constructs the bifurcated pipeline from the given junctions and passes
 the input-data through all bifurcations of the pipeline::
 
    >>> from DHParser.compile import run_pipeline
    >>> target_stages={"pretty-json", "byte-stream"}
-   >>> results = run_pipeline({pretty_print_junction, compact_print_junction, 
+   >>> results = run_pipeline({pretty_print_junction, compact_print_junction,
    ...                         bytearray_convert_junction},
    ...                         source_stages, target_stages)
 
