@@ -1921,9 +1921,12 @@ class EBNFCompiler(Compiler):
                     'static_analysis_pending__ = [True]',
                     'static_analysis_pending__ = []  # type: List[bool]', 1)
             except NameError as ne:
-                if ne.name not in self.symbols:
-                    # undefined symbols in the grammar have already been caught and reported
-                    raise(ne)
+                try:
+                    if ne.name not in self.symbols:
+                        # undefined symbols in the grammar have already been caught and reported
+                        raise(ne)
+                except AttributeError:
+                    pass  # In Python3.7/3.8/3.9 NameError does not have a name attribute
             except GrammarError as ge:
                 errors = ge.errors
                 if not has_errors([e.error for e in errors], ERROR):
