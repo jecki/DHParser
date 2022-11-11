@@ -14,16 +14,20 @@ type
     children: seq[Node]
     text: string  # must be empty if children is not empty!
     attributes*: Attributes
+    sourcePos: int
+  SourcePosUnassignedDefect = object of Defect
+  SourcePosReAssigmentDefect = object of Defect
+
 
 proc newNode*(name: string, 
              children: seq[Node], 
              attributes: Attributes = Attributes()): Node =
-  Node(name: name, children: children, text: "", attributes: attributes)
+  Node(name: name, children: children, text: "", attributes: attributes, sourcePos: -1)
 
 proc newNode*(name: string, 
              text: string, 
              attributes: Attributes = Attributes()): Node =
-  Node(name: name, children: @[], text: text, attributes: attributes)
+  Node(name: name, children: @[], text: text, attributes: attributes, sourcePos: -1)
 
 func isLeaf*(node: Node): bool = node.children.len == 0
 
@@ -53,6 +57,32 @@ func runeLen*(node: Node): int =
   else:
     for child in node.children:
       result += child.runeLen
+
+func sourcePos*(node: Node): int = 
+  if node.sourcePos >= 0:
+    node.sourcePos
+  else:
+    raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
+
+proc assignSourcePos(node: Node, sourcePos: int) : int =
+  if node.sourcePos < 0:
+    node.sourcePos = sourcePos
+    var pos = sourcePos
+    if node.isLeaf:
+      pos + node.text.runeLen
+    else:
+      for child in node.children:
+        pos += child.assignSourcePos(pos)
+      pos
+  else:
+    raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
+
+proc `sourcePos=`*(node: Node, sourcePos: int) = 
+  discard node.assignSourcePos(sourcePos)
+
+proc withSourcePos(node: Node, sourcePos: int): Node =
+  discard node.assignSourcePos(sourcePos)
+  node
 
 
 const indentation = 2
@@ -148,3 +178,6 @@ func asSxpr(node: Node): string =
 var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
                           newNode("right", "RIGHT")])
 echo n.asSxpr
+n.`sourcePos=` 0
+echo n.children[0].sourcePos
+echo n.children[1].sourcePos

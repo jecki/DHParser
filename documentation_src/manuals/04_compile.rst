@@ -442,7 +442,7 @@ For finalization, there are again two "hooks", although of different kind:
 Processing Pipelines
 --------------------
 
-The Standard-pipeline
+The standard-pipeline
 ^^^^^^^^^^^^^^^^^^^^^
 
 When compiling a document in a domain specific notation or language, DHParser assumes
@@ -701,3 +701,68 @@ A nice feature of extended pipelines is their integration with the
 testing-framework (see :py:mod:`~testing`): All stages of an extended pipeline
 can be unit-tested with DHParser's unit-testing framework for grammars as long
 as the results of these stages can be serialized with ``str()``.
+
+
+*Classes and Functions-Reference*
+---------------------------------
+
+The full documentation of all classes and functions can be found in module
+:py:mod:`DHParser.compile`. The following table of contents lists the most
+important of these:
+
+class Compile
+^^^^^^^^^^^^^
+
+* :py:class:`~compile.Compiler`: A callable base class for compilers. Derive
+      from this class and fill in ``on_NAME(self, node)`` and ``attr_NAME(self,
+      node, value)`` methods to build a compiler.
+
+  * :py:attr:`~compile.Compiler.path`: During compilation the current path to
+        the node that is about to be compiled.
+
+  * :py:attr:`~compile.Compiler.finalizers`: A list of pairs of callables and
+        arguments, that will be called at the end of the compilation of the
+        entire tree.
+
+  * :py:meth:`~compile.Compiler.prepare`: An overrideable method that will be
+        called with the root-note just before the compilation of the tree
+        starts.
+
+  * :py:meth:`~compile.Compiler.finalize`: A overrideable method that will be
+        called with the result and that may return a possibly modified result
+        after the compilation has finished.
+
+  * :py:meth:`~compile.Compiler.wildcard`: An overriable commpilaiton-method
+        that will be called when no specific compilation method, i.e.
+        ``on_NAME(node)`` has been defined. It defaults to redirecting to
+        :py:meth:`~compile.Commpiler.fallback_compiler`.
+
+   * :py:meth:`~compile.Compiler.fallback_compiler`: A method that will be
+        be called on nodes for the type or name, for that matter, of which
+        no ``on_NME(onde)``-method has been defined. This method should ony
+        be called for purely tree-transforming Comilper objects.
+
+Types and Functions
+^^^^^^^^^^^^^^^^^^^
+
+   * :py:data:`~compile.Copiler.CompilationResult`: A named tuple-type that stores
+        the result of a compilation: (result: Any, messages: list[:py:class:`~error.Error``], AST: Optioal[:py:class:`~nodetree.RootNode`])
+
+   * :py:func:`compile.compile_source`: A functions that calls preprocessor, parser, 
+        transformer and compiler in sequence on a source text. In other words, it
+        runs the "standard-pipeline" on the source text.
+
+   * :py:func:`compile.process_tree`: Calls a compiler on a given tree only if
+        the tree does not already had any fatal errors in a previous processing
+        stage. This function is syntactic sugar to allow allow writing sequences
+        of transformation or compilation stages as a sequence of
+        ``process_tree()``-calls without the need to chain them with if clauses.
+
+   * :py:data:`~compile.Junction`: A type-alias for a tuple: (name of relative
+        source stage, factory for a compiler, name of the relative destination
+        stage). "relative" here means from the point of view of the compilation
+        function returned by the factory.
+
+   * :py:func:`~compile.run_pipeline`: Runs an extended pipeline of compilation or
+        transformation functions (or, more precisely, callables) that is definied
+        by a set of junctions and returns the results for selected target stages.  

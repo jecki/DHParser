@@ -1148,7 +1148,7 @@ Or, more generally, to strings containing whitespace-separated substrings::
 ---------------------------------
 
 The full documentation of all classes and functions can be found in module
-:py:mod:`DHParser.nodetree`. The following table of contents list the most
+:py:mod:`DHParser.nodetree`. The following table of contents lists the most
 important of these:
 
 class Node

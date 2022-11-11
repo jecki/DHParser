@@ -211,7 +211,7 @@ class Compiler:
 
     def wildcard(self, node: Node) -> Any:
         """
-        The wildcard method is called nodes for which no other compilation-
+        The wildcard method is called on nodes for which no other compilation-
         method has been specified. This allows to check, whether illegal
         nodes occur in the tree (although, a static structural validation
         is to be preferred.) or whether a compilation node has been
@@ -512,7 +512,7 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
     any normal errors have occurred earlier in the processing pipeline.
     Don't catch Python-exceptions if no errors have occurred earlier.
 
-    This behaviour is based on the assumption that given any non-fatal
+    This behavior is based on the assumption that given any non-fatal
     errors have occurred earlier, the tree passed through the pipeline
     might not be in a state that is expected by the later stages, thus if
     an exception occurs it is not really to be considered a programming
