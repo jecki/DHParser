@@ -8,15 +8,15 @@ import std/unicode
 
 
 type
-  Attributes = OrderedTable[string, string]
-  Node = ref object of RootObj
+  Attributes* = OrderedTable[string, string]
+  Node* = ref object of RootObj
     name*: string
     children: seq[Node]
     text: string  # must be empty if children is not empty!
     attributes*: Attributes
-    sourcePos: int
-  SourcePosUnassignedDefect = object of Defect
-  SourcePosReAssigmentDefect = object of Defect
+    sourcePos: int32
+  SourcePosUnassignedDefect* = object of Defect
+  SourcePosReAssigmentDefect* = object of Defect
 
 
 proc newNode*(name: string, 
@@ -58,18 +58,18 @@ func runeLen*(node: Node): int =
     for child in node.children:
       result += child.runeLen
 
-func sourcePos*(node: Node): int = 
+func sourcePos*(node: Node): int32 = 
   if node.sourcePos >= 0:
     node.sourcePos
   else:
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
 
-proc assignSourcePos(node: Node, sourcePos: int) : int =
+proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
   if node.sourcePos < 0:
     node.sourcePos = sourcePos
     var pos = sourcePos
     if node.isLeaf:
-      pos + node.text.runeLen
+      pos + int32(node.text.runeLen)
     else:
       for child in node.children:
         pos += child.assignSourcePos(pos)
@@ -77,10 +77,10 @@ proc assignSourcePos(node: Node, sourcePos: int) : int =
   else:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
 
-proc `sourcePos=`*(node: Node, sourcePos: int) = 
+proc `sourcePos=`*(node: Node, sourcePos: int32) = 
   discard node.assignSourcePos(sourcePos)
 
-proc withSourcePos(node: Node, sourcePos: int): Node =
+proc withSourcePos*(node: Node, sourcePos: int32): Node =
   discard node.assignSourcePos(sourcePos)
   node
 

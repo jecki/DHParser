@@ -682,7 +682,7 @@ class Parser:
 
     def is_optional(self) -> Optional[bool]:
         """Returns ``True``, if the parser can never fail, i.e. never yields
-        ``None``, instead of a node. Returns ``False``, if the parser can fail.
+        ``None`` instead of a node. Returns ``False``, if the parser can fail.
         Returns ``None`` if it is not known whether the parser can fail.
         """
         return None
