@@ -438,6 +438,7 @@ For finalization, there are again two "hooks", although of different kind:
    other finalizers in check if the various finalizers are contextually
    separated from each other.
 
+.. _processing_pipelines:
 
 Processing Pipelines
 --------------------

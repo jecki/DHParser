@@ -1165,7 +1165,7 @@ Of course, this example is rather wanton and the grammar can easily be rewritten
 without the lookback-operators.
 
 
-Error Messages
+Error-Catching
 --------------
 
 Providing users with proper error information is one of the most tenacious
@@ -1177,7 +1177,7 @@ There are three different challenges:
 3. Resuming the parsing progress after an error has occurred at the nearest
    possible place without producing artificial follow-up errors.
 
-If the following, DHParser's techniques for the first two challenges,
+In the following, DHParser's techniques for the first two challenges,
 locating errors and customizing error messages will be described.
 Techniques for resuming the parsing process after an error occurred
 or for passing by erroneous passages in the source code will be
@@ -1376,14 +1376,91 @@ can occur in the interior of the string and can - with
 the help of customized error messages - be described as such
 and properly be located.
 
-However, emitting the right error messages based on a regular-
-expression-condition is not quite easy and sometimes customized
-error messages can even be more confusion for the users of the
-DSL. My recommendation is to wait for user feedback or to monitor
-the errors that users typically make and then to customize the
-error messages to the actual needs of the users to help them
-understand why the computer refuses to parse a certain construct.
+However, emitting the right error messages based on a
+regular-expression-condition is not quite easy and badly customized error
+messages can even be more confusing than not customizing error messages at all.
+One possible development-strategy is to wait for the feedback of testers and
+users or to monitor the errors that users typically make and then to customize
+the error messages to the actual needs of the users to help them understand why
+the computer refuses to parse a certain construct.
 
+Grammar-code for errors
+^^^^^^^^^^^^^^^^^^^^^^^
+
+A frequently used approach to error catching is the encoding of alternative code
+paths for erreneous code right into the grammar. This is usually done by adding
+a further alternatve with the alternative-operator ``|`` that is specifically
+meant to "throw" an error if all regular alternatives have been exhausted.
+DHParser offers a special syntax to add an error message if a certain part of
+the grammar is activated during the parsing of an erreneous source-text:
+``@Error("[CODE:]MESSAGE")`` where MESSAGE has to be substituted by a particular
+error message and the optional "CODE:" with a natural number at the beginning
+of the error-message from which the error-code must be separated with a colon.  
+This number can freely be chosen, but must adhere to the following convention:
+
+    * numbers from 1 to 99 must be used for mere notices 
+    * numbers from 100 to 999 for warnings
+    * numbers from 1000 to 9999 for errors 
+    * numbers of 10000 and more as fatal errors
+
+Fatal errors result in the stop of the :ref:`processing pipeline
+<processing_pipelines>` right after the step where the error occurred.
+"Normal" errors result in invalid results but DHParser will attempt to
+continue with the processing pipeline. This has the advantage that 
+other errors further downstream will also be reported in the same passe.
+A possible disadvantage is that consequential errors may arise in the
+processing of faulty results from earlier stages in the pipeline. If
+too many consequential errors occur in the aftermathe of an error, it
+should be considered to lift this error to a fatal error by assigning
+a higher number to it.  
+
+Warnings and notices should never should be used when the results will still be
+valid, though maybe not what they were intended to be. (Thus, the warning) Error
+codes starting with the digit "1" are reserved by DHParser. So, for
+custom-errors codes starting with "2", "3" etc. must be used.
+
+Here is an example how error-messages can be added within the grammar. The syntax
+uses the same ``@``-marker as directives but other than directives the error-markers
+do not resemble symbol-definitions but occur within the right hand side of a 
+symbol definition. The following is a grammar that parses a sequence of natural
+numbers separated by a blank of line-feed, e.g. "1 2 3"::
+
+    >>> sequence_of_natural_numbers = """@whitespace = vertical
+    ...     document = { ~ number | error } ~ EOF
+    ...     number = /[1-9]\\d*/~
+    ...     @error_error = "20:Parser stopped because of an error"
+    ...     error  = !EOF           # no error-message on end of file 
+    ...              @Error("2010:Not a valid Number!") 
+    ...              § EOF
+    ...     EOF = !/./"""
+    >>> number_parser = create_parser(sequence_of_natural_numbers)
+    >>> syntax_tree = number_parser("1 2 3 4 F 5")
+    >>> for error in syntax_tree.errors_sorted: print(error)
+    1:9: Error (2010): Not a valid Number!
+    1:9: Error (1010): Parser stopped because of an error
+
+Let's examine this in detail: The definition of the "document"-symbol without
+an error-branch would read::
+
+    document = { ~ number } ~ EOF
+
+Here, we add an alternative branch to the ``number``-parser in case the
+number parser does not match. Now, the number parser will not match on one
+of two conditions: a) the following text is not a number, or b) the end of the
+file has been reached. Now, since the latter is perfectly in order, we have to
+exclude this case at the beginning of the error-branch with a negative-lookahead::
+
+    error  = !EOF           
+             @Error("1010:Not a valid Number!") 
+             § EOF
+
+While the first line of the definition of the error-branch excludes the kinds of
+non-matche(s) that are not errors, the second line adds an error message with
+the current location of the parser. We add an error code, "1010", to make it
+easier to identify this error in automated tests or the like. The last line is
+just a means to make the parser to stop parsing right on the spot (that is,
+unless this error is caught by a resume-directive, see below). It will produce 
+the consequential error "EOF expected", though. 
 
 Fail-tolerant Parsing
 ---------------------

@@ -2119,24 +2119,27 @@ class PreprocessorToken(Parser):
         return None, location
 
 
+def exctract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[string, ErrorCode]:
+    if err_msg[0:1].isdigit():
+        i = err_msg.find(':')
+        if i >= 0:
+            try:
+                # if error code has been specified in the string...
+                err_code = ErrorCode(err_msg[:i])
+                # ... override tehe err_code parameter
+                err_msg = err_msg[i + 1:]
+            except ValueError:
+                pass
+    return err_msg, err_code
+
+
 class ERR(Parser):
     """ERR is a pseudo-parser does not consume any text, but adds an error
     message at the current location."""
 
     def __init__(self, err_msg: str, err_code: ErrorCode=ERROR) -> None:
         super(ERR, self).__init__()
-        if err_msg[0:1].isdigit():
-            i = err_msg.find(':')
-            if i >= 0:
-                try:
-                    # if error code has been specified in the string...
-                    err_code = int(err_msg[:i])
-                    # ... override tehe err_code parameter
-                    err_msg = err_msg[i + 1:]
-                except ValueError:
-                    pass
-        self.err_msg = err_msg
-        self.err_code = err_code
+        self.err_msg, self.err_code = exctract_error_code(err_msg, err_code)
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.err_msg, self.err_code)
