@@ -1833,8 +1833,9 @@ class ParserNumber(Parser):
         tree = parser('2 - (3 * -4.145E+5)')
         assert not tree.errors
 
+
 class TestErrors:
-    numbers = """@whitespace = vertical
+    numbers = r"""@whitespace = vertical
     document = { ~ number | error } ~ EOF
     number = /[1-9]\d*/~
     error  = !EOF @Error("Not a valid Number!") /.*?(?=\s|$)/  # skip to next whitespace

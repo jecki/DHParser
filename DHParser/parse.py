@@ -27,8 +27,6 @@ The different parsing functions are callable descendants of class
 ``Parser``. Usually, they are organized in a tree and defined
 within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
 for an example.
-
-    >>> from DHParser.parse import *
 """
 
 from __future__ import annotations
@@ -87,6 +85,7 @@ __all__ = ('ParserError',
            'Never',
            'AnyChar',
            'PreprocessorToken',
+           'extract_error_code',
            'ERR',
            'Text',
            'DropText',
@@ -803,17 +802,17 @@ class Parser:
     def signature(self) -> Hashable:
         """Returns a value that is identical for two different
         parser objects if they are functionally equivalent, i.e.
-        yield the same return value for the same call parameters:
+        yield the same return value for the same call parameters::
 
-        >>> a = Text('[')
-        >>> b = Text('[')
-        >>> c = Text(']')
-        >>> a is b
-        False
-        >>> a.signature() == b.signature()
-        True
-        >>> a.signature() == c.signature()
-        False
+            >>> a = Text('[')
+            >>> b = Text('[')
+            >>> c = Text(']')
+            >>> a is b
+            False
+            >>> a.signature() == b.signature()
+            True
+            >>> a.signature() == c.signature()
+            False
 
         The purpose of parser-signatures is to optimize better
         memoization in cases of code repetition in the grammar.
@@ -1873,14 +1872,14 @@ class Grammar:
         r"""Returns the closest named parser that contains ``parser``.
         If ``parser`` is a named parser itself, ``parser`` is returned.
         If ``parser`` is not connected to any symbol in the Grammar,
-        an AttributeError is raised.
+        an AttributeError is raised. Example::
 
-        >>> word = Series(RegExp(r'\w+'), Whitespace(r'\s*'))
-        >>> word.pname = 'word'
-        >>> gr = Grammar(word)
-        >>> anonymous_re = gr['word'].parsers[0]
-        >>> gr.associated_symbol__(anonymous_re).pname
-        'word'
+            >>> word = Series(RegExp(r'\w+'), Whitespace(r'\s*'))
+            >>> word.pname = 'word'
+            >>> gr = Grammar(word)
+            >>> anonymous_re = gr['word'].parsers[0]
+            >>> gr.associated_symbol__(anonymous_re).pname
+            'word'
         """
         symbol = self.associated_symbol_cache__.get(parser, None)   # type: Optional[Parser]
         if symbol:  return symbol
@@ -2119,17 +2118,35 @@ class PreprocessorToken(Parser):
         return None, location
 
 
-def exctract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[string, ErrorCode]:
-    if err_msg[0:1].isdigit():
-        i = err_msg.find(':')
-        if i >= 0:
-            try:
-                # if error code has been specified in the string...
-                err_code = ErrorCode(err_msg[:i])
-                # ... override tehe err_code parameter
-                err_msg = err_msg[i + 1:]
-            except ValueError:
-                pass
+def extract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[string, ErrorCode]:
+    """Extracts the error-code-prefix from an error message.
+
+    Example::
+
+        >>> msg = '2010:Big mistake!'
+        >>> print(extract_error_code(msg))
+        ('Big mistake!', 2010)
+    """
+    i = err_msg.find(':')
+    if i >= 0:
+        err_code_str = err_msg[:i]
+        try:
+            # if error code has been specified in the string...
+            err_code = ErrorCode(err_code_str)
+            # ... override tehe err_code parameter
+            err_msg = err_msg[i + 1:]
+        except ValueError:
+            pass
+            ## This code does not work, because ErrorCode names
+            ## defined on a higher level
+            ## are not reachable from within the parse-module
+            # if re.match(r'[A-Z_]+', err_code_str):
+            #     # assume err_code_str is not a number but
+            #     # the name of an ErrorCode-constant
+            #     try:
+            #         err_code = ErrorCode(globals()[err_code_str])
+            #     except (KeyError, ValueError):
+            #         pass
     return err_msg, err_code
 
 
@@ -2139,7 +2156,7 @@ class ERR(Parser):
 
     def __init__(self, err_msg: str, err_code: ErrorCode=ERROR) -> None:
         super(ERR, self).__init__()
-        self.err_msg, self.err_code = exctract_error_code(err_msg, err_code)
+        self.err_msg, self.err_code = extract_error_code(err_msg, err_code)
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.err_msg, self.err_code)
@@ -2651,15 +2668,15 @@ class Custom(CombinedParser):
     """
     A wrapper for a simple custom parser function defined by the user::
 
-    >>> def parse_magic_number(rest: StringView) -> Node:
-    ...     return Node('', rest[:4]) if rest.startswith('1234') else EMPTY_NODE
-    >>> parser = Grammar(Custom(parse_magic_number))
-    >>> result = parser('1234')
-    >>> print(result.as_sxpr())
-    (root "1234")
-    >>> result = parser('abcd')
-    >>> for e in result.errors:  print(e)
-    1:1: Error (1040): Parser "root" stopped before end, at: »abcd« Terminating parser.
+        >>> def parse_magic_number(rest: StringView) -> Node:
+        ...     return Node('', rest[:4]) if rest.startswith('1234') else EMPTY_NODE
+        >>> parser = Grammar(Custom(parse_magic_number))
+        >>> result = parser('1234')
+        >>> print(result.as_sxpr())
+        (root "1234")
+        >>> result = parser('abcd')
+        >>> for e in result.errors:  print(e)
+        1:1: Error (1040): Parser "root" stopped before end, at: »abcd« Terminating parser.
     """
 
     def __init__(self, parse_func: Union[CustomParseFunc, str]) -> None:
@@ -3009,7 +3026,7 @@ NO_MANDATORY = 2**30
 
 
 class MandatoryNary(NaryParser):
-    """MandatoryNary is the parent class for N-ary parsers that can be
+    r"""MandatoryNary is the parent class for N-ary parsers that can be
     configured to fail with a parsing error rather than returning a non-match,
     if all contained parsers from a specific subset of non-mandatory parsers
     have already matched successfully, so that only "mandatory" parsers are
@@ -3036,7 +3053,7 @@ class MandatoryNary(NaryParser):
         >>> str(num_parser('3.1415'))
         '3.1415'
         >>> str(num_parser('3.'))
-        '3. <<< Error on "" | \\'/[0-9]+/\\' expected by parser \\'fraction\\', but »...« found instead! >>> '
+        '3. <<< Error on "" | \'/[0-9]+/\' expected by parser \'fraction\', but »...« found instead! >>> '
 
     In this example, the first item of the fraction, i.e. the decimal dot,
     is non-mandatory, because only the parser with an index of one or more
@@ -3115,6 +3132,7 @@ class MandatoryNary(NaryParser):
         text_ = self.grammar.document__[location:]
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
         err_node.with_pos(location)  # for testing artifacts
+        error_code = MANDATORY_CONTINUATION
         found = text_[:10].replace('\n', '\\n') + '...'
         sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
@@ -3126,7 +3144,8 @@ class MandatoryNary(NaryParser):
                     or (is_rxs and text_.match(search)) \
                     or (is_str and text_.startswith(cast(str, search))):
                 try:
-                    msg = message.format(expected, found)
+                    msg, error_code = extract_error_code(
+                        message.format(expected, found), MANDATORY_CONTINUATION)
                     break
                 except (ValueError, KeyError, IndexError) as e:
                     error = Error("Malformed error format string »{}« leads to »{}«"
@@ -3141,8 +3160,6 @@ class MandatoryNary(NaryParser):
                 error_code = MANDATORY_CONTINUATION_AT_EOF
             else:
                 error_code = MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
-        else:
-            error_code = MANDATORY_CONTINUATION
         error = Error(msg, location, error_code,
                       length=max(self.grammar.ff_pos__ - location, 1))
         grammar.tree__.add_error(err_node, error)
@@ -3443,18 +3460,19 @@ class Alternative(NaryParser):
 @cython.locals(n=cython.int, i=cython.int)
 def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) -> str:
     """Returns the longest string from a given list of strings that
-    matches the beginning of text.
-    >>> l = ['a', 'ab', 'ca', 'cd']
-    >>> longest_match(l, 'a')
-    'a'
-    >>> longest_match(l, 'abcdefg')
-    'ab'
-    >>> longest_match(l, 'ac')
-    'a'
-    >>> longest_match(l, 'cb')
-    ''
-    >>> longest_match(l, 'cab')
-    'ca'
+    matches the beginning of text. Examples::
+
+        >>> l = ['a', 'ab', 'ca', 'cd']
+        >>> longest_match(l, 'a')
+        'a'
+        >>> longest_match(l, 'abcdefg')
+        'ab'
+        >>> longest_match(l, 'ac')
+        'a'
+        >>> longest_match(l, 'cb')
+        ''
+        >>> longest_match(l, 'cab')
+        'ca'
     """
     if n > len(text):  return ''
     if len(strings) == 1:
@@ -3520,6 +3538,7 @@ class Interleave(MandatoryNary):
     r"""Parse elements in arbitrary order.
 
     Examples::
+
         >>> prefixes = TKN("A") * TKN("B")
         >>> Grammar(prefixes)('A B').content
         'A B'
