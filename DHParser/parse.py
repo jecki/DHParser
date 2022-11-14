@@ -101,6 +101,7 @@ __all__ = ('ParserError',
            'TreeReduction',
            'CustomParseFunc',
            'Custom',
+           'CustomParser',
            'UnaryParser',
            'NaryParser',
            'Drop',
@@ -2664,13 +2665,13 @@ def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> P
 CustomParseFunc: TypeAlias = Callable[[StringView], Optional[Node]]
 
 
-class Custom(CombinedParser):
+class CustomParser(CombinedParser):
     """
     A wrapper for a simple custom parser function defined by the user::
 
         >>> def parse_magic_number(rest: StringView) -> Node:
         ...     return Node('', rest[:4]) if rest.startswith('1234') else EMPTY_NODE
-        >>> parser = Grammar(Custom(parse_magic_number))
+        >>> parser = Grammar(CustomParser(parse_magic_number))
         >>> result = parser('1234')
         >>> print(result.as_sxpr())
         (root "1234")
@@ -2679,9 +2680,8 @@ class Custom(CombinedParser):
         1:1: Error (1040): Parser "root" stopped before end, at: »abcd« Terminating parser.
     """
 
-    def __init__(self, parse_func: Union[CustomParseFunc, str]) -> None:
-        super(Custom, self).__init__()
-        if isinstance(parse_func, str):  parse_func = globals().get(parse_func, parse_func)
+    def __init__(self, parse_func: CustomParseFunc) -> None:
+        super(CustomParser, self).__init__()
         assert callable(parse_func), f"Not a CustomParseFunc: {parse_func}"
         self.parse_func: CustomParseFunc = parse_func
 
@@ -2720,6 +2720,18 @@ class Custom(CombinedParser):
         pf = self.parse_func
         pfname = getattr(pf, '__name__', getattr(pf.__class__, '__name__', str(pf)))
         return f'Custom({pfname})'
+
+
+def Custom(custom_parser: Union[Parser, CustomParseFunc, str]) -> Parser:
+    if isinstance(custom_parser, Parser):
+        return cast(Parser, custom_parser)
+    elif callable(custom_parser):
+        return CustomParser(custom_parser)
+    elif isinstance(custom_parser, str):
+        custom_parser = globals().get(custom_parser, custom_parser)
+        assert callable(custom_parser), f"Not a CustomParseFunc: {custom_parser}"
+    else:
+        raise ValueError('Illegal parameter {custom_parser} of type {type(custom_parsr}')
 
 
 class UnaryParser(CombinedParser):

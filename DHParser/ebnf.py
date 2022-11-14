@@ -2688,16 +2688,16 @@ class EBNFCompiler(Compiler):
     def on_parser(self, node: Node) -> str:
         assert 1 <= len(node.children) <= 2, node.as_sxpr()
         name = self.compile(node['name'])
-        if name not in ('Custom', 'Error', 'ERR'):
+        if name not in ('Custom', 'CustomParser', 'Error', 'ERR'):
             self.py_symbols.append(name)
         if name == 'Error':  name = 'ERR'
         if 'argument' in node:
             argument = self.compile(node['argument'])
             if argument[0:1] not in ('"', "'"):
                 self.py_symbols.append(argument)
-            return f'{name}({argument})'
+            return f'Custom({name}({argument}))'
         else:
-            return f'{name}()'
+            return f'Custom({name}())'
 
     def on_name(self, node: Node) -> str:
         assert not node.children
