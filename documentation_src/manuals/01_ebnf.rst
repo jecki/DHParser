@@ -1394,8 +1394,8 @@ the computer refuses to parse a certain construct.
 
 .. _grammar_code_for_errors:
 
-Grammar-code for errors
-^^^^^^^^^^^^^^^^^^^^^^^
+Enhancing grammars with error-paths
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A frequently used approach to error catching is the encoding of alternative code
 paths for erreneous code right into the grammar. This is usually done by adding
@@ -1898,6 +1898,7 @@ If syntax errors are sparse - as can reasonably be assumed - the harm done
 by skipping larger portions of the text is probably negligble or at any
 rate smaller than the harm done by introducing consequential errors as
 a result of poorly choosen resumption rules.
+
 
 Context sensitive parsers
 -------------------------
@@ -2409,6 +2410,12 @@ context-sensitive parsers if met with a combination of different errors. In this
 particular case of an XML-parser, the best way out might be not to use
 context-sensitive parsers at all and check the matching XML-tags at a later
 processing stage.
+
+
+Custom Parsers
+--------------
+
+
 
 
 *Classes and Functions-Reference*
