@@ -1783,24 +1783,27 @@ class TestCustomParsers:
     @ reduction   = merge_treetops           
     @ drop        = whitespace, strings    
 
-    expression = term  { (add | sub) term}
+    expression = term  { (add | sub) term} 
     term       = factor { (div | mul) factor}
     factor     = [NEG] (number | group)
         NEG    = `-`
     group      = "(" expression ")"
 
     add        = "+"
-    sub       = "-"
+    sub        = "-"
     mul        = "*"
     div        = "/"
 
-    number     = @Custom(parse_number) ~'''
+    number     = @Custom(parse_number) ~
+    
+    EOF        = !/./ '''
     py_parse_number = r'''
 def parse_number(s):
-    i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), s.find('*'), s.find('/'))
-            if k >= 0)
-    if i < 0:  i = len(s)
     try:
+        i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), 
+                            s.find('*'), s.find('/'), len(s))
+                if k >= 0)
+        if i < 0:  i = len(s)
         float(str(s[:i]))
     except ValueError:
         return None
@@ -1810,14 +1813,31 @@ def parse_number(s):
 class ParserNumber(Parser):
     def _parse(self, location):
         s = self.grammar.document__[location:]
-        i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), s.find('*'), s.find('/'))
-                if k >= 0)
-        if i < 0:  i = len(s)
         try:
+            i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), 
+                                s.find('*'), s.find('/'), len(s))
+                    if k >= 0)
+            if i < 0:  i = len(s)
             float(str(s[:i]))
         except ValueError:
             return None, location
         return Node('NUMBER', s[:i]), location + i        
+    '''
+    py_parse_factory_func = r'''
+def parse_number(base_as_str: str):
+    base = int(base_as_str)
+    def parse_number_func(s):
+        try:
+            i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), 
+                                s.find('*'), s.find('/'), len(s))
+                    if k >= 0)
+            if i < 0:  i = len(s)
+            num_str = str(s[:i])
+            int(num_str, base)
+        except ValueError:
+            return None
+        return Node('NUMBER', num_str)
+    return parse_number_func
     '''
 
     def test_custom_parser_func(self):
@@ -1828,11 +1848,17 @@ class ParserNumber(Parser):
 
     def test_custom_parser_class(self):
         arithmetic_ebnf = self.arithmetic_ebnf.replace('@Custom(parse_number)', '@ParserNumber()')
-        src, errors, ast = compile_ebnf(arithmetic_ebnf)
+        # src, errors, ast = compile_ebnf(arithmetic_ebnf)
         parser = create_parser(arithmetic_ebnf, additional_code=self.py_parse_number_class)
         tree = parser('2 - (3 * -4.145E+5)')
         assert not tree.errors
 
+    def test_custom_parser_factory_function(self):
+        arithmetic_ebnf = self.arithmetic_ebnf.replace('@Custom(parse_number)', '@parse_number("16")')
+        src, errors, ast = compile_ebnf(arithmetic_ebnf)
+        parser = create_parser(arithmetic_ebnf, additional_code=self.py_parse_factory_func)
+        tree = parser('2A + B3')
+        assert not tree.errors
 
 class TestErrors:
     numbers = r"""@whitespace = vertical

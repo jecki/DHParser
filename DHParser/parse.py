@@ -2119,7 +2119,7 @@ class PreprocessorToken(Parser):
         return None, location
 
 
-def extract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[string, ErrorCode]:
+def extract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[str, ErrorCode]:
     """Extracts the error-code-prefix from an error message.
 
     Example::
