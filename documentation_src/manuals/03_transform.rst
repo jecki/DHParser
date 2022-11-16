@@ -359,27 +359,27 @@ it contains as its single child node.
 The same effect can also be achieved by early tree-reduction during the parsing
 stage (see :ref:`Simplifying Trees <simplifying_syntax_trees>` in the
 documentation of the :doc:`01_ebnf`-module.) by listing the symbol
-"_known_environment" in the ``@disposable``-directeive at the beginning of the
+"_known_environment" in the ``@disposable``-directive at the beginning of the
 grammar. In cases as simple as this one, it is preferable way to eliminate
 superfluous nodes as early as possible by using the ``@disposable``-directive.
 
-The opposite case where you want to reatain the parent node but eliminate a
+The opposite case where you want to retain the parent node but eliminate a
 single child is demonstrated by the following entry. The symbol "inline_math" is
 meant to mark mathematical notation that occurs within the text of a paragraph.
 LaTeX has two different sets of symbols, ``\( ... \)`` and ``$ ... $`` to mark
-the begining and end of a stretch of inline maths, which are captured by
+the beginning and end of a stretch of inline maths, which are captured by
 "_im_bracket" and "_im_dollar"-symbol, respectively. Thus, "inline_math" is
-defined in the grammar as ``inline_math = _im_bracket | _im_dollar``. Hower,
+defined in the grammar as ``inline_math = _im_bracket | _im_dollar``. However,
 this time we are only interested in the fact that some piece of text is a piece
 of inline math and not what set of delimiters has been used to mark it as such.
 Therefore we use the :py:func:`DHParser.transform.reduce_single_child`-primitive
-to eliminate the child node while transfering it data to the parent.
+to eliminate the child node while transferring it data to the parent.
 
 Again, the same can more efficiently be achieved by adding the symbols
 "_im_bracket" and "_im_dollar" to the list of disposable symbols at the top of
 the grammar. However, when still developing the grammar, it can, for debugging
 purposes, still be helpful to eliminate them during the tree-transformation
-stage and not already while parsing. Once it has been superseeded by the
+stage and not already while parsing. Once it has been superseded by the
 disposable directive, the ``reduce_single_child``-primitive should be removed
 from the table, because - other than the ``replace_by_single_child``-primitive
 it can produce undesired side effect if the child to be reduced to its parent
@@ -387,7 +387,7 @@ has already been eliminated earlier.
 
 In the grammar of the LaTeX-example, the symbol "S" captures significant
 whitespace. However, at the beginning and the end of a paragraph, explicit
-whitespace is really unneccessary, because begining or ending a paragraph
+whitespace is really unnecessary, because beginning or ending a paragraph
 already implies that there is a linefeed (and thus whitespace). The entry for
 the "paragraph" symbol therefore eliminates whitespace that has been captured by
 the "paragraph"-parser at the beginning or the end. This is achieved with the
@@ -410,7 +410,7 @@ intricate tree-structure when parsed.
 
 Given that this structure is not relevant in the further processing of the
 parsed document one might ask the question why not a very much simplified
-URL-parser might have been suficient. A possible reason for specifying a
+URL-parser might have been sufficient. A possible reason for specifying a
 detailed parser in cases where the structure does not matter is to capture
 syntax errors early on. Otherwise a misspelled URL that hasn't been rejected by
 a simplified parser might cause trouble later on. In cases where this is not to
@@ -429,7 +429,7 @@ character, it will try to write the tilde *above* the following character. In
 order to really get a single tilde character one has to write "\~{ }" in LaTeX.
 The definition of the ESCAPED-symbol: ``ESCAPED = /\\(?:(?:[#%$&_\/{}
 \n])|(?:~\{\s*\}))/`` knows about this special case. But this means that while
-usually just dropping the leading backslash "\" when unescaping a character
+usually just dropping the leading backslash "\" when un-escaping a character
 during AST-transformation, we need to eliminate the following characters, too,
 in the case of the tilde.
 
@@ -437,7 +437,7 @@ This case differentiation is effected by the
 :py:func:`DHParser.transform.apply_ifelse`-function which applies one (list of)
 primitive(s) or an alternative (list of) primitive(s) depending on boolean
 condition. Note that the the boolean condition is stated as the last term in the
-list of paramters of the ``apply_if_else``-operator! In this case the
+list of parameters of the ``apply_if_else``-operator! In this case the
 boolean-primitive is defined inline as a lambda function::
     
     lambda path: '~' not in path[-1].content
@@ -452,18 +452,18 @@ argument to which the result of a Node (i.e. a string or a tuple of child-Nodes)
 is passed and that returns the transformed result. The
 :py:func:`DHParser.transform.replace_content_with`-primitive replaces the result
 of the last node in the path with the given string content. Observe the subtle
-difference between the two primities: `replace_content_with` always yields a
+difference between the two primitives: `replace_content_with` always yields a
 leaf node with string content but no children.
 
-The following three entries apply custem functions, specifically written for the
+The following three entries apply custom functions, specifically written for the
 LaTeX example case. ``replace_Umlaut`` replaces LaTeX-Umlaute like ``\"a`` by
 their unicode-counterpart, in this case "ä". ``replace_quotationmark`` does the
-same for quotationmarks. And ``streamline_whitspace`` compresses any whitespace
+same for quotation marks. And ``streamline_whitspace`` compresses any whitespace
 either to a single blank or single linefeed.
 
 Finally, the entry for ``WARN_Komma`` adds a syntax warning to all nodes with
 the name "WARN_Komma". This follows a pattern for fail tolerant parsing
-descirbed in the documentation of the :py:mod:`DHParser.ebnf` as :ref:`generic
+described in the documentation of the :py:mod:`DHParser.ebnf` as :ref:`generic
 fail tolerant parsing <generic_fail_tolerant_parsing>`.
 
 
@@ -482,13 +482,13 @@ in order to allow the inspection of the environment of the node. And,
 well, in rare cases it makes sense to deviate from the just mentioned rule.
 
 However, it should be kept in mind that the tree is traversed depth-first
-and that changes to the ancestry of a node will not affect the tree traversel
-which still operates on the children-tuples of the acesters before the
+and that changes to the ancestry of a node will not affect the tree traversal
+which still operates on the children-tuples of the ancestors before the
 change by a transformation-function takes effect. To avoid confusion,
 it is best, not to change the ancestry.
 
 Generally speaking, transformation function will see the effects of
-any other transfomration further up the tree (i.e. those affecting
+any other transformation further up the tree (i.e. those affecting
 the last node in the path and its descendants) or earlier in the
 list of transformations assigned to an entry in the transformation-table.
 
@@ -503,13 +503,13 @@ of transformation-function in the transformation table. Rather, probing
 functions are passed as arguments to conditional transformation functions.
 
 While transformation functions are functions with a single argument, it
-would often be helpful to pass further parameters, like the jsut
+would often be helpful to pass further parameters, like the just
 mentioned boolean conditions, to a transformation. Such transformation
 functions with further parameters can be called "parameterized
 transformation function" where we consider the second argument of the
 parameterized transformation function as its first parameter.
 
-One obvious way to turn a paremterized transformation function into
+One obvious way to turn a parameterized transformation function into
 a transformation function proper with a single argument is by deriving
 partial functions as described in
 `Python documentation <https://docs.python.org/3/library/functools.html#functools.partial>`_.
@@ -542,7 +542,7 @@ to rewrite the transformation table above as::
 While the transformations with parameters in transformation table look like
 functions calls where the first argument is missing, they are actually
 calls to the transformation_factory decorator that returns a partial function
-where all arguments are fixed execpt the "paths"-argument at the beginning
+where all arguments are fixed except the "paths"-argument at the beginning
 of the argument sequence. However, transformation functions with parameters
 can still be called like regular functions, if the first parameter is given.
 In this case the ``transformation_factory``-decorator simply passes the
@@ -561,17 +561,17 @@ is made on the basis of the type of the first argument.
 If the first argument is of type ``Path`` (defined as ``List[Node]``)
 the call is passed through, otherwise a partial function is generated.
 This places some subtle restrictions on the type of the first parameter
-(i.e. second argument) of a paramterized transformation function in so
+(i.e. second argument) of a parameterized transformation function in so
 far as this must not be a type that could be mistaken for the type
 ``Path`` of a subtype of ``Path``. As a rule of thumb it is advisable
 to avoid lists as types of the first parameter (or second argument,
 respectively) and use tuples or sets instead if a container type is needed.
 
 While this technical background may sound complicated, there is in fact little
-need to worry. For, paremeterized transformation functions have turned
-out to be easy and intuitive to handle in pratice.
+need to worry. For, parameterized transformation functions have turned
+out to be easy and intuitive to handle in practice.
 
-Probing functions can be paramterized in exactly the same fashion as regular
+Probing functions can be parameterized in exactly the same fashion as regular
 transformation functions with the same decorator ``transformation_factory``::
 
     >>> from typing import AbstractSet
@@ -607,7 +607,7 @@ Debugging the transformation-table
 Complex tranformations can become hard to follow and to debug. The
 transformation-module provides a simple "printf-style" debugging
 facility in form of the peek-function to help spotting mistakes.
-Additionally, the :py:mod:`DHParser.testng`-module provides
+Additionally, the :py:mod:`DHParser.testing`-module provides
 unit-testing-facilities that also cover the AST-transformation-step.
 
 Here is an example that demonstrates potentially unexpected results
@@ -811,10 +811,10 @@ Probing Functions
 * :py:func:`~transfrom.has_ancestor`: Checks whether the node has an has an has an ancestor 
   with one of the given names.
 
-* :py:func:`~transform.has_descendant`: Checks whether the node has a decsendant with
+* :py:func:`~transform.has_descendant`: Checks whether the node has a descendant with
   one of the given names. There are further functions like :py:func:`~transform.has_parent`, 
   :py:func:`~transform.has_child`, :py:func:`~transform.has_sibling` to check for immediate
-  ancestors, descendants or for neighbours on the same level.
+  ancestors, descendants or for neighbors on the same level.
 
 
 

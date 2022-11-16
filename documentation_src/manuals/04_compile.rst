@@ -168,11 +168,11 @@ exchanged by a modified tuple of children, for example because a child is
 dropped from the tree, this will not affect the tuple of children that
 "fallback_compiler" iterates over. So all children's handlers will be
 called even if a child is dropped and the result of its handler will
-subseqauently be ignored. By the same token, handlers of children added
+subsequently be ignored. By the same token, handlers of children added
 during the pass will not be called. Once, the pass is finished, the children
 still present in the tuple (and only those!) will be replaced by the result
 of their handler. This may sound complicated, but it is - as I believe -
-more or less the behaviour that you would intuitively expect.
+more or less the behavior that you would intuitively expect.
 
 However that may be, in order to keep
 the compiler-structure clean and comprehensible, it is generally advisable
@@ -180,7 +180,7 @@ manipulate only the child-composition of the node or its descendants in a
 handler but not that of its parent or farther ancestor(s). Still, as rules are there to be
 broken, it can sometimes become necessary to ignore this advice. The algorithm
 that "fallback_compiler" employ for tree-traversal allow you to ignore it
-safely. It is stille dangerous and, therefore, expressly not recommended to
+safely. It is still dangerous and, therefore, expressly not recommended to
 manipulate the sibling-composition!
 
 It is not necessary to call the handlers of the child-nodes right at
@@ -572,7 +572,7 @@ the very simple concept of junctions, where a junctions is the connection of an
 earlier stage (origin) in the the pipeline to a following stage (target) via a
 transformation or compilation function. Pipelines are created by providing
 junctions from for each intermediate stage from the starting stage (usually the
-last stage of the standard pipline) to one or more ending stages. Bifurcations a
+last stage of the standard pipeline) to one or more ending stages. Bifurcations a
 created simply by providing to different junctions starting from the same origin
 stage. (It is not allowed to have more than one junction for one and the same
 target stages.)

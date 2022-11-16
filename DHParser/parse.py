@@ -2731,7 +2731,7 @@ def Custom(custom_parser: Union[Parser, CustomParseFunc, str]) -> Parser:
         custom_parser = globals().get(custom_parser, custom_parser)
         assert callable(custom_parser), f"Not a CustomParseFunc: {custom_parser}"
     else:
-        raise ValueError('Illegal parameter {custom_parser} of type {type(custom_parsr}')
+        raise ValueError(f'Illegal parameter {custom_parser} of type {type(custom_parser)}')
 
 
 class UnaryParser(CombinedParser):

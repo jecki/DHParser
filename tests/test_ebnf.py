@@ -1807,7 +1807,7 @@ def parse_number(s):
         float(str(s[:i]))
     except ValueError:
         return None
-    return Node('NUMBER', s[:i])
+    return Node('', s[:i])
     '''
     py_parse_number_class = r'''
 class ParserNumber(Parser):
@@ -1821,7 +1821,7 @@ class ParserNumber(Parser):
             float(str(s[:i]))
         except ValueError:
             return None, location
-        return Node('NUMBER', s[:i]), location + i        
+        return Node(self.node_name, s[:i]), location + i        
     '''
     py_parse_factory_func = r'''
 def parse_number(base_as_str: str):
@@ -1836,7 +1836,7 @@ def parse_number(base_as_str: str):
             int(num_str, base)
         except ValueError:
             return None
-        return Node('NUMBER', num_str)
+        return Node('', num_str)
     return parse_number_func
     '''
 

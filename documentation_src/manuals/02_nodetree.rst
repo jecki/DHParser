@@ -84,7 +84,7 @@ been initialized with a single node::
     >>> parent.result
     (Node('word', 'Palace'),)
 
-The `result`-property can be assigned to, in order to changae the data of a
+The `result`-property can be assigned to, in order to change the data of a
 node::
 
     >>> parent.result = (Node('word', 'Buckingham'), Node('blank', ' '), node)
@@ -93,7 +93,7 @@ node::
 
 Content-equality of Nodes must be tested with the `equals()`-method. The
 equality operator `==` tests merely for the identity of the node-object, not for
-the euqality of the content of two different node-objects::
+the equality of the content of two different node-objects::
 
     >>> n1 = Node('dollars', '1')
     >>> n2 = Node('dollars', '1')
@@ -125,7 +125,7 @@ all of its children::
     >>> parent.children
     (Node('word', 'Buckingham'), Node('blank', ' '), Node('word', 'Palace'))
 
-Both the `content`-property and the `children`-propery are read-only-properties.
+Both the `content`-property and the `children`-property are read-only-properties.
 In order to change the data of a node, its `result`-property must be assigned to
 (as shown above).
 
@@ -470,7 +470,7 @@ One can also think of a tree-path as a breadcrumb-trail or, rather, ant-trail th
 particular part of text by marking the path from the root to the node, the
 content of which contains this text. This node does not need to be a leaf node,
 but can be any branch-node on the way from the root to the leaves of the tree.
-When analysing or transforming a tree-structured text, it is often helpful to
+When analyzing or transforming a tree-structured text, it is often helpful to
 "zoom" in and out of a particular part of text (pointed to by a path) or to
 move forward and backward from a particular location (again represented by a
 path).
@@ -499,8 +499,8 @@ Thus::
     >>> pp_path(next_path(pointer), with_content=-1)
     'sentence "This is Buckingham Palace" <- phrase "Buckingham Palace"'
 
-The reason for this beaviour is that ``prev_path()`` and ``next_path()``
-try to move to the path which contains the string content preceeding or
+The reason for this beavior is that ``prev_path()`` and ``next_path()``
+try to move to the path which contains the string content preceding or
 succeeding that of the given path. Therefore, these functions move to the
 next sibling on the same branch, rather traversing the complete tree like the
 ``select()`` and ``select_path()``- methods of the Node-class. However, when
@@ -569,7 +569,7 @@ Basics
 ^^^^^^
 
 For finding a passage in the text or identifying certain textual features
-like, for exmple, matching brakets, traverisng the tree is not really an 
+like, for example, matching brackets, traversing the tree is not really an 
 option, if only, because a passage may extend over several nodes, possibly
 even on different levels of the tree hierarchy. For such cases it is possible to
 generate a content mapping that maps text positions within the pure string-content
@@ -602,7 +602,7 @@ Now let's find all letters that are followed by a whitespace character::
 .. tip::
     Other than the node's content property, the content mappings content
     field is not generated on the fly every time it is retrieved, but
-    only when instantiating or reubuilding the mapping. Performancewise
+    only when instantiating or rebuilding the mapping. Performance-wise
     it is advisable to always use the content mapping's content field.
 
 The target returned by :py:meth:`~nodetree.ContentMapping.get_path_and_offset`
@@ -736,7 +736,7 @@ Now, let's look for the string "München" in the footnotes only::
     0
 
 We can now manipulate the tree through the path and offset. Let's insert the word
-"Stadt" in front of "München". We do so by changeing the result of the leaf node
+"Stadt" in front of "München". We do so by changing the result of the leaf node
 of the path to the term at the given offset::
 
     >>> path[-1].result = path[-1].result[:offset] + "Stadt " + \
@@ -755,7 +755,7 @@ inside the footnote::
 
 As mentioned earlier, the content mapping should be considered tainted if the
 underlying tree has been changed by any other means than the methods of the
-ContentMapping-obejct itself. In order to rebuild the affected path of the
+ContentMapping-object itself. In order to rebuild the affected path of the
 content mapping :py:meth:`ContentMapping.rebuild_mapping` must be called for
 the affected sections of the content mapping which are defined by the first
 and last path index of the content mapping where a change has taken place::
@@ -776,7 +776,7 @@ For example assume that the node-name "pB" signifies a page break, which
 implies that there is a gap between the two parts separated by the page
 break. However, because this is considered part of the meaning
 of "pb" it may not be required by the encoding guide-lines for the
-documnet that a gap, say, a blank character or a linefeed is also
+document that a gap, say, a blank character or a linefeed is also
 redundantly encoded in the string content of the document as well.
 (It may even be forbidden to do so!) But then a search on the
 string content may miss phrases separated by a page break::
@@ -864,12 +864,12 @@ runs across the border of another tag, in this case <location>. Note, that the
 <lb/>-tag lies inside the <foreign>-tag. But that makes sense, because it would
 also have been inside the <foreign>-tag, had there been no <location>-tag and
 no need to split. (Per default, the algorithm behaves somewhat "greedy", which,
-however can be configered with a parameter with the same name passed to the
+however can be configured with a parameter with the same name passed to the
 constructor of class ContentMapping.)
 
 But what if you don't wand the <foreign>-tag to be split up in two or more parts,
 as the case may be. Well, in this case, you need to allow those tags, the
-broders of which the new markup runs across, to be split by that markup::
+borders of which the new markup runs across, to be split by that markup::
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
     >>> divisability_map = {'foreign': {'location', ':Text'},
@@ -896,7 +896,7 @@ broders of which the new markup runs across, to be split by that markup::
     </hard>
 
 See the difference? This time the <foreign>-element remains intact, while the
-<location>-element has been split. This behaviour can be configures by the
+<location>-element has been split. This behavior can be configures by the
 divisability-map that is passed to the parameter ``divisability`` of the
 ContentMapping-constructor. It maps elements (or, rather, their names)
 to sets of elements that can be cut by them. The asterix ``*`` is a wildcard
@@ -908,10 +908,10 @@ with a name in this set can be cut by any other element. Any element the name of
 which is not a member of the set cannot be cut when markup is added.
 
 In cases where markup overlaps element-borders, it is unavoidable to decide which
-element will be divided and which not. It is a general limitation of tree strcutures
+element will be divided and which not. It is a general limitation of tree structures
 that they do not allow overlapping hierarchies. In this particular example, it would
 most probably be more reasonable to keep the <location>-element intact, because
-locatons should probably be recognisable as units, while this does not really seem
+locations should probably be recognizable as units, while this does not really seem
 to matter for a foreign language annotation.
 
 The case may arise, though, where you cannot avoid splitting elements that form
@@ -959,7 +959,7 @@ may show::
     ...     " is German for 'City of Munich'</footnote> in Bavaria"
     ...     " in this sentence.</doc>")
 
-Let's assume we'd like to markup locations and text-passages in foreign laguages, 
+Let's assume we'd like to markup locations and text-passages in foreign languages, 
 but only in the main text and not within footnotes and the like. For that purpose, 
 we build a context mapping that is restricted to non-footnote-text::
 
@@ -997,15 +997,15 @@ for this phrase and add the required location markup::
 The <location>-element covers the entire span, including the footnote. This
 is to be expected as changes are always carried out on the full tree. Only,
 the mapping is restricted to certain parts of the document. Usually, this
-is also the desired behaviour, though, admittedly, depending on the use case
+is also the desired behavior, though, admittedly, depending on the use case
 another behavior (e.g. splitting the <location>-element into one part before
-the <footnote>-elemnt and one part after that element) might be preferable.
+the <footnote>-element and one part after that element) might be preferable.
 Such cases are not covered by the markup-method of class ContentMapping.
 
 Because, the <location>-element did not need to be split, it does not need
 and therefore does not have a "chain"-attribute.
 
-Next, let's add the <foreign>-element. (We substitue the value of its 
+Next, let's add the <foreign>-element. (We substitute the value of its 
 chain-attribute, so that the doctest does not break, when another random
 key is picked!)::
 
@@ -1042,14 +1042,14 @@ different choices are imaginable which, however, are not covered by the
 Error Messages
 --------------
 
-Although errors are typically located at a particualr point or range of the
+Although errors are typically located at a particular point or range of the
 source code, DHParser treats them as global properties of the syntax tree
 (albeit with a location), rather than attaching them to particular nodes. This
 has two advantages:
 
 1. When restructuring the tree and removing or adding nodes during the
-   abtract-syntax-tree-transformation and possibly further tree-transformation,
-   error messages do not accidently get lost.
+   abstract-syntax-tree-transformation and possibly further tree-transformation,
+   error messages do not accidentally get lost.
 
 2. It is not necessary to add another slot to the Node class for keeping an
    error list which most of the time would remain empty, anyway.
@@ -1100,7 +1100,7 @@ just serve to store XML-attributes, the value of which is always a string. The
 cases of XML-attributes.
 
 One important use case of attributes is to add or remove css-classes to the
-"class"-attribute. The "class"-attribute understood as containg a set of
+"class"-attribute. The "class"-attribute understood as containing a set of
 whitespace delimited strings. Module "nodetree" provides a few functions to
 simplify class-handling::
 

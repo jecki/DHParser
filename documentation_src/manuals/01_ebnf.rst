@@ -23,8 +23,8 @@ formalism for specifying Grammars for context-free-languages.
 The recommended way of compiling grammars with DHParser is to either
 write the EBNF-specification for that Grammar into a text-file and then
 compile EBNF-source to an executable as well as importable Python-module
-with the help of the "dhparser"-skript. Or, for bigger projects, to
-create a new domain-specific-language-project with the DHParser-skript
+with the help of the "dhparser"-script. Or, for bigger projects, to
+create a new domain-specific-language-project with the DHParser-script
 as described in the step-by-step-guide.
 
 However, here we will show how to compile an EBNF-specified grammar
@@ -65,7 +65,7 @@ positive lookahead        & ...               & ...
 negative lookahead        ! ...               ! ...
 ========================  ==================  ================
 
-"insignificant whitespace" is a speciality of DHParser. Denoting
+"insignificant whitespace" is a specialty of DHParser. Denoting
 insignificant whitespace with a particular sign ``~`` allows to eliminate
 it already during the parsing process without burdening later
 syntax-tree-processing stages with this common task. DHParser offers
@@ -117,13 +117,13 @@ The structure of a JSON file can easily be described in EBNF::
 
 This is a rather common EBNF-grammar. A few peculiarities are noteworthy, though:
 First of all you might notice that some components of the grammar
-(or "prduction rules" as they are commonly called) have names with a leading
+(or "production rules" as they are commonly called) have names with a leading
 underscore ``_``. It is a convention to mark those elements, in which we are on
 interested on their own account, with an underscore ``_``. When moving from the
 concrete syntax-tree to a more abstract syntax-tree, these elements could be
 substituted by their content, to simplify the tree.
 
-Secondly, some production rules carry a name written in captial letters. This is also
+Secondly, some production rules carry a name written in capital letters. This is also
 a convention to mark those symbols which with other parser-generators would
 represent tokens delivered by a lexical scanner. DHParser is a "scanner-less"
 parser, which means that the breaking down of the string into meaningful tokens
@@ -135,10 +135,10 @@ slashes and follow the standard syntax of Perl-style regular expression that is
 also used by the "re"-module of the Python standard library. (Don't worry about
 the number of backslashes in the line defining ``_CHARS`` for now!)
 
-Finally, it is another helpful conention to indent the defintions of symbols
-that have only been introduced to simplify an otherwise uneccessarily
+Finally, it is another helpful convention to indent the definitions of symbols
+that have only been introduced to simplify an otherwise unnecessarily
 complicated definition (e.g. the definition of ``number``, above) or to make
-it more understandable by giving names to its componentns (like ``_EOF``).
+it more understandable by giving names to its components (like ``_EOF``).
 
 Let's try this grammar on our test-string.  In order to compile
 this grammar into executable Python-code, we use the high-level-function
@@ -153,7 +153,7 @@ this grammar into executable Python-code, we use the high-level-function
 As expected serializing the content of the resulting syntax-tree yields exactly
 the input-string of the parsing process. What we cannot see here, is that the
 parser has structured the string into the individual elements described in the
-grammar. Since the concrete syntax-tree that the parser vields is rather
+grammar. Since the concrete syntax-tree that the parser yields is rather
 verbose, it would not make sense to print it out. We'll just look at a small
 part of it, to see what it looks like. Let's just pick the sub-tree that
 captures the first json-array within the syntax-tree::
@@ -320,16 +320,16 @@ example, the parser is directed to drop all insignificant whitespace::
 
 Directives look similar to productions, only that on the right hand
 side of the equal sign follows a list of parameters. In the case
-of the drop-directive these can be either names of non-anomymous
+of the drop-directive these can be either names of non-anonymous
 nodes that shall be dropped or one of four particular classes of
 anonymous nodes (``strings``, ``backticked``, ``regexp``, ``whitespace``) that
 will be dropped.
 
 Another useful directive advises the parser to treat named nodes as
-anynouse nodes and to eliminate them accordingly during parsing. This
-is usefule, if we have introduced certain names in our grammar
+anonymous nodes and to eliminate them accordingly during parsing. This
+is useful, if we have introduced certain names in our grammar
 only as placeholders to render the definition of the grammar a bit
-more readable, not because we are intested in the text that is
+more readable, not because we are interested in the text that is
 captured by the production associated with them in their own right::
 
     >>> disposable_symbols = '@disposable = /_\\w+/ \n'
@@ -347,7 +347,7 @@ Now, let's examine the effect of these two directives::
     >>> syntax_tree.content
     '{"array":[1,2.0,"a string"],"number":-1.3e+25,"bool":false}'
 
-You might have notived that all insigificant whitespaces adjacent to
+You might have noticed that all insignificant whitespaces adjacent to
 the delimiters have been removed this time (but, of course not the
 significant whitespace between "a" and "string" in "a string"). And
 the difference, the use of these two directives makes, is even more
@@ -381,8 +381,8 @@ that DHParser offers in the parsing stage require some care to do this
 properly.
 
 The @drop-directive allows to drop all unnamed strings (i.e. strings
-that are not directly assigned to a symbol) and backticked strings (for
-the difference between strings and backticked strings, see below) and
+that are not directly assigned to a symbol) and back-ticked strings (for
+the difference between strings and back-ticked strings, see below) and
 regular expressions. However, using ``@drop = whitespace, strings, backticked``
 would also drop those parts captured as string that contain data::
 
@@ -401,7 +401,7 @@ would also drop those parts captured as string that contain data::
 Here, suddenly, the number "2.0" has been turned into "20"! There
 are three ways to get around this problem:
 
-1. Assigning all non-delmiter strings to symbols. In this case
+1. Assigning all non-delimiter strings to symbols. In this case
    we would have to rewrite the definition of "number" as such::
 
       number     = _INT _FRAC? _EXP? ~
@@ -415,7 +415,7 @@ are three ways to get around this problem:
         _Esmall  = `e`
 
    A simpler alternative of this technique would be to make use of
-   the fact that the document-parts captured by regular expresseion
+   the fact that the document-parts captured by regular expression
    are not dropped (although regular expressions can also be listed
    in the @drop-directive, if needed) and that at the same time
    delimiters are almost always simple strings containing keywords
@@ -430,7 +430,7 @@ are three ways to get around this problem:
 2. Assigning all delimiter strings to symbols and drop the nodes
    and content captured by these symbols. This means doing exactly
    the opposite of the first solution. Here is an excerpt of what
-   a JSON-grammar emploing this technique would look like::
+   a JSON-grammar employing this technique would look like::
 
       @disposable = /_\\w+/
       @drop = whitespace, _BEGIN_ARRAY, _END_ARRAY, _KOMMA, _BEGIN_OBJECT, ...
@@ -457,7 +457,7 @@ JSON-Parser according to the first solution-strategy. Observe, that the
 values of "bool" and "null" are now defined with regular expressions
 instead of string-literals, because the latter would be dropped because
 of the ``@drop = ... strings, ...``-directive, leaving an empty named node
-without a value, wheneever a bool value or null occurs in the input::
+without a value, whenever a bool value or null occurs in the input::
 
     >>> json_gr = '''
     ...     @disposable = /_\\w+/
@@ -487,10 +487,10 @@ without a value, wheneever a bool value or null occurs in the input::
         (:RegExp "0"))
       (string "a string"))
 
-This time the data is not distorted, any more. One oddity reamins, however: We
+This time the data is not distorted, any more. One oddity remains, however: We
 are most probably not interested in the fact that the number 2.0 consists of
 three components, each of which hast been captured by a regular expression.
-Luckiliy, there exists yet another directive that allows to reduce the tree
+Luckily, there exists yet another directive that allows to reduce the tree
 further by merging adjacent anonymous leaf-nodes::
 
     >>> json_gr = '@reduction = merge \n' + json_gr
@@ -541,7 +541,7 @@ There are for possible values for the ``@direction``-directive:
 Applying any of the here described tree-reductions (or "simplifications" for
 that matter) requires a bit of careful planning concerning which nodes
 will be named and which nodes will be dropped. This, however, pays off in
-terms of speed and a considerably simplified abtract-syntax-tree generation
+terms of speed and a considerably simplified abstract-syntax-tree generation
 stage, because most of the unnecessary structure of concrete-syntax-trees
 has already been eliminated at the parsing stage.
 
@@ -563,14 +563,14 @@ Depending on the data model, whitespace can be considered as
 significant and be included in the data or as
 insignificant and be excluded from the data and only be re-inserted
 when displaying the data in a human-readable-form. (For example, one
-can model a sentence as a seuqence of words and spaces or just as
+can model a sentence as a sequence of words and spaces or just as
 a sequence of words.) Note, that "significance" does not correlate
-with the syntatic or asthetic function, but only depends on whether
+with the syntactic or aesthetic function, but only depends on whether
 you'd like to keep the whitespace in you data or not.
 
 There can be different kinds of whitespace with different meaning
 (and differing significance). For example, one can make a difference
-between horozontal whitespace (spaces and tabs) and vertical
+between horizontal whitespace (spaces and tabs) and vertical
 whitespace (including linefeeds). And there can be different sizes
 of whitespace with different meaning. For example in LaTeX, a single
 linefeed still counts as plain whitespace while an empty line (i.e.
@@ -592,7 +592,7 @@ Significant Whitespace
 
 A reasonable approach to coding whitespace is to use one
 particular symbol for each kind of whitespace. Those kinds of
-whitespace that are insignficant, i.e. that do not need to
+whitespace that are insignificant, i.e. that do not need to
 appear in the data, should be dropped from the syntax-tree.
 With DHParser this can be done already while parsing, using
 the ``@disposable`` and ``@drop``-directives described earlier.
@@ -687,10 +687,10 @@ printing the content of the data-tree::
     >>> print(sentence)
     First of all: what is work?
 
-Otherwise one would have to programm a dedicated serialization routine. Especially,
+Otherwise one would have to program a dedicated serialization routine. Especially,
 if you receive data from a different source, you'll appreciate not having to
 do this - and so will other people, receiving your data. Think about it! However,
-dropping the whitespace will yield more consice data.
+dropping the whitespace will yield more concise data.
 
 Coding Comments
 ^^^^^^^^^^^^^^^
@@ -707,12 +707,12 @@ view, adding comments to a DSL raises two questions:
 2. How do we avoid pollution of the EBNF-grammar with comment markers?
    It's already curtails the readability that we have to put whitespace
    symbols in so many places. And speaking of comments at the end of
-   the line: If linefeeds aren't important for us - as in our toy-grammar
+   the line: If line-feeds aren't important for us - as in our toy-grammar
    for prose-text, above - we probably wouldn't want to reframe our
    grammar just to allow for at the end of the line comments.
 
 Luckily, there exists a simple and highly intuitive solution that takes
-care of both of these concerns: We admitt comments, wherever whitespace
+care of both of these concerns: We admit comments, wherever whitespace
 is allowed. And we code this by defining a symbol that means: "whitespace
 and, optionally, a comment".
 
@@ -758,7 +758,7 @@ We will not worry about the more sub-structure of the S-nodes right now. If
 we are not interested in the comments, we could use the ``@disposable``,
 ``@drop`` and ``@reduction = merge``-directives to simplify these at the
 parsing stage. Or, we could extract the comments and normalize the whitespace
-at a later tree-processing stage. For now, let's just check wehter our
+at a later tree-processing stage. For now, let's just check wether our
 comments work as expected::
 
     >>> syntax_tree = extended_parser('What{check this again!} is work?')
@@ -776,7 +776,7 @@ The last error was to be expected, because we did not allow comments
 to serve a substitutes for whitespace. Let's check whether putting comments
 near paragraph breaks works as well::
 
-    >>> test_text = '''Happiness lies in the diminuniation of work.
+    >>> test_text = '''Happiness lies in the diminution of work.
     ...
     ... { Here comes the comment }
     ...
@@ -784,7 +784,7 @@ near paragraph breaks works as well::
     >>> syntax_tree = extended_parser(test_text)
     >>> print(' '.join(nd.name for nd in syntax_tree.children))
     paragraph PBR paragraph
-    >>> test_text = '''Happiness lies in the diminuniation of work.
+    >>> test_text = '''Happiness lies in the diminution of work.
     ... { Here comes the comment }
     ... What is work?'''
     >>> syntax_tree = extended_parser(test_text)
@@ -836,7 +836,7 @@ The ``~``-whitespace-marker differs from the usual pattern for
 defining whitespace in that it is implicitly optional, or what
 amounts to the same, it matches the empty string. Normally,
 it is to be considered bad practice to define a symbol as
-optional. Rahter, a symbol should always match something and
+optional. Rather, a symbol should always match something and
 only at the places where it is used, it should be marked as
 optional. If this rule is obeyed, it is always easy to tell,
 wether some element is optional or not at a specific place
@@ -847,10 +847,10 @@ question-mark or, if you use classical EBNF-syntax, to enclose
 it with square brackets.
 
 The default regular expression for the tilde-whitespace captures
-arbitraily many spaces and tabs and at most one linefeed, but
+arbitrarily many spaces and tabs and at most one linefeed, but
 not an empty line (``[ \\t]*(?:\\n[ \\t]*)?(?!\\n)``), as this is
 the most convenient way to define whitespace for text-data.
-However, the tilde whitespace can also be definied with any
+However, the tilde whitespace can also be defined with any
 other regular expression with the ``@whitespace``-directive.
 
 Let's go back to our JSON-grammar and define the optional
@@ -873,7 +873,7 @@ to at most a single linefeed::
 When redefining the tilde-whitespace, make sure that your regular expression
 also matches the empty string! There is no need to worry that the syntax tree
 get's cluttered by empty whitespace-nodes, because tilde-whitespace always
-yeidls anonymous nodes and DHParser drops empty anonymous nodes right away.
+yields anonymous nodes and DHParser drops empty anonymous nodes right away.
 
 Comments can be defined using the ``@comment``-directive. DHParser automatically
 intermingles comments and whitespace so that where-ever tilde-whitespace is
@@ -907,14 +907,14 @@ have been nicely dropped along with the tilde-whitespace.
 
 There is one caveat: When using comments alongside with whitespace that
 captures at most one linefeed, the comments should be defined in such
-a way that the last charcter of a comment is never a linefeed.
+a way that the last character of a comment is never a linefeed.
 
 Also a few limitations of the tilde-whitespace and directive-defined
 comments should be kept in mind: 1. Only one kind of insignificant
 whitespace can be defined this way. If there are more kinds of
 insignificant whitespace, all but one need to be defined conventionally
 as part of the grammar. 2. Both directive-defined comments and
-tilde-whitespace can only be defined by a regular expresseion. In
+tilde-whitespace can only be defined by a regular expression. In
 particular, nested comments are impossible to define with regular
 expressions, only.
 
@@ -941,7 +941,7 @@ element.
 
 In order to reduce cluttering the grammar with tile-signs, DHParser
 allows to turn on implicit tilde-whitespace adjacent to any
-string literal with the diretive ``@ literalws = right`` or
+string literal with the directive ``@ literalws = right`` or
 ``@ literalws = left``. As the argument of the directive suggests,
 whitespace is either "eaten" at the right hand side or the left
 hand side of the literal. String literals can either be
@@ -950,10 +950,10 @@ kinds of literals will have implicit whitespace, if the
 ``@literalws``-directive is used.
 
 (Don't confuse implicit whitespace
-with insignificant whitespace: Insignificnat whitespace is whitespace
+with insignificant whitespace: Insignificant whitespace is whitespace
 you do not need any more after parsing. Implicit whitespace is
 whitespace you do not denote explicitly in the grammar. It's
-a speciality of DHParser and DHParser allows onl the insignificant
+a specialty of DHParser and DHParser allows onl the insignificant
 whitespace denoted by the tilde-character to be declared as
 "implicit".)
 
@@ -983,7 +983,7 @@ whitespace is to be allowed::
 
     bool       = /true/~ | /false/~
 
-The compliete json-grammar now looks like this::
+The complete json-grammar now looks like this::
 
     >>> json_gr = '''
     ...     @disposable = /_\\w+/
@@ -1052,8 +1052,8 @@ definiendum, any more, because it has already been captured. (All this may not
 easily become clear from the error message itself, but can easily be found
 out by using the post-mortem debugger of module :py:mod:`trace`.)
 
-An common tequnique to avoid this problem would be to introduce an
-end-of-statemenet, for example, a semicolon ";". A more elegant way to solve
+An common technique to avoid this problem would be to introduce an
+end-of-statement, for example, a semicolon ";". A more elegant way to solve
 the problem in this case is to make use of the fact that if a word is
 followed by the definition sign ":=" it cannot be part of the definiens
 any more, but must be a definiendum. This can be encoded by using the
@@ -1068,12 +1068,12 @@ negative look-ahead operator "!":
     A dog    is a carnivorous quadrupel that barks
     A human  is a featherless biped
 
-The statement ``word !":="`` is a squence of a ``word`` and a negative lookahead.
+The statement ``word !":="`` is a sequence of a ``word`` and a negative lookahead.
 This whole sequence only matches, if ``word`` matches and the negative looakahead
 matches, which is only the case of the following text cannot be matched by ":=".
 
 We could have achieved the same effect with a positive lookahead by checking
-whether any of the possible follow-up-sqeuences of parser ``definines`` ensues::
+whether any of the possible follow-up-sequences of parser ``definiens`` ensues::
 
     >>> def_DSL = def_DSL_first_try.replace('definiens   = word { word }',
     ...                                     'definiens   = word { word &(word|EOF) }')
@@ -1095,7 +1095,7 @@ operators are very helpful for "exploring" the surroundings of a piece of text
 to be captured by a parser. They allow parsers to match or fail depending on
 the ensuing text.
 
-A negative lookahead expresseion can also serve to encode the meaning of
+A negative lookahead expression can also serve to encode the meaning of
 "without" if placed in front of another expression. Let's rewrite our
 grammar of a definitions-DSL so as to exclude certain bad words::
 
@@ -1132,7 +1132,7 @@ likely not compatible with any other parser-generator-toolkit based on EBNF-gram
 Also, lookback operators in DHParser are more restricted than lookahead-operators.
 They can only be used in combination with simple text or regular expression parsers
 and - here comes the idiosyncratic part - they work in the opposite direction.
-This means that if you want to check whether a parser is preceeded, say, by the
+This means that if you want to check whether a parser is preceded, say, by the
 keyword "BEGIN", the text phrase that you have to check for with the lookback
 parser is actually "NIGEB". If that still does not put you off, here is how
 lookback-operators are used: Let's assume that our definition should not only
@@ -1217,8 +1217,8 @@ expressions::
 
 As can be seen the location of the error is captured well enough,
 at least when we keep in mind that the computer cannot guess where
-we would have placed the forgotton closing bracket. It can only
-report the point where the mistake becomes aparant.
+we would have placed the forgotten closing bracket. It can only
+report the point where the mistake becomes apparent.
 
 However, the reported fact that it was the sub-parser \`*\` of
 parser term that failed at this location does little to enlighten
@@ -1291,7 +1291,7 @@ a failure. That latter is particularly helpful if the DSL is to be
 used in with an integrated development environment, which benefits greatly
 from fail-tolerant parsing. However I only recommend to start using these,
 only after the grammar has reached a certain amount of maturity, because
-changing the grammer ofter requires re-adjusting customized error messages
+changing the grammar ofter requires re-adjusting customized error messages
 and resume-clauses as well, which can become tedious.
 
 Custom error messages
@@ -1343,7 +1343,7 @@ deliver understandable error-messages::
     1:4: Error (1010): Illegal character(s) »\pha"...« in string.
 
 It is possible to place an error code or number at the beginning of
-the error string, spearated by a colon to override the default code
+the error string, separated by a colon to override the default code
 of 1010 for mandatory continuation errors. (See
 :ref:`below <grammar_code_for_errors>` for ean example where it makes
 sense to do so.)
@@ -1398,11 +1398,11 @@ Enhancing grammars with error-paths
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A frequently used approach to error catching is the encoding of alternative code
-paths for erreneous code right into the grammar. This is usually done by adding
-a further alternatve with the alternative-operator ``|`` that is specifically
+paths for erroneous code right into the grammar. This is usually done by adding
+a further alternative with the alternative-operator ``|`` that is specifically
 meant to "throw" an error if all regular alternatives have been exhausted.
 DHParser offers a special syntax to add an error message if a certain part of
-the grammar is activated during the parsing of an erreneous source-text:
+the grammar is activated during the parsing of an erroneous source-text:
 ``@Error("[CODE:]MESSAGE")`` where MESSAGE has to be substituted by a particular
 error message and the optional "CODE:" with a natural number at the beginning of
 the error-message from which the error-code must be separated with a colon. This
@@ -1419,7 +1419,7 @@ errors result in invalid results but DHParser will attempt to continue with the
 processing pipeline. This has the advantage that other errors further downstream
 will also be reported in the same passe. A possible disadvantage is that
 consequential errors may arise in the processing of faulty results from earlier
-stages in the pipeline. If too many consequential errors occur in the aftermathe
+stages in the pipeline. If too many consequential errors occur in the aftermath
 of an error, it should be considered to lift this error to a fatal error by
 assigning a higher number to it.  
 
@@ -1464,14 +1464,14 @@ this case at the beginning of the error-branch with a negative-lookahead::
              § EOF
 
 While the first line of the definition of the error-branch excludes the kinds of
-non-matche(s) that are not errors, the second line adds an error message with
+non-match(es) that are not errors, the second line adds an error message with
 the current location of the parser. We add an error code, "1010", to make it
 easier to identify this error in automated tests or the like. The last line is
 just a means to make the parser to stop parsing right on the spot (that is,
 unless this error is caught by a resume-directive, see :ref:`below
 <fail_tolerant_parsing>`). It will produce the consequential error "EOF
 expected", though. In order not to confuse the use, the error has been
-reconfigered as a simple notice that explains the situation with the directive
+reconfigured as a simple notice that explains the situation with the directive
 ``@error_error = "20:Parser stopped because of an error"`` in the line before.
 
 Instead of stopping the parser by jumping right to the end of the document, one
@@ -1479,12 +1479,12 @@ might also try to skip only so much text as is needed to continue the
 parsing-process. In this trivial example, this is easily done by substituting
 the ``§ EOF`` statement with a regular expression that consumes all characters
 until the next location where the parser might find a possibly valid item. The
-expresion ``/.*?(?=\s|$)/`` skips all characters up to but not including the
+expression ``/.*?(?=\s|$)/`` skips all characters up to but not including the
 next blank or up to the end of the file. Let's try::
 
     >>> alt_gr = sequence_of_natural_numbers.replace('§ EOF', '/.*?(?=\\s|$)/')
-    >>> reenrant_number_parser = create_parser(alt_gr)
-    >>> syntax_tree = reenrant_number_parser('1 2 X 3 4 X 5')
+    >>> reentrant_number_parser = create_parser(alt_gr)
+    >>> syntax_tree = reentrant_number_parser('1 2 X 3 4 X 5')
     >>> for error in syntax_tree.errors_sorted:  print(error)
     1:5: Error (2010): Not a valid Number!
     1:11: Error (2010): Not a valid Number!
@@ -1535,9 +1535,9 @@ Fail tolerant parsing means that:
    and thus reports as many errors as possible on the first
    run.
 
-3. that ideally no consequential errors (Folgefehler) are
+3. that ideally no consequential errors ("Folgefehler") are
    introduced which are not original errors in the source
-   document, but merely artifacts of badly choosen locations
+   document, but merely artifacts of badly chosen locations
    for the resumption of the parsing process.
 
 There are a number of techniques for fail-tolerant parsing. One technique that
@@ -1559,7 +1559,7 @@ grammar-paths for possibly erroneous code to the grammar::
       (string_error "al\pha")
       (:Text '"'))
 
-This time the parser did not need to stop at the erroneous part. The erroneaus
+This time the parser did not need to stop at the erroneous part. The erroneous
 part itself has been caught within a node that betrays only by its name
 that there was an error. To produce error messages we have to add them
 explicitly to such nodes, afterwards:
@@ -1707,7 +1707,7 @@ resumption point must be at a reasonable place where the string parser might hav
 returned, if no error had occurred.
 
 A simple rule for specifying the reentry point of an error is to find a location
-where the next structural entity after the errouneous entity starts. Let's try
+where the next structural entity after the erroneous entity starts. Let's try
 this for a (simplified) `config-file <https://docs.python.org/3/library/configparser.html>`_
 parser::
 
@@ -1739,7 +1739,7 @@ at the first error. Further errors are neither detected nor reported::
     4:8: Error (1010): 'value' expected by parser 'entry', but »rose"\nBuil...« found instead!
 
 After adding suitable `resume`-clauses for those symbols the definition
-of which contain the mantatory marker `§`, all errors are reported in
+of which contain the mandatory marker `§`, all errors are reported in
 a single pass::
 
     >>> config_grammar = '''
@@ -1755,21 +1755,21 @@ a single pass::
 
 It can become difficult to find a reentry point with regular expressions
 that is on the same level of the parser call chain (or one level higher up in
-the case of the resume-directive) when an error occurres in a syntactic structure
+the case of the resume-directive) when an error occurs in a syntactic structure
 that can be recursively nested. Because of this it is also possible to specify
 the re-entry point with a parser. In this case, the search term has a different
 semantics however. If a parser is specified, it must match all characters
-from the point where the error occured up to the reentry point. In the case
+from the point where the error occurred up to the reentry point. In the case
 of a simple string or a regular expression, DHParser searches for the first
 match of the expression and then picks the location after that match. In order
 to distinguish the two cases clearly, PEG-rules must always be enclosed in round
 brackets. Thus, a single regular expression or a singular string enclosed in
-round brackets will not be uesed as a search term but as a matching expression
+round brackets will not be used as a search term but as a matching expression
 that determines the reentry-location by matching the complete text from the
 error location to the reentry-point.
 
 As an example, let's try this with a parser for arbitrarily nested lists
-of postive integers. First, we write our grammar without any re-entry rules::
+of positive integers. First, we write our grammar without any re-entry rules::
 
     >>> number_list_grammar = '''@ literalws   = right
     ... @ disposable  = /_\w+/
@@ -1784,9 +1784,9 @@ of postive integers. First, we write our grammar without any re-entry rules::
     >>> list_parser('[[1,2], [3,4]]').as_sxpr()
     '(list (list (number "1") (number "2")) (list (number "3") (number "4")))'
 
-The following example containts three errors: The letter "A" in a place where a
+The following example contains three errors: The letter "A" in a place where a
 number should be and, a bit later, the wrong delimiter ";" instead of a comma,
-and finally a missing value (or a superfluous comma) right befor the end.
+and finally a missing value (or a superfluous comma) right before the end.
 Since there are no rule for resuming the parser after an error ocurred, the
 parser will stop after the first error and also report that only part of the
 document could be parsed::
@@ -1807,7 +1807,7 @@ an error::
 Note, that for the "_items"-parser, several rules have been specified. DHParser
 will try all of these rules and resume at the closest of the locations these
 rules yield. The `@list_resume`-rule moves to a point after the list, where the
-list parser might have returned, if no error had occured, which is after the
+list parser might have returned, if no error had occurred, which is after the
 closing square bracket plus any adjacent whitespace. The '@_items_skip`-rule
 moves to any point within the sequence of items where the `_items` could catch
 up (another comma "," followed by further items) or end, because the sequence
@@ -1834,7 +1834,7 @@ nested structures are involved::
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
 
-Here, the parser stopped befere the end of the document, which shows that our resumption
+Here, the parser stopped before the end of the document, which shows that our resumption
 rules have been either incomplete or inadequate. Let's turn on some debugging information
 to get a better insight into what went wrong::
 
@@ -1852,7 +1852,7 @@ to get a better insight into what went wrong::
 What is of interest here, is the second notice: It seems that the error was caught within
 the "list"-parser. By moving on to the spot after closing bracket as determined by the
 `@list_resume`-directive, however, thar parsing-process did not end up at a location
-behind the grammatical structure where the error had occured, but at the location after
+behind the grammatical structure where the error had occurred, but at the location after
 a nested structure, which in this example is the inner list "[7, 8]".
 
 This problem can be remedied by using the full power of parsing expression grammars
@@ -1889,16 +1889,18 @@ and @resume-directives help separating the code for fail-tolerance from the
 grammar proper. The only hooks that are needed within the grammar proper are
 the mandatory markers ("§"). Still, it is a good strategy, to start adding the
 fail-tolerance code only later in the development of a grammar and to keep
-things as simple as possible. This can best be done by chosing resumption
+things as simple as possible. This can best be done by choosing resumption
 points that are as unambiguous as possible (like keywords that introduce
 specific parts of the document), even if this means that larger
 parts of the document will be skipped and, consequently, some errors will
 remain undetected until errors earlier in the document have been fixed.
 If syntax errors are sparse - as can reasonably be assumed - the harm done
-by skipping larger portions of the text is probably negligble or at any
+by skipping larger portions of the text is probably negligible or at any
 rate smaller than the harm done by introducing consequential errors as
-a result of poorly choosen resumption rules.
+a result of poorly chosen resumption rules.
 
+
+.. _context_sensitive_parsers:
 
 Context sensitive parsers
 -------------------------
@@ -1926,7 +1928,7 @@ the following code would be accepted by the parser:
     <line>O Rose thou art sick.</enil>
 
 In this case, the remedy is easy: When post-processing the syntax tree, check whether
-all end-tags have the same tag-name as the corresponbding start-tag and add an error
+all end-tags have the same tag-name as the corresponding start-tag and add an error
 message where this is not the case. However, this only works, because the tag-names
 have no influence on the structure of the syntax-tree of an XML-document.
 
@@ -1950,7 +1952,7 @@ is to allow you to fence code that may contain fenced code itself.::
 
 Here, a possible remedy is to employ a preprocessor, that distinguishes the fenced code
 from quoted fences and replaces the non-quoted fences by context-free opening and
-closing markers that can then be cpatured at parsing stage. Using preprocessors is often
+closing markers that can then be captured at parsing stage. Using preprocessors is often
 a clean and pragmatic solution and DHParser includes dedicated support for preprocessors.
 However, introducing preprocessors also hast some downsides. One disadvantage is that a
 preprocessor requires a makeshift parser of its own that must be strong enough not to
@@ -1999,8 +2001,8 @@ it can compared with the tag-name of the ending-tag::
 
 Here, the TagName-parser in the definition has been prefixed with a double colon ``::``. This double
 colon is the "Pop"-operator and can be put in front of any symbol defined in the grammar. If a symbol is
-annoted with the operator, then its parsing-rule will not be executed, but the last value that has been
-parsed by the symbal will be retrieved and match against the following part of the document by simple
+annotated with the operator, then its parsing-rule will not be executed, but the last value that has been
+parsed by the symbol will be retrieved and match against the following part of the document by simple
 text-comparison. If the last value matches the "Pop"-parser will remove that value from the stack of
 earlier values and report a match. Otherwise a non-match will be reported and the value will be
 left on the stack. In the example, since the Pop-parser ``::TagName`` follows a mandatory marker ``§``,
@@ -2025,7 +2027,7 @@ single colon `:`::
 Here the Pop-operator ``::`` is used in the definition of ``fenced`` in just the same way
 as in the earlier example. The Retrieve-operator ``:`` is used in the definition of
 ``no_fence`` in combination with a negative lookahead ``!``. This allows the no_fence-parsers
-to capture all "fences" which are not closing-fence of the current fenced enivronment::
+to capture all "fences" which are not closing-fence of the current fenced environment::
 
     >>> parseFenced = create_parser(fencedTextEBNF)
     >>> fenced_test_1 = '''~~~
@@ -2082,7 +2084,7 @@ importing it) and it must have the signature:
 
 This function takes the following text as well as the stack of previous value of
 the symbol that is being retrieved as an argument and it must return either
-a strech of matched text of ``None`` to indicate a non-match. The function
+a stretch of matched text of ``None`` to indicate a non-match. The function
 ``matching_bracket()`` is already defined in :py:mod:`DHParser.parse`. Slightly
 simplified to cover only the case of curly braces, it looks like this::
 
@@ -2118,11 +2120,11 @@ Advanced usages
 Apart from the Pop- and Retrieve-operator, DHParser offers a third retrieval operator that,
 like the Pop-operator, "pops" that last value from the stack and matches either this value
 or the empty strings. In other word, this operator always matches, as long as there is still
-a value on the stack, but it captures the begining of the following text only
+a value on the stack, but it captures the beginning of the following text only
 if it matches the stored value. A non-match only happens, when the stack has already been
-exhaustet. This "Pop anyways"-operator is denoted by a colon followed by a question mark ``:?``.
+exhausted. This "Pop anyways"-operator is denoted by a colon followed by a question mark ``:?``.
 Weird as this may sound, this operator has astonishingly manifold use cases. Think for
-exmple of a modifcation of our minimal pseudo-XML parser the allows coders to omit the
+example of a modification of our minimal pseudo-XML parser the allows coders to omit the
 tag name in closing tags to save them some typing:
 
     >>> miniXML = miniXML.replace('::TagName', ':?TagName')
@@ -2140,7 +2142,7 @@ tag name in closing tags to save them some typing:
 
 Another, rather tricky use case is to let the value of certain symbols be determined
 on first use by marking all appearances of theses symbols on the right hand side of
-the dfinitions wherein they appear with the single colon retrival operator ``:`` and
+the definitions wherein they appear with the single colon retrieval operator ``:`` and
 clearing the stack with ``[:?symbol]`` after the end of file has been reached.
 This technique has been employed for the "FlexibleEBNF"-parser in the examples folder.
 The FlexibleEBNF-parser "magically" adjusts itself to different syntactical flavors of
@@ -2204,7 +2206,7 @@ This trick can also be used to parse indentation::
                         (DEDENT))))
     ...
 
-In case you are suprised by the size of the resulting syntax-tree,
+In case you are surprised by the size of the resulting syntax-tree,
 keep in mind that the syntax-tree or "parse-tree" of the
 serialization of a data structure is not the data-structure itself,
 even if it happens to be a tree. However, the data-structure can
@@ -2265,7 +2267,7 @@ The problem of error resumption
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Resuming parsing after an error has occurred is complicated
-because, if done bady, it can lead to consequential errors, i.e.
+because, if done badly, it can lead to consequential errors, i.e.
 errors that are artifacts of the resumption rule or algorithm
 but not really errors in source text. This can be quite
 confusing and if worst comes to worst one cannot trust any
@@ -2326,12 +2328,12 @@ resume rule as full PEG-expression, not just a regular expression::
     >>> new_resume_rule = "@element_resume = (:?TagName '</' /\w+/ '>')"
 
 The regular expression ``/\s*(?=>)/`` merely has the purpose to cover
-enging-tags that fail to parse because of superfluous blanks before the
+ending-tags that fail to parse because of superfluous blanks before the
 closing ``>``. The important part is the "pop anyways"-operator
 ``:?TagName``. Since this operator does not capture any text in case
 of a misspelled tag-name, but merely removes it value from the stack,
-it it followed by the ragular expression ``/\s*(?=>)/`` which moves the
-parser forward to the next angualar bracket.::
+it it followed by the regular expression ``/\s*(?=>)/`` which moves the
+parser forward to the next angular bracket.::
 
     >>> i = miniXML.find('@element_resume')
     >>> k = miniXML.find('\n', i)
@@ -2344,7 +2346,7 @@ parser forward to the next angualar bracket.::
 If it only was so simple! Let's see what happens if we treat our
 parser with another, rather obvious or common mistake: Forgetting
 the closing tag (or, what leads to a similar confusion of the parser,
-omiting the closing slash ``/`` in an empty tag)::
+omitting the closing slash ``/`` in an empty tag)::
 
     >>> xmldoc = '''
     ... <doc>
@@ -2415,7 +2417,149 @@ processing stage.
 Custom Parsers
 --------------
 
+Specifying a grammar in EBNF and generating a parser from this specification has
+the advantage that one can get a much better overview over the grammar than when
+writing a completely parser directly in Python. This also makes changing the
+grammar and explaining it to others much easier. However, there are cases where
+writing a parsers at least for particular components in Python can be
+advantageous. These include cases, where it is easier to write a parser in
+Python, where a Python-parser might be faster, or where a parser cannot be coded
+in EBNF, say, because it requires as Turing-complete programming languages.
 
+A kind of parser that is a bit tedious to code in EBNF is a search parser. In
+the simplest imaginable case (e.g. ignoring comments ignoring nested structures,
+where the search phrase might occur, but should not be found) you could write
+``{ !"search_phrase" /.|\\n/ }``. Be wary that this search parser could land you in
+the middle of a comment, e.g. when "searching" for "rain" in the line ``I'm
+singing in # the rain`` (assuming ``#`` as the comment sign). So it is better to
+write ``{ !"search_phrase" (~ | /.|\\n/) }``. To keep the example simple, we'll leave
+such worries aside in the following::
+
+    >>> search_rain_grammar = '''@reduction = merge
+    ...     song = { search_rain [count_rain] } EOF
+    ...     search_rain = { !"rain" /.|\\n/ }
+    ...     count_rain  = "rain"
+    ...     EOF         = !/.|\\n/'''
+    >>> rain_counter = create_parser(search_rain_grammar)
+    >>> song = """
+    ...     I'm singin' in the rain
+    ...     Just singin' in the rain
+    ...     What a glorious feeling
+    ...     I'm happy again."""
+    >>> syntax_tree = rain_counter(song)
+    >>> print(syntax_tree.as_sxpr())
+    (song
+      (search_rain
+        ""
+        "    I'm singin' in the ")
+      (count_rain "rain")
+      (search_rain
+        ""
+        "    Just singin' in the ")
+      (count_rain "rain")
+      (search_rain
+        ""
+        "    What a glorious feeling"
+        "    I'm happy again.")
+      (search_rain)
+      (EOF))
+    >>> print(len(list(syntax_tree.select('count_rain'))))
+    2
+
+Let's now define a custom parser for "search_rain". A custom parser is a
+factory-function that returns a "custom parse function" which in turn is a
+function that takes a :py:class:`~stringview.StringView`-object as input and
+returns a :py:class:`nodetree.Node`-object or ``None`` as result. This
+factory-function can be a derived class from class :py:class:`parse.Parser` but
+does not need to be. In the EBNF-grammar is specified as ``@name(param)``
+where ``name`` is the name for the factory function on the Python side and
+``param`` either an identifier or - if enclosed in quotation marks - a single string
+paramter on the Python side, which can be used to configure the factory function.
+
+It is also possible to specify a custom parser function directly instead of
+a factory function. However, it must then be specified as the parameter of the
+predefined factory function "Custom", e.g. ``@Custom(parse_func)``. 
+
+The parser (factory) function itself must be defined in a global namespace
+that is reachable from the Grammar-class generated from the EBNF-code. A good
+place is the beginning of the generated "xxxParser.py"-script in case of
+DHParser-projects created with the "dhparser"-command. If, as in the following,
+the parser is created with :py:func:`~dsl.create_parser`, the custom code 
+should be passed as Python-source-string to the ``additional_code``-argument
+of the :py:func:`~dsl.create_parser`-function. In the following snipped, we,
+therefore, write it directly into a string.
+
+    >>> search_src = """
+    ... from DHParser.parse import CustomParseFunc
+    ... from DHParser.stringview import StringView
+    ... def search(what: string) -> CustomParseFunc:
+    ...     def parse_func(rest: StringView) -> Optional[Node]:
+    ...         i = rest.find(what)
+    ...         if i >= 0:  
+    ...             return Node('', rest[:i])
+    ...         else:
+    ...             return Node('', rest)
+    ...     return parse_func
+    ... """
+
+Note, that the name of the returned node ist left empty. It will be filled in by
+the :py:class:`~parse.CustomParser`-object either with the anonymous-parser name
+":CustomParser" or the name of the symbol to which the parser is assigned,
+because this information is not available within the function. If, however, the
+custom parser is defined as a class derived of :py:class:`~parse.CustomParser`,
+the right name must be given when creating the node. In most cases this will
+simply be ``self.node_name``.
+
+As said, referring to the custom parser factory function from the grammar is simple::
+
+    >>> search_rain_grammar = '''@reduction = merge
+    ...     song = { search_rain [count_rain] } EOF
+    ...     search_rain = @search("rain")
+    ...     count_rain  = "rain"
+    ...     EOF         = !/.|\\n/'''
+
+    >>> rain_counter = create_parser(search_rain_grammar, 
+    ...                              additional_code=search_src)
+
+Let's try using it::
+
+    >>> syntax_tree = rain_counter(song)
+    >>> print(syntax_tree.as_sxpr())
+    (song
+      (search_rain
+        ""
+        "    I'm singin' in the ")
+      (count_rain "rain")
+      (search_rain
+        ""
+        "    Just singin' in the ")
+      (count_rain "rain")
+      (search_rain
+        ""
+        "    What a glorious feeling"
+        "    I'm happy again.")
+      (search_rain)
+      (EOF))
+
+Another good use cases for custom parsers are long lists of fixed alternatives,
+say, a list of state-names, e.g. "Afghanistan, Albania, ... Zimbabwe" which
+would clutter the grammar and slow down parsing. In particular, if these lists
+are changed frequently and better directly fetched from a database then encoded
+in the grammar which would have to be recompiled every time there is a change in
+the data.
+
+Finally, custom parsers can also be used or misused for semantic actions of any
+kind. Tracing certain points of the parser by dumping debug-information would be
+one reasonable use case of this kind. When storing or manipulating data in your
+custom parser of producing other side effects, you should be aware that even if
+the parser matches, it's results may be thrown away later, because the
+rescursive descent parser pursues an other branch. There is no support by
+DHParser for filling and unwinding data-stacks or the like during parsing - with
+the exception the :ref:`context sensitive parsers <context_sensitive_parsers>`
+described above. If you want to store data at all, it is best to save the data
+in the attributes of the nodes that your custom function returns, because then
+you can be sure that only data from valid nodes survives to the end of the
+parsing process.
 
 
 *Classes and Functions-Reference*
@@ -2427,7 +2571,7 @@ like :py:func:`DHParser.dsl.create_parser` will be called or the
 `dhparser`-script will be used from the command line. Therefore, no
 commented abbreviated reference of the most important functions of
 module ``ebnf`` will be provided here. See the source code documentation
-of module :py:mod:`DHParser.ebnf` for a full references of all functions and
+of module :py:mod:`DHParser.ebnf` for a full reference of all functions and
 classes.
 
 
