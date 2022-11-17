@@ -59,9 +59,9 @@ packages = [
 
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 regex = { version = "*", optional = true }
-cython = { version = "^0.29", optional = true }
+cython = { version = "^0.3", optional = true }
 
 
 [tool.poetry.dev-dependencies]
@@ -74,5 +74,5 @@ dhparser_build_cython = 'DHParser.scripts.dhparser_build_cython:main'
 
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "Cython>=0.29", "setuptools", "wheel"]
+requires = ["poetry-core>=1.0.0", "Cython>=0.3", "setuptools", "wheel"]
 build-backend = "poetry.core.masonry.api"
