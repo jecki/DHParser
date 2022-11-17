@@ -1,13 +1,17 @@
-DHParser Version 1.3.0
-......................
+DHParser Version 1.3.0 (17.11.2022)
+...................................
 
+- New Requirement: Python 3.7 or greater!!!
+  (due to from __future__ import annoataions)
 - EBNF-grammars can now refer to custom Python parsers
-- EBNF-grammars can now attach errors to the syntax-tree, directly,
+- EBNF-grammars can now attach errors to the syntax-tree directly,
   e.g. number = digits | @Error("Not A Number") /.*?\d/
 - cython support moved to cython3, cython3 compatibility restored
 - support for arbitrary data, i.e. not only tree-data in intermediary
   steps of DHParser.compile-module's processing pipelines via optional
   RootNode.data - attribute
+- order of detailed manuals in documentation re-arranged
+
 
 DHParser Version 1.2 (3.10.2022)
 ................................
