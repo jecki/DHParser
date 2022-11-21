@@ -115,6 +115,7 @@ __all__ = ('SourceMap',
            'BADLY_NESTED_OPTIONAL_PARSER',
            'BAD_MANDATORY_SETUP',
            'DUPLICATE_PARSERS_IN_ALTERNATIVE',
+           'SYMBOL_NAME_IS_PYTHON_KEYWORD',
            'BAD_ORDER_OF_ALTERNATIVES',
            'BAD_REPETITION_COUNT',
            'MALFORMED_REGULAR_EXPRESSION',
@@ -246,6 +247,7 @@ CAPTURE_WITHOUT_PARSERNAME               = ErrorCode(1510)
 LOOKAHEAD_WITH_OPTIONAL_PARSER           = ErrorCode(1520)
 BADLY_NESTED_OPTIONAL_PARSER             = ErrorCode(1530)
 BAD_MANDATORY_SETUP                      = ErrorCode(1550)
+SYMBOL_NAME_IS_PYTHON_KEYWORD            = ErrorCode(1555)
 DUPLICATE_PARSERS_IN_ALTERNATIVE         = ErrorCode(1560)
 BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
 BAD_REPETITION_COUNT                     = ErrorCode(1580)

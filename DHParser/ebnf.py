@@ -50,7 +50,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
-    STRUCTURAL_ERROR_IN_AST, ERROR, FATAL, has_errors
+    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, ERROR, FATAL, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -1911,7 +1911,8 @@ class EBNFCompiler(Compiler):
 
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
         if get_config_value('static_analysis') == 'early' and not \
-                any((e.code >= FATAL or e.code == MALFORMED_REGULAR_EXPRESSION)
+                any((e.code >= FATAL or e.code in
+                     (MALFORMED_REGULAR_EXPRESSION, SYMBOL_NAME_IS_PYTHON_KEYWORD))
                     for e in self.tree.errors):
             errors = []
             # circumvent name-errors for external symbols
@@ -1977,8 +1978,10 @@ class EBNFCompiler(Compiler):
             self.tree.new_error(node, 'Symbol "%s" has already been defined as '
                                 'a preprocessor token.' % rule)
         elif keyword.iskeyword(rule):
-            self.tree.new_error(node, 'Python keyword "%s" may not be used as a symbol. '
-                                % rule + '(This may change in the future.)')
+            self.tree.new_error(node, f'Python keyword "{rule}" may not be used as a symbol. '
+                '(This may change in the future. In the meantime it might suffice to use '
+                'capital letters as a remedy, e.g. "And" instead of "and".)',
+                SYMBOL_NAME_IS_PYTHON_KEYWORD)
         try:
             self.current_symbols = [node]
             self.rules[rule] = self.current_symbols
