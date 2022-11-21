@@ -170,6 +170,28 @@ class TestDHParserCommandLineTool:
                                'data_8.sxpr', 'data_9.sxpr']
         os.chdir(save)
 
+    def test_dhparser_tst_script_error_report(self):
+        name = self.dirname
+        # test compiler creation and execution
+        system(self.python + os.path.join('..', 'DHParser', 'scripts', 'dhparser.py ')
+               + name + self.nulldevice)
+        for fname in os.listdir(name):
+            if fname.endswith('.ebnf'):
+                ebnf_name = fname
+                break
+        else:
+            raise AssertionError('No .ebnf-file found !?')
+        ebnf = """# this ebnf-code has errors:\n€€"""
+        with open(os.path.join(name, ebnf_name), 'w', encoding='utf-8') as f:
+            f.write(ebnf)
+        system(self.python + os.path.join(name, 'tst_%s_grammar.py --singlethread ' % name)
+               + self.nulldevice)
+        for fname in os.listdir(name):
+            if fname.endswith('_MESSAGES.txt'):
+                break
+        else:
+            raise AssertionError('No "..._MESSAGES.txt - file found!')
+        time.sleep(0.1)  # MS Windows needs a little break here...
 
 if __name__ == "__main__":
     from DHParser.testing import runner

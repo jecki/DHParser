@@ -1944,6 +1944,10 @@ class EBNFCompiler(Compiler):
                     # it is not merley a consequential error
                     # of an already reported error
                     raise te
+            except SyntaxError as se:
+                src_lines = probe_src.split('\n')
+                se.msg += f' "{src_lines[se.lineno - 1]}" '
+                raise se
             for sym, _, err in errors:
                 symdef_node = self.rules[sym][0]
                 err.pos = self.rules[sym][0].pos
