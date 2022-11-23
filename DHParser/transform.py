@@ -135,6 +135,7 @@ __all__ = ('TransformationDict',
            'remove_brackets',
            'remove_infix_operator',
            'remove_tokens',
+           'remove',
            'remove_if',
            'flatten',
            'forbid',
@@ -1598,16 +1599,21 @@ def remove_content(path: Path, regexp: str):
     remove_children_if(path, partial(content_matches, regexp=regexp))
 
 
+def remove(path: Path):
+    """Removes node unconditionally."""
+    try:
+        parent = path[-2]
+    except IndexError:
+        return
+    node = path[-1]
+    parent._set_result(tuple(nd for nd in parent._children if nd != node))
+
+
 @transformation_factory(collections.abc.Callable)
 def remove_if(path: Path, condition: Callable):
     """Removes node if condition is `True`"""
     if condition(path):
-        try:
-            parent = path[-2]
-        except IndexError:
-            return
-        node = path[-1]
-        parent._set_result(tuple(nd for nd in parent._children if nd != node))
+        remov(path)
 
 
 #######################################################################
