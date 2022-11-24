@@ -1445,12 +1445,24 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> tree.evaluate(actions)
             23
 
+        ``evaluate()`` can operate in two modes. In the basic mode, shown, in the
+        example, only the evaluated values of the children are passed to each
+        function in the action dictionary. However, if evaluate is called with
+        passing the begining of the path to its ``path``-argument, each function
+        will be called with the current path as its first argument the the
+        evaluated values of its children as the following arguments instead,
+        e.g. ``result = node.evaluate(actions, path=[node])``
+        This, more sophisticaed, mode gives the action function access to the
+        nodes of the tree as well.
+
         :param actions: A dictionary that maps node-names to action functions.
         :param path: If not empty, the current tree-path will be passed as first
             argument (before the evaluation results of the children) to each action.
-            Except for recursive calls of evaluate by evaluate itself, the non-empty
-            list that is passed should be a list of the node itself as its sole
-            element.
+            Start with a list of the node itself to trigger passing the path.
+        :raises KeyError: if an action is missing in the table, use the joker
+            '*' to vaoid this error, e.g. ``{ ..., '*': lambda node: node.content, ...}``.
+        :raises ValueError: in case any of the action functions cannot handle the
+            passed arguments.
         :return: the result of the evaluation
         """
         if path:
@@ -1458,16 +1470,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                             for child in self._children)) if self._children \
                    else (path, self._result,)
         else:
-            args = tuple(child.evaluate(actions, [])
+            args = tuple(child.evaluate(actions, path)
                          for child in self._children) if self._children \
                    else (self._result,)
         try:
-            return actions[self.name](*args)
-        except KeyError:
-            return self.content
+            action = actions[self.name]
+        except KeyError as ke:
+            if '*' in actions:
+                action = actions['*']
+            else:
+                raise ke
+        try:
+            return action(*args)
         except TypeError as e:
-            raise AssertionError(f'Evaluation function for tag "{self.name}" cannot handle '
-                                 f'arguments: {args}. Error raised: {e}')
+            raise ValueError(f'Evaluation function for tag "{self.name}" cannot handle '
+                             f'arguments: {args}. Error raised: {e}')
 
     # serialization ###########################################################
 

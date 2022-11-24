@@ -580,10 +580,13 @@ def run_pipeline(junctions: Set[Junction],
     """
     def cmp_junctions(a, b) -> int:
         if a[-1] == b[0]:
-            return -11
+            return -1
         if b[-1] == a[0]:
             return 1
-        return 0
+        if b[-1] > a[-1]:
+            return -1
+        else:
+            return 0
 
     t_to_j = {j[-1]: j for j in junctions}
     steps = []
