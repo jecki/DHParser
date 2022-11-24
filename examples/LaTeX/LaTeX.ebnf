@@ -195,13 +195,15 @@ text           = {_TEXT|special}+ { S  {_TEXT|special}+ }
 
 no_command     = "\begin{" | "\end{" | _BACKSLASH _structure_name &`{`
 blockcmd       = _BACKSLASH ( ( "begin{" | "end{" ) _env_name "}"
-                           | _structure_name & `{` | `[` | `]`)
+                            | _structure_name & `{` | `[` | `]`
+                            | _item_name )
 
 _env_name      = `enumerate` | `itemize` | `description` | `figure` | `quote`
                | `quotation` | `tabular` | `displaymath` [`*`]
                | `equation` [`*`] | `eqnarray` [`*`]
 _structure_name = `subsection` | `section` | `chapter` | `subsubsection`
-               | `paragraph` | `subparagraph` | `item`
+               | `paragraph` | `subparagraph`
+_item_name     = `item`
 
 
 #######################################################################

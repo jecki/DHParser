@@ -1434,10 +1434,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # evaluation ##############################################################
 
-    def evaluate(self, actions: Dict[str, Callable]) -> Any:
+    def evaluate(self, actions: Dict[str, Callable], path: Path = []) -> Any:
         """Simple tree evaluation: For each node the action associated with
         the node's tag-name is called with either the tuple of the evaluated
-        children or, in case of a leaf-node, the result-string as parameters::
+        children or, in case of a leaf-node, the result-string as parameter(s)::
 
             >>> tree = parse_sxpr('(plus (number 3) (mul (number 5) (number 4)))')
             >>> from operator import add, mul
@@ -1446,10 +1446,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             23
 
         :param actions: A dictionary that maps node-names to action functions.
+        :param path: If not empty, the current tree-path will be passed as first
+            argument (before the evaluation results of the children) to each action.
+            Except for recursive calls of evaluate by evaluate itself, the non-empty
+            list that is passed should be a list of the node itself as its sole
+            element.
         :return: the result of the evaluation
         """
-        args = tuple(child.evaluate(actions) for child in self._children) if self._children \
-               else (self._result,)
+        if path:
+            args = (path, *(child.evaluate(actions, path + [child])
+                            for child in self._children)) if self._children \
+                   else (path, self._result,)
+        else:
+            args = tuple(child.evaluate(actions, [])
+                         for child in self._children) if self._children \
+                   else (self._result,)
         try:
             return actions[self.name](*args)
         except KeyError:
