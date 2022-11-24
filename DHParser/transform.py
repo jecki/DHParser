@@ -1613,7 +1613,7 @@ def remove(path: Path):
 def remove_if(path: Path, condition: Callable):
     """Removes node if condition is `True`"""
     if condition(path):
-        remov(path)
+        remove(path)
 
 
 #######################################################################
