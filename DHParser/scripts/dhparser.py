@@ -42,6 +42,7 @@ from DHParser.error import is_error, has_errors, ERROR
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.log import start_logging
 from DHParser.toolkit import re, split_path
+from DHParser import versionnumber
 
 
 LOGGING = False
@@ -190,7 +191,9 @@ def main():
     set_preset_value('syntax_variant', 'heuristic')  # TODO: Bugs in Transformation-Table
     finalize_presets()
     if len(sys.argv) > 1:
-        if sys.argv[1].lower() == "--selftest":
+        if sys.argv[1].lower() in ("--version", "-v"):
+            print('dhparser version ' + versionnumber.__version__)
+        elif sys.argv[1].lower() == "--selftest":
             if not selftest():
                 print("Selftest FAILED :-(\n")
                 sys.exit(1)
@@ -246,6 +249,7 @@ def main():
             else:
                 create_project(sys.argv[1])
     else:
+        print('dhparser version ' + versionnumber.__version__)
         print('Usage: \n'
               '    dhparser.py PROJECTNAME  - to create a new project\n'
               '    dhparser.py FILENAME.ebnf  - to produce a python-parser from an EBNF-grammar\n'
