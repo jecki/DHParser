@@ -156,7 +156,7 @@ def cpu_profile(func, repetitions=1):
     import pstats
     profile = cProfile.Profile()
     profile.enable()
-    success = True
+    success = []
     for _ in range(repetitions):
         success = func()
         if not success:
@@ -216,7 +216,7 @@ def main():
                     print("Usage:  dhparser.py -ast FILENAME.ebnf")
                     sys.exit(1)
                 except FileNotFoundError:
-                    print('File "%s" not found!' % sys.arg[2])
+                    print('File "%s" not found!' % sys.argv[2])
                     sys.exit(1)
                 except IOError as e:
                     print('Could not read file "%s": %s' % (sys.argv[2], str(e)))
@@ -234,7 +234,7 @@ def main():
                     print("Usage:  dhparser.py -cpu/mem FILENAME.ebnf")
                     sys.exit(1)
                 except FileNotFoundError:
-                    print('File "%s" not found!' % sys.arg[2])
+                    print('File "%s" not found!' % sys.argv[2])
                     sys.exit(1)
                 except IOError as e:
                     print('Could not read file "%s": %s' % (sys.argv[2], str(e)))
