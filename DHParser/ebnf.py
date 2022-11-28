@@ -1006,6 +1006,9 @@ get_compiler = ThreadLocalSingletonFactory({NAME}Compiler)
 
 def compile_{NAME}(ast):
     return get_compiler()(ast)
+    
+    
+{NAME}_junction = ('ast', get_compiler, '{NAME}')    
 '''
 
 
