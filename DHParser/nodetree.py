@@ -1476,15 +1476,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         try:
             action = actions[self.name]
         except KeyError as ke:
-            if '*' in actions:
+            if self.name == ZOMBIE_TAG:
+                raise ValueError(f'Consequential Error: ZOMBIE__-node found in tree.')
+            elif '*' in actions:
                 action = actions['*']
             else:
                 raise ke
         try:
             return action(*args)
         except TypeError as e:
-            raise ValueError(f'Evaluation function for tag "{self.name}" cannot handle '
-                             f'arguments: {args}. Error raised: {e}')
+            raise ValueError(f'Evaluation function for tag "{self.name}" failed with error {e}. '
+                             f'Arguments: {args}.')
 
     # serialization ###########################################################
 
