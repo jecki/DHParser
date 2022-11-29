@@ -10,9 +10,9 @@ LOGGING = 'LOGS'
 DEBUG = True
 TEST_DIRNAME = 'tests_grammar'
 
-scriptpath = os.path.dirname(__file__)
-if scriptpath not in sys.path:
-    sys.path.append(scriptpath)
+scriptdir = os.path.abspath(os.path.dirname(__file__))
+if scriptdir not in sys.path:
+    sys.path.append(scriptdir)
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
@@ -27,7 +27,7 @@ except ModuleNotFoundError:
 
 
 def recompile_grammar(grammar_src, force):
-    grammar_tests_dir = os.path.join(scriptpath, TEST_DIRNAME)
+    grammar_tests_dir = os.path.join(scriptdir, TEST_DIRNAME)
     testing.create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
     if not dsl.recompile_grammar(grammar_src, force=force,
@@ -47,7 +47,7 @@ def run_grammar_tests(fn_pattern, get_grammar, get_transformer):
         if not testdir.startswith('/') or not testdir[1:2] == ':':
             testdir = os.path.abspath(testdir)
     else:
-        testdir = os.path.join(scriptpath, TEST_DIRNAME)
+        testdir = os.path.join(scriptdir, TEST_DIRNAME)
     DHParser.log.start_logging(os.path.join(testdir, LOGGING))
     error_report = testing.grammar_suite(
         testdir, get_grammar, get_transformer,
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptpath, '{name}.ebnf'),
+        recompile_grammar(os.path.join(scriptdir, '{name}.ebnf'),
                           force=False)
         sys.path.append('.')
         from {name}Parser import get_grammar, get_transformer

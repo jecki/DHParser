@@ -12,7 +12,7 @@ VERBOSE = False
 
 assert sys.version_info >= (3, 6, 0), "DHParser.server requires at least Python-Version 3.6.0"
 
-scriptpath = os.path.dirname(__file__)
+scriptpath = os.path.abspath(os.path.dirname(__file__))
 servername = os.path.splitext(os.path.basename(__file__))[0]
 
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server

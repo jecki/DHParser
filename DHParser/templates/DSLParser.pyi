@@ -85,20 +85,20 @@ def batch_process(file_names: List[str], out_dir: str,
 
 def main():
     # recompile grammar if needed
-    script_path = os.path.abspath(__file__)
-    if script_path.endswith('Parser.py'):
-        grammar_path = script_path.replace('Parser.py', '.ebnf')
+    scriptpath = os.path.abspath(__file__)
+    if scriptpath.endswith('Parser.py'):
+        grammar_path = scriptpath.replace('Parser.py', '.ebnf')
     else:
-        grammar_path = os.path.splitext(script_path)[0] + '.ebnf'
+        grammar_path = os.path.splitext(scriptpath)[0] + '.ebnf'
     parser_update = False
 
     def notify():
-        global parser_update
+        nonlocal parser_update
         parser_update = True
         print('recompiling ' + grammar_path)
 
     if os.path.exists(grammar_path) and os.path.isfile(grammar_path):
-        if not recompile_grammar(grammar_path, script_path, force=False, notify=notify):
+        if not recompile_grammar(grammar_path, scriptpath, force=False, notify=notify):
             error_file = os.path.basename(__file__)\
                 .replace('Parser.py', '_ebnf_MESSAGES.txt')
             with open(error_file, 'r', encoding="utf-8") as f:

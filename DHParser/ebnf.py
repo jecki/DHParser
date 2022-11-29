@@ -107,11 +107,11 @@ import sys
 from typing import Tuple, List, Union, Any, Optional, Callable, cast
 
 try:
-    scriptpath = os.path.dirname(__file__)
+    scriptdir = os.path.abspath(os.path.dirname(__file__))
 except NameError:
-    scriptpath = ''
-if scriptpath and scriptpath not in sys.path:
-    sys.path.append(scriptpath)
+    scriptdir = ''
+if scriptdir and scriptdir not in sys.path:
+    sys.path.append(scriptdir)
 
 try:
     import regex as re
