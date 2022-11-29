@@ -1185,20 +1185,23 @@ LALR-parsers and about as fast as the about equally powerful Earley-parsers.
 If you feel that DHParser's performance is too slow, you can increase the
 roughly a factor of 2 by compiling with `Cython`_. In order to do so you
 need to have a c-ompiler installed on your system (gcc, clang on Linux
-or MacOs and msvc on Windows will all do. You can then install the
-`Cython`_-package with::
+or MacOs and msvc on Windows will all do.  Since
+Version 1.3 DHParser requires at least Cython Version 3 alpha 11,
+which cannot be installed from the `Python Package Index <https://pypi.org/>`_
+but must be built from the `sources on github <https://github.com/cython/cython>`_.
+On some Linux-distributions you might find it in the community-repositories.
+(Under Arch-Linux it can be installed with ``yay -S cython3``.)
 
-    $ python -m pip install cython
-
-Compiling DHParser is simple. You just need to call the ``cythonize_dhparser.py``-script
-in the ``scripts``-subdirectory of DHParsers-installation-driectory::
+Compiling DHParser is simple. You just need to call the
+``dhparser_cythonize.py``-script in the ``scripts``-subdirectory of
+DHParsers-installation-driectory::
 
     $ python DHParser/scripts/dhparser_cythonize.py
 
 DHParser can also be run with any recent version of `pypy3`_. However, my own
-experience so far has been that while running DHParser with pypy over one and the
+experience so far has been that while running DHParser with pypy with one and the
 same dataset over and over again produces a most impressive speedup, in real-world
-applications of DHParser (e.g. running a whole fascicle of different(!) medieval latin
+applications of DHParser (I ran a whole fascicle of different medieval latin
 dictionary articles through DHParser in batch-mode), pypy is a even bit slower
 than the python-interpreter. So, presently, I'd recommend staying with `Cython`_ when
 trying to speed-up DHParser.

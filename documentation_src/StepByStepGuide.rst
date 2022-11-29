@@ -1,5 +1,5 @@
-Step by Step Guide
-******************
+A Step by Step Guide
+********************
 
 This step by step guide goes through the whole process of designing and testing
 a domain specific notation with the DHParser-package from the very start.

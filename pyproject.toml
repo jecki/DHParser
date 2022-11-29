@@ -61,7 +61,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.7"
 regex = { version = "*", optional = true }
-cython = { version = "^0.29", optional = true }
+# cython = { version = "^0.29", optional = true }
 
 
 [tool.poetry.dev-dependencies]
@@ -70,7 +70,9 @@ pytest = "^5.0"
 
 [tool.poetry.scripts]
 dhparser = 'DHParser.scripts.dhparser:main'
-dhparser_build_cython = 'DHParser.scripts.dhparser_build_cython:main'
+dhparser_build_cython = 'DHParser.scripts.dhparser_cythonize:main'
+dhparser_cythononize = 'DHParser.scripts.dhparser_cythonize:main'
+dhparser_cythonize_stringview = 'DHParser.scripts.dhparser_cythonize:main'
 
 
 [build-system]

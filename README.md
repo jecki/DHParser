@@ -184,22 +184,23 @@ will use `regex` instead of the built-in `re`-module for regular
 expressions. `regex` is faster and more powerful than `re`.
 
 In order to speed up DHParser even more, it can be compiled with
-the Python to C compiler [Cython](https://cython.org). First,
-you mustt install cython with the command:
-
-    pip install cython
+the Python to C compiler [Cython](https://cython.org). Since
+Version 1.3 DHParser requires at least Cython Version 3 alpha 11,
+which cannot be installed from the [Python Package Index](https://pypi.org/),
+but must be built from the [sources on github](https://github.com/cython/cython).
+On some Linux-distributions you might find it in the community-repositories.
+(Under Arch-Linux it can be installed with `yay -S cython3`.)
  
-Once cython is installed, you can run the `dhparser_build_cython`
-script from the command line:
+Once cython has been built and installed, you can run the 
+"dhparser_cythonize"-script from the command line:
 
-    dhparser_build_cython
+    dhparser_cythonize
        
-Alternatively, if you have cloned DHParser from the git-Repository,
-you can run the `buildpackages.sh`-script (or `buildpackages.bat` on
-Windows-systems) after installation.
-
 The Cython-compiled version is about 2-3 times faster than the 
-CPython interpreted version.
+CPython interpreted version. Compiling can take quite a while. 
+If you are in a hurry, you can just can also just call
+`dhparser_cythonize_stringview` which just compiles the 
+stringview-module, which profits the most from being "cythonized".
 
 Depending on the use case, e.g. when parsing large files, 
 [PyPy3](https://www.pypy.org/) yields even greater speed-ups. 
