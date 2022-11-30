@@ -87,7 +87,7 @@ __all__ = ('unit_from_config',
 UNIT_STAGES = frozenset({'match*', 'match', 'fail', 'ast', 'cst'})
 RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
 
-RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+):(?P<symbol>\w+)\]')
+RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+(:?\.\w+)*):(?P<symbol>\w+)\]')
 RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + r'(.*(?:\n(?:\s*\n)*    .*)*)'
 # the following does not work with pypy3, because pypy's re-engine does not
@@ -159,7 +159,8 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
         d = section_match.groupdict()
         stage = d['stage']
         if stage not in allowed_stages:
-            raise KeyError('Unknown stage ' + stage + " ! must be one of: " + str(allowed_stages))
+            raise KeyError(f'Unknown stage "{stage}" in file "{filename}"! '
+                           f'must be one of: {allowed_stages}')
         symbol = d['symbol']
         pos = eat_comments(cfg, section_match.span()[1])
 
