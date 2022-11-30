@@ -3779,7 +3779,7 @@ class RootNode(Node):
         the default serialization from the configuration.)
 
     :ivar data: Compiled data. If the data still is a tree this
-        simnply contains a reference to self.
+        simply contains a reference to self.
     """
 
     def __init__(self, node: Optional[Node] = None,
@@ -3855,10 +3855,23 @@ class RootNode(Node):
         duplicate.stage = self.stage
         duplicate.serialization_type = self.serialization_type
 
-        if self.data != self:
+        if self.data == self:
+            duplicate.data = duplicate
+        else:
             duplicate.data = copy.deepcopy(self.data)
 
         duplicate.name = self.name
+
+        # copy fields attached by the user
+        ssize = len(self.__dict__)
+        dsize = len(duplicate.__dict__)
+        if dsize < ssize:
+            for k, v in reversed(self.__dict__.items()):
+                setattr(duplicate, k, v)
+                dsize += 1
+                if dsize == ssize:
+                    break
+
         return duplicate
 
     def swallow(self, node: Optional[Node],

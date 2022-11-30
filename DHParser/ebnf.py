@@ -911,7 +911,9 @@ def transform_ebnf(cst: RootNode) -> RootNode:
     """Transforms the concrete-syntax-tree of an EBNF-source-code
     into the abstract-syntax-tree. The transformation changes the
     syntax tree in place. No value is returned."""
-    return cast(RootNode, get_ebnf_transformer()(cst))
+    root = get_ebnf_transformer()(cst)
+    root.stage = 'ast'
+    return root
 
 
 ########################################################################
@@ -1005,7 +1007,10 @@ get_compiler = ThreadLocalSingletonFactory({NAME}Compiler)
 
 
 def compile_{NAME}(ast):
-    return get_compiler()(ast)
+    result = get_compiler()(ast)
+    if isinstance(result, RootNode):  # redundant if used with compile.run_pipeline
+        result.stage = '{NAME}'
+    return result
     
     
 {NAME}_junction = ('ast', get_compiler, '{NAME}')    
@@ -1390,24 +1395,25 @@ class EBNFCompiler(Compiler):
             raise EBNFCompilerError('Compiler has not been run before calling '
                                     '"gen_Compiler_Skeleton()"!')
         compiler = ['class ' + self.grammar_name + 'Compiler(Compiler):',
-                    '    """Compiler for the abstract-syntax-tree of a ' +
-                    self.grammar_name + ' source file.',
+                    '    """Compiler for the abstract-syntax-tree of a ',
+                    f'        {self.grammar_name} source file.',
                     '    """', '',
                     '    def __init__(self):',
-                    '        super(' + self.grammar_name + 'Compiler, self).__init__()',
-                    '        self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None',
+                    f'        super({self.grammar_name}Compiler, self).__init__()',
+                    '        self.forbid_returning_None = True  '
+                    '# set to False if any compilation-method is allowed to return None',
                     '',
                     '    def reset(self):',
                     '        super().reset()',
                     '        # initialize your variables here, not in the constructor!',
                     '',
                     '    def prepare(self, root: RootNode) -> None:',
-                    '        pass',
+                    '        assert root.stage == "ast", f"Source stage `ast` expected, '
+                                                         '`but `{root.stage}` found."',
                     '',
                     '    def finalize(self, result: Any) -> Any:',
                     '        if isinstance(self.tree, RootNode):',
-                    '            root = cast(RootNode, self.tree)',
-                    '            root.stage = "compiled"',
+                    f'            self.tree.stage = "{self.grammar_name}"',
                     '        return result',
                     '']
         c = Compiler()

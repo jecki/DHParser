@@ -248,7 +248,7 @@ class Compiler:
         if self._dirty_flag:
             self.reset()
         self._dirty_flag = True
-        self.tree = cast(RootNode, root) if isinstance(root, RootNode) else RootNode(root)
+        self.tree = root if isinstance(root, RootNode) else RootNode(root)
         self.prepare(self.tree)
         result = self.compile(self.tree)
         while self.finalizers:
@@ -558,7 +558,7 @@ def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
     """Retrieves the data from the given tree or just passes the data through
     if argument ``tree_or_data`` is not of type RootNode."""
     if isinstance(tree_or_data, RootNode):
-        return cast(RootNode, tree_or_data).data
+        return tree_or_data.data
     return tree_or_data
 
 
@@ -587,6 +587,16 @@ def run_pipeline(junctions: Set[Junction],
             return -1
         else:
             return 0
+
+    def verify_stage(given_stage, junction, field, further_info=''):
+        assert field in (0, 2)
+        expected_stage = junction[field]
+        stage_type = 'source stage' if field == 0 else 'target stage'
+        if given_stage != expected_stage:
+            raise AssertionError(f'Expected {stage_type} "{expected_stage}" but found '
+                f'"{given_stage}" in "{junction[0]} -> {junction[2]}"-transformation! '
+                'Possible causes:  a) wrong stage name specified in junction  b) stage name not '
+                f'updated by compilation-function  c) internal error of DHParser. {further_info}')
 
     t_to_j = {j[-1]: j for j in junctions}
     steps = []
@@ -632,7 +642,9 @@ def run_pipeline(junctions: Set[Junction],
                     if not isinstance(tree, RootNode):
                         raise ValueError(f'Object in stage {s} is not a tree but a {type(tree)} '
                                          f'and, therefore, cannot be processed to {t}')
+                    verify_stage(tree.stage, junction, 0)
                     results[t] = process_tree(junction[1](), tree)
+                    verify_stage(tree.stage, junction, 2)
                     errata[t] = copy.copy(tree.errors_sorted)
     return {t: (extract_data(results[t]), errata[t]) for t in results.keys()}
 
