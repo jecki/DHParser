@@ -1202,8 +1202,10 @@ DHParser can also be run with any recent version of `pypy3`_. However, my own
 experience so far has been that while running DHParser with pypy with one and the
 same dataset over and over again produces a most impressive speedup, in real-world
 applications of DHParser (I ran a whole fascicle of different medieval latin
-dictionary articles through DHParser in batch-mode), pypy is a even bit slower
-than the python-interpreter. So, presently, I'd recommend staying with `Cython`_ when
+dictionary articles through DHParser in batch-mode), pypy is a even quite a bit slower
+than the python-interpreter. (Compiling one fascicle of the medival latin dctionary
+in batch mode with multiprocessing takes about three times longe with pypy3 than with
+CPython!) So, presently, I'd recommend staying with `Cython`_ when
 trying to speed-up DHParser.
 
 DHParser uses a variant of a recursive descent parser, a so called "pack-rat-parser",

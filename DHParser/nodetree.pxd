@@ -48,22 +48,24 @@ cdef class Node:
 cdef class FrozenNode(Node):
     cpdef object with_pos(self, pos)
 
+# cannot cythonize RootNode, because self.__dict__ is being accessed
+# in the __deepcopy__-method
 
-cdef class RootNode(Node):
-    cdef public list errors
-    cdef public object _error_set
-    cdef public object error_nodes
-    cdef public object error_positions
-    cdef public int error_flag
-    cdef public str source
-    cdef public object source_mapping
-    cdef public list lbreaks
-    cdef public set inline_tags
-    cdef public set string_tags
-    cdef public set empty_tags
-    cdef public str docname
-    cdef public str stage
-    cdef public str serialization_type
-    cdef public object data
+# cdef class RootNode(Node):
+#     cdef public list errors
+#     cdef public object _error_set
+#     cdef public object error_nodes
+#     cdef public object error_positions
+#     cdef public int error_flag
+#     cdef public str source
+#     cdef public object source_mapping
+#     cdef public list lbreaks
+#     cdef public set inline_tags
+#     cdef public set string_tags
+#     cdef public set empty_tags
+#     cdef public str docname
+#     cdef public str stage
+#     cdef public str serialization_type
+#     cdef public object data
 
 
