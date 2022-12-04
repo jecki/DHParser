@@ -27,8 +27,8 @@ type
 ## Test-code
 
 let 
-  p = Parser(pname: "")
-  t = Text(pname: "", text: "abc")
+  p = Parser(name: "")
+  t = Text(name: "", text: "abc")
 
 echo t is Parser
 

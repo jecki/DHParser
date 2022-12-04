@@ -21,7 +21,7 @@ permissions and limitations under the License.
 from __future__ import annotations
 
 import sys
-assert sys.version_info >= (3, 6, 0), "DHParser requires at least Python-Version 3.6!"
+assert sys.version_info >= (3, 7, 0), "DHParser requires at least Python-Version 3.7!"
 
 from .compile import *
 from .configuration import *
