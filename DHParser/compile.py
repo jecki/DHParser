@@ -646,11 +646,14 @@ def run_pipeline(junctions: Set[Junction],
                     errata[t] = []
                 else:
                     if not isinstance(tree, RootNode):
-                        raise ValueError(f'Object in stage {s} is not a tree but a {type(tree)} '
-                                         f'and, therefore, cannot be processed to {t}')
+                        raise ValueError(f'Object in stage "{s}" is not a tree but a {type(tree)}'
+                                         f' and, therefore, cannot be processed to {t}')
                     verify_stage(tree.stage, junction, 0)
                     results[t] = process_tree(junction[1](), tree)
-                    verify_stage(tree.stage, junction, 2)
+                    if tree.stage == s:  # tree stage hasn't been set by the processing function
+                        tree.stage = junction[2]
+                    else:
+                        verify_stage(tree.stage, junction, 2)
                     errata[t] = copy.copy(tree.errors_sorted)
     return {t: (extract_data(results[t]), errata[t]) for t in results.keys()}
 
