@@ -640,6 +640,10 @@ root-node of the last tree-stage, which in this case is the AST::
    >>> ast.stage = 'json'
    >>> source_stages = {'json': ast}
 
+It may appear odd that the stage of the ast-tree is named "json". However,
+once the ``data``-field is set in the root-node, the ``stage``-field
+indicates the stage of the data and not the tree, any more.
+
 Now let's define the "pretty-print"-compilation function and the respective junction::
 
    >>> import json

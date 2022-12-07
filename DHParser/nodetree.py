@@ -3740,7 +3740,12 @@ class RootNode(Node):
     :ivar empty_tags: see `Node.as_xml()` for an explanation.
 
     :ivar docname: a name for the document
-    :ivar stage: a name for the current processing stage
+    :ivar stage: a name for the current processing stage or the empty string
+        (default). This name if present is used for verifying the stage in
+        :py:func:`DHParser.compile.run_pipeline`. If ``stage`` contains the
+        empty string, stage-verification is turned off (which may result
+        in obscure error messages in case a tree-transformation is run on
+        the wrong stage.)
     :ivar serialization_type: The kind of serialization for the
         current processing stage. Can be one of 'XML', 'json',
         'indented', 'S-expression' or 'default'. (The latter picks
