@@ -575,18 +575,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # def __hash__(self):
     #     return hash(self.name)  # very bad idea!
 
-    # @property
-    # def tag_name(self) -> str:
-    #     deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
-    #                         'Use "Node.name" instead!')
-    #     return self.name
-    #
-    # @tag_name.setter
-    # def tag_name(self, name: str):
-    #     deprecation_warning('Property "DHParser.nodetree.Node.tag_name" is deprecated. '
-    #                         'Use "Node.name" instead!')
-    #     self.name = name
-
     def equals(self, other: Node, ignore_attr_order: bool = True) -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
@@ -648,23 +636,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 self._children = tuple()
                 self._result = result
 
-    # def _init_child_pos(self):
-    #     """Initialize position values of children with potentially
-    #     unassigned positions, i.e. child.pos < 0."""
-    #     children = self._children  # type: Tuple[Node, ...]
-    #     if children:
-    #         offset = self._pos
-    #         prev = children[0]
-    #         if prev._pos < 0:
-    #             prev.with_pos(offset)
-    #         for child in children[1:]:
-    #             if child._pos < 0:
-    #                 offset = offset + prev.strlen()
-    #                 child.with_pos(offset)
-    #             else:
-    #                 offset = child._pos
-    #             prev = child
-
     @property
     def result(self) -> StrictResultType:
         """
@@ -716,7 +687,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         self._result = str(self._result)
         return self._result
 
-        # unoptimized
+        # unoptimized algorithm (strings will be copied over and over again for each level of the tree)
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
 
@@ -753,10 +724,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :raises: AssertionError if position has already been assigned or
             if parameter `pos` has a value < 0.
         """
-        # condition self.pos == pos cannot be assumed when tokens or whitespace
-        # are dropped early!
-        # assert self._pos < 0 or self.pos == pos, ("pos mismatch %i != %i at Node: %s"
-        #                                           % (self._pos, pos, repr(self)))
+        # condition self.pos == pos cannot be assumed when tokens or whitespace are dropped early!
         if pos != self._pos >= 0:
             raise AssertionError(f"Position value {self._pos} of node {self.name} cannot be "
                                  f"reassigned to a different value ({pos})!")
@@ -3772,7 +3740,12 @@ class RootNode(Node):
     :ivar empty_tags: see `Node.as_xml()` for an explanation.
 
     :ivar docname: a name for the document
-    :ivar stage: a name for the current processing stage
+    :ivar stage: a name for the current processing stage or the empty string
+        (default). This name if present is used for verifying the stage in
+        :py:func:`DHParser.compile.run_pipeline`. If ``stage`` contains the
+        empty string, stage-verification is turned off (which may result
+        in obscure error messages in case a tree-transformation is run on
+        the wrong stage.)
     :ivar serialization_type: The kind of serialization for the
         current processing stage. Can be one of 'XML', 'json',
         'indented', 'S-expression' or 'default'. (The latter picks

@@ -194,7 +194,7 @@ even vary for different sub-trees.
 With this in mind the following code that compiles the XML-syntax-tree into 
 the XML-data-tree should be easy to understand::
 
-    >>> from DHParser.nodetree import Node
+    >>> from DHParser.nodetree import Node, RootNode
     >>> from DHParser.compile import Compiler
 
     >>> class XMLTransformer(Compiler):
@@ -320,13 +320,18 @@ bit verbose. So we, furthermore define an abstract-syntax-tree-transformation::
 Now, let's write a compiler that compiles the abstract-syntax-tree of
 a JSON-file into a Python data-structure::
 
-    >>> from typing import Dict, List, Tuple, Union
+    >>> from typing import Dict, List, Tuple, Union, Any
     >>> JSONType = Union[Dict, List, str, int, float, None]
     ...
     >>> class simplifiedJSONCompiler(Compiler):
     ...     def __init__(self):
     ...         super(simplifiedJSONCompiler, self).__init__()
     ...         self.forbid_returning_None = False  # None will be returned when compiling "null"
+    ...
+    ...     def finalize(self, result: Any) -> Any:
+    ...         if isinstance(self.tree, RootNode):
+    ...             self.tree.stage = 'json'
+    ...         return result
     ...
     ...     def on_json(self, node) -> JSONType:
     ...         assert len(node.children) == 1
@@ -632,17 +637,24 @@ extended data is not a nodetree, any more. So we need to attach it to the
 root-node of the last tree-stage, which in this case is the AST::
 
    >>> ast.data = json_objs
+   >>> ast.stage = 'json'
    >>> source_stages = {'json': ast}
+
+It may appear odd that the stage of the ast-tree is named "json". However,
+once the ``data``-field is set in the root-node, the ``stage``-field
+indicates the stage of the data and not the tree, any more.
 
 Now let's define the "pretty-print"-compilation function and the respective junction::
 
    >>> import json
    >>> from DHParser.nodetree import RootNode
    >>> def pretty_print(input: RootNode) -> str:
+   ...     input.stage = 'pretty-json'
    ...     try:
    ...         return json.dumps(input.data, indent=2)
    ...     except TypeError as e:
    ...         input.new_error(input, "JSON-Error: " + str(e))
+   ...         return f'"{str(e)}"'
    >>> pretty_print_junction = ('json', lambda : pretty_print, 'pretty-json')
 
 Any errors can simply be attached to the RootNode-obeject that is passed to the
@@ -657,6 +669,7 @@ Here, the transformed data must be attached to the RootNode, again::
    ...         input.data = json.dumps(input.data)
    ...     except TypeError as e:
    ...         input.new_error(input, "JSON-Error: " + str(e))
+   ...     input.stage = 'compact-json'
    ...     return input
    >>> compact_print_junction = ('json', lambda : compact_print, 'compact-json')
 
@@ -664,6 +677,7 @@ The "byte-array"-convert-junction that takes the output from the last step, the
 compact-json, as input can be defined as follows::
 
    >>> def bytearray_convert(input: RootNode) -> bytes:
+   ...     input.stage = 'byte-stream'
    ...     return input.data.encode('utf-8')
    >>> bytearray_convert_junction = ('compact-json', lambda : bytearray_convert, 'byte-stream')
 

@@ -207,6 +207,8 @@ class Compiler:
         A finalization method that is called after compilation has finished and
         after all tasks from the finalizers-stack have been executed
         """
+        if isinstance(self.tree, RootNode):
+            self.tree.stage = ''   # turn of stage-verification as default to keep matters simple
         return result
 
     def wildcard(self, node: Node) -> Any:
@@ -476,6 +478,8 @@ def compile_source(source: str,
                                       AST_TRANSFORM_CRASH)
         else:
             syntax_tree = transformer(syntax_tree)
+        assert isinstance(syntax_tree, RootNode)
+        syntax_tree.stage = 'ast'
 
         if 'ast' in log_syntax_trees:
             log_ST(syntax_tree, log_file_name + '.ast')
@@ -483,6 +487,7 @@ def compile_source(source: str,
         if not is_fatal(syntax_tree.error_flag):
             if preserve_AST:
                 ast = copy.deepcopy(syntax_tree)
+                ast.stage = ''  # turn stage-verification off on copied ast as default
 
             # Compilation
 
@@ -589,6 +594,7 @@ def run_pipeline(junctions: Set[Junction],
             return 0
 
     def verify_stage(given_stage, junction, field, further_info=''):
+        if not given_stage:  return  # verification is considered as turned off
         assert field in (0, 2)
         expected_stage = junction[field]
         stage_type = 'source stage' if field == 0 else 'target stage'
