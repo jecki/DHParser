@@ -1,5 +1,5 @@
-DHParser Version 1.3.3
-......................
+DHParser Version 1.3.3 (8.12.2022)
+..................................
 
 - nodetree.Node.evaluate() now supports another "mode" where path information
   is passed to the evaluating functions, making it much more versatile
@@ -8,6 +8,7 @@ DHParser Version 1.3.3
   are also reported to work, but not alpha 11. Many thanks to Ailton Andrade
   de Oliveira for cheking this out!) and the command "dhparser_cythonize"
   or "dhparser_cythonize_stringview" must be run from the command line.
+- a couple of minor bug-fixes
 
 
 DHParser Version 1.3.2 (23.11.2022)
