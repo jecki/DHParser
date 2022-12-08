@@ -60,6 +60,7 @@ __all__ = ('TransformationDict',
            'BLOCK_ANONYMOUS_LEAVES',
            'BLOCK_CHILDREN',
            'traverse',
+           'transformer',
            'merge_treetops',
            'always',
            'never',
@@ -332,9 +333,9 @@ BLOCK_LEAVES = BlockLeaves()
 BLOCK_ANONYMOUS_LEAVES = BlockAnonymousLeaves()
 
 
-def traverse(root_node: Node,
+def traverse(tree: Node,
              transformation_table: TransformationTableType,
-             key_func: KeyFunc = key_node_name) -> RootNode:
+             key_func: KeyFunc = key_node_name) -> Node:
     """
     Traverses the syntax tree starting with the given ``node`` depth
     first and applies the sequences of callback-functions registered
@@ -354,14 +355,16 @@ def traverse(root_node: Node,
       function appears in the table
     - '>': always called (after any other processing function)
 
-    Args:
-        root_node (Node): The root-node of the syntax tree to be traversed
-        transformation_table (dict): node key -> sequence of functions that
-            will be applied to matching nodes in order. This dictionary
+    :param tree: The root-node of the syntax tree to be traversed
+    :param transformation_table: A mapping node key -> sequence of functions
+            that will be applied to matching nodes in order. This dictionary
             is interpreted as a ``compact_table``. See
             :func:`expand_table` or :func:`EBNFCompiler.EBNFTransTable`
-        key_func (function): A mapping key_func(node) -> keystr. The default
+    :param key_func: A mapping key_func(node) -> keystr. The default
             key_func yields node.name.
+    :returns: The tree that has been transformed in-place. The returned
+            object is the same that has been passed in parameter tree,
+            but be aware that this tree has been changed in-place!
 
     Example::
 
@@ -448,11 +451,44 @@ def traverse(root_node: Node,
                 raise AssertionError('An exception occurred when transforming "%s" with %s:\n%s'
                                      % (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
 
-    if not isinstance(root_node, RootNode):
-        root_node = RootNode(root_node)
-    traverse_recursive([root_node])
-    return root_node
+    traverse_recursive([tree])
+    return tree
     # assert transformation_table['__cache__']
+
+
+def transformer(tree: RootNode,
+                transformation_table: TransformationTableType,
+                key_func: KeyFunc = key_node_name,
+                src_stage: str = '',
+                dst_stage: str = '') -> RootNode:
+    """
+    Same as :func:`traverse`, but expects a node of type RootNode
+    to be passed in parameter ``tree`` and retruns this RootNode.
+    Furthermore, the names of the source and destination stages
+    can be passed optionally in the parameters  ``src_stage`` and
+    ``dst_stage``. If these parameters are not empty strings,
+    the ``tree.stage`` will be checked against ``src_stage`` before
+    transforming the tree and set to ``dst_stage`` after the
+    transformation.
+
+    See :func:`traverse` for the first three parameters and the general
+    explanation of what ``transform`` does.
+
+    :param src_stage: The name of the source stage or the empty string
+        (default) if the source stage shall not be checked.
+    :param dst_stage: The name of the destination stage or the empty
+        string (default)
+
+    :raises: ValueError, if ``tree.stage != src_stage``
+    """
+    assert isinstance(tree, RootNode)
+    if src_stage and tree.stage and tree.stage.lower() != src_stage.lower():
+        raise ValueError(f'Tree in stage "{src_stage}" expected, but "{tree.stage}" found!')
+    tree = traverse(tree, transformation_table, key_func=key_func)
+    if not isinstance(tree, RootNode):
+        tree = RootNode(tree)
+    tree.stage = dst_stage
+    return tree
 
 
 #######################################################################

@@ -364,7 +364,7 @@ class HistoryRecord:
                (repr(self.call_stack), repr(self.node), repr(self.text),
                 repr(self.line_col), repr(self.errors))
 
-    def as_tuple(self) -> 'Snapshot':
+    def as_tuple(self) -> Snapshot:
         """
         Returns history record formatted as a snapshot tuple.
         """

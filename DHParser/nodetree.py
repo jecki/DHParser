@@ -3745,7 +3745,8 @@ class RootNode(Node):
         :py:func:`DHParser.compile.run_pipeline`. If ``stage`` contains the
         empty string, stage-verification is turned off (which may result
         in obscure error messages in case a tree-transformation is run on
-        the wrong stage.)
+        the wrong stage.) Stage-names should be considered as case-insensitive,
+        i.e. "AST" is treated as the same stage as "ast".
     :ivar serialization_type: The kind of serialization for the
         current processing stage. Can be one of 'XML', 'json',
         'indented', 'S-expression' or 'default'. (The latter picks
@@ -3755,9 +3756,15 @@ class RootNode(Node):
         simply contains a reference to self.
     """
 
+    def __new__(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], RootNode):
+            return args[0]  # avoid creating a root-node form a root-node
+        return Node.__new__(cls)
+
     def __init__(self, node: Optional[Node] = None,
                  source: Union[str, StringView] = '',
                  source_mapping: Optional[SourceMapFunc] = None):
+        if node is self:  return   # happens if you initialize a RootNode with a RootNode, see __new__ above
         super().__init__('__not_yet_ready__', '')
         self.errors: List[Error] = []
         self._error_set: Set[Error] = set()

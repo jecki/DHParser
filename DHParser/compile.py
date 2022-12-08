@@ -581,7 +581,7 @@ def run_pipeline(junctions: Set[Junction],
     essentially a function that transforms a tree from one particular stage
     (identified by its name) to another stage, again itentified by its name.
 
-    TODO: Parallelize processing of junctions
+    TODO: Parallelize processing of junctions? Requires copying a lot ot tree-data!?
     """
     def cmp_junctions(a, b) -> int:
         if a[-1] == b[0]:
@@ -598,7 +598,7 @@ def run_pipeline(junctions: Set[Junction],
         assert field in (0, 2)
         expected_stage = junction[field]
         stage_type = 'source stage' if field == 0 else 'target stage'
-        if given_stage != expected_stage:
+        if given_stage.lower() != expected_stage.lower():
             raise AssertionError(f'Expected {stage_type} "{expected_stage}" but found '
                 f'"{given_stage}" in "{junction[0]} -> {junction[2]}"-transformation! '
                 'Possible causes:  a) wrong stage name specified in junction  b) stage name not '

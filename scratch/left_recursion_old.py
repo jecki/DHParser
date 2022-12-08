@@ -5,7 +5,7 @@ def __call__(self: 'Parser', text: StringView) -> Tuple[Optional[Node], StringVi
     done in the overridden method `_parse()`. This wrapper-method can be thought of
     as a "parser guard", because it guards the parsing process.
     """
-    # def get_error_node_id(error_node: Node, root_node: RootNode) -> int:
+    # def get_error_node_id(error_node: Node, tree: RootNode) -> int:
     #     if error_node:
     #         error_node_id = id(error_node)
     #         while error_node_id not in grammar.tree__.error_nodes and error_node.children:

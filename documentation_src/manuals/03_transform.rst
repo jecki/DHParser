@@ -662,9 +662,20 @@ important of these:
    parameterized transformation of probing functions into simple
    transformation or probing functions with a singe argument.
 
-* :py:func:`~transform.traverse`: Traverses a tree depth-first and
-   calls zero or more transformation functions on each node picked
-   from the transformation table by the name of the node.
+* :py:func:`~transform.traverse`: Traverses a tree or sub-tree
+   depth-first and calls zero or more transformation functions
+   on each node picked from the transformation table by the name
+   of the node.
+
+* :py:func:`~transform.transformer`: This is a variant of
+  :py:func:`~transform.traverse` that only works on full trees,
+  i.e. tree originating in a :py:class:`~nodetree.RootNode`-object
+  and offers support for checking and setting the stage of the
+  tree before and after the transformation. This is useful if
+  the here described kind of tree-transformation is to be used
+  in the context of :ref:`processing_pipelines` and should in
+  this case be preferred to :py:func:`~transform.traverse`.
+
 
 Basic Re-Arranging Transformations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
