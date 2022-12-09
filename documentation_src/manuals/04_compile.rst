@@ -24,11 +24,6 @@ projects to have bifurcations in the processing pipeline, where one bifurcations
 leads to say, the pdf-generation for a printable document and another
 bifurcation yields an HTML-output to be viewed online.
 
-All of this is to a stronger or lesser degree supported by DHParser under the
-condition that all intermediary transformations in any bifurcation still yield
-trees. Only the very last transformation may yield a different data type. Or,
-put it differently, the processing-pipeline support of DHParser ends after the
-first transformation that does not yield a node-tree any more.
 
 Class Compiler
 --------------
