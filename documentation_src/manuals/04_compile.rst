@@ -639,6 +639,12 @@ It may appear odd that the stage of the ast-tree is named "json". However,
 once the ``data``-field is set in the root-node, the ``stage``-field
 indicates the stage of the data and not the tree, any more.
 
+It is not obligatory to set the `stage`-field to any value. It can also
+be left empty. But to do so helps when debugging
+processing pipelines and also allows :py:func:`~compile.run_pipeline`
+to check for errors in the setup of a pipeline. The following
+examples reflect this practise.
+
 Now let's define the "pretty-print"-compilation function and the respective junction::
 
    >>> import json

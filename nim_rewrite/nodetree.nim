@@ -174,10 +174,10 @@ func asSxpr(node: Node): string =
 
 
 # Test-code
-
+#[ 
 var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
                           newNode("right", "RIGHT")])
 echo n.asSxpr
 n.`sourcePos=` 0
 echo n.children[0].sourcePos
-echo n.children[1].sourcePos
+echo n.children[1].sourcePos ]#

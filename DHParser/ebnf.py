@@ -62,7 +62,7 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOM
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, TypeAlias
-from DHParser.transform import TransformerCallable, traverse, remove_brackets, \
+from DHParser.transform import TransformerCallable, transformer, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
     BLOCK_LEAVES
@@ -123,10 +123,10 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
     compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \\
-    remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, traverse, \\
+    remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, \\
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \\
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
-    replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \\
+    replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, transformer, \\
     merge_adjacent, collapse, collapse_children_if, transform_result, WHITESPACE_PTYPE, \\
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \\
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \\
@@ -894,17 +894,19 @@ EBNF_AST_transformation_table = {
 
 
 def EBNFTransform() -> TransformerCallable:
-    return partial(traverse, transformation_table=EBNF_AST_transformation_table.copy())
+    return partial(transformer,
+                   transformation_table=EBNF_AST_transformation_table.copy(),
+                   src_stage='cst', dst_stage='ast')
 
 
 def get_ebnf_transformer() -> TransformerCallable:
     THREAD_LOCALS = access_thread_locals()
     try:
-        transformer = THREAD_LOCALS.EBNF_transformer_singleton
+        ebnf_transformer = THREAD_LOCALS.EBNF_transformer_singleton
     except AttributeError:
         THREAD_LOCALS.EBNF_transformer_singleton = EBNFTransform()
-        transformer = THREAD_LOCALS.EBNF_transformer_singleton
-    return transformer
+        ebnf_transformer = THREAD_LOCALS.EBNF_transformer_singleton
+    return ebnf_transformer
 
 
 def transform_ebnf(cst: RootNode) -> RootNode:
@@ -912,7 +914,6 @@ def transform_ebnf(cst: RootNode) -> RootNode:
     into the abstract-syntax-tree. The transformation changes the
     syntax tree in place. No value is returned."""
     root = get_ebnf_transformer()(cst)
-    root.stage = 'ast'
     return root
 
 
@@ -981,17 +982,12 @@ def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=Tru
 
 TRANSFORMER_FACTORY = '''
 
-def _run_{NAME}_AST_transformation(root: RootNode) -> RootNode:
-    root = traverse(root, transformation_table={NAME}_AST_transformation_table.copy())
-    root.stage = 'ast'
-    return root
-    
-
 def {NAME}Transformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return _run_{NAME}_AST_transformation
-    # return partial(traverse, transformation_table={NAME}_AST_transformation_table.copy())
+    return partial(transformer, 
+                   transformation_table={NAME}_AST_transformation_table.copy(),
+                   src_stage='cst', dst_stage='ast')
 
 
 get_transformer = ThreadLocalSingletonFactory({NAME}Transformer)
