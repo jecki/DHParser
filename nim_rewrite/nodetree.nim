@@ -1,3 +1,5 @@
+{.experimental: "strictNotNil".} 
+
 import std/enumerate
 import std/sequtils
 import std/strformat
@@ -9,7 +11,8 @@ import std/unicode
 
 type
   Attributes* = OrderedTable[string, string]
-  Node* = ref object of RootObj
+  Node* = ref NodeObj not nil
+  NodeObj = object of RootObj
     name*: string
     children: seq[Node]
     text: string  # must be empty if children is not empty!
@@ -18,16 +21,32 @@ type
   SourcePosUnassignedDefect* = object of Defect
   SourcePosReAssigmentDefect* = object of Defect
 
+proc init*(node: Node, 
+          name: string, 
+          children: seq[Node], 
+          attributes: Attributes = Attributes()): Node =
+  node.name = name
+  node.children = children
+  node.text = ""
+  node.attributes = attributes
+  node.sourcePos = -1
+  node
 
-proc newNode*(name: string, 
-             children: seq[Node], 
-             attributes: Attributes = Attributes()): Node =
-  Node(name: name, children: children, text: "", attributes: attributes, sourcePos: -1)
+proc init*(node: Node, 
+           name: string, 
+           text: string, 
+           attributes: Attributes = Attributes()): Node =
+  node.name = name
+  node.children = @[]
+  node.text = text
+  node.attributes = attributes
+  node.sourcePos = -1
+  node
 
-proc newNode*(name: string, 
-             text: string, 
-             attributes: Attributes = Attributes()): Node =
-  Node(name: name, children: @[], text: text, attributes: attributes, sourcePos: -1)
+template newNode(args: varargs[untyped]): Node =
+  new(result)
+  result.init(args)
+
 
 func isLeaf*(node: Node): bool = node.children.len == 0
 
@@ -72,7 +91,8 @@ proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
       pos + int32(node.text.runeLen)
     else:
       for child in node.children:
-        pos += child.assignSourcePos(pos)
+        if not child.isNil:
+          pos += child.assignSourcePos(pos)
       pos
   else:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
@@ -130,7 +150,7 @@ func serialize(node: Node,
       result[^1] &= close
 
 
-func asSxpr(node: Node): string =
+func asSxpr*(node: Node): string =
   func renderAttrs(node: Node): string =
     # if node.attributes.len == 0:  return ""
     var attrStrs = newSeq[string](node.attributes.len)
@@ -149,7 +169,7 @@ func asSxpr(node: Node): string =
   
   func closing(node: Node): string = ")"
 
-  func leafdata(node: Node): seq[string] = 
+  func leafdata(node: Node): seq[string] =
     func esc(s: string): string =
       s.replace("\\", "\\\\").replace(""""""", """\"""")
 
@@ -174,10 +194,12 @@ func asSxpr(node: Node): string =
 
 
 # Test-code
+#[
+var n = new(Node).init("root", @[new(Node).init("left", "LEFT", {"id": "007"}.toOrderedTable),
+                                 new(Node).init("right", "RIGHT")])
 
-var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
-                          newNode("right", "RIGHT")])
 echo n.asSxpr
 n.`sourcePos=` 0
 echo n.children[0].sourcePos
 echo n.children[1].sourcePos
+]#
