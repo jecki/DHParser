@@ -718,9 +718,10 @@ def validate_XML_attribute_value(value: Any) -> str:
     if contains_doublequote and value.find("'") >= 0:
         raise ValueError(('Illegal XML-attribute value: %s  (Cannot be quoted, because '
                           'both single and double quotation mark are contained in the '
-                          'value. Use enttites to avoid this conflict.)') % value)
+                          'value. Use entities to avoid this conflict.)') % value)
     if value.find('<') >= 0:
-        raise ValueError('XML-attribute value  %s  must not contain "<"!' % value)
+        raise ValueError(f'XML-attribute value "{value}" must not contain "<"! Change '
+            f'config-variable "xml_attribute_error_handling" to "fix" to avoid this error.')
     i = value.find('&')
     while i >= 0:
         if not RX_ENTITY.match(value, i):
