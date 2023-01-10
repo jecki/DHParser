@@ -541,7 +541,7 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
                 result = tp(tree)
             except Exception as e:
                 # node = tp.path[-1] if hasattr(tp, 'path') and tp.path else tree
-                node = getattr(tp, 'path', [tree])[-1]
+                node = (getattr(tp, 'path', [tree]) or [tree])[-1]
                 st = traceback.format_list(traceback.extract_tb(e.__traceback__))
                 trace = ''.join(st)  # filter_stacktrace(st)
                 tree.new_error(
