@@ -15,7 +15,7 @@ type
   NodeObj = object of RootObj
     name*: string
     children: seq[Node]
-    text: string  # must be empty if children is not empty!
+    text: string  # must be empty if field children is not empty!
     attributes*: Attributes
     sourcePos: int32
   SourcePosUnassignedDefect* = object of Defect

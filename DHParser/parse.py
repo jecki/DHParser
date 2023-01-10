@@ -475,6 +475,10 @@ class Parser:
                 parser is connected in a grammar. If pname is not the
                 empty string, this will become the same as pname, when
                 the property ``symbol`` is read for the first time.
+
+        _descendants_cache:  A cache of the trails (i.e. list of parsers) from
+                this parser to all other parsers that can be reached from
+                this parser.
     """
 
     def __init__(self) -> None:
@@ -491,6 +495,7 @@ class Parser:
         except NameError:
             pass                      # ensures Cython-compatibility
         self._symbol = ''             # type: str
+        self._descendants_cache = None # type: Optional[List[ParserTrail]]
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -740,14 +745,15 @@ class Parser:
             self._grammar = grammar
 
     def sub_parsers(self) -> Tuple[Parser, ...]:
-        """Returns the list of sub-parsers if there are any.
+        """Returns the tuple of sub-parsers if there are any.
         Overridden by Unary, Nary and Forward.
         """
         return tuple()
 
-    def descendants(self) -> Iterator[ParserTrail]:
-        """Returns an iterator over the trails of self and all descendant parsers,
-        avoiding of circles."""
+    def descendants(self) -> List[ParserTrail]:
+        """Returns a list or iterator of the trails of self and all descendant
+        parsers, avoiding of circles."""
+        if self._descendants_cache is not None:  return self._descendants_cache
         visited = set()
 
         def descendants_(parser: Parser, ptrl: ParserTrail) -> Iterator[ParserTrail]:
@@ -758,7 +764,9 @@ class Parser:
                 for p in parser.sub_parsers():
                     yield from descendants_(p, ptrl)
 
-        yield from descendants_(self, [])
+        # yield from descendants_(self, [])
+        self._descendants_cache = [pt for pt in descendants_(self, [])]
+        return self._descendants_cache
 
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """

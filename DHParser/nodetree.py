@@ -1074,21 +1074,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :py:meth:`Node.select()` for a detailed description and examples.
         The tree is traversed pre-order by the iterator.
         """
-        def recursive(nd: Node) -> Iterator[Node]:
+        def select_if_recursive(nd: Node) -> Iterator[Node]:
             nonlocal match_func, reverse, skip_func
             child_iterator = reversed(nd._children) if reverse else nd._children
             for child in child_iterator:
                 if match_func(child):
                     yield child
                 if child._children and not skip_func(child):
-                    yield from recursive(child)
+                    yield from select_if_recursive(child)
 
         if include_root:
             if match_func(self):  yield self
             if not skip_func(self):
-                yield from recursive(self)
+                yield from select_if_recursive(self)
         else:
-            yield from recursive(self)
+            yield from select_if_recursive(self)
 
     def select(self, criteria: NodeSelector,
                include_root: bool = False, reverse: bool = False,
