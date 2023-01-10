@@ -776,7 +776,7 @@ def lxml_XML_attribute_value(value: Any) -> str:
 
 
 def issubtype(sub_type, base_type) -> bool:
-    """Returns `True` if sub_type is a sub_type of `base_type`.
+    """Returns `True` if sub_type is a sub-type of `base_type`.
     WARNING: Implementation is somewhat "hackish" and might break
     with new Python-versions.
     """
