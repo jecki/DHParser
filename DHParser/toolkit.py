@@ -145,7 +145,10 @@ __all__ = ('typing',
            'normalize_circular_path',
            'DHPARSER_DIR',
            'deprecated',
-           'deprecation_warning')
+           'deprecation_warning',
+           'SingleThreadExecutor',
+           'multiprocessing_broken',
+           'instantiate_executor')
 
 
 #######################################################################
@@ -1276,12 +1279,25 @@ class SingleThreadExecutor(concurrent.futures.Executor):
         return future
 
 
+@functools.lru_cache
+def multiprocessing_broken() -> str:
+    """Returns an error message, if, for any reason multiprocessing is not safe
+    to be used. For example, multiprocessing does not work with
+    PyInstaller (under Windows) or GraalVM.
+    """
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        err_msg = "Multiprocessing turned off for PyInstaller-bundled script."
+        print(err_msg)
+        return err_msg
+    return ""
+
+
 def instantiate_executor(allow_parallel: bool,
                          preferred_executor: Type[concurrent.futures.Executor],
                          *args, **kwargs) -> concurrent.futures.Executor:
     """Instantiates an Executor of a particular type, if the value of the
     configuration variable 'debug_parallel_execution' allows to do so.
-    Otherwise a surrogate executor will be returned.
+    Otherwise, a surrogate executor will be returned.
     If 'allow_parallel` is False, a SingleThreadExecutor will be instantiated,
     regardless of the preferred_executor and any configuration values.
     """
@@ -1294,7 +1310,7 @@ def instantiate_executor(allow_parallel: bool,
             else:  mode = 'multiprocessing'
         if mode == "singlethread":
             return SingleThreadExecutor()
-        elif mode == "multithreading":
+        elif mode == "multithreading" or (mode == "multiprocessing" and multiprocessing_broken()):
             if issubclass(preferred_executor, concurrent.futures.ProcessPoolExecutor):
                 return concurrent.futures.ThreadPoolExecutor(*args, **kwargs)
         else:

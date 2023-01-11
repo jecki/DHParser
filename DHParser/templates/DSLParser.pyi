@@ -68,7 +68,9 @@ def batch_process(file_names: List[str], out_dir: str,
         for file_name, err_future in zip(file_names, err_futures):
             error_filename = err_future.result()
             if log_func:
-                log_func('Compiling "%s"' % file_name)
+                suffix = (" with " + error_filename[error_filename.rfind('_') + 1:-4]) \
+                    if error_filename else ""
+                log_func(f'Compiled "%s"' % os.path.basename(file_name) + suffix)
             if error_filename:
                 error_list.append(error_filename)
 
@@ -83,7 +85,7 @@ def batch_process(file_names: List[str], out_dir: str,
     return error_list
 
 
-def main():
+def main(called_from_app=False) -> bool:
     # recompile grammar if needed
     scriptpath = os.path.abspath(__file__)
     if scriptpath.endswith('Parser.py'):
@@ -114,7 +116,7 @@ def main():
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Parses a {NAME}-file and shows its syntax-tree.")
-    parser.add_argument('files', nargs='+')
+    parser.add_argument('files', nargs='*' if called_from_app else '+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],
@@ -162,6 +164,8 @@ def main():
         if args.verbose:
             print(message)
 
+    if called_from_app and not file_names:  return False
+
     batch_processing = True
     if len(file_names) == 1:
         if os.path.isdir(file_names[0]):
@@ -201,6 +205,8 @@ def main():
         elif args.json:  outfmt = 'json'
         else:  outfmt = 'default'
         print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+
+    return True
 
 
 if __name__ == "__main__":
