@@ -1279,7 +1279,7 @@ class SingleThreadExecutor(concurrent.futures.Executor):
         return future
 
 
-@functools.lru_cache
+@functools.lru_cache(None)
 def multiprocessing_broken() -> str:
     """Returns an error message, if, for any reason multiprocessing is not safe
     to be used. For example, multiprocessing does not work with
