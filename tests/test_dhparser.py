@@ -193,6 +193,7 @@ class TestDHParserCommandLineTool:
             raise AssertionError('No "..._MESSAGES.txt - file found!')
         time.sleep(0.1)  # MS Windows needs a little break here...
 
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

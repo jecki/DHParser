@@ -51,38 +51,56 @@ def process_file(source: str, out_dir: str = '') -> str:
     return ''
 
 
+def _process_file(args: Tuple[str, str]) -> str:
+    return process_file(*args)
+
+
+def _never_cancel() -> bool:
+    return False
+
+
 def batch_process(file_names: List[str], out_dir: str,
                   *, submit_func: Callable = None,
-                  log_func: Callable = None) -> List[str]:
-    """Compiles all files listed in filenames and writes the results and/or
+                  log_func: Callable = None,
+                  cancel_func: Callable = _never_cancel) -> List[str]:
+    """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    error_list =  []
+    import concurrent.futures
+    from DHParser.toolkit import instantiate_executor
 
-    def run_batch(submit_func: Callable):
-        nonlocal error_list
-        err_futures = []
-        for name in file_names:
-            err_futures.append(submit_func(process_file, name, out_dir))
-        for file_name, err_future in zip(file_names, err_futures):
-            error_filename = err_future.result()
+    def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
+        error_list = []
+        if cancel_func(): return error_list
+        for file_name, error_filename in zip(file_names, res_iter):
             if log_func:
                 suffix = (" with " + error_filename[error_filename.rfind('_') + 1:-4]) \
                     if error_filename else ""
                 log_func(f'Compiled "%s"' % os.path.basename(file_name) + suffix)
             if error_filename:
                 error_list.append(error_filename)
+            if cancel_func(): return error_list
+        return error_list
 
     if submit_func is None:
-        import concurrent.futures
-        from DHParser.toolkit import instantiate_executor
-        with instantiate_executor(get_config_value('batch_processing_parallelization'),
-                                  concurrent.futures.ProcessPoolExecutor) as pool:
-            run_batch(pool.submit)
+        pool = instantiate_executor(get_config_value('batch_processing_parallelization'),
+                                    concurrent.futures.ProcessPoolExecutor)
+        res_iter = pool.map(_process_file, ((name, out_dir) for name in file_names),
+            chunksize=min(get_config_value('batch_processing_max_chunk_size'),
+                          max(1, len(file_names) // (cpu_count() * 4))))
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        if sys.version_info >= (3, 9):
+            pool.shutdown(wait=True, cancel_futures=True)
+        else:
+            pool.shutdown(wait=True)
     else:
-        run_batch(submit_func)
-    return error_list
+        futures = [submit_func(process_file, name, out_dir) for name in file_names]
+        res_iter = (f.result() for f in futures)
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        for f in futures:  f.cancel()
+        concurrent.futures.wait(futures)
+    return error_files
 
 
 def main(called_from_app=False) -> bool:

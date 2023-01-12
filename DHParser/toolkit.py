@@ -148,7 +148,8 @@ __all__ = ('typing',
            'deprecation_warning',
            'SingleThreadExecutor',
            'multiprocessing_broken',
-           'instantiate_executor')
+           'instantiate_executor',
+           'cpu_count')
 
 
 #######################################################################
@@ -1269,7 +1270,7 @@ class SingleThreadExecutor(concurrent.futures.Executor):
     It is not recommended to use this in asynchronous code or code that
     relies on the submit() or map()-method of executors to return quickly.
     """
-    def submit(self, fn, *args, **kwargs):
+    def submit(self, fn, *args, **kwargs) -> concurrent.futures.Future:
         future = concurrent.futures.Future()
         try:
             result = fn(*args, **kwargs)
@@ -1319,6 +1320,14 @@ def instantiate_executor(allow_parallel: bool,
         return preferred_executor(*args, **kwargs)
     return SingleThreadExecutor()
 
+
+def cpu_count() -> int:
+    """Returns the number of cpus that are accessible to the current process
+    or 1 if the cpu count cannot be determined."""
+    try:
+        return len(os.sched_getaffinity(0)) or 1
+    except AttributeError:
+        return os.cpu_count() or 1
 
 #######################################################################
 #
