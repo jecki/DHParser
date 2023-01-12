@@ -279,7 +279,8 @@ class TestServer:
                                      (long_running, frozenset(['long_running']), frozenset(),
                                   connection_cb_dummy, 'Long-Running-Test', False))
                 asyncio_run(run_tasks())
-                assert sequence == [SLOW, FAST, FAST, SLOW], str(sequence)
+                assert sequence == [SLOW, FAST, FAST, SLOW], \
+                    str(sequence) + " due to timing conditions this is not necessarily an error!"
             finally:
                 stop_tcp_server('127.0.0.1', TEST_PORT)
                 if p is not None:
