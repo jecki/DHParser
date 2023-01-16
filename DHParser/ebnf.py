@@ -1240,8 +1240,8 @@ class EBNFCompiler(Compiler):
     :ivar consumed_custom_errors:  A set of symbols for which a custom error
             has been defined and(!) consumed during compilation. This
             allows to add a compiler error in those cases where (i) an
-            error message has been defined but will never used or (ii)
-            an error message is accidently used twice. For examples, see
+            error message has been defined but will never be used or (ii)
+            an error message is accidentally used twice. For examples, see
             ``test_ebnf.TestErrorCustomization``.
 
     :ivar consumed_skip_rules: The same as ``consumed_custom_errors`` only for
@@ -1770,7 +1770,6 @@ class EBNFCompiler(Compiler):
         for symbol in self.directives.error.keys():
             verify_directive_against_symbol(symbol + '_error', symbol)
             if symbol in self.rules and symbol not in self.consumed_custom_errors:
-                # try:
                 def_node = self.rules[symbol][0]
                 self.tree.new_error(
                     def_node, 'Customized error message for symbol "{}" will never be used, '
@@ -2349,10 +2348,6 @@ class EBNFCompiler(Compiler):
                         "in its definiens.".format(current_symbol),
                         AMBIGUOUS_ERROR_HANDLING)
                 else:
-                    # use class field instead or direct representation of error messages!
-                    # custom_args.append('err_msgs={err_msgs_name}["{symbol}"]'
-                    #                    .format(err_msgs_name=self.ERR_MSGS_KEYWORD,
-                    #                            symbol=current_symbol))
                     self.consumed_custom_errors.add(current_symbol)
             # add skip-rules to resume parsing of a series, if rules have been declared
             if current_symbol in self.directives.skip:
