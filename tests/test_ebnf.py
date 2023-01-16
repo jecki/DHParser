@@ -871,6 +871,30 @@ class TestErrorCustomizationErrors:
         result = parser('ADX')
         assert "several strings" in str(result.errors), str(result.errors)
 
+    # def test_indirect_error_handling(self):
+    #     lang = """
+    #         document = series
+    #         @series_error = 'error'
+    #         series = "A" B "C"
+    #         B = "B" § "b"
+    #         """
+    #     provider = grammar_provider(lang)
+    #     parser = provider()
+    #     result = parser('ABC')
+    #     print(result.errors)
+    #     # result, messages, ast = compile_ebnf(lang)
+    #     # assert not messages, "No warning expected, but: " + str(messages)
+    #
+    # def test_indirect_ambiguity(self):
+    #     lang = """
+    #         document = series
+    #         @series_error = 'error'
+    #         series = "A" B § "C"
+    #         B = "B" § "b"
+    #         """
+    #     result, messages, ast = compile_ebnf(lang)
+    #     assert messages, '"Ambigous error message"-warning expected!'
+
 
 class TestVariableCapture:
     tree_grammar = '''@whitespace = horizontal
