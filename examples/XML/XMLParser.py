@@ -76,7 +76,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_XML(source):
@@ -93,7 +93,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "a91d13a93978568c6955b1c41e1a6682"
+    source_hash__ = "0ddb551b0a69ca626f84372ad807aace"
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -328,7 +328,7 @@ class XMLTransformer(Compiler):
         return node
 
 
-get_transformer = ThreadLocalSingletonFactory(XMLTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(XMLTransformer)
 
 
 def transform_XML(cst):

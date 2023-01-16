@@ -76,7 +76,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_json(source):
@@ -93,7 +93,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "2b2727a7373589ee6056e0571de4a4e7"
+    source_hash__ = "55265e9fb22b183d2ae57928a94185ac"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -193,7 +193,7 @@ def jsonTransformer() -> TransformerCallable:
     return partial(traverse, transformation_table=json_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(jsonTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(jsonTransformer)
 
 
 def transform_json(cst):
@@ -282,7 +282,7 @@ class jsonCompiler(Compiler):
             return '?'
 
 
-get_compiler = ThreadLocalSingletonFactory(jsonCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(jsonCompiler)
 
 
 def compile_json(ast):

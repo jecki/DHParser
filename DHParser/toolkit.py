@@ -189,7 +189,7 @@ class ThreadLocalSingletonFactory:
     the same instance of `class_or_factory` for one and the
     same thread, but different instances for different threads.
     """
-    def __init__(self, class_or_factory, name: str = "", *, ident: str = ""):
+    def __init__(self, class_or_factory, name: str = ""):
         self.class_or_factory = class_or_factory
         self.singleton_name = "{NAME}_{ID}_singleton".format(
             NAME=name or class_or_factory.__name__, ID=str(id(self)))
