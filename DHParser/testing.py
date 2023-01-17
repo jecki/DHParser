@@ -57,7 +57,7 @@ from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_hist
 from DHParser.parse import Lookahead
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
-from DHParser.trace import set_tracer, all_descendants, trace_history
+from DHParser.trace import set_tracer, trace_history
 from DHParser.transform import traverse, remove_children
 from DHParser.toolkit import load_if_file, re, re_find, instantiate_executor, TypeAlias
 
@@ -453,7 +453,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         track_history = get_config_value('history_tracking')
         try:
             if has_lookahead(parser_name):
-                set_tracer(all_descendants(parser[parser_name]), trace_history)
+                set_tracer(parser[parser_name].descendants, trace_history)
                 track_history = True
         except AttributeError:
             pass
@@ -673,7 +673,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
     # remove tracers, in case there are any:
-    set_tracer(all_descendants(parser.root_parser__), None)
+    set_tracer(parser.root_parser__.descendants, None)
 
     # write test-report
     if report:

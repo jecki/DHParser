@@ -14,7 +14,9 @@ cdef class Parser:
     cdef public object _grammar
     cdef object visited
     cdef public object cycle_detection
-    cdef public object _parse_proxy
+    cdef public object
+    cdef public object _descendants_cache
+    cdef public object _descendant_trails_cache
     cdef str _symbol
 
     cpdef reset(self)
@@ -25,6 +27,7 @@ cdef class Parser:
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
+    # cpdef descendant_trails(self)
     # cpdef _apply(self, func, ptrail, flip)
     cpdef apply(self, func)
 

@@ -429,17 +429,15 @@ class Parser:
     can for example be returned by the :py:class:`ZeroOrMore`-parser in case
     the contained parser is repeated zero times.
 
-    Attributes and Properties:
+    :ivar pname:  The parser's name.
 
-        pname:  The parser's name.
-
-        disposable: A property indicating that the parser returns
+    :ivar disposable: A property indicating that the parser returns
                 anonymous nodes. For performance
                 reasons this is implemented as an object variable rather
                 than a property. This property should always be equal to
                 ``self.name[0] == ":"``.
 
-        drop_content: A property (for performance reasons implemented as
+    :ivar drop_content: A property (for performance reasons implemented as
                 simple field) that, if set, induces the parser not to return
                 the parsed content or subtree if it has matched but the
                 dummy ``EMPTY_NODE``. In effect the parsed content will be
@@ -447,37 +445,41 @@ class Parser:
                 anonymous (or pseudo-anonymous) parsers are allowed to
                 drop content.
 
-        node_name: The name for the nodes that are created by
+    :ivar node_name: The name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
                 ``pname``, otherwise it is the name of the parser's type
                 prefixed with a colon ":".
 
-        eq_class: A unique number for the class of functionally
+    :ivar eq_class: A unique number for the class of functionally
                 equivalent parsers that this parser belongs to.
                 (This serves the purpose of optimizing memoization,
                 by tying memoization dictionaries to the classes
                 of functionally equivalent parsers, rather than to
                 the individual parsers themselves.)
 
-        visited:  Mapping of places this parser has already been to
+    :ivar visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
-        proxied: The original ``_parse()``-method is stored here, if a
-                proxy (e.g. a tracing debugger) is installed via the
-                ``set_proxy()``-method.
+    :ivar parse_proxy: Usually, just a reference to ``self._parse``, but can
+                be overwritten to run th call to the ``_parse``-method
+                through a proxy like, for example, a tracing debugger.
+                See :py:mod:`~DHParser.trace`
 
-        _grammar:  A reference to the Grammar object to which the parser
+    :ivar _grammar:  A reference to the Grammar object to which the parser
                 is attached.
 
-        _symbol:  The name of the closest named parser to which this
+    :ivar _symbol:  The name of the closest named parser to which this
                 parser is connected in a grammar. If pname is not the
                 empty string, this will become the same as pname, when
                 the property ``symbol`` is read for the first time.
 
-        _descendants_cache:  A cache of the trails (i.e. list of parsers) from
-                this parser to all other parsers that can be reached from
+    :ivar _descendants_cache: A cache of all descendant parsers that can be
+                reached from this parser.
+
+    :ivar _descendant_trails_cache:  A cache of the trails (i.e. list of parsers)
+                from this parser to all other parsers that can be reached from
                 this parser.
     """
 
@@ -495,7 +497,8 @@ class Parser:
         except NameError:
             pass                      # ensures Cython-compatibility
         self._symbol = ''             # type: str
-        self._descendants_cache = None # type: Optional[List[ParserTrail]]
+        self._descendants_cache = None  # type: Optional[Tuple[Parser]]
+        self._descendant_trails_cache = None  # type: Optional[Tuple[ParserTrail]]
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -707,6 +710,14 @@ class Parser:
             else:
                 # if proxy is a method it must be a method of self
                 assert proxy.__self__ == self
+            if self._parse_proxy != self._parse and proxy != self._parse\
+                    and proxy != self._parse_proxy:
+                # in the following `encode('utf-8')` is silly but needed, because
+                # MS Windows might otherwise crash with an encoding-error :-(
+                raise AssertionError((f"A new parsing proxy can only be set if the old"
+                    f'parsing proxy has been cleared with "parser.set_proxy(None)", first! '
+                    f'Parser "{self}" still has proxy: "{self._parse_proxy}" which cannot '
+                    f'be overwritten with "{proxy}".').encode('utf-8'))
             self._parse_proxy = cast(ParseFunc, proxy)
 
     def name(self, pname: str, disposable: bool = False) -> Parser:
@@ -750,23 +761,33 @@ class Parser:
         """
         return tuple()
 
-    def descendants(self) -> List[ParserTrail]:
-        """Returns a list or iterator of the trails of self and all descendant
-        parsers, avoiding of circles."""
-        if self._descendants_cache is not None:  return self._descendants_cache
-        visited = set()
-
-        def descendants_(parser: Parser, ptrl: ParserTrail) -> Iterator[ParserTrail]:
-            if parser not in visited:
-                visited.add(parser)
-                ptrl = ptrl + [parser]
-                yield ptrl
-                for p in parser.sub_parsers():
-                    yield from descendants_(p, ptrl)
-
-        # yield from descendants_(self, [])
-        self._descendants_cache = [pt for pt in descendants_(self, [])]
+    @property
+    def descendants(self) -> Tuple[Parser]:
+        """Returns a tuple or iterator of self and all descendant parsers,
+        avoiding circles. ``self`` is the first item in the returned list."""
+        if self._descendants_cache is None:
+            self._descendants_cache = tuple(pt[-1] for pt in self.descendant_trails)
         return self._descendants_cache
+
+    @property
+    def descendant_trails(self) -> Tuple[ParserTrail]:
+        """Returns a tuple or iterator of the trails of self and all descendant
+        parsers, avoiding of circles. The trail leading to self is the first
+        in the returned list or iterator."""
+        if self._descendant_trails_cache is None:
+            visited = set()
+
+            def desc_trails(parser: Parser, ptrl: ParserTrail) -> Iterator[ParserTrail]:
+                if parser not in visited:
+                    visited.add(parser)
+                    ptrl = ptrl + [parser]
+                    yield ptrl
+                    for p in parser.sub_parsers():
+                        yield from desc_trails(p, ptrl)
+
+            # yield from descendants_(self, [])
+            self._descendant_trails_cache = tuple(pt for pt in desc_trails(self, []))
+        return self._descendant_trails_cache
 
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
@@ -786,7 +807,7 @@ class Parser:
         worrying about forgetting the return value of procedure, because a
         return value of ``None`` means "carry on".
         """
-        for pctx in self.descendants():
+        for pctx in self.descendant_trails:
             if func(pctx):
                 return True
         return False
@@ -964,7 +985,7 @@ def mixin_nonempty(whitespace: str) -> str:
 
     :param whitespace: a regular expression pattern
     :return: new regular expression pattern that does not match the empty
-        string '' any more.
+        string '', anymore.
     """
     if re.match(whitespace, ''):
         return r'(?:(?=(.|\n))' + whitespace + r'(?!\1))'
@@ -3855,11 +3876,7 @@ class NegativeLookbehind(Lookbehind):
 def is_context_sensitive(parser: Parser) -> bool:
     """Returns True, is ``parser`` is a context-sensitive parser
     or calls a context-sensitive parser."""
-    return any(isinstance(pctx[-1], ContextSensitive) for pctx in parser.descendants())
-    # for p in parser.descendants():
-    #     if isinstance(p, ContextSensitive):
-    #         return True
-    # return False
+    return any(isinstance(p, ContextSensitive) for p in parser.descendants)
 
 
 class BlackHoleDict(dict):
