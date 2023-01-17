@@ -1,4 +1,5 @@
-# trace.py - tracing of the parsing process (for debugging)
+# trace.py - tracing of the parsing process (for debugging) and
+#            interrupting long running parser processes.
 #
 # Copyright 2018  by Eckhart Arnold (arnold@badw.de)
 #                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -29,6 +30,9 @@ This functionality can be used for several purposes:
 
 2. recording of parsing history and "post-mortem"-debugging,
    implemented here and in module :py:mod:`log`
+
+3. Interrupting long running parser processes by polling
+   a threading.Event or multiprocessing.Event once in a while
 """
 
 from __future__ import annotations
@@ -213,3 +217,12 @@ def resume_notices_on(grammar: Grammar):
 def resume_notices_off(grammar: Grammar):
     """Turns resume-notices as well as history tracking off!"""
     set_tracer(grammar, None)
+
+
+#######################################################################
+#
+# Interrupt-Polling
+#
+#######################################################################
+
+
