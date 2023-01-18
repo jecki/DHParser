@@ -66,7 +66,7 @@ from functools import partial
 import inspect
 import io
 import json
-from multiprocessing import Process, Value, Array
+from multiprocessing import Process, Value, Array, Manager
 import os
 import subprocess
 import sys
@@ -81,8 +81,8 @@ from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.nodetree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
-    json_encode_string, json_rpc, json_dumps, identify_python, normalize_docstring, md5, \
-    is_html_name, TypeAlias
+    json_encode_string, json_rpc, json_dumps, pp_json, pp_json_str, identify_python, \
+    normalize_docstring, md5, is_html_name, TypeAlias
 from DHParser.versionnumber import __version__
 
 
@@ -110,8 +110,6 @@ __all__ = ('RPC_Table',
            'ALL_RPCs',
            'rpc_entry_info',
            'rpc_table_info',
-           'pp_json',
-           'pp_json_str',
            'asyncio_run',
            'asyncio_connect',
            'split_header',
@@ -125,11 +123,20 @@ __all__ = ('RPC_Table',
            'has_server_stopped')
 
 
+#######################################################################
+#
+# Types and Constants
+#
+#######################################################################
+
+
 RPC_Table: TypeAlias = Dict[str, Callable]
 RPC_Type: TypeAlias = Union[RPC_Table, List[Callable], Callable]
 RPC_Error_Type: TypeAlias = Optional[Tuple[int, str]]
 BytesType: TypeAlias = Union[bytes, bytearray]
 ConnectionCallback: TypeAlias = Callable[['Connection'], None]
+
+ALL_RPCs = set('*')  # Magic value denoting all remote procedures
 
 RE_IS_JSONRPC = rb'(?:.*?\n\n)?\s*(?:{\s*"jsonrpc")|(?:\[\s*{\s*"jsonrpc")'
 # b'\s*(?:{|\[|"|\d|true|false|null)'
@@ -197,107 +204,11 @@ LOGGING_REQUEST = "logging('')"
 SERVER_REPLY_TIMEOUT = 3  # seconds
 
 
-def substitute_default_host_and_port(host, port):
-    """Substiutes the default value(s) from the configuration file if host
-     or port ist ``USE_DEFAULT_HOST`` or ``USE_DEFAULT_PORT``. """
-    if host == USE_DEFAULT_HOST:
-        host = get_config_value('server_default_host')
-    if port == USE_DEFAULT_PORT:
-        port = int(get_config_value('server_default_port'))
-    return host, port
-
-
-def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
-    """Convert string to suitable argument type"""
-    s = s.strip()
-    if s in ('None', 'null'):
-        return None
-    elif s in ('True', 'true'):
-        return True
-    elif s in ('False', 'false'):
-        return False
-    try:
-        return int(s)
-    except ValueError:
-        if s[:1] in ('"', "'"):
-            return s.strip('" \'')
-        else:
-            try:
-                return json.loads(s)
-            except json.JSONDecodeError:
-                return s
-
-
-def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
-    """Returns json-object as pretty-printed string. Other than the standard-library's
-    `json.dumps()`-function `pp_json` allows to include already serialized
-    parts (in the form of JSONStr-objects) in the json-object. Example::
-
-    :param obj: A json-object (or a tree of json-objects) to be serialized
-    :param cls: The class of a custom json-encoder derived from `json.JSONEncoder`
-    :return: The pretty-printed string-serialized form of the json-object.
-    """
-    custom_encoder = cls()
-
-    def serialize(obj, indent: str) -> List[str]:
-        if isinstance(obj, str):
-            if obj.find('\n') >= 0:
-                lines = obj.split('\n')
-                pretty_str = json_encode_string(lines[0]) + '\n' \
-                    + '\n'.join(indent + json_encode_string(line) for line in lines[1:])
-                return [pretty_str]
-            else:
-                return [json_encode_string(obj)]
-        elif isinstance(obj, dict):
-            if obj:
-                if len(obj) == 1:
-                    k, v = next(iter(obj.items()))
-                    if not isinstance(v, (dict, list, tuple)):
-                        r = ['{"' + k + '": ']
-                        r.extend(serialize(v, indent + '  '))
-                        r.append('}')
-                        return r
-                r = ['{\n' + indent + '  ']
-                for k, v in obj.items():
-                    r.append('"' + k + '": ')
-                    r.extend(serialize(v, indent + '  '))
-                    r.append(',\n' + indent + '  ')
-                r[-1] = '}'
-                return r
-            return ['{}']
-        elif isinstance(obj, (list, tuple)):
-            if obj:
-                r = ['[']
-                for item in obj:
-                    r.extend(serialize(item, indent + '  '))
-                    r.append(',')
-                r[-1] = ']'
-                return r
-            return ['[]']
-        elif obj is True:
-            return ['true']
-        elif obj is False:
-            return ['false']
-        elif obj is None:
-            return ['null']
-        elif isinstance(obj, (int, float)):
-            # NOTE: test for int must follow test for bool, because True and False
-            #       are treated as instances of int as well by Python
-            return [repr(obj)]
-        elif isinstance(obj, JSONstr):
-            return [obj.serialized_json]
-        elif isinstance(obj, JSONnull) or obj is JSONnull:
-            return ['null']
-        return serialize(custom_encoder.default(obj), indent)
-
-    return ''.join(serialize(obj, ''))
-
-
-def pp_json_str(jsons: str) -> str:
-    """Pretty-prints and already serialized (but possibly ugly-printed)
-    json object in a well-readable form. Syntactic sugar for:
-    `pp_json(json.loads(jsons))`."""
-    return pp_json(json.loads(jsons))
+#######################################################################
+#
+# asyncio support
+#
+#######################################################################
 
 
 def asyncio_run(coroutine: Awaitable, loop=None) -> Any:
@@ -327,48 +238,15 @@ def asyncio_run(coroutine: Awaitable, loop=None) -> Any:
                     myloop.close()
 
 
-async def asyncio_connect(
-        host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
-        retry_timeout: float = 3.0) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
-    """Opens a connection with timeout retry-timeout."""
-    host, port = substitute_default_host_and_port(host, port)
-    delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
-    connected = False
-    reader, writer = None, None
-    save_error = ConnectionError  # type: Union[Type[ConnectionError], ConnectionRefusedError, OSError]
-    OSError_countdown = 10
-    while not connected and delay < retry_timeout:
-        try:
-            reader, writer = await asyncio.open_connection(host, port)
-            delay = retry_timeout
-            connected = True
-        except ConnectionRefusedError as error:
-            save_error = error
-            if delay > 0.0:
-                await asyncio.sleep(delay)
-                delay *= 1.5
-            else:
-                delay = retry_timeout  # exit while loop
-        except OSError as error:
-            # workaround for strange erratic OSError (MacOS only?)
-            OSError_countdown -= 1
-            if OSError_countdown < 0:
-                save_error = error
-                delay = retry_timeout
-            else:
-                await asyncio.sleep(0)
-
-    if connected and reader is not None and writer is not None:
-        return reader, writer
-    else:
-        raise save_error
+#######################################################################
+#
+# Remote Procedure Call (RPC) support
+#
+#######################################################################
 
 
 def GMT_timestamp() -> str:
     return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
-
-
-ALL_RPCs = set('*')  # Magic value denoting all remote procedures
 
 
 def _func_info(name: str, func: Callable, html: bool) -> List[str]:
@@ -388,7 +266,7 @@ def _func_info(name: str, func: Callable, html: bool) -> List[str]:
 
 
 def _merge_info(info: List[str], html: bool) -> str:
-    """Interrnal function to merge function infos into
+    """Internal function to merge function infos into
     a string, omitting trailing empty lines."""
     while info and not info[-1]:  info.pop()
     if html:
@@ -481,6 +359,13 @@ def pp_transmission(data: bytes) -> Tuple[str, ...]:
     return t[:-1] + (pp_str,)
 
 
+#######################################################################
+#
+# Task-Execution in different Multi-Tasking-Models
+#
+#######################################################################
+
+
 def gen_task_id() -> int:
     """Generate a unique task id. This is always a negative number to
     distinguish the task id's from the json-rpc ids.
@@ -504,8 +389,10 @@ class ExecutionEnvironment:
     :ivar thread_executor:   A thread-pool-executor for blocking tasks
     :ivar submit_pool:  A secondary process-pool-executor to submit tasks
         synchronously and thread-safe.
-    :ivar submit_ppol_lock:  A threading.Lock to ensure that submissions to
+    :ivar submit_pool_lock:  A threading.Lock to ensure that submissions to
         the submit_pool will be thread_safe
+    ivar manager: a multiprocessing.SyncManager-object that can be used share
+        data across different processes.
     :ivar loop:  The asynchronous event loop for running coroutines
     :ivar log_file:  The name of the log-file to which error messages are
         written if an executor raises a Broken-Error.
@@ -517,6 +404,7 @@ class ExecutionEnvironment:
         self._process_executor = None                  # type: Optional[ProcessPoolExecutor]
         self._thread_executor = None                   # type: Optional[ThreadPoolExecutor]
         self._submit_pool = None                       # type: Optional[ProcessPoolExecutor]
+        self._manager = None                           # type: Optional[Manager]
         self.submit_pool_lock = threading.Lock()       # type: threading.Lock
         self.loop = event_loop                         # type: asyncio.AbstractEventLoop
         self.log_file = ''                             # type: str
@@ -548,6 +436,12 @@ class ExecutionEnvironment:
                 if self._submit_pool is None:
                     self._submit_pool = ProcessPoolExecutor()
         return self._submit_pool
+
+    @property
+    def manager(self):
+        if self._manager is None:
+            self._manager = Manager()
+        return self._manager
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
@@ -644,6 +538,69 @@ class ExecutionEnvironment:
         if self._submit_pool is not None:
             self._submit_pool.shutdown(wait=wait)
             self._submit_pool = None
+        if self._manager is not None:
+            self._manager.shutdown()
+
+
+#######################################################################
+#
+# TCP connection support
+#
+#######################################################################
+
+
+def substitute_default_host_and_port(host, port):
+    """Substitutes the default value(s) from the configuration file if host
+     or port ist ``USE_DEFAULT_HOST`` or ``USE_DEFAULT_PORT``. """
+    if host == USE_DEFAULT_HOST:
+        host = get_config_value('server_default_host')
+    if port == USE_DEFAULT_PORT:
+        port = int(get_config_value('server_default_port'))
+    return host, port
+
+
+async def asyncio_connect(
+        host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT,
+        retry_timeout: float = 3.0) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+    """Opens a connection with timeout retry-timeout."""
+    host, port = substitute_default_host_and_port(host, port)
+    delay = retry_timeout / 1.5**12 if retry_timeout > 0.0 else retry_timeout - 0.001
+    connected = False
+    reader, writer = None, None
+    save_error = ConnectionError  # type: Union[Type[ConnectionError], ConnectionRefusedError, OSError]
+    OSError_countdown = 10
+    while not connected and delay < retry_timeout:
+        try:
+            reader, writer = await asyncio.open_connection(host, port)
+            delay = retry_timeout
+            connected = True
+        except ConnectionRefusedError as error:
+            save_error = error
+            if delay > 0.0:
+                await asyncio.sleep(delay)
+                delay *= 1.5
+            else:
+                delay = retry_timeout  # exit while loop
+        except OSError as error:
+            # workaround for strange erratic OSError (MacOS only?)
+            OSError_countdown -= 1
+            if OSError_countdown < 0:
+                save_error = error
+                delay = retry_timeout
+            else:
+                await asyncio.sleep(0)
+
+    if connected and reader is not None and writer is not None:
+        return reader, writer
+    else:
+        raise save_error
+
+
+#######################################################################
+#
+#  Stream reading and writing
+#
+#######################################################################
 
 
 class StreamReaderProxy:
@@ -672,14 +629,6 @@ class StreamReaderProxy:
             return self.buffered_io.closed
         except AttributeError:
             return self._eof
-    #
-    # async def readline(self) -> bytes:
-    #     try:
-    #         return await self.loop.run_in_executor(None, self.buffered_io.readline)
-    #     except AttributeError:
-    #         self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
-    #             else asyncio.get_event_loop()
-    #         return await self.loop.run_in_executor(None, self.buffered_io.readline)
 
     async def _read(self, n=-1) -> bytes:
         if self._eof:
@@ -808,9 +757,8 @@ StreamWriterType = Union[asyncio.StreamWriter, StreamWriterProxy]
 class Connection:
     """Class Connections encapsulates connection-specific data for the Server
     class (see below). At the moment, however, only one connection is accepted at
-    one and the same time, assuming there is a one-on-one relationship between
-    the Text-Editor (i.e. the client) and the language server. Still, it serves
-    clarity to encapsulate the connection specific state.
+    one and the same time, assuming there is a one-to-one relationship between
+    the Text-Editor (i.e. the client) and the language server.
 
     Currently, logging is not encapsulated, assuming that for the purpose of
     debugging the language server it is better not to have more than one
@@ -970,6 +918,13 @@ class Connection:
             append_log(self.log_file, *args, echo=self.echo_log)
 
 
+#######################################################################
+#
+# Logging
+#
+#######################################################################
+
+
 def pick_value(rpc: bytes, key: bytes) -> Optional[Value]:
     i = rpc.find(key)
     if i < 0:  return None
@@ -1044,8 +999,37 @@ class LogFilter:
                 return not self.id_was_blocked(rpc)
         return True
 
+
+#######################################################################
+#
+# Language Server boilerplate
+#
+#######################################################################
+
+
 def connection_cb_dummy(connection: Connection) -> None:
     pass
+
+
+def convert_argstr(s: str) -> Union[None, bool, int, str, List, Dict]:
+    """Convert string to suitable argument type"""
+    s = s.strip()
+    if s in ('None', 'null'):
+        return None
+    elif s in ('True', 'true'):
+        return True
+    elif s in ('False', 'false'):
+        return False
+    try:
+        return int(s)
+    except ValueError:
+        if s[:1] in ('"', "'"):
+            return s.strip('" \'')
+        else:
+            try:
+                return json.loads(s)
+            except json.JSONDecodeError:
+                return s
 
 
 class Server:
@@ -1959,6 +1943,13 @@ class Server:
                 raise e
         finally:
             self.stage.value = SERVER_OFFLINE
+
+
+#######################################################################
+#
+# Starting and Stopping of servers
+#
+#######################################################################
 
 
 async def probe_tcp_server(host, port, timeout=SERVER_REPLY_TIMEOUT) -> str:

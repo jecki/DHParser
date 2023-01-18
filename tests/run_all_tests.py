@@ -42,7 +42,7 @@ def run_doctests_rst(rst_path):
         return result.failed
     except Exception as e:
         print("**********************************************************************")
-        print(f"Exception while procesing {rst_path}", e)
+        print(f"Exception while processing {rst_path}", e)
         print("**********************************************************************")
 
 
