@@ -388,7 +388,7 @@ ApplyFunc: TypeAlias = Callable[[List['Parser']], Optional[bool]]
 # The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc: TypeAlias = Callable[['Parser', cint], ParsingResult]
-ParserTrail: TypeAlias = List['Parser']
+ParserTrail: TypeAlias = Tuple['Parser']
 
 
 class Parser:
@@ -777,7 +777,7 @@ class Parser:
         if self._descendant_trails_cache is None:
             visited = set()
 
-            def desc_trails(parser: Parser, ptrl: ParserTrail) -> Iterator[ParserTrail]:
+            def desc_trails(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
                 if parser not in visited:
                     visited.add(parser)
                     ptrl = ptrl + [parser]
@@ -786,8 +786,9 @@ class Parser:
                         yield from desc_trails(p, ptrl)
 
             # yield from descendants_(self, [])
-            self._descendant_trails_cache = tuple(pt for pt in desc_trails(self, []))
+            self._descendant_trails_cache = tuple(tuple(pt) for pt in desc_trails(self, []))
         return self._descendant_trails_cache
+
 
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
@@ -878,7 +879,7 @@ def determine_eq_classes(root: Parser):
     of each parser."""
     eq_classes: Dict[Hashable, int] = {}
 
-    def assign_eq_class(parser_stack: List[Parser]) -> bool:
+    def assign_eq_class(parser_stack: ParserTrail) -> bool:
         nonlocal eq_classes
         p = parser_stack[-1]
         signature = p.signature()

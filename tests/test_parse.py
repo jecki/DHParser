@@ -1788,6 +1788,19 @@ class TestStructurePreservationOnLookahead:
         assert author.errors[0].code == MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
 
 
+class TestParserTrails:
+    def test_parser_trails(self):
+        grammar = """
+        root = a | b
+        a = `a`
+        b = c | root
+        c = `c`
+        """
+        gr = create_parser(grammar)
+        print(gr['b'].descendant_trails)
+
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
