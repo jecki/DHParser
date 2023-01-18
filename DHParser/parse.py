@@ -71,6 +71,7 @@ except ImportError:
 
 __all__ = ('ParserError',
            'ApplyFunc',
+           'ApplyToTrailFunc',
            'FlagFunc',
            'ParseFunc',
            'ParsingResult',
@@ -384,11 +385,12 @@ def reentry_point(rest: StringView,
 ParsingResult: TypeAlias = Tuple[Optional[Node], cint]
 MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
-ApplyFunc: TypeAlias = Callable[[List['Parser']], Optional[bool]]
+ApplyFunc: TypeAlias = Callable[['Parser'], Optional[bool]]
+ParserTrail: TypeAlias = Tuple['Parser']
+ApplyToTrailFunc: TypeAlias = Callable[[ParserTrail], Optional[bool]]
 # The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc: TypeAlias = Callable[['Parser', cint], ParsingResult]
-ParserTrail: TypeAlias = Tuple['Parser']
 
 
 class Parser:
@@ -766,27 +768,39 @@ class Parser:
         """Returns a tuple or iterator of self and all descendant parsers,
         avoiding circles. ``self`` is the first item in the returned list."""
         if self._descendants_cache is None:
-            self._descendants_cache = tuple(pt[-1] for pt in self.descendant_trails)
+            if self._descendant_trails_cache:
+                self._descendants_cache = tuple(pt[-1] for pt in self._descendant_trails_cache)
+            else:
+                visited = set()
+
+                def collect(parser: Parser) -> Iterator[Parser]:
+                    if parser not in visited:
+                        visited.add(parser)
+                        yield parser
+                        for p in parser.sub_parsers():
+                            yield from collect(p)
+
+                self._descendants_cache = tuple(p for p in collect(self))
         return self._descendants_cache
 
     @property
     def descendant_trails(self) -> Tuple[ParserTrail]:
         """Returns a tuple or iterator of the trails of self and all descendant
-        parsers, avoiding of circles. The trail leading to self is the first
-        in the returned list or iterator."""
+        parsers, avoiding circles. The trail leading to self is the first
+        in the returned sequence or iterator."""
         if self._descendant_trails_cache is None:
             visited = set()
 
-            def desc_trails(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
+            def collect(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
                 if parser not in visited:
                     visited.add(parser)
-                    ptrl = ptrl + [parser]
+                    ptrl += [parser]
                     yield ptrl
                     for p in parser.sub_parsers():
-                        yield from desc_trails(p, ptrl)
+                        yield from collect(p, ptrl)
 
             # yield from descendants_(self, [])
-            self._descendant_trails_cache = tuple(tuple(pt) for pt in desc_trails(self, []))
+            self._descendant_trails_cache = tuple(tuple(pt) for pt in collect(self, []))
         return self._descendant_trails_cache
 
 
@@ -807,6 +821,17 @@ class Parser:
         apply a procedure to all descendant parsers (including self) without
         worrying about forgetting the return value of procedure, because a
         return value of ``None`` means "carry on".
+        """
+        for parser in self.descendants:
+            if func(parser):
+                return True
+        return False
+
+    def apply_to_trail(self, func: ApplyToTrailFunc) -> Optional[bool]:
+        """
+        Same as :py:meth:`Parser.apply`, only that the applied function
+        receives the complete "trail", i.e. list of parsers that lead
+        from self to the visited parser as argument.
         """
         for pctx in self.descendant_trails:
             if func(pctx):
@@ -879,9 +904,8 @@ def determine_eq_classes(root: Parser):
     of each parser."""
     eq_classes: Dict[Hashable, int] = {}
 
-    def assign_eq_class(parser_stack: ParserTrail) -> bool:
+    def assign_eq_class(p: Parser) -> bool:
         nonlocal eq_classes
-        p = parser_stack[-1]
         signature = p.signature()
         p.eq_class = eq_classes.setdefault(signature, id(p))
         return False
@@ -922,7 +946,7 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
 # functions for analysing the parser tree/graph ###
 
 
-def has_non_autocaptured_symbols(ptrail: List[Parser]) -> Optional[bool]:
+def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
     """Returns True, if the parser-path contains a Capture-Parser that is not
     shielded by a Retrieve-Parser. This is the case for captured symbols
     that are not "auto-captured" by a Retrieve-Parser.
@@ -1025,8 +1049,8 @@ class GrammarError(Exception):
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
 
 
-def reset_parser(ctx):
-    return ctx[-1].reset()
+def reset_parser(parser):
+    return parser.reset()
 
 
 class Grammar:
@@ -1384,12 +1408,11 @@ class Grammar:
         return duplicate
 
 
-    def _add_parser__(self, ptrail: List[Parser]) -> None:
+    def _add_parser__(self, parser: Parser) -> None:
         """
         Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
-        parser = ptrail[-1]
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
@@ -1482,7 +1505,7 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
-        self.root_parser__.apply(lambda ctx: ctx[-1].reset())
+        self.root_parser__.apply(lambda parser: parser.reset())
         self.unconnected_parsers__: List[Parser] = []
         self.resume_parsers__: List[Parser] = []
         resume_lists = []
@@ -1790,7 +1813,7 @@ class Grammar:
             error_msg = "Capture-stack not empty after end of parsing: " \
                 + ', '.join(f'{v} {len(l)} {"items" if len(l) > 1 else "item"}'
                             for v, l in self.variables__.items() if len(l) >= 1)
-            if parser.apply(has_non_autocaptured_symbols):
+            if parser.apply_to_trail(has_non_autocaptured_symbols):
                 if all(cast(Capture, self[v]).can_capture_zero_length
                        for v, l in self.variables__.items() if len(l) >= 1):
                     error_code = CAPTURE_STACK_NOT_EMPTY_WARNING
@@ -1915,7 +1938,7 @@ class Grammar:
         symbol = self.associated_symbol_cache__.get(parser, None)   # type: Optional[Parser]
         if symbol:  return symbol
 
-        def find_symbol_for_parser(ptrail: List[Parser]) -> Optional[bool]:
+        def find_symbol_for_parser(ptrail: ParserTrail) -> Optional[bool]:
             nonlocal symbol, parser
             if parser in ptrail[-1].sub_parsers():
                 for p in reversed(ptrail):
@@ -1930,9 +1953,9 @@ class Grammar:
         elif parser.pname:
             symbol = parser
         else:
-            self.root_parser__.apply(find_symbol_for_parser)
+            self.root_parser__.apply_to_trail(find_symbol_for_parser)
             for resume_parser in self.unconnected_parsers__:
-                resume_parser.apply(find_symbol_for_parser)
+                resume_parser.apply_to_trail(find_symbol_for_parser)
             if symbol is None:
                 raise AttributeError('Parser %s (%i) is not contained in Grammar!'
                                      % (str(parser), id(parser)))
@@ -2666,9 +2689,8 @@ def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> P
         >>> print(tree.as_sxpr())
         (root "ABD")
     """
-    def apply_func(ptrail: List[Parser]) -> None:
+    def apply_func(parser: Parser) -> None:
         nonlocal level
-        parser = ptrail[-1]
         if isinstance(parser, CombinedParser):
             if level == CombinedParser.NO_TREE_REDUCTION:
                 cast(CombinedParser, parser)._return_value = parser._return_value_no_optimization
@@ -3998,7 +4020,7 @@ class Capture(ContextSensitive):
                 'Capture only works as named parser! Error in parser: ' + str(self),
                 0, CAPTURE_WITHOUT_PARSERNAME
             )))
-        if self.parser.apply(lambda plist: plist[-1].drop_content):
+        if self.parser.apply(lambda p: p.drop_content):
             errors.append(AnalysisError(self.pname, self, Error(
                 'Captured symbol "%s" contains parsers that drop content, '
                 'which can lead to unintended results!' % (self.pname or str(self)),

@@ -92,8 +92,7 @@ class TestParserClass:
             """
         gr = grammar_provider(minilang)()
         l = []
-        def visitor(context: List[Parser]):
-            p = context[-1]
+        def visitor(p: Parser):
             l.append(p.pname + p.ptype)
         gr.root__.apply(visitor)
         s1 = ", ".join(l)
