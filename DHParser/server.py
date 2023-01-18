@@ -620,11 +620,11 @@ class ExecutionEnvironment:
         return result, rpc_error
 
     def submit_as_process(self, func, *args) -> Future:
-        """Submits long running function to the secondary process-pool.
+        """Submits a long running function to the secondary process-pool.
         Other than `execute()` this works synchronously and thread-safe.
         """
-        if self.submit_pool is None:
-            self._submit_pool = ProcessPoolExecutor()
+        # if self.submit_pool is None:
+        #     self._submit_pool = ProcessPoolExecutor()
         with self.submit_pool_lock:
             future = self.submit_pool.submit(func, *args)
         return future
