@@ -774,19 +774,34 @@ class Parser:
         """Returns a tuple or iterator of the trails of self and all descendant
         parsers, avoiding of circles. The trail leading to self is the first
         in the returned list or iterator."""
+        # if self._descendant_trails_cache is None:
+        #     visited = set()
+        #
+        #     def desc_trails(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
+        #         if parser not in visited:
+        #             visited.add(parser)
+        #             ptrl = ptrl + [parser]
+        #             yield ptrl
+        #             for p in parser.sub_parsers():
+        #                 yield from desc_trails(p, ptrl)
+        #
+        #     # yield from descendants_(self, [])
+        #     self._descendant_trails_cache = tuple(tuple(pt) for pt in desc_trails(self, []))
+        # return self._descendant_trails_cache
+
         if self._descendant_trails_cache is None:
             visited = set()
 
-            def desc_trails(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
+            def desc_trails(parser: Parser) -> Iterator[ParserTrail]:
                 if parser not in visited:
                     visited.add(parser)
-                    ptrl = ptrl + [parser]
-                    yield ptrl
+                    yield (parser,)
                     for p in parser.sub_parsers():
-                        yield from desc_trails(p, ptrl)
+                        for pt in desc_trails(p):
+                            yield (parser, *pt)
 
             # yield from descendants_(self, [])
-            self._descendant_trails_cache = tuple(tuple(pt) for pt in desc_trails(self, []))
+            self._descendant_trails_cache = tuple(pt for pt in desc_trails(self))
         return self._descendant_trails_cache
 
 
