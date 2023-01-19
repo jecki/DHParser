@@ -798,19 +798,22 @@ class Parser:
         anonymous parsers to their nearest named ancestor."""
         if self._descendant_trails_cache is None:
             visited = set()
+            trails = set()
 
-            def collect_trails(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
-                nonlocal visited
+            def collect_trails(parser: Parser, ptrl: List[Parser]):
+                nonlocal visited, trails
                 if parser not in visited:
                     visited.add(parser)
-                    ptrl = ptrl + [parser]  # never replace by ptrl += [parser] or ptrl.appen(arser)!!!
-                    yield ptrl
+                    # ptrl = ptrl + [parser]
+                    ptrl.append(parser)
+                    trails.add(tuple(ptrl))
                     for p in parser.sub_parsers:
-                        yield from collect_trails(p, ptrl)
+                        collect_trails(p, ptrl)
+                    ptrl.pop()
 
-            self._descendant_trails_cache = tuple(tuple(pt) for pt in collect_trails(self, []))
+            collect_trails(self, [])
+            self._descendant_trails_cache = frozenset(trails)
         return self._descendant_trails_cache
-
 
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
