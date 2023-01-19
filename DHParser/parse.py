@@ -771,8 +771,8 @@ class Parser:
 
     @property
     def descendants(self) -> AbstractSet[Parser]:
-        """Returns a tuple or iterator of self and all descendant parsers,
-        avoiding circles. ``self`` is the first item in the returned list."""
+        """Returns a set of self and all descendant parsers,
+        avoiding circles."""
         if self._descendants_cache is None:
             if self._descendant_trails_cache:
                 self._descendants_cache = tuple(pt[-1] for pt in self._descendant_trails_cache)
@@ -792,9 +792,10 @@ class Parser:
 
     @property
     def descendant_trails(self) -> AbstractSet[ParserTrail]:
-        """Returns a tuple or iterator of the trails of self and all descendant
-        parsers, avoiding circles. The trail leading to self is the first
-        in the returned sequence or iterator."""
+        """Returns a set of the trails of self and all descendant
+        parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
+        the returned set is not really comprehensive, but sufficient to trace
+        anonymous parsers to their nearest named ancestor."""
         if self._descendant_trails_cache is None:
             visited = set()
 
@@ -802,7 +803,7 @@ class Parser:
                 nonlocal visited
                 if parser not in visited:
                     visited.add(parser)
-                    ptrl = ptrl + [parser]  # do not replace by ptrl += [parser] or ptrl.appen(arser)!!!
+                    ptrl = ptrl + [parser]  # never replace by ptrl += [parser] or ptrl.appen(arser)!!!
                     yield ptrl
                     for p in parser.sub_parsers:
                         yield from collect_trails(p, ptrl)
