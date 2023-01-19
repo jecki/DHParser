@@ -36,7 +36,7 @@ from collections import defaultdict, namedtuple
 import copy
 from functools import lru_cache
 from typing import Callable, cast, List, Tuple, Set, Dict, \
-    DefaultDict, Sequence, Union, Optional, Iterator, Hashable
+    DefaultDict, Sequence, Union, Optional, Iterator, Hashable, AbstractSet
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -468,6 +468,18 @@ class Parser:
                 be overwritten to run th call to the ``_parse``-method
                 through a proxy like, for example, a tracing debugger.
                 See :py:mod:`~DHParser.trace`
+                
+    :ivar sub_parsers: set of parsers that are directly referred to by
+                this parser, e.g. parser "a" defined by the EBNF-expression
+                "a = b (b | c)" has the sub-parser-set {b, c}.
+
+                Notes: 1.the set is empty for parser that derive neither
+                from :py:class:`UnaryParser` nor from :py:class:`NaryParser`
+                2. unary parser have exactly on sub-parser 3. n-ary parsers
+                have one or more sub_parsers. For n-ary-parsers
+                len(p.sub_parser) can be lower than len(p.parsers), in case
+                one and the same parser is referred to more than once
+                in the contained parser's list.
 
     :ivar _grammar:  A reference to the Grammar object to which the parser
                 is attached.
@@ -492,6 +504,7 @@ class Parser:
         self.drop_content = False     # type: bool
         self.node_name = self.ptype   # type: str
         self.eq_class = id(self)      # type: int
+        self.sub_parsers = frozenset()  # type: AbstractSet[Parser]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
         try:
@@ -499,8 +512,8 @@ class Parser:
         except NameError:
             pass                      # ensures Cython-compatibility
         self._symbol = ''             # type: str
-        self._descendants_cache = None  # type: Optional[Tuple[Parser]]
-        self._descendant_trails_cache = None  # type: Optional[Tuple[ParserTrail]]
+        self._descendants_cache = None  # type: Optional[AbstractSet[Parser]]
+        self._descendant_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -587,8 +600,7 @@ class Parser:
             except ParserError as pe:
                 # catching up with parsing after an error occurred
                 gap = pe.location - location
-                rules = tuple(grammar.resume_rules__.get(
-                    grammar.associated_symbol__(self).pname, []))
+                rules = tuple(grammar.resume_rules__.get(self.symbol, []))
                 next_location = pe.location + pe.node_orig_len
                 rest = grammar.document__[next_location:]
                 i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
@@ -757,14 +769,8 @@ class Parser:
         except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        """Returns the tuple of sub-parsers if there are any.
-        Overridden by Unary, Nary and Forward.
-        """
-        return tuple()
-
     @property
-    def descendants(self) -> Tuple[Parser]:
+    def descendants(self) -> AbstractSet[Parser]:
         """Returns a tuple or iterator of self and all descendant parsers,
         avoiding circles. ``self`` is the first item in the returned list."""
         if self._descendants_cache is None:
@@ -773,34 +779,35 @@ class Parser:
             else:
                 visited = set()
 
-                def collect(parser: Parser) -> Iterator[Parser]:
+                def collect(parser: Parser):
+                    nonlocal visited
                     if parser not in visited:
                         visited.add(parser)
-                        yield parser
-                        for p in parser.sub_parsers():
-                            yield from collect(p)
+                        for p in parser.sub_parsers:
+                            collect(p)
 
-                self._descendants_cache = tuple(p for p in collect(self))
+                collect(self)
+                self._descendants_cache = frozenset(visited)  # tuple(p for p in collect(self))
         return self._descendants_cache
 
     @property
-    def descendant_trails(self) -> Tuple[ParserTrail]:
+    def descendant_trails(self) -> AbstractSet[ParserTrail]:
         """Returns a tuple or iterator of the trails of self and all descendant
         parsers, avoiding circles. The trail leading to self is the first
         in the returned sequence or iterator."""
         if self._descendant_trails_cache is None:
             visited = set()
 
-            def collect(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
+            def collect_trails(parser: Parser, ptrl: List[Parser]) -> Iterator[ParserTrail]:
+                nonlocal visited
                 if parser not in visited:
                     visited.add(parser)
-                    ptrl += [parser]
+                    ptrl = ptrl + [parser]  # do not replace by ptrl += [parser] or ptrl.appen(arser)!!!
                     yield ptrl
-                    for p in parser.sub_parsers():
-                        yield from collect(p, ptrl)
+                    for p in parser.sub_parsers:
+                        yield from collect_trails(p, ptrl)
 
-            # yield from descendants_(self, [])
-            self._descendant_trails_cache = tuple(tuple(pt) for pt in collect(self, []))
+            self._descendant_trails_cache = tuple(tuple(pt) for pt in collect_trails(self, []))
         return self._descendant_trails_cache
 
 
@@ -1505,7 +1512,7 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
-        self.root_parser__.apply(lambda parser: parser.reset())
+        # self.root_parser__.apply(reset_parser)
         self.unconnected_parsers__: List[Parser] = []
         self.resume_parsers__: List[Parser] = []
         resume_lists = []
@@ -1689,7 +1696,7 @@ class Grammar:
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
-        # done by reset: self.last_rb__loc__ = -1  # rollback location
+        # done by reset: self.last_rb__loc__ = -2  # rollback location
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         L = len(self.document__)
@@ -1940,7 +1947,7 @@ class Grammar:
 
         def find_symbol_for_parser(ptrail: ParserTrail) -> Optional[bool]:
             nonlocal symbol, parser
-            if parser in ptrail[-1].sub_parsers():
+            if parser in ptrail[-1].sub_parsers:
                 for p in reversed(ptrail):
                     if p.pname:
                         # save the name of the closest containing named parser
@@ -1974,7 +1981,7 @@ class Grammar:
         def add_anonymous_descendants(p: Parser):
             nonlocal symbol
             self.associated_symbol_cache__[p] = symbol
-            for d in p.sub_parsers():
+            for d in p.sub_parsers:
                 if not d.pname and not (isinstance(d, Forward) and cast(Forward, d).parser.pname):
                     add_anonymous_descendants(d)
 
@@ -2006,11 +2013,10 @@ class Grammar:
             def leaf_parsers(p: Parser) -> Optional[bool]:
                 if p in leaf_state:
                     return leaf_state[p]
-                sub_list = p.sub_parsers()
-                if sub_list:
+                if p.sub_parsers:
                     leaf_state[p] = None
-                    state = any(leaf_parsers(s) for s in sub_list)  # type: Optional[bool]
-                    if not state and any(leaf_state[s] is None for s in sub_list):
+                    state = any(leaf_parsers(s) for s in p.sub_parsers)  # type: Optional[bool]
+                    if not state and any(leaf_state[s] is None for s in p.sub_parsers):
                         state = None
                 else:
                     state = True
@@ -2801,15 +2807,13 @@ class UnaryParser(CombinedParser):
         super(UnaryParser, self).__init__()
         assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
+        self.sub_parsers = frozenset({parser})
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
-
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        return (self.parser,)
 
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.parser.signature()
@@ -2833,15 +2837,13 @@ class NaryParser(CombinedParser):
         if len(parsers) == 0:
             raise ValueError('Cannot initialize NaryParser with zero parsers.')
         self.parsers = parsers  # type: Tuple[Parser, ...]
+        self.sub_parsers = frozenset(parsers)
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
-
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        return self.parsers
 
     def _signature(self) -> Hashable:
         return (self.__class__.__name__,) + tuple(p.signature() for p in self.parsers)
@@ -3155,8 +3157,7 @@ class MandatoryNary(NaryParser):
         skip-list ist empty, -1 and a zombie-node are returned.
         """
         text_ = self.grammar.document__[location:]
-        skip = tuple(self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname,
-                                                   tuple()))
+        skip = tuple(self.grammar.skip_rules__.get(self.symbol, []))
         if skip:
             gr = self._grammar
             reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
@@ -4304,6 +4305,7 @@ class Forward(UnaryParser):
         super(Forward, self).__init__(get_parser_placeholder())
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
+        self.sub_parsers = frozenset()
 
     def reset(self):
         super(Forward, self).reset()
@@ -4327,6 +4329,8 @@ class Forward(UnaryParser):
         duplicate.disposable = self.disposable
         duplicate.node_name = self.node_name  # Forward-Parser should not have a tag name!
         duplicate.drop_content = parser.drop_content
+        # duplicate.eq_class = self.eq_class
+        duplicate.sub_parsers = frozenset({parser})
         return duplicate
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
@@ -4465,13 +4469,8 @@ class Forward(UnaryParser):
         shall be delegated.
         """
         self.parser = parser
+        self.sub_parsers = frozenset({parser})
         self.drop_content = parser.drop_content
-
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        """Note: Sub-Parsers are not passed through by Forward-Parser."""
-        if is_parser_placeholder(self.parser):
-            return tuple()
-        return self.parser,
 
     def _signature(self) -> Hashable:
         # This code should theoretically never be reached, except when debugging

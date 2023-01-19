@@ -818,13 +818,20 @@ class TestErrorCustomizationErrors:
         l3 = [zeile for zeile in l2 if not zeile.lstrip().startswith('mitte')]
         lang3 = '\n'.join(l3).replace('mitte', '(`M` §"ITTE")')
         result, messages, ast = compile_ebnf(lang3)
+        # print(lang3)
+        # print(result)
         assert not messages, str(messages)
 
         parser = create_parser(lang3)
         cst = parser('ANFANGMITTEENDE')
         assert not cst.errors
+        # parser.root_parser__.apply(lambda p: p.reset())
+        # for p in parser.all_parsers__:
+        #     if len(p.visited) > 0:
+        #         print(p.name, p)
         cst = parser('ANFANGMISSEENDE')
         assert cst.errors
+        # print(cst.as_sxpr())
         assert 'alles' in cst and 'ZOMBIE__' in cst['alles'] and 'ende' in cst['alles']
 
     def test_multiple_resume_definitions(self):
