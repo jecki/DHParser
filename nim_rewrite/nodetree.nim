@@ -17,7 +17,7 @@ type
     children: seq[Node]
     text: string  # must be empty if field children is not empty!
     attributes*: Attributes
-    sourcePos: int32
+    sourcePos: int
   SourcePosUnassignedDefect* = object of Defect
   SourcePosReAssigmentDefect* = object of Defect
 
@@ -30,7 +30,7 @@ proc init*(node: Node,
   node.text = ""
   node.attributes = attributes
   node.sourcePos = -1
-  node
+  return node
 
 proc init*(node: Node, 
            name: string, 
@@ -41,7 +41,7 @@ proc init*(node: Node,
   node.text = text
   node.attributes = attributes
   node.sourcePos = -1
-  node
+  return node
 
 template newNode(args: varargs[untyped]): Node =
   new(result)
@@ -77,18 +77,18 @@ func runeLen*(node: Node): int =
     for child in node.children:
       result += child.runeLen
 
-func sourcePos*(node: Node): int32 = 
+func sourcePos*(node: Node): int =
   if node.sourcePos >= 0:
     node.sourcePos
   else:
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
 
-proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
+proc assignSourcePos(node: Node, sourcePos: int) : int =
   if node.sourcePos < 0:
     node.sourcePos = sourcePos
     var pos = sourcePos
     if node.isLeaf:
-      pos + int32(node.text.runeLen)
+      pos + node.text.runeLen
     else:
       for child in node.children:
         if not child.isNil:
@@ -97,12 +97,12 @@ proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
   else:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
 
-proc `sourcePos=`*(node: Node, sourcePos: int32) = 
+proc `sourcePos=`*(node: Node, sourcePos: int) =
   discard node.assignSourcePos(sourcePos)
 
-proc withSourcePos*(node: Node, sourcePos: int32): Node =
+proc withSourcePos*(node: Node, sourcePos: int): Node =
   discard node.assignSourcePos(sourcePos)
-  node
+  return node
 
 
 const indentation = 2

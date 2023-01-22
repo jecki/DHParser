@@ -7,29 +7,30 @@ import nodetree
 
 
 type
-  ParsingResult = tuple[node: Option[Node], location: int32]
-  ParseProc = proc(parser: Parser, location: int32): ParsingResult
+  ParsingResult = tuple[node: Option[Node], location: int]
+  ParseProc = proc(parser: Parser, location: int): ParsingResult
   Parser = ref ParserObj not nil
   ParserObj = object of RootObj
     name: string
     parserType: string
     disposable: bool
     dropContent: bool
-    eqClass: int32
+    eqClass: int
     grammar: Grammar
     symbol: string
-    parse: ParseProc not nil
+    parseProxy: ParseProc not nil
 
   GrammarObj = object of RootObj
     name: string
+    document: string
   Grammar = ref GrammarObj not nil
 
 
-let GrammarPlaceholderSingleton: Grammar = Grammar(name: "Placeholder")
+let grammarPlaceholderSingleton: Grammar = Grammar(name: "Placeholder")
 
 
-proc parsePlaceHolder(parser:Parser, location: int32): ParsingResult =
-  result = (none(Node), int32(0))
+method parse(parser: Parser, location: int): ParsingResult {.base.} =
+  result = (none(Node), 0)
 
 
 proc init(parser: Parser): Parser =
@@ -37,24 +38,30 @@ proc init(parser: Parser): Parser =
   parser.parserType = "Parser"
   parser.disposable = false
   parser.dropContent = false
-  parser.grammar = GrammarPlaceholderSingleton
+  parser.grammar = grammarPlaceholderSingleton
   parser.symbol = ""
-  parser.parse = parsePlaceHolder
-  parser
+  parser.parseProxy = parse
+  return parser
 
 
-# func `()`(parser: Parser, location: int32): ParsingResult =
+proc `()`(parser: Parser, location: int): ParsingResult =
+  return parser.parse_proxy(parser, location)
+
 
 type
-  Text = ref TextObj not nil
+  TextRef = ref TextObj not nil
   TextObj = object of ParserObj
       text: string
 
 
-proc init(parser: Text, text: string): Text =
-  discard init(Parser(parser))
-  parser.text = text
-  parser
+method parse(parser: Parser, location: int): ParsinResult =
+  result = ()
+
+
+proc init(textParser: TextRef, text: string): TextRef =
+  discard init(Parser(textParser))
+  textParser.text = text
+  return textParser
 
 
 ## Test-code
