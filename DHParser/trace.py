@@ -64,21 +64,6 @@ __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_o
 #######################################################################
 
 
-def set_proxy(parsers: Iterable[Parser], proxy: Optional[ParseFunc]):
-    """Adds or removes a proxy function to a sequence of parsers.
-
-    :param parsers: the parsers to which the proxy shall be added.
-        There must at least be one parser.
-    :param proxy: a proxy-function to be added or None. If None,
-        all existing proxies will be removed.
-    """
-    pivot = next(parsers.__iter__())
-    assert all(pivot.grammar == parser.grammar for parser in parsers)
-    for parser in parsers:
-        if parser.ptype != ':Forward':
-            parser.set_proxy(tracer)
-
-
 def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
     """Adds or removes a tracing function to (or from) a single parser, a set of
     parsers or all parsers in a grammar.
