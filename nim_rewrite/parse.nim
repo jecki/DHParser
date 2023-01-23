@@ -9,7 +9,7 @@ import nodetree
 type
   ParsingResult = tuple[node: Option[Node], location: int]
   ParseProc = proc(parser: Parser, location: int): ParsingResult
-  Parser = ref ParserObj not nil
+  Parser* = ref ParserObj not nil
   ParserObj = object of RootObj
     name: string
     parserType: string
@@ -29,23 +29,32 @@ type
 let grammarPlaceholderSingleton: Grammar = Grammar(name: "Placeholder")
 
 
-method parse(parser: Parser, location: int): ParsingResult {.base.} =
+method parse*(parser: Parser, location: int): ParsingResult {.base.} =
+  echo "Parser.parse"
   result = (none(Node), 0)
 
 
-proc init(parser: Parser): Parser =
+proc callParseMethod(parser: Parser, location: int): ParsingResult =
+  return parser.parse(location)
+
+
+proc init*(parser: Parser): Parser =
   parser.name = ""
   parser.parserType = "Parser"
   parser.disposable = false
   parser.dropContent = false
   parser.grammar = grammarPlaceholderSingleton
   parser.symbol = ""
-  parser.parseProxy = parse
+  parser.parseProxy = callParseMethod
   return parser
 
 
-proc `()`(parser: Parser, location: int): ParsingResult =
-  return parser.parse_proxy(parser, location)
+proc `()`(parser: Parser, location: int): ParsingResult {.inline.} =
+  # is this faster than simply calling parser.parseProxy?
+  if parser.parseProxy == callParseMethod:
+    return parser.parse(location)
+  else:
+    return parser.parseProxy(parser, location)
 
 
 type
@@ -54,12 +63,13 @@ type
       text: string
 
 
-method parse(parser: Parser, location: int): ParsinResult =
-  result = ()
+method parse(parser: TextRef, location: int): ParsingResult =
+  echo "Test.parse"
+  result = (none(Node), 0)
 
 
 proc init(textParser: TextRef, text: string): TextRef =
-  discard init(Parser(textParser))
+  discard Parser(textParser).init()
   textParser.text = text
   return textParser
 
@@ -69,12 +79,12 @@ proc init(textParser: TextRef, text: string): TextRef =
 
 let
   p = new(Parser).init()
-  t = new(Text).init("A")
+  t = new(TextRef).init("A")
 #  t = new(Text).initText("A")
-let pr = p.parse(p, 32)
+let pr = p(32)
+let pr2 = t(32)
 echo $pr
-t.text = "B"
-echo t.text
+
 
 
 

@@ -43,7 +43,7 @@ proc init*(node: Node,
   node.sourcePos = -1
   return node
 
-template newNode(args: varargs[untyped]): Node =
+template newNode*(args: varargs[untyped]): Node =
   new(result)
   result.init(args)
 
