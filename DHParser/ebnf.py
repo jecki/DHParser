@@ -1820,7 +1820,12 @@ class EBNFCompiler(Compiler):
                 for usage in self.symbols[symbol]:
                     passage = self.tree.source[usage.pos:usage.pos + len(symbol) + 1]
                     if passage == symbol + '(':
-                        hint = f' If "{passage}...)" was meant as a custom parser call, ' \
+                        i = self.tree.source.find(')', usage.pos)
+                        if i > usage.pos + len(passage):
+                            passage = self.tree.source[usage.pos:i + 1]
+                        else:
+                            passage += "...)"
+                        hint = f' If  {passage}  was meant as a custom parser call, ' \
                                f'then "@" should be added in front of it.'
                     else:
                         hint = ''
