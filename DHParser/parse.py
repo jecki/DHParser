@@ -804,7 +804,7 @@ class Parser:
                 nonlocal visited, trails
                 if parser not in visited:
                     visited.add(parser)
-                    # ptrl = ptrl + [parser]
+                    # ptrl = ptrl + [parser]  # creates a new ptrl-list...
                     ptrl.append(parser)
                     trails.add(tuple(ptrl))
                     for p in parser.sub_parsers:
@@ -2809,7 +2809,7 @@ class UnaryParser(CombinedParser):
 
     def __init__(self, parser: Parser) -> None:
         super(UnaryParser, self).__init__()
-        assert isinstance(parser, Parser), str(parser)
+        # assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
         self.sub_parsers = frozenset({parser})
 
@@ -2840,6 +2840,7 @@ class NaryParser(CombinedParser):
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         if len(parsers) == 0:
             raise ValueError('Cannot initialize NaryParser with zero parsers.')
+        # assert all(isinstance(p, Parser) for p in parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
         self.sub_parsers = frozenset(parsers)
 

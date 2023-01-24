@@ -50,7 +50,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
-    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, ERROR, FATAL, has_errors
+    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -1818,8 +1818,15 @@ class EBNFCompiler(Compiler):
         for symbol in self.symbols:
             if symbol not in defined_symbols:
                 for usage in self.symbols[symbol]:
+                    passage = self.tree.source[usage.pos:usage.pos + len(symbol) + 1]
+                    if passage == symbol + '(':
+                        hint = f' If "{passage}...)" was meant as a custom parser call, ' \
+                               f'then "@" should be added in front of it.'
+                    else:
+                        hint = ''
                     self.tree.new_error(
-                        usage, "Missing definition for symbol '%s'" % symbol)
+                        usage, f'Missing definition for symbol "{symbol}"!' + hint,
+                        UNDEFINED_SYMBOL)
 
         # check for unconnected rules
 
@@ -1944,11 +1951,9 @@ class EBNFCompiler(Compiler):
                     python_src = python_src.replace(
                         'static_analysis_pending__ = [True]',
                         'static_analysis_pending__ = []  # type: List[bool]', 1)
-            except TypeError as te:
+            except (TypeError, AttributeError) as te_ae:
                 if not (errors or self.tree.errors):
-                    # it is not merley a consequential error
-                    # of an already reported error
-                    raise te
+                    raise te_ae  # not merely a consequntial error of another reported error
             except SyntaxError as se:
                 src_lines = probe_src.split('\n')
                 se.msg += f' "{src_lines[se.lineno - 1]}" '

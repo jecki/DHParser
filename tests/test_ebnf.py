@@ -1936,6 +1936,15 @@ class TestErrors:
   (number "4")
   (EOF))"""
 
+    def test_missing_at(self):
+        try:
+            parser = create_parser(self.numbers.replace('@Error', 'Error'))
+            assert False, "CompilationError expected"
+        except CompilationError as ce:
+            assert str(ce).find('"@" should be added')
+
+
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
