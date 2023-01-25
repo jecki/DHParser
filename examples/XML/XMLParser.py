@@ -76,7 +76,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_XML(source):
@@ -328,7 +328,7 @@ class XMLTransformer(Compiler):
         return node
 
 
-get_transformer = ThreadLocalSingletonFactory(XMLTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(XMLTransformer)
 
 
 def transform_XML(cst):

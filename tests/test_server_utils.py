@@ -47,7 +47,10 @@ class TestExecutionEnvironment:
             loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
                 else asyncio.get_event_loop()
             env = ExecutionEnvironment(loop)
-            return await env.execute(None, fault, [])
+            try:
+                return await env.execute(None, fault, [])
+            finally:
+                env.shutdown()
 
         result, rpc_error = asyncio_run(main())
         json_str = '{"jsonrpc": "2.0", "error": {"code": %i, "message": %s}}' % \
@@ -182,13 +185,13 @@ class TestUtils:
         ppjsn = pp_json({'error' : tb}).replace('\\\\', '/')
         expected = '{"error": "Traceback (most recent call last):"\n' \
             '  "  File \\"$SCRIPTPATH/test_server_utils.py\\", ' \
-            'line 179, in test_pp_json_stacktrace"\n' \
+            'line 182, in test_pp_json_stacktrace"\n' \
             '  "    raise AssertionError()"\n' \
             '  "AssertionError"\n  ""}'.\
             replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1).replace('./', '')
         expected_py311 = '{"error": "Traceback (most recent call last):"\n' \
             '  "  File \\"$SCRIPTPATH/test_server_utils.py\\", ' \
-            'line 179, in test_pp_json_stacktrace"\n' \
+            'line 182, in test_pp_json_stacktrace"\n' \
             '  "    raise AssertionError()"\n' \
             '  "    ^^^^^^^^^^^^^^^^^^^^^^"\n' \
             '  "AssertionError"\n  ""}'.\

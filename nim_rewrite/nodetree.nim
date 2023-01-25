@@ -1,3 +1,5 @@
+{.experimental: "strictNotNil".} 
+
 import std/enumerate
 import std/sequtils
 import std/strformat
@@ -9,25 +11,42 @@ import std/unicode
 
 type
   Attributes* = OrderedTable[string, string]
-  Node* = ref object of RootObj
+  Node* = ref NodeObj not nil
+  NodeObj = object of RootObj
     name*: string
     children: seq[Node]
-    text: string  # must be empty if children is not empty!
+    text: string  # must be empty if field children is not empty!
     attributes*: Attributes
-    sourcePos: int32
+    sourcePos: int
   SourcePosUnassignedDefect* = object of Defect
   SourcePosReAssigmentDefect* = object of Defect
 
+proc init*(node: Node, 
+          name: string, 
+          children: seq[Node], 
+          attributes: Attributes = Attributes()): Node =
+  node.name = name
+  node.children = children
+  node.text = ""
+  node.attributes = attributes
+  node.sourcePos = -1
+  return node
 
-proc newNode*(name: string, 
-             children: seq[Node], 
-             attributes: Attributes = Attributes()): Node =
-  Node(name: name, children: children, text: "", attributes: attributes, sourcePos: -1)
+proc init*(node: Node, 
+           name: string, 
+           text: string, 
+           attributes: Attributes = Attributes()): Node =
+  node.name = name
+  node.children = @[]
+  node.text = text
+  node.attributes = attributes
+  node.sourcePos = -1
+  return node
 
-proc newNode*(name: string, 
-             text: string, 
-             attributes: Attributes = Attributes()): Node =
-  Node(name: name, children: @[], text: text, attributes: attributes, sourcePos: -1)
+template newNode*(args: varargs[untyped]): Node =
+  new(result)
+  result.init(args)
+
 
 func isLeaf*(node: Node): bool = node.children.len == 0
 
@@ -58,31 +77,32 @@ func runeLen*(node: Node): int =
     for child in node.children:
       result += child.runeLen
 
-func sourcePos*(node: Node): int32 = 
+func sourcePos*(node: Node): int =
   if node.sourcePos >= 0:
     node.sourcePos
   else:
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
 
-proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
+proc assignSourcePos(node: Node, sourcePos: int) : int =
   if node.sourcePos < 0:
     node.sourcePos = sourcePos
     var pos = sourcePos
     if node.isLeaf:
-      pos + int32(node.text.runeLen)
+      pos + node.text.runeLen
     else:
       for child in node.children:
-        pos += child.assignSourcePos(pos)
+        if not child.isNil:
+          pos += child.assignSourcePos(pos)
       pos
   else:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
 
-proc `sourcePos=`*(node: Node, sourcePos: int32) = 
+proc `sourcePos=`*(node: Node, sourcePos: int) =
   discard node.assignSourcePos(sourcePos)
 
-proc withSourcePos*(node: Node, sourcePos: int32): Node =
+proc withSourcePos*(node: Node, sourcePos: int): Node =
   discard node.assignSourcePos(sourcePos)
-  node
+  return node
 
 
 const indentation = 2
@@ -130,7 +150,7 @@ func serialize(node: Node,
       result[^1] &= close
 
 
-func asSxpr(node: Node): string =
+func asSxpr*(node: Node): string =
   func renderAttrs(node: Node): string =
     # if node.attributes.len == 0:  return ""
     var attrStrs = newSeq[string](node.attributes.len)
@@ -149,7 +169,7 @@ func asSxpr(node: Node): string =
   
   func closing(node: Node): string = ")"
 
-  func leafdata(node: Node): seq[string] = 
+  func leafdata(node: Node): seq[string] =
     func esc(s: string): string =
       s.replace("\\", "\\\\").replace(""""""", """\"""")
 
@@ -174,10 +194,12 @@ func asSxpr(node: Node): string =
 
 
 # Test-code
+#[
+var n = new(Node).init("root", @[new(Node).init("left", "LEFT", {"id": "007"}.toOrderedTable),
+                                 new(Node).init("right", "RIGHT")])
 
-var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
-                          newNode("right", "RIGHT")])
 echo n.asSxpr
 n.`sourcePos=` 0
 echo n.children[0].sourcePos
 echo n.children[1].sourcePos
+]#

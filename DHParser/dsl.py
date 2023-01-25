@@ -491,6 +491,11 @@ def compile_on_disk(source_file: str,
                     err_str = 'NameError "{}" while compiling AST-Transformation. ' \
                               'Possibly due to a forgotten import at the beginning ' \
                               'of the AST-Block (!)'.format(str(e))
+                elif isinstance(e, ValueError):
+                    err_str = f'Exception {type(e)}: "{e}" while compiling AST-Transformation. ' \
+                              f'This warning can safely be ignored, if a different method ' \
+                              f'without a transformation-table or no AST-transformation at ' \
+                              f'all is used for "{os.path.basename(rootname)}".'
                 else:
                     err_str = 'Exception {} while compiling AST-Transformation: {}' \
                               .format(str(type(e)), str(e))

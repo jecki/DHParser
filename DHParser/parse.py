@@ -36,7 +36,7 @@ from collections import defaultdict, namedtuple
 import copy
 from functools import lru_cache
 from typing import Callable, cast, List, Tuple, Set, Dict, \
-    DefaultDict, Sequence, Union, Optional, Iterator, Hashable
+    DefaultDict, Sequence, Union, Optional, Iterator, Hashable, AbstractSet
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -71,6 +71,7 @@ except ImportError:
 
 __all__ = ('ParserError',
            'ApplyFunc',
+           'ApplyToTrailFunc',
            'FlagFunc',
            'ParseFunc',
            'ParsingResult',
@@ -384,11 +385,12 @@ def reentry_point(rest: StringView,
 ParsingResult: TypeAlias = Tuple[Optional[Node], cint]
 MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
-ApplyFunc: TypeAlias = Callable[[List['Parser']], Optional[bool]]
+ApplyFunc: TypeAlias = Callable[['Parser'], Optional[bool]]
+ParserTrail: TypeAlias = Tuple['Parser']
+ApplyToTrailFunc: TypeAlias = Callable[[ParserTrail], Optional[bool]]
 # The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
 ParseFunc: TypeAlias = Callable[['Parser', cint], ParsingResult]
-ParserTrail: TypeAlias = List['Parser']
 
 
 class Parser:
@@ -429,17 +431,15 @@ class Parser:
     can for example be returned by the :py:class:`ZeroOrMore`-parser in case
     the contained parser is repeated zero times.
 
-    Attributes and Properties:
+    :ivar pname:  The parser's name.
 
-        pname:  The parser's name.
-
-        disposable: A property indicating that the parser returns
+    :ivar disposable: A property indicating that the parser returns
                 anonymous nodes. For performance
                 reasons this is implemented as an object variable rather
                 than a property. This property should always be equal to
                 ``self.name[0] == ":"``.
 
-        drop_content: A property (for performance reasons implemented as
+    :ivar drop_content: A property (for performance reasons implemented as
                 simple field) that, if set, induces the parser not to return
                 the parsed content or subtree if it has matched but the
                 dummy ``EMPTY_NODE``. In effect the parsed content will be
@@ -447,34 +447,54 @@ class Parser:
                 anonymous (or pseudo-anonymous) parsers are allowed to
                 drop content.
 
-        node_name: The name for the nodes that are created by
+    :ivar node_name: The name for the nodes that are created by
                 the parser. If the parser is named, this is the same as
                 ``pname``, otherwise it is the name of the parser's type
                 prefixed with a colon ":".
 
-        eq_class: A unique number for the class of functionally
+    :ivar eq_class: A unique number for the class of functionally
                 equivalent parsers that this parser belongs to.
                 (This serves the purpose of optimizing memoization,
                 by tying memoization dictionaries to the classes
                 of functionally equivalent parsers, rather than to
                 the individual parsers themselves.)
 
-        visited:  Mapping of places this parser has already been to
+    :ivar visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
-        proxied: The original ``_parse()``-method is stored here, if a
-                proxy (e.g. a tracing debugger) is installed via the
-                ``set_proxy()``-method.
+    :ivar parse_proxy: Usually, just a reference to ``self._parse``, but can
+                be overwritten to run th call to the ``_parse``-method
+                through a proxy like, for example, a tracing debugger.
+                See :py:mod:`~DHParser.trace`
+                
+    :ivar sub_parsers: set of parsers that are directly referred to by
+                this parser, e.g. parser "a" defined by the EBNF-expression
+                "a = b (b | c)" has the sub-parser-set {b, c}.
 
-        _grammar:  A reference to the Grammar object to which the parser
+                Notes: 1.the set is empty for parser that derive neither
+                from :py:class:`UnaryParser` nor from :py:class:`NaryParser`
+                2. unary parser have exactly on sub-parser 3. n-ary parsers
+                have one or more sub_parsers. For n-ary-parsers
+                len(p.sub_parser) can be lower than len(p.parsers), in case
+                one and the same parser is referred to more than once
+                in the contained parser's list.
+
+    :ivar _grammar:  A reference to the Grammar object to which the parser
                 is attached.
 
-        _symbol:  The name of the closest named parser to which this
+    :ivar _symbol:  The name of the closest named parser to which this
                 parser is connected in a grammar. If pname is not the
                 empty string, this will become the same as pname, when
                 the property ``symbol`` is read for the first time.
+
+    :ivar _descendants_cache: A cache of all descendant parsers that can be
+                reached from this parser.
+
+    :ivar _descendant_trails_cache:  A cache of the trails (i.e. list of parsers)
+                from this parser to all other parsers that can be reached from
+                this parser.
     """
 
     def __init__(self) -> None:
@@ -484,6 +504,7 @@ class Parser:
         self.drop_content = False     # type: bool
         self.node_name = self.ptype   # type: str
         self.eq_class = id(self)      # type: int
+        self.sub_parsers = frozenset()  # type: AbstractSet[Parser]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
         try:
@@ -491,6 +512,8 @@ class Parser:
         except NameError:
             pass                      # ensures Cython-compatibility
         self._symbol = ''             # type: str
+        self._descendants_cache = None  # type: Optional[AbstractSet[Parser]]
+        self._descendant_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -577,8 +600,7 @@ class Parser:
             except ParserError as pe:
                 # catching up with parsing after an error occurred
                 gap = pe.location - location
-                rules = tuple(grammar.resume_rules__.get(
-                    grammar.associated_symbol__(self).pname, []))
+                rules = tuple(grammar.resume_rules__.get(self.symbol, []))
                 next_location = pe.location + pe.node_orig_len
                 rest = grammar.document__[next_location:]
                 i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
@@ -702,6 +724,14 @@ class Parser:
             else:
                 # if proxy is a method it must be a method of self
                 assert proxy.__self__ == self
+            if self._parse_proxy != self._parse and proxy != self._parse\
+                    and proxy != self._parse_proxy:
+                # in the following `encode('utf-8')` is silly but needed, because
+                # MS Windows might otherwise crash with an encoding-error :-(
+                raise AssertionError((f"A new parsing proxy can only be set if the old"
+                    f'parsing proxy has been cleared with "parser.set_proxy(None)", first! '
+                    f'Parser "{self}" still has proxy: "{self._parse_proxy}" which cannot '
+                    f'be overwritten with "{proxy}".').encode('utf-8'))
             self._parse_proxy = cast(ParseFunc, proxy)
 
     def name(self, pname: str, disposable: bool = False) -> Parser:
@@ -739,26 +769,51 @@ class Parser:
         except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        """Returns the list of sub-parsers if there are any.
-        Overridden by Unary, Nary and Forward.
-        """
-        return tuple()
+    @property
+    def descendants(self) -> AbstractSet[Parser]:
+        """Returns a set of self and all descendant parsers,
+        avoiding circles."""
+        if self._descendants_cache is None:
+            if self._descendant_trails_cache:
+                self._descendants_cache = tuple(pt[-1] for pt in self._descendant_trails_cache)
+            else:
+                visited = set()
 
-    def descendants(self) -> Iterator[ParserTrail]:
-        """Returns an iterator over the trails of self and all descendant parsers,
-        avoiding of circles."""
-        visited = set()
+                def collect(parser: Parser):
+                    nonlocal visited
+                    if parser not in visited:
+                        visited.add(parser)
+                        for p in parser.sub_parsers:
+                            collect(p)
 
-        def descendants_(parser: Parser, ptrl: ParserTrail) -> Iterator[ParserTrail]:
-            if parser not in visited:
-                visited.add(parser)
-                ptrl = ptrl + [parser]
-                yield ptrl
-                for p in parser.sub_parsers():
-                    yield from descendants_(p, ptrl)
+                collect(self)
+                self._descendants_cache = frozenset(visited)  # tuple(p for p in collect(self))
+        return self._descendants_cache
 
-        yield from descendants_(self, [])
+    @property
+    def descendant_trails(self) -> AbstractSet[ParserTrail]:
+        """Returns a set of the trails of self and all descendant
+        parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
+        the returned set is not really comprehensive, but sufficient to trace
+        anonymous parsers to their nearest named ancestor."""
+        if self._descendant_trails_cache is None:
+            visited = set()
+            trails = set()
+
+            def collect_trails(parser: Parser, ptrl: List[Parser]):
+                nonlocal visited, trails
+                if parser not in visited:
+                    visited.add(parser)
+                    # ptrl = ptrl + [parser]  # creates a new ptrl-list...
+                    ptrl.append(parser)
+                    trails.add(tuple(ptrl))
+                    for p in parser.sub_parsers:
+                        collect_trails(p, ptrl)
+                    ptrl.pop()
+
+            collect_trails(self, [])
+            self._descendant_trails_cache = frozenset(trails)
+        return self._descendant_trails_cache
 
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
@@ -778,7 +833,18 @@ class Parser:
         worrying about forgetting the return value of procedure, because a
         return value of ``None`` means "carry on".
         """
-        for pctx in self.descendants():
+        for parser in self.descendants:
+            if func(parser):
+                return True
+        return False
+
+    def apply_to_trail(self, func: ApplyToTrailFunc) -> Optional[bool]:
+        """
+        Same as :py:meth:`Parser.apply`, only that the applied function
+        receives the complete "trail", i.e. list of parsers that lead
+        from self to the visited parser as argument.
+        """
+        for pctx in self.descendant_trails:
             if func(pctx):
                 return True
         return False
@@ -849,9 +915,8 @@ def determine_eq_classes(root: Parser):
     of each parser."""
     eq_classes: Dict[Hashable, int] = {}
 
-    def assign_eq_class(parser_stack: List[Parser]) -> bool:
+    def assign_eq_class(p: Parser) -> bool:
         nonlocal eq_classes
-        p = parser_stack[-1]
         signature = p.signature()
         p.eq_class = eq_classes.setdefault(signature, id(p))
         return False
@@ -892,7 +957,7 @@ def is_parser_placeholder(parser: Optional[Parser]) -> bool:
 # functions for analysing the parser tree/graph ###
 
 
-def has_non_autocaptured_symbols(ptrail: List[Parser]) -> Optional[bool]:
+def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
     """Returns True, if the parser-path contains a Capture-Parser that is not
     shielded by a Retrieve-Parser. This is the case for captured symbols
     that are not "auto-captured" by a Retrieve-Parser.
@@ -956,7 +1021,7 @@ def mixin_nonempty(whitespace: str) -> str:
 
     :param whitespace: a regular expression pattern
     :return: new regular expression pattern that does not match the empty
-        string '' any more.
+        string '', anymore.
     """
     if re.match(whitespace, ''):
         return r'(?:(?=(.|\n))' + whitespace + r'(?!\1))'
@@ -995,8 +1060,8 @@ class GrammarError(Exception):
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
 
 
-def reset_parser(ctx):
-    return ctx[-1].reset()
+def reset_parser(parser):
+    return parser.reset()
 
 
 class Grammar:
@@ -1354,12 +1419,11 @@ class Grammar:
         return duplicate
 
 
-    def _add_parser__(self, ptrail: List[Parser]) -> None:
+    def _add_parser__(self, parser: Parser) -> None:
         """
         Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
-        parser = ptrail[-1]
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
@@ -1452,7 +1516,7 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
-        self.root_parser__.apply(lambda ctx: ctx[-1].reset())
+        # self.root_parser__.apply(reset_parser)
         self.unconnected_parsers__: List[Parser] = []
         self.resume_parsers__: List[Parser] = []
         resume_lists = []
@@ -1636,7 +1700,7 @@ class Grammar:
         self.document__ = StringView(document)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
-        # done by reset: self.last_rb__loc__ = -1  # rollback location
+        # done by reset: self.last_rb__loc__ = -2  # rollback location
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         L = len(self.document__)
@@ -1760,7 +1824,7 @@ class Grammar:
             error_msg = "Capture-stack not empty after end of parsing: " \
                 + ', '.join(f'{v} {len(l)} {"items" if len(l) > 1 else "item"}'
                             for v, l in self.variables__.items() if len(l) >= 1)
-            if parser.apply(has_non_autocaptured_symbols):
+            if parser.apply_to_trail(has_non_autocaptured_symbols):
                 if all(cast(Capture, self[v]).can_capture_zero_length
                        for v, l in self.variables__.items() if len(l) >= 1):
                     error_code = CAPTURE_STACK_NOT_EMPTY_WARNING
@@ -1885,9 +1949,9 @@ class Grammar:
         symbol = self.associated_symbol_cache__.get(parser, None)   # type: Optional[Parser]
         if symbol:  return symbol
 
-        def find_symbol_for_parser(ptrail: List[Parser]) -> Optional[bool]:
+        def find_symbol_for_parser(ptrail: ParserTrail) -> Optional[bool]:
             nonlocal symbol, parser
-            if parser in ptrail[-1].sub_parsers():
+            if parser in ptrail[-1].sub_parsers:
                 for p in reversed(ptrail):
                     if p.pname:
                         # save the name of the closest containing named parser
@@ -1900,9 +1964,9 @@ class Grammar:
         elif parser.pname:
             symbol = parser
         else:
-            self.root_parser__.apply(find_symbol_for_parser)
+            self.root_parser__.apply_to_trail(find_symbol_for_parser)
             for resume_parser in self.unconnected_parsers__:
-                resume_parser.apply(find_symbol_for_parser)
+                resume_parser.apply_to_trail(find_symbol_for_parser)
             if symbol is None:
                 raise AttributeError('Parser %s (%i) is not contained in Grammar!'
                                      % (str(parser), id(parser)))
@@ -1921,7 +1985,7 @@ class Grammar:
         def add_anonymous_descendants(p: Parser):
             nonlocal symbol
             self.associated_symbol_cache__[p] = symbol
-            for d in p.sub_parsers():
+            for d in p.sub_parsers:
                 if not d.pname and not (isinstance(d, Forward) and cast(Forward, d).parser.pname):
                     add_anonymous_descendants(d)
 
@@ -1953,11 +2017,10 @@ class Grammar:
             def leaf_parsers(p: Parser) -> Optional[bool]:
                 if p in leaf_state:
                     return leaf_state[p]
-                sub_list = p.sub_parsers()
-                if sub_list:
+                if p.sub_parsers:
                     leaf_state[p] = None
-                    state = any(leaf_parsers(s) for s in sub_list)  # type: Optional[bool]
-                    if not state and any(leaf_state[s] is None for s in sub_list):
+                    state = any(leaf_parsers(s) for s in p.sub_parsers)  # type: Optional[bool]
+                    if not state and any(leaf_state[s] is None for s in p.sub_parsers):
                         state = None
                 else:
                     state = True
@@ -2636,9 +2699,8 @@ def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> P
         >>> print(tree.as_sxpr())
         (root "ABD")
     """
-    def apply_func(ptrail: List[Parser]) -> None:
+    def apply_func(parser: Parser) -> None:
         nonlocal level
-        parser = ptrail[-1]
         if isinstance(parser, CombinedParser):
             if level == CombinedParser.NO_TREE_REDUCTION:
                 cast(CombinedParser, parser)._return_value = parser._return_value_no_optimization
@@ -2747,17 +2809,15 @@ class UnaryParser(CombinedParser):
 
     def __init__(self, parser: Parser) -> None:
         super(UnaryParser, self).__init__()
-        assert isinstance(parser, Parser), str(parser)
+        # assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
+        self.sub_parsers = frozenset({parser})
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
-
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        return (self.parser,)
 
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.parser.signature()
@@ -2780,16 +2840,15 @@ class NaryParser(CombinedParser):
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         if len(parsers) == 0:
             raise ValueError('Cannot initialize NaryParser with zero parsers.')
+        # assert all(isinstance(p, Parser) for p in parsers)
         self.parsers = parsers  # type: Tuple[Parser, ...]
+        self.sub_parsers = frozenset(parsers)
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
-
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        return self.parsers
 
     def _signature(self) -> Hashable:
         return (self.__class__.__name__,) + tuple(p.signature() for p in self.parsers)
@@ -3103,8 +3162,7 @@ class MandatoryNary(NaryParser):
         skip-list ist empty, -1 and a zombie-node are returned.
         """
         text_ = self.grammar.document__[location:]
-        skip = tuple(self.grammar.skip_rules__.get(self.grammar.associated_symbol__(self).pname,
-                                                   tuple()))
+        skip = tuple(self.grammar.skip_rules__.get(self.symbol, []))
         if skip:
             gr = self._grammar
             reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
@@ -3847,11 +3905,7 @@ class NegativeLookbehind(Lookbehind):
 def is_context_sensitive(parser: Parser) -> bool:
     """Returns True, is ``parser`` is a context-sensitive parser
     or calls a context-sensitive parser."""
-    return any(isinstance(pctx[-1], ContextSensitive) for pctx in parser.descendants())
-    # for p in parser.descendants():
-    #     if isinstance(p, ContextSensitive):
-    #         return True
-    # return False
+    return any(isinstance(p, ContextSensitive) for p in parser.descendants)
 
 
 class BlackHoleDict(dict):
@@ -3972,7 +4026,7 @@ class Capture(ContextSensitive):
                 'Capture only works as named parser! Error in parser: ' + str(self),
                 0, CAPTURE_WITHOUT_PARSERNAME
             )))
-        if self.parser.apply(lambda plist: plist[-1].drop_content):
+        if self.parser.apply(lambda p: p.drop_content):
             errors.append(AnalysisError(self.pname, self, Error(
                 'Captured symbol "%s" contains parsers that drop content, '
                 'which can lead to unintended results!' % (self.pname or str(self)),
@@ -4256,6 +4310,7 @@ class Forward(UnaryParser):
         super(Forward, self).__init__(get_parser_placeholder())
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
+        self.sub_parsers = frozenset()
 
     def reset(self):
         super(Forward, self).reset()
@@ -4279,6 +4334,8 @@ class Forward(UnaryParser):
         duplicate.disposable = self.disposable
         duplicate.node_name = self.node_name  # Forward-Parser should not have a tag name!
         duplicate.drop_content = parser.drop_content
+        # duplicate.eq_class = self.eq_class
+        duplicate.sub_parsers = frozenset({parser})
         return duplicate
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
@@ -4417,13 +4474,8 @@ class Forward(UnaryParser):
         shall be delegated.
         """
         self.parser = parser
+        self.sub_parsers = frozenset({parser})
         self.drop_content = parser.drop_content
-
-    def sub_parsers(self) -> Tuple[Parser, ...]:
-        """Note: Sub-Parsers are not passed through by Forward-Parser."""
-        if is_parser_placeholder(self.parser):
-            return tuple()
-        return self.parser,
 
     def _signature(self) -> Hashable:
         # This code should theoretically never be reached, except when debugging

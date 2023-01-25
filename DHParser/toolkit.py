@@ -141,11 +141,17 @@ __all__ = ('typing',
            'json_encode_string',
            'json_dumps',
            'json_rpc',
+           'pp_json',
+           'pp_json_str',
            'sane_parser_name',
            'normalize_circular_path',
            'DHPARSER_DIR',
            'deprecated',
-           'deprecation_warning')
+           'deprecation_warning',
+           'SingleThreadExecutor',
+           'multiprocessing_broken',
+           'instantiate_executor',
+           'cpu_count')
 
 
 #######################################################################
@@ -185,7 +191,7 @@ class ThreadLocalSingletonFactory:
     the same instance of `class_or_factory` for one and the
     same thread, but different instances for different threads.
     """
-    def __init__(self, class_or_factory, name: str = "", *, ident: str = ""):
+    def __init__(self, class_or_factory, name: str = ""):
         self.class_or_factory = class_or_factory
         self.singleton_name = "{NAME}_{ID}_singleton".format(
             NAME=name or class_or_factory.__name__, ID=str(id(self)))
@@ -721,9 +727,10 @@ def validate_XML_attribute_value(value: Any) -> str:
     if contains_doublequote and value.find("'") >= 0:
         raise ValueError(('Illegal XML-attribute value: %s  (Cannot be quoted, because '
                           'both single and double quotation mark are contained in the '
-                          'value. Use enttites to avoid this conflict.)') % value)
+                          'value. Use entities to avoid this conflict.)') % value)
     if value.find('<') >= 0:
-        raise ValueError('XML-attribute value  %s  must not contain "<"!' % value)
+        raise ValueError(f'XML-attribute value "{value}" must not contain "<"! Change '
+            f'config-variable "xml_attribute_error_handling" to "fix" to avoid this error.')
     i = value.find('&')
     while i >= 0:
         if not RX_ENTITY.match(value, i):
@@ -778,7 +785,7 @@ def lxml_XML_attribute_value(value: Any) -> str:
 
 
 def issubtype(sub_type, base_type) -> bool:
-    """Returns `True` if sub_type is a sub_type of `base_type`.
+    """Returns `True` if sub_type is a sub-type of `base_type`.
     WARNING: Implementation is somewhat "hackish" and might break
     with new Python-versions.
     """
@@ -1250,6 +1257,88 @@ def json_rpc(method: str,
     return json_dumps(rpc, partially_serialized=partially_serialized)
 
 
+def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
+    """Returns json-object as pretty-printed string. Other than the standard-library's
+    `json.dumps()`-function `pp_json` allows to include already serialized
+    parts (in the form of JSONStr-objects) in the json-object. Example::
+
+        >>> already_serialized = '{"width":640,"height":400"}'
+        >>> literal = JSONstr(already_serialized)
+        >>> json_obj = {"jsonrpc": "2.0", "method": "report_size", "params": literal, "id": None}
+        >>> print(pp_json(json_obj))
+        {
+          "jsonrpc": "2.0",
+          "method": "report_size",
+          "params": {"width":640,"height":400"},
+          "id": null}
+
+    :param obj: A json-object (or a tree of json-objects) to be serialized
+    :param cls: The class of a custom json-encoder derived from `json.JSONEncoder`
+    :return: The pretty-printed string-serialized form of the json-object.
+    """
+    custom_encoder = cls()
+
+    def serialize(obj, indent: str) -> List[str]:
+        if isinstance(obj, str):
+            if obj.find('\n') >= 0:
+                lines = obj.split('\n')
+                pretty_str = json_encode_string(lines[0]) + '\n' \
+                    + '\n'.join(indent + json_encode_string(line) for line in lines[1:])
+                return [pretty_str]
+            else:
+                return [json_encode_string(obj)]
+        elif isinstance(obj, dict):
+            if obj:
+                if len(obj) == 1:
+                    k, v = next(iter(obj.items()))
+                    if not isinstance(v, (dict, list, tuple)):
+                        r = ['{"' + k + '": ']
+                        r.extend(serialize(v, indent + '  '))
+                        r.append('}')
+                        return r
+                r = ['{\n' + indent + '  ']
+                for k, v in obj.items():
+                    r.append('"' + k + '": ')
+                    r.extend(serialize(v, indent + '  '))
+                    r.append(',\n' + indent + '  ')
+                r[-1] = '}'
+                return r
+            return ['{}']
+        elif isinstance(obj, (list, tuple)):
+            if obj:
+                r = ['[']
+                for item in obj:
+                    r.extend(serialize(item, indent + '  '))
+                    r.append(',')
+                r[-1] = ']'
+                return r
+            return ['[]']
+        elif obj is True:
+            return ['true']
+        elif obj is False:
+            return ['false']
+        elif obj is None:
+            return ['null']
+        elif isinstance(obj, (int, float)):
+            # NOTE: test for int must follow test for bool, because True and False
+            #       are treated as instances of int as well by Python
+            return [repr(obj)]
+        elif isinstance(obj, JSONstr):
+            return [obj.serialized_json]
+        elif isinstance(obj, JSONnull) or obj is JSONnull:
+            return ['null']
+        return serialize(custom_encoder.default(obj), indent)
+
+    return ''.join(serialize(obj, ''))
+
+
+def pp_json_str(jsons: str) -> str:
+    """Pretty-prints and already serialized (but possibly ugly-printed)
+    json object in a well-readable form. Syntactic sugar for:
+    `pp_json(json.loads(jsons))`."""
+    return pp_json(json.loads(jsons))
+
+
 #######################################################################
 #
 #  concurrent execution (wrappers for concurrent.futures)
@@ -1268,7 +1357,7 @@ class SingleThreadExecutor(concurrent.futures.Executor):
     It is not recommended to use this in asynchronous code or code that
     relies on the submit() or map()-method of executors to return quickly.
     """
-    def submit(self, fn, *args, **kwargs):
+    def submit(self, fn, *args, **kwargs) -> concurrent.futures.Future:
         future = concurrent.futures.Future()
         try:
             result = fn(*args, **kwargs)
@@ -1278,12 +1367,25 @@ class SingleThreadExecutor(concurrent.futures.Executor):
         return future
 
 
+@functools.lru_cache(None)
+def multiprocessing_broken() -> str:
+    """Returns an error message, if, for any reason multiprocessing is not safe
+    to be used. For example, multiprocessing does not work with
+    PyInstaller (under Windows) or GraalVM.
+    """
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        err_msg = "Multiprocessing turned off for PyInstaller-bundled script."
+        print(err_msg)
+        return err_msg
+    return ""
+
+
 def instantiate_executor(allow_parallel: bool,
                          preferred_executor: Type[concurrent.futures.Executor],
                          *args, **kwargs) -> concurrent.futures.Executor:
     """Instantiates an Executor of a particular type, if the value of the
     configuration variable 'debug_parallel_execution' allows to do so.
-    Otherwise a surrogate executor will be returned.
+    Otherwise, a surrogate executor will be returned.
     If 'allow_parallel` is False, a SingleThreadExecutor will be instantiated,
     regardless of the preferred_executor and any configuration values.
     """
@@ -1296,7 +1398,7 @@ def instantiate_executor(allow_parallel: bool,
             else:  mode = 'multiprocessing'
         if mode == "singlethread":
             return SingleThreadExecutor()
-        elif mode == "multithreading":
+        elif mode == "multithreading" or (mode == "multiprocessing" and multiprocessing_broken()):
             if issubclass(preferred_executor, concurrent.futures.ProcessPoolExecutor):
                 return concurrent.futures.ThreadPoolExecutor(*args, **kwargs)
         else:
@@ -1305,6 +1407,14 @@ def instantiate_executor(allow_parallel: bool,
         return preferred_executor(*args, **kwargs)
     return SingleThreadExecutor()
 
+
+def cpu_count() -> int:
+    """Returns the number of cpus that are accessible to the current process
+    or 1 if the cpu count cannot be determined."""
+    try:
+        return len(os.sched_getaffinity(0)) or 1
+    except AttributeError:
+        return os.cpu_count() or 1
 
 #######################################################################
 #

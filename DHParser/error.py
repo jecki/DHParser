@@ -238,6 +238,7 @@ DIRECTIVE_FOR_NONEXISTANT_SYMBOL         = ErrorCode(1100)
 INAPPROPRIATE_SYMBOL_FOR_DIRECTIVE       = ErrorCode(1110)
 PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS  = ErrorCode(1120)
 CUSTOM_PARSER_FAILURE                    = ErrorCode(1130)
+UNDEFINED_SYMBOL                         = ErrorCode(1140)
 
 ERROR_WHILE_RECOVERING_FROM_ERROR        = ErrorCode(1301)
 
@@ -339,12 +340,22 @@ class Error:
         self.end_column = -1      # type: int
         self.related = tuple(related)   # type: Sequence['Error']
 
+    def _normalize_msg(self, msg: str) -> str:
+        """A hack to support recognition of duplicate error messages when using
+        produced as articaft by the seed and grow algorithm that catches
+        left-recursion in the parser. See :py:meth:`~parse.Forward.__call__`."""
+        if self.code == RESUME_NOTICE:
+            i = msg.find('with ')
+            if i > 0:  msg = msg[:i]
+        return msg
+
     def __eq__(self, other):
-        return self.message == other.message and self.code == other.code \
-               and self._pos == other._pos  # and self.length == other.length
+        return self._normalize_msg(self.message) == self._normalize_msg(other.message) \
+            and self.code == other.code \
+            and self._pos == other._pos  # and self.length == other.length
 
     def __hash__(self):
-        return hash((self.message, self.code, self._pos))
+        return hash((self._normalize_msg(self.message), self.code, self._pos))
 
     def __str__(self):
         if self.orig_doc and self.orig_doc != 'UNKNOWN_FILE':

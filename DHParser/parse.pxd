@@ -11,11 +11,13 @@ cdef class Parser:
     cdef public bint drop_content
     cdef public str node_name
     cdef public object eq_class
+    cdef public object sub_parsers
+    cdef public object _parse_proxy
     cdef public object _grammar
     cdef object visited
-    cdef public object cycle_detection
-    cdef public object _parse_proxy
     cdef str _symbol
+    cdef public object _descendants_cache
+    cdef public object _descendant_trails_cache
 
     cpdef reset(self)
     # cpdef __call__(self, location)
@@ -25,6 +27,7 @@ cdef class Parser:
     cpdef set_proxy(self, proxy)
     # cpdef sub_parsers(self)
     # cpdef descendants(self)
+    # cpdef descendant_trails(self)
     # cpdef _apply(self, func, ptrail, flip)
     cpdef apply(self, func)
 

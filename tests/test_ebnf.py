@@ -818,13 +818,20 @@ class TestErrorCustomizationErrors:
         l3 = [zeile for zeile in l2 if not zeile.lstrip().startswith('mitte')]
         lang3 = '\n'.join(l3).replace('mitte', '(`M` §"ITTE")')
         result, messages, ast = compile_ebnf(lang3)
+        # print(lang3)
+        # print(result)
         assert not messages, str(messages)
 
         parser = create_parser(lang3)
         cst = parser('ANFANGMITTEENDE')
         assert not cst.errors
+        # parser.root_parser__.apply(lambda p: p.reset())
+        # for p in parser.all_parsers__:
+        #     if len(p.visited) > 0:
+        #         print(p.name, p)
         cst = parser('ANFANGMISSEENDE')
         assert cst.errors
+        # print(cst.as_sxpr())
         assert 'alles' in cst and 'ZOMBIE__' in cst['alles'] and 'ende' in cst['alles']
 
     def test_multiple_resume_definitions(self):
@@ -870,6 +877,30 @@ class TestErrorCustomizationErrors:
         parser = provider()
         result = parser('ADX')
         assert "several strings" in str(result.errors), str(result.errors)
+
+    # def test_indirect_error_handling(self):
+    #     lang = """
+    #         document = series
+    #         @series_error = 'error'
+    #         series = "A" B "C"
+    #         B = "B" § "b"
+    #         """
+    #     provider = grammar_provider(lang)
+    #     parser = provider()
+    #     result = parser('ABC')
+    #     print(result.errors)
+    #     # result, messages, ast = compile_ebnf(lang)
+    #     # assert not messages, "No warning expected, but: " + str(messages)
+    #
+    # def test_indirect_ambiguity(self):
+    #     lang = """
+    #         document = series
+    #         @series_error = 'error'
+    #         series = "A" B § "C"
+    #         B = "B" § "b"
+    #         """
+    #     result, messages, ast = compile_ebnf(lang)
+    #     assert messages, '"Ambigous error message"-warning expected!'
 
 
 class TestVariableCapture:
@@ -1904,6 +1935,15 @@ class TestErrors:
   (:Whitespace " ")
   (number "4")
   (EOF))"""
+
+    def test_missing_at(self):
+        try:
+            parser = create_parser(self.numbers.replace('@Error', 'Error'))
+            assert False, "CompilationError expected"
+        except CompilationError as ce:
+            assert str(ce).find('"@" should be added')
+
+
 
 
 if __name__ == "__main__":

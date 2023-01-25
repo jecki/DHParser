@@ -50,7 +50,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
-    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, ERROR, FATAL, has_errors
+    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -131,7 +131,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \\
     remove_anonymous_tokens, keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content_with, forbid, assert_content, remove_infix_operator, \\
+    replace_content_with, forbid, assert_content, remove_infix_operator, cpu_count, \\
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
     get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \\
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
@@ -1240,8 +1240,8 @@ class EBNFCompiler(Compiler):
     :ivar consumed_custom_errors:  A set of symbols for which a custom error
             has been defined and(!) consumed during compilation. This
             allows to add a compiler error in those cases where (i) an
-            error message has been defined but will never used or (ii)
-            an error message is accidently used twice. For examples, see
+            error message has been defined but will never be used or (ii)
+            an error message is accidentally used twice. For examples, see
             ``test_ebnf.TestErrorCustomization``.
 
     :ivar consumed_skip_rules: The same as ``consumed_custom_errors`` only for
@@ -1770,7 +1770,6 @@ class EBNFCompiler(Compiler):
         for symbol in self.directives.error.keys():
             verify_directive_against_symbol(symbol + '_error', symbol)
             if symbol in self.rules and symbol not in self.consumed_custom_errors:
-                # try:
                 def_node = self.rules[symbol][0]
                 self.tree.new_error(
                     def_node, 'Customized error message for symbol "{}" will never be used, '
@@ -1819,8 +1818,20 @@ class EBNFCompiler(Compiler):
         for symbol in self.symbols:
             if symbol not in defined_symbols:
                 for usage in self.symbols[symbol]:
+                    passage = self.tree.source[usage.pos:usage.pos + len(symbol) + 1]
+                    if passage == symbol + '(':
+                        i = self.tree.source.find(')', usage.pos)
+                        if i > usage.pos + len(passage):
+                            passage = self.tree.source[usage.pos:i + 1]
+                        else:
+                            passage += "...)"
+                        hint = f' If  {passage}  was meant as a custom parser call, ' \
+                               f'then "@" should be added in front of it.'
+                    else:
+                        hint = ''
                     self.tree.new_error(
-                        usage, "Missing definition for symbol '%s'" % symbol)
+                        usage, f'Missing definition for symbol "{symbol}"!' + hint,
+                        UNDEFINED_SYMBOL)
 
         # check for unconnected rules
 
@@ -1945,11 +1956,9 @@ class EBNFCompiler(Compiler):
                     python_src = python_src.replace(
                         'static_analysis_pending__ = [True]',
                         'static_analysis_pending__ = []  # type: List[bool]', 1)
-            except TypeError as te:
+            except (TypeError, AttributeError) as te_ae:
                 if not (errors or self.tree.errors):
-                    # it is not merley a consequential error
-                    # of an already reported error
-                    raise te
+                    raise te_ae  # not merely a consequntial error of another reported error
             except SyntaxError as se:
                 src_lines = probe_src.split('\n')
                 se.msg += f' "{src_lines[se.lineno - 1]}" '
@@ -2349,10 +2358,6 @@ class EBNFCompiler(Compiler):
                         "in its definiens.".format(current_symbol),
                         AMBIGUOUS_ERROR_HANDLING)
                 else:
-                    # use class field instead or direct representation of error messages!
-                    # custom_args.append('err_msgs={err_msgs_name}["{symbol}"]'
-                    #                    .format(err_msgs_name=self.ERR_MSGS_KEYWORD,
-                    #                            symbol=current_symbol))
                     self.consumed_custom_errors.add(current_symbol)
             # add skip-rules to resume parsing of a series, if rules have been declared
             if current_symbol in self.directives.skip:

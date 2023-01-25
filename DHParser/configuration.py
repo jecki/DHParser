@@ -586,6 +586,14 @@ CONFIG_PRESET['delimiter_set'] = {
 # Default value: True
 CONFIG_PRESET['batch_processing_parallelization'] = True
 
+# Maximum chunk size when using multiple processes for batch processing
+# see: file:///usr/share/doc/python/html/library/concurrent.futures.html#concurrent.futures.Executor.map
+# Higher values can lead to more efficient multiprocessing, but can
+# also increase the time until a process completes.
+# Values must be greater or equal one.
+# Default value: 4
+CONFIG_PRESET['batch_processing_max_chunk_size'] = 4
+
 # Maximum allowed source size for remote procedure calls (including
 # parameters) in server.Server. The default value is rather large in
 # order to allow transmitting complete source texts as parameter.

@@ -78,7 +78,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 #######################################################################

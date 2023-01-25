@@ -76,7 +76,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_JSON(source):
@@ -126,7 +126,7 @@ class JSONGrammar(Grammar):
     root__ = json
     
 
-_raw_grammar = ThreadLocalSingletonFactory(JSONGrammar, ident=1)
+_raw_grammar = ThreadLocalSingletonFactory(JSONGrammar)
 
 def get_grammar() -> JSONGrammar:
     grammar = _raw_grammar()
@@ -187,7 +187,7 @@ def JSONTransformer() -> TransformerCallable:
     return partial(traverse, transformation_table=JSON_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(JSONTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(JSONTransformer)
 
 
 def transform_JSON(cst):
@@ -276,7 +276,7 @@ class JSONCompiler(Compiler):
             return '?'
 
 
-get_compiler = ThreadLocalSingletonFactory(JSONCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(JSONCompiler)
 
 
 def compile_JSON(ast):

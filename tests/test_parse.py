@@ -92,8 +92,7 @@ class TestParserClass:
             """
         gr = grammar_provider(minilang)()
         l = []
-        def visitor(context: List[Parser]):
-            p = context[-1]
+        def visitor(p: Parser):
             l.append(p.pname + p.ptype)
         gr.root__.apply(visitor)
         s1 = ", ".join(l)
@@ -1722,6 +1721,7 @@ class TestErrorLocations:
         parseXML = create_parser(miniXML)
         resume_notices_on(parseXML)
         result = parseXML(testdoc)
+        # for e in result.errors:  print(e)
         assert len(result.errors) == 2
 
     def test_error_resumption_2(self):
@@ -1786,6 +1786,19 @@ class TestStructurePreservationOnLookahead:
         author = gr('Bertrand Russell', 'author')
         assert author.name == "author" and author.content == "Bertrand Russell"
         assert author.errors[0].code == MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
+
+#
+# class TestParserTrails:
+#     def test_parser_trails(self):
+#         grammar = """
+#         root = a | b
+#         a = `a`
+#         b = c | root
+#         c = `c`
+#         """
+#         gr = create_parser(grammar)
+#         print(gr['b'].descendant_trails)
+
 
 
 if __name__ == "__main__":

@@ -74,7 +74,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, LaTeXPreprocessor)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident="1")
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 #######################################################################
@@ -449,7 +449,7 @@ def LaTeXTransformer() -> TransformerCallable:
     threads or processes."""
     return partial(traverse, transformation_table=LaTeX_AST_transformation_table.copy())
 
-get_transformer = ThreadLocalSingletonFactory(LaTeXTransformer, ident="1")
+get_transformer = ThreadLocalSingletonFactory(LaTeXTransformer)
 
 def transform_LaTeX(cst):
     get_transformer()(cst)
@@ -827,7 +827,7 @@ class LaTeXCompiler(Compiler):
     #     return node
 
 
-get_compiler = ThreadLocalSingletonFactory(LaTeXCompiler, ident="1")
+get_compiler = ThreadLocalSingletonFactory(LaTeXCompiler)
 
 def compile_LaTeX(ast):
     return get_compiler()(ast)

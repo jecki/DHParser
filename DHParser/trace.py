@@ -1,4 +1,5 @@
-# trace.py - tracing of the parsing process (for debugging)
+# trace.py - tracing of the parsing process (for debugging) and
+#            interrupting long running parser processes.
 #
 # Copyright 2018  by Eckhart Arnold (arnold@badw.de)
 #                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -18,10 +19,20 @@
 """
 Module ``trace`` provides trace-debugging functionality for the
 parser. The tracers are added or removed via monkey patching to
-all or some particular parsers of a grammar and trace the actions
+all or some parsers of a grammar and trace the actions
 of these parsers, making use of the `call_stack__`, `history__`
 and `moving_forward__`, `most_recent_error__`-hooks in the
 Grammar-object.
+
+This functionality can be used for several purposes:
+
+1. "live" or "breakpoint"-debugging (not implemented)
+
+2. recording of parsing history and "post-mortem"-debugging,
+   implemented here and in module :py:mod:`log`
+
+3. Interrupting long running parser processes by polling
+   a threading.Event or multiprocessing.Event once in a while
 """
 
 from __future__ import annotations
@@ -43,8 +54,49 @@ from DHParser.log import HistoryRecord
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive
 from DHParser.toolkit import line_col
 
-__all__ = ('trace_history', 'all_descendants', 'set_tracer',
-           'resume_notices_on', 'resume_notices_off')
+__all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
+
+
+#######################################################################
+#
+# Adding and removing tracers
+#
+#######################################################################
+
+
+def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
+    """Adds or removes a tracing function to (or from) a single parser, a set of
+    parsers or all parsers in a grammar.
+
+    :param parsers: the parsers or single parser or grammar-object containing
+        parsers where the ``tracer`` shall be added or removed.
+    :param tracer: a tracer function or ``None``. If ``None`` any existing
+        tracer will be removed. If not None, tracer must be a parsing function.
+        It is up to the tracer to call the original parsing function
+        (``self._parse()``).
+    """
+    if isinstance(parsers, Grammar):
+        if tracer is None:
+            parsers.history_tracking__ = False
+            parsers.resume_notices__ = False
+        parsers = parsers.all_parsers__
+    elif isinstance(parsers, Parser):
+        parsers = [parsers]
+    if parsers:
+        pivot = next(parsers.__iter__())
+        assert all(pivot.grammar == parser.grammar for parser in parsers)
+        if tracer is not None:
+            pivot.grammar.history_tracking__ = True
+        for parser in parsers:
+            if parser.ptype != ':Forward':
+                parser.set_proxy(tracer)
+
+
+#######################################################################
+#
+# History-Recording for post-mortem debugging
+#
+#######################################################################
 
 
 def symbol_name(parser: Parser, grammar: Grammar) -> str:
@@ -155,49 +207,22 @@ def trace_history(self: Parser, location: cint) -> Tuple[Optional[Node], cint]:
     return node, location_
 
 
-def all_descendants(root: Parser) -> List[Parser]:
-    """Returns a list with the parser `root` and all of its descendants."""
-    descendants = []
-
-    def visit(trail: List[Parser]):
-        descendants.append(trail[-1])
-    root.apply(visit)
-    return descendants
-
-
-# def with_unnamed_descendants(root: Parser) -> List[Parser]:
-#     """Returns a list that contains the parser `root` and only unnamed parsers."""
-#     descendants = [root]
-#     for parser in root.sub_parsers():
-#         if not parser.pname:
-#             descendants.extend(with_unnamed_descendants(parser))
-#     return descendants
-
-
-def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
-    if isinstance(parsers, Grammar):
-        if tracer is None:
-            parsers.history_tracking__ = False
-            parsers.resume_notices__ = False
-        parsers = parsers.all_parsers__
-    elif isinstance(parsers, Parser):
-        parsers = [parsers]
-    if parsers:
-        pivot = next(parsers.__iter__())
-        assert all(pivot.grammar == parser.grammar for parser in parsers)
-        if tracer is not None:
-            pivot.grammar.history_tracking__ = True
-        for parser in parsers:
-            if parser.ptype != ':Forward':
-                parser.set_proxy(tracer)
-
-
 def resume_notices_on(grammar: Grammar):
-    grammar.history_tracking__ = True
+    """Turns resume-notices as well as history tracking on!"""
+    # grammar.history_tracking__ = True
     grammar.resume_notices__ = True
     set_tracer(grammar, trace_history)
 
 
 def resume_notices_off(grammar: Grammar):
-    """Turns off resume-notices as well as history tracking!"""
+    """Turns resume-notices as well as history tracking off!"""
     set_tracer(grammar, None)
+
+
+#######################################################################
+#
+# Interrupt-Polling
+#
+#######################################################################
+
+
