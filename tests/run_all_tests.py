@@ -81,9 +81,9 @@ def gather_interpreters():
         if output.find(b'Python 3') >= 0:
             found.append('python ')
         elif run_cmd(['python3', '-V']):
-            found.append('python3')
+            found.append('python3 ')
     elif run_cmd(['python3', '-V']):
-        found.append('python3')
+        found.append('python3 ')
     # if run_cmd(['python3.5', '-V']):
     #     found.append('python3.5 ')
     # elif run_cmd(['~/.local/bin/python3.5', '-V']):
