@@ -42,7 +42,7 @@ def run_doctests_rst(rst_path):
         return result.failed
     except Exception as e:
         print("**********************************************************************")
-        print(f"Exception while procesing {rst_path}", e)
+        print(f"Exception while processing {rst_path}", e)
         print("**********************************************************************")
 
 
@@ -61,6 +61,7 @@ def run_doctests(module):
 
 def run_unittests(command):
     args = command.split(' ')
+    print(args)
     filename = args[1]
     print('\nUNITTEST ' + args[0] + ' ' + filename)
     subprocess.run(args)
@@ -81,9 +82,9 @@ def gather_interpreters():
         if output.find(b'Python 3') >= 0:
             found.append('python ')
         elif run_cmd(['python3', '-V']):
-            found.append('python3')
+            found.append('python3 ')
     elif run_cmd(['python3', '-V']):
-        found.append('python3')
+        found.append('python3 ')
     # if run_cmd(['python3.5', '-V']):
     #     found.append('python3.5 ')
     # elif run_cmd(['~/.local/bin/python3.5', '-V']):

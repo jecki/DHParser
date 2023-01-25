@@ -257,7 +257,10 @@ def concurrent_ident() -> str:
     """
     Returns an identificator for the current process and thread
     """
-    return multiprocessing.current_process().name + '_' + str(threading.get_ident())
+    if sys.version_info >= (3, 8, 0):
+        return multiprocessing.current_process().name + '_' + str(threading.get_native_id())
+    else:
+        return multiprocessing.current_process().name + '_' + str(threading.get_ident())
 
 
 class unrepr:
