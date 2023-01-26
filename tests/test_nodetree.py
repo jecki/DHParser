@@ -162,6 +162,7 @@ XML_EXAMPLE_2 = '''<TEI xmlns:abb="http://www.abbyy.com/FineReader_xml/FineReade
   </teiHeader>
 </TEI>'''
 
+
 class TestParseXML:
     def test_roundtrip(self):
         tree = parse_sxpr('(a (b c) (d (e f) (h i)))')
@@ -688,6 +689,15 @@ class TestRootNode:
         result = Grammar(number)("3.1416")
         assert not result.node_errors(result)
         assert result.node_errors(result[1])
+
+    # def test_node_errors(self):
+    #     tree = RootNode(parse_sxpr('(A (B (C "12") (D "34")) (E (F "56") (G "78")))'))
+    #     tree.with_pos(0)
+    #     tree.new_error(tree.pick('D'), "Ouch!")
+    #     tree.new_error(tree.pick('G'), "Doh!")
+    #     B = tree.pick('B')
+    #     B.result = B.content
+    #     print(tree.as_sxpr())
 
     def test_copy_errors(self):
         tree = RootNode(parse_sxpr('(A (B "1") (C "2"))').with_pos(0))

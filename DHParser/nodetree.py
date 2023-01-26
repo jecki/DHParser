@@ -3938,7 +3938,7 @@ class RootNode(Node):
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, node.strlen() - 1))
             assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
         self.error_nodes.setdefault(id(node), []).append(error)
-        if node.pos == error.pos:
+        if node.pos <= error.pos <= node.pos + max(node.strlen(), 1):  # node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
         if self.source:
             add_source_locations([error], self.source_mapping)
