@@ -1944,6 +1944,15 @@ class TestErrors:
             assert str(ce).find('"@" should be added')
 
 
+class TestNameConflicts:
+    def test_symbol_shadows_parser_name(self):
+        gr = '''
+        doc = Text | Literal
+        Literal = `abc` 
+        Text = /\w+/
+        '''
+        p = create_parser(gr)
+        print(p.python_src__)
 
 
 if __name__ == "__main__":

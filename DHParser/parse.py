@@ -1763,7 +1763,7 @@ class Grammar:
                     stitches.append(result)
                     for h in reversed(self.history__):
                         if h.node and (h.node.name != EMPTY_NODE.name or h.node.result) \
-                                and any('Lookahead' in tag for tag, _ in h.call_stack):
+                                and any(tag == ':Lookahead' for tag, _ in h.call_stack):
                             break
                     else:
                         h = HistoryRecord([], Node(EMPTY_NODE.name, '').with_pos(0),
