@@ -54,7 +54,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
-    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser
+    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
@@ -140,6 +140,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, RootNode
+from DHParser import parse as parse_namespace__
 '''
 
 
@@ -1326,6 +1327,7 @@ class EBNFCompiler(Compiler):
         self.defined_directives = dict()       # type: Dict[str, List[Node]]
         self.consumed_custom_errors = set()    # type: Set[str]
         self.consumed_skip_rules = set()       # type: Set[str]
+        self.P = {p: p for p in parser_names}  # type: Dict[str, str]
 
 
     @property
@@ -1911,6 +1913,14 @@ class EBNFCompiler(Compiler):
         if len(node.children) == 1 and node.children[0].anonymous:
             node = node.children[0]
 
+        # check for possible naming conflicts with Python parser names
+        for nd in node.children:
+            if nd.name == "definition":
+                assert nd[0].name == "symbol"
+                sym = nd[0].content
+                if sym in self.P:
+                    self.P[sym] = 'parse_namespace__.' + sym
+
         # compile definitions and directives and collect definitions
         root_symbol = ''
         for nd in node.children:
@@ -2004,7 +2014,7 @@ class EBNFCompiler(Compiler):
             if isinstance(defn, str):
                 if defn.find("(") < 0:
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
-                    defn = 'Synonym(%s)' % defn
+                    defn = f'{self.P["Synonym"]}({defn})'
                 if self.drop_flag and defn[:5] != "Drop(":
                     defn = 'Drop(%s)' % defn
                 # TODO: Recursively drop all contained parsers for optimization?

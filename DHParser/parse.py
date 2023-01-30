@@ -69,7 +69,8 @@ except ImportError:
     cint: TypeAlias = int
 
 
-__all__ = ('ParserError',
+__all__ = ('parser_names',
+           'ParserError',
            'ApplyFunc',
            'ApplyToTrailFunc',
            'FlagFunc',
@@ -94,6 +95,7 @@ __all__ = ('ParserError',
            'update_scanner',
            'RE',
            'TKN',
+           'DTKN',
            'Whitespace',
            'DropRegExp',
            'mixin_comment',
@@ -131,10 +133,45 @@ __all__ = ('ParserError',
            'last_value',
            'optional_last_value',
            'matching_bracket',
-           'Capture',
-           'Retrieve',
-           'Pop',
            'Forward')
+
+
+# Names of all parser classes and functions that can directly be used
+# for constructing a parser.
+parser_names = ('Always',
+                'Never',
+                'AnyChar',
+                'PreprocessorToken',
+                'ERR',
+                'Text',
+                'DropText',
+                'RegExp',
+                'RE',
+                'TKN',
+                'DTKN',
+                'Whitespace',
+                'DropRegExp',
+                'CombinedParser',
+                'Custom',
+                'CustomParser',
+                'Drop',
+                'Synonym',
+                'Option',
+                'ZeroOrMore',
+                'OneOrMore',
+                'Series',
+                'Alternative',
+                'Counted',
+                'Interleave',
+                'Required',
+                'Lookahead',
+                'NegativeLookahead',
+                'Lookbehind',
+                'NegativeLookbehind',
+                'Capture',
+                'Retrieve',
+                'Pop',
+                'Forward')
 
 
 ########################################################################
