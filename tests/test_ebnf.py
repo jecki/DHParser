@@ -1951,8 +1951,9 @@ class TestNameConflicts:
         Literal = `abc` 
         Text = /\w+/
         '''
+        # should run without causig an exception
         p = create_parser(gr)
-        print(p.python_src__)
+        assert p.python_src__.find('parse_namespace__.Text("abc")') >= 0
 
 
 if __name__ == "__main__":

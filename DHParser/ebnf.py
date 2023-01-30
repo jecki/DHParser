@@ -2015,8 +2015,8 @@ class EBNFCompiler(Compiler):
                 if defn.find("(") < 0:
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                     defn = f'{self.P["Synonym"]}({defn})'
-                if self.drop_flag and defn[:5] != "Drop(":
-                    defn = 'Drop(%s)' % defn
+                if self.drop_flag and not defn.startswith(self.P["Drop"] + "("):
+                    defn = f'{self.P["Drop"]}({defn})'
                 # TODO: Recursively drop all contained parsers for optimization?
             else:
                 assert isinstance(defn, Node)
@@ -2248,13 +2248,17 @@ class EBNFCompiler(Compiler):
         arguments = [self.compile(r) for r in node.children] + custom_args
         assert all(isinstance(arg, str) for arg in arguments), str(arguments)
         # remove drop clause for non dropping definitions of forms like "/\w+/~"
-        if (parser_class == "Series" and node.name not in self.directives.drop
+        parser_class = self.P.get(parser_class, parser_class)
+        drop_clause = f'{self.P["Drop"]}('
+        drop_regexp = drop_clause + f'{self.P["RegExp"]}('
+        drop_text = drop_clause + f'{self.P["Text"]}('
+        if (parser_class == self.P["Series"] and node.name not in self.directives.drop
             and DROP_REGEXP in self.directives.drop and self.path[-2].name == "definition"
-            and all((arg[:12] == 'Drop(RegExp(' or arg[:10] == 'Drop(Text('
+            and all((arg.startswith(drop_regexp) or arg.startswith(drop_text)
                      or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
-            arguments = [arg.replace('Drop(', '').replace('))', ')') for arg in arguments]
+            arguments = [arg.replace(drop_clause, '').replace('))', ')') for arg in arguments]
         if self.drop_flag:
-            return 'Drop(' + parser_class + '(' + ', '.join(arguments) + '))'
+            return drop_clause + parser_class + '(' + ', '.join(arguments) + '))'
         else:
             return parser_class + '(' + ', '.join(arguments) + ')'
 
@@ -2468,7 +2472,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
                                               "-parsers, not: " + nd.name)
 
-            if not result[:7] == 'RegExp(':
+            if not result.startswith(self.P['RegExp'] + '('):
                 self.deferred_tasks.append(lambda: verify(node))
         return result
 
@@ -2477,7 +2481,7 @@ class EBNFCompiler(Compiler):
         assert len(node.children) == 2, str(node.as_sxpr())
         left = self.compile(node.children[0])
         right = self.compile(node.children[1])
-        return "Series(NegativeLookahead(%s), %s)" % (right, left)
+        return f"{self.P['Series']}({self.P['NegativeLookahead']}({right}), {left})"
 
 
     def on_element(self, node: Node) -> str:
@@ -2596,7 +2600,8 @@ class EBNFCompiler(Compiler):
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = node.content  # ; assert result == cast(str, node.result)
         if symbol in self.directives.tokens:
-            return 'PreprocessorToken("' + symbol + '")'
+            return f'{self.P["PreprocessorToken"]}("{symbol}")'
+            # return 'PreprocessorToken("' + symbol + '")'
         else:
             self.current_symbols.append(node)
             self.symbols.setdefault(symbol, []).append(node)
@@ -2618,11 +2623,15 @@ class EBNFCompiler(Compiler):
 
 
     def TEXT_PARSER(self, text, drop):
-        return 'Drop(Text(' + text + '))' if drop else 'Text(' + text + ')'
+        return f'{self.P["Drop"]}({self.P["Text"]}({text}))' if drop \
+            else f'{self.P["Text"]}({text})'
+        # return 'Drop(Text(' + text + '))' if drop else 'Text(' + text + ')'
 
 
     def REGEXP_PARSER(self, regexp, drop):
-        return 'Drop(RegExp(' + regexp + '))' if drop else 'RegExp(' + regexp + ')'
+        return f'{self.P["Drop"]}({self.P["RegExp"]}({regexp}))' if drop \
+            else f'{self.P["RegExp"]}({regexp})'
+        # return 'Drop(RegExp(' + regexp + '))' if drop else 'RegExp(' + regexp + ')'
 
 
     def WSPC_PARSER(self, force_drop=False):
@@ -2644,7 +2653,9 @@ class EBNFCompiler(Compiler):
         left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
         right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
         if left or right:
-            return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
+            args = ", ".join(item for item in (left, center, right) if item)
+            return f'{self.P["Series"]}({args})'
+            # return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
 
 
@@ -2680,7 +2691,7 @@ class EBNFCompiler(Compiler):
                 child.result = self.extract_free_char(child)
         re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
         re_str = re.sub(r"(?<!\\)]", r'\]', re_str)
-        return "RegExp('[%s]')" % re_str
+        return f"{self.P['RegExp']}('[{re_str}]')"
 
 
     def extract_character(self, node: Node) -> str:
@@ -2696,7 +2707,8 @@ class EBNFCompiler(Compiler):
 
 
     def on_character(self, node: Node) -> str:
-        return "RegExp('%s')" % self.extract_character(node)
+        return f"{self.P['RegExp']}('[{self.extract_character(node)}]')"
+        # return "RegExp('%s')" % self.extract_character(node)
 
 
     def extract_free_char(self, node: Node) -> str:
@@ -2706,7 +2718,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_any_char(self, node: Node) -> str:
-        return 'AnyChar()'
+        return f'{self.P["AnyChar"]}()'
 
 
     def on_whitespace(self, node: Node) -> str:
@@ -2722,9 +2734,9 @@ class EBNFCompiler(Compiler):
             argument = self.compile(node['argument'])
             if argument[0:1] not in ('"', "'"):
                 self.py_symbols.append(argument)
-            return f'Custom({name}({argument}))'
+            return f'{self.P["Custom"]}({name}({argument}))'
         else:
-            return f'Custom({name}())'
+            return f'{self.P["Custom"]}({name}())'
 
     def on_name(self, node: Node) -> str:
         assert not node.children
