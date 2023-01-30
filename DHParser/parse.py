@@ -2266,7 +2266,10 @@ class ERR(Parser):
 
     def _parse(self, location: cint) -> ParsingResult:
         node = Node(ZOMBIE_TAG, '').with_pos(location)
-        self.grammar.tree__.new_error(node, self.err_msg, self.err_code)
+        before = '...' + self.grammar.document__[location - 10:location].replace('\n', '\\n')
+        after = self.grammar.document__[location:location + 10].replace('\n', '\\n') + '...'
+        message = self.err_msg.format(before, after)
+        self.grammar.tree__.new_error(node, message, self.err_code)
         return node, location
 
     def __repr__(self):

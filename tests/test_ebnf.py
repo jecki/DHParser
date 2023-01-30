@@ -1908,7 +1908,7 @@ class TestErrors:
     numbers = r"""@whitespace = vertical
     document = { ~ number | error } ~ EOF
     number = /[1-9]\d*/~
-    error  = !EOF @Error("Not a valid Number!") /.*?(?=\s|$)/  # skip to next whitespace
+    error  = !EOF @Error("»{1}« is not a valid Number!") /.*?(?=\s|$)/  # skip to next whitespace
     EOF = !/./
     """
 
@@ -1923,14 +1923,14 @@ class TestErrors:
     (:RegExp "2")
     (:Whitespace " "))
   (error
-    (ZOMBIE__ `(err "1:3: Error (1000): Not a valid Number!"))
+    (ZOMBIE__ `(err "1:3: Error (1000): »X 3 Y 4...« is not a valid Number!"))
     (:RegExp "X"))
   (:Whitespace " ")
   (number
     (:RegExp "3")
     (:Whitespace " "))
   (error
-    (ZOMBIE__ `(err "1:7: Error (1000): Not a valid Number!"))
+    (ZOMBIE__ `(err "1:7: Error (1000): »Y 4...« is not a valid Number!"))
     (:RegExp "Y"))
   (:Whitespace " ")
   (number "4")
