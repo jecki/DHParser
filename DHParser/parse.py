@@ -1733,10 +1733,11 @@ class Grammar:
 
         self.start_parser__ = parser
         assert isinstance(document, str)
-        self.text__ = document
-        self.document__ = StringView(document)
+        # eliminate BOM (byte order mark) https://en.wikipedia.org/wiki/Byte_order_mark
+        self.text__ = document[1:] if document[0:1] == '\ufeff' else document
+        self.document__ = StringView(self.text__)
         self.document_length__ = len(self.document__)
-        self._document_lbreaks__ = linebreaks(document) if self.history_tracking__ else []
+        self._document_lbreaks__ = linebreaks(self.text__) if self.history_tracking__ else []
         # done by reset: self.last_rb__loc__ = -2  # rollback location
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
@@ -1882,7 +1883,7 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
-        self.tree__.swallow(result, document, source_mapping)
+        self.tree__.swallow(result, self.text__, source_mapping)
         self.tree__.stage = 'cst'
         # if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
