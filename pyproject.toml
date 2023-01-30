@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "DHParser"
-version = "1.3.3"
+version = "1.3.4"
 description = "Parser Generator and DSL-construction-kit"
 
 license = "Apache-2"

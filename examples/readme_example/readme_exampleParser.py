@@ -69,7 +69,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example source file.
     """
-    source_hash__ = "8654e24c00c99efd6f86f8c85d493248"
+    source_hash__ = "25f0fbe48e5e12666c32a17280b5cf28"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

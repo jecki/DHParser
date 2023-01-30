@@ -1248,6 +1248,10 @@ class EBNFCompiler(Compiler):
     :ivar consumed_skip_rules: The same as ``consumed_custom_errors`` only for
             in-series-resume-rules (aka 'skip-rules') for Series-parsers.
 
+    :ivar P: a dictionary that maps parser class names to qualified names in
+            cases a parser class name has also been used as a symbol name
+            in the grammar. (e.g. Text -> parser_namespace__.Text)
+
     :ivar re_flags:  A set of regular expression flags to be added to all
             regular expressions found in the current parsing process
 
