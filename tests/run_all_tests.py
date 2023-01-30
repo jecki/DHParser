@@ -61,6 +61,7 @@ def run_doctests(module):
 
 def run_unittests(command):
     args = command.split(' ')
+    print(args)
     filename = args[1]
     print('\nUNITTEST ' + args[0] + ' ' + filename)
     subprocess.run(args)
