@@ -190,6 +190,9 @@ class ThreadLocalSingletonFactory:
     Generates a singleton-factory that returns one and
     the same instance of `class_or_factory` for one and the
     same thread, but different instances for different threads.
+
+    Note: The optional "ident"-parameter of the constructor is now
+    deprecated and should not be used any more!
     """
     def __init__(self, class_or_factory, name: str = "", *, ident: int = -1):
         if ident != -1:
