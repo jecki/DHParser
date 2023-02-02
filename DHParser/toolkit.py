@@ -309,7 +309,7 @@ def as_list(item_or_sequence) -> List[Any]:
     return [item_or_sequence]
 
 
-def as_tuple(item_or_sequence) -> List[Any]:
+def as_tuple(item_or_sequence) -> Tuple[Any]:
     """Turns an arbitrary sequence or a single item into a tuple. In case of
     a single item, the tuple contains this element as its sole item."""
     if isinstance(item_or_sequence, Iterable):
@@ -364,7 +364,6 @@ def deprecated(message: str) -> Callable:
         ... except DeprecationWarning as w:  print(w)
         This function is deprecated!
         >>> set_config_value('deprecation_policy', save)
-
     """
     assert isinstance(message, str)
     def decorator(f: Callable) -> Callable:
