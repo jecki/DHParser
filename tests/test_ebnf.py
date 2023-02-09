@@ -1707,7 +1707,7 @@ class TestRuleOrder:
             for i in range(len(paths)):
                 for k in range(i + 1, len(paths)):
                     assert paths[i] ^ paths[k]
-            return paths[0].union(*paths[1:])
+            return paths and paths[0].union(*paths[1:])
 
         lang = """doc = A
             A = B | C

@@ -1653,7 +1653,12 @@ class EBNFCompiler(Compiler):
                     definitions.insert(k, definitions[i])
                     del definitions[i]
                     top -= 1
-                    recursive.remove(sym)
+                    try:
+                        recursive.remove(sym)
+                    except KeyError:
+                        # due to reiterated reordering sym may happen to be
+                        # removed more than once
+                        pass
             i += 1
         self.forward = recursive
 
