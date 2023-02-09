@@ -370,7 +370,7 @@ class StringView:  # collections.abc.Sized
         if self._fullstring:
             return self._fullstring.split(sep)
         else:
-            pieces = []  # type: List[Union['StringView', str]]
+            pieces = []   # type: List[Union['StringView', str]]
             length = len(sep)
             k = 0
             i = self.find(sep, k)

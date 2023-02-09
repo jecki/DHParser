@@ -190,8 +190,13 @@ class ThreadLocalSingletonFactory:
     Generates a singleton-factory that returns one and
     the same instance of `class_or_factory` for one and the
     same thread, but different instances for different threads.
+
+    Note: The optional "ident"-parameter of the constructor is now
+    deprecated and should not be used any more!
     """
-    def __init__(self, class_or_factory, name: str = ""):
+    def __init__(self, class_or_factory, name: str = "", *, ident: int = -1):
+        if ident != -1:
+            deprecation_warning('ThreadLocalSingletonFactory: "ident" is deprecated!')
         self.class_or_factory = class_or_factory
         self.singleton_name = "{NAME}_{ID}_singleton".format(
             NAME=name or class_or_factory.__name__, ID=str(id(self)))
@@ -309,7 +314,7 @@ def as_list(item_or_sequence) -> List[Any]:
     return [item_or_sequence]
 
 
-def as_tuple(item_or_sequence) -> List[Any]:
+def as_tuple(item_or_sequence) -> Tuple[Any]:
     """Turns an arbitrary sequence or a single item into a tuple. In case of
     a single item, the tuple contains this element as its sole item."""
     if isinstance(item_or_sequence, Iterable):
@@ -364,7 +369,6 @@ def deprecated(message: str) -> Callable:
         ... except DeprecationWarning as w:  print(w)
         This function is deprecated!
         >>> set_config_value('deprecation_policy', save)
-
     """
     assert isinstance(message, str)
     def decorator(f: Callable) -> Callable:

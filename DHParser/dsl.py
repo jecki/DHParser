@@ -591,7 +591,7 @@ def recompile_grammar(ebnf_filename: str,
             In case this is a directory and not a file, all files within
             this directory ending with .ebnf will be compiled.
     :param parser_name:  The name of the compiler script. If not given
-            the ebnf-filename without extension and with the the addition
+            the ebnf-filename without extension and with the addition
             of "Parser.py" will be used.
     :param force:  If False (default), the grammar will only be
             recompiled if it has been changed.

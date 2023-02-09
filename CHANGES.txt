@@ -1,4 +1,10 @@
-DHParser Version 1.3.4 (30.1.2022)
+DHParser Version 1.3.5 (10.2.2023)
+..................................
+
+- bugfixes, some to restore broken backwards compatibility
+
+
+DHParser Version 1.3.4 (30.1.2023)
 ..................................
 
 - bugfix ebnf.py: possible name conflics between symbol names in a grammar
