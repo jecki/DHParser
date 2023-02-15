@@ -600,15 +600,15 @@ like::
             |
             |--- compact-print
             |
-    -----------------
-    | one-line json |
-    -----------------
+     -----------------
+     | one-line json |
+     -----------------
             |
             |--- bytearry-convert
             |
-   --------------------
-   | transmission obj |
-   --------------------
+    --------------------
+    | transmission obj |
+    --------------------
 
 Let's define the necessary junctions "pretty-print", "compact-print" and
 "bytearray-convert". Each junction is a 3-tuple of 1) the name of input stage, 2)
