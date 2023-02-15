@@ -1553,7 +1553,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = True,
-                flatten_threshold: int = 92) -> str:
+                flatten_threshold: int = 92,
+                sxml: bool = False) -> str:
         """
         Serializes the tree as S-expression, i.e. in lisp-like form. If this
         method is called on a RootNode-object, error strings will be displayed
@@ -1570,6 +1571,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param flatten_threshold:  Return the S-expression in flattened form if
             the flattened expression does not exceed the threshold length.
             A negative number means that it will always be flattened.
+        :param sxml:  If True, attributes are rendered according to the
+            SXML-conventions <https://okmij.org/ftp/papers/SXs.pdf>, e.g.
+            `` (@ (attr "value")`` instead of `` `(attr "value") ``
         :returns: A string containing the S-expression serialization of the tree.
         """
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
@@ -1577,23 +1581,35 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
 
+        def attr(name: str, value: str):
+            if sxml:  return f' ({name} "{value}")'
+            else:  return f' `({name} "{value}")'
+
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             txt = [left_bracket, node.name]
             # s += " '(pos %i)" % node.add_pos
             # txt.append(str(id(node)))  # for debugging
-            if node.has_attr():
-                txt.extend(' `(%s "%s")' % (k, str(v)) for k, v in node.attr.items())
-            if node._pos >= 0:
-                if src:
-                    line, col = line_col(lbreaks, node.pos)
-                    txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
-                elif src is not None:
-                    txt.append(' `(pos %i)' % node.pos)
-            if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                err_str = ';  '.join(str(err) for err in root.node_errors(node))
-                err_str = err_str.replace('"', r'\"')
-                txt.append(f' `(err "{err_str}")')
+            has_attrs = node.has_attr()
+            render_pos = node._pos >= 0 and src is not None
+            has_errors = root and id(node) in root.error_nodes
+            show_attrs = has_attrs or render_pos or has_errors
+            if show_attrs:
+                if sxml:  txt.append('(@ ')
+                if has_attrs:
+                    txt.extend(attr(k, str(v)) for k, v in node.attr.items())
+                if render_pos:
+                    if src:
+                        line, col = line_col(lbreaks, node.pos)
+                        txt.append((' (pos "%i %i %i")' if sxml else ' `(pos %i %i %i)')
+                                   % (node.pos, line, col))
+                    else:
+                        txt.append((' (pos "%i")' if sxml else ' `(pos %i)') % node.pos)
+                if has_errors and not node.has_attr('err'):
+                    err_str = ';  '.join(str(err) for err in root.node_errors(node))
+                    err_str = err_str.replace('"', r'\"')
+                    txt.append(attr('err', err_str))
+                if sxml:  txt.append(')')
             return "".join(txt)
 
         def closing(node: Node) -> str:
@@ -1608,6 +1624,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
         return flatten_sxpr(sxpr, flatten_threshold)
+
+    def as_sxml(self, src: Optional[str] = None,
+                indentation: int = 2,
+                compact: bool = True,
+                flatten_threshold: int = 92) -> str:
+        return as_sxpr(src, indentation, compact, flatten_threshold, sxml=True)
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
@@ -1831,6 +1853,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         if switch in ('S-expression', 'S-Expression', 's-expression', 'sxpr'):
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
+                                compact=exceeds_compact_threshold(self, compact_threshold))
+        elif switch == 'sxml':
+            return self.as_sxml(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == 'xml':
             return self.as_xml(strict_mode=False)

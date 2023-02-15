@@ -405,6 +405,8 @@ CONFIG_PRESET['left_recursion'] = True
 # Possible values are:
 # 'XML'          - output as XML
 # 'S-expression' - output as S-expression, i.e. a list-like format
+# 'SXML'         - a variant of S-expression differing in how attributes are
+#                  rendered, e.g. (@ attr "value") instead of `(attr "value")
 # 'indented'     - compact tree output, i.e. children a represented on
 #                  indented lines with no opening or closing tags, brackets
 #                  etc.
@@ -413,7 +415,7 @@ CONFIG_PRESET['left_recursion'] = True
 #                  example, to return syntax trees from remote procedure calls.
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
-_serializations = frozenset({'XML', 'json', 'indented', 'S-expression'})
+_serializations = frozenset({'XML', 'json', 'indented', 'S-expression', 'SXML'})
 CONFIG_PRESET['cst_serialization'] = 'S-expression'
 CONFIG_PRESET['ast_serialization'] = 'S-expression'
 CONFIG_PRESET['default_serialization'] = 'S-expression'
