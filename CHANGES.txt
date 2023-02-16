@@ -1,3 +1,10 @@
+DHParser Version 1.4.0
+......................
+
+- nodetree.py: support for SXML-serialization
+  (see https://okmij.org/ftp/Scheme/SXML.html)
+
+
 DHParser Version 1.3.5 (10.2.2023)
 ..................................
 

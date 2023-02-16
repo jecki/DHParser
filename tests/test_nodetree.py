@@ -32,7 +32,8 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
-    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID
+    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
+    parse_sxml
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -82,6 +83,8 @@ class TestParseSxpression:
         sxpr = '(B (A `(tic "abc :-)") "Z") (C "1"))'
         s = parse_sxpr(sxpr)
         assert flatten_sxpr(s.as_sxpr()) == sxpr
+        s = parse_sxpr('(A 250)')
+        assert flatten_sxpr(s.as_sxpr()) == '(A "250")'
 
     def test_parse_s_expression_malformed(self):
         try:
@@ -313,6 +316,16 @@ class TestParseJSON:
         sxpr = n.as_sxpr('')
         assert sxpr.find('pos') >= 0
         tree = parse_sxpr(sxpr)
+        assert tree.pos == 46
+        assert not 'pos' in tree.attr
+
+        # SXML
+        sxml = n.as_sxml()
+        assert sxml == '(employee(@ (branch "Secret Service") (id "007")) "James Bond")'
+        assert sxml.find('pos') < 0
+        sxml = n.as_sxml('')
+        assert sxml.find('pos') >= 0
+        tree = parse_sxml(sxml)
         assert tree.pos == 46
         assert not 'pos' in tree.attr
 

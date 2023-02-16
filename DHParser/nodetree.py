@@ -82,9 +82,11 @@ __all__ = ('WHITESPACE_PTYPE',
            'ANY_NODE',
            'NO_NODE',
            'LEAF_NODE',
+           'BRANCH_NODE',
            'ANY_PATH',
            'NO_PATH',
            'LEAF_PATH',
+           'BRANCH_PATH',
            'Node',
            'content_of',
            'strlen_of',
@@ -132,6 +134,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'RootNode',
            'DHParser_JSONEncoder',
            'parse_sxpr',
+           'parse_sxml',
            'parse_xml',
            'parse_json',
            'deserialize',
@@ -197,8 +200,16 @@ def LEAF_NODE(nd: Node) -> bool:
     return not nd._children
 
 
+def BRANCH_NODE(nd: Node) -> bool:
+    return nd._children
+
+
 def LEAF_PATH(path: Path) -> bool:
-    return not path[-1].children
+    return not path[-1]._children
+
+
+def BRANCH_PATH(path: Path) -> bool:
+    return path[-1]._children
 
 
 def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
@@ -1572,8 +1583,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             the flattened expression does not exceed the threshold length.
             A negative number means that it will always be flattened.
         :param sxml:  If True, attributes are rendered according to the
-            SXML-conventions <https://okmij.org/ftp/papers/SXs.pdf>, e.g.
-            `` (@ (attr "value")`` instead of `` `(attr "value") ``
+            `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_ -conventions,
+            e.g. `` (@ (attr "value")`` instead of `` `(attr "value") ``
         :returns: A string containing the S-expression serialization of the tree.
         """
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
@@ -1629,7 +1640,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 indentation: int = 2,
                 compact: bool = True,
                 flatten_threshold: int = 92) -> str:
-        return as_sxpr(src, indentation, compact, flatten_threshold, sxml=True)
+        return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=True)
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
@@ -4156,8 +4167,39 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
         nonlocal remaining
         remaining = s
 
+    @cython.locals(pos=cython.int, i=cython.int, k=cython.int, m=cython.int, L=cython.int)
+    def parse_attrs(sxpr: StringView, attr_start: str, attributes: Dict[str, Any]) -> Tuple[str, int]:
+        pos: int = -1
+        L: int = len(attr_start)
+        while sxpr[:L] == attr_start:
+            i = sxpr.find('"')
+            k = sxpr.find(')')
+            if k > i:
+                k = sxpr.find(')', sxpr.find('"', i + 1))
+            if i < 0:
+                i = k + 1
+            if k < 0:
+                raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
+            # read very special attribute pos
+            if sxpr[L:L + 3] == "pos" and (L == 1 or 0 < k < i):
+                pos = int(str(sxpr[L + 3:k].strip(' \'"').split(' ')[0]))
+            # ignore very special attribute err
+            elif sxpr[L:L + 3] == "err" and 0 <= sxpr.find('`', L + 3) < k:
+                m = sxpr.find('(', L + 3)
+                while 0 <= m < k:
+                    m = sxpr.find('(', k)
+                    k = max(k, sxpr.find(')', max(m, 0)))
+            # read attr
+            else:
+                attr = str(sxpr[L:i].strip())
+                if not RX_ATTR_NAME.match(attr):
+                    raise ValueError('Illegal attribute name: ' + attr)
+                value = sxpr[i:k].strip()[1:-1]
+                attributes[attr] = str(value)
+            sxpr = sxpr[k + 1:].strip()
+        return sxpr, pos
 
-    @cython.locals(pos=cython.int, i=cython.int, k=cython.int, end=cython.int)
+    @cython.locals(pos=cython.int, i=cython.int, end=cython.int)
     def inner_parser(sxpr: StringView) -> Node:
         if sxpr[0] != '(':
             raise ValueError('"(" expected, not ' + sxpr[:10])
@@ -4172,34 +4214,13 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
         attributes = OrderedDict()  # type: Dict[str, Any]
-        pos = -1  # type: int
         # parse attr
-        while sxpr[:2] == "`(":
-            i = sxpr.find('"')
-            k = sxpr.find(')')
-            if k > i:
-                k = sxpr.find(')', sxpr.find('"', i + 1))
-            if i < 0:
-                i = k + 1
-            if k < 0:
-                raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
-            # read very special attribute pos
-            if sxpr[2:5] == "pos" and 0 < k < i:
-                pos = int(str(sxpr[5:k].strip(' \'"').split(' ')[0]))
-            # ignore very special attribute err
-            elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
-                m = sxpr.find('(', 5)
-                while 0 <= m < k:
-                    m = sxpr.find('(', k)
-                    k = max(k, sxpr.find(')', max(m, 0)))
-            # read attr
-            else:
-                attr = str(sxpr[2:i].strip())
-                if not RX_ATTR_NAME.match(attr):
-                    raise ValueError('Illegal attribute name: ' + attr)
-                value = sxpr[i:k].strip()[1:-1]
-                attributes[attr] = str(value)
-            sxpr = sxpr[k + 1:].strip()
+        if sxpr[:2] == '(@':  # SXML-style
+            sxpr, pos = parse_attrs(sxpr[2:].lstrip(), "(", attributes)
+            assert sxpr[0] == ')'
+            sxpr = sxpr[1:].lstrip()
+        else:  # DHParser-style
+            sxpr, pos = parse_attrs(sxpr, "`(", attributes)
         if sxpr[0] == '(':
             result = tuple(inner_parser(block)
                            for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
@@ -4234,6 +4255,18 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
     if remaining != ')':
         raise ValueError('Malformed S-expression. Superfluous characters: ' + remaining[1:])
     return RootNode(tree)
+
+
+def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
+    """Generates a tree of nodes from `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_.
+    Example::
+
+        >>> sxml = '(employee(@ (branch "Secret Service") (id "007")) "James Bond")'
+        >>> tree = parse_sxml(sxml)
+        >>> print(tree.as_xml())
+        <employee branch="Secret Service" id="007">James Bond</employee>
+    """
+    return parse_sxpr(sxml)
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
