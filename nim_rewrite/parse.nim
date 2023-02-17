@@ -49,7 +49,7 @@ proc init*(parser: Parser): Parser =
   return parser
 
 
-proc `()`(parser: Parser, location: int): ParsingResult {.inline.} =
+proc `()`*(parser: Parser, location: int): ParsingResult {.inline.} =
   # is this faster than simply calling parser.parseProxy?
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
@@ -62,16 +62,15 @@ type
   TextObj = object of ParserObj
       text: string
 
-
 method parse(parser: TextRef, location: int): ParsingResult =
   echo "Test.parse"
   result = (none(Node), 0)
 
-
-proc init(textParser: TextRef, text: string): TextRef =
+proc init*(textParser: TextRef, text: string): TextRef =
   discard Parser(textParser).init()
   textParser.text = text
   return textParser
+
 
 
 ## Test-code
