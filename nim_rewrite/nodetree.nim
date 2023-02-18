@@ -56,11 +56,12 @@ func content*(node: Node): string =
   if node.isLeaf:
     result = node.text
   else:
+    # result = ""
     for child in node.children:
       result &= child.content
 
 func children*(node: Node): seq[Node] =
-  node.children
+  return node.children
 
 proc `result=`*(node: Node, text: string) =
   node.text = text
@@ -74,28 +75,27 @@ func runeLen*(node: Node): int =
   if node.isLeaf:
     result = node.text.runeLen
   else:
+    # result = 0
     for child in node.children:
       result += child.runeLen
 
 func sourcePos*(node: Node): int =
-  if node.sourcePos >= 0:
-    node.sourcePos
-  else:
+  if node.sourcePos < 0:
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
+  return node.sourcePos
 
 proc assignSourcePos(node: Node, sourcePos: int) : int =
-  if node.sourcePos < 0:
-    node.sourcePos = sourcePos
-    var pos = sourcePos
-    if node.isLeaf:
-      pos + node.text.runeLen
-    else:
-      for child in node.children:
-        if not child.isNil:
-          pos += child.assignSourcePos(pos)
-      pos
-  else:
+  if node.sourcePos >= 0:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
+  node.sourcePos = sourcePos
+  var pos = sourcePos
+  if node.isLeaf:
+    return pos + node.text.runeLen
+  else:
+    for child in node.children:
+      if not child.isNil:
+        pos += child.assignSourcePos(pos)
+  return pos
 
 proc `sourcePos=`*(node: Node, sourcePos: int) =
   discard node.assignSourcePos(sourcePos)
@@ -111,6 +111,7 @@ func serialize(node: Node,
                opening, closing: proc (nd: Node) : string,
                leafdata: proc(nd: Node): seq[string],
                ind: int = 0): seq[string] =
+  # result = newSeq()
   var open = opening(node)
   var close = closing(node)
   let openLF = open.endsWith("\n")
@@ -190,16 +191,16 @@ func asSxpr*(node: Node): string =
     else:
       @['"' & esc(node.content) & '"']
 
-  serialize(node, opening, closing, leafdata).join("\n")
+  return serialize(node, opening, closing, leafdata).join("\n")
 
 
 # Test-code
-#[
-var n = new(Node).init("root", @[new(Node).init("left", "LEFT", {"id": "007"}.toOrderedTable),
-                                 new(Node).init("right", "RIGHT")])
+when isMainModule:
+  var n = new(Node).init("root", @[new(Node).init("left", "LEFT", {"id": "007"}.toOrderedTable),
+                                   new(Node).init("right", "RIGHT")])
 
-echo n.asSxpr
-n.`sourcePos=` 0
-echo n.children[0].sourcePos
-echo n.children[1].sourcePos
-]#
+  echo n.asSxpr
+  n.`sourcePos=` 0
+  echo n.children[0].sourcePos
+  echo n.children[1].sourcePos
+

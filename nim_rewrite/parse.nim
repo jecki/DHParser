@@ -64,12 +64,15 @@ type
 
 method parse(parser: TextRef, location: int): ParsingResult =
   echo "Test.parse"
-  result = (none(Node), 0)
+  return (none(Node), 0)
 
 proc init*(textParser: TextRef, text: string): TextRef =
   discard Parser(textParser).init()
   textParser.text = text
   return textParser
+
+proc Text*(text: string): TextRef {.inline.} =
+  return new(TextRef).init(text)
 
 
 
