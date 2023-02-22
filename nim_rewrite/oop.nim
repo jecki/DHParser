@@ -8,6 +8,7 @@
 #   obj.init(args)
 #   obj
 
+
 template newObj*(T: typedesc, args: varargs[untyped]): T =
   new(result)
   result.init(args)
