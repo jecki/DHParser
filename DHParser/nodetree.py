@@ -3811,9 +3811,9 @@ class RootNode(Node):
         self.lbreaks: List[int] = linebreaks(source)
 
         # customization for XML-Representation
-        self.inline_tags: AbstractSet[str] = set()
-        self.string_tags: AbstractSet[str] = {TOKEN_PTYPE}
-        self.empty_tags: AbstractSet[str] = set()
+        self.inline_tags: Set[str] = set()
+        self.string_tags: Set[str] = {TOKEN_PTYPE}
+        self.empty_tags: Set[str] = set()
 
         # meta-data
         self.docname: str = ''
