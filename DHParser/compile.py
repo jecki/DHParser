@@ -19,7 +19,7 @@
 Module ``compile`` contains a skeleton class for syntax
 driven compilation support. Class ``Compiler`` can serve as base
 class for a compiler. Compiler objects
-are callable an receive the Abstract syntax tree (AST)
+are callable and receive the Abstract syntax tree (AST)
 as argument and yield whatever output the compiler produces. In
 most Digital Humanities applications this will be
 XML-code. However, it can also be anything else, like binary
