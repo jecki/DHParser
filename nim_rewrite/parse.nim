@@ -2,6 +2,7 @@
 {.experimental: "callOperator".}
 
 import std/options
+import std/strutils
 
 import nodetree
 
@@ -16,18 +17,18 @@ type
     disposable: bool
     dropContent: bool
     eqClass: int
-    grammar: Grammar
+    grammar: GrammarRef
     symbol: string
     parseProxy: ParseProc not nil
 
   # the GrammarObj
+  GrammarRef = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
     document: string
-  Grammar = ref GrammarObj not nil
 
 
-let grammarPlaceholderSingleton: Grammar = Grammar(name: "Placeholder")
+let grammarPlaceholderSingleton = GrammarRef(name: "Placeholder")
 
 
 method parse*(parser: Parser, location: int): ParsingResult {.base.} =
@@ -50,8 +51,16 @@ proc init*(parser: Parser): Parser =
   return parser
 
 
-proc `()`*(parser: Parser, location: int): ParsingResult {.inline.} =
+proc `()`*(parser: Parser, location: int): ParsingResult =
   # is this faster than simply calling parser.parseProxy?
+  if parser.parseProxy == callParseMethod:
+    return parser.parse(location)
+  else:
+    return parser.parseProxy(parser, location)
+
+
+proc `()`*(parser: Parser, document: string, location: int = 0): ParsingResult =
+  parser.grammar = GrammarRef(name: "adhoc", document: document)
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
   else:
@@ -64,15 +73,16 @@ type
       text: string
 
 method parse(parser: TextRef, location: int): ParsingResult =
-  echo "Test.parse"
-  return (none(Node), 0)
+  if substrEq(parser.grammmar.document, location, parser.text):
+
+
 
 proc init*(textParser: TextRef, text: string): TextRef =
   discard Parser(textParser).init()
   textParser.text = text
   return textParser
 
-proc Text*(text: string): TextRef {.inline.} =
+proc Text*(text: string): TextRef =
   return new(TextRef).init(text)
 
 
@@ -81,12 +91,10 @@ proc Text*(text: string): TextRef {.inline.} =
 
 
 let
-  p = new(Parser).init()
-  t = new(TextRef).init("A")
+  t = Text("A")
 #  t = new(Text).initText("A")
-let pr = p(32)
 let pr2 = t(32)
-echo $pr
+echo $pr2
 
 
 
