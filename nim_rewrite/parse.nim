@@ -20,6 +20,7 @@ type
     symbol: string
     parseProxy: ParseProc not nil
 
+  # the GrammarObj
   GrammarObj = object of RootObj
     name: string
     document: string
