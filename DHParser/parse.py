@@ -565,11 +565,10 @@ class Parser:
         return duplicate
 
     def __repr__(self):
-        return self.original_name() + self.ptype
+        return self.pname + self.ptype
 
     def __str__(self):
-        name = self.original_name()
-        return name + (' = ' if name else '') + repr(self)
+        return self.pname + (' = ' if self.pname else '') + repr(self)
 
     @property
     def ptype(self) -> str:
@@ -583,7 +582,7 @@ class Parser:
         This is the closest parser with a pname that contains this parser."""
         if not self._symbol:
             try:
-                self._symbol = self.grammar.associated_symbol__(self).original_name()
+                self._symbol = self.grammar.associated_symbol__(self).pname
             except AttributeError:
                 # return an empty string, if parser is not connected to grammar,
                 # but be sure not to save the empty string in self._symbol
@@ -593,8 +592,7 @@ class Parser:
     @property
     def repr(self) -> str:
         """Returns the parser's name if it has a name and ``self.__repr__()`` otherwise."""
-        name = self.original_name()
-        return name if name else self.__repr__()
+        return self.pname if self.pname else self.__repr__()
 
     def gen_memoization_dict(self) -> dict:
         """Create and return an empty memoization dictionary. This allows to customize
@@ -775,16 +773,17 @@ class Parser:
 
     def name(self, pname: str) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
-        self.pname = pname
-        self.node_name = pname
-        self.disposable = pname[0:1] == ':'
-        return self
+        assert pname, "Tried to assigned empty name!"
+        assert self.pname == "", "Parser name cannot be reassigned!"
 
-    def original_name(self) -> str:
-        if self.pname[0:1] != ':':
-            return self.pname
+        self.node_name = pname
+        if pname[0:1] == ":":
+            # self.disposable = True
+            self.pname = pname[1:]
         else:
-            return self.pname[1:] if self.pname != self.ptype else ''
+            self.disposable = False
+            self.pname = pname
+        return self
 
     @property
     def grammar(self) -> 'Grammar':
@@ -1467,24 +1466,23 @@ class Grammar:
         particular instance of Grammar.
         """
         if parser not in self.all_parsers__:
-            pname = parser.original_name()
-            if pname:
+            if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
                 # assert (parser.pname not in self.__dict__
                 #         or isinstance(self.__dict__[parser.pname], parser.__class__)), \
                 #     ('Cannot add parser "%s" because a field with the same name '
                 #      'already exists in grammar object: %s!'
                 #      % (parser.pname, str(self.__dict__[parser.pname])))
-                if pname in self.__dict__:
-                    assert (isinstance(self.__dict__[pname], Forward)
-                            or isinstance(self.__dict__[pname], parser.__class__)), \
+                if parser.pname in self.__dict__:
+                    assert (isinstance(self.__dict__[parser.pname], Forward)
+                            or isinstance(self.__dict__[parser.pname], parser.__class__)), \
                         ('Cannot add parser "%s" because a field with the same name '
                          'already exists in grammar object: %s!'
-                         % (pname, str(self.__dict__[pname])))
+                         % (parser.pname, str(self.__dict__[parser.pname])))
                 else:
-                    setattr(self, pname, parser)
+                    setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
-                setattr(self, cast(Forward, parser).parser.original_name(), parser)
+                setattr(self, cast(Forward, parser).parser.pname, parser)
             # # see Parser.name()
             # if parser.disposable:
             #     parser.name = (':' + parser.pname) if parser.pname else parser.ptype
@@ -2941,7 +2939,7 @@ class Option(UnaryParser):
 
     def __repr__(self):
         return '[' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
-                      and not self.parser.original_name() else self.parser.repr) + ']'
+                      and not self.parser.pname else self.parser.repr) + ']'
 
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
@@ -2990,7 +2988,7 @@ class ZeroOrMore(Option):
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
-                      and not self.parser.original_name() else self.parser.repr) + '}'
+                      and not self.parser.pname else self.parser.repr) + '}'
 
 
 class OneOrMore(UnaryParser):
@@ -3035,7 +3033,7 @@ class OneOrMore(UnaryParser):
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
-                      and not self.parser.original_name() else self.parser.repr) + '}+'
+                      and not self.parser.pname else self.parser.repr) + '}+'
 
     def static_analysis(self) -> List[AnalysisError]:
         errors = super().static_analysis()
@@ -3251,7 +3249,7 @@ class MandatoryNary(NaryParser):
         err_node.with_pos(location)  # for testing artifacts
         error_code = MANDATORY_CONTINUATION
         found = text_[:10].replace('\n', '\\n') + '...'
-        sym = self.grammar.associated_symbol__(self).original_name()
+        sym = self.grammar.associated_symbol__(self).pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
         for search, message in err_msgs:
             is_func = callable(search)           # search rule is a function: StringView -> bool
@@ -4321,12 +4319,10 @@ class Synonym(UnaryParser):
         return node, location
 
     def __str__(self):
-        name = self.original_name()
-        return name + (' = ' if name else '') + self.parser.repr
-        # return self.pname + (' = ' if self.pname else '') + self.parser.repr
+        return self.pname + (' = ' if self.pname else '') + self.parser.repr
 
     def __repr__(self):
-        return self.original_name() or self.parser.repr
+        return self.pname or self.parser.repr
 
 
 class Forward(UnaryParser):
@@ -4366,11 +4362,10 @@ class Forward(UnaryParser):
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
-    def name(self, pname: str, disposable: bool = False) -> Parser:
+    def name(self, pname: str,) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
         assert not pname, "Forward-parser mustn't have a name. "\
             'Use pname="" when calling  Forward.name()'
-        super().name(pname, disposable)
         return self
 
     def __deepcopy__(self, memo):
@@ -4516,8 +4511,7 @@ class Forward(UnaryParser):
     @property
     def repr(self) -> str:
         """Returns the parser's name if it has a name or ``repr(self)`` if not."""
-        name = self.parser.original_name()
-        return name if name else self.__repr__()
+        return self.parser.pname if self.parser.pname else self.__repr__()
 
     def set(self, parser: Parser):
         """Sets the parser to which the calls to this Forward-object

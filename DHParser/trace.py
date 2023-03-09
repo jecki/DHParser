@@ -103,7 +103,7 @@ def symbol_name(parser: Parser, grammar: Grammar) -> str:
     name = str(parser) if isinstance(parser, ContextSensitive) else parser.node_name
     # name = parser.name
     if name[:1] == ':':
-        name = grammar.associated_symbol__(parser).original_name() + '->' + name
+        name = grammar.associated_symbol__(parser).pname + '->' + name
     return name
 
 

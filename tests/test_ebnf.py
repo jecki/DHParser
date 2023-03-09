@@ -534,7 +534,7 @@ class TestSynonymDetection:
         assert not grammar['a'].disposable
         assert grammar['_b'].disposable
         assert grammar['a'].pname == 'a', grammar['a'].pname
-        assert grammar['_b'].original_name() == '_b', grammar['_b'].pname
+        assert grammar['_b'].pname == '_b', grammar['_b'].pname
         assert grammar('b').as_sxpr() == '(a "b")', grammar('b').as_sxpr()
 
 
