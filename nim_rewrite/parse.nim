@@ -7,6 +7,15 @@ import std/strutils
 import nodetree
 
 
+## Parser Base and Grammar
+## -----------------------
+##
+## Parser is the base class for all parsers.
+##
+## Grammar objects contain an ensemble of parsers. A grammar object is
+## linked to each contained parser and stores the global variables
+## that are shared by all parsers of the ensemble, like memoizing data.
+
 type
   ParsingResult = tuple[node: NodeOrNil, location: int]
   ParseProc = proc(parser: Parser, location: int): ParsingResult
@@ -23,13 +32,15 @@ type
     parseProxy: ParseProc not nil
 
   # the GrammarObj
+  ReturnItemFunc = proc(parser: Parser, node: NodeOrNil): Node
+  ReturnSequenceFunc = proc(parser: Parser, nodes: seq[Node]): Node
   GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
     document: string
-
-
-let grammarPlaceholderSingleton = GrammarRef(name: "Placeholder")
+    parsers: seq[Parser]
+    returnItem: ReturnItemFunc
+    returnSequence: ReturnSequenceFunc
 
 
 proc `$`*(r: ParsingResult): string =
@@ -38,6 +49,62 @@ proc `$`*(r: ParsingResult): string =
     return fmt"node: {tree}, location: {r.location}"
   else:
     return fmt"node:\n{tree}\nlocation: {r.location}"
+
+
+func returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
+  if parser.dropContent:
+    return EmptyNode
+  if isNil(node):
+    return newNode(parser.nodeName, "")
+  return newNode(parser.nodeName, @[node])
+
+func returnSeqAsIs(parser: Parser, nodes: seq[Node]): Node =
+  if parser.dropContent:
+    return EmptyNode
+  return newNode(parser.nodeName, nodes)
+
+func returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
+  if not isNil(node):
+    if parser.disposable:
+      if parser.dropContent:
+        return EmptyNode
+      return node
+    if node.isAnonymous:
+      return newNode(parser.nodeName, node)
+  elif parser.disposable:
+    return EmptyNode
+  return newNodw(parser.nodeName, "")
+
+func returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
+  if parser.dropContent:
+    return EmptyNode
+  N = seq.len
+  if N > 1:
+    let res = newSeq[Node](seq.len * 2)
+    for child in nodes:
+      let anonymous = child.anonymous
+      if not child.isLeaf and anonymous:
+        for item in child.children:
+          res.add(item)
+      elif not child.isEmpty or not anonymous:
+        res.add(child)
+    if res.len > 0 or not parser.disposable:
+      return newNode(parser.nodeName, res)
+    else:
+      return EmptyNode
+  elif N == 1:
+    return parser.grammer.returnItem(nodes[0])
+  if self.disposable:
+    return EmptyNode
+  return newNode(parser.nodeName, "")
+
+proc init*(grammar: GrammarRef,
+           name: string="",
+           returnItem: ReturnItemProc): GrammarRef =
+
+
+
+let grammarPlaceholderSingleton = GrammarRef(name: "Placeholder")
 
 
 method parse*(parser: Parser, location: int): ParsingResult {.base.} =
@@ -83,16 +150,18 @@ proc `()`*(parser: Parser, location: int): ParsingResult =
 
 
 proc `()`*(parser: Parser, document: string, location: int = 0): ParsingResult =
-  parser.grammar = GrammarRef(name: "adhoc", document: document)
+  parser.grammar = GrammarRef(name: "adhoc", document: document)  # TODO: do some thing propper here
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
   else:
     return parser.parseProxy(parser, location)
 
 
-
-
-
+## Leaf Parsers
+## ------------
+##
+## Leaf parsers are "object"-parsers that capture text directly without
+## calling other parsers
 
 
 type
@@ -118,6 +187,21 @@ method parse(parser: TextRef, location: int): ParsingResult =
       return (newNode(parser.nodeName, parser.text), location + parser.length)
     return (EMPTY_NODE, location)
   return (nil, location)
+
+
+## Combined Parsers
+## ----------------
+##
+## Combined "meta"-parsers are parsers that call other parsers.
+
+
+type
+  ReturnValueProc = proc(parser: Parser, node: NodeOrNil): Node
+  ReturnValuesProc = proc(parser: Parser, nodes: seq[Node]): Node
+  CombinedParser ref CombinedParserObj not nil
+  CombinedParserObj = object of ParserObj
+    returnValue: ReturnValueProc
+    returnValues: ReturnValuesProc
 
 
 

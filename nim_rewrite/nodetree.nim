@@ -52,6 +52,8 @@ func isLeaf*(node: Node): bool = node.children.len == 0
 
 func isEmpty*(node: Node): bool = node.children.len == 0 and node.text.len == 0
 
+func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ":"
+
 func content*(node: Node): string =
   if node.isLeaf:
     result = node.text
@@ -201,11 +203,11 @@ proc `$`*(node: NodeOrNil): string =
     return node.asSxpr()
 
 
-# Special Nodes
+# Special Node-Singletons
 
 let
-   EMPTY_PTYPE* = ":EMPTY"
-   EMPTY_NODE* = newNode(EMPTY_PTYPE, "")
+   EmptyPType* = ":EMPTY"
+   EmptyNode* = newNode(EmptyPType, "")
 
 
 

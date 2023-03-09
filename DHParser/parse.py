@@ -2495,7 +2495,7 @@ class CombinedParser(Parser):
     The reasoning is that the earlier the tree is reduced, the less work
     remains to do at all later processing stages. As these typically run
     through all nodes of the syntax tree, this results in a considerable
-    speed up.
+    speedup.
     """
 
     def __init__(self):
