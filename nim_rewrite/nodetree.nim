@@ -12,6 +12,7 @@ import std/unicode
 type
   Attributes* = OrderedTable[string, string]
   Node* = ref NodeObj not nil
+  NodeOrNil* = ref NodeObj
   NodeObj = object of RootObj
     name*: string
     children: seq[Node]
@@ -43,10 +44,9 @@ proc init*(node: Node,
   node.sourcePos = -1
   return node
 
-template newNode*(args: varargs[untyped]): Node =
-  new(result)
-  result.init(args)
 
+template newNode*(args: varargs[untyped]): Node =
+  new(Node).init(args)
 
 func isLeaf*(node: Node): bool = node.children.len == 0
 
@@ -63,11 +63,11 @@ func content*(node: Node): string =
 func children*(node: Node): seq[Node] =
   return node.children
 
-method `result=`*(node: Node, text: string) =
+proc `result=`*(node: Node, text: string) =
   node.text = text
   if node.children.len > 0:  node.children = @[]
 
-method `result=`*(node: Node, children: seq[Node]) =
+proc `result=`*(node: Node, children: seq[Node]) =
   node.children = children
   node.text = ""
 
@@ -84,7 +84,7 @@ func sourcePos*(node: Node): int =
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
   return node.sourcePos
 
-method assignSourcePos(node: Node, sourcePos: int) : int =
+proc assignSourcePos(node: Node, sourcePos: int) : int =
   if node.sourcePos >= 0:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
   node.sourcePos = sourcePos
@@ -194,13 +194,18 @@ func asSxpr*(node: Node): string =
   return serialize(node, opening, closing, leafdata).join("\n")
 
 
+# Special Nodes
+
+let
+   EMPTY_PTYPE* = ":EMPTY"
+   EMPTY_NODE* = newNode(EMPTY_PTYPE, "")
+
 
 
 # Test-code
 when isMainModule:
   var n = new(Node).init("root", @[new(Node).init("left", "LEFT", {"id": "007"}.toOrderedTable),
                                    new(Node).init("right", "RIGHT")])
-
   echo n.asSxpr
   n.`sourcePos=` 0
   echo n.children[0].sourcePos

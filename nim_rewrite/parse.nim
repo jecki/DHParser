@@ -1,18 +1,18 @@
 {.experimental: "strictNotNil".} 
 {.experimental: "callOperator".}
 
-import std/options
 import std/strutils
 
 import nodetree
 
 
 type
-  ParsingResult = tuple[node: Option[Node], location: int]
+  ParsingResult = tuple[node: NodeOrNil, location: int]
   ParseProc = proc(parser: Parser, location: int): ParsingResult
   Parser* = ref ParserObj not nil
   ParserObj = object of RootObj
     name: string
+    nodeName: string
     parserType: string
     disposable: bool
     dropContent: bool
@@ -22,7 +22,7 @@ type
     parseProxy: ParseProc not nil
 
   # the GrammarObj
-  GrammarRef = ref GrammarObj not nil
+  GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
     document: string
@@ -33,16 +33,17 @@ let grammarPlaceholderSingleton = GrammarRef(name: "Placeholder")
 
 method parse*(parser: Parser, location: int): ParsingResult {.base.} =
   echo "Parser.parse"
-  result = (none(Node), 0)
+  result = (nil, 0)
 
 
 proc callParseMethod(parser: Parser, location: int): ParsingResult =
   return parser.parse(location)
 
 
-proc init*(parser: Parser): Parser =
+proc init*(parser: Parser, ptype: string = "Parser"): Parser =
   parser.name = ""
-  parser.parserType = "Parser"
+  parser.nodeName = ptype
+  parser.parserType = ptype
   parser.disposable = false
   parser.dropContent = false
   parser.grammar = grammarPlaceholderSingleton
@@ -50,6 +51,13 @@ proc init*(parser: Parser): Parser =
   parser.parseProxy = callParseMethod
   return parser
 
+proc assignName*(name: string, parser: Parser): Parser =
+  assert parser.name == ""
+  assert name != ""
+
+  parser.name = name
+  parser.nodeName = name
+  return parser
 
 proc `()`*(parser: Parser, location: int): ParsingResult =
   # is this faster than simply calling parser.parseProxy?
@@ -71,19 +79,25 @@ type
   TextRef = ref TextObj not nil
   TextObj = object of ParserObj
       text: string
-
-method parse(parser: TextRef, location: int): ParsingResult =
-  if substrEq(parser.grammmar.document, location, parser.text):
-
-
+      length: int
 
 proc init*(textParser: TextRef, text: string): TextRef =
-  discard Parser(textParser).init()
+  discard Parser(textParser).init("Text")
   textParser.text = text
+  textParser.length = text.len
   return textParser
 
 proc Text*(text: string): TextRef =
   return new(TextRef).init(text)
+
+method parse(parser: TextRef, location: int): ParsingResult =
+  if parser.grammar.document.continuesWith(parser.text, location):
+    if parser.dropContent:
+      return (EMPTY_NODE, location + parser.length)
+    elif parser.text != "" or not parser.disposable:
+      return (newNode(parser.nodeName, parser.text), location + parser.length)
+    return (EMPTY_NODE, location)
+  return (nil, location)
 
 
 
@@ -91,10 +105,13 @@ proc Text*(text: string): TextRef =
 
 
 let
-  t = Text("A")
+  t = "A".assignName Text("A")
 #  t = new(Text).initText("A")
-let pr2 = t(32)
-echo $pr2
+let cst = t("A")
+echo $cst
+if not isNil(cst.node):
+  echo cst.node.asSxpr
+
 
 
 
