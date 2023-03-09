@@ -1,6 +1,7 @@
 {.experimental: "strictNotNil".} 
 {.experimental: "callOperator".}
 
+import std/strformat
 import std/strutils
 
 import nodetree
@@ -31,9 +32,16 @@ type
 let grammarPlaceholderSingleton = GrammarRef(name: "Placeholder")
 
 
+func `$`*(r: ParsingResult): string =
+  let tree = $r.node
+  if tree.contains('\n'):
+    return fmt"node:\n{tree}\nlocation: {r.location}"
+  return fmt"node: {tree}, location: {r.location}"
+
+
 method parse*(parser: Parser, location: int): ParsingResult {.base.} =
   echo "Parser.parse"
-  result = (nil, 0)
+  result = (nil, -1)
 
 
 proc callParseMethod(parser: Parser, location: int): ParsingResult =
@@ -44,7 +52,7 @@ proc init*(parser: Parser, ptype: string = "Parser"): Parser =
   parser.name = ""
   parser.nodeName = ptype
   parser.parserType = ptype
-  parser.disposable = false
+  parser.disposable = true
   parser.dropContent = false
   parser.grammar = grammarPlaceholderSingleton
   parser.symbol = ""
@@ -57,6 +65,7 @@ proc assignName*(name: string, parser: Parser): Parser =
 
   parser.name = name
   parser.nodeName = name
+  parser.disposable = if name[0] == ':': true else: false
   return parser
 
 proc `()`*(parser: Parser, location: int): ParsingResult =
@@ -109,8 +118,7 @@ let
 #  t = new(Text).initText("A")
 let cst = t("A")
 echo $cst
-if not isNil(cst.node):
-  echo cst.node.asSxpr
+
 
 
 

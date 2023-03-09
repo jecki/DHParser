@@ -781,6 +781,13 @@ class Parser:
             self.node_name = pname if pname else self.ptype
         return self
 
+    # def name(self, pname: str) -> Parser:
+    #     """Sets the parser name to ``pname`` and returns ``self``."""
+    #     self.pname = pname
+    #     self.node_name = pname
+    #     self.disposable = pname[0:1] == ':'
+    #     return self
+
     @property
     def grammar(self) -> 'Grammar':
         try:

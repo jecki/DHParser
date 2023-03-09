@@ -194,6 +194,10 @@ func asSxpr*(node: Node): string =
   return serialize(node, opening, closing, leafdata).join("\n")
 
 
+func `$`*(node: NodeOrNil): string =
+  return if isNil(node): "nil" else: node.asSxpr()
+
+
 # Special Nodes
 
 let
@@ -206,7 +210,10 @@ let
 when isMainModule:
   var n = new(Node).init("root", @[new(Node).init("left", "LEFT", {"id": "007"}.toOrderedTable),
                                    new(Node).init("right", "RIGHT")])
-  echo n.asSxpr
+  var maybeN: NodeOrNil = nil
+
+  echo $maybeN
+  echo $n
   n.`sourcePos=` 0
   echo n.children[0].sourcePos
   echo n.children[1].sourcePos
