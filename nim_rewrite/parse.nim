@@ -49,11 +49,13 @@ proc callParseMethod(parser: Parser, location: int): ParsingResult =
   return parser.parse(location)
 
 
-proc init*(parser: Parser, ptype: string = "Parser"): Parser =
+proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
+  assert ptype != "" and ptype[0] == ':'
+
   parser.name = ""
   parser.nodeName = ptype
   parser.parserType = ptype
-  parser.disposable = false
+  parser.disposable = true
   parser.dropContent = false
   parser.grammar = grammarPlaceholderSingleton
   parser.symbol = ""
@@ -64,8 +66,12 @@ proc assignName*(name: string, parser: Parser): Parser =
   assert parser.name == ""
   assert name != ""
 
-  parser.name = name
   parser.nodeName = name
+  if name[0] == ':':
+    parser.name = name[1 .. ^1]
+  else:
+    parser.disposable = false
+    parser.name = name
   return parser
 
 proc `()`*(parser: Parser, location: int): ParsingResult =
@@ -84,6 +90,11 @@ proc `()`*(parser: Parser, document: string, location: int = 0): ParsingResult =
     return parser.parseProxy(parser, location)
 
 
+
+
+
+
+
 type
   TextRef = ref TextObj not nil
   TextObj = object of ParserObj
@@ -91,7 +102,7 @@ type
       length: int
 
 proc init*(textParser: TextRef, text: string): TextRef =
-  discard Parser(textParser).init("Text")
+  discard Parser(textParser).init(":Text")
   textParser.text = text
   textParser.length = text.len
   return textParser
