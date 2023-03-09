@@ -194,18 +194,6 @@ func asSxpr*(node: Node): string =
   return serialize(node, opening, closing, leafdata).join("\n")
 
 
-type
-  FrozenNode* = ref FrozenNodeObj not nil
-  FrozenNodeObj = object of NodeObj
-
-
-method `result=`*(node: Node, text: string) =
-  node.text = text
-  if node.children.len > 0:  node.children = @[]
-
-method `result=`*(node: Node, children: seq[Node]) =
-  node.children = children
-  node.text = ""
 
 
 # Test-code

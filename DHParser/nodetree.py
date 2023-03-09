@@ -3725,7 +3725,7 @@ def tree_sanity_check(tree: Node) -> bool:
 #
 #######################################################################
 
-_EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
+EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
 
 
 def default_divisable() -> AbstractSet[str]:
@@ -4083,15 +4083,15 @@ class RootNode(Node):
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
-               inline_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
-               string_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
-               empty_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
+               inline_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               string_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
                strict_mode: bool=True) -> str:
         return super().as_xml(
             src, indentation,
-            inline_tags=self.inline_tags if inline_tags is _EMPTY_SET_SENTINEL else inline_tags,
-            string_tags=self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
-            empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags,
+            inline_tags=self.inline_tags if inline_tags is EMPTY_SET_SENTINEL else inline_tags,
+            string_tags=self.string_tags if string_tags is EMPTY_SET_SENTINEL else string_tags,
+            empty_tags=self.empty_tags if empty_tags is EMPTY_SET_SENTINEL else empty_tags,
             strict_mode=strict_mode)
 
     def serialize(self, how: str = '') -> str:
