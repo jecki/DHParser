@@ -20,6 +20,7 @@ type
   ParsingResult = tuple[node: NodeOrNil, location: int]
   ParseProc = proc(parser: Parser, location: int): ParsingResult
   Parser* = ref ParserObj not nil
+  ParserOrNil = ref ParserObj
   ParserObj = object of RootObj
     name: string
     nodeName: string
@@ -28,19 +29,27 @@ type
     dropContent: bool
     eqClass: int
     grammar: GrammarRef
-    symbol: string
+    symbol: ParserOrNil
+    subParsers: seq[Parser]
     parseProxy: ParseProc not nil
 
   # the GrammarObj
-  ReturnItemFunc = proc(parser: Parser, node: NodeOrNil): Node
-  ReturnSequenceFunc = proc(parser: Parser, nodes: seq[Node]): Node
+  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node
+  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node
   GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
     document: string
-    parsers: seq[Parser]
-    returnItem: ReturnItemFunc
-    returnSequence: ReturnSequenceFunc
+    roots: seq[Parser]
+    returnItem: ReturnItemProc
+    returnSequence: ReturnSequenceProc
+
+
+## Special Node-Singletons
+
+let
+   EmptyPType* = ":EMPTY"
+   EmptyNode* = newNode(EmptyPType, "")
 
 
 proc `$`*(r: ParsingResult): string =
@@ -51,38 +60,38 @@ proc `$`*(r: ParsingResult): string =
     return fmt"node:\n{tree}\nlocation: {r.location}"
 
 
-func returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
+proc returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
   if parser.dropContent:
     return EmptyNode
   if isNil(node):
     return newNode(parser.nodeName, "")
-  return newNode(parser.nodeName, @[node])
+  return newNode(parser.nodeName, @[Node(node)])
 
-func returnSeqAsIs(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqAsIs(parser: Parser, nodes: seq[Node]): Node =
   if parser.dropContent:
     return EmptyNode
   return newNode(parser.nodeName, nodes)
 
-func returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
+proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
   if not isNil(node):
     if parser.disposable:
       if parser.dropContent:
         return EmptyNode
       return node
     if node.isAnonymous:
-      return newNode(parser.nodeName, node)
+      return newNode(parser.nodeName, @[Node(node)])
   elif parser.disposable:
     return EmptyNode
-  return newNodw(parser.nodeName, "")
+  return newNode(parser.nodeName, "")
 
-func returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
   if parser.dropContent:
     return EmptyNode
-  N = seq.len
+  let N = nodes.len
   if N > 1:
-    let res = newSeq[Node](seq.len * 2)
+    var res: seq[Node] = @[]
     for child in nodes:
-      let anonymous = child.anonymous
+      let anonymous = child.isAnonymous
       if not child.isLeaf and anonymous:
         for item in child.children:
           res.add(item)
@@ -93,18 +102,18 @@ func returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
     else:
       return EmptyNode
   elif N == 1:
-    return parser.grammer.returnItem(nodes[0])
-  if self.disposable:
+    return parser.grammar.returnItem(parser, nodes[0])
+  if parser.disposable:
     return EmptyNode
   return newNode(parser.nodeName, "")
 
-proc init*(grammar: GrammarRef,
-           name: string="",
-           returnItem: ReturnItemProc): GrammarRef =
+#proc init*(grammar: GrammarRef,
+#           name: string="",
+#           returnItem: ReturnItemProc): GrammarRef =
 
 
 
-let grammarPlaceholderSingleton = GrammarRef(name: "Placeholder")
+let GrammarPlaceholder = GrammarRef(name: "__Placeholder__")
 
 
 method parse*(parser: Parser, location: int): ParsingResult {.base.} =
@@ -124,8 +133,9 @@ proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
   parser.parserType = ptype
   parser.disposable = true
   parser.dropContent = false
-  parser.grammar = grammarPlaceholderSingleton
-  parser.symbol = ""
+  parser.grammar = GrammarPlaceholder
+  parser.symbol = nil
+  parser.subParsers = @[]
   parser.parseProxy = callParseMethod
   return parser
 
@@ -139,6 +149,7 @@ proc assignName*(name: string, parser: Parser): Parser =
   else:
     parser.disposable = false
     parser.name = name
+  parser.symbol = parser
   return parser
 
 proc `()`*(parser: Parser, location: int): ParsingResult =
@@ -195,21 +206,12 @@ method parse(parser: TextRef, location: int): ParsingResult =
 ## Combined "meta"-parsers are parsers that call other parsers.
 
 
-type
-  ReturnValueProc = proc(parser: Parser, node: NodeOrNil): Node
-  ReturnValuesProc = proc(parser: Parser, nodes: seq[Node]): Node
-  CombinedParser ref CombinedParserObj not nil
-  CombinedParserObj = object of ParserObj
-    returnValue: ReturnValueProc
-    returnValues: ReturnValuesProc
-
-
 
 ## Test-code
 
 
 let
-  t = "A".assignName Text("A")
+  t = "t".assignName Text("A")
 #  t = new(Text).initText("A")
 let cst = t("A")
 echo $cst

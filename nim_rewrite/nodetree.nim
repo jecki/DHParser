@@ -13,7 +13,7 @@ type
   Attributes* = OrderedTable[string, string]
   Node* = ref NodeObj not nil
   NodeOrNil* = ref NodeObj
-  NodeObj = object of RootObj
+  NodeObj {.acyclic.} = object of RootObj
     name*: string
     children: seq[Node]
     text: string  # must be empty if field children is not empty!
@@ -52,7 +52,7 @@ func isLeaf*(node: Node): bool = node.children.len == 0
 
 func isEmpty*(node: Node): bool = node.children.len == 0 and node.text.len == 0
 
-func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ":"
+func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
 
 func content*(node: Node): string =
   if node.isLeaf:
@@ -201,14 +201,6 @@ proc `$`*(node: NodeOrNil): string =
     return "nil"
   else:
     return node.asSxpr()
-
-
-# Special Node-Singletons
-
-let
-   EmptyPType* = ":EMPTY"
-   EmptyNode* = newNode(EmptyPType, "")
-
 
 
 # Test-code
