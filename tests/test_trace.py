@@ -239,6 +239,7 @@ class TestTrace:
         resume_notices_on(parser)
         tree = parser(example_with_errors)
         for e in tree.errors:
+            print(e)
             assert e.code != RESUME_NOTICE or e.message.find('_item') >= 0
 
 
