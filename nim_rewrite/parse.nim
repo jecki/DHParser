@@ -178,13 +178,11 @@ proc `()`*(parser: Parser, document: string, location: int = 0): ParsingResult =
 type
   TextRef = ref TextObj not nil
   TextObj = object of ParserObj
-      text: string
-      length: int
+    text: string
 
 proc init*(textParser: TextRef, text: string): TextRef =
   discard Parser(textParser).init(":Text")
   textParser.text = text
-  textParser.length = text.len
   return textParser
 
 proc Text*(text: string): TextRef =
@@ -193,9 +191,9 @@ proc Text*(text: string): TextRef =
 method parse(parser: TextRef, location: int): ParsingResult =
   if parser.grammar.document.continuesWith(parser.text, location):
     if parser.dropContent:
-      return (EMPTY_NODE, location + parser.length)
+      return (EMPTY_NODE, location + parser.text.len)
     elif parser.text != "" or not parser.disposable:
-      return (newNode(parser.nodeName, parser.text), location + parser.length)
+      return (newNode(parser.nodeName, parser.text), location + parser.text.len)
     return (EMPTY_NODE, location)
   return (nil, location)
 
@@ -205,6 +203,26 @@ method parse(parser: TextRef, location: int): ParsingResult =
 ##
 ## Combined "meta"-parsers are parsers that call other parsers.
 
+type
+  OptionRef = ref OptionObj not nil
+  OptionObj = object of ParserObj
+
+proc init*(option: OptionRef, parser: Parser): OptionRed =
+  discard Parser(option).init(":Option")
+  option.subParsers = @[parser]
+  return option
+
+proc Option*(parser: Parser): OptionRef =
+  return new(OptionRef).init(parser)
+
+method parse(parser: OptionRef, location: int): ParsingResult =
+  let pr = self.subParsera[0](location)
+  return (parser.grammar.returnItem(pr.node), pr.location)
+
+
+type
+  CountedRef = ref CountedObj not nil
+  CountedObj = object of ParserObj
 
 
 ## Test-code
