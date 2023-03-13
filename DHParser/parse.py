@@ -2956,11 +2956,12 @@ class Option(UnaryParser):
 
 def infinite_loop_warning(parser, node, location):
     assert isinstance(parser, UnaryParser) or isinstance(parser, NaryParser)
-    if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
-    dsl_error(parser, node,
-              "Repeated parser did not make any progress! Was inner parser "
-              "really intended to capture empty text?",
-              INFINITE_LOOP_WARNING)
+    if location < parser.grammar.document_length__:
+        if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
+        dsl_error(parser, node,
+                  f'Repeated parser did not make any progress! Was inner parser '
+                  f'of "{parser.symbol}" really intended to capture empty text?',
+                  INFINITE_LOOP_WARNING)
 
 
 class ZeroOrMore(Option):
@@ -2977,11 +2978,11 @@ class ZeroOrMore(Option):
         >>> Grammar(sentence)('.').content  # an empty sentence also matches
         '.'
         >>> forever = ZeroOrMore(RegExp(''))
-        >>> tree = Grammar(forever)('')  # infinite loops will automatically be broken
-        >>> tree.errors[0].code          # but with a warning!
-        150
-        >>> tree.errors = []; tree
+        >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
+
+    Except for the end of file a warning will be emitted, if an infinite-loop
+    is detected.
 
     EBNF-Notation: ``{ ... }``
 
@@ -3024,11 +3025,11 @@ class OneOrMore(UnaryParser):
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
         ' <<< Error on "." | Parser "root->/\\\\w+,?/" did not match: ».« >>> '
         >>> forever = OneOrMore(RegExp(''))
-        >>> tree = Grammar(forever)('')  # infinite loops will automatically be broken,
-        >>> tree.errors[0].code          # but with a warning!
-        150
-        >>> tree.errors = []; tree
+        >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
+
+    Except for the end of file a warning will be emitted, if an infinite-loop
+    is detected.
 
     EBNF-Notation: ``{ ... }+``
 
@@ -4327,7 +4328,6 @@ class Synonym(UnaryParser):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
     def __init__(self, parser: Parser) -> None:
-        assert not parser.drop_content
         super(Synonym, self).__init__(parser)
 
     def _parse(self, location: cint) -> ParsingResult:

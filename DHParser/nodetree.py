@@ -1655,6 +1655,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param indentation: The number of whitespaces for indentation
         :param inline_tags:  A set of tag names, the content of which will always be
                 written on a single line, unless it contains explicit line feeds (`\\n`).
+                In addition, all nodes that have the attribute ``xml:space="preserve"``
+                will be inlined.
         :param string_tags: A set of tags from which only the content will be printed, but
                 neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,

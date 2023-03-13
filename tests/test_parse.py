@@ -260,46 +260,46 @@ class TestInfiLoopsAndRecursion:
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_inifnite_loop_OneOrMore(self):
         forever = OneOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Counted(self):
         forever = Counted(Always(), (0, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Counted(Always(), (5, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Counted(Always(), (INFINITE, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Counted(Always(), (1000, INFINITE - 1))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Interleave(self):
         forever = Interleave(Always(), repetitions=[(0, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Interleave(Always(), Always(),
                              repetitions=[(5, INFINITE), (INFINITE, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Interleave(Always(), repetitions=[(1000, INFINITE - 1)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
-        check_infinite_loop_warning(result)
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     # def test_infinite_loops(self):
