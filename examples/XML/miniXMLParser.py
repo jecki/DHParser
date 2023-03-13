@@ -76,7 +76,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_miniXML(source):
@@ -93,7 +93,7 @@ class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML source file.
     """
     element = Forward()
-    source_hash__ = "a7219d435186d346296c7fd7ad7f3415"
+    source_hash__ = "55228bcaaa2ebb67502eedc3ddfc790b"
     disposable__ = re.compile('EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -184,7 +184,7 @@ class XMLTransformer(Compiler):
         return node
 
 
-get_transformer = ThreadLocalSingletonFactory(XMLTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(XMLTransformer)
 
 
 def transform_XML(cst):
@@ -238,7 +238,7 @@ class miniXMLCompiler(Compiler):
     #     return node
 
 
-get_compiler = ThreadLocalSingletonFactory(miniXMLCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(miniXMLCompiler)
 
 
 def compile_miniXML(ast):

@@ -50,7 +50,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, \
-    SourceMapFunc, has_errors
+    INFINITE_LOOP_WARNING, SourceMapFunc, has_errors
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -2103,12 +2103,16 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     :return: An error message string including the call stack if
         history tracking has been enabled in the grammar object.
     """
-    msg = ["DSL parser specification error:", error_str, 'Caught by parser "%s".' % str(parser)]
+    msg = ["DSL parser specification:", error_str, 'Caught by parser "%s".' % str(parser)]
     if parser.grammar.history__:
         msg.extend(["\nCall stack:", parser.grammar.history__[-1].stack])
     else:
         msg.extend(["\nEnable history tracking in Grammar object to display call stack."])
     return " ".join(msg)
+
+
+def dsl_error(parser, node, error_str, error_code):
+    parser.grammar.tree__.new_error(node, dsl_error_msg(parser, error_str), error_code)
 
 
 _GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
@@ -2381,9 +2385,9 @@ class RegExp(Parser):
         try:
             if pattern == self._grammar.WSP_RE__:
                 return '~'
-            elif pattern == self._grammar.COMMENT__:
+            elif pattern and pattern == self._grammar.COMMENT__:
                 return 'comment__'
-            elif pattern == self._grammar.WHITESPACE__:
+            elif pattern and pattern == self._grammar.WHITESPACE__:
                 return 'whitespace__'
         except (AttributeError, NameError):
             pass
@@ -2950,6 +2954,15 @@ class Option(UnaryParser):
         return errors
 
 
+def infinite_loop_warning(parser, node, location):
+    assert isinstance(parser, UnaryParser) or isinstance(parser, NaryParser)
+    if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
+    dsl_error(parser, node,
+              "Repeated parser did not make any progress! Was inner parser "
+              "really intended to capture empty text?",
+              INFINITE_LOOP_WARNING)
+
+
 class ZeroOrMore(Option):
     r"""
     ``ZeroOrMore`` applies a parser repeatedly as long as this parser
@@ -2964,7 +2977,10 @@ class ZeroOrMore(Option):
         >>> Grammar(sentence)('.').content  # an empty sentence also matches
         '.'
         >>> forever = ZeroOrMore(RegExp(''))
-        >>> Grammar(forever)('')  # infinite loops will automatically be broken
+        >>> tree = Grammar(forever)('')  # infinite loops will automatically be broken
+        >>> tree.errors[0].code          # but with a warning!
+        150
+        >>> tree.errors = []; tree
         Node('root', '')
 
     EBNF-Notation: ``{ ... }``
@@ -2976,13 +2992,16 @@ class ZeroOrMore(Option):
     def _parse(self, location: cint) -> ParsingResult:
         results: Tuple[Node, ...] = ()
         n: int = location - 1
-        while location > n:
+        while True:  # location > n:
             n = location
             node, location = self.parser(location)
             if node is None:
                 break
-            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node._result or node.name[0] != ':': # drop anonymous empty nodes
                 results += (node,)
+            if location <= n:
+                infinite_loop_warning(self, node, location)
+                break
         nd = self._return_values(results)  # type: Node
         return nd, location
 
@@ -3005,7 +3024,10 @@ class OneOrMore(UnaryParser):
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
         ' <<< Error on "." | Parser "root->/\\\\w+,?/" did not match: ».« >>> '
         >>> forever = OneOrMore(RegExp(''))
-        >>> Grammar(forever)('')  # infinite loops will automatically be broken
+        >>> tree = Grammar(forever)('')  # infinite loops will automatically be broken,
+        >>> tree.errors[0].code          # but with a warning!
+        150
+        >>> tree.errors = []; tree
         Node('root', '')
 
     EBNF-Notation: ``{ ... }+``
@@ -3018,7 +3040,7 @@ class OneOrMore(UnaryParser):
         # text_ = text  # type: StringView
         match_flag: bool = False
         n: int = location - 1
-        while location > n:
+        while True:
             n = location
             node, location = self.parser(location)
             if node is None:
@@ -3026,6 +3048,9 @@ class OneOrMore(UnaryParser):
             match_flag = True
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
+            if location <= n:
+                infinite_loop_warning(self, node, location)
+                break
         if not match_flag:
             return None, location
         nd = self._return_values(results)  # type: Node
@@ -3105,6 +3130,7 @@ class Counted(UnaryParser):
                 return None, location_
             results += (node,)
             if location_ >= location:
+                infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
             location_ = location
         for _ in range(self.repetitions[1] - self.repetitions[0]):
@@ -3113,6 +3139,7 @@ class Counted(UnaryParser):
                 break
             results += (node,)
             if location_ >= location:
+                infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
             location_ = location
         return self._return_values(results), location
@@ -3728,7 +3755,8 @@ class Interleave(MandatoryNary):
                 if reloc < 0:
                     break
             if location__ <= location_:
-                break
+                infinite_loop_warning(self, node, location)
+                break  # infinite loop protection
             location_ = location__
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
@@ -4221,9 +4249,8 @@ class Retrieve(ContextSensitive):
                 return None, location
             else:
                 node = Node(tn, '', True).with_pos(location)
-                self.grammar.tree__.new_error(
-                    node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
-                    UNDEFINED_RETRIEVE)
+                dsl_error(self, node, "'{self.symbol_pname}' undefined or exhausted.",
+                          UNDEFINED_RETRIEVE)
                 return node, location
         if value is None:
             return None, location

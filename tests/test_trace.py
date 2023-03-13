@@ -172,7 +172,7 @@ class TestTrace:
         lang = """@ whitespace  = vertical
         @ literalws   = right
         _document = ~ [ list ] §_EOF
-        @list_resume = ({ list | /[^\[\]]*/ } ["]"])
+        @list_resume = ({ list | /[^\[\]]+/ } ["]"])
         list     = "[" [_items] § "]"
         @_items_skip = /(?=,)/, /(?=])/, /$/
         _items   = _item { "," §_item }

@@ -93,7 +93,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "c2a09640693fa52e8a9b39e0fe631092"
+    source_hash__ = "82e693ffabd87a47d56feb32c2f56deb"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

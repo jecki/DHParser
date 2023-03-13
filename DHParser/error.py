@@ -205,6 +205,7 @@ RESUME_NOTICE                            = ErrorCode(50)
 REDECLARED_TOKEN_WARNING                 = ErrorCode(120)
 UNUSED_ERROR_HANDLING_WARNING            = ErrorCode(130)
 LEFT_RECURSION_WARNING                   = ErrorCode(140)  # obsolete!
+INFINITE_LOOP_WARNING                    = ErrorCode(150)
 
 UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING   = ErrorCode(610)
 CANNOT_VERIFY_TRANSTABLE_WARNING         = ErrorCode(620)

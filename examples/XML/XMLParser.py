@@ -93,7 +93,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "9382bf4388321a4a75dd534cb71d8d10"
+    source_hash__ = "997a1c5672101df33afb994df22c69f2"
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -342,7 +342,7 @@ def transform_XML(cst):
 #
 #######################################################################
 
-# get_compiler = ThreadLocalSingletonFactory(XMLCompiler, ident=1)
+# get_compiler = ThreadLocalSingletonFactory(XMLCompiler)
 
 def get_compiler() -> Callable:
     def nop(ast: Node) -> Node:

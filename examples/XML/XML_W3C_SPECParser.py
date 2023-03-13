@@ -76,7 +76,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_XML_W3C_SPEC(source):
@@ -97,7 +97,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "1be7bf8f97d53e5034150cdab06a82ab"
+    source_hash__ = "2a314a4d44b5b162598c9047827acf65"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -306,7 +306,7 @@ def XML_W3C_SPECTransformer() -> TransformerCallable:
     return partial(traverse, transformation_table=XML_W3C_SPEC_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(XML_W3C_SPECTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(XML_W3C_SPECTransformer)
 
 
 def transform_XML_W3C_SPEC(cst):
@@ -568,7 +568,7 @@ class XML_W3C_SPECCompiler(Compiler):
     #     return node
 
 
-get_compiler = ThreadLocalSingletonFactory(XML_W3C_SPECCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(XML_W3C_SPECCompiler)
 
 
 def compile_XML_W3C_SPEC(ast):

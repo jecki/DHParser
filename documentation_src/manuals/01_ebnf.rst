@@ -1861,7 +1861,7 @@ PEG-rules unambiguously from plain regular expressions or simple strings, they m
 be enclosed in round rackets!)::
 
     >>> resumption_rules = '''
-    ... @list_resume = ({ list | /[^\\[\\]]*/ } ["]"])
+    ... @list_resume = ({ list | /[^\\[\\]]+/ } ["]"])
     ... @_items_skip = /(?=,)/, /(?=])/, /$/
     ... '''
     >>> list_parser = create_parser(resumption_rules + number_list_grammar)
@@ -2436,7 +2436,7 @@ write ``{ !"search_phrase" (~ | /.|\\n/) }``. To keep the example simple, we'll 
 such worries aside in the following::
 
     >>> search_rain_grammar = '''@reduction = merge
-    ...     song = { search_rain [count_rain] } EOF
+    ...     song = { search_rain count_rain } [search_rain] EOF
     ...     search_rain = { !"rain" /.|\\n/ }
     ...     count_rain  = "rain"
     ...     EOF         = !/.|\\n/'''
@@ -2461,7 +2461,6 @@ such worries aside in the following::
         ""
         "    What a glorious feeling"
         "    I'm happy again.")
-      (search_rain)
       (EOF))
     >>> print(len(list(syntax_tree.select('count_rain'))))
     2
@@ -2513,7 +2512,7 @@ simply be ``self.node_name``.
 As said, referring to the custom parser factory function from the grammar is simple::
 
     >>> search_rain_grammar = '''@reduction = merge
-    ...     song = { search_rain [count_rain] } EOF
+    ...     song = { search_rain count_rain } search_rain EOF
     ...     search_rain = @search("rain")
     ...     count_rain  = "rain"
     ...     EOF         = !/.|\\n/'''
@@ -2538,7 +2537,6 @@ Let's try using it::
         ""
         "    What a glorious feeling"
         "    I'm happy again.")
-      (search_rain)
       (EOF))
 
 Another good use cases for custom parsers are long lists of fixed alternatives,

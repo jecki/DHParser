@@ -34,7 +34,7 @@ from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
 from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
     PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING, \
-    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, ErrorCode
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING, ErrorCode
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
@@ -113,6 +113,13 @@ class TestParserClass:
         regex = gr['word'].parsers[-1].parser
         result = gr.associated_symbol__(regex).symbol
         assert result == 'word', result
+
+
+def check_infinite_loop_warning(result):
+    assert result.errors, "At least one Warning, Infninite Loop Warning exptected!"
+    assert result.errors[0].code == INFINITE_LOOP_WARNING, str(result.errors[0])
+    # print(result.errors[0])
+    result.errors = []
 
 
 class TestInfiLoopsAndRecursion:
@@ -250,41 +257,49 @@ class TestInfiLoopsAndRecursion:
             log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
 
-
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_inifnite_loop_OneOrMore(self):
         forever = OneOrMore(RegExp(''))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Counted(self):
         forever = Counted(Always(), (0, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Counted(Always(), (5, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Counted(Always(), (INFINITE, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Counted(Always(), (1000, INFINITE - 1))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Interleave(self):
         forever = Interleave(Always(), repetitions=[(0, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Interleave(Always(), Always(),
                              repetitions=[(5, INFINITE), (INFINITE, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
         forever = Interleave(Always(), repetitions=[(1000, INFINITE - 1)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        check_infinite_loop_warning(result)
         assert repr(result) == "Node('root', '')", repr(result)
 
     # def test_infinite_loops(self):
