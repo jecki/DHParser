@@ -1606,7 +1606,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             has_errors = root and id(node) in root.error_nodes
             show_attrs = has_attrs or render_pos or has_errors
             if show_attrs:
-                if sxml:  txt.append('(@ ')
+                if sxml:  txt.append(' (@')
                 if has_attrs:
                     txt.extend(attr(k, str(v)) for k, v in node.attr.items())
                 if render_pos:
@@ -1702,7 +1702,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 # txt.append(' err="%s"' % (
                 #     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
                 #             for err in root.node_errors(node))))
-                txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
+                txt.append(' err=' + attr_filter(''.join(str(err).replace('&', '')
+                                                         for err in root.node_errors(node))))
             if node.name in empty_tags:
                 if node.name[0:1] != '?' and node.result:
                     if strict_mode:

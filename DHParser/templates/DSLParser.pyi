@@ -141,12 +141,16 @@ def main(called_from_app=False) -> bool:
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
+    parser.add_argument('-f', '--force', action='store_const', const='force',
+                        help='Write output file even if errors have occurred')
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
                         help='Run batch jobs in a single thread (recommended only for debugging)')
     outformat = parser.add_mutually_exclusive_group()
     outformat.add_argument('-x', '--xml', action='store_const', const='xml', 
                            help='Format result as XML')
     outformat.add_argument('-s', '--sxpr', action='store_const', const='sxpr',
+                           help='Format result as S-expression')
+    outformat.add_argument('-m', '--sxml', action='store_const', const='sxml',
                            help='Format result as S-expression')
     outformat.add_argument('-t', '--tree', action='store_const', const='tree',
                            help='Format result as indented tree')
@@ -211,18 +215,20 @@ def main(called_from_app=False) -> bool:
     else:
         result, errors = compile_src(file_names[0])
 
-        if errors:
-            for err_str in canonical_error_strings(errors):
-                print(err_str)
-            if has_errors(errors, ERROR):
-                sys.exit(1)
+        if not errors or (not has_errors(errors, ERROR)) \
+                or (not has_errors(errors, FATAL) and args.force):
+            if args.xml:  outfmt = 'xml'
+            elif args.sxpr:  outfmt = 'sxpr'
+            elif args.sxml:  outfmt = 'sxml'
+            elif args.tree:  outfmt = 'tree'
+            elif args.json:  outfmt = 'json'
+            else:  outfmt = 'default'
+            print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+            if errors:  print('\n---')
 
-        if args.xml:  outfmt = 'xml'
-        elif args.sxpr:  outfmt = 'sxpr'
-        elif args.tree:  outfmt = 'tree'
-        elif args.json:  outfmt = 'json'
-        else:  outfmt = 'default'
-        print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+        for err_str in canonical_error_strings(errors):
+            print(err_str)
+        if has_errors(errors, ERROR):  sys.exit(1)
 
     return True
 

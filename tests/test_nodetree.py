@@ -321,7 +321,7 @@ class TestParseJSON:
 
         # SXML
         sxml = n.as_sxml()
-        assert sxml == '(employee(@ (branch "Secret Service") (id "007")) "James Bond")'
+        assert sxml == '(employee (@ (branch "Secret Service") (id "007")) "James Bond")'
         assert sxml.find('pos') < 0
         sxml = n.as_sxml('')
         assert sxml.find('pos') >= 0
