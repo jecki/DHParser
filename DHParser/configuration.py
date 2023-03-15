@@ -196,8 +196,8 @@ def read_local_config(ini_filename: str) -> str:
     Python standard library. Any key,value-pair under the
     section "DHParser" will directly be transferred to the
     configuration presets. For other sections, the section
-    name will added as a qualifier to the key:
-    "section.key". Thus only values under the "DHParser"
+    name will be added as a qualifier to the key:
+    "section.key". Thus, only values under the "DHParser"
     section modify the DHParser-configuration while
     configuration parameters unter other sections are
     free to be evaluated by the calling script and cannot
@@ -394,6 +394,17 @@ CONFIG_PRESET['resume_notices'] = False
 # descent parser into an infinite-loop.
 # Default value: True
 CONFIG_PRESET['left_recursion'] = True
+
+# Warn about pending infinite loops which would occur if a repeating
+# parser like "zero or more" calls another parser that matches but
+# does not move the location pointer forward, i.e. { /(?=.)|$/ }.
+# Theoretically, this parser would be called at the same place again
+# and again forever. In practice, DHParser recognizes this situation
+# and breaks the pending infinite loop. Since this situation usually
+# is the result of a poorly designed inner parser, a warning can
+# be emitted.
+# Default value: True
+CONFIG_PRESET['infinite_loop_warning'] = True
 
 ########################################################################
 #

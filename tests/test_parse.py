@@ -185,7 +185,7 @@ class TestInfiLoopsAndRecursion:
 
     def test_indirect_left_recursion1(self):
         minilang = """@literalws = right
-            Expr    = //~ (Product | Sum | Value)
+            Expr    = ~ (Product | Sum | Value)
             Product = Expr { ('*' | '/') Expr }+
             Sum     = Expr { ('+' | '-') Expr }+
             Value   = /[0-9.]+/~ | '(' §Expr ')'
@@ -258,46 +258,46 @@ class TestInfiLoopsAndRecursion:
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
 
     def test_break_inifnite_loop_ZeroOrMore(self):
-        forever = ZeroOrMore(RegExp(''))
+        forever = ZeroOrMore(RegExp('(?=.)|$'))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_inifnite_loop_OneOrMore(self):
-        forever = OneOrMore(RegExp(''))
+        forever = OneOrMore(RegExp('(?=.)|$'))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Counted(self):
-        forever = Counted(Always(), (0, INFINITE))
+        forever = Counted(RegExp('(?=.)|$'), (0, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Counted(Always(), (5, INFINITE))
+        forever = Counted(RegExp('(?=.)|$'), (5, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Counted(Always(), (INFINITE, INFINITE))
+        forever = Counted(RegExp('(?=.)|$'), (INFINITE, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Counted(Always(), (1000, INFINITE - 1))
+        forever = Counted(RegExp('(?=.)|$'), (1000, INFINITE - 1))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Interleave(self):
-        forever = Interleave(Always(), repetitions=[(0, INFINITE)])
+        forever = Interleave(RegExp('(?=.)|$'), repetitions=[(0, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Interleave(Always(), Always(),
+        forever = Interleave(RegExp('(?=.)|$'), RegExp('(?=.)|$'),
                              repetitions=[(5, INFINITE), (INFINITE, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Interleave(Always(), repetitions=[(1000, INFINITE - 1)])
+        forever = Interleave(RegExp('(?=.)|$'), repetitions=[(1000, INFINITE - 1)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
         # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)

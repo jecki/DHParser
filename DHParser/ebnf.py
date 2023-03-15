@@ -50,7 +50,8 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
-    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, has_errors
+    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
+    has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -387,7 +388,7 @@ class HeuristicEBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    RAISE_EXPR_WO_BRACKETS = Text("")
+    RAISE_EXPR_WO_BRACKETS = Always()
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
@@ -684,7 +685,7 @@ class ConfigurableEBNFGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    RAISE_EXPR_WO_BRACKETS = Text("")
+    RAISE_EXPR_WO_BRACKETS = Always()
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
@@ -2386,15 +2387,11 @@ class EBNFCompiler(Compiler):
             if current_symbol in self.directives.skip:
                 if current_symbol in self.consumed_skip_rules:
                     self.tree.new_error(
-                        node, "Cannot apply 'skip-rules' unambigiously, because symbol "
+                        node, "Cannot apply 'skip-rules' unambiguously, because symbol "
                         "{} contains more than one parser with a mandatory marker '§' "
                         "in its definiens.".format(current_symbol),
                         AMBIGUOUS_ERROR_HANDLING)
                 else:
-                    # use class field instead or direct representation of error messages!
-                    # custom_args.append('skip={skip_rules_name}["{symbol}"]'
-                    #                    .format(skip_rules_name=self.SKIP_RULES_KEYWORD,
-                    #                            symbol=current_symbol))
                     self.consumed_skip_rules.add(current_symbol)
         return tuple(filtered_children), custom_args
 

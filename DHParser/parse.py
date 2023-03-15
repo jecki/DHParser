@@ -2147,7 +2147,13 @@ class Unparameterized(Parser):
 class Always(Unparameterized):
     """A parser that always matches, but does not capture anything."""
     def _parse(self, location: cint) -> ParsingResult:
-        return EMPTY_NODE, location
+        if self.node_name[0:1] == ':':
+            return EMPTY_NODE, location
+        else:
+            return Node(self.node_name, ''), location
+
+    def is_optional(self) -> Optional[bool]:
+        return True  # parser can never fail, like an optional parser
 
 
 class Never(Unparameterized):
@@ -2330,6 +2336,9 @@ class Text(Parser):
         return '`%s`' % abbreviate_middle(self.text, 80)
         # return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
 
+    def is_optional(self) -> Optional[bool]:
+        return not self.text
+
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.text
 
@@ -2356,6 +2365,7 @@ class RegExp(Parser):
 
     def __init__(self, regexp) -> None:
         super(RegExp, self).__init__()
+        assert regexp
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
@@ -2393,6 +2403,11 @@ class RegExp(Parser):
             pass
         return '/' + escape_ctrl_chars('%s' % abbreviate_middle(pattern, 118))\
             .replace('/', '\\/') + '/'
+
+    def is_optional(self) -> Optional[bool]:
+        if not self.regexp.pattern:
+            return True
+        return super().is_optional()
 
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.regexp.pattern
@@ -2978,7 +2993,7 @@ class ZeroOrMore(Option):
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> Grammar(sentence)('.').content  # an empty sentence also matches
         '.'
-        >>> forever = ZeroOrMore(RegExp(''))
+        >>> forever = ZeroOrMore(RegExp('(?=.)|$'))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
 
@@ -3033,7 +3048,7 @@ class OneOrMore(UnaryParser):
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
         ' <<< Error on "." | Parser "root->/\\\\w+,?/" did not match: ».« >>> '
-        >>> forever = OneOrMore(RegExp(''))
+        >>> forever = OneOrMore(RegExp('(?=.)|$'))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
 

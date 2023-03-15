@@ -152,7 +152,7 @@ class TestTestfiles:
 ARITHMETIC_EBNF = """
     @ whitespace = vertical
     @ literalws = right
-    formula = [ //~ ] expr
+    formula = [ ~ ] expr
     expr = expr ("+"|"-") term | term
     term = term ("*"|"/") factor | factor
     factor = /[0-9]+/~

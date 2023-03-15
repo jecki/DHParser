@@ -37,7 +37,7 @@ from DHParser.toolkit import concurrent_ident, re
 ARITHMETIC_EBNF = """
     @ literalws = right
     @ whitespace = linefeed
-    formula = [ //~ ] expr
+    formula = [ ~ ] expr
     expr = expr ("+"|"-") term | term
     term = term ("*"|"/") factor | factor
     factor = /[0-9]+/~

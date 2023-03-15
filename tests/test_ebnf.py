@@ -53,7 +53,7 @@ class TestDirectives:
         expression =  term  { ("+" | "-") term }
         term       =  factor  { ("*" | "/") factor }
         factor     =  constant | "("  expression  ")"
-        constant   =  digit { digit } [ //~ ]
+        constant   =  digit { digit } [ ~ ]
         digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/ 
         """
 
@@ -128,11 +128,11 @@ class TestDirectives:
             @ ignorecase  = False           # literals and regular expressions are case-sensitive
             @ drop        = strings, whitespace
             
-            document      = `` "" '' //
+            document      = ` ` " " ' ' / /
         """
         parser = create_parser(lang)
-        st = parser('')
-        assert not st.errors and str(st) == ''
+        st = parser('    ')
+        assert not st.errors and str(st) == '  '
 
     def test_drop(self):
         lang = r"""
@@ -379,7 +379,7 @@ EBNF = r"""
 
 #: top-level
 
-syntax     = [~//] { definition | directive } §EOF
+syntax     = ~ { definition | directive } §EOF
 definition = symbol §"=" expression
 directive  = "@" §symbol "="
              (regexp | literal | symbol)
