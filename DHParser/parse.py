@@ -50,7 +50,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, \
-    INFINITE_LOOP_WARNING, SourceMapFunc, has_errors
+    INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, SourceMapFunc, has_errors
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -2956,10 +2956,11 @@ class Option(UnaryParser):
 
 def infinite_loop_warning(parser, node, location):
     assert isinstance(parser, UnaryParser) or isinstance(parser, NaryParser)
-    if location < parser.grammar.document_length__:
+    if location < parser.grammar.document_length__ \
+            and get_config_value('infinite_loop_warning'):
         if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
         dsl_error(parser, node,
-                  f'Repeated parser did not make any progress! Was inner parser '
+                  f'Repeating parser did not make any progress! Was inner parser '
                   f'of "{parser.symbol}" really intended to capture empty text?',
                   INFINITE_LOOP_WARNING)
 
@@ -3009,6 +3010,14 @@ class ZeroOrMore(Option):
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.pname else self.parser.repr) + '}'
+
+    def static_analysis(self) -> List[AnalysisError]:
+        errors = super().static_analysis()
+        if self.parser.is_optional():
+            errors.append(self.static_error(
+                "Optional parsers should not be nested inside repeating parsers: "
+                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
+        return errors
 
 
 class OneOrMore(UnaryParser):
@@ -3113,6 +3122,7 @@ class Counted(UnaryParser):
     """
     def __init__(self, parser: Parser, repetitions: Tuple[int, int]) -> None:
         super(Counted, self).__init__(parser)
+        assert repetitions[0] <= repetitions[1]
         self.repetitions = repetitions  # type: Tuple[int, int]
 
     def __deepcopy__(self, memo):
@@ -3158,8 +3168,16 @@ class Counted(UnaryParser):
         if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
             errors.append(self.static_error(
                 'Repetition count [a=%i, b=%i] for parser %s violates requirement '
-                '0 <= a <= b <= infinity = 2^30' % (a, b, str(self)),
+                '0 <= a <= b <= infinity (%i)' % (a, b, str(self), INFINITE),
                 BAD_REPETITION_COUNT))
+        if self.repetitions == (1, 1):
+            errors.append(self.static_error(
+                "Repetition count from 1 to 1 renders Counted-parser redundant: "
+                + self.location_info(), REDUNDANT_PARSER_WARNING))
+        if self.parser.is_optional() and self.repetitions != (1, 1):
+            errors.append(self.static_error(
+                "Optional parsers should not be nested inside repeating parsers: "
+                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
         return errors
 
     def _signature(self) -> Hashable:
@@ -3450,6 +3468,11 @@ class Series(MandatoryNary):
         self.mandatory = combined_mandatory(self, other)
         return self
 
+    def is_optional(self) -> Optional[bool]:
+        if all(p.is_optional() for p in self.parsers):
+            return True
+        return super().is_optional()
+
 
 def starting_string(parser: Parser) -> str:
     """If parser starts with a fixed string, this will be returned.
@@ -3556,6 +3579,12 @@ class Alternative(NaryParser):
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
         return self
+
+    def is_optional(self) -> Optional[bool]:
+        if (self.parsers and self.parsers[-1].is_optional()) \
+                or any(p.is_optional() for p in self.parsers):
+            return True
+        return super().is_optional()
 
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
@@ -3705,6 +3734,7 @@ class Interleave(MandatoryNary):
                  mandatory: int = NO_MANDATORY,
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
         super(Interleave, self).__init__(*parsers, mandatory=mandatory)
+        assert all(0 <= r[0] <= r[1] for r in repetitions)
         if len(repetitions) == 0:
             repetitions = [(1, 1)] * len(parsers)
         elif len(parsers) != len(repetitions):
