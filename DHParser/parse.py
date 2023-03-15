@@ -2365,7 +2365,6 @@ class RegExp(Parser):
 
     def __init__(self, regexp) -> None:
         super(RegExp, self).__init__()
-        assert regexp
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
