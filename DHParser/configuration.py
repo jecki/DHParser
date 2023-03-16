@@ -415,18 +415,20 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 # Defines the output format for the serialization of syntax trees.
 # Possible values are:
 # 'XML'          - output as XML
+# 'HTML'         - like XML but enclosed in the body of a minimal
+#                  HTML-page.
 # 'S-expression' - output as S-expression, i.e. a list-like format
 # 'SXML'         - a variant of S-expression differing in how attributes are
 #                  rendered, e.g. (@ attr "value") instead of `(attr "value")
-# 'indented'     - compact tree output, i.e. children a represented on
+# 'tree'         - compact tree output, i.e. children a represented on
 #                  indented lines with no opening or closing tags, brackets
-#                  etc.
+#                  etc. 'indented' can be used as a synonym for 'tree'
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
-_serializations = frozenset({'XML', 'json', 'indented', 'S-expression', 'SXML'})
+_serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree', 'S-expression', 'SXML'})
 CONFIG_PRESET['cst_serialization'] = 'S-expression'
 CONFIG_PRESET['ast_serialization'] = 'S-expression'
 CONFIG_PRESET['default_serialization'] = 'S-expression'

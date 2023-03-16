@@ -1749,6 +1749,25 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
             allow_omissions=bool(string_tags)))
 
+    def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:
+        """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
+        keyword-arguments."""
+        xhtml = self.as_xml(**kwargs)
+        css_snippet = '\n'.join(['<style type="text/css">', css, '</style>'])
+        if head:
+            head = head.strip()
+            assert head.startswith('<head>') or head.startswith('<HEAD>')
+            assert head.endswith('</head>') or head.endswith('</HEAD>')
+            if css:
+                head = '\n'.join([head[:-7], css_snippet, head[-7:]])
+        else:
+            head_tags = ['<head>', '<meta charset="UTF-8" />', '</head>']
+            if css:  head_tags.insert(2, css_snippet)
+            head = '\n'.join(head_tags)
+        html = '\n'.join(['<!DOCTYPE html>', f'<html lang="{lang}" xml:lang="{lang}">', head,
+                          '<body>', xhtml, '</body>', '</html>'])
+        return html
+
     def as_tree(self) -> str:
         """Serialize as a simple indented text-tree."""
         sxpr = self.as_sxpr(flatten_threshold=0, compact=True)
@@ -1767,7 +1786,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # JSON serialization ###
 
-    def to_json_obj(self) -> list:
+    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> list:
         """Converts the tree into a JSON-serializable nested list. Nodes
         are serialized as JSON-lists with either two or three elements:
 
@@ -1781,14 +1800,33 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> Node('root', 'content').with_attr(importance="high").to_json_obj()
             ['root', 'content', {'importance': 'high'}]
         """
-        jo = [self.name,
-              [nd.to_json_obj() for nd in self._children]
-              if self._children else str(self.result)]
-        pos = self._pos
-        if pos >= 0:
-            jo.append(pos)
-        if self.has_attr():
-            jo.append(self.attr)
+        if not as_dict:
+            jo = [self.name,
+                  [nd.to_json_obj() for nd in self._children]
+                  if self._children else str(self.result)]
+            pos = self._pos
+            if include_pos and pos >= 0:
+                jo.append(pos)
+            if self.has_attr():
+                jo.append(self.attr)
+        else:
+            jo = {self.name: { nd.name: ((nd.to_json_obj(include_pos))[nd.name])
+                               for nd in self._children }
+                             if self._children else self._result }
+            additional = {}
+            if include_pos:
+                pos = self._pos
+                if pos >= 0:
+                    additional['pos__'] = str(pos)
+            if self.has_attr():
+                additional['attributes__'] = self.attr
+            if additional:
+                if self._children:
+                    jo[self.name].update(additional)
+                else:
+                    d = {'content__': self._result}
+                    d.update(additional)
+                    jo[self.name] = d
         return jo
 
     @staticmethod
@@ -1796,22 +1834,41 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Converts a JSON-object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
-        assert isinstance(json_obj, Sequence)
-        assert 2 <= len(json_obj) <= 4, str(json_obj)
-        if isinstance(json_obj[1], str):
-            result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
-        else:
-            result = tuple(Node.from_json_obj(item) for item in json_obj[1])
-        node = Node(json_obj[0], result)
-        for extra in json_obj[2:]:
-            if isinstance(extra, dict):
-                node.attr.update(extra)
+        if isinstance(json_obj, Sequence):
+            assert 2 <= len(json_obj) <= 4, str(json_obj)
+            if isinstance(json_obj[1], str):
+                result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
             else:
-                assert isinstance(extra, int)
-                node._pos = extra
+                result = tuple(Node.from_json_obj(item) for item in json_obj[1])
+            node = Node(json_obj[0], result)
+            for extra in json_obj[2:]:
+                if isinstance(extra, dict):
+                    node.attr.update(extra)
+                else:
+                    assert isinstance(extra, int)
+                    node._pos = extra
+        else:
+            assert isinstance(json_obj, dict)
+            name, result = list(json_obj.items())[0]
+            if isinstance(result, str):
+                pos = -1
+                attrs = {}
+            else:
+                pos = int(result.get('pos__', -1))
+                attrs = result.get('attributes__', {})
+                content = result.get('content__', None)
+                if content is None:
+                    result = tuple(Node.from_json_obj({k: v})
+                                   for k, v in result.items() if k[-2:] != '__')
+                else:
+                    result = content
+            node = Node(name, result)
+            if pos >= 0:  node = node.with_pos(pos)
+            if attrs:  node = node.with_attr(attrs)
         return node
 
-    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
+    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False,
+                as_dict: bool=False, include_pos: bool=True) -> str:
         """Serializes the tree originating in `self` as JSON-string. Nodes
         are serialized as JSON-lists with either two or three elements:
 
@@ -1820,13 +1877,24 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         3. optional: a dictionary that maps attribute names to attribute values,
            both of which are strings.
 
+        If as_dict is True, nodes are serialized as JSON dictionaries. Keep
+        in mind that while this renders the json files more readable, not
+        all json parsers honor the order of the entries of dictionaries.
+        Thus, serializing node trees as ordered JSON-dictionaries is not
+        strictly in accordance with the JSON-specification!
+
         Example::
 
-            >>> Node('root', 'content').with_attr(importance="high").as_json(indent=0)
+            >>> node = Node('root', 'content').with_attr(importance="high")
+            >>> node.as_json(indent=0)
             '["root","content",{"importance":"high"}]'
+            >>> node.as_json(indent=0, as_dict=True)
+            '{"root":{"content__":"content","attributes__":{"importance":"high"}}}'
+
         """
         if not indent or indent <= 0:  indent = None
-        return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
+        return json.dumps(self.to_json_obj(as_dict=as_dict, include_pos=include_pos),
+                          indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
     # serialization meta-method ###
@@ -1873,6 +1941,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                                 compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == 'xml':
             return self.as_xml(strict_mode=False)
+        elif switch == 'html':
+            return self.as_html(strict_mode=False)
         elif switch == 'json':
             return self.as_json()
         elif switch in ('indented', 'tree'):
@@ -3815,7 +3885,7 @@ class RootNode(Node):
 
         # customization for XML-Representation
         self.inline_tags: Set[str] = set()
-        self.string_tags: Set[str] = {TOKEN_PTYPE}
+        self.string_tags: Set[str] = {MIXED_MODE_TEXT_PTYPE}
         self.empty_tags: Set[str] = set()
 
         # meta-data

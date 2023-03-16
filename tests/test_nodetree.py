@@ -270,9 +270,10 @@ class TestParseJSON:
     def test_json_obj_roundtrip(self):
         json_obj_tree = self.tree.to_json_obj()
         tree_copy = Node.from_json_obj(json_obj_tree)
-        # print(json_obj_tree)
-        # print(json.dumps(json_obj_tree, ensure_ascii=False))
-        # print(json.loads(json.dumps(json_obj_tree, ensure_ascii=False)))        
+        assert tree_copy.equals(self.tree), '\n' + tree_copy.as_sxpr() + '\n' + self.tree.as_sxpr()
+
+        json_obj_tree = self.tree.to_json_obj(as_dict=True)
+        tree_copy = Node.from_json_obj(json_obj_tree)
         assert tree_copy.equals(self.tree), '\n' + tree_copy.as_sxpr() + '\n' + self.tree.as_sxpr()
 
     def test_json_roundtrip(self):
@@ -284,9 +285,16 @@ class TestParseJSON:
         assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
         s = self.tree.as_json(indent=None, ensure_ascii=False)
         tree_copy = parse_json(s)
-        # print(s)
-        # print(self.tree.as_sxpr())
-        # print(tree_copy.as_sxpr())
+        assert tree_copy.equals(self.tree)
+
+        s = self.tree.as_json(indent=None, ensure_ascii=True, as_dict=True)
+        tree_copy = Node.from_json_obj(json.loads(s))
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
+        s = self.tree.as_json(indent=2, ensure_ascii=False, as_dict=True)
+        tree_copy = Node.from_json_obj(json.loads(s))
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
+        s = self.tree.as_json(indent=None, ensure_ascii=False, as_dict=True)
+        tree_copy = parse_json(s)
         assert tree_copy.equals(self.tree)
 
     def test_attr_serialization_and_parsing(self):
@@ -296,7 +304,10 @@ class TestParseJSON:
         # json
         json = n.as_json()
         tree = parse_json(json)
-        # print()
+        assert tree.equals(n)
+        json = n.as_json(as_dict=True)
+        tree = parse_json(json)
+        assert tree.equals(n)
 
         # XML
         xml = n.as_xml()
