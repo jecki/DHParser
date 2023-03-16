@@ -1786,7 +1786,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # JSON serialization ###
 
-    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> list:
+    def to_json_obj(self, include_pos: bool=True) -> list:
         """Converts the tree into a JSON-serializable nested list. Nodes
         are serialized as JSON-lists with either two or three elements:
 
@@ -1800,33 +1800,33 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> Node('root', 'content').with_attr(importance="high").to_json_obj()
             ['root', 'content', {'importance': 'high'}]
         """
-        if not as_dict:
-            jo = [self.name,
-                  [nd.to_json_obj() for nd in self._children]
-                  if self._children else str(self.result)]
-            pos = self._pos
-            if include_pos and pos >= 0:
-                jo.append(pos)
-            if self.has_attr():
-                jo.append(self.attr)
-        else:
-            jo = {self.name: { nd.name: ((nd.to_json_obj(include_pos))[nd.name])
-                               for nd in self._children }
-                             if self._children else self._result }
-            additional = {}
-            if include_pos:
-                pos = self._pos
-                if pos >= 0:
-                    additional['pos__'] = str(pos)
-            if self.has_attr():
-                additional['attributes__'] = self.attr
-            if additional:
-                if self._children:
-                    jo[self.name].update(additional)
-                else:
-                    d = {'content__': self._result}
-                    d.update(additional)
-                    jo[self.name] = d
+        # if not as_dict:
+        jo = [self.name,
+              [nd.to_json_obj() for nd in self._children]
+              if self._children else str(self.result)]
+        pos = self._pos
+        if include_pos and pos >= 0:
+            jo.append(pos)
+        if self.has_attr():
+            jo.append(self.attr)
+        # else:
+        #     jo = {self.name: { nd.name: ((nd.to_json_obj(as_dict, include_pos))[nd.name])
+        #                        for nd in self._children }
+        #                      if self._children else self._result }
+        #     additional = {}
+        #     if include_pos:
+        #         pos = self._pos
+        #         if pos >= 0:
+        #             additional['pos__'] = str(pos)
+        #     if self.has_attr():
+        #         additional['attributes__'] = self.attr
+        #     if additional:
+        #         if self._children:
+        #             jo[self.name].update(additional)
+        #         else:
+        #             d = {'content__': self._result}
+        #             d.update(additional)
+        #             jo[self.name] = d
         return jo
 
     @staticmethod
@@ -1834,41 +1834,42 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Converts a JSON-object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
-        if isinstance(json_obj, Sequence):
-            assert 2 <= len(json_obj) <= 4, str(json_obj)
-            if isinstance(json_obj[1], str):
-                result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
-            else:
-                result = tuple(Node.from_json_obj(item) for item in json_obj[1])
-            node = Node(json_obj[0], result)
-            for extra in json_obj[2:]:
-                if isinstance(extra, dict):
-                    node.attr.update(extra)
-                else:
-                    assert isinstance(extra, int)
-                    node._pos = extra
+        # if isinstance(json_obj, Sequence):
+        assert isinstance(json_obj, Sequence)
+        assert 2 <= len(json_obj) <= 4, str(json_obj)
+        if isinstance(json_obj[1], str):
+            result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
         else:
-            assert isinstance(json_obj, dict)
-            name, result = list(json_obj.items())[0]
-            if isinstance(result, str):
-                pos = -1
-                attrs = {}
+            result = tuple(Node.from_json_obj(item) for item in json_obj[1])
+        node = Node(json_obj[0], result)
+        for extra in json_obj[2:]:
+            if isinstance(extra, dict):
+                node.attr.update(extra)
             else:
-                pos = int(result.get('pos__', -1))
-                attrs = result.get('attributes__', {})
-                content = result.get('content__', None)
-                if content is None:
-                    result = tuple(Node.from_json_obj({k: v})
-                                   for k, v in result.items() if k[-2:] != '__')
-                else:
-                    result = content
-            node = Node(name, result)
-            if pos >= 0:  node = node.with_pos(pos)
-            if attrs:  node = node.with_attr(attrs)
+                assert isinstance(extra, int)
+                node._pos = extra
+        # else:
+        #     assert isinstance(json_obj, dict)
+        #     name, result = list(json_obj.items())[0]
+        #     if isinstance(result, str):
+        #         pos = -1
+        #         attrs = {}
+        #     else:
+        #         pos = int(result.get('pos__', -1))
+        #         attrs = result.get('attributes__', {})
+        #         content = result.get('content__', None)
+        #         if content is None:
+        #             result = tuple(Node.from_json_obj({k: v})
+        #                            for k, v in result.items() if k[-2:] != '__')
+        #         else:
+        #             result = content
+        #     node = Node(name, result)
+        #     if pos >= 0:  node = node.with_pos(pos)
+        #     if attrs:  node = node.with_attr(attrs)
         return node
 
     def as_json(self, indent: Optional[int] = 2, ensure_ascii=False,
-                as_dict: bool=False, include_pos: bool=True) -> str:
+                include_pos: bool=True) -> str:
         """Serializes the tree originating in `self` as JSON-string. Nodes
         are serialized as JSON-lists with either two or three elements:
 
@@ -1888,12 +1889,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> node = Node('root', 'content').with_attr(importance="high")
             >>> node.as_json(indent=0)
             '["root","content",{"importance":"high"}]'
-            >>> node.as_json(indent=0, as_dict=True)
-            '{"root":{"content__":"content","attributes__":{"importance":"high"}}}'
 
         """
         if not indent or indent <= 0:  indent = None
-        return json.dumps(self.to_json_obj(as_dict=as_dict, include_pos=include_pos),
+        return json.dumps(self.to_json_obj(include_pos=include_pos),
                           indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
