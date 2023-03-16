@@ -1943,7 +1943,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif switch == 'html':
             return self.as_html(strict_mode=False)
         elif switch == 'json':
-            return self.as_json()
+            return self.as_json(include_pos=False)
         elif switch in ('indented', 'tree'):
             return self.as_tree()
         else:
