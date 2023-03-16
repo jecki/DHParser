@@ -1473,8 +1473,7 @@ def lean_left(path: Path, operators: AbstractSet[str]):
 #
 # destructive transformations:
 #
-# - leaves may be dropped (e.g. if deemed irrelevant)
-# - errors of dropped leaves may be be lost
+# - nodes and content may be dropped entirely (if deemed irrelevant)
 # - no promise that order will be preserved
 #
 #######################################################################

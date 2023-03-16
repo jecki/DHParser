@@ -41,7 +41,7 @@ import copy
 import functools
 import os
 import traceback
-from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, cast
+from typing import Any, Optional, Tuple, List, Set, AbstractSet, Dict, Union, Callable, cast
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc
@@ -567,9 +567,9 @@ def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
     return tree_or_data
 
 
-def run_pipeline(junctions: Set[Junction],
+def run_pipeline(junctions: AbstractSet[Junction],
                  source_stages: Dict[str, RootNode],
-                 target_stages: Set[str]) -> Dict[str, Tuple[Any, List[Error]]]:
+                 target_stages: AbstractSet[str]) -> Dict[str, Tuple[Any, List[Error]]]:
     """
     Runs all the intermediary compilation-steps that are necessary to produce
     the "target-stages" from the given "source-stages". Here, each source-stage
@@ -579,7 +579,7 @@ def run_pipeline(junctions: Set[Junction],
 
     The stages or connected through chains of junctions, where a junction is
     essentially a function that transforms a tree from one particular stage
-    (identified by its name) to another stage, again itentified by its name.
+    (identified by its name) to another stage, again identified by its name.
 
     TODO: Parallelize processing of junctions? Requires copying a lot ot tree-data!?
     """

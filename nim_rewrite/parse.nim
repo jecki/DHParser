@@ -243,7 +243,7 @@ method parse(self: RepeatRef, location: int): ParsingResult =
     lastLoc = location
     node: NodeOrNil = nil
   for i in countup(1, self.repRange.min):
-    node, location = self.subParsers[0](location)
+    (node, location) = self.subParsers[0](location)
     if isNil(node):  return (nil, lastLoc)
     nodes.add(node)
     if lastLoc >= location:  break  # avoid infinite loops
