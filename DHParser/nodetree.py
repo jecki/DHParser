@@ -1986,7 +1986,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.as_html(strict_mode=False)
         elif switch == 'json':
             return self.as_json(indent=0)
-        elif switch == 'jsondict':
+        elif switch in ('dict.json', 'jsondict'):
             return self.as_json(indent=2, as_dict=True, include_pos=False)
         elif switch in ('indented', 'tree'):
             return self.as_tree()

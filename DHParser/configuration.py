@@ -426,7 +426,7 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
-# 'jsondict'     - a different, and often more readable flavor of json, where
+# 'dict.json'    - a different, and often more readable flavor of json, where
 #                  dicts are used whenever possible. Please be aware, that this
 #                  goes beyond the JSON-sepcification which does not know
 #                  ordered dicts! This could result in the misrepresentation
