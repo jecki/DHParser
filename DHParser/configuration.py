@@ -426,6 +426,12 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
+# 'jsondict'     - a different, and often more readable flavor of json, where
+#                  dicts are used whenever possible. Please be aware, that this
+#                  goes beyond the JSON-sepcification which does not know
+#                  ordered dicts! This could result in the misrepresentation
+#                  of data by JSON parsers that are not aware of the order
+#                  of entries in dictionaries. (e.g. Python < 3.6)
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
 _serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree', 'S-expression', 'SXML'})

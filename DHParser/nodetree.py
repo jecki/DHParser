@@ -1922,7 +1922,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         all json parsers honor the order of the entries of dictionaries.
         Thus, serializing node trees as ordered JSON-dictionaries is not
         strictly in accordance with the JSON-specification! Also serializing
-        and de-serializing in dictionary flavor is slower.
+        and de-serializing the dictionary-flavored JSON is slower.
 
         Example::
 
@@ -1985,7 +1985,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif switch == 'html':
             return self.as_html(strict_mode=False)
         elif switch == 'json':
-            return self.as_json()
+            return self.as_json(indent=0)
+        elif switch == 'jsondict':
+            return self.as_json(indent=2, as_dict=True, include_pos=False)
         elif switch in ('indented', 'tree'):
             return self.as_tree()
         else:
