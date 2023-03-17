@@ -1820,7 +1820,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             {'letters': [['a', 'A'], ['b', 'B'], ['c', 'C'], ['a', 'doublette']]}
 
         """
-        if not as_dict:
+        if not as_dict: # list flavor
             jo = [self.name,
                   [nd.to_json_obj(as_dict, include_pos) for nd in self._children]
                   if self._children else str(self.result)]
@@ -1829,7 +1829,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 jo.append(pos)
             if self.has_attr():
                 jo.append(self.attr)
-        else:
+        else:  # dictionary flavor
             names = set()
             for nd in self._children:
                 if nd.name in names:
@@ -1867,7 +1867,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Converts a JSON-object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
-        if isinstance(json_obj, Sequence):
+        if isinstance(json_obj, Sequence):  # list flavor
             assert 2 <= len(json_obj) <= 4, str(json_obj)
             if isinstance(json_obj[1], str):
                 result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
@@ -1880,7 +1880,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else:
                     assert isinstance(extra, int)
                     node._pos = extra
-        else:
+        else:  # dictionary flavor
             assert isinstance(json_obj, dict)
             name, result = list(json_obj.items())[0]
             if isinstance(result, str):
