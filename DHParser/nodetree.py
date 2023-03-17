@@ -1787,22 +1787,42 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     # JSON serialization ###
 
     def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> list:
-        """Converts the tree into a JSON-serializable nested list. Nodes
-        are serialized as JSON-lists with either two or three elements:
+        """Converts the tree into a JSON-serializable nested list. Nodes can
+        be serialized in list-flavor (faster) or dictionary-flavor
+        (``asdict=True``, slower).
+
+        In list-flavor, Nodes are serialized as JSON-lists with either
+        two or three elements:
 
         1. name (always a string),
         2. content (either a string or a list of JSON-serialized Nodes)
         3. optional: a dictionary that maps attribute names to attribute values,
            both of which are strings.
 
-        Example::
+        In dictionary flavor, Nodes are serialized as dictionaries that map
+        the node's name to a string (in case of a leaf node) or to a dictionary
+        of its children (in case all the children's names are unique) or to
+        a list of pairs (child name, child's result).
+
+        Examples (list flavor)::
 
             >>> Node('root', 'content').with_attr(importance="high").to_json_obj()
             ['root', 'content', {'importance': 'high'}]
+            >>> node = parse_sxpr('(letters (a "A") (b "B") (c "C"))')
+            >>> node.to_json_obj()
+            ['letters', [['a', 'A'], ['b', 'B'], ['c', 'C']]]
+
+        Examples (dictionary flavor)
+            >>> node.to_json_obj(as_dict=True)
+            {'letters': {'a': 'A', 'b': 'B', 'c': 'C'}}
+            >>> node.result = node.children + (Node('a', 'doublette'),)
+            >>> node.to_json_obj(as_dict=True)
+            {'letters': [['a', 'A'], ['b', 'B'], ['c', 'C'], ['a', 'doublette']]}
+
         """
         if not as_dict:
             jo = [self.name,
-                  [nd.to_json_obj() for nd in self._children]
+                  [nd.to_json_obj(as_dict, include_pos) for nd in self._children]
                   if self._children else str(self.result)]
             pos = self._pos
             if include_pos and pos >= 0:
@@ -1810,9 +1830,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if self.has_attr():
                 jo.append(self.attr)
         else:
-            jo = {self.name: { nd.name: ((nd.to_json_obj(include_pos))[nd.name])
-                               for nd in self._children }
-                             if self._children else self._result }
+            names = set()
+            for nd in self._children:
+                if nd.name in names:
+                    jo = {self.name: [[nd.name, nd.to_json_obj(as_dict, include_pos)[nd.name]]
+                                      for nd in self._children]
+                                     if self._children else self._result}
+                    break
+                else:
+                    names.add(nd.name)
+            else:
+                jo = {self.name: {nd.name: nd.to_json_obj(as_dict, include_pos)[nd.name]
+                                  for nd in self._children}
+                                 if self._children else self._result}
             additional = {}
             if include_pos:
                 pos = self._pos
@@ -1822,7 +1852,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 additional['attributes__'] = self.attr
             if additional:
                 if self._children:
-                    jo[self.name].update(additional)
+                    if isinstance(jo[self.name], dict):
+                        jo[self.name].update(additional)
+                    else:
+                        jo[self.name].extend(additional.items())
                 else:
                     d = {'content__': self._result}
                     d.update(additional)
@@ -1854,12 +1887,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 pos = -1
                 attrs = {}
             else:
+                if isinstance(result, dict):
+                    result_iter = result.items()
+                else:
+                    assert isinstance(result, list)
+                    result_iter = result
+                    result = {k: v for k, v in result}
                 pos = int(result.get('pos__', -1))
                 attrs = result.get('attributes__', {})
                 content = result.get('content__', None)
                 if content is None:
                     result = tuple(Node.from_json_obj({k: v})
-                                   for k, v in result.items() if k[-2:] != '__')
+                                   for k, v in result_iter if k[-2:] != '__')
                 else:
                     result = content
             node = Node(name, result)
@@ -1877,11 +1916,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         3. optional: a dictionary that maps attribute names to attribute values,
            both of which are strings.
 
-        If as_dict is True, nodes are serialized as JSON dictionaries. Keep
-        in mind that while this renders the json files more readable, not
+        If as_dict is True, nodes are serialized as JSON dictionaries, which
+        can be better human-readable when serialized. Keep in mind, though,
+        that while this renders the json files more readable, not
         all json parsers honor the order of the entries of dictionaries.
         Thus, serializing node trees as ordered JSON-dictionaries is not
-        strictly in accordance with the JSON-specification!
+        strictly in accordance with the JSON-specification! Also serializing
+        and de-serializing in dictionary flavor is slower.
 
         Example::
 

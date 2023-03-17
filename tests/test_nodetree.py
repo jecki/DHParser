@@ -293,9 +293,12 @@ class TestParseJSON:
         s = self.tree.as_json(indent=2, ensure_ascii=False, as_dict=True)
         tree_copy = Node.from_json_obj(json.loads(s))
         assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
-        s = self.tree.as_json(indent=None, ensure_ascii=False, as_dict=True)
+        new_tree = copy.deepcopy(self.tree)
+        new_tree.result = new_tree.result + (Node('b', 'doublette'),)
+        s = new_tree.as_json(indent=0, ensure_ascii=False, as_dict=True, include_pos=False)
+        assert s == '{"a":[["b","ä"],["d",{"e":"ö","h":"über","attributes__":{"name":"James Bond","id":"007"}}],["b","doublette"]]}'
         tree_copy = parse_json(s)
-        assert tree_copy.equals(self.tree)
+        assert tree_copy.equals(new_tree)
 
     def test_attr_serialization_and_parsing(self):
         n = Node('employee', 'James Bond').with_pos(46)
