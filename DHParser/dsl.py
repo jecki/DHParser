@@ -22,6 +22,7 @@ of domain specific languages based on an EBNF-grammar.
 
 from __future__ import annotations
 
+from collections import namedtuple
 import functools
 import inspect
 import os
@@ -41,10 +42,10 @@ from DHParser.error import Error, is_error, has_errors, only_errors, \
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.nodetree import Node
-from DHParser.transform import TransformerCallable, TransformationDict
+from DHParser.nodetree import Node, RootNode
+from DHParser.transform import TransformerCallable, TransformationDict, transformer
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
-    compile_python_object, re, as_identifier
+    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory
 
 
 __all__ = ('DefinitionError',
@@ -673,5 +674,56 @@ def restore_server_script(ebnf_filename: str,
             st = os.stat(serverscript)
             os.chmod(serverscript, st.st_mode | stat.S_IEXEC)
     if not os.path.exists(parser_name):  recompile_grammar(ebnf_filename, parser_name)
+
+
+# pipeline-support
+
+StageDescriptor = namedtuple('StageDescriptor',
+    ['factory',                 # get thread-specific transformation function
+     'process',             # transform thread-safe (RootNode) -> Any
+     'junction'],           # junction, see compile.py
+    module=__name__)
+
+
+def process_template(src_tree: Node, src_stage: str, dst_stage: str,
+                     factory_function) -> Any:
+    if isinstance(src_tree, RootNode):
+        assert src_tree.stage == src_stage
+    result = factory_function()(src_tree)
+    if isinstance(result, RootNode):
+        assert result.stage in (src_stage, dst_stage)
+        result.stage = dst_stage
+    return result
+
+
+def stage_from_compile_class(compile_class: Compiler,
+                             src_stage: str,
+                             dst_stage: str) -> StageDescriptor:
+    """Creates thread-safe transformation functions from a
+    :py:class:`compile.Compiler`-class."""
+    assert src_stage
+    assert dst_stage
+    factory = ThreadLocalSingletonFactory(compile_class)
+    process = functools.partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+                                factory_function=factory)
+    return StageDescriptor(factory,  process, (src_stage, factory, dst_stage))
+
+
+def stage_from_transformation_table(table: TransformationDict,
+                                    src_stage: str,
+                                    dst_stage: str) -> StageDescriptor:
+    assert src_stage
+    assert dst_stage
+
+    def make_transformer() -> TransformerCallable:
+        nonlocal src_stage, dst_stage, table
+        return functools.partial(transformer,
+                                 transformation_table=table.copy(),
+                                 src_stage=src_stage, dst_stage=dst_stage)
+
+    factory = ThreadLocalSingletonFactory(make_transformer)
+    process = functools.partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+                                factory_function=factory)
+    return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
 
 
