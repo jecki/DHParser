@@ -1428,10 +1428,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         example, only the evaluated values of the children are passed to each
         function in the action dictionary. However, if evaluate is called with
         passing the begining of the path to its ``path``-argument, each function
-        will be called with the current path as its first argument the the
-        evaluated values of its children as the following arguments instead,
+        will be called with the current path as its first argument and the
+        evaluated values of its children as the following arguments,
         e.g. ``result = node.evaluate(actions, path=[node])``
-        This, more sophisticaed, mode gives the action function access to the
+        This more sophisticaed mode gives the action function access to the
         nodes of the tree as well.
 
         :param actions: A dictionary that maps node-names to action functions.

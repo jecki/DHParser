@@ -29,7 +29,7 @@ import os
 import platform
 import stat
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
-    Callable, Sequence
+    Callable, Sequence, Dict
 
 import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source
@@ -676,7 +676,12 @@ def restore_server_script(ebnf_filename: str,
     if not os.path.exists(parser_name):  recompile_grammar(ebnf_filename, parser_name)
 
 
-# pipeline-support
+#######################################################################
+#
+# Processing Pipeline support (see compile.run_pipeline)
+#
+#######################################################################
+
 
 StageDescriptor = namedtuple('StageDescriptor',
     ['factory',                 # get thread-specific transformation function
@@ -696,11 +701,12 @@ def process_template(src_tree: Node, src_stage: str, dst_stage: str,
     return result
 
 
-def stage_from_compile_class(compile_class: Compiler,
-                             src_stage: str,
-                             dst_stage: str) -> StageDescriptor:
+def create_compiler_stage(compile_class: Compiler,
+                          src_stage: str,
+                          dst_stage: str) -> StageDescriptor:
     """Creates thread-safe transformation functions from a
     :py:class:`compile.Compiler`-class."""
+    assert isinstance(compile_class, Compiler)
     assert src_stage
     assert dst_stage
     factory = ThreadLocalSingletonFactory(compile_class)
@@ -709,9 +715,11 @@ def stage_from_compile_class(compile_class: Compiler,
     return StageDescriptor(factory,  process, (src_stage, factory, dst_stage))
 
 
-def stage_from_transformation_table(table: TransformationDict,
-                                    src_stage: str,
-                                    dst_stage: str) -> StageDescriptor:
+def create_transtable_stage(table: TransformationDict,
+                            src_stage: str,
+                            dst_stage: str) -> StageDescriptor:
+
+    assert isinstance(table, dict)
     assert src_stage
     assert dst_stage
 
@@ -726,4 +734,28 @@ def stage_from_transformation_table(table: TransformationDict,
                                 factory_function=factory)
     return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
 
+
+def create_evaluation_stage(actions: Dict[str, Callable],
+                            src_stage: str,
+                            dst_stage: str,
+                            supply_path_arg: bool=True) -> StageDescriptor:
+    assert isinstance(actions, dict)
+    assert src_stage
+    assert dst_stage
+
+    def make_evaluation() -> Callable[[Node], Any]:
+        nonlocal actions
+
+        def evaluate_with_path(node: Node) -> Any:
+            return node.evaluate(actions, [node])
+
+        def evaluate_without_path(node: Node) -> Any
+            return node.evaluate(actions, path=[])
+
+        return evaluate_with_path if supply_path_arg else evaluate_without_path
+
+    factory = ThreadLocalSingletonFactory(make_evaluation)
+    process = functools.partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+                                factory_function=factory)
+    return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
 
