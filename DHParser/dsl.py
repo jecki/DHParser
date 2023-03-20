@@ -41,7 +41,8 @@ from DHParser.error import Error, is_error, has_errors, only_errors, \
     CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.parse import Grammar
-from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
+from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
+    gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes
 from DHParser.nodetree import Node, RootNode
 from DHParser.transform import TransformerCallable, TransformationDict, transformer
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
@@ -59,7 +60,13 @@ __all__ = ('DefinitionError',
            'create_parser',
            'compile_on_disk',
            'recompile_grammar',
-           'restore_server_script')
+           'restore_server_script',
+           'create_preprocess_stage',
+           'create_parser_stage',
+           'create_compiler_stage',
+           'create_transtable_stage',
+           'create_evaluation_stage',
+           'create_stage')
 
 
 @functools.lru_cache()
@@ -682,16 +689,77 @@ def restore_server_script(ebnf_filename: str,
 #
 #######################################################################
 
+PreprocessStageDescriptor = namedtuple('PreprocessStageDescriptor',
+    ['factory',             # get thread safe preprocessing function
+     'process'],            # preprocess thread-safely (string|StringView) -> string|StringView
+    module=__name__)
+
+ParserStageDescriptor = namedtuple('ParserStageDescriptor',
+    ['factory',             # get thread safe parsing funciton
+     'process'],            # parse thread-safely (string|StringView) -> RootNode
+    module=__name__)            #
 
 StageDescriptor = namedtuple('StageDescriptor',
-    ['factory',                 # get thread-specific transformation function
-     'process',             # transform thread-safe (RootNode) -> Any
+    ['factory',             # get thread-specific transformation function
+     'process',             # transform thread-safely (RootNode) -> Any
      'junction'],           # junction, see compile.py
     module=__name__)
 
 
+# def illegal_junction(nd: RootNode) -> Any:
+#     raise AssertionError("Junctions and processing piplelines cannot be used for the "
+#         "preprocessing and parsing stage. Use DHParser.compile.compile_source instead!")
+
+
+def create_preprocess_stage(tokenizer: Tokenizer,
+                            include_regex, comment_regex) -> PreprocessStageDescriptor:
+    """Creates a factory for thread-safe preprocessing functions as well as a
+    thread-safe preprocessing function."""
+    def preprocessor_factory() -> PreprocessorFunc:
+        nonlocal tokenizer, include_regex, comment_regex
+        # below, the second parameter must always be the same as neuGrammar.COMMENT__!
+        find_next_include = gen_find_include_func(include_regex, comment_regex)
+        include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+        tokenizing_prep = make_preprocessor(tokenizer)
+        return chain_preprocessors(include_prep, tokenizing_prep)
+    thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
+
+    def preprocess(source: Union[String, StringView]) -> Union[String, StringView]:
+        return thread_safe_factory()(source)
+
+    return PreprocessStageDescriptor(thread_safe_factory, preprocess)
+
+
+def create_parser_stage(grammar_class: type) -> ParserStageDescriptor:
+    """Creates a factory for thread-safe parser functions as well as a
+    thread-safe parser function."""
+    assert issubclass(grammar_class, Grammar)
+    raw_grammar = ThreadLocalSingletonFactory(grammar_class)
+
+    def parser_factory() -> Grammar:
+        nonlocal raw_grammar
+        grammar = raw_grammar()
+        if get_config_value('resume_notices'):
+            resume_notices_on(grammar)
+        elif get_config_value('history_tracking'):
+            set_tracer(grammar, trace_history)
+        try:
+            if not grammar.__class__.python_src__:
+                grammar.__class__.python_src__ = factory.python_src__
+        except AttributeError:
+            pass
+        return grammar
+
+    def parse(document, start_parser = "root_parser__", *, complete_match=True):
+        nonlocal parser_factory
+        return parser_factory()(document, start_parser, complete_match=complete_match)
+
+    return PreprocessStageDescriptor(factory, parse)
+
+
 def process_template(src_tree: Node, src_stage: str, dst_stage: str,
                      factory_function) -> Any:
+    """A generic templare for tree-transformation-functions."""
     if isinstance(src_tree, RootNode):
         assert src_tree.stage == src_stage
     result = factory_function()(src_tree)
@@ -701,12 +769,13 @@ def process_template(src_tree: Node, src_stage: str, dst_stage: str,
     return result
 
 
-def create_compiler_stage(compile_class: Compiler,
+def create_compiler_stage(compile_class: type,
                           src_stage: str,
                           dst_stage: str) -> StageDescriptor:
-    """Creates thread-safe transformation functions from a
-    :py:class:`compile.Compiler`-class."""
-    assert isinstance(compile_class, Compiler)
+    """Creates a thread-safe transformation function and function-factory from
+    a :py:class:`compile.Compiler`-class.
+    """
+    assert issubclass(compile_class, Compiler)
     assert src_stage
     assert dst_stage
     factory = ThreadLocalSingletonFactory(compile_class)
@@ -718,7 +787,9 @@ def create_compiler_stage(compile_class: Compiler,
 def create_transtable_stage(table: TransformationDict,
                             src_stage: str,
                             dst_stage: str) -> StageDescriptor:
-
+    """Creates a thread-safe transformation function and function-factory from
+    a transformation-table :py:func:`transform.traverse`.
+    """
     assert isinstance(table, dict)
     assert src_stage
     assert dst_stage
@@ -739,6 +810,9 @@ def create_evaluation_stage(actions: Dict[str, Callable],
                             src_stage: str,
                             dst_stage: str,
                             supply_path_arg: bool=True) -> StageDescriptor:
+    """Creates a thread-safe transformation function and function-factory from
+    an evaluation-table :py:meth:`nodetree.Node.evaluate`.
+    """
     assert isinstance(actions, dict)
     assert src_stage
     assert dst_stage
@@ -749,7 +823,7 @@ def create_evaluation_stage(actions: Dict[str, Callable],
         def evaluate_with_path(node: Node) -> Any:
             return node.evaluate(actions, [node])
 
-        def evaluate_without_path(node: Node) -> Any
+        def evaluate_without_path(node: Node) -> Any:
             return node.evaluate(actions, path=[])
 
         return evaluate_with_path if supply_path_arg else evaluate_without_path
@@ -759,3 +833,25 @@ def create_evaluation_stage(actions: Dict[str, Callable],
                                 factory_function=factory)
     return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
 
+
+def create_stage(tool: Union[dict, type],
+                 src_stage: str, dst_stage: str, hint: str='?') -> StageDescriptor:
+    """Generic stage-creation function for tree-transforming stages where a tree-transforming
+    stage is a stage which either rehapes a node-tree or transforms a nodetree into
+    something else, but not a stage where something else (e.g. a text) is turned into
+    a node-tree."""
+    if isinstance(tool, type):
+        return create_compiler_stage(tool, src_stage, dst_stage)
+    else:
+        assert isinstance(tool, dict)
+        if any(isinstance(value, Sequence) for value in tool.values()) \
+                or hint == "transtable":
+            return create_transtable_stage(tool, src_stage, dst_stage)
+        elif hint == "evaluate_with_path":
+            return create_evaluation_stage(tool, src_stage, dst_stage, True)
+        elif hint == "evaluate_without_path":
+            return create_evaluation_stage(tool, src_stage, dst_stage, False)
+        else:
+            raise AssertionError('Cannot determine transformation-type automatically! '
+                'Please, add optional parameter "hint" to the function call with one of the '
+                'following values: "transtable", "evaluate_with_path", "evaluate_without_path"!')

@@ -118,29 +118,36 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
+from DHParser.compile import Compiler, compile_source
+from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
+    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
+from DHParser.dsl import recompile_grammar
+from DHParser.ebnf import grammar_changed
+from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL
+from DHParser.log import start_logging, suspend_logging, resume_logging
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode
+from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
-    compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \\
-    remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, \\
-    remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \\
-    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
-    replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, transformer, \\
-    merge_adjacent, collapse, collapse_children_if, transform_result, WHITESPACE_PTYPE, \\
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \\
-    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \\
+    last_value, matching_bracket, optional_last_value
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \\
+    ThreadLocalSingletonFactory
+from DHParser.trace import set_tracer, resume_notices_on, trace_history
+from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerCallable, \\
+    transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \\
+    is_anonymous, name_matches, reduce_single_child, replace_by_single_child, replace_or_reduce, \\
+    remove_whitespace, replace_by_children, remove_empty, remove_tokens, flatten, all_of, \\
+    any_of, transformer, merge_adjacent, collapse, collapse_children_if, transform_result, \\
+    remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \\
+    keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content_with, forbid, assert_content, remove_infix_operator, cpu_count, \\
-    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
-    get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \\
-    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
-    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
+    replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \\
+    left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \\
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \\
-    has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
-    has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \\
-    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, RootNode
+    has_attr, has_parent
 from DHParser import parse as parse_namespace__
 '''
 

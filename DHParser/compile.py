@@ -65,6 +65,7 @@ __all__ = ('CompilerError',
            'Junction',
            'extract_data',
            'run_pipeline',
+           'NoTransformation',
            'compile_source')
 
 
@@ -382,11 +383,16 @@ CompilationResult = namedtuple('CompilationResult',
     module=__name__)
 
 
+def NoTransformation(root: RootNode) -> RootNode:
+    """Simply passes through the unaltered node-tree."""
+    return root
+
+
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],
                    parser: ParserCallable,
-                   transformer: TransformerCallable,
-                   compiler: CompilerCallable,
+                   transformer: TransformerCallable = NoTransformation,
+                   compiler: CompilerCallable = NoTransformation,
                    *, preserve_AST: bool = False) -> CompilationResult:
     """Compiles a source in four stages:
 

@@ -1820,47 +1820,55 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             {'letters': [['a', 'A'], ['b', 'B'], ['c', 'C'], ['a', 'doublette']]}
 
         """
-        if not as_dict: # list flavor
-            jo = [self.name,
-                  [nd.to_json_obj(as_dict, include_pos) for nd in self._children]
-                  if self._children else str(self.result)]
-            pos = self._pos
+        def list_flavor(node):
+            jo = [node.name,
+                  [list_flavor(nd) for nd in node._children]
+                  if node._children else str(node.result)]
+            pos = node._pos
             if include_pos and pos >= 0:
                 jo.append(pos)
-            if self.has_attr():
-                jo.append(self.attr)
-        else:  # dictionary flavor
+            if node.has_attr():
+                jo.append(node.attr)
+            return jo
+
+        def dict_flavor(node):
             names = set()
-            for nd in self._children:
+            for nd in node._children:
                 if nd.name in names:
-                    jo = {self.name: [[nd.name, nd.to_json_obj(as_dict, include_pos)[nd.name]]
-                                      for nd in self._children]
-                                     if self._children else self._result}
+                    # if any name appears more than once among the child node's names,
+                    # lists must be used instead of dictionaries!
+                    jo = {node.name: [[nd.name, dict_flavor(nd)[nd.name]]
+                                      for nd in node._children]
+                                     if node._children else node._result}
                     break
                 else:
                     names.add(nd.name)
             else:
-                jo = {self.name: {nd.name: nd.to_json_obj(as_dict, include_pos)[nd.name]
-                                  for nd in self._children}
-                                 if self._children else self._result}
+                # use a dictionary only after having made sure
+                # that each child node's name is unique
+                jo = {node.name: {nd.name: dict_flavor(nd)[nd.name]
+                                  for nd in node._children}
+                                 if node._children else node._result}
             additional = {}
             if include_pos:
-                pos = self._pos
+                pos = node._pos
                 if pos >= 0:
                     additional['pos__'] = str(pos)
-            if self.has_attr():
-                additional['attributes__'] = self.attr
+            if node.has_attr():
+                additional['attributes__'] = node.attr
             if additional:
-                if self._children:
-                    if isinstance(jo[self.name], dict):
-                        jo[self.name].update(additional)
+                if node._children:
+                    if isinstance(jo[node.name], dict):
+                        jo[node.name].update(additional)
                     else:
-                        jo[self.name].extend(additional.items())
+                        jo[node.name].extend(additional.items())
                 else:
-                    d = {'content__': self._result}
+                    d = {'content__': node._result}
                     d.update(additional)
-                    jo[self.name] = d
-        return jo
+                    jo[node.name] = d
+            return jo
+
+        return dict_flavor(self) if as_dict else list_flavor(self)
 
     @staticmethod
     def from_json_obj(json_obj: Union[Dict, Sequence]) -> Node:
