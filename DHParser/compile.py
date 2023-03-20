@@ -686,7 +686,7 @@ def full_compile(source: str,
     """Compiles and post-processes the source into the given target stages.
     Mind that if there are fatal errors earlier in the pipeline some or all
     target stages might not be reached and thus not be included in the result."""
-    cst, msgs, _ = compile_source(source, preprocessor, parser)
+    cst, msgs, _ = compile_source(source, preprocessor(), parser())
     if has_errors(msgs, FATAL):
         return {cst.stage: (cst, msgs)}
     return run_pipeline(junctions, {cst.stage: cst}, target_stages)

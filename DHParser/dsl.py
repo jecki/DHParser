@@ -793,8 +793,8 @@ def create_compiler_stage(compile_class: type,
     a :py:class:`compile.Compiler`-class.
     """
     assert issubclass(compile_class, Compiler)
-    assert src_stage
-    assert dst_stage
+    assert src_stage and src_stage.islower()
+    assert dst_stage and dst_stage.islower()
     factory = ThreadLocalSingletonFactory(compile_class)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
                       factory_function=factory)
@@ -814,8 +814,8 @@ def create_transtable_stage(table: TransformationDict,
     a transformation-table :py:func:`transform.traverse`.
     """
     assert isinstance(table, dict)
-    assert src_stage
-    assert dst_stage
+    assert src_stage and src_stage.islower()
+    assert dst_stage and dst_stage.islower()
     make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
     factory = ThreadLocalSingletonFactory(make_transformer)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
@@ -843,8 +843,8 @@ def create_evaluation_stage(actions: Dict[str, Callable],
     an evaluation-table :py:meth:`nodetree.Node.evaluate`.
     """
     assert isinstance(actions, dict)
-    assert src_stage
-    assert dst_stage
+    assert src_stage and src_stage.islower()
+    assert dst_stage and dst_stage.islower()
     make_evaluation = partial(
         _make_evaluation, actions=actions, supply_path_arg=supply_path_arg)
     factory = ThreadLocalSingletonFactory(make_evaluation)
@@ -903,9 +903,10 @@ def process_file(source: str, out_dir: str,
     source_filename = source if is_filename(source) else 'unknown_document_name'
     dest_name = os.path.splitext(os.path.basename(source_filename))[0]
     results = full_compile(source, preprocessor, parser, junctions, targets)
+    end_results = {t: r for t, r in results.items() if t in targets}
 
     # create target directories
-    for t in results.keys():
+    for t in end_results.keys():
         path = os.path.join(out_dir, t)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -917,7 +918,7 @@ def process_file(source: str, out_dir: str,
 
     # write data
     errors = [];  errstrs = set()
-    for t, r in results.items():
+    for t, r in end_results.items():
         result, err = r
         for e in err:
             estr = str(e)
@@ -926,9 +927,9 @@ def process_file(source: str, out_dir: str,
                 errors.append(e)
         path = os.path.join(out_dir, t, '.'.join([dest_name, t]))
         if isinstance(result, Node):
-            serializations = serializations.get(t, serializations.get(
+            slist = serializations.get(t, serializations.get(
                 '*', get_config_value('default_serialization')))
-            for s in serializations:
+            for s in slist:
                 data = result.serialize(s)
                 with open('.'.join([path, s]), 'w', encoding='utf-8') as f:
                     f.write(data)

@@ -17,16 +17,21 @@
 # Add your own stages to the junctions and target-lists, below
 # (See DHParser.compile for a description of junctions)
 
-# add your own junctions, here, e.g. postprocessing.junction
-postprocessing_junctions = set([ASTTransformation.junction, compiling.junction])
+# add your own post-processing junctions, here, e.g. postprocessing.junction
+junctions = set([ASTTransformation.junction, compiling.junction])
 # add further destinations here
-targets = set([ASTTransformation.junction.dst, compiling.junction.dst])
+targets = set([compiling.junction.dst])
 # choose a primary target (this will be used when running script without the --out option
-primary_target = {NAME}
+primary_target = "{NAME}".lower()
 # Add one or more serializations for those targets that are node-trees
-serializations = expand_table({'*': ['sxpr']})
+serializations = expand_table(dict([('*', ['sxpr'])]))
 
 #######################################################################
+
+def compile_src(source: str) -> Tuple[Any, List[Error]]:
+    full_compilation_result = full_compile(
+        source, preprocessing.factory, parsing.factory, junctions, set([primary_target]))
+    return full_compilation_result[primary_target]
 
 
 def process_file(source: str, out_dir: str = '') -> str:
@@ -38,7 +43,7 @@ def process_file(source: str, out_dir: str = '') -> str:
     string, if no errors or warnings occurred.
     """
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
-                            postprocessing_junctions, targets, serializations)
+                            junctions, targets, serializations)
 
 
 def _process_file(args: Tuple[str, str]) -> str:
@@ -167,9 +172,7 @@ def main(called_from_app=False) -> bool:
             if category == "ERRORS":
                 sys.exit(1)
     else:
-        full_compilation_result = full_compile(
-            file_names[0], preprocessing.factory, parsing.factory, junctions, set[primary_target])
-        result, errors = full_compilation_result[primary_target]
+        result, errors = compile_src(file_names[0])
 
         if not errors or (not has_errors(errors, ERROR)) \
                 or (not has_errors(errors, FATAL) and args.force):

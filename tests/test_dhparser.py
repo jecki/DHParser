@@ -163,11 +163,14 @@ class TestDHParserCommandLineTool:
             with open(os.path.join('in', f'data_{i}.txt'), 'w') as f:
                 f.write(f'2 / (4 * -5 + {i})\n')
         system(self.python + ' ArithmeticParser.py' + ' in')
-        result_list = os.listdir('out')
+        assert os.listdir('out') == ['arithmetic']
+        result_list = os.listdir(os.path.join('out', 'arithmetic'))
         result_list.sort()
-        assert result_list == ['data_0.sxpr', 'data_1.sxpr', 'data_2.sxpr', 'data_3.sxpr',
-                               'data_4.sxpr', 'data_5.sxpr', 'data_6.sxpr', 'data_7.sxpr',
-                               'data_8.sxpr', 'data_9.sxpr']
+        assert result_list == ['data_0.arithmetic.sxpr', 'data_1.arithmetic.sxpr',
+                               'data_2.arithmetic.sxpr', 'data_3.arithmetic.sxpr',
+                               'data_4.arithmetic.sxpr', 'data_5.arithmetic.sxpr',
+                               'data_6.arithmetic.sxpr', 'data_7.arithmetic.sxpr',
+                               'data_8.arithmetic.sxpr', 'data_9.arithmetic.sxpr']
         os.chdir(save)
 
     def test_dhparser_tst_script_error_report(self):

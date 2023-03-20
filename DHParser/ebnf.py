@@ -118,7 +118,7 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.compile import Compiler, compile_source
+from DHParser.compile import Compiler, compile_source, full_compile
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
@@ -136,7 +136,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \\
-    ThreadLocalSingletonFactory
+    ThreadLocalSingletonFactory, expand_table
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerCallable, \\
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \\
@@ -976,7 +976,7 @@ ASTTransformation: StageDescriptor = create_stage(
 COMPILER_FACTORY = '''
 
 compiling: StageDescriptor = create_stage(
-    {NAME}Compiler, "ast", "{NAME}")
+    {NAME}Compiler, "ast", "{NAME}".lower())
 '''
 
 
