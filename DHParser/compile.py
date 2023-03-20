@@ -61,12 +61,14 @@ __all__ = ('CompilerError',
            'CompilerCallable',
            'CompilerFactory',
            'CompilationResult',
+           'FullCompilationResult',
            'process_tree',
            'Junction',
            'extract_data',
            'run_pipeline',
            'NoTransformation',
-           'compile_source')
+           'compile_source',
+           'full_compile')
 
 
 class CompilerError(Exception):
@@ -383,6 +385,11 @@ CompilationResult = namedtuple('CompilationResult',
     module=__name__)
 
 
+# compilation and postprocessing result:
+# Dict: target-stage-name -> (result, errors)
+FullCompilationResult = Dict[str, Tuple[Any, List[Error]]]
+
+
 def NoTransformation(root: RootNode) -> RootNode:
     """Simply passes through the unaltered node-tree."""
     return root
@@ -403,7 +410,10 @@ def compile_source(source: str,
 
     The later stages AST-transformation, compilation will only be invoked if
     no fatal errors occurred in any of the earlier stages of the processing
-    pipeline.
+    pipeline. Function "compile_source" does not invoke any postprocessing
+    after compiling. See functions: :py:func:`run_pipeline`
+    and :py:func:`full_compile` for postprocessing and compiling plus
+    postprocessing.
 
     :param source: The input text for compilation or a the name of a
             file containing the input text.
@@ -575,7 +585,7 @@ def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
 
 def run_pipeline(junctions: AbstractSet[Junction],
                  source_stages: Dict[str, RootNode],
-                 target_stages: AbstractSet[str]) -> Dict[str, Tuple[Any, List[Error]]]:
+                 target_stages: AbstractSet[str]) -> FullCompilationResult:
     """
     Runs all the intermediary compilation-steps that are necessary to produce
     the "target-stages" from the given "source-stages". Here, each source-stage
@@ -664,7 +674,22 @@ def run_pipeline(junctions: AbstractSet[Junction],
     return {t: (extract_data(results[t]), errata[t]) for t in results.keys()}
 
 
+def full_compile(source: str,
+                 preprocessor: Optional[PreprocessorFunc],
+                 parser: ParserCallable,
+                 junctions: AbstractSet[Junction],
+                 target_stages: AbstractSet[str]) -> FullCompilationResult:
+    """Compiles and post-processes the source into the given target stages.
+    Mind that if there are fatal errors earlier in the pipeline some or all
+    target stages might not be reached and thus not be included in the result."""
+    cst, msgs, _ = compile_source(source, preprocessor, parser)
+    if has_error(msgs, FATAL):
+        return {cst.stage: (cst, msgs)}
+    return run_pipeline(junctions, {cst.stage: cst}, targets)
+
+
 # TODO: Verify compiler against grammar,
 #       i.e. make sure that for all on_X()-methods, `X` is the name of a parser
 #       Does that make sense? Tag names could change during AST-Transformation!
-# TODO: AST validation against an ASDL-Specification
+# TODO: AST validation against an ASDL-Specification or other structural validation
+#       of trees

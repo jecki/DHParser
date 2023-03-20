@@ -944,7 +944,8 @@ PREPROCESSOR_FACTORY = '''
 # To capture includes, replace the NEVER_MATCH_PATTERN 
 # by a pattern with group "name" here, e.g. r'\\input{{(?P<name>.*)}}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
-RE_COMMENT = {COMMENT__}
+RE_COMMENT = {COMMENT__}  # THIS MUST ALWAYS BE THE SAME AS {NAME}Grammar.COMMENT__ !!!
+
 
 def {NAME}Tokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens

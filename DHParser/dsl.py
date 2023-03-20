@@ -23,7 +23,7 @@ of domain specific languages based on an EBNF-grammar.
 from __future__ import annotations
 
 from collections import namedtuple
-import functools
+from functools import partial, lru_cache
 import inspect
 import os
 import platform
@@ -70,7 +70,7 @@ __all__ = ('DefinitionError',
            'create_stage')
 
 
-@functools.lru_cache()
+@lru_cache()
 def read_template(template_name: str) -> str:
     """
     Reads a script-template from a template file named ``template_name``
@@ -269,7 +269,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     return '\n'.join(src)
 
 
-@functools.lru_cache()
+@lru_cache()
 def grammar_provider(ebnf_src: str,
                      branding="DSL",
                      additional_code: str = '',
@@ -706,28 +706,54 @@ StageDescriptor = namedtuple('StageDescriptor',
     module=__name__)
 
 
-# def illegal_junction(nd: RootNode) -> Any:
-#     raise AssertionError("Junctions and processing piplelines cannot be used for the "
-#         "preprocessing and parsing stage. Use DHParser.compile.compile_source instead!")
+# In the following PARTICAL FUNCTIONS are used rather than local functions,
+# because the closure of local functions cannot be pickled!
+
+
+# Preprocessing-Stage #################################################
+
+def _preprocessor_factory(tokenizer, include_regex, comment_regex) -> PreprocessorFunc:
+    # below, the second parameter must always be the same as Grammar.COMMENT__!
+    find_next_include = gen_find_include_func(include_regex, comment_regex)
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    tokenizing_prep = make_preprocessor(tokenizer)
+    return chain_preprocessors(include_prep, tokenizing_prep)
+
+
+def _preprocess(source, factory) -> Union[String, StringView]:
+    return factory()(source)
 
 
 def create_preprocess_stage(tokenizer: Tokenizer,
                             include_regex, comment_regex) -> PreprocessStageDescriptor:
     """Creates a factory for thread-safe preprocessing functions as well as a
     thread-safe preprocessing function."""
-    def preprocessor_factory() -> PreprocessorFunc:
-        nonlocal tokenizer, include_regex, comment_regex
-        # below, the second parameter must always be the same as neuGrammar.COMMENT__!
-        find_next_include = gen_find_include_func(include_regex, comment_regex)
-        include_prep = functools.partial(preprocess_includes, find_next_include=find_next_include)
-        tokenizing_prep = make_preprocessor(tokenizer)
-        return chain_preprocessors(include_prep, tokenizing_prep)
+    preprocessor_factory = partial(_preprocessor_factory,
+        tokenizer=tokenizer, include_regex=include_regex, comment_regex=comment_regex)
     thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
-
-    def preprocess(source: Union[String, StringView]) -> Union[String, StringView]:
-        return thread_safe_factory()(source)
-
+    preprocess = partial(_preprocess, factory=thread_safe_factory)
     return PreprocessStageDescriptor(thread_safe_factory, preprocess)
+
+
+# Parsing-stage #######################################################
+
+def _parser_factory(raw_grammar) -> Grammar:
+    grammar = raw_grammar()
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = _parser_factory.python_src__
+    except AttributeError:
+        pass
+    return grammar
+
+
+def _parse_func(parser_factory: Callable, document, start_parser = "root_parser__",
+                *, complete_match=True):
+    return parser_factory()(document, start_parser, complete_match=complete_match)
 
 
 def create_parser_stage(grammar_class: type) -> ParserStageDescriptor:
@@ -735,27 +761,14 @@ def create_parser_stage(grammar_class: type) -> ParserStageDescriptor:
     thread-safe parser function."""
     assert issubclass(grammar_class, Grammar)
     raw_grammar = ThreadLocalSingletonFactory(grammar_class)
+    factory = partial(_parser_factory, raw_grammar=raw_grammar)
+    process = partial(_parse_func, parser_factory=factory)
+    return PreprocessStageDescriptor(factory, process)
 
-    def factory() -> Grammar:
-        nonlocal raw_grammar
-        grammar = raw_grammar()
-        if get_config_value('resume_notices'):
-            resume_notices_on(grammar)
-        elif get_config_value('history_tracking'):
-            set_tracer(grammar, trace_history)
-        try:
-            if not grammar.__class__.python_src__:
-                grammar.__class__.python_src__ = factory.python_src__
-        except AttributeError:
-            pass
-        return grammar
 
-    def parse(document, start_parser = "root_parser__", *, complete_match=True):
-        nonlocal factory
-        return factory()(document, start_parser, complete_match=complete_match)
+# Tree-Processing-Stages ##############################################
 
-    return PreprocessStageDescriptor(factory, parse)
-
+# 1. tree-processing with Compiler-class
 
 def process_template(src_tree: Node, src_stage: str, dst_stage: str,
                      factory_function) -> Any:
@@ -779,10 +792,16 @@ def create_compiler_stage(compile_class: type,
     assert src_stage
     assert dst_stage
     factory = ThreadLocalSingletonFactory(compile_class)
-    process = functools.partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
-                                factory_function=factory)
+    process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+                      factory_function=factory)
     return StageDescriptor(factory,  process, (src_stage, factory, dst_stage))
 
+
+# 2. tree-processing with transformation-table
+
+def _make_transformer(src_stage, dst_stage, table) -> TransformerCallable:
+    return partial(transformer, transformation_table=table.copy(),
+                   src_stage=src_stage, dst_stage=dst_stage)
 
 def create_transtable_stage(table: TransformationDict,
                             src_stage: str,
@@ -793,17 +812,23 @@ def create_transtable_stage(table: TransformationDict,
     assert isinstance(table, dict)
     assert src_stage
     assert dst_stage
-
-    def make_transformer() -> TransformerCallable:
-        nonlocal src_stage, dst_stage, table
-        return functools.partial(transformer,
-                                 transformation_table=table.copy(),
-                                 src_stage=src_stage, dst_stage=dst_stage)
-
+    make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
     factory = ThreadLocalSingletonFactory(make_transformer)
-    process = functools.partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
-                                factory_function=factory)
+    process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+                      factory_function=factory)
     return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
+
+
+# 3. tree-processing with evaluation-table
+
+def _make_evaluation(actions, supply_path_arg) -> Callable[[Node], Any]:
+    def evaluate_with_path(node: Node) -> Any:
+        return node.evaluate(actions, [node])
+
+    def evaluate_without_path(node: Node) -> Any:
+        return node.evaluate(actions, path=[])
+
+    return evaluate_with_path if supply_path_arg else evaluate_without_path
 
 
 def create_evaluation_stage(actions: Dict[str, Callable],
@@ -816,23 +841,15 @@ def create_evaluation_stage(actions: Dict[str, Callable],
     assert isinstance(actions, dict)
     assert src_stage
     assert dst_stage
-
-    def make_evaluation() -> Callable[[Node], Any]:
-        nonlocal actions
-
-        def evaluate_with_path(node: Node) -> Any:
-            return node.evaluate(actions, [node])
-
-        def evaluate_without_path(node: Node) -> Any:
-            return node.evaluate(actions, path=[])
-
-        return evaluate_with_path if supply_path_arg else evaluate_without_path
-
+    make_evaluation = partial(
+        _make_evaluation, actions=actions, supply_path_arg=supply_path_arg)
     factory = ThreadLocalSingletonFactory(make_evaluation)
-    process = functools.partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
-                                factory_function=factory)
+    process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+                      factory_function=factory)
     return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
 
+
+# generic tree-processing function
 
 def create_stage(tool: Union[dict, type],
                  src_stage: str,

@@ -198,8 +198,9 @@ class ThreadLocalSingletonFactory:
         if ident != -1:
             deprecation_warning('ThreadLocalSingletonFactory: "ident" is deprecated!')
         self.class_or_factory = class_or_factory
-        self.singleton_name = "{NAME}_{ID}_singleton".format(
-            NAME=name or class_or_factory.__name__, ID=str(id(self)))
+        # partial functions do not have a __name__ attribute!
+        name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
+        self.singleton_name = "{NAME}_{ID}_singleton".format(NAME=name, ID=str(id(self)))
         THREAD_LOCALS = access_thread_locals()
         assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name
 
