@@ -3,8 +3,8 @@ RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
 def compile_src(source: str) -> Tuple[Any, List[Error]]:
     """Compiles ``source`` and returns (result, errors)."""
-    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
-                                  get_compiler())
+    result_tuple = compile_source(source, preprocessing.factory(), parsing.factory(),
+                                  ASTTransformation.factory(), compiling.factory())
     return result_tuple[:2]  # drop the AST at the end of the result tuple
 
 

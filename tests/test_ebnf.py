@@ -497,8 +497,8 @@ class TestBoundaryCases:
                 "not an error: " + str(messages)
             grammar_src = result
             grammar = compile_python_object(
-                DHPARSER_IMPORTS + grammar_src, #.format(dhparser_parentdir=repr('.')) + grammar_src,
-                r'get_(?:\w+_)?grammar$')()
+                DHPARSER_IMPORTS + grammar_src,
+                'parsing').factory()
         else:
             assert False, "EBNF compiler should warn about unconnected rules."
 

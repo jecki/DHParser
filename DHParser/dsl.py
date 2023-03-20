@@ -44,6 +44,7 @@ from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
     gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes
 from DHParser.nodetree import Node, RootNode
+from DHParser.trace import set_tracer, trace_history, resume_notices_on, resume_notices_off
 from DHParser.transform import TransformerCallable, TransformationDict, transformer
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
     compile_python_object, re, as_identifier, ThreadLocalSingletonFactory
@@ -296,11 +297,11 @@ def grammar_provider(ebnf_src: str,
     log_name = get_config_value('compiled_EBNF_log')
     if log_name and is_logging():  append_log(log_name, grammar_src)
     imports = DHPARSER_IMPORTS  
-    grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
-                                            r'get_grammar$')  # r'get_(?:\w+_)?grammar$'
-    if callable(grammar_factory):
-        grammar_factory.python_src__ = grammar_src
-        return grammar_factory
+    parsing_stage = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
+                                          r'parsing$')  # r'get_(?:\w+_)?grammar$'
+    if callable(parsing_stage.factory):
+        parsing_stage.factory.python_src__ = grammar_src
+        return parsing_stage.factory
     raise ValueError('Could not compile grammar provider!')
 
 
@@ -346,10 +347,9 @@ def load_compiler_suite(compiler_suite: str) -> \
         sections = split_source(compiler_suite, source)
         _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = sections
         # TODO: Compile in one step and pick parts from namespace later ?
-        preprocessor = compile_python_object(imports + preprocessor_py,
-                                             r'get_(?:\w+_)?preprocessor$')
-        parser = compile_python_object(imports + parser_py, r'get_(?:\w+_)?grammar$')
-        ast = compile_python_object(imports + ast_py, r'get_(?:\w+_)?transformer$')
+        preprocessor = compile_python_object(imports + preprocessor_py, r'preprocessing$').factory
+        parser = compile_python_object(imports + parser_py, r'parsing$').factory
+        ast = compile_python_object(imports + ast_py, r'ASTTransformation$').factory
     else:
         # Assume source is an ebnf grammar.
         # Is there really any reasonable application case for this?
@@ -363,7 +363,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
-    compiler = compile_python_object(imports + compiler_py, r'get_(?:\w+_)?compiler$')
+    compiler = compile_python_object(imports + compiler_py, r'compiling$').factory
     if callable(preprocessor) and callable(parser) and callable(Callable) and callable(compiler):
         return preprocessor, parser, ast, compiler
     raise ValueError('Could not generate compiler suite from source code!')
@@ -719,7 +719,7 @@ def create_preprocess_stage(tokenizer: Tokenizer,
         nonlocal tokenizer, include_regex, comment_regex
         # below, the second parameter must always be the same as neuGrammar.COMMENT__!
         find_next_include = gen_find_include_func(include_regex, comment_regex)
-        include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+        include_prep = functools.partial(preprocess_includes, find_next_include=find_next_include)
         tokenizing_prep = make_preprocessor(tokenizer)
         return chain_preprocessors(include_prep, tokenizing_prep)
     thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
@@ -736,7 +736,7 @@ def create_parser_stage(grammar_class: type) -> ParserStageDescriptor:
     assert issubclass(grammar_class, Grammar)
     raw_grammar = ThreadLocalSingletonFactory(grammar_class)
 
-    def parser_factory() -> Grammar:
+    def factory() -> Grammar:
         nonlocal raw_grammar
         grammar = raw_grammar()
         if get_config_value('resume_notices'):
@@ -751,8 +751,8 @@ def create_parser_stage(grammar_class: type) -> ParserStageDescriptor:
         return grammar
 
     def parse(document, start_parser = "root_parser__", *, complete_match=True):
-        nonlocal parser_factory
-        return parser_factory()(document, start_parser, complete_match=complete_match)
+        nonlocal factory
+        return factory()(document, start_parser, complete_match=complete_match)
 
     return PreprocessStageDescriptor(factory, parse)
 
@@ -835,7 +835,9 @@ def create_evaluation_stage(actions: Dict[str, Callable],
 
 
 def create_stage(tool: Union[dict, type],
-                 src_stage: str, dst_stage: str, hint: str='?') -> StageDescriptor:
+                 src_stage: str,
+                 dst_stage: str,
+                 hint: str='?') -> StageDescriptor:
     """Generic stage-creation function for tree-transforming stages where a tree-transforming
     stage is a stage which either rehapes a node-tree or transforms a nodetree into
     something else, but not a stage where something else (e.g. a text) is turned into

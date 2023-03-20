@@ -121,7 +121,8 @@ except ImportError:
 from DHParser.compile import Compiler, compile_source
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
-from DHParser.dsl import recompile_grammar
+from DHParser.dsl import recompile_grammar, create_parser_stage, create_preprocess_stage, \\
+    create_stage, PreprocessStageDescriptor, ParserStageDescriptor, StageDescriptor
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
@@ -940,85 +941,40 @@ CompilerFactoryFunc: TypeAlias = Callable[[], Compiler]
 
 PREPROCESSOR_FACTORY = '''
 
-RE_INCLUDE = NEVER_MATCH_PATTERN
 # To capture includes, replace the NEVER_MATCH_PATTERN 
 # by a pattern with group "name" here, e.g. r'\\input{{(?P<name>.*)}}'
-
+RE_INCLUDE = NEVER_MATCH_PATTERN
+RE_COMMENT = {COMMENT__}
 
 def {NAME}Tokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
-
-def preprocessor_factory() -> PreprocessorFunc:
-    # below, the second parameter must always be the same as {NAME}Grammar.COMMENT__!
-    find_next_include = gen_find_include_func(RE_INCLUDE, {COMMENT__})
-    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor({NAME}Tokenizer)
-    return chain_preprocessors(include_prep, tokenizing_prep)
-
-
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
-
-
-def preprocess_{NAME}(source):
-    return get_preprocessor()(source)
+preprocessing: PreprocessStageDescriptor = create_preprocess_stage(
+    {NAME}Tokenizer, RE_INCLUDE, RE_COMMENT)
 '''
 
 
 GRAMMAR_FACTORY = '''
-
-_raw_grammar = ThreadLocalSingletonFactory({NAME}Grammar)
-
-def get_grammar() -> {NAME}Grammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
+parsing: ParserStageDescriptor = create_parser_stage(
+    {NAME}Grammar)    
 '''
 
 
 TRANSFORMER_FACTORY = '''
 
-def {NAME}Transformer() -> TransformerCallable:
-    """Creates a transformation function that does not share state with other
-    threads or processes."""
-    return partial(transformer, 
-                   transformation_table={NAME}_AST_transformation_table.copy(),
-                   src_stage='cst', dst_stage='ast')
+ASTTransformation: StageDescriptor = create_stage(
+    {NAME}_AST_transformation_table.copy(), "cst", "ast", "transtable")
 
-
-get_transformer = ThreadLocalSingletonFactory({NAME}Transformer)
-
-
-def transform_{NAME}(cst):
-    return get_transformer()(cst)
 '''
 
 
 COMPILER_FACTORY = '''
-get_compiler = ThreadLocalSingletonFactory({NAME}Compiler)
 
-
-def compile_{NAME}(ast):
-    result = get_compiler()(ast)
-    if isinstance(result, RootNode):  # redundant if used with compile.run_pipeline
-        result.stage = '{NAME}'
-    return result
-    
-    
-{NAME}_junction = ('ast', get_compiler, '{NAME}')    
+compiling: StageDescriptor = create_stage(
+    {NAME}Compiler, "ast", "{NAME}")
 '''
 
 

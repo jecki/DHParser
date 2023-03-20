@@ -41,7 +41,7 @@ def recompile_grammar(grammar_src, force):
     dsl.restore_server_script(grammar_src)
 
 
-def run_grammar_tests(fn_pattern, get_grammar, get_transformer):
+def run_grammar_tests(fn_pattern, parser_factory, transformer_factory):
     if fn_pattern.find('/') >= 0 or fn_pattern.find('\\') >= 0:
         testdir, fn_pattern = os.path.split(fn_pattern)
         if not testdir.startswith('/') or not testdir[1:2] == ':':
@@ -50,7 +50,7 @@ def run_grammar_tests(fn_pattern, get_grammar, get_transformer):
         testdir = os.path.join(scriptdir, TEST_DIRNAME)
     DHParser.log.start_logging(os.path.join(testdir, LOGGING))
     error_report = testing.grammar_suite(
-        testdir, get_grammar, get_transformer,
+        testdir, parser_factory, transformer_factory,
         fn_patterns=[fn_pattern], report='REPORT', verbose=True,
         junctions=set(), show=set())
     return error_report
@@ -81,8 +81,8 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptdir, '{name}.ebnf'),
                           force=False)
         sys.path.append('.')
-        from {name}Parser import get_grammar, get_transformer
-        error_report = run_grammar_tests(arg, get_grammar, get_transformer)
+        from {name}Parser import parsing, ASTTransformation
+        error_report = run_grammar_tests(arg, parsing.factory, ASTTransformation.factory)
         if error_report:
             print('\n')
             print(error_report)
