@@ -121,8 +121,9 @@ except ImportError:
 from DHParser.compile import Compiler, compile_source
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
+from DHParser import dsl
 from DHParser.dsl import recompile_grammar, create_parser_stage, create_preprocess_stage, \\
-    create_stage, PreprocessStageDescriptor, ParserStageDescriptor, StageDescriptor
+    create_stage, PreprocessStageDescriptor, ParserStageDescriptor, StageDescriptor, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging

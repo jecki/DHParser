@@ -572,7 +572,11 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
     return result
 
 
-Junction: TypeAlias = Tuple[str, CompilerFactory, str]  # source stage name, source->target, target stage name
+Junction = namedtuple('Junction',
+    ['src',                ## type: string
+     'factory',            ## type: CompilerFactory
+     'dst'],               ## type: string
+    module=__name__)
 
 
 def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
@@ -583,9 +587,9 @@ def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
     return tree_or_data
 
 
-def run_pipeline(junctions: AbstractSet[Junction],
+def run_pipeline(junctions: Set[Junction],
                  source_stages: Dict[str, RootNode],
-                 target_stages: AbstractSet[str]) -> FullCompilationResult:
+                 target_stages: Set[str]) -> FullCompilationResult:
     """
     Runs all the intermediary compilation-steps that are necessary to produce
     the "target-stages" from the given "source-stages". Here, each source-stage
@@ -677,15 +681,15 @@ def run_pipeline(junctions: AbstractSet[Junction],
 def full_compile(source: str,
                  preprocessor: Optional[PreprocessorFunc],
                  parser: ParserCallable,
-                 junctions: AbstractSet[Junction],
-                 target_stages: AbstractSet[str]) -> FullCompilationResult:
+                 junctions: Set[Junction],
+                 target_stages: Set[str]) -> FullCompilationResult:
     """Compiles and post-processes the source into the given target stages.
     Mind that if there are fatal errors earlier in the pipeline some or all
     target stages might not be reached and thus not be included in the result."""
     cst, msgs, _ = compile_source(source, preprocessor, parser)
-    if has_error(msgs, FATAL):
+    if has_errors(msgs, FATAL):
         return {cst.stage: (cst, msgs)}
-    return run_pipeline(junctions, {cst.stage: cst}, targets)
+    return run_pipeline(junctions, {cst.stage: cst}, target_stages)
 
 
 # TODO: Verify compiler against grammar,

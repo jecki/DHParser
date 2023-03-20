@@ -1,23 +1,32 @@
-RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
+#######################################################################
+#
+# Post-Processing-Stages [add one or more postprocessing stages, here]
+#
+#######################################################################
 
+# class PostProcessing(Compiler):
+#     ...
 
-def compile_src(source: str) -> Tuple[Any, List[Error]]:
-    """Compiles ``source`` and returns (result, errors)."""
-    result_tuple = compile_source(source, preprocessing.factory(), parsing.factory(),
-                                  ASTTransformation.factory(), compiling.factory())
-    return result_tuple[:2]  # drop the AST at the end of the result tuple
+# # change the names of the source and destination stages. Source
+# # ("{NAME}") in this example must be the name of some earlier stage, though.
+# postprocessing: StageDescriptor = create_stage("{NAME}", "refined", PostProcessing)
+#
 
+#######################################################################
 
-def serialize_result(result: Any) -> Union[str, bytes]:
-    """Serialization of result. REWRITE THIS, IF YOUR COMPILATION RESULT
-    IS NOT A TREE OF NODES.
-    """
-    if isinstance(result, Node):
-        return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
-    elif isinstance(result, str):
-        return result
-    else:
-        return repr(result)
+# Add your own stages to the junctions and target-lists, below
+# (See DHParser.compile for a description of junctions)
+
+# add your own junctions, here, e.g. postprocessing.junction
+postprocessing_junctions = set([ASTTransformation.junction, compiling.junction])
+# add further destinations here
+targets = set([ASTTransformation.junction.dst, compiling.junction.dst])
+# choose a primary target (this will be used when running script without the --out option
+primary_target = {NAME}
+# Add one or more serializations for those targets that are node-trees
+serializations = expand_table({'*': ['sxpr']})
+
+#######################################################################
 
 
 def process_file(source: str, out_dir: str = '') -> str:
@@ -28,79 +37,24 @@ def process_file(source: str, out_dir: str = '') -> str:
     extension. Returns the name of the error-messages file or an empty
     string, if no errors or warnings occurred.
     """
-    def gen_dest_name(name):
-        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
-                                     + RESULT_FILE_EXTENSION)
-
-    source_filename = source if is_filename(source) else ''
-    result_filename = gen_dest_name(source_filename)
-    result, errors = compile_src(source)
-    if not has_errors(errors, FATAL):
-        if os.path.abspath(source_filename) != os.path.abspath(result_filename):
-            with open(result_filename, 'w', encoding='utf-8') as f:
-                f.write(serialize_result(result))
-        else:
-            errors.append(Error('Source and destination have the same name "%s"!'
-                                % result_filename, 0, FATAL))
-    if errors:
-        err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
-        err_filename = os.path.splitext(result_filename)[0] + err_ext
-        with open(err_filename, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(canonical_error_strings(errors)))
-        return err_filename
-    return ''
+    return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
+                            postprocessing_junctions, targets, serializations)
 
 
 def _process_file(args: Tuple[str, str]) -> str:
     return process_file(*args)
 
 
-def _never_cancel() -> bool:
-    return False
-
-
 def batch_process(file_names: List[str], out_dir: str,
                   *, submit_func: Callable = None,
                   log_func: Callable = None,
-                  cancel_func: Callable = _never_cancel) -> List[str]:
+                  cancel_func: Callable = never_cancel) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    import concurrent.futures
-    from DHParser.toolkit import instantiate_executor
-
-    def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
-        error_list = []
-        if cancel_func(): return error_list
-        for file_name, error_filename in zip(file_names, res_iter):
-            if log_func:
-                suffix = (" with " + error_filename[error_filename.rfind('_') + 1:-4]) \
-                    if error_filename else ""
-                log_func(f'Compiled "%s"' % os.path.basename(file_name) + suffix)
-            if error_filename:
-                error_list.append(error_filename)
-            if cancel_func(): return error_list
-        return error_list
-
-    if submit_func is None:
-        pool = instantiate_executor(get_config_value('batch_processing_parallelization'),
-                                    concurrent.futures.ProcessPoolExecutor)
-        res_iter = pool.map(_process_file, ((name, out_dir) for name in file_names),
-            chunksize=min(get_config_value('batch_processing_max_chunk_size'),
-                          max(1, len(file_names) // (cpu_count() * 4))))
-        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
-        if sys.version_info >= (3, 9):
-            pool.shutdown(wait=True, cancel_futures=True)
-        else:
-            pool.shutdown(wait=True)
-    else:
-        futures = [submit_func(process_file, name, out_dir) for name in file_names]
-        res_iter = (f.result() for f in futures)
-        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
-        for f in futures:  f.cancel()
-        concurrent.futures.wait(futures)
-    return error_files
+    return dsl.batch_process(file_names, out_dir, _process_file,
+        submit_func=submit_func, log_func=log_func, cancel_func=cancel_func)
 
 
 def main(called_from_app=False) -> bool:
@@ -213,7 +167,9 @@ def main(called_from_app=False) -> bool:
             if category == "ERRORS":
                 sys.exit(1)
     else:
-        result, errors = compile_src(file_names[0])
+        full_compilation_result = full_compile(
+            file_names[0], preprocessing.factory, parsing.factory, junctions, set[primary_target])
+        result, errors = full_compilation_result[primary_target]
 
         if not errors or (not has_errors(errors, ERROR)) \
                 or (not has_errors(errors, FATAL) and args.force):

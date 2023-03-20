@@ -28,16 +28,17 @@ import inspect
 import os
 import platform
 import stat
+import sys
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
-    Callable, Sequence, Dict
+    Callable, Sequence, Dict, Set
 
 import DHParser.ebnf
-from DHParser.compile import Compiler, compile_source
+from DHParser.compile import Compiler, compile_source, full_compile, Junction, ParserCallable
 from DHParser.configuration import get_config_value
 from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
-from DHParser.error import Error, is_error, has_errors, only_errors, \
+from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.parse import Grammar
@@ -46,8 +47,8 @@ from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
 from DHParser.nodetree import Node, RootNode
 from DHParser.trace import set_tracer, trace_history, resume_notices_on, resume_notices_off
 from DHParser.transform import TransformerCallable, TransformationDict, transformer
-from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
-    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory
+from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
+    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count
 
 
 __all__ = ('DefinitionError',
@@ -67,7 +68,10 @@ __all__ = ('DefinitionError',
            'create_compiler_stage',
            'create_transtable_stage',
            'create_evaluation_stage',
-           'create_stage')
+           'create_stage',
+           'process_file',
+           'never_cancel',
+           'batch_process')
 
 
 @lru_cache()
@@ -794,7 +798,7 @@ def create_compiler_stage(compile_class: type,
     factory = ThreadLocalSingletonFactory(compile_class)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
                       factory_function=factory)
-    return StageDescriptor(factory,  process, (src_stage, factory, dst_stage))
+    return StageDescriptor(factory,  process, Junction(src_stage, factory, dst_stage))
 
 
 # 2. tree-processing with transformation-table
@@ -816,7 +820,7 @@ def create_transtable_stage(table: TransformationDict,
     factory = ThreadLocalSingletonFactory(make_transformer)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
                       factory_function=factory)
-    return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
+    return StageDescriptor(factory, process, Junction(src_stage, factory, dst_stage))
 
 
 # 3. tree-processing with evaluation-table
@@ -846,7 +850,7 @@ def create_evaluation_stage(actions: Dict[str, Callable],
     factory = ThreadLocalSingletonFactory(make_evaluation)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
                       factory_function=factory)
-    return StageDescriptor(factory, process, (src_stage, factory, dst_stage))
+    return StageDescriptor(factory, process, Junction(src_stage, factory, dst_stage))
 
 
 # generic tree-processing function
@@ -874,3 +878,118 @@ def create_stage(tool: Union[dict, type],
             raise AssertionError('Cannot determine transformation-type automatically! '
                 'Please, add optional parameter "hint" to the function call with one of the '
                 'following values: "transtable", "evaluate_with_path", "evaluate_without_path"!')
+
+
+#######################################################################
+#
+# batch-processing
+#
+#######################################################################
+
+
+def process_file(source: str, out_dir: str,
+                 preprocessor: Optional[PreprocessorFunc],
+                 parser: ParserCallable,
+                 junctions: Set[Junction],
+                 targets: Set[str],
+                 serializations: Dict[str, List[str]]) -> str:
+    """Compiles the source and writes the serialized results back to disk,
+    unless any fatal errors have occurred. Error and Warning messages are
+    written to a file with the same name as `result_filename` with an
+    appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
+    extension. Returns the name of the error-messages file or an empty
+    string, if no errors or warnings occurred.
+    """
+    source_filename = source if is_filename(source) else 'unknown_document_name'
+    dest_name = os.path.splitext(os.path.basename(source_filename))[0]
+    results = full_compile(source, preprocessor, parser, junctions, targets)
+
+    # create target directories
+    for t in results.keys():
+        path = os.path.join(out_dir, t)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        elif not os.path.isdir(path):
+            error_file_name = dest_name + '_FATAL_ERROR.txt'
+            with open(error_file_name, 'w', encoding='utf-8') as f:
+                f.write(f'Destination directory path "{path}" already in use!')
+            return error_file_name
+
+    # write data
+    errors = [];  errstrs = set()
+    for t, r in results.items():
+        result, err = r
+        for e in err:
+            estr = str(e)
+            if estr not in errstrs:
+                errstrs.add(estr)
+                errors.append(e)
+        path = os.path.join(out_dir, t, '.'.join([dest_name, t]))
+        if isinstance(result, Node):
+            serializations = serializations.get(t, serializations.get(
+                '*', get_config_value('default_serialization')))
+            for s in serializations:
+                data = result.serialize(s)
+                with open('.'.join([path, s]), 'w', encoding='utf-8') as f:
+                    f.write(data)
+        else:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(str(result))
+
+    errors.sort(key=lambda e: e.pos)
+    if errors:
+        err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
+        err_filename = dest_name + err_ext
+        with open(err_filename, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(canonical_error_strings(errors)))
+        return err_filename
+    return ''
+
+
+def never_cancel() -> bool:
+    return False
+
+
+def batch_process(file_names: List[str], out_dir: str,
+                  process_file: Callable[[Tuple[str, str]], str],
+                  *, submit_func: Callable = None,
+                  log_func: Callable = None,
+                  cancel_func: Callable = never_cancel) -> List[str]:
+    """Compiles all files listed in file_names and writes the results and/or
+    error messages to the directory `our_dir`. Returns a list of error
+    messages files.
+    """
+    import concurrent.futures
+    from DHParser.toolkit import instantiate_executor
+
+    def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
+        error_list = []
+        if cancel_func(): return error_list
+        for file_name, error_filename in zip(file_names, res_iter):
+            if log_func:
+                suffix = (" with " + error_filename[error_filename.rfind('_') + 1:-4]) \
+                    if error_filename else ""
+                log_func(f'Compiled "%s"' % os.path.basename(file_name) + suffix)
+            if error_filename:
+                error_list.append(error_filename)
+            if cancel_func(): return error_list
+        return error_list
+
+    if submit_func is None:
+        pool = instantiate_executor(get_config_value('batch_processing_parallelization'),
+                                    concurrent.futures.ProcessPoolExecutor)
+        res_iter = pool.map(process_file, ((name, out_dir) for name in file_names),
+            chunksize=min(get_config_value('batch_processing_max_chunk_size'),
+                          max(1, len(file_names) // (cpu_count() * 4))))
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        if sys.version_info >= (3, 9):
+            pool.shutdown(wait=True, cancel_futures=True)
+        else:
+            pool.shutdown(wait=True)
+    else:
+        futures = [submit_func(process_file, name, out_dir) for name in file_names]
+        res_iter = (f.result() for f in futures)
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        for f in futures:  f.cancel()
+        concurrent.futures.wait(futures)
+    return error_files
