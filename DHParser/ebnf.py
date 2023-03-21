@@ -125,7 +125,7 @@ from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \\
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
-from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
@@ -147,7 +147,7 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \\
     left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \\
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \\
-    has_attr, has_parent, has_children, apply_unless, apply_ifelse
+    has_attr, has_parent, has_children, has_child, apply_unless, apply_ifelse, traverse
 from DHParser import parse as parse_namespace__
 
 '''

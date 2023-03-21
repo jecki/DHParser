@@ -533,14 +533,6 @@ def compile_on_disk(source_file: str,
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHParser.ebnf.DHPARSER_IMPORTS
-        else:
-            i = imports.find('from DHParser import')
-            if i >= 0 and imports.find('from DHParser.') < 0:
-                # update old imports block
-                k = DHParser.ebnf.DHPARSER_IMPORTS.find('from DHParser.')
-                assert k >= 0
-                print('Updating old DHParser-imports block in ...Parser.py-script')
-                imports = imports[:i] + DHParser.ebnf.DHPARSER_IMPORTS[k:]
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
