@@ -36,7 +36,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
+    Node, TransformerFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, \
@@ -202,13 +202,13 @@ Lyrik_AST_transformation_table = {
 
 
 
-def CreateLyrikTransformer() -> TransformerCallable:
+def CreateLyrikTransformer() -> TransformerFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, transformation_table=Lyrik_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformerCallable:
+def get_transformer() -> TransformerFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:

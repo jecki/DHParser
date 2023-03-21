@@ -31,6 +31,7 @@ for an example.
 
 from __future__ import annotations
 
+import functools
 from bisect import bisect_left
 from collections import defaultdict, namedtuple
 import copy
@@ -2089,6 +2090,10 @@ class Grammar:
                     'the parsed document' % cast('CombinedParser', parser).location_info(),
                     0, PARSER_NEVER_TOUCHES_DOCUMENT)))
         return error_list
+
+
+ParserFunc: TypeAlias = Union[Grammar, Callable[[str], RootNode], functools.partial]
+ParserFactory: TypeAlias = Union[Callable[[], ParserFunc], functools.partial]
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:

@@ -52,7 +52,7 @@ __all__ = ('TransformationDict',
            'TransformationTableType',
            'ConditionFunc',
            'KeyFunc',
-           'TransformerCallable',
+           'TransformerFunc',
            'transformation_factory',
            'key_node_name',
            'Filter',
@@ -167,7 +167,8 @@ TransformationTableType: TypeAlias = Dict[str, Union[Sequence[Callable], Transfo
 ConditionFunc: TypeAlias = Callable  # Callable[[Path], bool]
 KeyFunc: TypeAlias = Callable[[Node], str]
 CriteriaType: TypeAlias = Union[int, str, Callable]
-TransformerCallable: TypeAlias = Union[Callable[[RootNode], RootNode], partial]
+TransformerFunc: TypeAlias = Union[Callable[[RootNode], RootNode], partial]
+TransformerFactory: TypeAlias = Callable[[], TransformerFunc]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
@@ -1925,3 +1926,4 @@ def forbid(path: Path, child_tags: AbstractSet[str]):
 def peek(path: Path):
     """For debugging: Prints the last node in the path as S-expression."""
     print(path[-1].as_sxpr(compact=True))
+

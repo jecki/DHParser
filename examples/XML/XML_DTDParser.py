@@ -26,27 +26,41 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
-    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
-    grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
-    Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
-    remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \
-    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    replace_by_children, remove_empty, remove_tokens, flatten, PLACEHOLDER, \
-    merge_adjacent, collapse, collapse_children_if, transform_result, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
-    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \
+from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
+    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
+from DHParser import dsl
+from DHParser.dsl import recompile_grammar, create_parser_transition, \
+    create_preprocess_transition, create_transition, PseudoJunction, never_cancel
+from DHParser.ebnf import grammar_changed
+from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
+    WARNING, ERROR, FATAL
+from DHParser.log import start_logging, suspend_logging, resume_logging
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode
+from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
+    last_value, matching_bracket, optional_last_value
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+    ThreadLocalSingletonFactory, expand_table
+from DHParser.trace import set_tracer, resume_notices_on, trace_history
+from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
+    transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
+    is_anonymous, name_matches, reduce_single_child, replace_by_single_child, replace_or_reduce, \
+    remove_whitespace, replace_by_children, remove_empty, remove_tokens, flatten, all_of, \
+    any_of, transformer, merge_adjacent, collapse, collapse_children_if, transform_result, \
+    remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \
+    keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    replace_content_with, forbid, assert_content, remove_infix_operator, \
-    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, node_maker, any_of, access_thread_locals, access_presets, \
-    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
-    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
+    replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \
+    left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory
+    has_attr, has_parent, has_children, apply_unless, apply_ifelse
+from DHParser import parse as parse_namespace__
+
 
 
 #######################################################################
@@ -183,24 +197,10 @@ class XML_DTDGrammar(Grammar):
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
-
-_raw_grammar = ThreadLocalSingletonFactory(XML_DTDGrammar)
-
-def get_grammar() -> XML_DTDGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_XML_DTD(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    XML_DTDGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################
@@ -313,13 +313,13 @@ XML_AST_transformation_table = {
 
 
 
-def CreateXMLTransformer() -> TransformerCallable:
+def CreateXMLTransformer() -> TransformerFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, transformation_table=XML_AST_transformation_table.copy())
 
 
-def get_transformer() -> TransformerCallable:
+def get_transformer() -> TransformerFunc:
     """Returns a thread/process-exclusive transformation function."""
     THREAD_LOCALS = access_thread_locals()
     try:

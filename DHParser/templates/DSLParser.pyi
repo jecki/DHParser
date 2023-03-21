@@ -9,7 +9,7 @@
 
 # # change the names of the source and destination stages. Source
 # # ("{NAME}") in this example must be the name of some earlier stage, though.
-# postprocessing: StageDescriptor = create_stage("{NAME}", "refined", PostProcessing)
+# postprocessing: Junction = create_transition("{NAME}", "refined", PostProcessing)
 #
 
 #######################################################################
@@ -19,19 +19,24 @@
 
 # add your own post-processing junctions, here, e.g. postprocessing.junction
 junctions = set([ASTTransformation, compiling])
-# add further destinations here
+# put your targets of interest, here. A target is the name of result (or stage)
+# of any transformation, compilation or postprocessing step after parsing.
+# Serializations of the stages listed here will be written to disk when
+# calling process_file() or batch_process().
 targets = set([compiling.dst])
-# choose a primary target (this will be used when running script without the --out option
-primary_target = "{NAME}".lower()
-# Add one or more serializations for those targets that are node-trees
+# add one or more serializations for those targets that are node-trees
 serializations = expand_table(dict([('*', ['sxpr'])]))
 
 #######################################################################
 
-def compile_src(source: str) -> Tuple[Any, List[Error]]:
+def compile_src(source: str, target: str = "{NAME}".lower()) -> Tuple[Any, List[Error]]:
+    """Compiles the source to a single targte and returns the result of the compilation
+    as well as a (possibly empty) list or errors or warnings that have occurred in the
+    process.
+    """
     full_compilation_result = full_compile(
-        source, preprocessing.factory, parsing.factory, junctions, set([primary_target]))
-    return full_compilation_result[primary_target]
+        source, preprocessing.factory, parsing.factory, junctions, set([target]))
+    return full_compilation_result[target]
 
 
 def process_file(source: str, out_dir: str = '') -> str:

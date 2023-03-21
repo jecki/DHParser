@@ -115,6 +115,7 @@ FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (docum
 DeriveFileNameFunc: TypeAlias = Union[Callable[[str], str], functools.partial]  # include name -> file name
 PreprocessorFunc: TypeAlias = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
                                     functools.partial]
+PreprocessorFactory: TypeAlias = Callable[[], PreprocessorFunc]
 Tokenizer: TypeAlias = Union[Callable[[str], Tuple[str, List[Error]]],
                              functools.partial]
 
@@ -467,4 +468,3 @@ def preprocess_includes(original_text: Optional[str],
     include_map, result = generate_include_map(original_name, original_text, find_next_include)
     mapping_func = functools.partial(srcmap_includes, inclmap=include_map)
     return PreprocessorResult(original_text, result, mapping_func, [])
-

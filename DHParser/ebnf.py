@@ -30,7 +30,7 @@ from functools import partial
 import keyword
 import os
 import sys
-from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Union, Optional, cast
+from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Union, Optional
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -63,7 +63,7 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOM
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, TypeAlias
-from DHParser.transform import TransformerCallable, transformer, remove_brackets, \
+from DHParser.transform import TransformerFunc, transformer, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
     BLOCK_LEAVES
@@ -86,11 +86,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'EBNFDirectives',
            'EBNFCompiler',
            'grammar_changed',
-           'compile_ebnf',
-           'PreprocessorFactoryFunc',
-           'ParserFactoryFunc',
-           'TransformerFactoryFunc',
-           'CompilerFactoryFunc')
+           'compile_ebnf')
 
 
 ########################################################################
@@ -118,14 +114,16 @@ try:
     import regex as re
 except ImportError:
     import re
+
 from DHParser.compile import Compiler, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, create_parser_stage, create_preprocess_stage, \\
-    create_stage, PreprocessStageDescriptor, ParserStageDescriptor, never_cancel
+from DHParser.dsl import recompile_grammar, create_parser_transition, \\
+    create_preprocess_transition, create_transition, PseudoJunction, never_cancel
 from DHParser.ebnf import grammar_changed
-from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL
+from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \\
+    WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
@@ -138,7 +136,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, Preprocessor
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \\
     ThreadLocalSingletonFactory, expand_table
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
-from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerCallable, \\
+from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \\
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \\
     is_anonymous, name_matches, reduce_single_child, replace_by_single_child, replace_or_reduce, \\
     remove_whitespace, replace_by_children, remove_empty, remove_tokens, flatten, all_of, \\
@@ -149,8 +147,9 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \\
     left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \\
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \\
-    has_attr, has_parent
+    has_attr, has_parent, has_children, apply_unless, apply_ifelse
 from DHParser import parse as parse_namespace__
+
 '''
 
 
@@ -904,13 +903,13 @@ EBNF_AST_transformation_table = {
 }
 
 
-def EBNFTransform() -> TransformerCallable:
+def EBNFTransform() -> TransformerFunc:
     return partial(transformer,
                    transformation_table=EBNF_AST_transformation_table.copy(),
                    src_stage='cst', dst_stage='ast')
 
 
-def get_ebnf_transformer() -> TransformerCallable:
+def get_ebnf_transformer() -> TransformerFunc:
     THREAD_LOCALS = access_thread_locals()
     try:
         ebnf_transformer = THREAD_LOCALS.EBNF_transformer_singleton
@@ -935,11 +934,6 @@ def transform_ebnf(cst: RootNode) -> RootNode:
 ########################################################################
 
 
-PreprocessorFactoryFunc: TypeAlias = Callable[[], PreprocessorFunc]
-ParserFactoryFunc: TypeAlias = Callable[[], Grammar]
-TransformerFactoryFunc: TypeAlias = Callable[[], TransformerCallable]
-CompilerFactoryFunc: TypeAlias = Callable[[], Compiler]
-
 PREPROCESSOR_FACTORY = '''
 
 # To capture includes, replace the NEVER_MATCH_PATTERN 
@@ -953,21 +947,22 @@ def {NAME}Tokenizer(original_text) -> Tuple[str, List[Error]]:
     # to the source code and returns the modified source.
     return original_text, []
 
-preprocessing: PreprocessStageDescriptor = create_preprocess_stage(
+preprocessing: PseudoJunction = create_preprocess_transition(
     {NAME}Tokenizer, RE_INCLUDE, RE_COMMENT)
 '''
 
 
 GRAMMAR_FACTORY = '''
     
-parsing: ParserStageDescriptor = create_parser_stage(
-    {NAME}Grammar)    
+parsing: PseudoJunction = create_parser_transition(
+    {NAME}Grammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 '''
 
 
 TRANSFORMER_FACTORY = '''
 
-ASTTransformation: Junction = create_stage(
+ASTTransformation: Junction = create_transition(
     {NAME}_AST_transformation_table.copy(), "cst", "ast", "transtable")
 
 '''
@@ -975,7 +970,7 @@ ASTTransformation: Junction = create_stage(
 
 COMPILER_FACTORY = '''
 
-compiling: Junction = create_stage(
+compiling: Junction = create_transition(
     {NAME}Compiler, "ast", "{NAME}".lower())
 '''
 

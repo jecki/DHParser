@@ -33,21 +33,20 @@ from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, 
     Callable, Sequence, Dict, Set
 
 import DHParser.ebnf
-from DHParser.compile import Compiler, compile_source, full_compile, Junction, ParserCallable
+from DHParser.compile import Compiler, compile_source, full_compile, Junction, CompilerFactory
 from DHParser.configuration import get_config_value
 from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
-    get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
-    PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
+    get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
 from DHParser.nodetree import Node, RootNode
-from DHParser.parse import Grammar
+from DHParser.parse import Grammar, ParserFactory, ParserFunc
 from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
-    gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes
+    gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes, PreprocessorFactory
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
-from DHParser.transform import TransformerCallable, TransformationDict, transformer
+from DHParser.transform import TransformerFunc, TransformationDict, transformer, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
     compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count
 
@@ -64,12 +63,14 @@ __all__ = ('DefinitionError',
            'compile_on_disk',
            'recompile_grammar',
            'restore_server_script',
-           'create_preprocess_stage',
-           'create_parser_stage',
-           'create_compiler_stage',
-           'create_transtable_stage',
-           'create_evaluation_stage',
-           'create_stage',
+           'PseudoJunction',
+           'create_preprocess_transition',
+           'create_parser_transition',
+           'process_template',
+           'create_compiler_transition',
+           'create_transtable_transition',
+           'create_evaluation_transition',
+           'create_transition',
            'process_file',
            'never_cancel',
            'batch_process')
@@ -199,7 +200,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 def compileDSL(text_or_file: str,
                preprocessor: Optional[PreprocessorFunc],
                dsl_grammar: Union[str, Grammar],
-               ast_transformation: TransformerCallable,
+               ast_transformation: TransformerFunc,
                compiler: Compiler,
                fail_when: ErrorCode = ERROR) -> Any:
     """
@@ -278,7 +279,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
 def grammar_provider(ebnf_src: str,
                      branding="DSL",
                      additional_code: str = '',
-                     fail_when: ErrorCode = ERROR) -> ParserFactoryFunc:
+                     fail_when: ErrorCode = ERROR) -> ParserFactory:
     """
     Compiles an EBNF-grammar and returns a grammar-parser provider
     function for that grammar.
@@ -334,8 +335,8 @@ def split_source(file_name: str, file_content: str) -> List[str]:
 
 
 def load_compiler_suite(compiler_suite: str) -> \
-        Tuple[PreprocessorFactoryFunc, ParserFactoryFunc,
-              TransformerFactoryFunc, CompilerFactoryFunc]:
+        Tuple[PreprocessorFactory, ParserFactory,
+              TransformerFactory, CompilerFactory]:
     """
     Extracts a compiler suite from file or string ``compiler_suite``
     and returns it as a tuple (preprocessor, parser, ast, compiler).
@@ -428,7 +429,7 @@ def compile_on_disk(source_file: str,
                     compiler_suite: str = "",
                     extension: str = ".xml") -> Iterable[Error]:
     """
-    Compiles the a source file with a given compiler and writes the
+    Compiles a source file with a given compiler and writes the
     result to a file.
 
     If no ``compiler_suite`` is given it is assumed that the source
@@ -466,11 +467,11 @@ def compile_on_disk(source_file: str,
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
         compiler1 = cfactory()
     else:
-        sfactory = get_ebnf_preprocessor  # PreprocessorFactoryFunc
-        pfactory = get_ebnf_grammar       # ParserFactoryFunc
-        tfactory = get_ebnf_transformer   # TransformerFactoryFunc
-        cfactory = get_ebnf_compiler      # CompilerFactoryFunc
-        compiler1 = cfactory()            # Compiler
+        sfactory = get_ebnf_preprocessor  # PreprocessorFactory
+        pfactory = get_ebnf_grammar       # ParserFactory
+        tfactory = get_ebnf_transformer   # TransformerFactory
+        cfactory = get_ebnf_compiler      # CompilerFactory
+        compiler1 = cfactory()            # CompilerFunc
 
     is_ebnf_compiler = False  # type: bool
     if isinstance(compiler1, EBNFCompiler):
@@ -532,6 +533,14 @@ def compile_on_disk(source_file: str,
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHParser.ebnf.DHPARSER_IMPORTS
+        else:
+            i = imports.find('from DHParser import')
+            if i >= 0 and imports.find('from DHParser.') < 0:
+                # update old imports block
+                k = DHParser.ebnf.DHPARSER_IMPORTS.find('from DHParser.')
+                assert k >= 0
+                print('Updating old DHParser-imports block in ...Parser.py-script')
+                imports = imports[:i] + DHParser.ebnf.DHPARSER_IMPORTS[k:]
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
@@ -694,26 +703,13 @@ def restore_server_script(ebnf_filename: str,
 #
 #######################################################################
 
-PreprocessStageDescriptor = namedtuple('PreprocessStageDescriptor',
-    ['factory',             # get thread safe preprocessing function
-     'process'],            # preprocess thread-safely (string|StringView) -> string|StringView
-    module=__name__)
+PseudoJunction = namedtuple('PseudoJunction',
+                            ['factory'],  # get thread safe preprocessing function
+                            # 'process'], # preprocess thread-safely
+                            module=__name__)
 
-ParserStageDescriptor = namedtuple('ParserStageDescriptor',
-    ['factory',             # get thread safe parsing funciton
-     'process'],            # parse thread-safely (string|StringView) -> RootNode
-    module=__name__)            #
-
-# StageDescriptor = namedtuple('StageDescriptor',
-#     ['factory',             # get thread-specific transformation function
-#      'process',             # transform thread-safely (RootNode) -> Any
-#      'junction'],           # junction, see compile.py
-#     module=__name__)
-
-
-# In the following PARTICAL FUNCTIONS are used rather than local functions,
+# In the following PARTIAL FUNCTIONS are used rather than local functions,
 # because the closure of local functions cannot be pickled!
-
 
 # Preprocessing-Stage #################################################
 
@@ -725,19 +721,19 @@ def _preprocessor_factory(tokenizer, include_regex, comment_regex) -> Preprocess
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-def _preprocess(source, factory) -> Union[str, StringView]:
-    return factory()(source)
+# def _preprocess(source, factory) -> Union[str, StringView]:
+#     return factory()(source)
 
 
-def create_preprocess_stage(tokenizer: Tokenizer,
-                            include_regex, comment_regex) -> PreprocessStageDescriptor:
+def create_preprocess_transition(tokenizer: Tokenizer,
+                                 include_regex, comment_regex) -> PseudoJunction:
     """Creates a factory for thread-safe preprocessing functions as well as a
     thread-safe preprocessing function."""
     preprocessor_factory = partial(_preprocessor_factory,
         tokenizer=tokenizer, include_regex=include_regex, comment_regex=comment_regex)
     thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
-    preprocess = partial(_preprocess, factory=thread_safe_factory)
-    return PreprocessStageDescriptor(thread_safe_factory, preprocess)
+    # preprocess = partial(_preprocess, factory=thread_safe_factory)
+    return PseudoJunction(thread_safe_factory)  # , preprocess)
 
 
 # Parsing-stage #######################################################
@@ -756,19 +752,19 @@ def _parser_factory(raw_grammar) -> Grammar:
     return grammar
 
 
-def _parse_func(parser_factory: Callable, document, start_parser = "root_parser__",
-                *, complete_match=True):
-    return parser_factory()(document, start_parser, complete_match=complete_match)
+# def _parse_func(parser_factory: Callable, document, start_parser = "root_parser__",
+#                 *, complete_match=True):
+#     return parser_factory()(document, start_parser, complete_match=complete_match)
 
 
-def create_parser_stage(grammar_class: type) -> ParserStageDescriptor:
+def create_parser_transition(grammar_class: type) -> PseudoJunction:
     """Creates a factory for thread-safe parser functions as well as a
     thread-safe parser function."""
     assert issubclass(grammar_class, Grammar)
     raw_grammar = ThreadLocalSingletonFactory(grammar_class)
     factory = partial(_parser_factory, raw_grammar=raw_grammar)
-    process = partial(_parse_func, parser_factory=factory)
-    return PreprocessStageDescriptor(factory, process)
+    # process = partial(_parse_func, parser_factory=factory)
+    return PseudoJunction(factory)  # , process)
 
 
 # Tree-Processing-Stages ##############################################
@@ -787,30 +783,30 @@ def process_template(src_tree: Node, src_stage: str, dst_stage: str,
     return result
 
 
-def create_compiler_stage(compile_class: type,
-                          src_stage: str,
-                          dst_stage: str) -> Junction:
+def create_compiler_transition(compile_class: type,
+                               src_stage: str,
+                               dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
-    a :py:class:`compile.Compiler`-class.
+    a :py:class:`compile.Compiler` or another callable class.
     """
-    assert issubclass(compile_class, Compiler)
+    assert callable(compile_class)
     assert src_stage and src_stage.islower()
     assert dst_stage and dst_stage.islower()
     factory = ThreadLocalSingletonFactory(compile_class)
-    process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
-                      factory_function=factory)
+    # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+    #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)
 
 
 # 2. tree-processing with transformation-table
 
-def _make_transformer(src_stage, dst_stage, table) -> TransformerCallable:
+def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
     return partial(transformer, transformation_table=table.copy(),
                    src_stage=src_stage, dst_stage=dst_stage)
 
-def create_transtable_stage(table: TransformationDict,
-                            src_stage: str,
-                            dst_stage: str) -> Junction:
+def create_transtable_transition(table: TransformationDict,
+                                 src_stage: str,
+                                 dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a transformation-table :py:func:`transform.traverse`.
     """
@@ -819,8 +815,8 @@ def create_transtable_stage(table: TransformationDict,
     assert dst_stage and dst_stage.islower()
     make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
     factory = ThreadLocalSingletonFactory(make_transformer)
-    process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
-                      factory_function=factory)
+    # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+    #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)
 
 
@@ -836,10 +832,10 @@ def _make_evaluation(actions, supply_path_arg) -> Callable[[Node], Any]:
     return evaluate_with_path if supply_path_arg else evaluate_without_path
 
 
-def create_evaluation_stage(actions: Dict[str, Callable],
-                            src_stage: str,
-                            dst_stage: str,
-                            supply_path_arg: bool=True) -> Junction:
+def create_evaluation_transition(actions: Dict[str, Callable],
+                                 src_stage: str,
+                                 dst_stage: str,
+                                 supply_path_arg: bool=True) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     an evaluation-table :py:meth:`nodetree.Node.evaluate`.
     """
@@ -849,32 +845,32 @@ def create_evaluation_stage(actions: Dict[str, Callable],
     make_evaluation = partial(
         _make_evaluation, actions=actions, supply_path_arg=supply_path_arg)
     factory = ThreadLocalSingletonFactory(make_evaluation)
-    process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
-                      factory_function=factory)
+    # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+    #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)
 
 
 # generic tree-processing function
 
-def create_stage(tool: Union[dict, type],
-                 src_stage: str,
-                 dst_stage: str,
-                 hint: str='?') -> Junction:
+def create_transition(tool: Union[dict, type],
+                      src_stage: str,
+                      dst_stage: str,
+                      hint: str='?') -> Junction:
     """Generic stage-creation function for tree-transforming stages where a tree-transforming
     stage is a stage which either rehapes a node-tree or transforms a nodetree into
     something else, but not a stage where something else (e.g. a text) is turned into
     a node-tree."""
     if isinstance(tool, type):
-        return create_compiler_stage(tool, src_stage, dst_stage)
+        return create_compiler_transition(tool, src_stage, dst_stage)
     else:
         assert isinstance(tool, dict)
         if any(isinstance(value, Sequence) for value in tool.values()) \
                 or hint == "transtable":
-            return create_transtable_stage(tool, src_stage, dst_stage)
+            return create_transtable_transition(tool, src_stage, dst_stage)
         elif hint == "evaluate_with_path":
-            return create_evaluation_stage(tool, src_stage, dst_stage, True)
+            return create_evaluation_transition(tool, src_stage, dst_stage, True)
         elif hint == "evaluate_without_path":
-            return create_evaluation_stage(tool, src_stage, dst_stage, False)
+            return create_evaluation_transition(tool, src_stage, dst_stage, False)
         else:
             raise AssertionError('Cannot determine transformation-type automatically! '
                 'Please, add optional parameter "hint" to the function call with one of the '
@@ -889,8 +885,8 @@ def create_stage(tool: Union[dict, type],
 
 
 def process_file(source: str, out_dir: str,
-                 preprocessor: Optional[PreprocessorFunc],
-                 parser: ParserCallable,
+                 preprocessor_factory: PreprocessorFactory,
+                 parser_factory: ParserFactory,
                  junctions: Set[Junction],
                  targets: Set[str],
                  serializations: Dict[str, List[str]]) -> str:
@@ -900,10 +896,26 @@ def process_file(source: str, out_dir: str,
     appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
     extension. Returns the name of the error-messages file or an empty
     string, if no errors or warnings occurred.
+
+    :param source:  the source document or the filename of the source-document
+    :param out_dir:  the path of the output-directory. If the output-directory
+        does not exist, it will be created.
+    :param preprocessor_factory:  A factory-function that returns a
+        preprocessing function.
+    :param parser_factory: A factory-function that returns a parser function
+        which, usually, is a :py:class:`parse.Grammar`-object.
+    :param junctions:  a set of junctions for all processing stages beyond
+        parsing.
+    :param serializations: A dictionary of serialization names, e.g. "sxpr",
+        "xml", "json" for those target stages that still are node-trees. These
+        will be serialized and written to disk in all given serializations.
+
+    :return: either the empty string or the file name of a file that contains
+        the errors or warnings that occurred while processing the source.
     """
     source_filename = source if is_filename(source) else 'unknown_document_name'
     dest_name = os.path.splitext(os.path.basename(source_filename))[0]
-    results = full_compile(source, preprocessor, parser, junctions, targets)
+    results = full_compile(source, preprocessor_factory, parser_factory, junctions, targets)
     end_results = {t: r for t, r in results.items() if t in targets}
 
     # create target directories
