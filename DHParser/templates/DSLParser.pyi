@@ -18,9 +18,9 @@
 # (See DHParser.compile for a description of junctions)
 
 # add your own post-processing junctions, here, e.g. postprocessing.junction
-junctions = set([ASTTransformation.junction, compiling.junction])
+junctions = set([ASTTransformation, compiling])
 # add further destinations here
-targets = set([compiling.junction.dst])
+targets = set([compiling.dst])
 # choose a primary target (this will be used when running script without the --out option
 primary_target = "{NAME}".lower()
 # Add one or more serializations for those targets that are node-trees

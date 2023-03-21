@@ -41,11 +41,12 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
+from DHParser.nodetree import Node, RootNode
 from DHParser.parse import Grammar
 from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
     gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes
-from DHParser.nodetree import Node, RootNode
-from DHParser.trace import set_tracer, trace_history, resume_notices_on, resume_notices_off
+from DHParser.stringview import StringView
+from DHParser.trace import set_tracer, trace_history, resume_notices_on
 from DHParser.transform import TransformerCallable, TransformationDict, transformer
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
     compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count
@@ -703,11 +704,11 @@ ParserStageDescriptor = namedtuple('ParserStageDescriptor',
      'process'],            # parse thread-safely (string|StringView) -> RootNode
     module=__name__)            #
 
-StageDescriptor = namedtuple('StageDescriptor',
-    ['factory',             # get thread-specific transformation function
-     'process',             # transform thread-safely (RootNode) -> Any
-     'junction'],           # junction, see compile.py
-    module=__name__)
+# StageDescriptor = namedtuple('StageDescriptor',
+#     ['factory',             # get thread-specific transformation function
+#      'process',             # transform thread-safely (RootNode) -> Any
+#      'junction'],           # junction, see compile.py
+#     module=__name__)
 
 
 # In the following PARTICAL FUNCTIONS are used rather than local functions,
@@ -724,7 +725,7 @@ def _preprocessor_factory(tokenizer, include_regex, comment_regex) -> Preprocess
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-def _preprocess(source, factory) -> Union[String, StringView]:
+def _preprocess(source, factory) -> Union[str, StringView]:
     return factory()(source)
 
 
@@ -788,7 +789,7 @@ def process_template(src_tree: Node, src_stage: str, dst_stage: str,
 
 def create_compiler_stage(compile_class: type,
                           src_stage: str,
-                          dst_stage: str) -> StageDescriptor:
+                          dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a :py:class:`compile.Compiler`-class.
     """
@@ -798,7 +799,7 @@ def create_compiler_stage(compile_class: type,
     factory = ThreadLocalSingletonFactory(compile_class)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
                       factory_function=factory)
-    return StageDescriptor(factory,  process, Junction(src_stage, factory, dst_stage))
+    return Junction(src_stage, factory, dst_stage)
 
 
 # 2. tree-processing with transformation-table
@@ -809,7 +810,7 @@ def _make_transformer(src_stage, dst_stage, table) -> TransformerCallable:
 
 def create_transtable_stage(table: TransformationDict,
                             src_stage: str,
-                            dst_stage: str) -> StageDescriptor:
+                            dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a transformation-table :py:func:`transform.traverse`.
     """
@@ -820,7 +821,7 @@ def create_transtable_stage(table: TransformationDict,
     factory = ThreadLocalSingletonFactory(make_transformer)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
                       factory_function=factory)
-    return StageDescriptor(factory, process, Junction(src_stage, factory, dst_stage))
+    return Junction(src_stage, factory, dst_stage)
 
 
 # 3. tree-processing with evaluation-table
@@ -838,7 +839,7 @@ def _make_evaluation(actions, supply_path_arg) -> Callable[[Node], Any]:
 def create_evaluation_stage(actions: Dict[str, Callable],
                             src_stage: str,
                             dst_stage: str,
-                            supply_path_arg: bool=True) -> StageDescriptor:
+                            supply_path_arg: bool=True) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     an evaluation-table :py:meth:`nodetree.Node.evaluate`.
     """
@@ -850,7 +851,7 @@ def create_evaluation_stage(actions: Dict[str, Callable],
     factory = ThreadLocalSingletonFactory(make_evaluation)
     process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
                       factory_function=factory)
-    return StageDescriptor(factory, process, Junction(src_stage, factory, dst_stage))
+    return Junction(src_stage, factory, dst_stage)
 
 
 # generic tree-processing function
@@ -858,7 +859,7 @@ def create_evaluation_stage(actions: Dict[str, Callable],
 def create_stage(tool: Union[dict, type],
                  src_stage: str,
                  dst_stage: str,
-                 hint: str='?') -> StageDescriptor:
+                 hint: str='?') -> Junction:
     """Generic stage-creation function for tree-transforming stages where a tree-transforming
     stage is a stage which either rehapes a node-tree or transforms a nodetree into
     something else, but not a stage where something else (e.g. a text) is turned into
