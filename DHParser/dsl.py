@@ -533,6 +533,8 @@ def compile_on_disk(source_file: str,
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHParser.ebnf.DHPARSER_IMPORTS
+        elif imports.find("from DHParser.") < 0:
+            imports += "\nfrom DHParser.dsl import PseudoJunction, create_parser_transition\n"
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
@@ -913,13 +915,14 @@ def process_file(source: str, out_dir: str,
     # create target directories
     for t in end_results.keys():
         path = os.path.join(out_dir, t)
-        if not os.path.exists(path):
+        try:  # do not use os.path.exsits, here: RACE CONDITION!
             os.makedirs(path)
-        elif not os.path.isdir(path):
-            error_file_name = dest_name + '_FATAL_ERROR.txt'
-            with open(error_file_name, 'w', encoding='utf-8') as f:
-                f.write(f'Destination directory path "{path}" already in use!')
-            return error_file_name
+        except FileExistsError:
+            if not os.path.isdir(path):
+                error_file_name = dest_name + '_FATAL_ERROR.txt'
+                with open(error_file_name, 'w', encoding='utf-8') as f:
+                    f.write(f'Destination directory path "{path}" already in use!')
+                return error_file_name
 
     # write data
     errors = [];  errstrs = set()
