@@ -53,6 +53,7 @@ __all__ = ('TransformationDict',
            'ConditionFunc',
            'KeyFunc',
            'TransformerFunc',
+           'TransformerCallable',
            'transformation_factory',
            'key_node_name',
            'Filter',
@@ -168,6 +169,7 @@ ConditionFunc: TypeAlias = Callable  # Callable[[Path], bool]
 KeyFunc: TypeAlias = Callable[[Node], str]
 CriteriaType: TypeAlias = Union[int, str, Callable]
 TransformerFunc: TypeAlias = Union[Callable[[RootNode], RootNode], partial]
+TransformerCallable = TransformerFunc  # Deprecated: Use TransformerFunc!
 TransformerFactory: TypeAlias = Callable[[], TransformerFunc]
 
 
