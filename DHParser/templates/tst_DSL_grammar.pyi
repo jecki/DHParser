@@ -16,7 +16,7 @@ if scriptdir not in sys.path:
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
-        finalize_presets
+        finalize_presets, get_config_value
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
@@ -30,7 +30,7 @@ def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptdir, TEST_DIRNAME)
     testing.create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
-    first_run = os.path.exists(os.path.splitext(grammar_src)[0] + 'Parser.py')
+    first_run = not os.path.exists(os.path.splitext(grammar_src)[0] + 'Parser.py')
     if not dsl.recompile_grammar(grammar_src, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
@@ -76,10 +76,11 @@ if __name__ == '__main__':
         print('Argument -d or --debug is deprecated! Parsing-histories of failed tests will '
               'be logged per default. This can be turned off with -n or --nohistory .')
 
+    config_test_parallelization = get_config_value('test_parallelization')
     access_presets()
     if args.singlethread:
         set_preset_value('test_parallelization', False)
-    elif not get_config_value('test_parallelization'):
+    elif not config_test_parallelization:
         print('Tests will be run in a single-thread, because test-multiprocessing '
               'has been turned off in configuration file.')
     set_preset_value('history_tracking', not args.nohistory)

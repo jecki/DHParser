@@ -1,4 +1,6 @@
-# User Interface for Transformation
+#!/usr/bin/env python3
+
+"""DSLApp.py - a simple GUI for the compilation of DSL-files"""
 
 import sys
 import os
@@ -9,14 +11,14 @@ import webbrowser
 from tkinter import ttk
 from tkinter import filedialog, messagebox
 
-import {NAME}Parser
+import DSLParser
 
 
-class {NAME}App(tkinter.Tk):
+class DSLApp(tkinter.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw()
-        self.title('{NAME} App')
+        self.title('DSL App')
         self.minsize(480, 320)
         self.geometry("800x600")
         self.option_add('*tearOff', False)
@@ -126,7 +128,7 @@ class {NAME}App(tkinter.Tk):
                 if not os.path.exists(self.outdir):  os.mkdir(self.outdir)
                 with self.lock:  self.cancel_flag = False
                 self.worker = threading.Thread(
-                    target = {NAME}Parser.batch_process,
+                    target = DSLParser.batch_process,
                     args = (self.names, self.outdir),
                     kwargs = dict([('log_func', self.log_callback),
                                    ('cancel_func', self.cancel_callback)]))
@@ -166,7 +168,7 @@ class {NAME}App(tkinter.Tk):
 
 
 if __name__ == '__main__':
-    if not {NAME}Parser.main(called_from_app=True):
-        app = {NAME}App()
+    if not DSLParser.main(called_from_app=True):
+        app = DSLApp()
         app.mainloop()
 

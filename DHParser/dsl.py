@@ -697,16 +697,13 @@ def create_scripts(ebnf_filename: str,
 
     def create_script(script_name, template_name):
         nonlocal base
-        template = read_template('DSLServer.pyi')
-        # reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
-        # rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(reldhparserdir))
-        serverscript = base + 'Server.py'
-        with open(serverscript, 'w', encoding='utf-8') as f:
+        template = read_template(template_name)
+        with open(script_name, 'w', encoding='utf-8') as f:
             f.write(template.replace('DSL', name))
         if platform.system() != "Windows":
             # set file permissions so that the server-script can be executed
-            st = os.stat(serverscript)
-            os.chmod(serverscript, st.st_mode | stat.S_IEXEC)
+            st = os.stat(script_name)
+            os.chmod(script_name, st.st_mode | stat.S_IEXEC)
 
     if not parser_name:  parser_name = base + 'Parser.py'
     if server_name is not None and not server_name:  server_name = base + 'Server.py'
