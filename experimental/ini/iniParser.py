@@ -51,6 +51,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
+from DHParser.dsl import PseudoJunction, create_parser_transition
+
 
 #######################################################################
 #
@@ -95,7 +97,7 @@ def preprocess_ini(source):
 class iniGrammar(Grammar):
     r"""Parser for an ini source file.
     """
-    source_hash__ = "3c1c553d5d0e95aee47ffb654683f53b"
+    source_hash__ = "6eb3b31f237c49092f2038d580ed36df"
     disposable__ = re.compile('EOF$|TEXTLINE$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -117,24 +119,10 @@ class iniGrammar(Grammar):
                       'entry': [re.compile(r'\n\s*(?=\w|\[)')]}
     root__ = ini_file
     
-
-_raw_grammar = ThreadLocalSingletonFactory(iniGrammar, ident=1)
-
-def get_grammar() -> iniGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_ini(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    iniGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################

@@ -108,7 +108,7 @@ def create_project(path: str):
     # The following is left to the user as an exercise
     # print('Creating file "%s".' % (name + 'Parser.py'))
     # recompile_grammar(name + '.ebnf', force=True)
-    print(f'\nNow generate a DSL-parser from the EBNF-grammar by running\n'
+    print(f'\nNow generate a parser for {name}-files from the EBNF-grammar by running\n'
           f'\n    python tst_{name}_gramar.py\n')
     os.chdir(curr_dir)
 

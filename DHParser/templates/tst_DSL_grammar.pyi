@@ -30,6 +30,7 @@ def recompile_grammar(grammar_src, force):
     grammar_tests_dir = os.path.join(scriptdir, TEST_DIRNAME)
     testing.create_test_templates(grammar_src, grammar_tests_dir)
     # recompiles Grammar only if it has changed
+    first_run = os.path.exists(os.path.splitext(grammar_src)[0] + 'Parser.py')
     if not dsl.recompile_grammar(grammar_src, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
@@ -38,7 +39,7 @@ def recompile_grammar(grammar_src, force):
         with open(error_path, 'r', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
-    dsl.restore_server_script(grammar_src)
+    if first_run:  dsl.create_scripts(grammar_src)
 
 
 def run_grammar_tests(fn_pattern, parser_factory, transformer_factory):
@@ -57,21 +58,40 @@ def run_grammar_tests(fn_pattern, parser_factory, transformer_factory):
 
 
 if __name__ == '__main__':
-    argv = sys.argv[:]
-    if len(argv) > 1 and sys.argv[1] == "--debug":
-        DEBUG = True
-        del argv[1]
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description='Runs all grammar-tests in "test_grammar/" '
+        'or a given test - after (re-)creating the parser script if necessary.')
+    parser.add_argument('files', nargs='*')
+    parser.add_argument('-n', '--nohistory', action='store_const', const='nohistory',
+                        help="Don't log parsing history of failed tests.")
+    parser.add_argument('-d', '--debug', action='store_const', const='debug',
+                        help='Deprecated argument.')
+    parser.add_argument('-s', '--scripts', action='store_const', const='scripts',
+        help="Creates a server- and an app-script. Existing scripts will not be overwritten!")
+    parser.add_argument('--singlethread', action='store_const', const='singlethread',
+                        help='Run tests in a single thread (recommended only for debugging)')
+    args = parser.parse_args()
+
+    if args.debug is not None:
+        print('Argument -d or --debug is deprecated! Parsing-histories of failed tests will '
+              'be logged per default. This can be turned off with -n or --nohistory .')
 
     access_presets()
-    # set_preset_value('test_parallelization', True)
-    if DEBUG:  set_preset_value('history_tracking', True)
+    if args.singlethread:
+        set_preset_value('test_parallelization', False)
+    elif not get_config_value('test_parallelization'):
+        print('Tests will be run in a single-thread, because test-multiprocessing '
+              'has been turned off in configuration file.')
+    set_preset_value('history_tracking', not args.nohistory)
     finalize_presets()
 
-    if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or
-        os.path.splitext(argv[1])[1].lower() in testing.TEST_READERS.keys())):
+    if args.scripts:
+        dsl.create_scripts(os.path.join(scriptdir, '{name}.ebnf'))
+
+    if args.files:
         # if called with a single filename that is either an EBNF file or a known
         # test file type then use the given argument
-        arg = argv[1]
+        arg = args.files[0]
     else:
         # otherwise run all tests in the test directory
         arg = '*_test_*.ini'

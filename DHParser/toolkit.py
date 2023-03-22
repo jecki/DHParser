@@ -358,8 +358,8 @@ def deprecation_warning(message: str):
 
 
 def deprecated(message: str) -> Callable:
-    """Marks a function as deprecated and emits a deprecation
-    message on its first use::
+    """Decorator that marks a function as deprecated and emits
+    a deprecation message on its first use::
 
         >>> @deprecated('This function is deprecated!')
         ... def bad():

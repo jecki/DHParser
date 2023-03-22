@@ -48,7 +48,7 @@ from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
 from DHParser.transform import TransformerFunc, TransformationDict, transformer, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
-    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count
+    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count, deprecated
 
 
 __all__ = ('DefinitionError',
@@ -62,6 +62,7 @@ __all__ = ('DefinitionError',
            'create_parser',
            'compile_on_disk',
            'recompile_grammar',
+           'create_scripts',
            'restore_server_script',
            'PseudoJunction',
            'create_preprocess_transition',
@@ -649,20 +650,40 @@ def recompile_grammar(ebnf_filename: str,
     return True
 
 
-def restore_server_script(ebnf_filename: str,
-                          parser_name: str = '',
-                          server_name: str = '',
-                          overwrite: bool = False):
-    """Creates a script for compiling texts adhering to the given grammar
-    with a server. Because the server script relies on a parser script,
-    a parser scripte will be created, too, if it does not yet exist.
+def create_scripts(ebnf_filename: str,
+                   parser_name: str = '',
+                   server_name: Optional[str] = '',
+                   app_name: Optional[str] = '',
+                   overwrite: bool = False):
+    """Creates a parser script from the grammar with the filename
+    ``ebnf_filename'`` or, if ebnf_filename referes to a directory from all
+    grammars in files ending with ".ebnf" in that directory.
+
+    If ``server_name`` is not None a script for starting a parser-server
+    will be created as well. Running the parser as a server has the advantage
+    that the startup time for calling the parser is greatly reduced for
+    subsequent parser calls. (While the same can be achieved with running
+    the parser script in batch-processing-mode by passing a directory or
+    several filenames on the command line to the parser script, batch
+    processing is not suitable for all application cases. For example,
+    it is not usable when implementing language servers to feed
+    editors with data from the parseing process.)
+
+    if ``app_name`` is not None an application script with a tkinter-based
+    graphical user interface will be created as well. (When distributing
+    this script with pyinstaller, parallel processing should be turned off
+    at least on MS Windows systems!)
 
     :param ebnf_filename: The filename of the grammar, from which the servfer
         script's filename is derived.
     :param parser_name: The filename of the parser script or the empty string
         if the default filename shall be used.
     :param server_name: The filename of the server script of the empty string
-        if the default filename shall be used.
+        if the default filename shall be used, or None if no server script
+        shall be created.
+    :param app_name: The filename of the server script of the empty string
+        if the default filename shall be used, or None if no app-script
+        shall be created
     :param overwrite: If True an existing server script will be overwritten.
     """
     if os.path.isdir(ebnf_filename):
@@ -673,22 +694,36 @@ def restore_server_script(ebnf_filename: str,
 
     base, _ = os.path.splitext(ebnf_filename)
     name = os.path.basename(base)
-    if not server_name:
-        server_name = base + 'Server.py'
-    if not parser_name:
-        parser_name = base + 'Parser.py'
-    if not os.path.exists(server_name) or overwrite:
+
+    def create_script(script_name, template_name):
+        nonlocal base
         template = read_template('DSLServer.pyi')
         # reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
         # rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(reldhparserdir))
         serverscript = base + 'Server.py'
-        with open(serverscript, 'w', encoding='utf-8') as f:  
+        with open(serverscript, 'w', encoding='utf-8') as f:
             f.write(template.replace('DSL', name))
         if platform.system() != "Windows":
             # set file permissions so that the server-script can be executed
             st = os.stat(serverscript)
             os.chmod(serverscript, st.st_mode | stat.S_IEXEC)
+
+    if not parser_name:  parser_name = base + 'Parser.py'
+    if server_name is not None and not server_name:  server_name = base + 'Server.py'
+    if app_name is not None and not app_name:  app_name = base + 'App.py'
+    if server_name is not None and (not os.path.exists(server_name) or overwrite):
+        create_script(server_name, "DSLServer.pyi")
+    if app_name is not None and (not os.path.exists(app_name) or overwrite):
+        create_script(app_name, "DSLApp.pyi")
     if not os.path.exists(parser_name):  recompile_grammar(ebnf_filename, parser_name)
+
+
+@deprecated("restore_server_script() is deprecated! Please, use create_additional_scripts().")
+def restore_server_script(ebnf_filename: str,
+                          parser_name: str = '',
+                          server_name: str = '',
+                          overwrite: bool = False):
+    create_scripts(ebnf_filename, parser_name, server_name, None, overwrite)
 
 
 #######################################################################
