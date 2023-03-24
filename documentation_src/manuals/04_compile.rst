@@ -515,7 +515,7 @@ Function :py:func:`DHParser.compile.process_tree` is a convenient helper functio
 that calls a given processing stage only, if the tree handed over from the last stage
 does not contain any fatal errors. Thus, a sequence of processing stages can be
 written as a sequence of calls of :py:func:`DHParser.compile.process_tree` without
-the need of any if clauses the check the results for fatal errors after each call.
+the need of any if clauses to check the results for fatal errors after each call.
 
 The extended pipeline
 ^^^^^^^^^^^^^^^^^^^^^
@@ -643,7 +643,7 @@ It is not obligatory to set the `stage`-field to any value. It can also
 be left empty. But to do so helps when debugging
 processing pipelines and also allows :py:func:`~compile.run_pipeline`
 to check for errors in the setup of a pipeline. The following
-examples reflect this practise.
+examples reflect this practice.
 
 Now let's define the "pretty-print"-compilation function and the respective junction::
 
@@ -768,6 +768,9 @@ Types and Functions
         transformer and compiler in sequence on a source text. In other words, it
         runs the "standard-pipeline" on the source text.
 
+   * :py:func:`compile.full_compile`: Like :py:func:`compile.compile_source` but
+        also runs any post-processing stages beyond the compilation.
+
    * :py:func:`compile.process_tree`: Calls a compiler on a given tree only if
         the tree does not already had any fatal errors in a previous processing
         stage. This function is syntactic sugar to allow allow writing sequences
@@ -780,5 +783,5 @@ Types and Functions
         function returned by the factory.
 
    * :py:func:`~compile.run_pipeline`: Runs an extended pipeline of compilation or
-        transformation functions (or, more precisely, callables) that is definied
+        transformation functions (or, more precisely, callables) that is defined
         by a set of junctions and returns the results for selected target stages.  

@@ -168,6 +168,11 @@ class DSLApp(tkinter.Tk):
 
 
 if __name__ == '__main__':
+    # # Uncomment the following 3 lines before bundling this script with pyinstaller
+    # access_presets()
+    # set_preset_value('batch_processing_parallelization', False)
+    # finalize_presets()
+
     if not DSLParser.main(called_from_app=True):
         app = DSLApp()
         app.mainloop()
