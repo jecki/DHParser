@@ -3175,7 +3175,10 @@ class Counted(UnaryParser):
         return self._return_values(results), location
 
     def is_optional(self) -> Optional[bool]:
-        return self.repetitions[0] == 0
+        if self.repetitions[0] == 0:
+            return True
+        else:
+            return None
 
     def __repr__(self):
         return self.parser.repr + "{%i,%i}" % self.repetitions

@@ -47,6 +47,11 @@ proc init*(node: Node,
 
 template newNode*(args: varargs[untyped]): Node =
   new(Node).init(args)
+  # let node: NodeOrNil = new(Node)
+  # if isNil(node):
+  #   raise newException(OSError, "Creation of Node-object failed!")
+  # else:
+  #   node.init(args)
 
 func isLeaf*(node: Node): bool = node.children.len == 0
 
@@ -109,11 +114,11 @@ proc withSourcePos*(node: Node, sourcePos: int): Node =
 
 const indentation = 2
 
-func serialize(node: Node, 
+func serialize(node: Node,
                opening, closing: proc (nd: Node) : string,
                leafdata: proc(nd: Node): seq[string],
                ind: int = 0): seq[string] =
-  # result = newSeq()
+  # result = newSeq[string]()
   var open = opening(node)
   var close = closing(node)
   let openLF = open.endsWith("\n")
@@ -130,22 +135,22 @@ func serialize(node: Node,
     var lines = leafdata(node)
     if not openLF and lines.len > 0:
       result[^1] &= lines[0]
-      lines.delete(0)
+      lines.delete(0)  # causes a SEGSIGV Illegal storage access attempt to read from nil? with "nim doc"
     for i in countup(0, lines.len - 1):
-      lines[i] = indent(lines[i], ind + indentation)      
+      lines[i] = indent(lines[i], ind + indentation)
     result = concat(result, lines)
     if closeLF:
       result.add(close)
     else:
       result[^1] &= close
-  
+
   else:
-    var childBlocks = collect(newSeq): 
-      for child in node.children: 
+    var childBlocks = collect(newSeqofCap(node.children.len)):
+      for child in node.children:
         serialize(child, opening, closing, leafdata, ind + indentation)
     if not openLF and child_blocks[0][0].len > 0:
       result[^1] &= child_blocks[0][0]
-      child_blocks[0].delete(0)
+      child_blocks[0].delete(0)  # causes SIGSEGV (read from nil) on nim doc?
     result = concat(result, concat(child_blocks))
     if closeLF:
       result.add(close)
@@ -153,7 +158,7 @@ func serialize(node: Node,
       result[^1] &= close
 
 
-func asSxpr*(node: Node): string =
+func asSxpr*(node: NodeOrNil): string =
   func renderAttrs(node: Node): string =
     # if node.attributes.len == 0:  return ""
     var attrStrs = newSeq[string](node.attributes.len)
@@ -169,7 +174,7 @@ func asSxpr*(node: Node): string =
         fmt"({node.name}{'\n'}"
     else:
       fmt"({node.name} {renderAttrs(node)}{'\n'}"
-  
+
   func closing(node: Node): string = ")"
 
   func leafdata(node: Node): seq[string] =
@@ -180,7 +185,7 @@ func asSxpr*(node: Node): string =
     var L = node.runeLen
     if L >= 60:
       let s = node.content
-      var 
+      var
         lines: seq[string] = @[]
         i = 0
         k = 0
@@ -189,24 +194,24 @@ func asSxpr*(node: Node): string =
         lines.add('"' & esc(s[i..<k]) & '"')
         i = k
         L -= 60
-      lines
+      return lines
     else:
-      @['"' & esc(node.content) & '"']
+      return @['"' & esc(node.content) & '"']
 
-  return serialize(node, opening, closing, leafdata).join("\n")
-
-
-proc `$`*(node: NodeOrNil): string =
   if isNil(node):
     return "nil"
   else:
-    return node.asSxpr()
+    return serialize(node, opening, closing, leafdata).join("\n")
 
 
-# Test-code
+proc `$`*(node: NodeOrNil): string =
+  return node.asSxpr()
+
+
+## Test-code
 when isMainModule:
-  var n = new(Node).init("root", @[new(Node).init("left", "LEFT", {"id": "007"}.toOrderedTable),
-                                   new(Node).init("right", "RIGHT")])
+  var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
+                            newNode("right", "RIGHT")])
   echo $n
   n.`sourcePos=` 0
   echo n.children[0].sourcePos
