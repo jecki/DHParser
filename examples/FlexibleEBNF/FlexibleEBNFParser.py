@@ -237,15 +237,11 @@ EBNF_AST_transformation_table = {
         [],
     "regexp":
         [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
-    "char_range":
-        [flatten, remove_tokens('[', ']')],
     "character":
         [remove_children('CH_LEADIN'), reduce_single_child],
-    "free_char":
-        [],
     (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
         [reduce_single_child],
-    "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, TIMES, "
+    "EOF, DEF, OR, AND, ENDL, RNG_DELIM, TIMES, "
     "RE_LEADIN, RE_CORE, RE_LEADOUT, CH_LEADIN":
         [],
     "*":

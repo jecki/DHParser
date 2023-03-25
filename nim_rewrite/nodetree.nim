@@ -1,4 +1,4 @@
-{.experimental: "strictNotNil".} 
+{.experimental: "strictNotNil".}
 
 import std/enumerate
 import std/sequtils
@@ -208,7 +208,7 @@ proc `$`*(node: NodeOrNil): string =
   return node.asSxpr()
 
 
-## Test-code
+# Test-code
 when isMainModule:
   var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
                             newNode("right", "RIGHT")])

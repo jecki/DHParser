@@ -14,9 +14,9 @@
     # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
-@ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
-# @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+@ disposable = component, pure_elem, countable, no_range, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+@ drop       = whitespace, EOF, no_range        # do not include these even in the concrete syntax tree
+
 
 # re-entry-rules to resume parsing after a syntax-error
  
@@ -32,18 +32,19 @@
 
 #: top-level
 
-syntax     = ~ { definition | directive } EOF
+syntax     = ~ { definition | directive | macrodef } EOF
 definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
-  # component  = (regexp | literals | procedure | symbol !DEF)
-  # component  = literals | procedure | expression
   component  = regexp | literals | procedure | symbol !DEF
              | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
-FOLLOW_UP  = `@` | symbol | EOF
+macrodef   = "$" §name "(" placeholder { "," placeholder }  ")"
+             DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP
+
+FOLLOW_UP  = `@` | `$` | symbol | EOF
 
 
 #: components
@@ -65,11 +66,12 @@ element    = [retrieveop] symbol !DEF           # negative lookahead to be sure 
            | literal
            | plaintext
            | regexp
-           # | char_range
            | character ~
            | any_char
            | whitespace
            | group
+           | macro
+           | placeholder
            | parser                             # a user defined parser
 
 
@@ -88,20 +90,19 @@ retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, '
 group      = "(" no_range §expression ")"
 oneormore  = "{" no_range expression "}+" | element "+"
 repetition = "{" no_range §expression "}" | element "*" no_range
-option     = # !char_range
-             "[" §expression "]" | element "?"
+option     = "[" §expression "]" | element "?"
 counted    = countable range | countable TIMES~ multiplier | multiplier TIMES~ §countable
 
 range      = RNG_OPEN~ multiplier [ RNG_DELIM~ multiplier ] RNG_CLOSE~
-no_range   = !multiplier | &multiplier TIMES
+no_range   = !multiplier | &multiplier TIMES   # should that be &(multiplier TIMES)??
 multiplier = /[1-9]\d*/~
 
 
 #: leaf-elements
 
-parser     = "@" name "(" [argument] ")"        # a user defined parser
-  argument = literal | name
-  name     = SYM_REGEX ~                        # name of Parser class or (factory) function
+parser     = "@" §name "(" [argument] ")"        # a user defined parser
+  argument = literal | name~
+
 
 symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
@@ -109,13 +110,16 @@ literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
            | /´(?:(?<!\\)\\´|[^´])*?´/~
 regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
-# regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-# char_range = `[` &char_range_heuristics
-#                  [`^`] (character | free_char) { [`-`] character | free_char } "]"
 character  = CH_LEADIN HEXCODE
-free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
+
+#: macros
+
+macro       = '$' name "(" no_range §expression { "," no_range expression } ")"
+placeholder = `$` SYM_REGEX !`(` ~
+
+name        = SYM_REGEX
 
 
 #: delimiters
