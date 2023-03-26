@@ -1160,7 +1160,7 @@ class TestBorderlineCases:
         assert not cst.error_flag
 
 
-EBNF_with_Errors = r"""# Test code with errors. All places marked by a "$" should yield and error
+EBNF_with_Errors = r"""# Test code with errors. All places marked by a "€" should yield and error
 
 @ comment    = /#.*(?:\n|$)/
 @ whitespace = /\s*/
@@ -1195,7 +1195,7 @@ sequence   = ["§"] ( interleave | lookaround )
              { :AND~ ["§"] ( interleave | lookaround ) }
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
-difference = term ["-" § (oneormore $ pure_elem)]               # <- ERROR
+difference = term ["-" § (oneormore € pure_elem)]               # <- ERROR
 term       = oneormore | repetition | option | pure_elem        # resuming expected her
 
 #: elements
@@ -1206,25 +1206,25 @@ element    = [retrieveop] symbol !DEF
            | plaintext
            | regexp
            | whitespace
-           | group$                                             # <- ERROR
+           | group€                                             # <- ERROR
 
 #: flow-operators
 
 flowmarker = "!"  | "&"                                         # resuming expected her
            | "<-!" | "<-&"
-retr$ieveop = "::" | ":?" | ":"
+retr€ieveop = "::" | ":?" | ":"
 
 #: groups
 
 group      = "(" §expression ")"
 oneormore  = "{" expression "}+" | element "+"
-repetition = "{" §expressi$on "}" | element "*"                 # <- ERROR
+repetition = "{" §expressi€on "}" | element "*"                 # <- ERROR
 option     = "[" §expression "]" | element "?"                  # resuming expected here
 
 #: leaf-elements
 
 symbol     = /(?!\d)\w+/~
-$literals   = { literal }+                                      # <- ERROR
+€literals   = { literal }+                                      # <- ERROR
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~                         # resuming expected her
            | /'(?:(?<!\\)\\'|[^'])*?'/~
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~
