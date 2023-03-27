@@ -174,7 +174,6 @@ def identity(x):
     return x
 
 
-
 global_id_counter: int = 0
 
 
@@ -191,16 +190,16 @@ class ThreadLocalSingletonFactory:
     the same instance of `class_or_factory` for one and the
     same thread, but different instances for different threads.
 
-    Note: The optional "ident"-parameter of the constructor is now
-    deprecated and should not be used any more!
+    Note: Parameter uniqueID should be provided if class_or_factory is not
+    unique but generic. See source code of
+    :py:func:`DHParser.dsl.create_transtable_transition`
     """
-    def __init__(self, class_or_factory, name: str = "", *, ident: int = -1):
-        if ident != -1:
-            deprecation_warning('ThreadLocalSingletonFactory: "ident" is deprecated!')
+
+    def __init__(self, class_or_factory, name: str = "", *, uniqueID: Union[str, int] = 0):
         self.class_or_factory = class_or_factory
         # partial functions do not have a __name__ attribute!
         name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
-        self.singleton_name = "{NAME}_{ID}_singleton".format(NAME=name, ID=str(id(self)))
+        self.singleton_name = f"{name}_{str(id(self))}_{str(uniqueID)}_singleton"
         THREAD_LOCALS = access_thread_locals()
         assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name
 

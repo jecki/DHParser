@@ -67,7 +67,7 @@ __all__ = ('DefinitionError',
            'PseudoJunction',
            'create_preprocess_transition',
            'create_parser_transition',
-           'process_template',
+           # 'process_template',
            'create_compiler_transition',
            'create_transtable_transition',
            'create_evaluation_transition',
@@ -797,16 +797,16 @@ def create_parser_transition(grammar_class: type) -> PseudoJunction:
 
 # 1. tree-processing with Compiler-class
 
-def process_template(src_tree: Node, src_stage: str, dst_stage: str,
-                     factory_function) -> Any:
-    """A generic templare for tree-transformation-functions."""
-    if isinstance(src_tree, RootNode):
-        assert src_tree.stage == src_stage
-    result = factory_function()(src_tree)
-    if isinstance(result, RootNode):
-        assert result.stage in (src_stage, dst_stage)
-        result.stage = dst_stage
-    return result
+# def process_template(src_tree: Node, src_stage: str, dst_stage: str,
+#                      factory_function) -> Any:
+#     """A generic templare for tree-transformation-functions."""
+#     if isinstance(src_tree, RootNode):
+#         assert src_tree.stage == src_stage
+#     result = factory_function()(src_tree)
+#     if isinstance(result, RootNode):
+#         assert result.stage in (src_stage, dst_stage)
+#         result.stage = dst_stage
+#     return result
 
 
 def create_compiler_transition(compile_class: type,
@@ -840,7 +840,7 @@ def create_transtable_transition(table: TransformationDict,
     assert src_stage and src_stage.islower()
     assert dst_stage and dst_stage.islower()
     make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
-    factory = ThreadLocalSingletonFactory(make_transformer)
+    factory = ThreadLocalSingletonFactory(make_transformer, id(table))
     # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
     #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)
@@ -870,7 +870,7 @@ def create_evaluation_transition(actions: Dict[str, Callable],
     assert dst_stage and dst_stage.islower()
     make_evaluation = partial(
         _make_evaluation, actions=actions, supply_path_arg=supply_path_arg)
-    factory = ThreadLocalSingletonFactory(make_evaluation)
+    factory = ThreadLocalSingletonFactory(make_evaluation, id(actions))
     # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
     #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)

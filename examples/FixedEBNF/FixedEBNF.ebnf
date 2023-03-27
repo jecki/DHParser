@@ -14,7 +14,7 @@
     # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ disposable = component, pure_elem, countable, no_range, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+@ disposable = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
 @ drop       = whitespace, EOF, no_range        # do not include these even in the concrete syntax tree
 
 
@@ -32,7 +32,7 @@
 
 #: top-level
 
-syntax     = ~ { definition | directive | macrodef } EOF
+syntax     = ~ { definition | directive | macrodef  } EOF
 definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
@@ -43,6 +43,7 @@ directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
 
 macrodef   = "$" §name "(" placeholder { "," placeholder }  ")"
              DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP
+is_mdef    = "$" name "(" placeholder { "," placeholder }  ")" DEF
 
 FOLLOW_UP  = `@` | `$` | symbol | EOF
 
@@ -70,7 +71,7 @@ element    = [retrieveop] symbol !DEF           # negative lookahead to be sure 
            | any_char
            | whitespace
            | group
-           | macro
+           | &`$` !is_mdef § (macro | placeholder) !DEF
            | placeholder
            | parser                             # a user defined parser
 
@@ -114,10 +115,11 @@ character  = CH_LEADIN HEXCODE
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
 
+
 #: macros
 
-macro       = '$' name "(" no_range §expression { "," no_range expression } ")"
-placeholder = `$` SYM_REGEX !`(` ~
+macro       = "$" name "(" no_range §expression { "," no_range expression } ")"
+placeholder = ["$"] name !`(` ~
 
 name        = SYM_REGEX
 

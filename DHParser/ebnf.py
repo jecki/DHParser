@@ -26,6 +26,7 @@ are supported.
 
 from __future__ import annotations
 
+import copy
 from functools import partial
 import keyword
 import os
@@ -51,7 +52,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
     STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
-    has_errors
+    PLACEHOLDER_OUTSIDE_MACRO, WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -1332,6 +1333,7 @@ class EBNFCompiler(Compiler):
         self.variables = {}                    # type: Dict[str, List[Node]]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
+        self.macros = {}                       # type: Dict[str, Node]
         self.required_keywords = set()         # type: Set[str]
         self.deferred_tasks = []               # type: List[Callable]
         self.root_symbol = ""                  # type: str
@@ -1939,6 +1941,18 @@ class EBNFCompiler(Compiler):
                 if sym in self.P:
                     self.P[sym] = 'parse_namespace__.' + sym
 
+        # reorder children: directives first, then macro definition, finally symbol definitions
+        directivedefs, macrodefs, symdefs = [], [], []
+        for nd in node.children:
+            if nd.name == 'directive':
+                directivedefs.append(nd)
+            elif nd.name == 'macrodef':
+                macrodefs.append(nd)
+            else:
+                assert nd.name == 'definition', nd.as_sxpr()
+                symdefs.append(nd)
+        node.result = tuple(directivedefs + macrodefs + symdefs)
+
         # compile definitions and directives and collect definitions
         root_symbol = ''
         for nd in node.children:
@@ -1946,6 +1960,8 @@ class EBNFCompiler(Compiler):
                 rule, defn = self.compile(nd)
                 self.definitions[rule] = defn
                 if not root_symbol:  root_symbol = rule
+            elif nd.name == "macrodef":
+                self.compile(nd)
             else:
                 assert nd.name == "directive", nd.as_sxpr()
                 self.compile(nd)
@@ -1953,6 +1969,7 @@ class EBNFCompiler(Compiler):
         if not self.definitions:
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
 
+        # derive Python-parser and run static analysis of the Python-parser
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
         if get_config_value('static_analysis') == 'early' and not \
                 any((e.code >= FATAL or e.code in
@@ -2051,6 +2068,7 @@ class EBNFCompiler(Compiler):
         finally:
             self.drop_flag = False
         return rule, defn
+
 
     @staticmethod
     def join_literals(nd):
@@ -2258,6 +2276,15 @@ class EBNFCompiler(Compiler):
         return ""
 
 
+    def on_macrodef(self, node) -> str:
+        macro_name = node['name'].content
+        placeholders = [pl['name'].content for pl in node.children
+                        if pl.children and pl.name == 'placeholder']
+        template = node.pick('expression')
+        self.macros[macro_name] = (node, placeholders, template)
+        return ""
+
+
     def non_terminal(self, node: Node, parser_class: str, custom_args: List[str] = []) -> str:
         """
         Compiles any non-terminal, where `parser_class` indicates the Parser class
@@ -2279,6 +2306,42 @@ class EBNFCompiler(Compiler):
             return drop_clause + parser_class + '(' + ', '.join(arguments) + '))'
         else:
             return parser_class + '(' + ', '.join(arguments) + ')'
+
+
+    def on_macro(self, node) -> str:
+        macro_name = node['name'].content
+        _, margs, mexpr = self.macros[macro_name]
+        values = [expr for expr in node.children[1:]]
+        if len(values) != len(margs):
+            self.tree.new_error(node, f'Wrong number of macro arguments: {len(margs)} expected, '
+                                f'{len(values)} given!', WRONG_NUMBER_OF_ARGUMENTS)
+            return "_FAILED_MACRO_CALL_" + macro_name
+        args = dict(zip(margs, values))
+        tmpl = copy.deepcopy(mexpr)
+        for arg in tmpl.select('placeholder'):
+            arg_name = arg.content
+            if arg_name not in args:
+                self.tree.new_error(node, f'Unknown macro argument "${arg_name}". Known args: '
+                                    f'{str(margs)}', UNKNOWN_MACRO_ARGUMENT)
+                return "_FAILED_MACRO_CALL_" + macro_name
+            value = args[arg_name]
+            # replace placeholder with argument expression
+            arg.name = value.name
+            arg.result = value.result
+            if value.has_attr():
+                arg.attr.update(value.attr)
+        node.name = tmpl.name
+        node.result = tmpl.result
+        if tmpl.has_attr():
+            node.attr.update(tmpl.attr)
+        return self.compile(node)
+
+
+    def on_placeholder(self, node) -> str:
+        name = node['name'].content
+        self.tree.new_error(
+            node, f'Placeholder "${name}" used outside macro!', PLACEHOLDER_OUTSIDE_MACRO)
+        return "_UNXEPECTED_PLACEHOLDER_" + node['name'].content
 
 
     def on_expression(self, node) -> str:

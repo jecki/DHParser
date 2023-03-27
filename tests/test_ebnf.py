@@ -1956,6 +1956,16 @@ class TestNameConflicts:
         assert p.python_src__.find('parse_namespace__.Text("abc")') >= 0
 
 
+class TestMacros:
+    def test_simple_macros(self):
+        lang = '''
+        doo = ~ $pharse(`,`) { `,`~ $phrase(`,`) } 
+        $phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }   
+        '''
+        parser = create_parser(lang)
+
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
