@@ -664,6 +664,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._pos = -1
             self.with_pos(pos)
 
+    def replace_by(self, replacement: Node, merge_attr: bool=False):
+        """Replaces the node's name, result and attributes by that of another
+        node. This allows to effectually replace the node without needing to
+        change the parent node's children's tuple.
+
+        :param replacement: the node by which self shall be "replaced".
+        :param merge_attr: if True, attributes are merged (by updating the
+            attr dictionary with that of the replacement node) rather than
+            simply be replaced.
+        """
+        self.name = replacement.name
+        self.result = replacement._result
+        if replacement.has_attr():
+            if not merge_attr:
+                self.attr = {}
+            self.attr.update(replacement.attr)
+
     @property
     def children(self) -> ChildrenType:
         """Returns the tuple of child-nodes or an empty tuple if the node does

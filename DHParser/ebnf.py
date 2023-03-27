@@ -2359,14 +2359,8 @@ class EBNFCompiler(Compiler):
                 return "wsp__"  # use wsp__ as a placeholder
             value = args[arg_name]
             # replace placeholder with argument expression
-            arg.name = value.name
-            arg.result = value.result
-            if value.has_attr():
-                arg.attr.update(value.attr)
-        node.name = tmpl.name
-        node.result = tmpl.result
-        if tmpl.has_attr():
-            node.attr.update(tmpl.attr)
+            arg.replace_by(value, merge_attr=True)
+        node.replace_by(tmpl, merge_attr=True)
         return self.compile(node)
 
 
