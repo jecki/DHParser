@@ -66,8 +66,8 @@ from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     ThreadLocalSingletonFactory, TypeAlias
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
-    remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
-    BLOCK_LEAVES
+    remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
+    all_of, not_one_of, BLOCK_LEAVES
 from DHParser.versionnumber import __version__
 
 
@@ -729,11 +729,13 @@ class ConfigurableEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "822e272d95df913611fc704a6cca3de6"
-    disposable__ = re.compile('component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "9c5f383974a5064910feb3a4b9a1e4b8"
+    disposable__ = re.compile(
+        'is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
+    error_messages__ = {'definition': [(re.compile(r','),
+                                        'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -757,27 +759,38 @@ class ConfigurableEBNFGrammar(Grammar):
     DEF = Text("=")
     EOF = Drop(NegativeLookahead(RegExp('.')))
     name = Synonym(SYM_REGEX)
-    placeholder = Series(Text("$"), SYM_REGEX, NegativeLookahead(Text("(")), dwsp__)
+    placeholder = Series(Series(Text("$"), dwsp__), name, NegativeLookahead(Text("(")), dwsp__)
     multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
     character = Series(CH_LEADIN, HEXCODE)
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
-    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
+                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
+                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
-    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__), mandatory=3)
+    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
+                    Series(Text(")"), dwsp__), mandatory=3)
     no_range = Drop(Alternative(Drop(NegativeLookahead(multiplier)), Drop(Series(Drop(Lookahead(multiplier)), TIMES))))
-    macro = Series(Series(Text('$'), dwsp__), name, Series(Text("("), dwsp__), no_range, expression, ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__), mandatory=4)
+    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression,
+                   ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__),
+                   mandatory=4)
     range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
-    counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier), Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
-    option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1), Series(element, Series(Text("?"), dwsp__)))
-    repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2), Series(element, Series(Text("*"), dwsp__), no_range))
-    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)), Series(element, Series(Text("+"), dwsp__)))
+    counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier),
+                          Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
+    option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1),
+                         Series(element, Series(Text("?"), dwsp__)))
+    repetition = Alternative(
+        Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2),
+        Series(element, Series(Text("*"), dwsp__), no_range))
+    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)),
+                            Series(element, Series(Text("+"), dwsp__)))
     group = Series(Series(Text("("), dwsp__), no_range, expression, Series(Text(")"), dwsp__), mandatory=2)
     retrieveop = Alternative(Series(Text("::"), dwsp__), Series(Text(":?"), dwsp__), Series(Text(":"), dwsp__))
-    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__), Series(Text("<-&"), dwsp__))
+    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__),
+                             Series(Text("<-&"), dwsp__))
     ANY_SUFFIX = RegExp('[?*+]')
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
@@ -785,14 +798,28 @@ class ConfigurableEBNFGrammar(Grammar):
     term = Alternative(oneormore, counted, repetition, option, pure_elem)
     difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
-    interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
+    interleave = Series(difference,
+                        ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
+        Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
-    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    macrodef = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
-    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, macro, placeholder, parser))
+    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP),
+                        mandatory=1)
+    is_mdef = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), placeholder,
+                     ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), DEF)
+    macrobody = Synonym(expression)
+    macrodef = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), placeholder,
+                      ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), DEF,
+                      dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)),
+                            Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)),
+                            Series(RAISE_EXPR_WO_BRACKETS, expression))
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component,
+                       ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp,
+                            Series(character, dwsp__), any_char, whitespace, group,
+                            Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), Alternative(macro, placeholder),
+                                   NegativeLookahead(DEF), mandatory=2), placeholder, parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
@@ -892,6 +919,10 @@ EBNF_AST_transformation_table = {
     "directive":
         [flatten, remove_tokens('@', '=', ',', '(', ')'),
          remove_children("RAISE_EXPR_WO_BRACKETS")],
+    "macrodef": [remove_anonymous_tokens],
+    "macrobody": [],
+    "macro": [remove_anonymous_tokens],
+    "placeholder": [remove_anonymous_tokens],
     "procedure":
         [remove_tokens('()', '(', ')'), reduce_single_child],
     "literals":
@@ -2280,7 +2311,9 @@ class EBNFCompiler(Compiler):
         macro_name = node['name'].content
         placeholders = [pl['name'].content for pl in node.children
                         if pl.children and pl.name == 'placeholder']
-        template = node.pick('expression')
+        body = node.pick('macrobody')
+        assert body and body.children and len(body.children) == 1
+        template = body.children[0]
         self.macros[macro_name] = (node, placeholders, template)
         return ""
 
@@ -2315,7 +2348,7 @@ class EBNFCompiler(Compiler):
         if len(values) != len(margs):
             self.tree.new_error(node, f'Wrong number of macro arguments: {len(margs)} expected, '
                                 f'{len(values)} given!', WRONG_NUMBER_OF_ARGUMENTS)
-            return "_FAILED_MACRO_CALL_" + macro_name
+            return "wsp__"  # use wsp__ as a placeholder
         args = dict(zip(margs, values))
         tmpl = copy.deepcopy(mexpr)
         for arg in tmpl.select('placeholder'):
@@ -2323,7 +2356,7 @@ class EBNFCompiler(Compiler):
             if arg_name not in args:
                 self.tree.new_error(node, f'Unknown macro argument "${arg_name}". Known args: '
                                     f'{str(margs)}', UNKNOWN_MACRO_ARGUMENT)
-                return "_FAILED_MACRO_CALL_" + macro_name
+                return "wsp__"  # use wsp__ as a placeholder
             value = args[arg_name]
             # replace placeholder with argument expression
             arg.name = value.name

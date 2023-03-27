@@ -42,8 +42,9 @@ directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
 macrodef   = "$" §name "(" placeholder { "," placeholder }  ")"
-             DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP
-is_mdef    = "$" name "(" placeholder { "," placeholder }  ")" DEF
+             DEF~ [ OR~ ] macrobody ENDL~ & FOLLOW_UP
+  macrobody  = expression
+  is_mdef    = "$" name "(" placeholder { "," placeholder }  ")" DEF
 
 FOLLOW_UP  = `@` | `$` | symbol | EOF
 
@@ -119,7 +120,7 @@ whitespace = /~/~                               # insignificant whitespace
 #: macros
 
 macro       = "$" name "(" no_range §expression { "," no_range expression } ")"
-placeholder = ["$"] name !`(` ~
+placeholder = "$" name !`(` ~
 
 name        = SYM_REGEX
 

@@ -1959,7 +1959,7 @@ class TestNameConflicts:
 class TestMacros:
     def test_simple_macros(self):
         lang = '''
-        doo = ~ $pharse(`,`) { `,`~ $phrase(`,`) } 
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) } 
         $phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }   
         '''
         parser = create_parser(lang)
