@@ -1960,9 +1960,11 @@ class TestMacros:
     def test_simple_macros(self):
         lang = '''
         doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) } 
-        $phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }   
+        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
         '''
         parser = create_parser(lang)
+        tree = parser('1; 2, 3; 4')
+        print(tree.as_sxpr())
 
 
 

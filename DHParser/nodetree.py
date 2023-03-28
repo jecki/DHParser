@@ -122,7 +122,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'pp_path',
            'path_sanity_check',
            'insert_node',
-           'split',
+           'split_node',
            'deep_split',
            'can_split',
            'leaf_paths',
@@ -674,12 +674,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             attr dictionary with that of the replacement node) rather than
             simply be replaced.
         """
+        if self._pos < 0:
+            self._pos = replacement._pos
+        elif replacement._pos < 0:
+            replacement.with_pos(self._pos)
         self.name = replacement.name
         self.result = replacement._result
         if replacement.has_attr():
             if not merge_attr:
                 self.attr = {}
             self.attr.update(replacement.attr)
+
 
     @property
     def children(self) -> ChildrenType:
@@ -2523,8 +2528,8 @@ def gen_chain_ID() -> str:
 
 
 @cython.locals(k=cython.int)
-def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
-          chain_attr: Optional[dict] = None) -> int:
+def split_node(node: Node, parent: Node, i: cint, left_biased: bool = True,
+               chain_attr: Optional[dict] = None) -> int:
     """Splits a node at the given index (in case of a branch-node) or
     string-position (in case of a leaf-node). Returns the index of the
     right part within the parent node after the split. (This means
@@ -2534,23 +2539,37 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
     Non-anonymous node that have been split will be marked by updateing
     their attribute-dictionary with the chain_attr-dictionary if given.
 
+    :param node: the node to be split
+    :param parent: the node's parent
+    :param i: the index either of the child or of the character before
+        which the node will be split.
+    :param left_biased: if True, yields the location after the end of
+        the previous path rather than the location at the very beginning
+        of the next path. Default value is "False".
+    :param chain_attr: a dictionary with a single key and value resembling
+        an attribute and value that will be added to the attributes-dicitonary
+        of both nodes after the split, if the node is named node.
+
+    :returns: the index of the split within the children's tuple of the
+        parent node.
+
     Examples::
 
         >>> test_tree = parse_sxpr('(X (A "Hello, ") (B "Peter") (C " Smith"))').with_pos(0)
         >>> X = copy.deepcopy(test_tree)
 
         # test edge cases first
-        >>> split(X['B'], X, 0)
+        >>> split_node(X['B'], X, 0)
         1
         >>> print(X.as_sxpr())
         (X (A "Hello, ") (B "Peter") (C " Smith"))
-        >>> split(X['B'], X, X['B'].strlen())
+        >>> split_node(X['B'], X, X['B'].strlen())
         2
         >>> print(X.as_sxpr())
         (X (A "Hello, ") (B "Peter") (C " Smith"))
 
         # standard case
-        >>> split(X['B'], X, 2)
+        >>> split_node(X['B'], X, 2)
         2
         >>> print(X.as_sxpr())
         (X (A "Hello, ") (B "Pe") (B "ter") (C " Smith"))
@@ -2559,10 +2578,10 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
 
         # use split() as preparation for adding markup
         >>> X = copy.deepcopy(test_tree)
-        >>> a = split(X['A'], X, 6)
+        >>> a = split_node(X['A'], X, 6)
         >>> a
         1
-        >>> b = split(X['C'], X, 1)
+        >>> b = split_node(X['C'], X, 1)
         >>> b
         4
         >>> print(X.as_sxpr())
@@ -2574,13 +2593,13 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
 
         # a more complex case: add markup to a nested tree
         >>> X = parse_sxpr('(X (A "Hello, ") (B "Peter") (bold (C " Smith")))').with_pos(0)
-        >>> a = split(X['A'], X, 6)
-        >>> b0 = split(X['bold']['C'], X['bold'], 1)
+        >>> a = split_node(X['A'], X, 6)
+        >>> b0 = split_node(X['bold']['C'], X['bold'], 1)
         >>> b0
         1
         >>> print(X.as_sxpr())
         (X (A "Hello,") (A " ") (B "Peter") (bold (C " ") (C "Smith")))
-        >>> b = split(X['bold'], X, b0)
+        >>> b = split_node(X['bold'], X, b0)
         >>> b
         4
         >>> print(X.as_sxpr())
@@ -2592,9 +2611,9 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
 
         # use left_bias hint for potentially ambiguous cases:
         >>> X = parse_sxpr('(X (A ""))')
-        >>> split(X['A'], X, X['A'].strlen())
+        >>> split_node(X['A'], X, X['A'].strlen())
         0
-        >>> split(X['A'], X, X['A'].strlen(), left_biased=False)
+        >>> split_node(X['A'], X, X['A'].strlen(), left_biased=False)
         1
     """
     assert i >= 0
@@ -2685,7 +2704,7 @@ def deep_split(path: Path, i: cint, left_biased: bool=True,
         node = parent
         parent = path[-idx]
         if chain_attr_name:  chain_attr = {chain_attr_name: gen_chain_ID()}
-        i = split(node, parent, i, left_biased, chain_attr)
+        i = split_node(node, parent, i, left_biased, chain_attr)
         if greedy and idx < last_index:
             if left_biased:
                 if i > 0 and _strlen_of(parent.children[:i], match_func, skip_func) == 0:  i = 0
@@ -2748,7 +2767,7 @@ def can_split(t: Path, i: cint, left_biased: bool = True, greedy: bool = True,
         if i != 0 and i != len(node._result) and not (node.anonymous or node.name in divisable):
             break
         parent = t[-k - 2]
-        i = split(node, parent, i, left_biased)
+        i = split_node(node, parent, i, left_biased)
         if greedy:
             if left_biased:
                 if i > 0 and _strlen_of(parent.children[:i], match_func, skip_func) == 0:  i = 0
@@ -3015,7 +3034,7 @@ def _breed_leaf_selector(select: PathSelector,
 def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     """Creates a path-match function that matches only and all leaf path
     for those paths that the criterion matches. Warning: This may be
-    slower than a custom algorithm that matches only leaf-poth right
+    slower than a custom algorithm that matches only leaf-paths right
     from the start. Example::
 
         >>> xml = '''<doc><p>In München<footnote><em>München</em> is the German
