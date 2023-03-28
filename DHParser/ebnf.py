@@ -1296,13 +1296,6 @@ class EBNFCompiler(Compiler):
     :ivar re_flags:  A set of regular expression flags to be added to all
             regular expressions found in the current parsing process
 
-    :ivar disposable_regexp: A regular expression to identify symbols that stand
-            for parsers that shall yield anonymous nodes. The pattern of
-            the regular expression is configured in configuration.py but
-            can also be set by a directive. The default value is a regular
-            expression that catches names with a leading underscore.
-            See also `parser.Grammar.disposable__`
-
     :ivar python_src:  A string that contains the python source code that was
             the outcome of the last EBNF-compilation.
 
@@ -2361,8 +2354,12 @@ class EBNFCompiler(Compiler):
             # replace placeholder with argument expression
             arg.replace_by(value, merge_attr=True)
         node.replace_by(tmpl, merge_attr=True)
-        return self.compile(node)
-
+        code = self.compile(node)
+        if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
+            return f'{self.P["Drop"]}({code})'
+        elif not re.match(self.directives.disposable, macro_name):
+            return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+        return code
 
     def on_placeholder(self, node) -> str:
         name = node['name'].content

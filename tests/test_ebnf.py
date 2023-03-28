@@ -1958,13 +1958,16 @@ class TestNameConflicts:
 
 class TestMacros:
     def test_simple_macros(self):
-        lang = '''
+        lang = '''@reduction = merge
+        # @ disposable = phrase
         doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) } 
         $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
         '''
         parser = create_parser(lang)
+        # print(parser.python_src__)
         tree = parser('1; 2, 3; 4')
-        print(tree.as_sxpr())
+        assert flatten_sxpr(tree.as_sxpr()) == \
+               '(doc (phrase "1; 2") (:Text ", ") (phrase "3; 4"))', tree.as_sxpr()
 
 
 
