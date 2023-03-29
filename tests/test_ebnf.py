@@ -1959,7 +1959,6 @@ class TestNameConflicts:
 class TestMacros:
     def test_simple_macros(self):
         lang = '''@reduction = merge
-        @ disposable = phrase
         doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) } 
         $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
         '''

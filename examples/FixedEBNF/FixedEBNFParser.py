@@ -84,7 +84,7 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "9c5f383974a5064910feb3a4b9a1e4b8"
+    source_hash__ = "f117652a2202d0dadb43bc3a6af28e3c"
     disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -147,7 +147,7 @@ class FixedEBNFGrammar(Grammar):
     is_mdef = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), DEF)
     macrobody = Synonym(expression)
     macrodef = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(DEF), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), Alternative(macro, placeholder), NegativeLookahead(DEF), mandatory=2), placeholder, parser))
     countable.set(Alternative(option, oneormore, element))

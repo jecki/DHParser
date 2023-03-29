@@ -37,6 +37,7 @@ definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to supp
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   component  = regexp | literals | procedure | symbol !DEF
+             | &`$` !is_mdef § placeholder !DEF
              | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!

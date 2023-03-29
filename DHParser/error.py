@@ -106,6 +106,8 @@ __all__ = ('SourceMap',
            'PLACEHOLDER_OUTSIDE_MACRO',
            'WRONG_NUMBER_OF_ARGUMENTS',
            'UNKNOWN_MACRO_ARGUMENT',
+           'UNDEFINED_MACRO',
+           'RECURSIVE_MACRO_CALL',
            'CAPTURE_STACK_NOT_EMPTY',
            'CAPTURE_STACK_NOT_EMPTY_WARNING',
            'AUTOCAPTURED_SYMBOL_NOT_CLEARED',
@@ -250,6 +252,8 @@ UNDEFINED_SYMBOL                         = ErrorCode(1140)
 PLACEHOLDER_OUTSIDE_MACRO                = ErrorCode(1150)
 WRONG_NUMBER_OF_ARGUMENTS                = ErrorCode(1160)
 UNKNOWN_MACRO_ARGUMENT                   = ErrorCode(1170)
+UNDEFINED_MACRO                          = ErrorCode(1180)
+RECURSIVE_MACRO_CALL                     = ErrorCode(1190)
 
 
 ERROR_WHILE_RECOVERING_FROM_ERROR        = ErrorCode(1301)

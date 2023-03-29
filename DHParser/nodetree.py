@@ -51,7 +51,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle, TypeAlias
+    abbreviate_middle, TypeAlias, deprecated
 
 try:
     import cython
@@ -122,6 +122,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'pp_path',
            'path_sanity_check',
            'insert_node',
+           'split',
            'split_node',
            'deep_split',
            'can_split',
@@ -2525,6 +2526,11 @@ def gen_chain_ID() -> str:
     while len(cid) < chain_len:
         cid.append('A')
     return ''.join(cid)
+
+
+@deprecated('Function "split()" has been renamed to "split_node()".')
+def split(*args, **kwargs):
+    return split_node(*args, **kwargs)
 
 
 @cython.locals(k=cython.int)
