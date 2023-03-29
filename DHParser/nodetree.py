@@ -1809,7 +1809,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # JSON serialization ###
 
-    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> list:
+    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> Union[List, Dict]:
         """Converts the tree into a JSON-serializable nested list. Nodes can
         be serialized in list-flavor (faster) or dictionary-flavor
         (``asdict=True``, slower).
@@ -3855,7 +3855,7 @@ class FrozenNode(Node):
     def with_pos(self, pos: cint) -> Node:
         raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 
-    def to_json_obj(self) -> List:
+    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> List:
         raise NotImplementedError("Frozen nodes cannot and be serialized as JSON!")
 
     @staticmethod

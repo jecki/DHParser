@@ -840,7 +840,7 @@ def create_transtable_transition(table: TransformationDict,
     assert src_stage and src_stage.islower()
     assert dst_stage and dst_stage.islower()
     make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
-    factory = ThreadLocalSingletonFactory(make_transformer, id(table))
+    factory = ThreadLocalSingletonFactory(make_transformer, uniqueID=id(table))
     # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
     #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)
@@ -870,7 +870,7 @@ def create_evaluation_transition(actions: Dict[str, Callable],
     assert dst_stage and dst_stage.islower()
     make_evaluation = partial(
         _make_evaluation, actions=actions, supply_path_arg=supply_path_arg)
-    factory = ThreadLocalSingletonFactory(make_evaluation, id(actions))
+    factory = ThreadLocalSingletonFactory(make_evaluation, uniqueID=id(actions))
     # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
     #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)

@@ -41,7 +41,7 @@ cdef class Node:
     # cpdef _tree_repr(self, tab, open_fn, close_fn, data_fn, density, inline, inline_fn)
     # cpdef as_sxpr(self, src, indentation, compact)
     # cpdef as_xml(self, src, indentation, inline_tags, string_tags, empty_tags)
-    cpdef to_json_obj(self)
+    # cpdef to_json_obj(self, as_dict, include_pos)
     # cpdef serialize(self, how)
 
 
