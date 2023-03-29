@@ -961,7 +961,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif isinstance(key, slice):
             if not isinstance(value, Sequence):
                 value = [value]
-            lchildren.__setitem__(key, value)
+            # lchildren.__setitem__(key, value)
+            lchildren[key] = value
         else:
             mf = create_match_function(key)
             indices = [i for i in range(len(lchildren)) if mf(lchildren[i])]
