@@ -1860,7 +1860,7 @@ class EBNFCompiler(Compiler):
 
         # check for symbols used but never defined
 
-        defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS
+        defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS | set(self.macros.keys())
         for symbol in self.symbols:
             if symbol not in defined_symbols:
                 for usage in self.symbols[symbol]:
