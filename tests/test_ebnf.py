@@ -36,7 +36,8 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
-    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, \
+    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, UNDEFINED_MACRO, \
+    UNKNOWN_MACRO_ARGUMENT, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD, canonical_error_strings
 from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
@@ -153,9 +154,10 @@ class TestDirectives:
         B = 'x'
         '''
         _, errors, _ = compile_ebnf(lang)
-        assert len(errors) == 1
-        assert errors[0].message.startswith('''Illegal value "B" for Directive "@ drop"!''')
-        assert errors[0].message.endswith('''where the "@disposable"-directive must precede the @drop-directive.''')
+        # error does not exist any more, due to directives-reordering in DHParser Version 1.4 and above
+        # assert len(errors) == 1
+        # assert errors[0].message.startswith('''Illegal value "B" for Directive "@ drop"!''')
+        # assert errors[0].message.endswith('''where the "@disposable"-directive must precede the @drop-directive.''')
         lang = r'''
         @disposable = /[A]/
         @drop = A, B
@@ -1963,11 +1965,37 @@ class TestMacros:
         $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
         '''
         parser = create_parser(lang)
-        # print(parser.python_src__)
         tree = parser('1; 2, 3; 4')
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(doc (phrase "1; 2") (:Text ", ") (phrase "3; 4"))', tree.as_sxpr()
 
+        lang = "@disposable = $phrase\n" + lang
+        parser = create_parser(lang)
+        tree = parser('1; 2, 3; 4')
+        assert tree.as_sxpr() == '(doc "1; 2, 3; 4")'
+
+        lang = "@drop = $phrase\n" + lang
+        parser = create_parser(lang)
+        tree = parser('1; 2, 3; 4')
+        assert tree.as_sxpr() == '(doc ", ")'
+
+    def test_macro_errors(self):
+        lang = '''@reduction = merge
+        doc = ~ $undefined(`,`) { `,`~ $phrase(`,`) } 
+        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
+        '''
+        src, errors, ast = compile_ebnf(lang)
+        assert errors[0].code == UNDEFINED_MACRO
+
+        lang = '''@reduction = merge
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) } 
+        $phrase($separator) = /[^.,;]+/ { !$unknown /[.,;]/ /[^,.;]/+ }   
+        '''
+        src, errors, ast = compile_ebnf(lang)
+        for e in errors:  print(e)
+        assert errors[0].code == UNKNOWN_MACRO_ARGUMENT
+        # TODO: UNUSED MACRO ARGUMENTS should be warned about as well!
+        # TODO: Test WRONG_NUMBER_OF_ARGUMENTS
 
 
 if __name__ == "__main__":

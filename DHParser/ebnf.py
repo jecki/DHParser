@@ -1946,6 +1946,8 @@ class EBNFCompiler(Compiler):
         directivedefs, macrodefs, symdefs = [], [], []
         for nd in node.children:
             if nd.name == 'directive':
+                if nd[0].content == "disposable":
+                    directivedefs.insert(0, nd)  # make sure that @disposable is always in front of @drop
                 directivedefs.append(nd)
             elif nd.name == 'macrodef':
                 macrodefs.append(nd)
@@ -2286,6 +2288,8 @@ class EBNFCompiler(Compiler):
 
 
     def on_macrodef(self, node) -> str:
+        # TODO: UNUSED MACRO ARGUMENTS should be warned about!
+        # TODO: Allow macrosyms and do macrosym-substitution
         macro_name = node['name'].content
         placeholders = [pl['name'].content for pl in node.children
                         if pl.children and pl.name == 'placeholder']
