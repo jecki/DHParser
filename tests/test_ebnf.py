@@ -1966,17 +1966,20 @@ class TestMacros:
         '''
         parser = create_parser(lang)
         tree = parser('1; 2, 3; 4')
+        assert not tree.errors
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(doc (phrase "1; 2") (:Text ", ") (phrase "3; 4"))', tree.as_sxpr()
 
         lang = "@disposable = $phrase\n" + lang
         parser = create_parser(lang)
         tree = parser('1; 2, 3; 4')
+        assert not tree.errors
         assert tree.as_sxpr() == '(doc "1; 2, 3; 4")'
 
         lang = "@drop = $phrase\n" + lang
         parser = create_parser(lang)
         tree = parser('1; 2, 3; 4')
+        assert not tree.errors
         assert tree.as_sxpr() == '(doc ", ")'
 
     def test_macro_errors(self):
@@ -1997,6 +2000,35 @@ class TestMacros:
         # TODO: UNUSED MACRO ARGUMENTS should be warned about as well!
         # TODO: Test WRONG_NUMBER_OF_ARGUMENTS
 
+    def test_nested_macros(self):
+        lang = '''@reduction = merge
+        doc = ~ $phrase_list(`,`)
+        $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) } 
+        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
+        '''
+        parser = create_parser(lang)
+        tree = parser('1; 2, 3; 4')
+        assert not tree.errors
+        assert flatten_sxpr(tree.as_sxpr()) == '(doc (phrase_list (phrase "1; 2") (:Text ", ") (phrase "3; 4")))'
+
+        lang = "@disposable = $phrase_list\n" + lang
+        parser = create_parser(lang)
+        tree = parser('1; 2, 3; 4')
+        assert not tree.errors
+        assert flatten_sxpr(tree.as_sxpr()) == '(doc (phrase "1; 2") (:Text ", ") (phrase "3; 4"))'
+
+    def test_macrosym(self):
+        lang = '''@reduction = merge
+        doc = ~ $phrase_list(`,`)
+        $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) } 
+        $phrase($separator) = neutral_chars $chars
+        $chars = { !$separator /[.,;]/ neutral_chars } 
+        neutral_chars = /[^.,;]+/  
+        '''
+        parser = create_parser(lang)
+        tree = parser('1; 2, 3; 4')
+        for e in tree.errors:
+            print(e)
 
 if __name__ == "__main__":
     from DHParser.testing import runner
