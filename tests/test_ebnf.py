@@ -1992,7 +1992,7 @@ class TestMacros:
         $phrase($separator) = /[^.,;]+/ { !$unknown /[.,;]/ /[^,.;]/+ }   
         '''
         src, errors, ast = compile_ebnf(lang)
-        for e in errors:  print(e)
+        assert len(errors) == 1
         assert errors[0].code == UNKNOWN_MACRO_ARGUMENT
         # TODO: UNUSED MACRO ARGUMENTS should be warned about as well!
         # TODO: Test WRONG_NUMBER_OF_ARGUMENTS

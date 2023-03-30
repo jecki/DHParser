@@ -2344,8 +2344,8 @@ class EBNFCompiler(Compiler):
         tmpl = copy.deepcopy(mexpr)
         for arg in tmpl.select('placeholder'):
             arg_name = arg.content
-            if arg_name not in args:
-                self.tree.new_error(node, f'Unknown macro argument "${arg_name}". Known args: '
+            if arg_name not in args:  # TODO:  should this test be moved to macrodef
+                self.tree.new_error(arg, f'Unknown macro argument "${arg_name}". Known args: '
                                     f'{str(margs)}', UNKNOWN_MACRO_ARGUMENT)
                 return "wsp__"  # use wsp__ as a placeholder
             value = args[arg_name]
