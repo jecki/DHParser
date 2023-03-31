@@ -37,7 +37,7 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
     PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, UNDEFINED_MACRO, \
-    UNKNOWN_MACRO_ARGUMENT, \
+    UNKNOWN_MACRO_ARGUMENT, UNUSED_MACRO_ARGUMENTS_WARNING, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD, canonical_error_strings
 from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
@@ -1995,8 +1995,10 @@ class TestMacros:
         $phrase($separator) = /[^.,;]+/ { !$unknown /[.,;]/ /[^,.;]/+ }   
         '''
         src, errors, ast = compile_ebnf(lang)
-        assert len(errors) == 1
-        assert errors[0].code == UNKNOWN_MACRO_ARGUMENT
+        assert len(errors) == 2
+        codes = {e.code for e in errors}
+        assert UNKNOWN_MACRO_ARGUMENT in codes
+        assert UNUSED_MACRO_ARGUMENTS_WARNING in codes
         # TODO: UNUSED MACRO ARGUMENTS should be warned about as well!
         # TODO: Test WRONG_NUMBER_OF_ARGUMENTS
 

@@ -52,8 +52,8 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
     STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
-    PLACEHOLDER_OUTSIDE_MACRO, WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, \
-    UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, has_errors
+    WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, \
+    UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -730,8 +730,8 @@ class ConfigurableEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "f117652a2202d0dadb43bc3a6af28e3c"
-    disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "1e692df774672c88c722bd8b4e0bc838"
+    disposable__ = re.compile('(?:is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)|(?:is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -770,7 +770,7 @@ class ConfigurableEBNFGrammar(Grammar):
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__), mandatory=3)
     no_range = Drop(Alternative(Drop(NegativeLookahead(multiplier)), Drop(Series(Drop(Lookahead(multiplier)), TIMES))))
-    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression, ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__), mandatory=4)
+    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression, ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
     range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
     counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier), Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
     option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1), Series(element, Series(Text("?"), dwsp__)))
@@ -790,12 +790,12 @@ class ConfigurableEBNFGrammar(Grammar):
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
     definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    is_mdef = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), DEF)
+    is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, DEF)
     macrobody = Synonym(expression)
-    macrodef = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL, dwsp__, Lookahead(FOLLOW_UP))
     component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(DEF), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), Alternative(macro, placeholder), NegativeLookahead(DEF), mandatory=2), placeholder, parser))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(DEF)), Series(placeholder, NegativeLookahead(DEF)), parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
@@ -898,7 +898,7 @@ EBNF_AST_transformation_table = {
     "macrodef": [remove_anonymous_tokens],
     "macrobody": [],
     "macro": [remove_anonymous_tokens],
-    "placeholder": [remove_anonymous_tokens],
+    "placeholder": [remove_anonymous_tokens, reduce_single_child],
     "procedure":
         [remove_tokens('()', '(', ')'), reduce_single_child],
     "literals":
@@ -2302,14 +2302,35 @@ class EBNFCompiler(Compiler):
         # TODO: UNUSED MACRO ARGUMENTS should be warned about!
         # TODO: Allow macrosyms and do macrosym-substitution
         macro_name = node['name'].content
-        placeholders = [pl['name'].content for pl in node.children
-                        if pl.children and pl.name == 'placeholder']
-        unused_placeholders = set(placeholders)
+        placeholders = [pl.content for pl in node.children if pl.name == 'placeholder']
         body = node.pick('macrobody')
         assert body and body.children and len(body.children) == 1
         template = body.children[0]
         for sym in template.select('symbol', include_root=True):
             self.referred_otherwise.add(sym.content)
+        used_placholders = set()
+        replacement = 1
+        while replacement:
+            replacement = None
+            for pl in template.select('placeholder', include_root=True):
+                pl_name = pl.content
+                if pl_name in placeholders:
+                    used_placholders.add(pl_name)
+                else:
+                    try:
+                        _, args, expansion = self.macros[pl_name]
+                        if args:
+                            self.tree.new_error(node, f'Macro "${pl_name}" requires arguments',
+                                                WRONG_NUMBER_OF_ARGUMENTS)
+                            return ""
+                        replacement = copy.deepcopy(expansion)
+                        pl.replace_by(replacement, merge_attr=True)
+                    except KeyError:
+                        pass
+        leftover = set(placeholders) - used_placholders
+        if leftover:
+            self.tree.new_error(node, f"Unused macro arguments: {str(leftover)[1:-1]}",
+                                UNUSED_MACRO_ARGUMENTS_WARNING)
         self.macros[macro_name] = (node, placeholders, template)
         return ""
 
@@ -2338,11 +2359,15 @@ class EBNFCompiler(Compiler):
 
 
     def on_macro(self, node) -> str:
-        macro_name = node['name'].content
+        macro_name = node['name'].content if node.children else node.content
         try:
-            _, margs, mexpr = self.macros[macro_name]
+            _, margs, expansion = self.macros[macro_name]
         except KeyError:
-            self.tree.new_error(node, f'Undefined macro "${macro_name}"!', UNDEFINED_MACRO)
+            if len(node.children) <= 1:
+                self.tree.new_error(node, f'Unknown argument or macro-component "${macro_name}"!',
+                                    UNKNOWN_MACRO_ARGUMENT)
+            else:
+                self.tree.new_error(node, f'Undefined macro "${macro_name}"!', UNDEFINED_MACRO)
             return "wsp__"
         self.symbols.setdefault('$' + macro_name, []).append(node)
         if macro_name in self.macro_stack:
@@ -2355,16 +2380,13 @@ class EBNFCompiler(Compiler):
                                 f'{len(values)} given!', WRONG_NUMBER_OF_ARGUMENTS)
             return "wsp__"  # use wsp__ as a placeholder
         args = dict(zip(margs, values))
-        tmpl = copy.deepcopy(mexpr)
+        tmpl = copy.deepcopy(expansion)
         for arg in tmpl.select('placeholder'):
             arg_name = arg.content
-            if arg_name not in args:  # TODO:  should this test be moved to macrodef
-                self.tree.new_error(arg, f'Unknown macro argument "${arg_name}". Known args: '
-                                    f'{str(margs)}', UNKNOWN_MACRO_ARGUMENT)
-                return "wsp__"  # use wsp__ as a placeholder
-            value = args[arg_name]
-            # replace placeholder with argument expression
-            arg.replace_by(value, merge_attr=True)
+            if arg_name in args:
+                value = args[arg_name]
+                # replace placeholder with argument expression
+                arg.replace_by(value, merge_attr=True)
         node.replace_by(tmpl, merge_attr=True)
         self.macro_stack.append(macro_name)
         code = self.compile(node)
@@ -2377,12 +2399,7 @@ class EBNFCompiler(Compiler):
         return code
 
     def on_placeholder(self, node) -> str:
-        name = node['name'].content
-        self.tree.new_error(
-            node, f'Placeholder "${name}" used outside macro!', PLACEHOLDER_OUTSIDE_MACRO)
-        return "wsp__"
-        # return "_UNEXPECTED_PLACEHOLDER_" + node['name'].content
-
+        return self.on_macro(node)
 
     def on_expression(self, node) -> str:
         # The following algorithm reorders literal alternatives, so that earlier alternatives
