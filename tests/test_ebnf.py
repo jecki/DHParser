@@ -2017,7 +2017,7 @@ class TestMacros:
         assert not tree.errors
         assert flatten_sxpr(tree.as_sxpr()) == '(doc (phrase "1; 2") (:Text ", ") (phrase "3; 4"))'
 
-    def test_macrosym(self):
+    def test_macrosyms(self):
         lang = '''@reduction = merge
         doc = ~ $phrase_list(`,`)
         $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) } 

@@ -32,20 +32,21 @@
 
 #: top-level
 
-syntax     = ~ { definition | directive | macrodef  } EOF
-definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
+syntax     = ~ { definition | directive | macrodef } EOF
+definition = symbol §DEF~ [ OR~ ] expression ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
-directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
+directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
   component  = regexp | literals | procedure | symbol !DEF
              | &`$` !is_mdef § placeholder !DEF
              | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
-macrodef   = "$" §name "(" placeholder { "," placeholder }  ")"
+macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
              DEF~ [ OR~ ] macrobody ENDL~ & FOLLOW_UP
-  macrobody  = expression
-  is_mdef    = "$" name "(" placeholder { "," placeholder }  ")" DEF
+# macrosym   = "$" name~ DEF~ [ OR~ ] §macrobody ENDL~ &FOLLOW_UP
+macrobody  = expression
+is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~DEF
 
 FOLLOW_UP  = `@` | `$` | symbol | EOF
 
@@ -73,8 +74,8 @@ element    = [retrieveop] symbol !DEF           # negative lookahead to be sure 
            | any_char
            | whitespace
            | group
-           | &`$` !is_mdef § (macro | placeholder) !DEF
-           | placeholder
+           | macro !DEF
+           | placeholder !DEF
            | parser                             # a user defined parser
 
 
@@ -120,7 +121,7 @@ whitespace = /~/~                               # insignificant whitespace
 
 #: macros
 
-macro       = "$" name "(" no_range §expression { "," no_range expression } ")"
+macro       = "$" name "(" no_range expression { "," no_range expression } ")"
 placeholder = "$" name !`(` ~
 
 name        = SYM_REGEX

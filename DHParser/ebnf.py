@@ -1207,10 +1207,10 @@ class EBNFCompiler(Compiler):
             the set of symbols that are referred to in the definition
             of a particular symbol.
 
-    :ivar referred_by_directive: A set of symbols which are directly
-           referred to in a directive. It does not matter whether
-           these symbals are reachable (i.e. directly oder indirectly
-           referred to) from the root-symbol.
+    :ivar referred_otherwise: A set of symbols which are directly
+           referred to in a directive, macro or macro-symbol. It does
+           not matter whether these symbals are reachable (i.e. directly
+           oder indirectly referred to) from the root-symbol.
 
     :ivar symbols:  A mapping of symbol names to their usages (not
             their definition!) in the EBNF source.
@@ -1230,6 +1230,13 @@ class EBNFCompiler(Compiler):
 
     :ivar definitions:  A dictionary of definitions. Other than ``rules``
             this maps the symbols to their compiled definienda.
+
+    :ivar macros:  A dictionary that maps macro names to the AST of the
+            macro-definition. (The macro's AST is used to implement the
+            the substitution when the macro is applied.)
+
+    :ivar macro_stack:  A stack (i.e. list) of macro names needed to
+            ensure that macro calls are not recursively nested.
 
     :ivar required_keywords: A list of keywords (like ``comment__`` or
             ``whitespace__``) that need to be defined at the beginning
@@ -1325,7 +1332,7 @@ class EBNFCompiler(Compiler):
         self.rules = OrderedDict()             # type: OrderedDict[str, List[Node]]
         self.referred_symbols_cache = dict()   # type: Dict[str, FrozenSet[str]]
         self.directly_referred_cache = dict()  # type: Dict[str, FrozenSet[str]]
-        self.referred_by_directive = set()     # type: Set[str]
+        self.referred_otherwise = set()        # type: Set[str]
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
@@ -1526,7 +1533,7 @@ class EBNFCompiler(Compiler):
             return unrepr(proc_name)
         elif nd.name == 'symbol':
             referred_symbol = nd.content.strip()
-            self.referred_by_directive.add(referred_symbol)
+            self.referred_otherwise.add(referred_symbol)
             return unrepr(referred_symbol)
         else:
             # create a parser-based search rule
@@ -1544,7 +1551,7 @@ class EBNFCompiler(Compiler):
             defn = self.compile(nd)
             assert defn.find("(") >= 0  # synonyms are impossible here
             self.definitions[rule] = defn
-            self.referred_by_directive.add(rule)
+            self.referred_otherwise.add(rule)
             return unrepr(rule)
 
 
@@ -1869,7 +1876,7 @@ class EBNFCompiler(Compiler):
                     remove_connections(str(related))
 
         remove_connections(self.root_symbol)
-        for symbol in self.referred_by_directive:
+        for symbol in self.referred_otherwise:
             if symbol in defined_symbols:
                 remove_connections(symbol)
         for leftover in defined_symbols:
@@ -1942,19 +1949,23 @@ class EBNFCompiler(Compiler):
                 if sym in self.P:
                     self.P[sym] = 'parse_namespace__.' + sym
 
-        # reorder children: directives first, then macro definition, finally symbol definitions
-        directivedefs, macrodefs, symdefs = [], [], []
+        # reorder children: directives first, then macro syms and definitions,
+        #                   finally symbol definitions
+        directivedefs, macrosyms, macrodefs, symdefs = [], [], [], []
         for nd in node.children:
             if nd.name == 'directive':
                 if nd[0].content == "disposable":
                     directivedefs.insert(0, nd)  # make sure that @disposable is always in front of @drop
                 directivedefs.append(nd)
             elif nd.name == 'macrodef':
-                macrodefs.append(nd)
+                if nd.get('placeholder', None):
+                    macrodefs.append(nd)
+                else:  # macros without arguments must be read first, later, because of early substitution
+                    macrosyms.append(nd)
             else:
                 assert nd.name == 'definition', nd.as_sxpr()
                 symdefs.append(nd)
-        node.result = tuple(directivedefs + macrodefs + symdefs)
+        node.result = tuple(directivedefs + macrosyms + macrodefs + symdefs)
 
         # compile definitions and directives and collect definitions
         root_symbol = ''
@@ -1963,11 +1974,11 @@ class EBNFCompiler(Compiler):
                 rule, defn = self.compile(nd)
                 self.definitions[rule] = defn
                 if not root_symbol:  root_symbol = rule
-            elif nd.name == "macrodef":
-                self.compile(nd)
             else:
-                assert nd.name == "directive", nd.as_sxpr()
-                self.compile(nd)
+                assert nd.name in ("macrodef", "directive", ZOMBIE_TAG), nd.as_sxpr()
+                if nd.name != ZOMBIE_TAG:   self.compile(nd)
+                # If nd.name == ZOMBIE_TAG, some error has already been reported, earlier.
+                # So it can be ignored here.
 
         if not self.definitions:
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
@@ -2293,9 +2304,12 @@ class EBNFCompiler(Compiler):
         macro_name = node['name'].content
         placeholders = [pl['name'].content for pl in node.children
                         if pl.children and pl.name == 'placeholder']
+        unused_placeholders = set(placeholders)
         body = node.pick('macrobody')
         assert body and body.children and len(body.children) == 1
         template = body.children[0]
+        for sym in template.select('symbol', include_root=True):
+            self.referred_otherwise.add(sym.content)
         self.macros[macro_name] = (node, placeholders, template)
         return ""
 
@@ -2366,7 +2380,8 @@ class EBNFCompiler(Compiler):
         name = node['name'].content
         self.tree.new_error(
             node, f'Placeholder "${name}" used outside macro!', PLACEHOLDER_OUTSIDE_MACRO)
-        return "_UNXEPECTED_PLACEHOLDER_" + node['name'].content
+        return "wsp__"
+        # return "_UNEXPECTED_PLACEHOLDER_" + node['name'].content
 
 
     def on_expression(self, node) -> str:
