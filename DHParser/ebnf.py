@@ -2299,8 +2299,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_macrodef(self, node) -> str:
-        # TODO: UNUSED MACRO ARGUMENTS should be warned about!
-        # TODO: Allow macrosyms and do macrosym-substitution
+        # TODO: Better reference-cycle-prevention than countdown
         macro_name = node['name'].content
         placeholders = [pl.content for pl in node.children if pl.name == 'placeholder']
         body = node.pick('macrobody')
@@ -2310,12 +2309,18 @@ class EBNFCompiler(Compiler):
             self.referred_otherwise.add(sym.content)
         used_placholders = set()
         replacement = 1
-        while replacement:
+        countdown = 20
+        while replacement and countdown > 0:
             replacement = None
+            countdown -= 1
             for pl in template.select('placeholder', include_root=True):
                 pl_name = pl.content
                 if pl_name in placeholders:
                     used_placholders.add(pl_name)
+                elif pl_name == macro_name:  # this covers but one of several cases
+                    self.tree.new_error(pl, f'Recursive nesting of component "{macro_name}"!',
+                                        RECURSIVE_MACRO_CALL)
+                    return ""
                 else:
                     try:
                         _, args, expansion = self.macros[pl_name]
@@ -2323,10 +2328,15 @@ class EBNFCompiler(Compiler):
                             self.tree.new_error(node, f'Macro "${pl_name}" requires arguments',
                                                 WRONG_NUMBER_OF_ARGUMENTS)
                             return ""
-                        replacement = copy.deepcopy(expansion)
+                        replacement = Node('macroname', copy.deepcopy(expansion))\
+                            .with_attr({'name': pl_name}).with_pos(pl.pos)
                         pl.replace_by(replacement, merge_attr=True)
                     except KeyError:
                         pass
+        if countdown <= 0:
+            self.tree.new_error(pl, f'Component "{macro_name}" too deeply structured '
+                                f'if not recursively nested!', RECURSIVE_MACRO_CALL)
+            return ""
         leftover = set(placeholders) - used_placholders
         if leftover:
             self.tree.new_error(node, f"Unused macro arguments: {str(leftover)[1:-1]}",
@@ -2357,6 +2367,15 @@ class EBNFCompiler(Compiler):
         else:
             return parser_class + '(' + ', '.join(arguments) + ')'
 
+
+    def on_macroname(self, node) -> str:
+        macro_name = node.attr['name']
+        code = self.compile(node[0])
+        if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
+            return f'{self.P["Drop"]}({code})'
+        elif not re.match(self.directives.disposable, macro_name):
+            return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+        return code
 
     def on_macro(self, node) -> str:
         macro_name = node['name'].content if node.children else node.content
@@ -2389,14 +2408,15 @@ class EBNFCompiler(Compiler):
                 arg.replace_by(value, merge_attr=True)
         node.replace_by(tmpl, merge_attr=True)
         self.macro_stack.append(macro_name)
-        code = self.compile(node)
+        code = self.compile(Node('macroname', node).with_attr({'name': macro_name}))
         _ = self.macro_stack.pop()
         assert macro_name == _
-        if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
-            return f'{self.P["Drop"]}({code})'
-        elif not re.match(self.directives.disposable, macro_name):
-            return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+        # if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
+        #     return f'{self.P["Drop"]}({code})'
+        # elif not re.match(self.directives.disposable, macro_name):
+        #     return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
         return code
+
 
     def on_placeholder(self, node) -> str:
         return self.on_macro(node)
