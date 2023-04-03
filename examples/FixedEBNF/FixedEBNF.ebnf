@@ -44,9 +44,8 @@ directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
 
 macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
              DEF~ [ OR~ ] macrobody ENDL~ & FOLLOW_UP
-# macrosym   = "$" name~ DEF~ [ OR~ ] §macrobody ENDL~ &FOLLOW_UP
-macrobody  = expression
-is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~DEF
+  macrobody  = expression
+  is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~DEF
 
 FOLLOW_UP  = `@` | `$` | symbol | EOF
 
@@ -106,7 +105,6 @@ multiplier = /[1-9]\d*/~
 
 parser     = "@" name "(" §[argument] ")"        # a user defined parser
   argument = literal | name~
-
 
 symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
