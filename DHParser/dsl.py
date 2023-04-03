@@ -49,6 +49,7 @@ from DHParser.trace import set_tracer, trace_history, resume_notices_on
 from DHParser.transform import TransformerFunc, TransformationDict, transformer, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
     compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count, deprecated
+from DHParser.versionnumber import __version__, __version_info__
 
 
 __all__ = ('DefinitionError',
@@ -247,6 +248,14 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL", fail_when: ErrorCode = ERROR)
     return compiler
 
 
+VERSION_CHECK=f"""import DHParser.versionnumber
+if DHParser.versionnumber.__version_info__ < {__version_info__}:
+    print(f'DHParser version {{DHParser.versionnumber.__version__}} is lower than the DHParser '
+          f'version {__version__}, {{os.path.basename(__file__)}} has first been generated with. '
+          f'Please install a more recent version of DHParser to avoid unexpected errors!')
+"""
+
+
 def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     """
     Compiles an EBNF source file and returns the source code of a
@@ -266,7 +275,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
            SECTION_MARKER.format(marker=SYMBOLS_SECTION),
-           DHPARSER_IMPORTS,
+           DHPARSER_IMPORTS, VERSION_CHECK,
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
@@ -533,7 +542,7 @@ def compile_on_disk(source_file: str,
         if RX_WHITESPACE.fullmatch(outro):
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
-            imports = DHParser.ebnf.DHPARSER_IMPORTS
+            imports = DHParser.ebnf.DHPARSER_IMPORTS + VERSION_CHECK
         elif imports.find("from DHParser.") < 0:
             imports += "\nfrom DHParser.dsl import PseudoJunction, create_parser_transition\n"
         if RX_WHITESPACE.fullmatch(preprocessor):
@@ -947,7 +956,7 @@ def process_file(source: str, out_dir: str,
     # create target directories
     for t in end_results.keys():
         path = os.path.join(out_dir, t)
-        try:  # do not use os.path.exsits, here: RACE CONDITION!
+        try:  # do not use os.path.exists(), here: RACE CONDITION!!
             os.makedirs(path)
         except FileExistsError:
             if not os.path.isdir(path):
@@ -958,24 +967,26 @@ def process_file(source: str, out_dir: str,
 
     # write data
     errors = [];  errstrs = set()
-    for t, r in end_results.items():
+    items = end_results.items() if len(end_results) == len(targets) else results.items()
+    for t, r in items:
         result, err = r
         for e in err:
             estr = str(e)
             if estr not in errstrs:
                 errstrs.add(estr)
                 errors.append(e)
-        path = os.path.join(out_dir, t, '.'.join([dest_name, t]))
-        if isinstance(result, Node):
-            slist = serializations.get(t, serializations.get(
-                '*', get_config_value('default_serialization')))
-            for s in slist:
-                data = result.serialize(s)
-                with open('.'.join([path, s]), 'w', encoding='utf-8') as f:
-                    f.write(data)
-        else:
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(str(result))
+        if t in end_results:
+            path = os.path.join(out_dir, t, '.'.join([dest_name, t]))
+            if isinstance(result, Node):
+                slist = serializations.get(t, serializations.get(
+                    '*', get_config_value('default_serialization')))
+                for s in slist:
+                    data = result.serialize(s)
+                    with open('.'.join([path, s]), 'w', encoding='utf-8') as f:
+                        f.write(data)
+            else:
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(str(result))
 
     errors.sort(key=lambda e: e.pos)
     if errors:

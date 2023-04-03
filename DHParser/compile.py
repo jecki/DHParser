@@ -631,7 +631,7 @@ def run_pipeline(junctions: Set[Junction],
             j_sequence.sort(key=functools.cmp_to_key(cmp_junctions))
             steps.append(j_sequence)
         except KeyError as e:
-            raise AssertionError(f"{e.args[0]} is not a valid target.")
+            raise AssertionError(f"{e.args[0]} is not a valid target.") from e
         targets = {j[0] for j in steps[-1] if j[0] not in already_reached}
         already_reached |= targets
         for step in steps[:-1]:
@@ -685,7 +685,7 @@ def full_compile(source: str,
     target stages might not be reached and thus not be included in the result."""
     cst, msgs, _ = compile_source(source, preprocessor_factory(), parser_factory())
     if has_errors(msgs, FATAL):
-        return {cst.stage: (cst, msgs)}
+        return {ts: (cst, msgs) for ts in target_stages}
     return run_pipeline(junctions, {cst.stage: cst}, target_stages)
 
 

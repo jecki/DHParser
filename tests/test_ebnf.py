@@ -1311,7 +1311,6 @@ class TestAlternativeEBNFSyntax:
     #     gr = get_ebnf_grammar()
     #     assert isinstance(gr, HeuristicEBNFGrammar)
     #     result = gr(r' */', 'regex_heuristics')
-    #     print(result.as_sxpr())
 
 
 class TestConfigurableEBNF:
@@ -1807,17 +1806,11 @@ class TestInclude:
 
     def test_include(self):
         arithmetic_ebnf = self.arithmetic_ebnf.replace('number.ebnf', self.number_path)
-        # print(arithmetic_ebnf)
         src, errors, ast = compile_ebnf(arithmetic_ebnf)
         assert not errors, str(errors)
-        # for e in errors:
-        #     print(str(e), e.orig_doc)
-        # print(canonical_error_strings(errors))
         parser = create_parser(arithmetic_ebnf)
-        # print(parser.python_src__)
         tree = parser('2 - (3 * -4.145E+5)')
         assert not tree.errors
-        # print(tree.as_sxpr())
 
 
 class TestCustomParsers:
@@ -2021,16 +2014,18 @@ class TestMacros:
 
     def test_macrosyms(self):
         lang = '''@reduction = merge
+        @disposable = $phrase_list, $chars, _neutral_chars
         doc = ~ $phrase_list(`,`)
         $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) } 
-        $phrase($separator) = neutral_chars $chars
-        $chars = { !$separator /[.,;]/ neutral_chars } 
-        neutral_chars = /[^.,;]+/  
+        $phrase($separator) = _neutral_chars $chars
+        $chars = { !$separator /[.,;]/ _neutral_chars } 
+        _neutral_chars = /[^.,;]+/  
         '''
         parser = create_parser(lang)
         tree = parser('1; 2, 3; 4')
-        for e in tree.errors:
-            print(e)
+        assert not tree.errors
+        assert flatten_sxpr(tree.as_sxpr()) == '(doc (phrase "1; 2") (:Text ", ") (phrase "3; 4"))'
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
