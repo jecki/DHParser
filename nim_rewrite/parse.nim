@@ -112,7 +112,6 @@ proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
   return newNode(parser.nodeName, "")
 
 
-
 let GrammarPlaceholder = GrammarRef(name: "__Placeholder__")
 
 
