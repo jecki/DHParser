@@ -9,6 +9,9 @@ __pycache__/
 *.bcf
 *.aux
 *.toc
+*_MESSAGES.txt
+*_ERRORS.txt
+tmp_*
 testdata/*.log
 testdata/*.pdf
 *~
@@ -54,3 +57,7 @@ docs/*
 examples/LaTeX/testdata/*.xml
 venv/*
 *.sxpr
+**/htmldocs/
+experimental
+
+
