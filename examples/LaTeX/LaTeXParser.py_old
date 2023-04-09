@@ -1,0 +1,731 @@
+#!/usr/bin/env python3
+
+#######################################################################
+#
+# SYMBOLS SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+
+from collections import defaultdict
+import os
+import sys
+from functools import partial
+from typing import List, Any
+
+dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
+
+try:
+    import regex as re
+except ImportError:
+    import re
+from DHParser import is_filename, Grammar, Compiler, Lookbehind, Alternative, Pop, \
+    Synonym, Whitespace, Drop, Text, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Series, Capture, Lookahead, \
+    ZeroOrMore, Forward, NegativeLookahead, mixin_comment, compile_source, \
+    PreprocessorFunc, Node, TransformationFunc, traverse, remove_children_if, \
+    reduce_single_child, replace_by_single_child, remove_whitespace, remove_empty, \
+    flatten, is_empty, collapse, remove_brackets, strip, \
+    is_one_of, remove_tokens, remove_children, TOKEN_PTYPE, WARNING, \
+    access_thread_locals, recompile_grammar, get_config_value, apply_unless, \
+    transform_content, replace_content_with, resume_notices_on, set_tracer, trace_history, \
+    EMPTY_NODE, ThreadLocalSingletonFactory
+from DHParser.log import start_logging
+
+
+#######################################################################
+#
+# PREPROCESSOR SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+def LaTeXPreprocessor(text):
+    return text, lambda i: i
+
+def get_preprocessor() -> PreprocessorFunc:
+    return LaTeXPreprocessor
+
+
+#######################################################################
+#
+# PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!
+#
+#######################################################################
+
+class LaTeXGrammar(Grammar):
+    r"""Parser for a LaTeX source file.
+    """
+    begin_generic_block = Forward()
+    block_environment = Forward()
+    block_of_paragraphs = Forward()
+    end_generic_block = Forward()
+    paragraph = Forward()
+    tabular_config = Forward()
+    text_element = Forward()
+    source_hash__ = "e304b8a7a8f08bd86b429bff3590dd34"
+    anonymous__ = re.compile('_WSPC$|_GAP$|_LB$|_PARSEP$|block_environment$|known_environment$|text_element$|line_element$|inline_environment$|known_inline_env$|begin_inline_env$|end_inline_env$|command$|known_command$')
+    static_analysis_pending__ = []  # type: List[bool]
+    parser_initialization__ = ["upon instantiation"]
+    COMMENT__ = r'%.*'
+    comment_rx__ = re.compile(COMMENT__)
+    comment__ = RegExp(comment_rx__)
+    WHITESPACE__ = r'[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?'
+    whitespace__ = Whitespace(WHITESPACE__)
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(Whitespace(WSP_RE__))
+    EOF = RegExp('(?!.)')
+    BACKSLASH = RegExp('[\\\\]')
+    _LB = Drop(RegExp('\\s*?\\n|$'))
+    NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('\\n')))
+    _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
+    _WSPC = Drop(OneOrMore(Drop(Alternative(comment__, Drop(RegExp('\\s+'))))))
+    _PARSEP = Drop(Series(Drop(ZeroOrMore(Drop(Series(whitespace__, comment__)))), _GAP, Drop(Option(_WSPC))))
+    S = Series(Lookahead(Drop(RegExp('[% \\t\\n]'))), NegativeLookahead(_GAP), wsp__)
+    LFF = Series(NEW_LINE, Option(_WSPC))
+    LF = Series(NEW_LINE, ZeroOrMore(Series(comment__, whitespace__)))
+    LETTERS = RegExp('[^\\\\%$&\\{\\}\\[\\]\\s\\n]+')
+    LINE = RegExp('[^\\\\%$&\\{\\}\\[\\]\\n]+')
+    TEXT = RegExp('(?:[^\\\\%$&\\{\\}\\[\\]\\n]+(?:\\n(?![ \\t]*\\n))?)+')
+    INTEGER = Series(RegExp('\\d+'), dwsp__)
+    NAME = Capture(RegExp('\\w+'))
+    LINEFEED = RegExp('[\\\\][\\\\]')
+    BRACKETS = RegExp('[\\[\\]]')
+    SPECIAL = RegExp('[$&_/\\\\\\\\]')
+    ESCAPED = RegExp('\\\\[%$&_/{}]')
+    TXTCOMMAND = RegExp('\\\\text\\w+')
+    CMDNAME = Series(RegExp('\\\\(?:(?!_)\\w)+'), dwsp__)
+    structural = Alternative(Series(Drop(Text("subsection")), dwsp__), Series(Drop(Text("section")), dwsp__), Series(Drop(Text("chapter")), dwsp__), Series(Drop(Text("subsubsection")), dwsp__), Series(Drop(Text("paragraph")), dwsp__), Series(Drop(Text("subparagraph")), dwsp__), Series(Drop(Text("item")), dwsp__))
+    blockcmd = Series(BACKSLASH, Alternative(Series(Alternative(Series(Drop(Text("begin{")), dwsp__), Series(Drop(Text("end{")), dwsp__)), Alternative(Series(Drop(Text("enumerate")), dwsp__), Series(Drop(Text("itemize")), dwsp__), Series(Drop(Text("figure")), dwsp__), Series(Drop(Text("quote")), dwsp__), Series(Drop(Text("quotation")), dwsp__), Series(Drop(Text("tabular")), dwsp__)), Series(Drop(Text("}")), dwsp__)), structural, begin_generic_block, end_generic_block))
+    no_command = Alternative(Series(Drop(Text("\\begin{")), dwsp__), Series(Drop(Text("\\end")), dwsp__), Series(BACKSLASH, structural))
+    text = Series(TEXT, ZeroOrMore(Series(S, TEXT)))
+    block = Series(Drop(RegExp('{')), dwsp__, ZeroOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))), Drop(RegExp('}')), mandatory=3)
+    cfg_text = ZeroOrMore(Alternative(Series(dwsp__, text), CMDNAME, SPECIAL))
+    config = Series(Series(Drop(Text("[")), dwsp__), cfg_text, Series(Drop(Text("]")), dwsp__), mandatory=2)
+    pdfinfo = Series(Series(Drop(Text("\\pdfinfo")), dwsp__), block)
+    documentclass = Series(Series(Drop(Text("\\documentclass")), dwsp__), Option(config), block)
+    cline = Series(Series(Drop(Text("\\cline{")), dwsp__), INTEGER, Series(Drop(Text("-")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__))
+    hline = Series(Text("\\hline"), dwsp__)
+    multicolumn = Series(Series(Drop(Text("\\multicolumn")), dwsp__), Series(Drop(Text("{")), dwsp__), INTEGER, Series(Drop(Text("}")), dwsp__), tabular_config, block_of_paragraphs)
+    caption = Series(Series(Drop(Text("\\caption")), dwsp__), block)
+    includegraphics = Series(Series(Drop(Text("\\includegraphics")), dwsp__), Option(config), block)
+    footnote = Series(Series(Drop(Text("\\footnote")), dwsp__), block_of_paragraphs)
+    citep = Series(Alternative(Series(Drop(Text("\\citep")), dwsp__), Series(Drop(Text("\\cite")), dwsp__)), Option(config), block)
+    citet = Series(Series(Drop(Text("\\citet")), dwsp__), Option(config), block)
+    generic_command = Series(NegativeLookahead(no_command), CMDNAME, Option(Series(Option(Series(dwsp__, config)), dwsp__, block)))
+    text_command = Alternative(TXTCOMMAND, ESCAPED, BRACKETS)
+    known_command = Alternative(citet, citep, footnote, includegraphics, caption, multicolumn, hline, cline, documentclass, pdfinfo)
+    command = Alternative(known_command, text_command, generic_command)
+    inline_math = Series(Drop(RegExp('\\$')), Drop(RegExp('[^$]*')), Drop(RegExp('\\$')), mandatory=2)
+    end_environment = Series(Drop(RegExp('\\\\end{')), Pop(NAME), Drop(RegExp('}')), mandatory=1)
+    begin_environment = Series(Drop(RegExp('\\\\begin{')), NAME, Drop(RegExp('}')), mandatory=1)
+    end_inline_env = Synonym(end_environment)
+    begin_inline_env = Alternative(Series(NegativeLookbehind(_LB), begin_environment), Series(begin_environment, NegativeLookahead(LFF)))
+    generic_inline_env = Series(begin_inline_env, dwsp__, paragraph, end_inline_env, mandatory=3)
+    known_inline_env = Synonym(inline_math)
+    inline_environment = Alternative(known_inline_env, generic_inline_env)
+    line_element = Alternative(text, block, inline_environment, command)
+    text_element.set(Alternative(line_element, LINEFEED))
+    paragraph.set(OneOrMore(Series(NegativeLookahead(blockcmd), text_element, Option(S))))
+    sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, block_environment), Option(_PARSEP))))
+    block_of_paragraphs.set(Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2))
+    TBCFG_VALUE = Series(RegExp('[lcr|]+'), dwsp__)
+    tabular_config.set(Series(Series(Drop(Text("{")), dwsp__), TBCFG_VALUE, Series(Drop(Text("}")), dwsp__), mandatory=2))
+    tabular_cell = ZeroOrMore(Series(line_element, Option(S)))
+    tabular_row = Series(Alternative(multicolumn, tabular_cell), ZeroOrMore(Series(Series(Drop(Text("&")), dwsp__), Alternative(multicolumn, tabular_cell))), Series(Drop(Text("\\\\")), dwsp__), Alternative(hline, ZeroOrMore(cline)))
+    tabular = Series(Series(Drop(Text("\\begin{tabular}")), dwsp__), tabular_config, ZeroOrMore(tabular_row), Series(Drop(Text("\\end{tabular}")), dwsp__), mandatory=3)
+    verbatim = Series(Series(Drop(Text("\\begin{verbatim}")), dwsp__), sequence, Series(Drop(Text("\\end{verbatim}")), dwsp__), mandatory=2)
+    quotation = Alternative(Series(Series(Drop(Text("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Text("\\begin{quote}")), dwsp__), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
+    figure = Series(Series(Drop(Text("\\begin{figure}")), dwsp__), sequence, Series(Drop(Text("\\end{figure}")), dwsp__), mandatory=2)
+    item = Series(Series(Drop(Text("\\item")), dwsp__), sequence)
+    enumerate = Series(Series(Drop(Text("\\begin{enumerate}")), dwsp__), Option(_WSPC), ZeroOrMore(item), Series(Drop(Text("\\end{enumerate}")), dwsp__), mandatory=3)
+    itemize = Series(Series(Drop(Text("\\begin{itemize}")), dwsp__), Option(_WSPC), ZeroOrMore(item), Series(Drop(Text("\\end{itemize}")), dwsp__), mandatory=3)
+    end_generic_block.set(Series(Lookbehind(_LB), end_environment, LFF))
+    begin_generic_block.set(Series(Lookbehind(_LB), begin_environment, LFF))
+    generic_block = Series(begin_generic_block, sequence, end_generic_block, mandatory=2)
+    known_environment = Alternative(itemize, enumerate, figure, tabular, quotation, verbatim)
+    block_environment.set(Alternative(known_environment, generic_block))
+    heading = Synonym(block)
+    Index = Series(Option(_WSPC), Series(Drop(Text("\\printindex")), dwsp__))
+    Bibliography = Series(Option(_WSPC), Series(Drop(Text("\\bibliography")), dwsp__), heading)
+    SubParagraph = Series(Series(Drop(Text("\\subparagraph")), dwsp__), heading, Option(sequence))
+    SubParagraphs = OneOrMore(Series(Option(_WSPC), SubParagraph))
+    Paragraph = Series(Series(Drop(Text("\\paragraph")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubParagraphs)))
+    Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
+    SubSubSection = Series(Series(Drop(Text("\\subsubsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Paragraphs)))
+    SubSubSections = OneOrMore(Series(Option(_WSPC), SubSubSection))
+    SubSection = Series(Series(Drop(Text("\\subsection")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSubSections)))
+    SubSections = OneOrMore(Series(Option(_WSPC), SubSection))
+    Section = Series(Series(Drop(Text("\\section")), dwsp__), heading, ZeroOrMore(Alternative(sequence, SubSections)))
+    Sections = OneOrMore(Series(Option(_WSPC), Section))
+    Chapter = Series(Series(Drop(Text("\\chapter")), dwsp__), heading, ZeroOrMore(Alternative(sequence, Sections)))
+    Chapters = OneOrMore(Series(Option(_WSPC), Chapter))
+    frontpages = Synonym(sequence)
+    document = Series(Option(_WSPC), Series(Drop(Text("\\begin{document}")), dwsp__), frontpages, Alternative(Chapters, Sections), Option(Bibliography), Option(Index), Option(_WSPC), Series(Drop(Text("\\end{document}")), dwsp__), Option(_WSPC), EOF, mandatory=9)
+    preamble = OneOrMore(Series(Option(_WSPC), command))
+    latexdoc = Series(preamble, document)
+    root__ = latexdoc
+    
+
+_raw_grammar = ThreadLocalSingletonFactory(LaTeXGrammar, ident=1)
+
+def get_grammar() -> LaTeXGrammar:
+    grammar = _raw_grammar()
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
+    return grammar
+    
+def parse_LaTeX(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match)
+
+
+#######################################################################
+#
+# AST SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+
+def streamline_whitespace(context):
+    # if context[-2].tag_name == TOKEN_PTYPE:
+    #     return
+    node = context[-1]
+    assert node.tag_name in ['WSPC', ':Whitespace', 'S']
+    s = node.content
+    if s.find('%') >= 0:
+        node.result = '\n'
+        # c = s.find('%')
+        # node.result = ('  ' if (n >= c) or (n < 0) else '\n')+ s[c:].rstrip(' \t')
+        # node.parser = MockParser('COMMENT', '')
+    elif s.find('\n') >= 0:
+        node.result = '\n'
+    else:
+        node.result = ' ' if s else ''
+
+
+def watch(node):
+    print(node.as_sxpr())
+
+flatten_structure = flatten(lambda context: is_one_of(
+    context, {"Chapters", "Sections", "SubSections", "SubSubSections", "Paragraphs",
+              "SubParagraphs", "sequence"}), recursive=True)
+
+
+def transform_generic_command(context: List[Node]):
+    node = context[-1]
+    assert node.children[0].tag_name == 'CMDNAME'
+    node.tag_name = 'cmd_' + node.children[0].content.lstrip('\\')
+    node.result = node.children[1:]
+    pass
+
+
+def transform_generic_block(context: List[Node]):
+    node = context[-1]
+    # assert node.children[0].tag_name == "begin_generic_block"
+    # assert node.children[0].children[0].tag_name == "begin_environment"
+    # assert node.children[-1].tag_name == "end_generic_block"
+    # assert node.children[-1].children[0].tag_name == "end_environment"
+    node.tag_name = 'env_' + node.children[0].children[0].content.lstrip('\\')
+    node.result = node.children[1:-1]
+
+
+def is_expendable(context: List[Node]):
+    node = context[-1]
+    return not node._result and not node.tag_name.startswith('cmd_')
+
+
+def show(context: List[Node]):
+    print(context[-1].as_xml())
+
+
+LaTeX_AST_transformation_table = {
+    # AST Transformations for the LaTeX-grammar
+    "<": [flatten, flatten_structure, remove_children_if(is_expendable)],
+    "latexdoc": [],
+    "document": [flatten_structure],
+    "pdfinfo": [],
+    "frontpages": reduce_single_child,
+    "Chapters, Sections, SubSections, SubSubSections, Paragraphs, SubParagraphs": [],
+    "Chapter, Section, SubSection, SubSubSection, Paragraph, SubParagraph": [],
+    "heading": reduce_single_child,
+    "Bibliography": [],
+    "Index": [],
+    "block_environment": replace_by_single_child,
+    "known_environment": replace_by_single_child,
+    "generic_block": [transform_generic_block],
+    "generic_command": [transform_generic_command],  # [flatten],
+    "begin_generic_block, end_generic_block": [],
+        # [remove_children({'NEW_LINE', 'LFF'}), replace_by_single_child],
+    "itemize, enumerate": [remove_brackets, flatten],
+    "item": [],
+    "figure": [],
+    "quotation": [reduce_single_child, remove_brackets],
+    "verbatim": [],
+    "tabular": [],
+    "tabular_config, block_of_paragraphs": [remove_brackets, reduce_single_child],
+    "tabular_row": [flatten, remove_tokens('&', '\\')],
+    "tabular_cell": [flatten, remove_whitespace],
+    "multicolumn": [remove_tokens('{', '}')],
+    "hline": [remove_whitespace, reduce_single_child],
+    "sequence": [flatten],
+    "paragraph": [flatten, strip(is_one_of({'S'}))],
+    "text_element": replace_by_single_child,
+    "line_element": replace_by_single_child,
+    "inline_environment": replace_by_single_child,
+    "known_inline_env": replace_by_single_child,
+    "generic_inline_env": [],
+    "begin_inline_env, end_inline_env": [replace_by_single_child],
+    "begin_environment, end_environment": [],  # [remove_brackets, reduce_single_child],
+    "inline_math": [remove_brackets, reduce_single_child],
+    "command": replace_by_single_child,
+    "known_command": replace_by_single_child,
+    "text_command": [],
+    "citet, citep": [],
+    "footnote": [],
+    "includegraphics": [],
+    "caption": [],
+    "config": [remove_brackets, reduce_single_child],
+    "block": [remove_brackets, flatten],
+    "text": collapse,
+    "no_command, blockcmd": [],
+    "structural": [],
+    "CMDNAME": [remove_whitespace, reduce_single_child],
+    "TXTCOMMAND": [remove_whitespace, reduce_single_child],
+    "NAME": [reduce_single_child, remove_whitespace, reduce_single_child],
+    "ESCAPED": [transform_content(lambda node: str(node)[1:])],
+    "BRACKETS": [],
+    "TEXTCHUNK": [],
+    "LF": [],
+    "GAP": [],
+    "LB": [],
+    "BACKSLASH": [],
+    "EOF": [],
+    "PARSEP": [replace_content_with('\n\n')],
+    ":Whitespace, WSPC, S": streamline_whitespace,
+    "*": apply_unless(replace_by_single_child,
+                      lambda ctx: ctx[-1].tag_name[:4] not in ('cmd_', 'env_'))
+}
+
+
+def CreateLaTeXTransformer() -> TransformationFunc:
+    """Creates a transformation function that does not share state with other
+    threads or processes."""
+    return partial(traverse, processing_table=LaTeX_AST_transformation_table.copy())
+
+def get_transformer() -> TransformationFunc:
+    """Returns a thread/process-exclusive transformation function."""
+    THREAD_LOCALS = access_thread_locals()
+    try:
+        transformer = THREAD_LOCALS.LaTeX_00000001_transformer_singleton
+    except AttributeError:
+        THREAD_LOCALS.LaTeX_00000001_transformer_singleton = CreateLaTeXTransformer()
+        transformer = THREAD_LOCALS.LaTeX_00000001_transformer_singleton
+    return transformer
+
+
+
+#######################################################################
+#
+# COMPILER SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+
+def empty_defaultdict():
+    """Returns a defaultdict with an empty defaultdict as default value."""
+    return defaultdict(empty_defaultdict)
+
+
+class LaTeXCompiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a LaTeX source file.
+    """
+    KNOWN_DOCUMENT_CLASSES = {'book', 'article'}
+    KNOWN_LANGUAGES = {'english', 'german'}
+
+    def __init__(self):
+        super(LaTeXCompiler, self).__init__()
+        self.metadata = defaultdict(empty_defaultdict)
+
+    def __call__(self, root):
+        result = super().__call__(root)
+        self.tree.inline_tags = set()  # {'paragraph'}
+        self.tree.empty_tags = set()
+        self.tree.string_tags = {'S', 'PARSEP'}
+        return result
+
+
+    def fallback_generic_command(self, node: Node) -> Node:
+        if not node.result:
+            return EMPTY_NODE
+        return node
+
+    def fallback_generic_environment(self, node) -> Node:
+        node = super().fallback_compiler(node)
+        node.tag_name = 'VOID'
+        return node
+
+    def fallback_compiler(self, node: Node) -> Any:
+        if node.tag_name.startswith('cmd_'):
+            node = self.fallback_generic_command(node)
+        elif node.tag_name.startswith('env_'):
+            node = self.fallback_generic_environment(node)
+        else:
+            node = super().fallback_compiler(node)
+        # replace void nodes by their children
+        if node.children:
+            result = [];  void_flag = False
+            for child in node.children:
+                if child.tag_name == 'VOID' and child.children:
+                    result.extend(child.children);  void_flag = True
+                else:
+                    result.append(child)
+            if void_flag:  # use flag, because assignment can be costly
+                node.result = tuple(result)
+        return node
+
+    # def on_latexdoc(self, node):
+    #     self.compile(node['preamble'])
+    #     self.compile(node['document'])
+    #     return node
+
+    # def on_preamble(self, node):
+    #     return node
+
+    # def on_document(self, node):
+    #     return node
+
+    # def on_frontpages(self, node):
+    #     return node
+
+    # def on_Chapters(self, node):
+    #     return node
+
+    # def on_Chapter(self, node):
+    #     return node
+
+    # def on_Sections(self, node):
+    #     return node
+
+    # def on_Section(self, node):
+    #     return node
+
+    # def on_SubSections(self, node):
+    #     return node
+
+    # def on_SubSection(self, node):
+    #     return node
+
+    # def on_SubSubSections(self, node):
+    #     return node
+
+    # def on_SubSubSection(self, node):
+    #     return node
+
+    # def on_Paragraphs(self, node):
+    #     return node
+
+    # def on_Paragraph(self, node):
+    #     return node
+
+    # def on_SubParagraphs(self, node):
+    #     return node
+
+    # def on_SubParagraph(self, node):
+    #     return node
+
+    # def on_Bibliography(self, node):
+    #     return node
+
+    # def on_Index(self, node):
+    #     return node
+
+    # def on_heading(self, node):
+    #     return node
+
+    # def on_block_environment(self, node):
+    #     return node
+
+    # def on_known_environment(self, node):
+    #     return node
+
+    # def on_generic_block(self, node):
+    #     return node
+
+    # def on_begin_generic_block(self, node):
+    #     return node
+
+    # def on_end_generic_block(self, node):
+    #     return node
+
+    # def on_itemize(self, node):
+    #     return node
+
+    # def on_enumerate(self, node):
+    #     return node
+
+    # def on_item(self, node):
+    #     return node
+
+    # def on_figure(self, node):
+    #     return node
+
+    # def on_quotation(self, node):
+    #     return node
+
+    # def on_verbatim(self, node):
+    #     return node
+
+    # def on_tabular(self, node):
+    #     return node
+
+    # def on_tabular_row(self, node):
+    #     return node
+
+    # def on_tabular_cell(self, node):
+    #     return node
+
+    # def on_tabular_config(self, node):
+    #     return node
+
+    # def on_block_of_paragraphs(self, node):
+    #     return node
+
+    # def on_sequence(self, node):
+    #     return node
+
+    # def on_paragraph(self, node):
+    #     return node
+
+    # def on_text_element(self, node):
+    #     return node
+
+    # def on_line_element(self, node):
+    #     return node
+
+    # def on_inline_environment(self, node):
+    #     return node
+
+    # def on_known_inline_env(self, node):
+    #     return node
+
+    # def on_generic_inline_env(self, node):
+    #     return node
+
+    # def on_begin_inline_env(self, node):
+    #     return node
+
+    # def on_end_inline_env(self, node):
+    #     return node
+
+    # def on_begin_environment(self, node):
+    #     return node
+
+    # def on_end_environment(self, node):
+    #     return node
+
+    # def on_inline_math(self, node):
+    #     return node
+
+    # def on_command(self, node):
+    #     return node
+
+    # def on_known_command(self, node):
+    #     return node
+
+    # def on_text_command(self, node):
+    #     return node
+
+    # def on_generic_command(self, node):
+    #     return node
+
+    # def on_footnote(self, node):
+    #     return node
+
+    # def on_includegraphics(self, node):
+    #     return node
+
+    # def on_caption(self, node):
+    #     return node
+
+    # def on_multicolumn(self, node):
+    #     return node
+
+    # def on_hline(self, node):
+    #     return node
+
+    # def on_cline(self, node):
+    #     return node
+
+    def on_documentclass(self, node):
+        """
+        Saves the documentclass (if known) and the language (if given)
+        in the metadata dictionary.
+        """
+        if 'config' in node:
+            for it in {part.strip() for part in node['config'].content.split(',')}:
+                if it in self.KNOWN_LANGUAGES:
+                    if 'language' in self.metadata:
+                        self.metadata['language'] = it
+                    else:
+                        self.tree.new_error(node, 'Only one document language supported. '
+                                            'Using %s, ignoring %s.'
+                                            % (self.metadata['language'], it), WARNING)
+        if node['block'].content in self.KNOWN_DOCUMENT_CLASSES:
+            self.metadata['documentclass'] = node['block'].content
+        return node
+
+    def on_pdfinfo(self, node):
+        return node
+
+    # def on_config(self, node):
+    #     return node
+
+    # def on_cfg_text(self, node):
+    #     return node
+
+    # def on_block(self, node):
+    #     return node
+
+    # def on_text(self, node):
+    #     return node
+
+    # def on_no_command(self, node):
+    #     return node
+
+    # def on_blockcmd(self, node):
+    #     return node
+
+    # def on_structural(self, node):
+    #     return node
+
+    # def on_CMDNAME(self, node):
+    #     return node
+
+    # def on_TXTCOMMAND(self, node):
+    #     return node
+
+    # def on_ESCAPED(self, node):
+    #     return node
+
+    # def on_SPECIAL(self, node):
+    #     return node
+
+    # def on_BRACKETS(self, node):
+    #     return node
+
+    # def on_LINEFEED(self, node):
+    #     return node
+
+    # def on_NAME(self, node):
+    #     return node
+
+    # def on_INTEGER(self, node):
+    #     return node
+
+    # def on_TEXTCHUNK(self, node):
+    #     return node
+
+    # def on_LF(self, node):
+    #     return node
+
+    # def on_LFF(self, node):
+    #     return node
+
+    # def on_PARSEP(self, node):
+    #     return node
+
+    # def on_WSPC(self, node):
+    #     return node
+
+    # def on_GAP(self, node):
+    #     return node
+
+    # def on_NEW_LINE(self, node):
+    #     return node
+
+    # def on_LB(self, node):
+    #     return node
+
+    # def on_BACKSLASH(self, node):
+    #     return node
+
+    # def on_EOF(self, node):
+    #     return node
+
+
+def get_compiler() -> LaTeXCompiler:
+    """Returns a thread/process-exclusive LaTeXCompiler-singleton."""
+    THREAD_LOCALS = access_thread_locals()
+    try:
+        compiler = THREAD_LOCALS.LaTeX_00000001_compiler_singleton
+    except AttributeError:
+        THREAD_LOCALS.LaTeX_00000001_compiler_singleton = LaTeXCompiler()
+        compiler = THREAD_LOCALS.LaTeX_00000001_compiler_singleton
+    return compiler
+
+
+#######################################################################
+#
+# END OF DHPARSER-SECTIONS
+#
+#######################################################################
+
+
+def compile_src(source):
+    """Compiles ``source`` and returns (result, errors, ast).
+    """
+    compiler = get_compiler()
+    cname = compiler.__class__.__name__
+    log_file_name = os.path.basename(os.path.splitext(source)[0]) \
+        if is_filename(source) < 0 else cname[:cname.find('.')] + '_out'
+    result = compile_source(source, get_preprocessor(),
+                            get_grammar(),
+                            get_transformer(), compiler)
+    return result
+
+
+if __name__ == "__main__":
+    # recompile grammar if needed
+    grammar_path = os.path.abspath(__file__).replace('Parser.py', '.ebnf')
+    parser_update = False
+
+    def notify():
+        global parser_update
+        parser_update = True
+        print('recompiling ' + grammar_path)
+
+    if os.path.exists(grammar_path):
+        if not recompile_grammar(grammar_path, force=False, notify=notify):
+            error_file = os.path.basename(__file__).replace('Parser.py', '_ebnf_ERRORS.txt')
+            with open(error_file, encoding="utf-8") as f:
+                print(f.read())
+            sys.exit(1)
+        elif parser_update:
+            print(os.path.basename(__file__) + ' has changed. '
+              'Please run again in order to apply updated compiler')
+            sys.exit(0)
+    else:
+        print('Could not check whether grammar requires recompiling, '
+              'because grammar was not found at: ' + grammar_path)
+
+    if len(sys.argv) > 1:
+        # compile file
+        file_name, log_dir = sys.argv[1], ''
+        if file_name in ['-d', '--debug'] and len(sys.argv) > 2:
+            file_name, log_dir = sys.argv[2], 'LOGS'
+        start_logging(log_dir)
+        result, errors, _ = compile_src(file_name)
+        if errors:
+            cwd = os.getcwd()
+            rel_path = file_name[len(cwd):] if file_name.startswith(cwd) else file_name
+            for error in errors:
+                print(rel_path + ':' + str(error))
+            sys.exit(1)
+        else:
+            print(result.customized_XML() if isinstance(result, Node) else result)
+    else:
+        print("Usage: LaTeXParser.py [FILENAME]")

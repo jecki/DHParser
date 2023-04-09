@@ -10,6 +10,7 @@ __pycache__/
 *.aux
 *.toc
 *_MESSAGES.txt
+*_WARNINGS.txt
 *_ERRORS.txt
 tmp_*
 testdata/*.log
@@ -39,11 +40,8 @@ DHParser.egg-info
 *.build
 VERALTET
 DHParser/stringview.c
-*_ERRORS.txt
-*_WARNINGS.txt
 imperium.html
 fascitergula.html
-_build
 _build
 _static
 _templates
@@ -61,3 +59,5 @@ venv/*
 experimental
 
 
+/nim_rewrite/nodetree
+/nim_rewrite/parse
