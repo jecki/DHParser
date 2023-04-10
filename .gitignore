@@ -61,3 +61,4 @@ experimental
 
 /nim_rewrite/nodetree
 /nim_rewrite/parse
+/nim_rewrite/nimdoc
