@@ -172,7 +172,7 @@ proc `()`*(parser: Parser, document: string, location: int = 0): ParsingResult =
     return parser.parseProxy(parser, location)
 
 
-method is_optional(self: Parser): Option[bool] =
+method is_optional(self: Parser): Option[bool] {.base.} =
   ## Returns some(true), if the parser can never fail, i.e. never yields nil
   ## instead of a node.
   ## Returns some(false), if the parser can fail.
@@ -200,9 +200,10 @@ proc init*(textParser: TextRef, text: string): TextRef =
 proc Text*(text: string): TextRef =
   return new(TextRef).init(text)
 
-method parse(self: TextRef, location: int): ParsingResult =
+method parse*(self: TextRef, location: int): ParsingResult =
   runnableExamples:
-    doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
+    import nodetree
+    doAssert Text("A")("A").node.asSxpr() == "(:Text \"A\")"
 
   if self.grammar.document.continuesWith(self.text, location):
     if self.dropContent:
@@ -254,10 +255,10 @@ proc init*(repeat: RepeatRef, parser: Parser, repRange: Range): RepeatRef =
 proc Repeat*(parser: Parser, repRange: Range): RepeatRef =
   return new(RepeatRef).init(parser, repRange)
 
-method parse(self: RepeatRef, location: int): ParsingResult =
+method parse*(self: RepeatRef, location: int): ParsingResult =
   ## Examples:
   runnableExamples:
-    doAssert True
+    doAssert true
   var
     nodes = newSeqOfCap[Node](max(self.repRange.min, 1))
     loc = location

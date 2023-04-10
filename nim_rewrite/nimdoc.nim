@@ -12,7 +12,7 @@ when declared(paramStr) and declared(paramCount):
     echo "Usage: nimdoc [options] filename"
     quit(1)
   let fileName = paramStr(N)
-  var tmpDir = fmt"{getTempDir()}/nimdoc/"
+  var tmpDir = fmt"{getTempDir()}nimdoc/"
   discard existsOrCreateDir(tmpDir) 
   for nimFile in walkPattern("*.nim"):
     var nimSource = readFile(nimFile)
@@ -30,7 +30,7 @@ when declared(paramStr) and declared(paramCount):
   var result = execShellCmd(cmdLine)
   if result == 0:
     let docDir = tmpDir & "htmldocs"
-    copyDir(docDir, ".")
+    copyDir(docDir, "htmldocs")
     removeDir(tmpDir)
   else:
     removeDir(tmpDir)
