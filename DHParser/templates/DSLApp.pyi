@@ -11,6 +11,12 @@ import webbrowser
 from tkinter import ttk
 from tkinter import filedialog, messagebox
 
+try:
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+except NameError:
+    scriptdir = ''
+if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
+
 import DSLParser
 
 

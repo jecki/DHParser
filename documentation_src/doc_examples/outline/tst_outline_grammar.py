@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""tst_{name}_grammar.py - runs the unit tests for the {name}-grammar
+"""tst_outline_grammar.py - runs the unit tests for the outline-grammar
 """
 
 import os
@@ -24,7 +24,6 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
         finalize_presets, get_config_value
@@ -32,8 +31,8 @@ try:
     import DHParser.log
     from DHParser import testing
 except ModuleNotFoundError:
-    print('Could not import DHParser. Please adjust sys.path in file '
-          '"%s" manually' % __file__)
+    print(f'Could not import DHParser. Please adjust sys.path in file '
+          f'"{__file__}" manually')
     sys.exit(1)
 
 
@@ -44,7 +43,7 @@ def recompile_grammar(grammar_src, force):
     first_run = not os.path.exists(os.path.splitext(grammar_src)[0] + 'Parser.py')
     if not dsl.recompile_grammar(grammar_src, force=force,
             notify=lambda: print('recompiling ' + grammar_src)):
-        msg = f'Errors while recompiling "%s":' % os.path.basename(grammar_src)
+        msg = f'Errors while recompiling "{os.path.basename(grammar_src)}":'
         print('\n'.join(['', msg, '-'*len(msg)]))
         error_path = os.path.join(grammar_src[:-5] + '_ebnf_MESSAGES.txt')
         with open(error_path, 'r', encoding='utf-8') as f:
@@ -99,7 +98,7 @@ if __name__ == '__main__':
     finalize_presets()
 
     if args.scripts:
-        dsl.create_scripts(os.path.join(scriptdir, '{name}.ebnf'))
+        dsl.create_scripts(os.path.join(scriptdir, 'outline.ebnf'))
 
     if args.files:
         # if called with a single filename that is either an EBNF file or a known
@@ -111,11 +110,11 @@ if __name__ == '__main__':
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:
-        recompile_grammar(os.path.join(scriptdir, '{name}.ebnf'),
+        recompile_grammar(os.path.join(scriptdir, 'outline.ebnf'),
                           force=False)
         sys.path.append('.')
-        from {name}Parser import parsing, ASTTransformation, junctions, targets
-        test_targets = targets  # <- CHANGE TEXT-TARGET-SET, HERE, IF NEEDED
+        from outlineParser import parsing, ASTTransformation, junctions, targets
+        test_targets = {'ast'}
         error_report = run_grammar_tests(arg, parsing.factory, ASTTransformation.factory,
                                          junctions, test_targets)
         if error_report:

@@ -12,8 +12,13 @@ VERBOSE = False
 
 assert sys.version_info >= (3, 6, 0), "DHParser.server requires at least Python-Version 3.6.0"
 
-scriptpath = os.path.abspath(os.path.dirname(__file__))
-servername = os.path.splitext(os.path.basename(__file__))[0]
+try:
+    scriptdir, scriptname = os.path.split(os.path.realpath(__file__))
+    scriptpath = os.path.abspath(scriptdir)
+    servername = os.path.splitext(scriptname)[0]
+except NameError:
+    scriptdir = ''
+    servername = 'DHParserServer'
 
 STOP_SERVER_REQUEST_BYTES = b"__STOP_SERVER__"   # hardcoded in order to avoid import from DHParser.server
 IDENTIFY_REQUEST = "identify()"
@@ -265,12 +270,23 @@ def run_server(host, port, log_path=None):
     if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
     else:  set_start_method('spawn')
 
-    grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
-    if scriptpath not in sys.path:
+    try:
+        grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
+    except NameError:
+        grammar_src = ''
+    if scriptpath and scriptpath not in sys.path:
         sys.path.append(scriptpath)
+    try:
+        from DHParser import versionnumber
+    except (ImportError, ModuleNotFoundError):
+        i = scriptdir.rfind("/DHParser/")
+        if i >= 0:
+            dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
+            if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
+
     from DHParser.dsl import recompile_grammar
-    if not recompile_grammar(grammar_src, force=False,
-                             notify=lambda: print('recompiling ' + grammar_src)):
+    if grammar_src and not recompile_grammar(grammar_src, force=False,
+            notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
         with open('DSL_ebnf_ERRORS.txt', 'r', encoding='utf-8') as f:

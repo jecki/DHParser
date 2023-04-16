@@ -106,16 +106,23 @@ import sys
 from typing import Tuple, List, Union, Any, Optional, Callable, cast
 
 try:
-    scriptdir = os.path.abspath(os.path.dirname(__file__))
-except NameError:
-    scriptdir = ''
-if scriptdir and scriptdir not in sys.path:
-    sys.path.append(scriptdir)
-
-try:
     import regex as re
 except ImportError:
     import re
+
+try:
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+except NameError:
+    scriptdir = ''
+if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
+
+try:
+    from DHParser import versionnumber
+except (ImportError, ModuleNotFoundError):
+    i = scriptdir.rfind("/DHParser/")
+    if i >= 0:
+        dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
+        if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
 from DHParser.compile import Compiler, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
