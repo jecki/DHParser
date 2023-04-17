@@ -2026,6 +2026,45 @@ class TestMacros:
         assert not tree.errors
         assert flatten_sxpr(tree.as_sxpr()) == '(doc (phrase "1; 2") (:Text ", ") (phrase "3; 4"))'
 
+    def test_macro_complex_case(self):
+        lang = r'''@ whitespace  = /[ \t]*/
+        @ reduction   = merge        
+        @ disposable  = WS, EOF, LINE, S
+        @ drop        = WS, EOF, backticked
+        document = main [WS] §EOF
+        $one_sec($level_sign, $sub_level) = [WS] $level_sign !`#` heading [blocks] { $sub_level }
+        $sec_seq($sec) = { [WS] $sec }+
+        main = $one_sec(`#`, sections)
+        sections = $sec_seq(section)
+        section = $one_sec(`##`, subsections)
+        subsections = $sec_seq(subsection)
+        subsection = $one_sec(`###`, subsubsections)
+        subsubsections = $sec_seq(subsubsection)
+        subsubsection = $one_sec(`####`, NEVER_MATCH)
+        heading = LINE
+        blocks = [WS] block { PARSEP block }
+        block  = !is_heading line { lf !is_heading line }
+          line = LINE
+          lf   = S
+        is_heading = /##?#?#?#?#?(?!#)/
+        LINE      = /[ \t]*[^\n]+/
+        WS        = /(?:[ \t]*\n)+/  # empty lines
+        S         = !PARSEP /\s+/
+        PARSEP    = /[ \t]*\n[ \t]*\n\s*/
+        NEVER_MATCH = /..(?<=^)/
+        EOF       =  !/./
+        '''
+        parser = create_parser(lang)
+        doc = """
+        # Title
+        ## Section 1
+        ### SubSection 1.1
+        Text
+        ## SubSection 1.2
+        ### Section 2
+        """
+        tree = parser(doc)
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

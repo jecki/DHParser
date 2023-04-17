@@ -38,6 +38,13 @@ class DSLApp(tkinter.Tk):
         # self.rowconfigure(0, weight=1)
         # self.columnconfigure(1, weight=1)
 
+        if 'html' in DSLParser.targets or 'HTML' in DSLParser.targets:
+            self.target = 'html'
+        elif len(DSLParser.targets) == 1:
+            self.target = list(DSLParser.targets)[0]
+        else:
+            self.target = ''
+
         # widget-variables
         self.num_sources = 0
         self.num_compiled = 0
@@ -112,25 +119,29 @@ class DSLApp(tkinter.Tk):
                 with self.lock:  self.cancel_flag = False
             else:
                 self.result.insert(tkinter.END, "Compilation finished.\n")
-                if len(self.names) == 1:
-                    html_name = os.path.join(os.path.dirname(self.names[0]), 'html',
-                                             os.path.basename(self.names[0])[:-3] + 'html')
+                out_dir = os.path.join(os.path.dirname(self.names[0]), 'out', self.target)
+                if self.target == 'html':
+                    html_name = os.path.splitext(os.path.basename(self.names[0]))[0] + '.html'
+                    html_name = os.path.join(out_dir, html_name)
                     self.result.insert(tkinter.END, html_name + "\n")
                     webbrowser.open('file://' + os.path.abspath(html_name)
                                     if sys.platform == "darwin" else html_name)
+                else:
+                    webbrowser.open('file://' + os.path.abspath(out_dir)
+                                    if sys.platform == "darwin" else out_dir)
             self.worker = None
 
     def on_pick_src(self):
         if not self.worker or self.on_cancel():
             self.progress.set(0)
             self.names = list(tkinter.filedialog.askopenfilenames(
-                title="Chose files to parser/compile",
+                title="Chose files to parse/compile",
                 filetypes=[('All', '*')]
             ))
             if self.names:
                 self.num_sources = len(self.names)
                 self.num_compiled = 0
-                self.outdir = os.path.join(os.path.dirname(self.names[0]), 'html')
+                self.outdir = os.path.join(os.path.dirname(self.names[0]), 'out')
                 if not os.path.exists(self.outdir):  os.mkdir(self.outdir)
                 with self.lock:  self.cancel_flag = False
                 self.worker = threading.Thread(

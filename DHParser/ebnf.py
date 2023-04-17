@@ -2444,7 +2444,11 @@ class EBNFCompiler(Compiler):
         if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
             return f'{self.P["Drop"]}({code})'
         elif not re.match(self.directives.disposable, macro_name):
-            return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+            if len(self.path) >= 3 and self.path[-3].name != 'definition':
+                if code.find('(') >= 0:
+                    return f'({code}).name("{macro_name}")'
+                else:  # code is symbol which already has a name which should not be overwritten.
+                    return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
         return code
 
     def on_macro(self, node) -> str:

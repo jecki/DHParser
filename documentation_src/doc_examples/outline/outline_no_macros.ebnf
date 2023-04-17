@@ -20,27 +20,22 @@
 
 document = main [WS] §EOF
 
-$one_sec($level_sign, $sub_level) = [WS] $level_sign !`#` heading
-                                    [blocks] { $sub_level }
-$sec_seq($sec) = { [WS] $sec }+
+main  = [WS] `#` !`#` heading [blocks] { sections }
 
-main = $one_sec(`#`, sections)
+sections = { [WS] section }+
+section  = `##` !`#` heading [blocks] { subsections }
 
-sections = $sec_seq(section)
-section = $one_sec(`##`, subsections)
+subsections = { [WS] subsection }+
+subsection  = `###` !`#` heading [blocks] { subsubsections }
 
-subsections = $sec_seq(subsection)
-subsection = $one_sec(`###`, subsubsections)
+subsubsections = { [WS] subsubsection }+
+subsubsection  = `####` !`#` heading [blocks] { s5sections }
 
-subsubsections = $sec_seq(subsubsection)
-subsubsection = $one_sec(`####`, s5sections)
+s5sections = { [WS] s5section }+
+s5section  = `#####` !`#` heading [blocks] { s6sections }
 
-s5sections = $sec_seq(s5section)
-s5section = $one_sec(`#####`, s6sections)
-
-s6sections = $sec_seq(s6section)
-s6section = $one_sec(`######`, NEVER_MATCH )
-
+s6sections = { [WS] s6section }+
+s6section  = `######` !`#` heading [blocks]
 
 #######################################################################
 #
@@ -67,6 +62,5 @@ is_heading = /##?#?#?#?#?(?!#)/
 LINE      = /[ \t]*[^\n]+/
 WS        = /(?:[ \t]*\n)+/  # empty lines
 S         = !PARSEP /\s+/
-PARSEP    = /[ \t]*\n[ \t]*\n\s*/
-NEVER_MATCH = /..(?<=^)/
+PARSEP    = /[ \t]*\n[ \t]*\n\s*/      
 EOF       =  !/./        # no more characters ahead, end of file reached

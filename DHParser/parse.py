@@ -775,7 +775,7 @@ class Parser:
     def name(self, pname: str) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
         assert pname, "Tried to assigned empty name!"
-        assert self.pname == "", "Parser name cannot be reassigned!"
+        assert self.pname == "", f'Parser name cannot be reassigned! "{self.pname}" -> "{pname}"'
 
         self.node_name = pname
         if pname[0:1] == ":":
@@ -2968,7 +2968,7 @@ class Option(UnaryParser):
         errors = super().static_analysis()
         if self.parser.is_optional():
             errors.append(self.static_error(
-                "Redundant nesting of optional parser in " + self.location_info(),
+                "Redundant nesting of optional or empty parser in " + self.location_info(),
                 OPTIONAL_REDUNDANTLY_NESTED_WARNING))
         return errors
 
@@ -3034,7 +3034,7 @@ class ZeroOrMore(Option):
         errors = super().static_analysis()
         if self.parser.is_optional():
             errors.append(self.static_error(
-                "Optional parsers should not be nested inside repeating parsers: "
+                "Optional or empty parsers should not be nested inside repeating parsers: "
                 + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
         return errors
 
