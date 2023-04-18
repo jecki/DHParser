@@ -1642,8 +1642,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                         txt.append((' (pos "%i")' if sxml else ' `(pos %i)') % node.pos)
                 if has_errors and not node.has_attr('err'):
                     err_str = ';  '.join(str(err) for err in root.node_errors(node))
-                    err_str = err_str.replace('"', r'\"')
-                    txt.append(attr('err', err_str))
+                    if err_str:
+                        err_str = err_str.replace('"', r'\"')
+                        txt.append(attr('err', err_str))
                 if sxml:  txt.append(')')
             return "".join(txt)
 

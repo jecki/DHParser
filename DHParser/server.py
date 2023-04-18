@@ -391,7 +391,7 @@ class ExecutionEnvironment:
         synchronously and thread-safe.
     :ivar submit_pool_lock:  A threading.Lock to ensure that submissions to
         the submit_pool will be thread_safe
-    ivar manager: a multiprocessing.SyncManager-object that can be used share
+    :ivar manager: a multiprocessing.SyncManager-object that can be used share
         data across different processes.
     :ivar loop:  The asynchronous event loop for running coroutines
     :ivar log_file:  The name of the log-file to which error messages are

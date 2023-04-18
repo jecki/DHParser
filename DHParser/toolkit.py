@@ -1361,6 +1361,7 @@ class SingleThreadExecutor(concurrent.futures.Executor):
     It is not recommended to use this in asynchronous code or code that
     relies on the submit() or map()-method of executors to return quickly.
     """
+
     def submit(self, fn, *args, **kwargs) -> concurrent.futures.Future:
         future = concurrent.futures.Future()
         try:

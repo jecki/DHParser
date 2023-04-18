@@ -48,6 +48,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
+from DHParser.dsl import PseudoJunction, create_parser_transition
+
 
 #######################################################################
 #
@@ -97,7 +99,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "0e11cab74274ef81efcc5ab5bb8f8b90"
+    source_hash__ = "2a314a4d44b5b162598c9047827acf65"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -106,16 +108,16 @@ class XML_W3C_SPECGrammar(Grammar):
     WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    PubidChar = Alternative(RegExp('\x20'), RegExp('\x0D'), RegExp('\x0A'), RegExp('[a-zA-Z0-9]'), RegExp('[-\'()+,./:=?;!*#@$_%]'))
+    PubidChar = Alternative(RegExp('[\x20]'), RegExp('[\x0D]'), RegExp('[\x0A]'), RegExp('[a-zA-Z0-9]'), RegExp('[-\'()+,./:=?;!*#@$_%]'))
     PubidLiteral = Alternative(Series(Text('"'), ZeroOrMore(PubidChar), Text('"')), Series(Text("\'"), ZeroOrMore(Series(NegativeLookahead(Text("\'")), PubidChar)), Text("\'")))
     EncName = Series(RegExp('[A-Za-z]'), ZeroOrMore(Alternative(RegExp('[A-Za-z0-9._]'), Text('-'))))
-    S = OneOrMore(Alternative(RegExp('\x20'), RegExp('\x09'), RegExp('\x0D'), RegExp('\x0A')))
+    S = OneOrMore(Alternative(RegExp('[\x20]'), RegExp('[\x09]'), RegExp('[\x0D]'), RegExp('[\x0A]')))
     Eq = Series(Option(S), Text('='), Option(S))
     VersionNum = Series(Text('1.'), OneOrMore(RegExp('[0-9]')))
     NameStartChar = Alternative(Text(":"), RegExp('[A-Z]'), Text("_"), RegExp('[a-z]'), RegExp('[\xC0-\xD6]'), RegExp('[\xD8-\xF6]'), RegExp('[\xF8-\u02FF]'), RegExp('[\u0370-\u037D]'), RegExp('[\u037F-\u1FFF]'), RegExp('[\u200C-\u200D]'), RegExp('[\u2070-\u218F]'), RegExp('[\u2C00-\u2FEF]'), RegExp('[\u3001-\uD7FF]'), RegExp('[\uF900-\uFDCF]'), RegExp('[\uFDF0-\uFFFD]'), RegExp('[\U00010000-\U000EFFFF]'))
     SystemLiteral = Alternative(Series(Text('"'), ZeroOrMore(RegExp('[^"]')), Text('"')), Series(Text("\'"), ZeroOrMore(RegExp('[^\']')), Text("\'")))
     EncodingDecl = Series(S, Text('encoding'), Eq, Alternative(Series(Text('"'), EncName, Text('"')), Series(Text("\'"), EncName, Text("\'"))))
-    NameChar = Alternative(NameStartChar, Text("-"), Text("."), RegExp('[0-9]'), RegExp('\xB7'), RegExp('[\u0300-\u036F]'), RegExp('[\u203F-\u2040]'))
+    NameChar = Alternative(NameStartChar, Text("-"), Text("."), RegExp('[0-9]'), RegExp('[\xB7]'), RegExp('[\u0300-\u036F]'), RegExp('[\u203F-\u2040]'))
     CharRef = Alternative(Series(Text('&#'), OneOrMore(RegExp('[0-9]')), Text(';')), Series(Text('&#x'), OneOrMore(RegExp('[0-9a-fA-F]')), Text(';')))
     PublicID = Series(Text('PUBLIC'), S, PubidLiteral)
     ExternalID = Alternative(Series(Text('SYSTEM'), S, SystemLiteral), Series(Text('PUBLIC'), S, PubidLiteral, S, SystemLiteral))
@@ -123,7 +125,7 @@ class XML_W3C_SPECGrammar(Grammar):
     NDataDecl = Series(S, Text('NDATA'), S, Name)
     EntityRef = Series(Text('&'), Name, Text(';'))
     Reference = Alternative(EntityRef, CharRef)
-    Char = Alternative(RegExp('\x09'), RegExp('\x0A'), RegExp('\x0D'), RegExp('[\x20-\uD7FF]'), RegExp('[\uE000-\uFFFD]'), RegExp('[\U00010000-\U0010FFFF]'))
+    Char = Alternative(RegExp('[\x09]'), RegExp('[\x0A]'), RegExp('[\x0D]'), RegExp('[\x20-\uD7FF]'), RegExp('[\uE000-\uFFFD]'), RegExp('[\U00010000-\U0010FFFF]'))
     PEReference = Series(Text('%'), Name, Text(';'))
     NotationDecl = Series(Text('<!NOTATION'), S, Name, S, Alternative(ExternalID, PublicID), Option(S), Text('>'))
     ignoreSect = Series(Text('<!['), Option(S), Text('IGNORE'), Option(S), Text('['), ZeroOrMore(ignoreSectContents), Text(']]>'))
@@ -177,8 +179,8 @@ class XML_W3C_SPECGrammar(Grammar):
     STag = Series(Text('<'), Name, ZeroOrMore(Series(S, Attribute)), Option(S), Text('>'))
     doctypedecl = Series(Text('<!DOCTYPE'), S, Name, Option(Series(S, ExternalID)), Option(S), Option(Series(Text('['), intSubset, Text(']'), Option(S))), Text('>'))
     prolog = Series(Option(XMLDecl), ZeroOrMore(Misc), Option(Series(doctypedecl, ZeroOrMore(Misc))))
-    Nmtokens = Series(Nmtoken, ZeroOrMore(Series(RegExp('\x20'), Nmtoken)))
-    Names = Series(Name, ZeroOrMore(Series(RegExp('\x20'), Name)))
+    Nmtokens = Series(Nmtoken, ZeroOrMore(Series(RegExp('[\x20]'), Nmtoken)))
+    Names = Series(Name, ZeroOrMore(Series(RegExp('[\x20]'), Name)))
     ignoreSectContents.set(Series(Ignore, ZeroOrMore(Series(Text('<!['), ignoreSectContents, Text(']]>'), Ignore))))
     cp.set(Series(Alternative(Name, choice, seq), Option(Alternative(Text('?'), Text('*'), Text('+')))))
     content.set(Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData)))))
@@ -187,24 +189,10 @@ class XML_W3C_SPECGrammar(Grammar):
     document = Series(prolog, element, ZeroOrMore(Misc))
     root__ = document
     
-
-_raw_grammar = ThreadLocalSingletonFactory(XML_W3C_SPECGrammar)
-
-def get_grammar() -> XML_W3C_SPECGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_XML_W3C_SPEC(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    XML_W3C_SPECGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################

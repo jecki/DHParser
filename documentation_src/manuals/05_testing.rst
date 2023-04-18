@@ -19,6 +19,10 @@ unit-testing framework allows to::
     - check the syntax-tree-construction as well as all subsequent
       transformations (as long as their result is serializable).
       
-
+Because one and the same formal language can be described by different
+grammars and because the way the grammar is written influences the shape
+of the syntax-tree that the parser yields, test driven development is
+particularly useful for conditioning the shape of the syntax-tree when
+writing a grammar. 
 
 

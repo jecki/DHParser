@@ -104,7 +104,7 @@ class jsonGrammar(Grammar):
     """
     _element = Forward()
     source_hash__ = "82e693ffabd87a47d56feb32c2f56deb"
-    disposable__ = re.compile('_[A-Za-z]+')
+    disposable__ = re.compile('(?:_[A-Za-z]+)|(?:_[A-Za-z]+)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?:\/\/|#).*'

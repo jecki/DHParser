@@ -1,0 +1,22 @@
+# Example-grammar for macros
+
+@ whitespace  = /[ \t]*/
+@ reduction   = merge
+@ disposable  = EOF, PARSEP, WS, LF
+@ drop        = EOF, whitespace, PARSEP, WS, LF
+
+database = [WS] [dataset] { PARSEP dataset } [WS] EOF
+
+dataset = authors ° title ° keywords
+authors = "Author" ["s"] ":" ~$list(";") LF
+title = "Title:" ~ $list(".") LF
+keywords = "Keywords:" ~ $list(",") LF
+
+$list($delim) = $item { $delim ~ $item }
+$item = { /[^;:,.\n]+/ | !$delim /[.,:;]/ | LF !field_name }+
+field_name = /\w+:/
+
+WS        = /(?:[ \t]*\n)+/
+LF        = !PARSEP /[ \t]*\n/~ | EOF
+PARSEP    = /[ \t]*\n[ \t]*\n\s*/
+EOF      =  !/./        

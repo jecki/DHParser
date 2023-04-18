@@ -50,6 +50,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
     apply_unless, ERROR
 
+from DHParser.dsl import PseudoJunction, create_parser_transition
+
 
 #######################################################################
 #
@@ -75,8 +77,8 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "eee8012c222c481157040ef9d5d34d56"
-    disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
+    source_hash__ = "43d2c4810365e5c4f4c15a36c54cfb3c"
+    disposable__ = re.compile('(?:Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$)|(?:Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -124,24 +126,10 @@ class XMLGrammar(Grammar):
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
     
-
-_raw_grammar = ThreadLocalSingletonFactory(XMLGrammar)
-
-def get_grammar() -> XMLGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_XML(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    XMLGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################

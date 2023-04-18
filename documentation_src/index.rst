@@ -16,15 +16,17 @@ DHParser offers:
 
 * EBNF-based grammar-specification language with support for
   different flavors of EBNF
+* Macros to reduce code-repetion within grammars and includes to
+  avoid code-repetition between grammars.
 * Parsing-Expression-Grammar (PEG)-parser with memoization
   and full left-recursion support
-* full unicode support
 * unit-testing-framework for grammars
 * post-mortem debugger for generated parsers
 * support for fail-tolerant parsing
 * customizable error messages
 * extensive tree-processing facilities
 * support for building language servers (experimental)
+* full unicode support
 
 DHParser is by now mature and "production ready". It is being used in several projects,
 most notably for the domain specific notation of the `Medieval Latin Dictionary`_

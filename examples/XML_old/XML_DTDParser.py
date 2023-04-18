@@ -48,6 +48,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
+from DHParser.dsl import PseudoJunction, create_parser_transition
+
 
 #######################################################################
 #
@@ -97,7 +99,7 @@ class XML_DTDGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "5037aaec98c9395c5ed90b37d4e00ef8"
+    source_hash__ = "22beb277da8a5450ce1c7efecb5bf7af"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -203,24 +205,10 @@ class XML_DTDGrammar(Grammar):
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
-
-_raw_grammar = ThreadLocalSingletonFactory(XML_DTDGrammar)
-
-def get_grammar() -> XML_DTDGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_XML_DTD(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    XML_DTDGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################
