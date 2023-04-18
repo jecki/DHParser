@@ -11,14 +11,23 @@ construction kit for the Digital Humanities
 
 This software is open source software under the Apache 2.0-License (see section License, below).
 
-Copyright 2016-2022  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
+Copyright 2016-2023  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
 
 
 Features
 --------
 
-* Handles all context-free grammars; based on Parsing Expression Grammars,
-  but with added support for left-recursive grammars
+* Memoizing packrat-parser based on Parsing Expression Grammars. This
+  means: 
+  
+    - Linear parsing time
+
+    - any EBNF-grammar supported, including left-recursive grammars 
+      (via "seed and grow"-algorithm)
+
+    - Unlimited look ahead and look behind
+
+* Macros to avoid code-repetition within grammars
 
 * Full unicode support
 
@@ -37,7 +46,7 @@ Features
 
 * No dependencies except the Python Standard Library
 
-* Work in progress: Extensive documentation and documented examples
+* Extensive documentation and examples
 
 
 Ease of use

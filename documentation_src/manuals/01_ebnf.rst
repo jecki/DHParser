@@ -188,6 +188,8 @@ that has created the node (see :py:mod:`parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
 because they lack the name of a proper grammatical component.
 
+.. _include_directive:
+
 Chaining Grammars with @include
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1899,6 +1901,18 @@ by skipping larger portions of the text is probably negligible or at any
 rate smaller than the harm done by introducing consequential errors as
 a result of poorly chosen resumption rules.
 
+.. _macros:
+
+Macros 
+------
+
+In order to reduce code-repetition within grammar-specifications
+DHParser offers substitution based macros. (To avoid code-repetition
+*between* grammars, :ref:`includes <include_directive>` can be used.)
+
+Macros are definined similar to symbols, only that their name must
+always start with a dollar sign. 
+
 
 .. _context_sensitive_parsers:
 
@@ -1950,28 +1964,32 @@ is to allow you to fence code that may contain fenced code itself.::
     ~~~
     ~~~~~
 
-Here, a possible remedy is to employ a preprocessor, that distinguishes the fenced code
-from quoted fences and replaces the non-quoted fences by context-free opening and
-closing markers that can then be captured at parsing stage. Using preprocessors is often
-a clean and pragmatic solution and DHParser includes dedicated support for preprocessors.
-However, introducing preprocessors also hast some downsides. One disadvantage is that a
-preprocessor requires a makeshift parser of its own that must be strong enough not to
-stumble over the syntactic constructs that do not concern the preprocessor like comments
-for example.
+Here, a possible remedy is to employ a preprocessor, that distinguishes
+the fenced code from quoted fences and replaces the non-quoted fences by
+context-free opening and closing markers that can then be captured at
+parsing stage. Using preprocessors is often a clean and pragmatic
+solution and DHParser includes dedicated support for preprocessors.
+However, introducing preprocessors also hast some downsides. One
+disadvantage is that a preprocessor requires a makeshift parser of its
+own that must be strong enough not to stumble over the syntactic
+constructs that do not concern the preprocessor like comments for
+example.
 
-DHParser therefore also offers another alternative for occasional context sensitivity
-by allowing to retrieve and compare earlier values of a symbol. Any users of these
-features should be aware, however, that extensive use of context sensitive parsers
-may slow-down parsing, because it does not play well with the the memoizing
-optimization that is commonly used with parsing expression grammars and also employed
-by DHParser. Also, since these features are specific for DHParser, switching to
-another parser generator will require factoring the context-sensitive-parser out
-of your grammar and re-implementing the functionality for which they have been used
-with the more conventional approach of pre- and post-processors.
+DHParser therefore also offers another alternative for occasional
+context sensitivity by allowing to retrieve and compare earlier values
+of a symbol. Any users of these features should be aware, however, that
+extensive use of context sensitive parsers may slow-down parsing,
+because it does not play well with the the memoizing optimization that
+is commonly used with parsing expression grammars and also employed by
+DHParser. Also, since these features are specific for DHParser,
+switching to another parser generator will require factoring the
+context-sensitive-parser out of your grammar and re-implementing the
+functionality for which they have been used with the more conventional
+approach of pre- and post-processors.
 
 Before explaining the full mechanism, let's have a look at an example.
-The following minimal pseudo-XML-parser captures the value of the tag-name so that
-it can compared with the tag-name of the ending-tag::
+The following minimal pseudo-XML-parser captures the value of the
+tag-name so that it can compared with the tag-name of the ending-tag::
 
     >>> miniXML = '''
     ... @ disposable  = EOF
