@@ -50,7 +50,7 @@ class TestDHParser:
         assert dhparser.selftest(silent=True)
 
 
-TEST_GRAMMAR = """# Arithmetic-grammar
+TEST_GRAMMAR = r"""# Arithmetic-grammar
 
 @ whitespace  = vertical             # implicit whitespace, includes any number of line feeds
 @ literalws   = right                # literals have implicit whitespace on the right hand side

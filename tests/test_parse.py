@@ -1711,7 +1711,7 @@ class TestErrorLocations:
         _ = parseXML(testdoc)
 
     def test_error_resumption(self):
-        miniXML = '''
+        miniXML = r'''
         @ whitespace  = /\s*/
         @ disposable  = EOF
         @ drop        = EOF, whitespace, strings
@@ -1740,7 +1740,7 @@ class TestErrorLocations:
         assert len(result.errors) == 2
 
     def test_error_resumption_2(self):
-        miniXML = '''
+        miniXML = r'''
         @ whitespace  = /\s*/
         @ disposable  = EOF
         @ drop        = EOF, whitespace, strings

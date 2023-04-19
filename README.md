@@ -28,7 +28,7 @@ Features
     - Unlimited look ahead and look behind
 
 * [Macros](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#macros)
+  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#macro_system)
   to avoid code-repetition within grammars
 
 * [Declarative tree-transformations](

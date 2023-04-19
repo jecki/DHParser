@@ -821,12 +821,12 @@ grammar::
     ...   lf   = S
     ... is_heading = /##?#?#?#?#?(?!#)/
     ...
-    ... LINE      = /[ \\t]*[^\\n]+/
+    ... LINE      = /[ \\t]*[^\\n]+/   # a line of text
     ... WS        = /(?:[ \\t]*\\n)+/  # empty lines
-    ... S         = !PARSEP /\\s+/    # whitespace and single(!) linefeeds
-    ... PARSEP    = /[ \\t]*\\n[ \\t]*\\n\\s*/      
-    ... EOF       =  !/./  
-    ... NEVER_MATCH = /..(?<=^)/"""
+    ... S         = !PARSEP /\\s+/     # whitespace and single(!) linefeeds
+    ... PARSEP    = /[ \\t]*\\n[ \\t]*\\n\\s*/  # one or more empty lines    
+    ... EOF       =  !/./              # end of file
+    ... NEVER_MATCH = /..(?<=^)/       # a regular expression that never matches"""
 
 Note that DHParser's macro-system does not allow to define symbols
 inside macros. Therefore, each outline level must still be defined

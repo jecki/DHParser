@@ -169,7 +169,7 @@ class TestTrace:
         assert not gr.history_tracking__
 
     def test_trace_resume_2(self):
-        lang = """@ whitespace  = vertical
+        lang = r"""@ whitespace  = vertical
         @ literalws   = right
         _document = ~ [ list ] §_EOF
         @list_resume = ({ list | /[^\[\]]+/ } ["]"])
@@ -221,8 +221,8 @@ class TestTrace:
         assert not gr.history_tracking__
 
     def test_resume_messag_2(self):
-        number_list_grammar = '''
-            @ list_resume = /]\\s*|$/
+        number_list_grammar = r'''
+            @ list_resume = /]\s*|$/
             @ _items_skip = /(?=,)/, /(?=])/, /$/
             @ literalws   = right
             @ disposable  = /_\w+/

@@ -463,7 +463,7 @@ class TestOptimizations:
 
 class TestErrors:
     def test_add_error(self):
-        lang = """
+        lang = r"""
             doc = letters { ws letters }
             letters = /\w+/ | WRONG
             ws = /\s+/

@@ -415,11 +415,11 @@ class TestLookaheadDroppedTokens:
         os.chdir(self.save_dir)
 
     def test_lookahead_dropped_tokens(self):
-        void_grammar = '''@ whitespace   = horizontal
-        @ comment      = /#[^\\n]*/
+        void_grammar = r'''@ whitespace   = horizontal
+        @ comment      = /#[^\n]*/
         document       = { empty_line } /\s*/ EOF
         empty_line     = LF ~ &LF
-        LF             = /\\n/
+        LF             = /\n/
         EOF            = !/./ '''
         void_parser_provider = grammar_provider(void_grammar)
         void_transformer_provider = lambda : lambda _: _
