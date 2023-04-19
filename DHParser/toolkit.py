@@ -195,7 +195,9 @@ class ThreadLocalSingletonFactory:
     :py:func:`DHParser.dsl.create_transtable_transition`
     """
 
-    def __init__(self, class_or_factory, name: str = "", *, uniqueID: Union[str, int] = 0):
+    def __init__(self, class_or_factory, name: str = "", *,
+                 uniqueID: Union[str, int] = 0,
+                 ident = None):
         self.class_or_factory = class_or_factory
         # partial functions do not have a __name__ attribute!
         name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
