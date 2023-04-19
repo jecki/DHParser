@@ -1,4 +1,4 @@
-DHParser Version 1.4.1 (19.4.2023)
+DHParser Version 1.4.2 (19.4.2023)
 ..................................
 
 - Macro system
