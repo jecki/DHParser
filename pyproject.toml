@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "DHParser"
-version = "1.4.0"
+version = "1.4.1"
 description = "Parser Generator and DSL-construction-kit"
 
 license = "Apache-2"
@@ -61,7 +61,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.7"
 regex = { version = "*", optional = true }
-# cython = { version = "^0.29", optional = true }
+# cython = { version = "^0.30", optional = true }
 
 
 [tool.poetry.dev-dependencies]
