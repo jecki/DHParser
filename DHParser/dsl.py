@@ -22,29 +22,34 @@ of domain specific languages based on an EBNF-grammar.
 
 from __future__ import annotations
 
-import functools
+from collections import namedtuple
+from functools import partial, lru_cache
 import inspect
 import os
 import platform
 import stat
+import sys
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
-    Callable, Sequence
+    Callable, Sequence, Dict, Set
 
 import DHParser.ebnf
-from DHParser.compile import Compiler, compile_source
+from DHParser.compile import Compiler, compile_source, full_compile, Junction, CompilerFactory
 from DHParser.configuration import get_config_value
 from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
-    get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
-    PreprocessorFactoryFunc, ParserFactoryFunc, TransformerFactoryFunc, CompilerFactoryFunc
-from DHParser.error import Error, is_error, has_errors, only_errors, \
+    get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
+from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
-from DHParser.parse import Grammar
-from DHParser.preprocess import nil_preprocessor, PreprocessorFunc
-from DHParser.nodetree import Node
-from DHParser.transform import TransformerCallable, TransformationDict
-from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, \
-    compile_python_object, re, as_identifier
+from DHParser.nodetree import Node, RootNode
+from DHParser.parse import Grammar, ParserFactory, ParserFunc
+from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
+    gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes, PreprocessorFactory
+from DHParser.stringview import StringView
+from DHParser.trace import set_tracer, trace_history, resume_notices_on
+from DHParser.transform import TransformerFunc, TransformationDict, transformer, TransformerFactory
+from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
+    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count, deprecated
+from DHParser.versionnumber import __version__, __version_info__
 
 
 __all__ = ('DefinitionError',
@@ -58,10 +63,22 @@ __all__ = ('DefinitionError',
            'create_parser',
            'compile_on_disk',
            'recompile_grammar',
-           'restore_server_script')
+           'create_scripts',
+           'restore_server_script',
+           'PseudoJunction',
+           'create_preprocess_transition',
+           'create_parser_transition',
+           # 'process_template',
+           'create_compiler_transition',
+           'create_transtable_transition',
+           'create_evaluation_transition',
+           'create_transition',
+           'process_file',
+           'never_cancel',
+           'batch_process')
 
 
-@functools.lru_cache()
+@lru_cache()
 def read_template(template_name: str) -> str:
     """
     Reads a script-template from a template file named ``template_name``
@@ -185,7 +202,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
 def compileDSL(text_or_file: str,
                preprocessor: Optional[PreprocessorFunc],
                dsl_grammar: Union[str, Grammar],
-               ast_transformation: TransformerCallable,
+               ast_transformation: TransformerFunc,
                compiler: Compiler,
                fail_when: ErrorCode = ERROR) -> Any:
     """
@@ -231,6 +248,14 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL", fail_when: ErrorCode = ERROR)
     return compiler
 
 
+VERSION_CHECK=f"""import DHParser.versionnumber
+if DHParser.versionnumber.__version_info__ < {__version_info__}:
+    print(f'DHParser version {{DHParser.versionnumber.__version__}} is lower than the DHParser '
+          f'version {__version__}, {{os.path.basename(__file__)}} has first been generated with. '
+          f'Please install a more recent version of DHParser to avoid unexpected errors!')
+"""
+
+
 def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     """
     Compiles an EBNF source file and returns the source code of a
@@ -250,7 +275,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
            SECTION_MARKER.format(marker=SYMBOLS_SECTION),
-           DHPARSER_IMPORTS,
+           DHPARSER_IMPORTS, VERSION_CHECK,
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
@@ -260,11 +285,11 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     return '\n'.join(src)
 
 
-@functools.lru_cache()
+@lru_cache()
 def grammar_provider(ebnf_src: str,
                      branding="DSL",
                      additional_code: str = '',
-                     fail_when: ErrorCode = ERROR) -> ParserFactoryFunc:
+                     fail_when: ErrorCode = ERROR) -> ParserFactory:
     """
     Compiles an EBNF-grammar and returns a grammar-parser provider
     function for that grammar.
@@ -288,11 +313,11 @@ def grammar_provider(ebnf_src: str,
     log_name = get_config_value('compiled_EBNF_log')
     if log_name and is_logging():  append_log(log_name, grammar_src)
     imports = DHPARSER_IMPORTS  
-    grammar_factory = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
-                                            r'get_grammar$')  # r'get_(?:\w+_)?grammar$'
-    if callable(grammar_factory):
-        grammar_factory.python_src__ = grammar_src
-        return grammar_factory
+    parsing_stage = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
+                                          r'parsing$')  # r'get_(?:\w+_)?grammar$'
+    if callable(parsing_stage.factory):
+        parsing_stage.factory.python_src__ = grammar_src
+        return parsing_stage.factory
     raise ValueError('Could not compile grammar provider!')
 
 
@@ -320,8 +345,8 @@ def split_source(file_name: str, file_content: str) -> List[str]:
 
 
 def load_compiler_suite(compiler_suite: str) -> \
-        Tuple[PreprocessorFactoryFunc, ParserFactoryFunc,
-              TransformerFactoryFunc, CompilerFactoryFunc]:
+        Tuple[PreprocessorFactory, ParserFactory,
+              TransformerFactory, CompilerFactory]:
     """
     Extracts a compiler suite from file or string ``compiler_suite``
     and returns it as a tuple (preprocessor, parser, ast, compiler).
@@ -338,10 +363,9 @@ def load_compiler_suite(compiler_suite: str) -> \
         sections = split_source(compiler_suite, source)
         _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = sections
         # TODO: Compile in one step and pick parts from namespace later ?
-        preprocessor = compile_python_object(imports + preprocessor_py,
-                                             r'get_(?:\w+_)?preprocessor$')
-        parser = compile_python_object(imports + parser_py, r'get_(?:\w+_)?grammar$')
-        ast = compile_python_object(imports + ast_py, r'get_(?:\w+_)?transformer$')
+        preprocessor = compile_python_object(imports + preprocessor_py, r'preprocessing$').factory
+        parser = compile_python_object(imports + parser_py, r'parsing$').factory
+        ast = compile_python_object(imports + ast_py, r'ASTTransformation$').factory
     else:
         # Assume source is an ebnf grammar.
         # Is there really any reasonable application case for this?
@@ -355,7 +379,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
-    compiler = compile_python_object(imports + compiler_py, r'get_(?:\w+_)?compiler$')
+    compiler = compile_python_object(imports + compiler_py, r'compiling$').factory
     if callable(preprocessor) and callable(parser) and callable(Callable) and callable(compiler):
         return preprocessor, parser, ast, compiler
     raise ValueError('Could not generate compiler suite from source code!')
@@ -415,7 +439,7 @@ def compile_on_disk(source_file: str,
                     compiler_suite: str = "",
                     extension: str = ".xml") -> Iterable[Error]:
     """
-    Compiles the a source file with a given compiler and writes the
+    Compiles a source file with a given compiler and writes the
     result to a file.
 
     If no ``compiler_suite`` is given it is assumed that the source
@@ -453,11 +477,11 @@ def compile_on_disk(source_file: str,
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
         compiler1 = cfactory()
     else:
-        sfactory = get_ebnf_preprocessor  # PreprocessorFactoryFunc
-        pfactory = get_ebnf_grammar       # ParserFactoryFunc
-        tfactory = get_ebnf_transformer   # TransformerFactoryFunc
-        cfactory = get_ebnf_compiler      # CompilerFactoryFunc
-        compiler1 = cfactory()            # Compiler
+        sfactory = get_ebnf_preprocessor  # PreprocessorFactory
+        pfactory = get_ebnf_grammar       # ParserFactory
+        tfactory = get_ebnf_transformer   # TransformerFactory
+        cfactory = get_ebnf_compiler      # CompilerFactory
+        compiler1 = cfactory()            # CompilerFunc
 
     is_ebnf_compiler = False  # type: bool
     if isinstance(compiler1, EBNFCompiler):
@@ -518,7 +542,9 @@ def compile_on_disk(source_file: str,
         if RX_WHITESPACE.fullmatch(outro):
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
-            imports = DHParser.ebnf.DHPARSER_IMPORTS
+            imports = DHParser.ebnf.DHPARSER_IMPORTS + VERSION_CHECK
+        elif imports.find("from DHParser.") < 0:
+            imports += "\nfrom DHParser.dsl import PseudoJunction, create_parser_transition\n"
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
@@ -591,7 +617,7 @@ def recompile_grammar(ebnf_filename: str,
             In case this is a directory and not a file, all files within
             this directory ending with .ebnf will be compiled.
     :param parser_name:  The name of the compiler script. If not given
-            the ebnf-filename without extension and with the the addition
+            the ebnf-filename without extension and with the addition
             of "Parser.py" will be used.
     :param force:  If False (default), the grammar will only be
             recompiled if it has been changed.
@@ -633,20 +659,40 @@ def recompile_grammar(ebnf_filename: str,
     return True
 
 
-def restore_server_script(ebnf_filename: str,
-                          parser_name: str = '',
-                          server_name: str = '',
-                          overwrite: bool = False):
-    """Creates a script for compiling texts adhering to the given grammar
-    with a server. Because the server script relies on a parser script,
-    a parser scripte will be created, too, if it does not yet exist.
+def create_scripts(ebnf_filename: str,
+                   parser_name: str = '',
+                   server_name: Optional[str] = '',
+                   app_name: Optional[str] = '',
+                   overwrite: bool = False):
+    """Creates a parser script from the grammar with the filename
+    ``ebnf_filename'`` or, if ebnf_filename referes to a directory from all
+    grammars in files ending with ".ebnf" in that directory.
+
+    If ``server_name`` is not None a script for starting a parser-server
+    will be created as well. Running the parser as a server has the advantage
+    that the startup time for calling the parser is greatly reduced for
+    subsequent parser calls. (While the same can be achieved with running
+    the parser script in batch-processing-mode by passing a directory or
+    several filenames on the command line to the parser script, batch
+    processing is not suitable for all application cases. For example,
+    it is not usable when implementing language servers to feed
+    editors with data from the parseing process.)
+
+    if ``app_name`` is not None an application script with a tkinter-based
+    graphical user interface will be created as well. (When distributing
+    this script with pyinstaller, parallel processing should be turned off
+    at least on MS Windows systems!)
 
     :param ebnf_filename: The filename of the grammar, from which the servfer
         script's filename is derived.
     :param parser_name: The filename of the parser script or the empty string
         if the default filename shall be used.
     :param server_name: The filename of the server script of the empty string
-        if the default filename shall be used.
+        if the default filename shall be used, or None if no server script
+        shall be created.
+    :param app_name: The filename of the server script of the empty string
+        if the default filename shall be used, or None if no app-script
+        shall be created
     :param overwrite: If True an existing server script will be overwritten.
     """
     if os.path.isdir(ebnf_filename):
@@ -657,21 +703,345 @@ def restore_server_script(ebnf_filename: str,
 
     base, _ = os.path.splitext(ebnf_filename)
     name = os.path.basename(base)
-    if not server_name:
-        server_name = base + 'Server.py'
-    if not parser_name:
-        parser_name = base + 'Parser.py'
-    if not os.path.exists(server_name) or overwrite:
-        template = read_template('DSLServer.pyi')
-        # reldhparserdir = os.path.relpath(os.path.dirname(DHPARSER_DIR), os.path.abspath('.'))
-        # rel_dhpath_expr = ', '.join(f"'{p}'" for p in split_path(reldhparserdir))
-        serverscript = base + 'Server.py'
-        with open(serverscript, 'w', encoding='utf-8') as f:  
+
+    def create_script(script_name, template_name):
+        nonlocal base
+        template = read_template(template_name)
+        with open(script_name, 'w', encoding='utf-8') as f:
             f.write(template.replace('DSL', name))
         if platform.system() != "Windows":
             # set file permissions so that the server-script can be executed
-            st = os.stat(serverscript)
-            os.chmod(serverscript, st.st_mode | stat.S_IEXEC)
+            st = os.stat(script_name)
+            os.chmod(script_name, st.st_mode | stat.S_IEXEC)
+
+    if not parser_name:  parser_name = base + 'Parser.py'
+    if server_name is not None and not server_name:  server_name = base + 'Server.py'
+    if app_name is not None and not app_name:  app_name = base + 'App.py'
+    if server_name is not None and (not os.path.exists(server_name) or overwrite):
+        create_script(server_name, "DSLServer.pyi")
+    if app_name is not None and (not os.path.exists(app_name) or overwrite):
+        create_script(app_name, "DSLApp.pyi")
     if not os.path.exists(parser_name):  recompile_grammar(ebnf_filename, parser_name)
 
 
+@deprecated("restore_server_script() is deprecated! Please, use create_additional_scripts().")
+def restore_server_script(ebnf_filename: str,
+                          parser_name: str = '',
+                          server_name: str = '',
+                          overwrite: bool = False):
+    create_scripts(ebnf_filename, parser_name, server_name, None, overwrite)
+
+
+#######################################################################
+#
+# Processing Pipeline support (see compile.run_pipeline)
+#
+#######################################################################
+
+PseudoJunction = namedtuple('PseudoJunction',
+                            ['factory'],  # get thread safe preprocessing function
+                            # 'process'], # preprocess thread-safely
+                            module=__name__)
+
+# In the following PARTIAL FUNCTIONS are used rather than local functions,
+# because the closure of local functions cannot be pickled!
+
+# Preprocessing-Stage #################################################
+
+def _preprocessor_factory(tokenizer, include_regex, comment_regex) -> PreprocessorFunc:
+    # below, the second parameter must always be the same as Grammar.COMMENT__!
+    find_next_include = gen_find_include_func(include_regex, comment_regex)
+    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
+    tokenizing_prep = make_preprocessor(tokenizer)
+    return chain_preprocessors(include_prep, tokenizing_prep)
+
+
+# def _preprocess(source, factory) -> Union[str, StringView]:
+#     return factory()(source)
+
+
+def create_preprocess_transition(tokenizer: Tokenizer,
+                                 include_regex, comment_regex) -> PseudoJunction:
+    """Creates a factory for thread-safe preprocessing functions as well as a
+    thread-safe preprocessing function."""
+    preprocessor_factory = partial(_preprocessor_factory,
+        tokenizer=tokenizer, include_regex=include_regex, comment_regex=comment_regex)
+    thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
+    # preprocess = partial(_preprocess, factory=thread_safe_factory)
+    return PseudoJunction(thread_safe_factory)  # , preprocess)
+
+
+# Parsing-stage #######################################################
+
+def _parser_factory(raw_grammar) -> Grammar:
+    grammar = raw_grammar()
+    if get_config_value('resume_notices'):
+        resume_notices_on(grammar)
+    elif get_config_value('history_tracking'):
+        set_tracer(grammar, trace_history)
+    try:
+        if not grammar.__class__.python_src__:
+            grammar.__class__.python_src__ = _parser_factory.python_src__
+    except AttributeError:
+        pass
+    return grammar
+
+
+# def _parse_func(parser_factory: Callable, document, start_parser = "root_parser__",
+#                 *, complete_match=True):
+#     return parser_factory()(document, start_parser, complete_match=complete_match)
+
+
+def create_parser_transition(grammar_class: type) -> PseudoJunction:
+    """Creates a factory for thread-safe parser functions as well as a
+    thread-safe parser function."""
+    assert issubclass(grammar_class, Grammar)
+    raw_grammar = ThreadLocalSingletonFactory(grammar_class)
+    factory = partial(_parser_factory, raw_grammar=raw_grammar)
+    # process = partial(_parse_func, parser_factory=factory)
+    return PseudoJunction(factory)  # , process)
+
+
+# Tree-Processing-Stages ##############################################
+
+# 1. tree-processing with Compiler-class
+
+# def process_template(src_tree: Node, src_stage: str, dst_stage: str,
+#                      factory_function) -> Any:
+#     """A generic templare for tree-transformation-functions."""
+#     if isinstance(src_tree, RootNode):
+#         assert src_tree.stage == src_stage
+#     result = factory_function()(src_tree)
+#     if isinstance(result, RootNode):
+#         assert result.stage in (src_stage, dst_stage)
+#         result.stage = dst_stage
+#     return result
+
+
+def create_compiler_transition(compile_class: type,
+                               src_stage: str,
+                               dst_stage: str) -> Junction:
+    """Creates a thread-safe transformation function and function-factory from
+    a :py:class:`compile.Compiler` or another callable class.
+    """
+    assert callable(compile_class)
+    assert src_stage and src_stage.islower()
+    assert dst_stage and dst_stage.islower()
+    factory = ThreadLocalSingletonFactory(compile_class)
+    # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+    #                   factory_function=factory)
+    return Junction(src_stage, factory, dst_stage)
+
+
+# 2. tree-processing with transformation-table
+
+def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
+    return partial(transformer, transformation_table=table.copy(),
+                   src_stage=src_stage, dst_stage=dst_stage)
+
+def create_transtable_transition(table: TransformationDict,
+                                 src_stage: str,
+                                 dst_stage: str) -> Junction:
+    """Creates a thread-safe transformation function and function-factory from
+    a transformation-table :py:func:`transform.traverse`.
+    """
+    assert isinstance(table, dict)
+    assert src_stage and src_stage.islower()
+    assert dst_stage and dst_stage.islower()
+    make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
+    factory = ThreadLocalSingletonFactory(make_transformer, uniqueID=id(table))
+    # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+    #                   factory_function=factory)
+    return Junction(src_stage, factory, dst_stage)
+
+
+# 3. tree-processing with evaluation-table
+
+def _make_evaluation(actions, supply_path_arg) -> Callable[[Node], Any]:
+    def evaluate_with_path(node: Node) -> Any:
+        return node.evaluate(actions, [node])
+
+    def evaluate_without_path(node: Node) -> Any:
+        return node.evaluate(actions, path=[])
+
+    return evaluate_with_path if supply_path_arg else evaluate_without_path
+
+
+def create_evaluation_transition(actions: Dict[str, Callable],
+                                 src_stage: str,
+                                 dst_stage: str,
+                                 supply_path_arg: bool=True) -> Junction:
+    """Creates a thread-safe transformation function and function-factory from
+    an evaluation-table :py:meth:`nodetree.Node.evaluate`.
+    """
+    assert isinstance(actions, dict)
+    assert src_stage and src_stage.islower()
+    assert dst_stage and dst_stage.islower()
+    make_evaluation = partial(
+        _make_evaluation, actions=actions, supply_path_arg=supply_path_arg)
+    factory = ThreadLocalSingletonFactory(make_evaluation, uniqueID=id(actions))
+    # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
+    #                   factory_function=factory)
+    return Junction(src_stage, factory, dst_stage)
+
+
+# generic tree-processing function
+
+def create_transition(tool: Union[dict, type],
+                      src_stage: str,
+                      dst_stage: str,
+                      hint: str='?') -> Junction:
+    """Generic stage-creation function for tree-transforming stages where a tree-transforming
+    stage is a stage which either rehapes a node-tree or transforms a nodetree into
+    something else, but not a stage where something else (e.g. a text) is turned into
+    a node-tree."""
+    if isinstance(tool, type):
+        return create_compiler_transition(tool, src_stage, dst_stage)
+    else:
+        assert isinstance(tool, dict)
+        if any(isinstance(value, Sequence) for value in tool.values()) \
+                or hint == "transtable":
+            return create_transtable_transition(tool, src_stage, dst_stage)
+        elif hint == "evaluate_with_path":
+            return create_evaluation_transition(tool, src_stage, dst_stage, True)
+        elif hint == "evaluate_without_path":
+            return create_evaluation_transition(tool, src_stage, dst_stage, False)
+        else:
+            raise AssertionError('Cannot determine transformation-type automatically! '
+                'Please, add optional parameter "hint" to the function call with one of the '
+                'following values: "transtable", "evaluate_with_path", "evaluate_without_path"!')
+
+
+#######################################################################
+#
+# batch-processing
+#
+#######################################################################
+
+
+def process_file(source: str, out_dir: str,
+                 preprocessor_factory: PreprocessorFactory,
+                 parser_factory: ParserFactory,
+                 junctions: Set[Junction],
+                 targets: Set[str],
+                 serializations: Dict[str, List[str]]) -> str:
+    """Compiles the source and writes the serialized results back to disk,
+    unless any fatal errors have occurred. Error and Warning messages are
+    written to a file with the same name as `result_filename` with an
+    appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
+    extension. Returns the name of the error-messages file or an empty
+    string, if no errors or warnings occurred.
+
+    :param source:  the source document or the filename of the source-document
+    :param out_dir:  the path of the output-directory. If the output-directory
+        does not exist, it will be created.
+    :param preprocessor_factory:  A factory-function that returns a
+        preprocessing function.
+    :param parser_factory: A factory-function that returns a parser function
+        which, usually, is a :py:class:`parse.Grammar`-object.
+    :param junctions:  a set of junctions for all processing stages beyond
+        parsing.
+    :param serializations: A dictionary of serialization names, e.g. "sxpr",
+        "xml", "json" for those target stages that still are node-trees. These
+        will be serialized and written to disk in all given serializations.
+
+    :return: either the empty string or the file name of a file that contains
+        the errors or warnings that occurred while processing the source.
+    """
+    source_filename = source if is_filename(source) else 'unknown_document_name'
+    dest_name = os.path.splitext(os.path.basename(source_filename))[0]
+    results = full_compile(source, preprocessor_factory, parser_factory, junctions, targets)
+    end_results = {t: r for t, r in results.items() if t in targets}
+
+    # create target directories
+    for t in end_results.keys():
+        path = os.path.join(out_dir, t)
+        try:  # do not use os.path.exists(), here: RACE CONDITION!!
+            os.makedirs(path)
+        except FileExistsError:
+            if not os.path.isdir(path):
+                error_file_name = dest_name + '_FATAL_ERROR.txt'
+                with open(error_file_name, 'w', encoding='utf-8') as f:
+                    f.write(f'Destination directory path "{path}" already in use!')
+                return error_file_name
+
+    # write data
+    errors = [];  errstrs = set()
+    items = end_results.items() if len(end_results) == len(targets) else results.items()
+    for t, r in items:
+        result, err = r
+        for e in err:
+            estr = str(e)
+            if estr not in errstrs:
+                errstrs.add(estr)
+                errors.append(e)
+        if t in end_results:
+            path = os.path.join(out_dir, t, '.'.join([dest_name, t]))
+            if isinstance(result, Node):
+                slist = serializations.get(t, serializations.get(
+                    '*', get_config_value('default_serialization')))
+                for s in slist:
+                    data = result.serialize(s)
+                    with open('.'.join([path, s]), 'w', encoding='utf-8') as f:
+                        f.write(data)
+            else:
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(str(result))
+
+    errors.sort(key=lambda e: e.pos)
+    if errors:
+        err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
+        err_filename = dest_name + err_ext
+        with open(err_filename, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(canonical_error_strings(errors)))
+        return err_filename
+    return ''
+
+
+def never_cancel() -> bool:
+    return False
+
+
+def batch_process(file_names: List[str], out_dir: str,
+                  process_file: Callable[[Tuple[str, str]], str],
+                  *, submit_func: Callable = None,
+                  log_func: Callable = None,
+                  cancel_func: Callable = never_cancel) -> List[str]:
+    """Compiles all files listed in file_names and writes the results and/or
+    error messages to the directory `our_dir`. Returns a list of error
+    messages files.
+    """
+    import concurrent.futures
+    from DHParser.toolkit import instantiate_executor
+
+    def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
+        error_list = []
+        if cancel_func(): return error_list
+        for file_name, error_filename in zip(file_names, res_iter):
+            if log_func:
+                suffix = (" with " + error_filename[error_filename.rfind('_') + 1:-4]) \
+                    if error_filename else ""
+                log_func(f'Compiled "%s"' % os.path.basename(file_name) + suffix)
+            if error_filename:
+                error_list.append(error_filename)
+            if cancel_func(): return error_list
+        return error_list
+
+    if submit_func is None:
+        pool = instantiate_executor(get_config_value('batch_processing_parallelization'),
+                                    concurrent.futures.ProcessPoolExecutor)
+        res_iter = pool.map(process_file, ((name, out_dir) for name in file_names),
+            chunksize=min(get_config_value('batch_processing_max_chunk_size'),
+                          max(1, len(file_names) // (cpu_count() * 4))))
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        if sys.version_info >= (3, 9):
+            pool.shutdown(wait=True, cancel_futures=True)
+        else:
+            pool.shutdown(wait=True)
+    else:
+        futures = [submit_func(process_file, name, out_dir) for name in file_names]
+        res_iter = (f.result() for f in futures)
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        for f in futures:  f.cancel()
+        concurrent.futures.wait(futures)
+    return error_files

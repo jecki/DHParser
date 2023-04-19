@@ -32,7 +32,8 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
-    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID
+    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
+    parse_sxml
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -82,6 +83,8 @@ class TestParseSxpression:
         sxpr = '(B (A `(tic "abc :-)") "Z") (C "1"))'
         s = parse_sxpr(sxpr)
         assert flatten_sxpr(s.as_sxpr()) == sxpr
+        s = parse_sxpr('(A 250)')
+        assert flatten_sxpr(s.as_sxpr()) == '(A "250")'
 
     def test_parse_s_expression_malformed(self):
         try:
@@ -267,9 +270,10 @@ class TestParseJSON:
     def test_json_obj_roundtrip(self):
         json_obj_tree = self.tree.to_json_obj()
         tree_copy = Node.from_json_obj(json_obj_tree)
-        # print(json_obj_tree)
-        # print(json.dumps(json_obj_tree, ensure_ascii=False))
-        # print(json.loads(json.dumps(json_obj_tree, ensure_ascii=False)))        
+        assert tree_copy.equals(self.tree), '\n' + tree_copy.as_sxpr() + '\n' + self.tree.as_sxpr()
+
+        json_obj_tree = self.tree.to_json_obj(as_dict=True)
+        tree_copy = Node.from_json_obj(json_obj_tree)
         assert tree_copy.equals(self.tree), '\n' + tree_copy.as_sxpr() + '\n' + self.tree.as_sxpr()
 
     def test_json_roundtrip(self):
@@ -281,10 +285,20 @@ class TestParseJSON:
         assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
         s = self.tree.as_json(indent=None, ensure_ascii=False)
         tree_copy = parse_json(s)
-        # print(s)
-        # print(self.tree.as_sxpr())
-        # print(tree_copy.as_sxpr())
         assert tree_copy.equals(self.tree)
+
+        s = self.tree.as_json(indent=None, ensure_ascii=True, as_dict=True)
+        tree_copy = Node.from_json_obj(json.loads(s))
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
+        s = self.tree.as_json(indent=2, ensure_ascii=False, as_dict=True)
+        tree_copy = Node.from_json_obj(json.loads(s))
+        assert tree_copy.equals(self.tree, ignore_attr_order = sys.version_info < (3, 6))
+        new_tree = copy.deepcopy(self.tree)
+        new_tree.result = new_tree.result + (Node('b', 'doublette'),)
+        s = new_tree.as_json(indent=0, ensure_ascii=False, as_dict=True, include_pos=False)
+        assert s == '{"a":[["b","ä"],["d",{"e":"ö","h":"über","attributes__":{"name":"James Bond","id":"007"}}],["b","doublette"]]}'
+        tree_copy = parse_json(s)
+        assert tree_copy.equals(new_tree)
 
     def test_attr_serialization_and_parsing(self):
         n = Node('employee', 'James Bond').with_pos(46)
@@ -293,7 +307,10 @@ class TestParseJSON:
         # json
         json = n.as_json()
         tree = parse_json(json)
-        # print()
+        assert tree.equals(n)
+        json = n.as_json(as_dict=True)
+        tree = parse_json(json)
+        assert tree.equals(n)
 
         # XML
         xml = n.as_xml()
@@ -313,6 +330,16 @@ class TestParseJSON:
         sxpr = n.as_sxpr('')
         assert sxpr.find('pos') >= 0
         tree = parse_sxpr(sxpr)
+        assert tree.pos == 46
+        assert not 'pos' in tree.attr
+
+        # SXML
+        sxml = n.as_sxml()
+        assert sxml == '(employee (@ (branch "Secret Service") (id "007")) "James Bond")'
+        assert sxml.find('pos') < 0
+        sxml = n.as_sxml('')
+        assert sxml.find('pos') >= 0
+        tree = parse_sxml(sxml)
         assert tree.pos == 46
         assert not 'pos' in tree.attr
 

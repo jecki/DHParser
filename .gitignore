@@ -9,6 +9,10 @@ __pycache__/
 *.bcf
 *.aux
 *.toc
+*_MESSAGES.txt
+*_WARNINGS.txt
+*_ERRORS.txt
+tmp_*
 testdata/*.log
 testdata/*.pdf
 *~
@@ -36,11 +40,8 @@ DHParser.egg-info
 *.build
 VERALTET
 DHParser/stringview.c
-*_ERRORS.txt
-*_WARNINGS.txt
 imperium.html
 fascitergula.html
-_build
 _build
 _static
 _templates
@@ -54,3 +55,10 @@ docs/*
 examples/LaTeX/testdata/*.xml
 venv/*
 *.sxpr
+**/htmldocs/
+experimental
+
+
+/nim_rewrite/nodetree
+/nim_rewrite/parse
+/nim_rewrite/nimdoc

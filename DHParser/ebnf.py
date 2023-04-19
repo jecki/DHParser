@@ -26,11 +26,12 @@ are supported.
 
 from __future__ import annotations
 
+import copy
 from functools import partial
 import keyword
 import os
 import sys
-from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Union, Optional, cast
+from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Union, Optional
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -50,7 +51,9 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
-    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, has_errors
+    STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
+    WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, \
+    UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -62,10 +65,10 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOM
 from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, TypeAlias
-from DHParser.transform import TransformerCallable, transformer, remove_brackets, \
+from DHParser.transform import TransformerFunc, transformer, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
-    remove_tokens, flatten, forbid, assert_content, remove_children_if, all_of, not_one_of, \
-    BLOCK_LEAVES
+    remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
+    all_of, not_one_of, BLOCK_LEAVES
 from DHParser.versionnumber import __version__
 
 
@@ -85,11 +88,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'EBNFDirectives',
            'EBNFCompiler',
            'grammar_changed',
-           'compile_ebnf',
-           'PreprocessorFactoryFunc',
-           'ParserFactoryFunc',
-           'TransformerFactoryFunc',
-           'CompilerFactoryFunc')
+           'compile_ebnf')
 
 
 ########################################################################
@@ -107,40 +106,59 @@ import sys
 from typing import Tuple, List, Union, Any, Optional, Callable, cast
 
 try:
-    scriptdir = os.path.abspath(os.path.dirname(__file__))
-except NameError:
-    scriptdir = ''
-if scriptdir and scriptdir not in sys.path:
-    sys.path.append(scriptdir)
-
-try:
     import regex as re
 except ImportError:
     import re
-from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \\
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
+
+try:
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+except NameError:
+    scriptdir = ''
+if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
+
+try:
+    from DHParser import versionnumber
+except (ImportError, ModuleNotFoundError):
+    i = scriptdir.rfind("/DHParser/")
+    if i >= 0:
+        dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
+        if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
+
+from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
+    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
+from DHParser import dsl
+from DHParser.dsl import recompile_grammar, create_parser_transition, \\
+    create_preprocess_transition, create_transition, PseudoJunction, never_cancel
+from DHParser.ebnf import grammar_changed
+from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \\
+    WARNING, ERROR, FATAL
+from DHParser.log import start_logging, suspend_logging, resume_logging
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path
+from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
-    compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \\
-    remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, \\
-    remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \\
-    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \\
-    replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, transformer, \\
-    merge_adjacent, collapse, collapse_children_if, transform_result, WHITESPACE_PTYPE, \\
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \\
-    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \\
+    last_value, matching_bracket, optional_last_value
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \\
+    ThreadLocalSingletonFactory, expand_table
+from DHParser.trace import set_tracer, resume_notices_on, trace_history
+from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \\
+    transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \\
+    is_anonymous, name_matches, reduce_single_child, replace_by_single_child, replace_or_reduce, \\
+    remove_whitespace, replace_by_children, remove_empty, remove_tokens, flatten, all_of, \\
+    any_of, transformer, merge_adjacent, collapse, collapse_children_if, transform_result, \\
+    remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \\
+    keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \\
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \\
-    replace_content_with, forbid, assert_content, remove_infix_operator, cpu_count, \\
-    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \\
-    get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \\
-    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \\
-    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \\
+    replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \\
+    left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \\
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \\
-    has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \\
-    has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \\
-    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, RootNode
+    has_attr, has_parent, has_children, has_child, apply_unless, apply_ifelse, traverse
 from DHParser import parse as parse_namespace__
+
 '''
 
 
@@ -238,7 +256,7 @@ class HeuristicEBNFGrammar(Grammar):
 
         #: top-level
 
-        syntax     = ~ { definition | directive } EOF
+        syntax     = ~ { definition | directive | macrodef } EOF
         definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
 
         directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
@@ -248,7 +266,12 @@ class HeuristicEBNFGrammar(Grammar):
           literals   = { literal }+                       # string chaining, only allowed in directives!
           procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
-        FOLLOW_UP  = `@` | symbol | EOF
+        macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
+                     :DEF~ [ OR~ ] macrobody :ENDL~ & FOLLOW_UP
+          macrobody  = expression
+          is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~:DEF
+
+        FOLLOW_UP  = `@` | `$` | symbol | EOF
 
 
         #: components
@@ -275,6 +298,8 @@ class HeuristicEBNFGrammar(Grammar):
                    | any_char
                    | whitespace
                    | group
+                   | macro !:DEF
+                   | placeholder !:DEF
                    | parser                             # a user-defined parser
 
 
@@ -304,8 +329,7 @@ class HeuristicEBNFGrammar(Grammar):
         #: leaf-elements
 
         parser     = "@" name "(" [argument] ")"        # a user defined parser
-          argument = literal | name
-          name     = SYM_REGEX ~                        # name of Parser class or (factory) function
+          argument = literal | name~
 
         symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
         literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
@@ -320,6 +344,15 @@ class HeuristicEBNFGrammar(Grammar):
         free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
         any_char   = "."
         whitespace = /~/~                               # insignificant whitespace
+
+
+        #: macros
+
+        macro       = "$" name "(" no_range expression { "," no_range expression } ")"
+        placeholder = "$" name !`(` ~
+
+        name        = SYM_REGEX
+
 
         #: delimiters
 
@@ -376,11 +409,13 @@ class HeuristicEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "e6d7b1125c464e928175aee7a068f744"
-    disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "a6bd5026c686bfeabba924473393fa58"
+    disposable__ = re.compile(
+        '(?:component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)|(?:component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
+    error_messages__ = {'definition': [(re.compile(r','),
+                                        'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -391,45 +426,84 @@ class HeuristicEBNFGrammar(Grammar):
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
-    regex_heuristics = Series(NegativeLookahead(Alternative(RegExp(' +`[^`]*` +/'), RegExp(' +´[^´]*´ +/'), RegExp(" +'[^']*' +/"), RegExp(' +"[^"]*" +/'), RegExp(' +\\w+ +/'))), Alternative(RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]*/'), RegExp('[^\\w]+/'), RegExp('[^ ]')))
-    literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
+    regex_heuristics = Series(NegativeLookahead(
+        Alternative(RegExp(' +`[^`]*` +/'), RegExp(' +´[^´]*´ +/'), RegExp(" +'[^']*' +/"), RegExp(' +"[^"]*" +/'),
+                    RegExp(' +\\w+ +/'))), Alternative(RegExp('[^/\\n*?+\\\\]*[*?+\\\\][^/\\n]*/'), RegExp('[^\\w]+/'),
+                                                       RegExp('[^ ]')))
+    literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'),
+                                     RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"),
+                                     RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'),
+                                     RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'),
+                                     RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
-    char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX, RegExp('\\s*\\]'))))
+    char_range_heuristics = NegativeLookahead(
+        Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics),
+                    Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX,
+                           RegExp('\\s*\\]'))))
     CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")), zero_length_warning=False)
     RE_LEADOUT = Capture(Text("/"), zero_length_warning=False)
-    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")), zero_length_warning=False)
+    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")),
+                        zero_length_warning=False)
     TIMES = Capture(Text("*"), zero_length_warning=False)
     RNG_DELIM = Capture(Text(","), zero_length_warning=False)
     BRACE_SIGN = Capture(Alternative(Text("{"), Text("(")), zero_length_warning=False)
     RNG_BRACE = Capture(Retrieve(BRACE_SIGN), zero_length_warning=True)
     ENDL = Capture(Alternative(Text(";"), Text("")), zero_length_warning=False)
     AND = Capture(Alternative(Text(","), Text("")), zero_length_warning=False)
-    OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))), zero_length_warning=False)
+    OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))),
+                 zero_length_warning=True)
     _DEF = Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": "))
     DEF = Capture(Synonym(_DEF), zero_length_warning=False)
-    EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
+    EOF = Drop(
+        Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))),
+               Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
+    name = Synonym(SYM_REGEX)
+    placeholder = Series(Series(Text("$"), dwsp__), name, NegativeLookahead(Text("(")), dwsp__)
+    multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrtfv`´\'"(){}\\[\\]/\\\\]'))
     character = Series(Retrieve(CH_LEADIN), HEXCODE)
-    char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)), Series(Text("]"), dwsp__))
+    char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")),
+                        Alternative(character, free_char),
+                        ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)),
+                        Series(Text("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
-    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
+                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
+                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
-    name = Series(SYM_REGEX, dwsp__)
-    argument = Alternative(literal, name)
-    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))
-    multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
+    argument = Alternative(literal, Series(name, dwsp__))
+    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
+                    Series(Text(")"), dwsp__))
     no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
-    range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
-    counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
-    option = Alternative(Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=2), Series(element, Series(Text("?"), dwsp__)))
-    repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2), Series(element, Series(Text("*"), dwsp__), no_range))
-    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)), Series(element, Series(Text("+"), dwsp__)))
+    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression,
+                   ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
+    range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)),
+                   Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
+    counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier),
+                          Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
+    option = Alternative(
+        Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__),
+               mandatory=2), Series(element, Series(Text("?"), dwsp__)))
+    repetition = Alternative(
+        Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2),
+        Series(element, Series(Text("*"), dwsp__), no_range))
+    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)),
+                            Series(element, Series(Text("+"), dwsp__)))
     group = Series(Series(Text("("), dwsp__), no_range, expression, Series(Text(")"), dwsp__), mandatory=2)
     retrieveop = Alternative(Series(Text("::"), dwsp__), Series(Text(":?"), dwsp__), Series(Text(":"), dwsp__))
-    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__), Series(Text("<-&"), dwsp__))
+    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__),
+                             Series(Text("<-&"), dwsp__))
     ANY_SUFFIX = RegExp('[?*+]')
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
@@ -437,16 +511,35 @@ class HeuristicEBNFGrammar(Grammar):
     term = Alternative(oneormore, counted, repetition, option, pure_elem)
     difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
-    interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
-    FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
-    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
-    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group, parser))
+    interleave = Series(difference,
+                        ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
+        Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__,
+               Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
+    FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
+    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL),
+                        dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(
+        Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
+               Series(Text(")"), dwsp__))), dwsp__, Retrieve(DEF))
+    macrobody = Synonym(expression)
+    macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(
+        Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
+               Series(Text(")"), dwsp__), mandatory=1)), Retrieve(DEF), dwsp__, Option(Series(OR, dwsp__)), macrobody,
+                      Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP))
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)),
+                            Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)),
+                            Series(RAISE_EXPR_WO_BRACKETS, expression))
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component,
+                       ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
+    element.set(
+        Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp,
+                    char_range, Series(character, dwsp__), any_char, whitespace, group,
+                    Series(macro, NegativeLookahead(Retrieve(DEF))),
+                    Series(placeholder, NegativeLookahead(Retrieve(DEF))), parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
-    syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
+    syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
     resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
@@ -536,9 +629,9 @@ class ConfigurableEBNFGrammar(Grammar):
             # or python-style: # ... \n, excluding, however, character markers: #x20
         @ whitespace = /\s*/                            # whitespace includes linefeed
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-        @ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
-        @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
-        # @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+        @ disposable = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+        @ drop       = whitespace, EOF, no_range        # do not include these even in the concrete syntax tree
+
 
         # re-entry-rules to resume parsing after a syntax-error
 
@@ -554,18 +647,22 @@ class ConfigurableEBNFGrammar(Grammar):
 
         #: top-level
 
-        syntax     = ~ { definition | directive } EOF
-        definition = symbol §DEF~ [ OR~ ] expression ENDL~ & FOLLOW_UP  # [OR~] to support v. Rossum's syntax
+        syntax     = ~ { definition | directive | macrodef } EOF
+        definition = symbol §DEF~ [ OR~ ] expression ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
-        directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
-          # component  = (regexp | literals | procedure | symbol !DEF)
-          # component  = literals | procedure | expression
+        directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
           component  = regexp | literals | procedure | symbol !DEF
+                     | &`$` !is_mdef § placeholder !DEF
                      | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
           literals   = { literal }+                       # string chaining, only allowed in directives!
           procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
-        FOLLOW_UP  = `@` | symbol | EOF
+        macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
+                     DEF~ [ OR~ ] macrobody ENDL~ & FOLLOW_UP
+          macrobody  = expression
+          is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~DEF
+
+        FOLLOW_UP  = `@` | `$` | symbol | EOF
 
 
         #: components
@@ -587,11 +684,12 @@ class ConfigurableEBNFGrammar(Grammar):
                    | literal
                    | plaintext
                    | regexp
-                   # | char_range
                    | character ~
                    | any_char
                    | whitespace
                    | group
+                   | macro !DEF
+                   | placeholder !DEF
                    | parser                             # a user defined parser
 
 
@@ -610,20 +708,18 @@ class ConfigurableEBNFGrammar(Grammar):
         group      = "(" no_range §expression ")"
         oneormore  = "{" no_range expression "}+" | element "+"
         repetition = "{" no_range §expression "}" | element "*" no_range
-        option     = # !char_range
-                     "[" §expression "]" | element "?"
+        option     = "[" §expression "]" | element "?"
         counted    = countable range | countable TIMES~ multiplier | multiplier TIMES~ §countable
 
         range      = RNG_OPEN~ multiplier [ RNG_DELIM~ multiplier ] RNG_CLOSE~
-        no_range   = !multiplier | &multiplier TIMES
+        no_range   = !multiplier | &multiplier TIMES   # should that be &(multiplier TIMES)??
         multiplier = /[1-9]\d*/~
 
 
         #: leaf-elements
 
-        parser     = "@" name "(" [argument] ")"        # a user defined parser
-          argument = literal | name
-          name     = SYM_REGEX ~                        # name of Parser class or (factory) function
+        parser     = "@" name "(" §[argument] ")"        # a user defined parser
+          argument = literal | name~
 
         symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
         literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
@@ -631,13 +727,17 @@ class ConfigurableEBNFGrammar(Grammar):
         plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
                    | /´(?:(?<!\\)\\´|[^´])*?´/~
         regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
-        # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-        # char_range = `[` &char_range_heuristics
-        #                  [`^`] (character | free_char) { [`-`] character | free_char } "]"
         character  = CH_LEADIN HEXCODE
-        free_char  = /[^\n\[\]\\]/ | /\\[nrt`´'"(){}\[\]\/\\]/
         any_char   = "."
         whitespace = /~/~                               # insignificant whitespace
+
+
+        #: macros
+
+        macro       = "$" name "(" no_range expression { "," no_range expression } ")"
+        placeholder = "$" name !`(` ~
+
+        name        = SYM_REGEX
 
 
         #: delimiters
@@ -673,11 +773,13 @@ class ConfigurableEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "e1154ad391275e611b1d84e5cb2471b1"
-    disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "1e692df774672c88c722bd8b4e0bc838"
+    disposable__ = re.compile(
+        '(?:is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)|(?:is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
+    error_messages__ = {'definition': [(re.compile(r','),
+                                        'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -700,27 +802,38 @@ class ConfigurableEBNFGrammar(Grammar):
     OR = Text("|")
     DEF = Text("=")
     EOF = Drop(NegativeLookahead(RegExp('.')))
+    name = Synonym(SYM_REGEX)
+    placeholder = Series(Series(Text("$"), dwsp__), name, NegativeLookahead(Text("(")), dwsp__)
+    multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
-    free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrt`´\'"(){}\\[\\]/\\\\]'))
     character = Series(CH_LEADIN, HEXCODE)
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
-    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
+                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
+                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
-    name = Series(SYM_REGEX, dwsp__)
-    argument = Alternative(literal, name)
-    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))
-    multiplier = Series(RegExp('[1-9]\\d*'), dwsp__)
-    no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), TIMES))
+    argument = Alternative(literal, Series(name, dwsp__))
+    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
+                    Series(Text(")"), dwsp__), mandatory=3)
+    no_range = Drop(Alternative(Drop(NegativeLookahead(multiplier)), Drop(Series(Drop(Lookahead(multiplier)), TIMES))))
+    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression,
+                   ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
     range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
-    counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier), Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
-    option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1), Series(element, Series(Text("?"), dwsp__)))
-    repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2), Series(element, Series(Text("*"), dwsp__), no_range))
-    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)), Series(element, Series(Text("+"), dwsp__)))
+    counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier),
+                          Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
+    option = Alternative(Series(Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=1),
+                         Series(element, Series(Text("?"), dwsp__)))
+    repetition = Alternative(
+        Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2),
+        Series(element, Series(Text("*"), dwsp__), no_range))
+    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)),
+                            Series(element, Series(Text("+"), dwsp__)))
     group = Series(Series(Text("("), dwsp__), no_range, expression, Series(Text(")"), dwsp__), mandatory=2)
     retrieveop = Alternative(Series(Text("::"), dwsp__), Series(Text(":?"), dwsp__), Series(Text(":"), dwsp__))
-    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__), Series(Text("<-&"), dwsp__))
+    flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__),
+                             Series(Text("<-&"), dwsp__))
     ANY_SUFFIX = RegExp('[?*+]')
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
@@ -728,16 +841,34 @@ class ConfigurableEBNFGrammar(Grammar):
     term = Alternative(oneormore, counted, repetition, option, pure_elem)
     difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
-    interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
-    FOLLOW_UP = Alternative(Text("@"), symbol, EOF)
-    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
-    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, parser))
+    interleave = Series(difference,
+                        ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
+        Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
+    FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
+    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP),
+                        mandatory=1)
+    is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(
+        Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
+               Series(Text(")"), dwsp__))), dwsp__, DEF)
+    macrobody = Synonym(expression)
+    macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(
+        Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
+               Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL,
+                      dwsp__, Lookahead(FOLLOW_UP))
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)),
+                            Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder,
+                                   NegativeLookahead(DEF), mandatory=2),
+                            Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)),
+                            Series(RAISE_EXPR_WO_BRACKETS, expression))
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component,
+                       ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(DEF)), literal, plaintext, regexp,
+                            Series(character, dwsp__), any_char, whitespace, group,
+                            Series(macro, NegativeLookahead(DEF)), Series(placeholder, NegativeLookahead(DEF)), parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
-    syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive)), EOF)
+    syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
     resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
@@ -834,6 +965,10 @@ EBNF_AST_transformation_table = {
     "directive":
         [flatten, remove_tokens('@', '=', ',', '(', ')'),
          remove_children("RAISE_EXPR_WO_BRACKETS")],
+    "macrodef": [remove_anonymous_tokens],
+    "macrobody": [],
+    "macro": [remove_anonymous_tokens],
+    "placeholder": [remove_anonymous_tokens, reduce_single_child],
     "procedure":
         [remove_tokens('()', '(', ')'), reduce_single_child],
     "literals":
@@ -894,13 +1029,13 @@ EBNF_AST_transformation_table = {
 }
 
 
-def EBNFTransform() -> TransformerCallable:
+def EBNFTransform() -> TransformerFunc:
     return partial(transformer,
                    transformation_table=EBNF_AST_transformation_table.copy(),
                    src_stage='cst', dst_stage='ast')
 
 
-def get_ebnf_transformer() -> TransformerCallable:
+def get_ebnf_transformer() -> TransformerFunc:
     THREAD_LOCALS = access_thread_locals()
     try:
         ebnf_transformer = THREAD_LOCALS.EBNF_transformer_singleton
@@ -925,16 +1060,12 @@ def transform_ebnf(cst: RootNode) -> RootNode:
 ########################################################################
 
 
-PreprocessorFactoryFunc: TypeAlias = Callable[[], PreprocessorFunc]
-ParserFactoryFunc: TypeAlias = Callable[[], Grammar]
-TransformerFactoryFunc: TypeAlias = Callable[[], TransformerCallable]
-CompilerFactoryFunc: TypeAlias = Callable[[], Compiler]
-
 PREPROCESSOR_FACTORY = '''
 
-RE_INCLUDE = NEVER_MATCH_PATTERN
 # To capture includes, replace the NEVER_MATCH_PATTERN 
 # by a pattern with group "name" here, e.g. r'\\input{{(?P<name>.*)}}'
+RE_INCLUDE = NEVER_MATCH_PATTERN
+RE_COMMENT = {COMMENT__}  # THIS MUST ALWAYS BE THE SAME AS {NAME}Grammar.COMMENT__ !!!
 
 
 def {NAME}Tokenizer(original_text) -> Tuple[str, List[Error]]:
@@ -942,75 +1073,31 @@ def {NAME}Tokenizer(original_text) -> Tuple[str, List[Error]]:
     # to the source code and returns the modified source.
     return original_text, []
 
-
-def preprocessor_factory() -> PreprocessorFunc:
-    # below, the second parameter must always be the same as {NAME}Grammar.COMMENT__!
-    find_next_include = gen_find_include_func(RE_INCLUDE, {COMMENT__})
-    include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor({NAME}Tokenizer)
-    return chain_preprocessors(include_prep, tokenizing_prep)
-
-
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
-
-
-def preprocess_{NAME}(source):
-    return get_preprocessor()(source)
+preprocessing: PseudoJunction = create_preprocess_transition(
+    {NAME}Tokenizer, RE_INCLUDE, RE_COMMENT)
 '''
 
 
 GRAMMAR_FACTORY = '''
-
-_raw_grammar = ThreadLocalSingletonFactory({NAME}Grammar)
-
-def get_grammar() -> {NAME}Grammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_{NAME}(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    {NAME}Grammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 '''
 
 
 TRANSFORMER_FACTORY = '''
 
-def {NAME}Transformer() -> TransformerCallable:
-    """Creates a transformation function that does not share state with other
-    threads or processes."""
-    return partial(transformer, 
-                   transformation_table={NAME}_AST_transformation_table.copy(),
-                   src_stage='cst', dst_stage='ast')
+ASTTransformation: Junction = create_transition(
+    {NAME}_AST_transformation_table.copy(), "cst", "ast", "transtable")
 
-
-get_transformer = ThreadLocalSingletonFactory({NAME}Transformer)
-
-
-def transform_{NAME}(cst):
-    return get_transformer()(cst)
 '''
 
 
 COMPILER_FACTORY = '''
-get_compiler = ThreadLocalSingletonFactory({NAME}Compiler)
 
-
-def compile_{NAME}(ast):
-    result = get_compiler()(ast)
-    if isinstance(result, RootNode):  # redundant if used with compile.run_pipeline
-        result.stage = '{NAME}'
-    return result
-    
-    
-{NAME}_junction = ('ast', get_compiler, '{NAME}')    
+compiling: Junction = create_transition(
+    {NAME}Compiler, "ast", "{NAME}".lower())
 '''
 
 
@@ -1190,10 +1277,10 @@ class EBNFCompiler(Compiler):
             the set of symbols that are referred to in the definition
             of a particular symbol.
 
-    :ivar referred_by_directive: A set of symbols which are directly
-           referred to in a directive. It does not matter whether
-           these symbals are reachable (i.e. directly oder indirectly
-           referred to) from the root-symbol.
+    :ivar referred_otherwise: A set of symbols which are directly
+           referred to in a directive, macro or macro-symbol. It does
+           not matter whether these symbals are reachable (i.e. directly
+           oder indirectly referred to) from the root-symbol.
 
     :ivar symbols:  A mapping of symbol names to their usages (not
             their definition!) in the EBNF source.
@@ -1213,6 +1300,13 @@ class EBNFCompiler(Compiler):
 
     :ivar definitions:  A dictionary of definitions. Other than ``rules``
             this maps the symbols to their compiled definienda.
+
+    :ivar macros:  A dictionary that maps macro names to the AST of the
+            macro-definition. (The macro's AST is used to implement the
+            the substitution when the macro is applied.)
+
+    :ivar macro_stack:  A stack (i.e. list) of macro names needed to
+            ensure that macro calls are not recursively nested.
 
     :ivar required_keywords: A list of keywords (like ``comment__`` or
             ``whitespace__``) that need to be defined at the beginning
@@ -1254,13 +1348,6 @@ class EBNFCompiler(Compiler):
 
     :ivar re_flags:  A set of regular expression flags to be added to all
             regular expressions found in the current parsing process
-
-    :ivar disposable_regexp: A regular expression to identify symbols that stand
-            for parsers that shall yield anonymous nodes. The pattern of
-            the regular expression is configured in configuration.py but
-            can also be set by a directive. The default value is a regular
-            expression that catches names with a leading underscore.
-            See also `parser.Grammar.disposable__`
 
     :ivar python_src:  A string that contains the python source code that was
             the outcome of the last EBNF-compilation.
@@ -1315,7 +1402,7 @@ class EBNFCompiler(Compiler):
         self.rules = OrderedDict()             # type: OrderedDict[str, List[Node]]
         self.referred_symbols_cache = dict()   # type: Dict[str, FrozenSet[str]]
         self.directly_referred_cache = dict()  # type: Dict[str, FrozenSet[str]]
-        self.referred_by_directive = set()     # type: Set[str]
+        self.referred_otherwise = set()        # type: Set[str]
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
@@ -1323,6 +1410,8 @@ class EBNFCompiler(Compiler):
         self.variables = {}                    # type: Dict[str, List[Node]]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
+        self.macros = {}                       # type: Dict[str, Node]
+        self.macro_stack = []                  # type: List[str]
         self.required_keywords = set()         # type: Set[str]
         self.deferred_tasks = []               # type: List[Callable]
         self.root_symbol = ""                  # type: str
@@ -1514,7 +1603,7 @@ class EBNFCompiler(Compiler):
             return unrepr(proc_name)
         elif nd.name == 'symbol':
             referred_symbol = nd.content.strip()
-            self.referred_by_directive.add(referred_symbol)
+            self.referred_otherwise.add(referred_symbol)
             return unrepr(referred_symbol)
         else:
             # create a parser-based search rule
@@ -1532,7 +1621,7 @@ class EBNFCompiler(Compiler):
             defn = self.compile(nd)
             assert defn.find("(") >= 0  # synonyms are impossible here
             self.definitions[rule] = defn
-            self.referred_by_directive.add(rule)
+            self.referred_otherwise.add(rule)
             return unrepr(rule)
 
 
@@ -1653,7 +1742,12 @@ class EBNFCompiler(Compiler):
                     definitions.insert(k, definitions[i])
                     del definitions[i]
                     top -= 1
-                    recursive.remove(sym)
+                    try:
+                        recursive.remove(sym)
+                    except KeyError:
+                        # due to reiterated reordering sym may happen to be
+                        # removed more than once
+                        pass
             i += 1
         self.forward = recursive
 
@@ -1820,9 +1914,11 @@ class EBNFCompiler(Compiler):
 
         # check for symbols used but never defined
 
-        defined_symbols = set(self.rules.keys()) | self.RESERVED_SYMBOLS
+        defined_symbols = set(self.rules.keys())
+        symbols_and_macros = defined_symbols | self.RESERVED_SYMBOLS \
+                             | set(['$' + k for k in self.macros.keys()])
         for symbol in self.symbols:
-            if symbol not in defined_symbols:
+            if symbol not in symbols_and_macros:
                 for usage in self.symbols[symbol]:
                     passage = self.tree.source[usage.pos:usage.pos + len(symbol) + 1]
                     if passage == symbol + '(':
@@ -1841,8 +1937,6 @@ class EBNFCompiler(Compiler):
 
         # check for unconnected rules
 
-        defined_symbols.difference_update(self.RESERVED_SYMBOLS)
-
         def remove_connections(symbol):
             """Recursively removes all symbols which appear in the
             definiens of a particular symbol."""
@@ -1852,7 +1946,7 @@ class EBNFCompiler(Compiler):
                     remove_connections(str(related))
 
         remove_connections(self.root_symbol)
-        for symbol in self.referred_by_directive:
+        for symbol in self.referred_otherwise:
             if symbol in defined_symbols:
                 remove_connections(symbol)
         for leftover in defined_symbols:
@@ -1925,6 +2019,24 @@ class EBNFCompiler(Compiler):
                 if sym in self.P:
                     self.P[sym] = 'parse_namespace__.' + sym
 
+        # reorder children: directives first, then macro syms and definitions,
+        #                   finally symbol definitions
+        directivedefs, macrosyms, macrodefs, symdefs = [], [], [], []
+        for nd in node.children:
+            if nd.name == 'directive':
+                if nd[0].content == "disposable":
+                    directivedefs.insert(0, nd)  # make sure that @disposable is always in front of @drop
+                directivedefs.append(nd)
+            elif nd.name == 'macrodef':
+                if nd.get('placeholder', None):
+                    macrodefs.append(nd)
+                else:  # macros without arguments must be read first, later, because of early substitution
+                    macrosyms.append(nd)
+            else:
+                assert nd.name == 'definition', nd.as_sxpr()
+                symdefs.append(nd)
+        node.result = tuple(directivedefs + macrosyms + macrodefs + symdefs)
+
         # compile definitions and directives and collect definitions
         root_symbol = ''
         for nd in node.children:
@@ -1933,12 +2045,15 @@ class EBNFCompiler(Compiler):
                 self.definitions[rule] = defn
                 if not root_symbol:  root_symbol = rule
             else:
-                assert nd.name == "directive", nd.as_sxpr()
-                self.compile(nd)
+                assert nd.name in ("macrodef", "directive", ZOMBIE_TAG), nd.as_sxpr()
+                if nd.name != ZOMBIE_TAG:   self.compile(nd)
+                # If nd.name == ZOMBIE_TAG, some error has already been reported, earlier.
+                # So it can be ignored here.
 
         if not self.definitions:
             self.tree.new_error(node, "Grammar does not contain any rules!", EMPTY_GRAMMAR_ERROR)
 
+        # derive Python-parser and run static analysis of the Python-parser
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
         if get_config_value('static_analysis') == 'early' and not \
                 any((e.code >= FATAL or e.code in
@@ -2038,6 +2153,7 @@ class EBNFCompiler(Compiler):
             self.drop_flag = False
         return rule, defn
 
+
     @staticmethod
     def join_literals(nd):
         assert nd.name == "literals"
@@ -2109,15 +2225,22 @@ class EBNFCompiler(Compiler):
                     self.add_to_disposable_regexp(re_pattern)
             else:
                 args = node.children[1:]
+                symlist = []
+                phldr_list = []
                 for child in args:
-                    if child.name != "symbol":
+                    if child.name == "symbol":
+                        symlist.append(child.content)
+                    elif child.name == "placeholder":
+                        phldr_list.append(child.content)
+                    else:
                         self.tree.new_error(
                             child, f'Non-symbol argument: {flatten_sxpr(child.as_sxpr())}'
                             ' cannot be mixed with symbols in @disposable-directive')
-                alist = [child.content for child in args]
-                for asym in alist:
-                    self.symbols.setdefault(asym, []).append(node)
-                self.add_to_disposable_regexp('$|'.join(alist) + '$')
+                for sym in symlist:
+                    self.symbols.setdefault(sym, []).append(node)
+                for phldr in phldr_list:
+                    self.symbols.setdefault('$' + phldr, []).append(node)
+                self.add_to_disposable_regexp('$|'.join(symlist + phldr_list) + '$')
 
         elif key == 'drop':
             if len(node.children) <= 1:
@@ -2131,6 +2254,7 @@ class EBNFCompiler(Compiler):
                     self.directives[key].add(content.lower())
                 else:
                     unmatched.append(content)
+                    if child.name == "placeholder":  content = '$' + content
                     if self.directives.disposable == NEVER_MATCH_PATTERN or \
                             re.fullmatch(r'(?:\w+\$\|)*\w+\$', self.directives.disposable):
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
@@ -2140,8 +2264,8 @@ class EBNFCompiler(Compiler):
                     else:
                         self.tree.new_error(
                             node, 'Illegal value "%s" for Directive "@ drop"! Should be one of '
-                            '%s or a string matching r"%s".' % (content, str(DROP_VALUES),
-                                                                self.directives.disposable))
+                            '%s or a string matching r"%s", preceeded by "$" in case of a macro '
+                            'name' % (content, str(DROP_VALUES), self.directives.disposable))
             if unmatched:
                 self.directives[key].add(content)
                 self.add_to_disposable_regexp('$|'.join(unmatched) + '$')
@@ -2244,6 +2368,53 @@ class EBNFCompiler(Compiler):
         return ""
 
 
+    def on_macrodef(self, node) -> str:
+        # TODO: Better reference-cycle-prevention than countdown
+        macro_name = node['name'].content
+        placeholders = [pl.content for pl in node.children if pl.name == 'placeholder']
+        body = node.pick('macrobody')
+        assert body and body.children and len(body.children) == 1
+        template = body.children[0]
+        for sym in template.select('symbol', include_root=True):
+            self.referred_otherwise.add(sym.content)
+        used_placholders = set()
+        replacement = 1
+        countdown = 20
+        while replacement and countdown > 0:
+            replacement = None
+            countdown -= 1
+            for pl in template.select('placeholder', include_root=True):
+                pl_name = pl.content
+                if pl_name in placeholders:
+                    used_placholders.add(pl_name)
+                elif pl_name == macro_name:  # this covers but one of several cases
+                    self.tree.new_error(pl, f'Recursive nesting of component "{macro_name}"!',
+                                        RECURSIVE_MACRO_CALL)
+                    return ""
+                else:
+                    try:
+                        _, args, expansion = self.macros[pl_name]
+                        if args:
+                            self.tree.new_error(node, f'Macro "${pl_name}" requires arguments',
+                                                WRONG_NUMBER_OF_ARGUMENTS)
+                            return ""
+                        replacement = Node('macroname', copy.deepcopy(expansion))\
+                            .with_attr({'name': pl_name}).with_pos(pl.pos)
+                        pl.replace_by(replacement, merge_attr=True)
+                    except KeyError:
+                        pass
+        if countdown <= 0:
+            self.tree.new_error(pl, f'Component "{macro_name}" too deeply structured '
+                                f'if not recursively nested!', RECURSIVE_MACRO_CALL)
+            return ""
+        leftover = set(placeholders) - used_placholders
+        if leftover:
+            self.tree.new_error(node, f"Unused macro arguments: {str(leftover)[1:-1]}",
+                                UNUSED_MACRO_ARGUMENTS_WARNING)
+        self.macros[macro_name] = (node, placeholders, template)
+        return ""
+
+
     def non_terminal(self, node: Node, parser_class: str, custom_args: List[str] = []) -> str:
         """
         Compiles any non-terminal, where `parser_class` indicates the Parser class
@@ -2266,6 +2437,63 @@ class EBNFCompiler(Compiler):
         else:
             return parser_class + '(' + ', '.join(arguments) + ')'
 
+
+    def on_macroname(self, node) -> str:
+        macro_name = node.attr['name']
+        code = self.compile(node[0])
+        if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
+            return f'{self.P["Drop"]}({code})'
+        elif not re.match(self.directives.disposable, macro_name):
+            if len(self.path) >= 3 and self.path[-3].name != 'definition':
+                if code.find('(') >= 0:
+                    return f'({code}).name("{macro_name}")'
+                else:  # code is symbol which already has a name which should not be overwritten.
+                    return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+        return code
+
+    def on_macro(self, node) -> str:
+        macro_name = node['name'].content if node.children else node.content
+        try:
+            _, margs, expansion = self.macros[macro_name]
+        except KeyError:
+            if len(node.children) <= 1:
+                self.tree.new_error(node, f'Unknown argument or macro-component "${macro_name}"!',
+                                    UNKNOWN_MACRO_ARGUMENT)
+            else:
+                self.tree.new_error(node, f'Undefined macro "${macro_name}"!', UNDEFINED_MACRO)
+            return "wsp__"
+        self.symbols.setdefault('$' + macro_name, []).append(node)
+        if macro_name in self.macro_stack:
+            self.tree.new_error(node, f'Recursive nesting of macro "{macro_name}"!',
+                                RECURSIVE_MACRO_CALL)
+            return "wsp__"
+        values = [expr for expr in node.children[1:]]
+        if len(values) != len(margs):
+            self.tree.new_error(node, f'Wrong number of macro arguments: {len(margs)} expected, '
+                                f'{len(values)} given!', WRONG_NUMBER_OF_ARGUMENTS)
+            return "wsp__"  # use wsp__ as a placeholder
+        args = dict(zip(margs, values))
+        tmpl = copy.deepcopy(expansion)
+        for arg in tmpl.select('placeholder'):
+            arg_name = arg.content
+            if arg_name in args:
+                value = args[arg_name]
+                # replace placeholder with argument expression
+                arg.replace_by(value, merge_attr=True)
+        node.replace_by(tmpl, merge_attr=True)
+        self.macro_stack.append(macro_name)
+        code = self.compile(Node('macroname', node).with_attr({'name': macro_name}))
+        _ = self.macro_stack.pop()
+        assert macro_name == _
+        # if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
+        #     return f'{self.P["Drop"]}({code})'
+        # elif not re.match(self.directives.disposable, macro_name):
+        #     return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+        return code
+
+
+    def on_placeholder(self, node) -> str:
+        return self.on_macro(node)
 
     def on_expression(self, node) -> str:
         # The following algorithm reorders literal alternatives, so that earlier alternatives
@@ -2381,15 +2609,11 @@ class EBNFCompiler(Compiler):
             if current_symbol in self.directives.skip:
                 if current_symbol in self.consumed_skip_rules:
                     self.tree.new_error(
-                        node, "Cannot apply 'skip-rules' unambigiously, because symbol "
+                        node, "Cannot apply 'skip-rules' unambiguously, because symbol "
                         "{} contains more than one parser with a mandatory marker '§' "
                         "in its definiens.".format(current_symbol),
                         AMBIGUOUS_ERROR_HANDLING)
                 else:
-                    # use class field instead or direct representation of error messages!
-                    # custom_args.append('skip={skip_rules_name}["{symbol}"]'
-                    #                    .format(skip_rules_name=self.SKIP_RULES_KEYWORD,
-                    #                            symbol=current_symbol))
                     self.consumed_skip_rules.add(current_symbol)
         return tuple(filtered_children), custom_args
 

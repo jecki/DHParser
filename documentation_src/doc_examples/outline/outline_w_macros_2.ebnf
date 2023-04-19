@@ -1,0 +1,62 @@
+# outline-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = /[ \t]*/
+@ reduction   = merge        
+@ disposable  = WS, EOF, LINE, S
+@ drop        = WS, EOF, backticked
+
+
+#######################################################################
+#
+#:  Outline
+#
+#######################################################################
+
+document = main [WS] §EOF
+
+$one_sec($level_sign, $sub_level) = [WS] $level_sign !`#` heading
+                                    [blocks] { $sub_level }
+$sec_seq($sec) = { [WS] $sec }+
+
+main = $one_sec(`#`, $sec_seq(section))
+section = $one_sec(`##`, $sec_seq(subsection))
+subsection = $one_sec(`###`, $sec_seq(subsubsection))
+subsubsection = $one_sec(`####`, $sec_seq(s5section))
+s5section = $one_sec(`#####`, $sec_seq(s6section))
+s6section = $one_sec(`######`, NEVER_MATCH )
+
+
+#######################################################################
+#
+#:  Content
+#
+#######################################################################
+
+heading = LINE
+
+blocks = [WS] block { PARSEP block }
+block  = !is_heading line { lf !is_heading line }
+  line = LINE
+  lf   = S
+
+is_heading = /##?#?#?#?#?(?!#)/
+
+
+#######################################################################
+#
+#:  Regular Expressions
+#
+#######################################################################
+
+LINE      = /[ \t]*[^\n]+/
+WS        = /(?:[ \t]*\n)+/  # empty lines
+S         = !PARSEP /\s+/
+PARSEP    = /[ \t]*\n[ \t]*\n\s*/
+NEVER_MATCH = /..(?<=^)/
+EOF       =  !/./        # no more characters ahead, end of file reached

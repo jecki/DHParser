@@ -1,0 +1,56 @@
+# outline-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = /[ \t]*/
+@ reduction   = merge        
+@ disposable  = WS, EOF, LINE, S
+@ drop        = WS, EOF, backticked
+
+
+#######################################################################
+#
+#:  Outline
+#
+#######################################################################
+
+document = main [WS] §EOF
+
+main  = [WS] `#` !`#` heading [blocks] { [WS] section }
+section  = `##` !`#` heading [blocks] { [WS] subsection }
+subsection  = `###` !`#` heading [blocks] { [WS] subsubsection }
+subsubsection  = `####` !`#` heading [blocks] { [WS] s5section }
+s5section  = `#####` !`#` heading [blocks] { [WS] s6section }
+s6section  = `######` !`#` heading [blocks]
+
+#######################################################################
+#
+#:  Content
+#
+#######################################################################
+
+heading = LINE
+
+blocks = [WS] block { PARSEP block }
+block  = !is_heading line { lf !is_heading line }
+  line = LINE
+  lf   = S
+
+is_heading = /##?#?#?#?#?(?!#)/
+
+
+#######################################################################
+#
+#:  Regular Expressions
+#
+#######################################################################
+
+LINE      = /[ \t]*[^\n]+/
+WS        = /(?:[ \t]*\n)+/  # empty lines
+S         = !PARSEP /\s+/
+PARSEP    = /[ \t]*\n[ \t]*\n\s*/      
+EOF       =  !/./        # no more characters ahead, end of file reached

@@ -169,10 +169,10 @@ class TestTrace:
         assert not gr.history_tracking__
 
     def test_trace_resume_2(self):
-        lang = """@ whitespace  = vertical
+        lang = r"""@ whitespace  = vertical
         @ literalws   = right
         _document = ~ [ list ] §_EOF
-        @list_resume = ({ list | /[^\[\]]*/ } ["]"])
+        @list_resume = ({ list | /[^\[\]]+/ } ["]"])
         list     = "[" [_items] § "]"
         @_items_skip = /(?=,)/, /(?=])/, /$/
         _items   = _item { "," §_item }
@@ -185,7 +185,6 @@ class TestTrace:
         cst = gr('[1, 2, A, [5, 6; [7, 8], 9], 10, ]')
         note_pos = set([e.orig_pos for e in cst.errors if e.code == RESUME_NOTICE])
         err_pos = set([e.orig_pos for e in cst.errors if e.code != RESUME_NOTICE])
-        # for e in cst.errors:  print(e)
         assert note_pos == {8, 27, 33}, str(note_pos)
         assert err_pos == {7, 15, 33}, str(err_pos)
 
@@ -222,8 +221,8 @@ class TestTrace:
         assert not gr.history_tracking__
 
     def test_resume_messag_2(self):
-        number_list_grammar = '''
-            @ list_resume = /]\\s*|$/
+        number_list_grammar = r'''
+            @ list_resume = /]\s*|$/
             @ _items_skip = /(?=,)/, /(?=])/, /$/
             @ literalws   = right
             @ disposable  = /_\w+/
@@ -239,6 +238,7 @@ class TestTrace:
         resume_notices_on(parser)
         tree = parser(example_with_errors)
         for e in tree.errors:
+            # print(e)
             assert e.code != RESUME_NOTICE or e.message.find('_item') >= 0
 
 

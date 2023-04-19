@@ -1,0 +1,24 @@
+# Example-grammar for macros
+
+@ whitespace  = /[ \t]*/
+@ reduction   = flatten        
+@ disposable  = EOF, PARSEP, WS, LF
+@ drop        = EOF, whitespace, PARSEP, WS, LF
+
+database = [WS] [dataset] { PARSEP dataset } [WS] EOF
+
+dataset = authors ° title ° keywords
+authors = "Author" ["s"] ":" ~ semicolon_separated LF
+title = "Title:" ~ dot_separated LF
+keywords = "Keywords:" ~ comma_separated LF
+
+semicolon_separated = { data | /[,.:]/~ }+ { ";" ~ { data | /[,.:]/~ } } 
+dot_separated = { data | /[,;:]/~ }+ { "." ~ { data | /[,;:]/~ } } 
+comma_separated = { data | /[.;:]/~ }+ { "," ~ { data | /[.;:]/~ } } 
+data = { /[^;:,.\n]+/ | !PARSEP /\n/ !field_name }+
+field_name = /\w+:/
+
+WS        = /(?:[ \t]*\n)+/
+LF        = !PARSEP /[ \t]*\n/ | EOF
+PARSEP    = /[ \t]*\n[ \t]*\n\s*/
+EOF      =  !/./        

@@ -196,8 +196,8 @@ def read_local_config(ini_filename: str) -> str:
     Python standard library. Any key,value-pair under the
     section "DHParser" will directly be transferred to the
     configuration presets. For other sections, the section
-    name will added as a qualifier to the key:
-    "section.key". Thus only values under the "DHParser"
+    name will be added as a qualifier to the key:
+    "section.key". Thus, only values under the "DHParser"
     section modify the DHParser-configuration while
     configuration parameters unter other sections are
     free to be evaluated by the calling script and cannot
@@ -395,6 +395,17 @@ CONFIG_PRESET['resume_notices'] = False
 # Default value: True
 CONFIG_PRESET['left_recursion'] = True
 
+# Warn about pending infinite loops which would occur if a repeating
+# parser like "zero or more" calls another parser that matches but
+# does not move the location pointer forward, i.e. { /(?=.)|$/ }.
+# Theoretically, this parser would be called at the same place again
+# and again forever. In practice, DHParser recognizes this situation
+# and breaks the pending infinite loop. Since this situation usually
+# is the result of a poorly designed inner parser, a warning can
+# be emitted.
+# Default value: True
+CONFIG_PRESET['infinite_loop_warning'] = True
+
 ########################################################################
 #
 # nodetree configuration
@@ -404,16 +415,26 @@ CONFIG_PRESET['left_recursion'] = True
 # Defines the output format for the serialization of syntax trees.
 # Possible values are:
 # 'XML'          - output as XML
+# 'HTML'         - like XML but enclosed in the body of a minimal
+#                  HTML-page.
 # 'S-expression' - output as S-expression, i.e. a list-like format
-# 'indented'     - compact tree output, i.e. children a represented on
+# 'SXML'         - a variant of S-expression differing in how attributes are
+#                  rendered, e.g. (@ attr "value") instead of `(attr "value")
+# 'tree'         - compact tree output, i.e. children a represented on
 #                  indented lines with no opening or closing tags, brackets
-#                  etc.
+#                  etc. 'indented' can be used as a synonym for 'tree'
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
+# 'dict.json'    - a different, and often more readable flavor of json, where
+#                  dicts are used whenever possible. Please be aware, that this
+#                  goes beyond the JSON-sepcification which does not know
+#                  ordered dicts! This could result in the misrepresentation
+#                  of data by JSON parsers that are not aware of the order
+#                  of entries in dictionaries. (e.g. Python < 3.6)
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
-_serializations = frozenset({'XML', 'json', 'indented', 'S-expression'})
+_serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree', 'S-expression', 'SXML'})
 CONFIG_PRESET['cst_serialization'] = 'S-expression'
 CONFIG_PRESET['ast_serialization'] = 'S-expression'
 CONFIG_PRESET['default_serialization'] = 'S-expression'

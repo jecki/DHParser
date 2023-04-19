@@ -19,7 +19,7 @@
 Module ``compile`` contains a skeleton class for syntax
 driven compilation support. Class ``Compiler`` can serve as base
 class for a compiler. Compiler objects
-are callable an receive the Abstract syntax tree (AST)
+are callable and receive the Abstract syntax tree (AST)
 as argument and yield whatever output the compiler produces. In
 most Digital Humanities applications this will be
 XML-code. However, it can also be anything else, like binary
@@ -41,13 +41,13 @@ import copy
 import functools
 import os
 import traceback
-from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, cast
+from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable
 
 from DHParser.configuration import get_config_value
-from DHParser.preprocess import PreprocessorFunc
+from DHParser.preprocess import PreprocessorFunc, PreprocessorFactory
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
-from DHParser.transform import TransformerCallable
-from DHParser.parse import Grammar
+from DHParser.transform import TransformerFunc
+from DHParser.parse import ParserFunc, ParserFactory
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
@@ -57,15 +57,17 @@ from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias
 
 __all__ = ('CompilerError',
            'Compiler',
-           'ParserCallable',
-           'CompilerCallable',
+           'CompilerFunc',
            'CompilerFactory',
            'CompilationResult',
+           'FullCompilationResult',
            'process_tree',
            'Junction',
            'extract_data',
            'run_pipeline',
-           'compile_source')
+           'NoTransformation',
+           'compile_source',
+           'full_compile')
 
 
 class CompilerError(Exception):
@@ -79,7 +81,7 @@ class CompilerError(Exception):
 
 
 ROOTNODE_PLACEHOLDER = RootNode()
-CompilerFunc: TypeAlias = Callable[[Node], Any]
+CompileMethod: TypeAlias = Callable[[Node], Any]
 
 
 class Compiler:
@@ -162,7 +164,7 @@ class Compiler:
         self._debug = get_config_value('debug_compiler')  # type: bool
         self._debug_already_compiled = set()              # type: Set[Node]
         self.finalizers = []  # type: List[Tuple[Callable, Tuple]]
-        self.method_dict = {}  # type: Dict[str, CompilerFunc]
+        self.method_dict = {}  # type: Dict[str, CompileMethod]
 
     def visitor_name(self, node_name: str) -> str:
         """
@@ -301,7 +303,7 @@ class Compiler:
             self.visit_attributes(node)
         return node
 
-    def find_compilation_method(self, node_name: str) -> CompilerFunc:
+    def find_compilation_method(self, node_name: str) -> CompileMethod:
         try:
             method = self.method_dict[node_name]
         except KeyError:
@@ -370,10 +372,8 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 
 # processing pipeline support #########################################
 
-ParserCallable: TypeAlias = Union[Grammar, Callable[[str], RootNode], functools.partial]
-CompilerCallable: TypeAlias = Union[Compiler, Callable[[RootNode], Any], functools.partial]
-CompilerFactory: TypeAlias = Union[Callable[[], CompilerCallable], functools.partial]
-
+CompilerFunc: TypeAlias = Union[Compiler, Callable[[RootNode], Any], functools.partial]
+CompilerFactory: TypeAlias = Union[Callable[[], CompilerFunc], functools.partial]
 
 CompilationResult = namedtuple('CompilationResult',
     ['result',      ## type: Optional[Any]
@@ -382,11 +382,21 @@ CompilationResult = namedtuple('CompilationResult',
     module=__name__)
 
 
+# compilation and postprocessing result:
+# Dict: target-stage-name -> (result, errors)
+FullCompilationResult = Dict[str, Tuple[Any, List[Error]]]
+
+
+def NoTransformation(root: RootNode) -> RootNode:
+    """Simply passes through the unaltered node-tree."""
+    return root
+
+
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],
-                   parser: ParserCallable,
-                   transformer: TransformerCallable,
-                   compiler: CompilerCallable,
+                   parser: ParserFunc,
+                   transformer: TransformerFunc = NoTransformation,
+                   compiler: CompilerFunc = NoTransformation,
                    *, preserve_AST: bool = False) -> CompilationResult:
     """Compiles a source in four stages:
 
@@ -397,7 +407,10 @@ def compile_source(source: str,
 
     The later stages AST-transformation, compilation will only be invoked if
     no fatal errors occurred in any of the earlier stages of the processing
-    pipeline.
+    pipeline. Function "compile_source" does not invoke any postprocessing
+    after compiling. See functions: :py:func:`run_pipeline`
+    and :py:func:`full_compile` for postprocessing and compiling plus
+    postprocessing.
 
     :param source: The input text for compilation or a the name of a
             file containing the input text.
@@ -511,7 +524,7 @@ def filter_stacktrace(stacktrace: List[str]) -> List[str]:
     return stacktrace[n:]
 
 
-def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
+def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Catch any Python-exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
@@ -556,7 +569,11 @@ def process_tree(tp: CompilerCallable, tree: RootNode) -> Any:
     return result
 
 
-Junction: TypeAlias = Tuple[str, CompilerFactory, str]  # source stage name, source->target, target stage name
+Junction = namedtuple('Junction',
+    ['src',                ## type: string
+     'factory',            ## type: CompilerFactory
+     'dst'],               ## type: string
+    module=__name__)
 
 
 def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
@@ -569,7 +586,7 @@ def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
 
 def run_pipeline(junctions: Set[Junction],
                  source_stages: Dict[str, RootNode],
-                 target_stages: Set[str]) -> Dict[str, Tuple[Any, List[Error]]]:
+                 target_stages: Set[str]) -> FullCompilationResult:
     """
     Runs all the intermediary compilation-steps that are necessary to produce
     the "target-stages" from the given "source-stages". Here, each source-stage
@@ -579,7 +596,7 @@ def run_pipeline(junctions: Set[Junction],
 
     The stages or connected through chains of junctions, where a junction is
     essentially a function that transforms a tree from one particular stage
-    (identified by its name) to another stage, again itentified by its name.
+    (identified by its name) to another stage, again identified by its name.
 
     TODO: Parallelize processing of junctions? Requires copying a lot ot tree-data!?
     """
@@ -614,7 +631,7 @@ def run_pipeline(junctions: Set[Junction],
             j_sequence.sort(key=functools.cmp_to_key(cmp_junctions))
             steps.append(j_sequence)
         except KeyError as e:
-            raise AssertionError(f"{e.args[0]} is not a valid target.")
+            raise AssertionError(f"{e.args[0]} is not a valid target.") from e
         targets = {j[0] for j in steps[-1] if j[0] not in already_reached}
         already_reached |= targets
         for step in steps[:-1]:
@@ -658,7 +675,23 @@ def run_pipeline(junctions: Set[Junction],
     return {t: (extract_data(results[t]), errata[t]) for t in results.keys()}
 
 
+def full_compile(source: str,
+                 preprocessor_factory: PreprocessorFactory,
+                 parser_factory: ParserFactory,
+                 junctions: Set[Junction],
+                 target_stages: Set[str]) -> FullCompilationResult:
+    """Compiles and post-processes the source into the given target stages.
+    Mind that if there are fatal errors earlier in the pipeline some or all
+    target stages might not be reached and thus not be included in the result."""
+    cst, msgs, _ = compile_source(source, preprocessor_factory(), parser_factory())
+    if has_errors(msgs, FATAL):
+        return {ts: (cst, msgs) for ts in target_stages}
+    return run_pipeline(junctions, {cst.stage: cst}, target_stages)
+
+
 # TODO: Verify compiler against grammar,
 #       i.e. make sure that for all on_X()-methods, `X` is the name of a parser
 #       Does that make sense? Tag names could change during AST-Transformation!
-# TODO: AST validation against an ASDL-Specification
+# TODO: AST validation against an ASDL-Specification or other structural validation
+#       of trees
+

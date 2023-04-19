@@ -33,7 +33,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \
     compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
-    remove_if, Node, TransformationDict, TransformerCallable, transformation_factory, traverse, \
+    remove_if, Node, TransformationDict, TransformerFunc, transformation_factory, traverse, \
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \
     reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
     replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
@@ -50,6 +50,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+
+from DHParser.dsl import PseudoJunction, create_parser_transition
 
 
 #######################################################################
@@ -95,7 +97,7 @@ def preprocess_ini(source):
 class iniGrammar(Grammar):
     r"""Parser for an ini source file.
     """
-    source_hash__ = "3c1c553d5d0e95aee47ffb654683f53b"
+    source_hash__ = "6eb3b31f237c49092f2038d580ed36df"
     disposable__ = re.compile('EOF$|TEXTLINE$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -117,24 +119,10 @@ class iniGrammar(Grammar):
                       'entry': [re.compile(r'\n\s*(?=\w|\[)')]}
     root__ = ini_file
     
-
-_raw_grammar = ThreadLocalSingletonFactory(iniGrammar, ident=1)
-
-def get_grammar() -> iniGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_ini(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    iniGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################
@@ -159,7 +147,7 @@ ini_AST_transformation_table = {
 }
 
 
-def iniTransformer() -> TransformerCallable:
+def iniTransformer() -> TransformerFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
     return partial(traverse, transformation_table=ini_AST_transformation_table.copy())

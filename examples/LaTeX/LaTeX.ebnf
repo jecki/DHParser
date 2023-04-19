@@ -14,7 +14,7 @@
 #                _begin_inline_env, _end_inline_env, _command, _known_command,
 #                _dmath_long_form, _dmath_short_form, _BACKSLASH, _structure_name,
 #                _env_name
-@ drop       = strings, backticked, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB,
+@  drop       = strings, backticked, whitespace, regexps, _WSPC, _GAP, _PARSEP, _LB,
                _has_block_start, _BACKSLASH, _structure_name, _env_name
 
 ########################################################################

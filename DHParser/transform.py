@@ -52,6 +52,7 @@ __all__ = ('TransformationDict',
            'TransformationTableType',
            'ConditionFunc',
            'KeyFunc',
+           'TransformerFunc',
            'TransformerCallable',
            'transformation_factory',
            'key_node_name',
@@ -167,7 +168,9 @@ TransformationTableType: TypeAlias = Dict[str, Union[Sequence[Callable], Transfo
 ConditionFunc: TypeAlias = Callable  # Callable[[Path], bool]
 KeyFunc: TypeAlias = Callable[[Node], str]
 CriteriaType: TypeAlias = Union[int, str, Callable]
-TransformerCallable: TypeAlias = Union[Callable[[RootNode], RootNode], partial]
+TransformerFunc: TypeAlias = Union[Callable[[RootNode], RootNode], partial]
+TransformerCallable = TransformerFunc  # Deprecated: Use TransformerFunc!
+TransformerFactory: TypeAlias = Callable[[], TransformerFunc]
 
 
 def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
@@ -1473,8 +1476,7 @@ def lean_left(path: Path, operators: AbstractSet[str]):
 #
 # destructive transformations:
 #
-# - leaves may be dropped (e.g. if deemed irrelevant)
-# - errors of dropped leaves may be be lost
+# - nodes and content may be dropped entirely (if deemed irrelevant)
 # - no promise that order will be preserved
 #
 #######################################################################
@@ -1926,3 +1928,4 @@ def forbid(path: Path, child_tags: AbstractSet[str]):
 def peek(path: Path):
     """For debugging: Prints the last node in the path as S-expression."""
     print(path[-1].as_sxpr(compact=True))
+

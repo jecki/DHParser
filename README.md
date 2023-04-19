@@ -11,33 +11,58 @@ construction kit for the Digital Humanities
 
 This software is open source software under the Apache 2.0-License (see section License, below).
 
-Copyright 2016-2022  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
+Copyright 2016-2023  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
 
 
 Features
 --------
 
-* Handles all context-free grammars; based on Parsing Expression Grammars,
-  but with added support for left-recursive grammars
+* Memoizing packrat-parser based on Parsing Expression Grammars. This
+  means: 
+  
+    - Linear parsing time
 
-* Full unicode support
+    - any EBNF-grammar supported, including left-recursive grammars 
+      (via "seed and grow"-algorithm)
 
-* Unit testing framework and post-mortem debugger for grammars
+    - Unlimited look ahead and look behind
 
-* Customizable error reporting
+* [Macros](
+  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#macro_system)
+  to avoid code-repetition within grammars
 
-* Customizable recovery after syntax errors and support for fail-tolerant parsers
+* [Declarative tree-transformations](
+  https://dhparser.readthedocs.io/en/latest/manuals/03_transform.html#declarative-tree-transformation)
+  for post-processing syntax-trees
+
+* Unit testing framework for test-driven grammar development(
+  https://dhparser.readthedocs.io/en/latest/Overview.html#test-driven-grammar-development)
+  and post-mortem debugger for grammars
+
+* [Customizable error reporting](
+  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#error-catching),
+  [recovery after syntax errors](
+  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#skip-and-resume) 
+  and support for [fail-tolerant parsers](
+  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#fail-tolerant-parsing)
 
 * Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
 
-* Workflow-support
+* Workflow-support and [data-processing-pipelines](
+  https://dhparser.readthedocs.io/en/latest/manuals/04_compile.html#processing-pipelines)
 
-* XML-support like mapping flat-text to the DOM-tree ("node-tree" in DHParser's 
-  terminology) and adding markup
+* XML-support like [mapping flat-text to the DOM-tree](
+  https://dhparser.readthedocs.io/en/latest/manuals/02_nodetree.html#content-mappings)
+  ("node-tree" in DHParser's terminology) and 
+  [adding markup in arbitrary places](
+  https://dhparser.readthedocs.io/en/latest/manuals/02_nodetree.html#markup-insertion),
+  even if this requires splitting tags.
+
+* Full unicode support
 
 * No dependencies except the Python Standard Library
 
-* Work in progress: Extensive documentation and documented examples
+* [Extensive documentation](https://dhparser.readthedocs.io) and examples
 
 
 Ease of use
@@ -221,85 +246,6 @@ Get them with:
 There exists a mirror of this repository on github:
 https://github.com/jecki/DHParser Be aware, though, that the github-mirror
 may occasionally lag behind a few commits.
-
-
-Purpose
--------
-
-DHParser is a parser-combinator-based parsing and compiling
-infrastructure for domain specific languages (DSL) in Digital
-Humanities projects. It leverages the power of Domain specific
-languages for the Digital Humanities.
-
-Domain specific languages are widespread in
-computer sciences, but seem to be underused in the Digital Humanities.
-While DSLs are sometimes introduced to Digital-Humanities-projects as
-[practical adhoc-solution][Müller_2016], these solutions are often
-somewhat "quick and dirty". In other words they are more of a hack
-than a technology. The purpose of DHParser is to introduce
-[DSLs as a technology][Arnold_2016] to the Digital Humanities. It is
-based on the well known technology of [EBNF][ISO_IEC_14977]-based
-parser generators, but employs the more modern form called
-"[parsing expression grammar][Ford_2004]" and
-[parser combinators][Ford_20XX] as a variant of the classical
-recursive descent parser.
-
-Why another parser generator? There are plenty of good parser
-generators out there, e.g. [Añez's grako parser generator][Añez_2017],
-[Eclipse XText][XText_Website]. However, DHParser is
-intended as a tool that is specifically geared towards digital
-humanities applications, while most existing parser generators come
-from compiler construction toolkits for programming languages.
-While I expect DSLs in computer science and DSLs in the Digital
-Humanities to be quite similar as far as the technological realization
-is concerned, the use cases, requirements and challenges are somewhat
-different. For example, in the humanities annotating text is a central
-use case, which is mostly absent in computer science treatments.
-These differences might sooner or later require to develop the
-DSL-construction toolkits in a different direction. Also DHParser
-emphasizes and evolutionary development model for grammars with
-unit-testing support, which fits the typical use cases in DH where DSLs
-evolve in a discussion process between technicians and humanists.
-Because the users of DSLs in the humanities are not necessarily very
-technically minded people, DHParser supports the construction of
-fail-tolerant parsers with good error reporting in terms of locating
-the errors at the right spot and giving useful error messages.
-
-Also,
-DHParser shall (in the future) serve as a teaching tool, which
-influences some of its design decisions such as, for example, clearly
-separating the parsing, syntax-tree-transformation and compilation
-stages. Finally, DHParser is intended as a tool to experiment with.  One
-possible research area is, how non
-[context-free grammars](https://en.wikipedia.org/wiki/Context-free_grammar)
-such as the grammars of [TeX][tex_stackexchange_no_bnf] or
-[CommonMark][MacFarlane_et_al_2017] can be described with declarative
-langauges in the spirit of but beyond EBNF, and what extensions of the
-parsing technology are necessary to capture such languages.
-
-Primary use case at the Bavarian Academy of Sciences and Humanities
-(for the time being): A DSL for the
-"[Mittellateinische Wörterbuch](http://www.mlw.badw.de/)"!
-
-Further (intended) use cases are:
-
-* LaTeX -> XML/HTML conversion. See this
-  [discussion on why an EBNF-parser for the complete TeX/LaTeX-grammar][tex_stackexchange_no_bnf]
-  is not possible.
-* [CommonMark][MacFarlane_et_al_2017] and other DSLs for cross media
-  publishing of scientific literature, e.g. journal articles.  (Common
-  Mark and Markdown also go beyond what is feasible with pure
-  EBNF-based-parsers.)
-* EBNF itself. DHParser is already self-hosting ;-)
-* XML-parser, just for the fun of it ;-)
-* Digital and cross-media editions
-* Digital dictionaries
-
-For a simple self-test run `dhparser.py` from the command line. This
-compiles the EBNF-Grammar in `examples/EBNF/EBNF.ebnf` and outputs the
-Python-based parser class representing that grammar. The concrete and
-abstract syntax tree as well as a full and abbreviated log of the
-parsing process will be stored in a subdirectory named "LOG".
 
 
 Author

@@ -188,6 +188,8 @@ that has created the node (see :py:mod:`parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
 because they lack the name of a proper grammatical component.
 
+.. _include_directive:
+
 Chaining Grammars with @include
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1804,16 +1806,17 @@ an error::
     ... @_items_skip = /(?=,)/, /(?=])/, /$/
     ... '''
 
-Note, that for the "_items"-parser, several rules have been specified. DHParser
-will try all of these rules and resume at the closest of the locations these
-rules yield. The `@list_resume`-rule moves to a point after the list, where the
-list parser might have returned, if no error had occurred, which is after the
-closing square bracket plus any adjacent whitespace. The '@_items_skip`-rule
-moves to any point within the sequence of items where the `_items` could catch
-up (another comma "," followed by further items) or end, because the sequence
-is exhausted ("]" or the end of the document caught be the regular expression
-marker for the end of the string: /$/). See, how these rules play out in
-this particular example::
+Note, that for the "_items"-parser, several rules have been specified.
+DHParser will try all of these rules and resume at the closest of the
+locations these rules yield. The `@list_resume`-rule moves to a point
+after the list, where the list parser might have returned, if no error
+had occurred, which is after the closing square bracket plus any
+adjacent whitespace. The '@_items_skip`-rule moves to any point within
+the sequence of items where the `_items` could catch up (another comma
+"," followed by further items) or end, because the sequence is exhausted
+("]" or the end of the document caught be the regular expression marker
+for the end of the string: /$/). See, how these rules play out in this
+particular example::
 
     >>> list_parser = create_parser(resumption_rules + number_list_grammar)
     >>> result = list_parser(example_with_errors)
@@ -1822,10 +1825,11 @@ this particular example::
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; 7], 8, ]...« found instead!
     1:25: Error (1010): '_item' expected by parser '_items', but »]...« found instead!
 
-All errors are located and reported properly in a single run and the parser continues
-right through until the end of the document as we'd expect from a fail-tolerant parser.
-However, the limitations of our regular-expression-based rules become apparent when
-nested structures are involved::
+All errors are located and reported properly in a single run and the
+parser continues right through until the end of the document as we'd
+expect from a fail-tolerant parser. However, the limitations of our
+regular-expression-based rules become apparent when nested structures
+are involved::
 
     >>> example_with_errors_2 = '[1, 2, A, [5, 6; [7, 8], 9], 10, ]'
     >>> result = list_parser(example_with_errors_2)
@@ -1849,19 +1853,21 @@ to get a better insight into what went wrong::
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
 
 
-What is of interest here, is the second notice: It seems that the error was caught within
-the "list"-parser. By moving on to the spot after closing bracket as determined by the
-`@list_resume`-directive, however, thar parsing-process did not end up at a location
-behind the grammatical structure where the error had occurred, but at the location after
-a nested structure, which in this example is the inner list "[7, 8]".
+What is of interest here, is the second notice: It seems that the error
+was caught within the "list"-parser. By moving on to the spot after
+closing bracket as determined by the `@list_resume`-directive, however,
+thar parsing-process did not end up at a location behind the grammatical
+structure where the error had occurred, but at the location after a
+nested structure, which in this example is the inner list "[7, 8]".
 
-This problem can be remedied by using the full power of parsing expression grammars
-for determining the resumption-position. (Note, that in order to clearly distinguish
-PEG-rules unambiguously from plain regular expressions or simple strings, they must
-be enclosed in round rackets!)::
+This problem can be remedied by using the full power of parsing
+expression grammars for determining the resumption-position. (Note, that
+in order to clearly distinguish PEG-rules unambiguously from plain
+regular expressions or simple strings, they must be enclosed in round
+rackets!)::
 
     >>> resumption_rules = '''
-    ... @list_resume = ({ list | /[^\\[\\]]*/ } ["]"])
+    ... @list_resume = ({ list | /[^\\[\\]]+/ } ["]"])
     ... @_items_skip = /(?=,)/, /(?=])/, /$/
     ... '''
     >>> list_parser = create_parser(resumption_rules + number_list_grammar)
@@ -1899,26 +1905,63 @@ by skipping larger portions of the text is probably negligible or at any
 rate smaller than the harm done by introducing consequential errors as
 a result of poorly chosen resumption rules.
 
+.. _macro_system:
+
+Macros 
+------
+
+In order to reduce code-repetition within grammar-specifications
+DHParser offers a substitution-based macro-system. (To avoid
+code-repetition *between* grammars, :ref:`includes <include_directive>`
+can be used.)
+
+Macros are definined similar to symbols, only that their name must
+always start with a dollar sign ``$``::
+
+    $list($delimiter) = { /[^,.;:]+/ | !$delimiter /[,.;:]/ }
+           { $delimiter ~ { /[^,.;:]+/ | !$delimiter /[,.;:]/ } }
+
+The parameters of a macro are also marked with a dollar sign. 
+Using macros is straight forward::
+
+    keywords = "Keywords:" $list(",")
+
+Macros can use other macros in their definiens but they may not be
+nested recursively. It is also possible to define macros without any
+arguments. This makes sense, when breaking up a long macro definition
+into several macros which works similar to breaking up a long
+symbol-definition by introducing (disposable) helper-symbols. For this
+purpose helper-macros may refer to parameters of the "calling" macro
+without explicitly passing them as parameters::
+
+    $list($delimiter) = $item { $delimiter ~ $item }
+    $item = { /[^;:,.\n]+/ | !$delimiter /[.,:;]/  }+
+
+A limitation of DHParser's macro-system is that there is no way to
+define new symbols inside a macro-definition.
+
+For a more detailed example, see :any:`macros`.
 
 .. _context_sensitive_parsers:
 
 Context sensitive parsers
 -------------------------
 
-DHParser does by intention not contain support for semantic actions, because
-these can introduce a context-sensitivity that can be hard to handle with a
-recursive descent parser. And compiler-generation, where semantic actions
-are mostly needed, is not the main domain of application for DHParser.
-(There are a few loopholes that can be (mis-)used for semantic actions, though...)
+DHParser does by intention not contain support for semantic actions,
+because these can introduce a context-sensitivity that can be hard to
+handle with a recursive descent parser. And compiler-generation, where
+semantic actions are mostly needed, is not the main domain of
+application for DHParser. (There are a few loopholes that can be
+(mis-)used for semantic actions, though...)
 
 Sometimes, however, it would be ever so comfortable to break out of the
-paradigm of context free grammars - if only just a little bit. For example,
-when encoding data in XML or HTML, the closing tag must have the same tag-name
-as the opening tag::
+paradigm of context free grammars - if only just a little bit. For
+example, when encoding data in XML or HTML, the closing tag must have
+the same tag-name as the opening tag::
 
     <line>O Rose thou art sick.</line>
 
-If you encode the tag-name parser roughly following the `XML-specs <https://www.w3.org/TR/xml/>`_
+If you encode the tag-name-parser roughly following the `XML-specs <https://www.w3.org/TR/xml/>`_
 as::
 
     tag_name        = /(?![0-9][:\\w][\\w:.-]*/
@@ -1927,21 +1970,24 @@ the following code would be accepted by the parser:
 
     <line>O Rose thou art sick.</enil>
 
-In this case, the remedy is easy: When post-processing the syntax tree, check whether
-all end-tags have the same tag-name as the corresponding start-tag and add an error
-message where this is not the case. However, this only works, because the tag-names
-have no influence on the structure of the syntax-tree of an XML-document.
+In this case, the remedy is easy: When post-processing the syntax tree,
+check whether all end-tags have the same tag-name as the corresponding
+start-tag and add an error message where this is not the case. However,
+this only works, because the tag-names have no influence on the
+structure of the syntax-tree of an XML-document.
 
-Therefore, the same remedy would not work in many other cases.
-In `CommonMark <https://commonmark.org/>`_, for example, a
-"`code fence <https://spec.commonmark.org/0.30/#fenced-code-blocks>`_ is a sequence
-of at least three [but possibly more] consecutive backtick characters (`) or tildes (~)"
-Now, this is a bit more complicated than the XML-example, because here the content of
-the closing marker needs to be known at the time of parsing already, because otherwise
-the structure could not be determined correctly. A smaller number of tildes or
-backticks than used at the opening of a code fence would be part of the content of
-the fenced code that needs to be distinguished from the closing delimiter. The purpose
-is to allow you to fence code that may contain fenced code itself.::
+Therefore, the same remedy would not work in many other cases. In
+`CommonMark <https://commonmark.org/>`_, for example, a "`code fence
+<https://spec.commonmark.org/0.30/#fenced-code-blocks>`_ is a sequence
+of at least three [but possibly more] consecutive backtick characters
+(`) or tildes (~)" Now, this is a bit more complicated than the
+XML-example, because here the content of the closing marker needs to be
+known at the time of parsing already, because otherwise the structure
+could not be determined correctly. A smaller number of tildes or
+backticks than used at the opening of a code fence would be part of the
+content of the fenced code that needs to be distinguished from the
+closing delimiter. The purpose is to allow you to fence code that may
+contain fenced code itself.::
 
     ~~~~~
     In common mark code can be fenced with tilde-characters. You can just write:
@@ -1950,28 +1996,32 @@ is to allow you to fence code that may contain fenced code itself.::
     ~~~
     ~~~~~
 
-Here, a possible remedy is to employ a preprocessor, that distinguishes the fenced code
-from quoted fences and replaces the non-quoted fences by context-free opening and
-closing markers that can then be captured at parsing stage. Using preprocessors is often
-a clean and pragmatic solution and DHParser includes dedicated support for preprocessors.
-However, introducing preprocessors also hast some downsides. One disadvantage is that a
-preprocessor requires a makeshift parser of its own that must be strong enough not to
-stumble over the syntactic constructs that do not concern the preprocessor like comments
-for example.
+Here, a possible remedy is to employ a preprocessor, that distinguishes
+the fenced code from quoted fences and replaces the non-quoted fences by
+context-free opening and closing markers that can then be captured at
+parsing stage. Using preprocessors is often a clean and pragmatic
+solution and DHParser includes dedicated support for preprocessors.
+However, introducing preprocessors also hast some downsides. One
+disadvantage is that a preprocessor requires a makeshift parser of its
+own that must be strong enough not to stumble over the syntactic
+constructs that do not concern the preprocessor like comments for
+example.
 
-DHParser therefore also offers another alternative for occasional context sensitivity
-by allowing to retrieve and compare earlier values of a symbol. Any users of these
-features should be aware, however, that extensive use of context sensitive parsers
-may slow-down parsing, because it does not play well with the the memoizing
-optimization that is commonly used with parsing expression grammars and also employed
-by DHParser. Also, since these features are specific for DHParser, switching to
-another parser generator will require factoring the context-sensitive-parser out
-of your grammar and re-implementing the functionality for which they have been used
-with the more conventional approach of pre- and post-processors.
+DHParser therefore also offers another alternative for occasional
+context sensitivity by allowing to retrieve and compare earlier values
+of a symbol. Any users of these features should be aware, however, that
+extensive use of context sensitive parsers may slow-down parsing,
+because it does not play well with the the memoizing optimization that
+is commonly used with parsing expression grammars and also employed by
+DHParser. Also, since these features are specific for DHParser,
+switching to another parser generator will require factoring the
+context-sensitive-parser out of your grammar and re-implementing the
+functionality for which they have been used with the more conventional
+approach of pre- and post-processors.
 
 Before explaining the full mechanism, let's have a look at an example.
-The following minimal pseudo-XML-parser captures the value of the tag-name so that
-it can compared with the tag-name of the ending-tag::
+The following minimal pseudo-XML-parser captures the value of the
+tag-name so that it can compared with the tag-name of the ending-tag::
 
     >>> miniXML = '''
     ... @ disposable  = EOF
@@ -1999,18 +2049,21 @@ it can compared with the tag-name of the ending-tag::
     >>> print(result.errors[0])
     1:28: Error (1010): 'ETag = `</` ::TagName "line" § `>`' expected by parser 'element', but »</enil>...« found instead!
 
-Here, the TagName-parser in the definition has been prefixed with a double colon ``::``. This double
-colon is the "Pop"-operator and can be put in front of any symbol defined in the grammar. If a symbol is
-annotated with the operator, then its parsing-rule will not be executed, but the last value that has been
-parsed by the symbol will be retrieved and match against the following part of the document by simple
-text-comparison. If the last value matches the "Pop"-parser will remove that value from the stack of
-earlier values and report a match. Otherwise a non-match will be reported and the value will be
-left on the stack. In the example, since the Pop-parser ``::TagName`` follows a mandatory marker ``§``,
-the non-match causes a syntax error.
+Here, the TagName-parser in the definition has been prefixed with a
+double colon ``::``. This double colon is the "Pop"-operator and can be
+put in front of any symbol defined in the grammar. If a symbol is
+annotated with the operator, then its parsing-rule will not be executed,
+but the last value that has been parsed by the symbol will be retrieved
+and match against the following part of the document by simple
+text-comparison. If the last value matches the "Pop"-parser will remove
+that value from the stack of earlier values and report a match.
+Otherwise a non-match will be reported and the value will be left on the
+stack. In the example, since the Pop-parser ``::TagName`` follows a
+mandatory marker ``§``, the non-match causes a syntax error.
 
-Sometimes it is useful to compare the following text with a stored value without removing that
-value from the stack. For this purpose, there is the "Retrieve"-operator which is denoted by a
-single colon `:`::
+Sometimes it is useful to compare the following text with a stored value
+without removing that value from the stack. For this purpose, there is
+the "Retrieve"-operator which is denoted by a single colon `:`::
 
     >>> fencedTextEBNF =  '''@whitespace = vertical
     ... @disposable = EOF, fence_re
@@ -2436,7 +2489,7 @@ write ``{ !"search_phrase" (~ | /.|\\n/) }``. To keep the example simple, we'll 
 such worries aside in the following::
 
     >>> search_rain_grammar = '''@reduction = merge
-    ...     song = { search_rain [count_rain] } EOF
+    ...     song = { search_rain count_rain } [search_rain] EOF
     ...     search_rain = { !"rain" /.|\\n/ }
     ...     count_rain  = "rain"
     ...     EOF         = !/.|\\n/'''
@@ -2461,7 +2514,6 @@ such worries aside in the following::
         ""
         "    What a glorious feeling"
         "    I'm happy again.")
-      (search_rain)
       (EOF))
     >>> print(len(list(syntax_tree.select('count_rain'))))
     2
@@ -2513,7 +2565,7 @@ simply be ``self.node_name``.
 As said, referring to the custom parser factory function from the grammar is simple::
 
     >>> search_rain_grammar = '''@reduction = merge
-    ...     song = { search_rain [count_rain] } EOF
+    ...     song = { search_rain count_rain } search_rain EOF
     ...     search_rain = @search("rain")
     ...     count_rain  = "rain"
     ...     EOF         = !/.|\\n/'''
@@ -2538,7 +2590,6 @@ Let's try using it::
         ""
         "    What a glorious feeling"
         "    I'm happy again.")
-      (search_rain)
       (EOF))
 
 Another good use cases for custom parsers are long lists of fixed alternatives,

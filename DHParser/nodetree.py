@@ -51,7 +51,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle, TypeAlias
+    abbreviate_middle, TypeAlias, deprecated
 
 try:
     import cython
@@ -82,9 +82,11 @@ __all__ = ('WHITESPACE_PTYPE',
            'ANY_NODE',
            'NO_NODE',
            'LEAF_NODE',
+           'BRANCH_NODE',
            'ANY_PATH',
            'NO_PATH',
            'LEAF_PATH',
+           'BRANCH_PATH',
            'Node',
            'content_of',
            'strlen_of',
@@ -121,6 +123,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'path_sanity_check',
            'insert_node',
            'split',
+           'split_node',
            'deep_split',
            'can_split',
            'leaf_paths',
@@ -132,6 +135,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'RootNode',
            'DHParser_JSONEncoder',
            'parse_sxpr',
+           'parse_sxml',
            'parse_xml',
            'parse_json',
            'deserialize',
@@ -197,8 +201,16 @@ def LEAF_NODE(nd: Node) -> bool:
     return not nd._children
 
 
+def BRANCH_NODE(nd: Node) -> bool:
+    return nd._children
+
+
 def LEAF_PATH(path: Path) -> bool:
-    return not path[-1].children
+    return not path[-1]._children
+
+
+def BRANCH_PATH(path: Path) -> bool:
+    return path[-1]._children
 
 
 def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
@@ -653,6 +665,28 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._pos = -1
             self.with_pos(pos)
 
+    def replace_by(self, replacement: Node, merge_attr: bool=False):
+        """Replaces the node's name, result and attributes by that of another
+        node. This allows to effectually replace the node without needing to
+        change the parent node's children's tuple.
+
+        :param replacement: the node by which self shall be "replaced".
+        :param merge_attr: if True, attributes are merged (by updating the
+            attr dictionary with that of the replacement node) rather than
+            simply be replaced.
+        """
+        if self._pos < 0:
+            self._pos = replacement._pos
+        elif replacement._pos < 0:
+            replacement.with_pos(self._pos)
+        self.name = replacement.name
+        self.result = replacement._result
+        if replacement.has_attr():
+            if not merge_attr:
+                self.attr = {}
+            self.attr.update(replacement.attr)
+
+
     @property
     def children(self) -> ChildrenType:
         """Returns the tuple of child-nodes or an empty tuple if the node does
@@ -927,7 +961,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         elif isinstance(key, slice):
             if not isinstance(value, Sequence):
                 value = [value]
-            lchildren.__setitem__(key, value)
+            # lchildren.__setitem__(key, value)
+            lchildren[key] = value
         else:
             mf = create_match_function(key)
             indices = [i for i in range(len(lchildren)) if mf(lchildren[i])]
@@ -1417,10 +1452,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         example, only the evaluated values of the children are passed to each
         function in the action dictionary. However, if evaluate is called with
         passing the begining of the path to its ``path``-argument, each function
-        will be called with the current path as its first argument the the
-        evaluated values of its children as the following arguments instead,
+        will be called with the current path as its first argument and the
+        evaluated values of its children as the following arguments,
         e.g. ``result = node.evaluate(actions, path=[node])``
-        This, more sophisticaed, mode gives the action function access to the
+        This more sophisticaed mode gives the action function access to the
         nodes of the tree as well.
 
         :param actions: A dictionary that maps node-names to action functions.
@@ -1553,7 +1588,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = True,
-                flatten_threshold: int = 92) -> str:
+                flatten_threshold: int = 92,
+                sxml: bool = False) -> str:
         """
         Serializes the tree as S-expression, i.e. in lisp-like form. If this
         method is called on a RootNode-object, error strings will be displayed
@@ -1570,6 +1606,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param flatten_threshold:  Return the S-expression in flattened form if
             the flattened expression does not exceed the threshold length.
             A negative number means that it will always be flattened.
+        :param sxml:  If True, attributes are rendered according to the
+            `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_ -conventions,
+            e.g. `` (@ (attr "value")`` instead of `` `(attr "value") ``
         :returns: A string containing the S-expression serialization of the tree.
         """
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
@@ -1577,23 +1616,36 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
 
+        def attr(name: str, value: str):
+            if sxml:  return f' ({name} "{value}")'
+            else:  return f' `({name} "{value}")'
+
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
             txt = [left_bracket, node.name]
             # s += " '(pos %i)" % node.add_pos
             # txt.append(str(id(node)))  # for debugging
-            if node.has_attr():
-                txt.extend(' `(%s "%s")' % (k, str(v)) for k, v in node.attr.items())
-            if node._pos >= 0:
-                if src:
-                    line, col = line_col(lbreaks, node.pos)
-                    txt.append(' `(pos %i %i %i)' % (node.pos, line, col))
-                elif src is not None:
-                    txt.append(' `(pos %i)' % node.pos)
-            if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                err_str = ';  '.join(str(err) for err in root.node_errors(node))
-                err_str = err_str.replace('"', r'\"')
-                txt.append(f' `(err "{err_str}")')
+            has_attrs = node.has_attr()
+            render_pos = node._pos >= 0 and src is not None
+            has_errors = root and id(node) in root.error_nodes
+            show_attrs = has_attrs or render_pos or has_errors
+            if show_attrs:
+                if sxml:  txt.append(' (@')
+                if has_attrs:
+                    txt.extend(attr(k, str(v)) for k, v in node.attr.items())
+                if render_pos:
+                    if src:
+                        line, col = line_col(lbreaks, node.pos)
+                        txt.append((' (pos "%i %i %i")' if sxml else ' `(pos %i %i %i)')
+                                   % (node.pos, line, col))
+                    else:
+                        txt.append((' (pos "%i")' if sxml else ' `(pos %i)') % node.pos)
+                if has_errors and not node.has_attr('err'):
+                    err_str = ';  '.join(str(err) for err in root.node_errors(node))
+                    if err_str:
+                        err_str = err_str.replace('"', r'\"')
+                        txt.append(attr('err', err_str))
+                if sxml:  txt.append(')')
             return "".join(txt)
 
         def closing(node: Node) -> str:
@@ -1609,6 +1661,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
         return flatten_sxpr(sxpr, flatten_threshold)
 
+    def as_sxml(self, src: Optional[str] = None,
+                indentation: int = 2,
+                compact: bool = True,
+                flatten_threshold: int = 92) -> str:
+        return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=True)
+
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: AbstractSet[str] = frozenset(),
@@ -1622,6 +1680,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param indentation: The number of whitespaces for indentation
         :param inline_tags:  A set of tag names, the content of which will always be
                 written on a single line, unless it contains explicit line feeds (`\\n`).
+                In addition, all nodes that have the attribute ``xml:space="preserve"``
+                will be inlined.
         :param string_tags: A set of tags from which only the content will be printed, but
                 neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,
@@ -1667,7 +1727,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 # txt.append(' err="%s"' % (
                 #     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
                 #             for err in root.node_errors(node))))
-                txt.append(' err=' + attr_filter(''.join(str(err) for err in root.node_errors(node))))
+                txt.append(' err=' + attr_filter(''.join(str(err).replace('&', '')
+                                                         for err in root.node_errors(node))))
             if node.name in empty_tags:
                 if node.name[0:1] != '?' and node.result:
                     if strict_mode:
@@ -1713,6 +1774,25 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
             allow_omissions=bool(string_tags)))
 
+    def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:
+        """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
+        keyword-arguments."""
+        xhtml = self.as_xml(**kwargs)
+        css_snippet = '\n'.join(['<style type="text/css">', css, '</style>'])
+        if head:
+            head = head.strip()
+            assert head.startswith('<head>') or head.startswith('<HEAD>')
+            assert head.endswith('</head>') or head.endswith('</HEAD>')
+            if css:
+                head = '\n'.join([head[:-7], css_snippet, head[-7:]])
+        else:
+            head_tags = ['<head>', '<meta charset="UTF-8" />', '</head>']
+            if css:  head_tags.insert(2, css_snippet)
+            head = '\n'.join(head_tags)
+        html = '\n'.join(['<!DOCTYPE html>', f'<html lang="{lang}" xml:lang="{lang}">', head,
+                          '<body>', xhtml, '</body>', '</html>'])
+        return html
+
     def as_tree(self) -> str:
         """Serialize as a simple indented text-tree."""
         sxpr = self.as_sxpr(flatten_threshold=0, compact=True)
@@ -1731,51 +1811,136 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # JSON serialization ###
 
-    def to_json_obj(self) -> list:
-        """Converts the tree into a JSON-serializable nested list. Nodes
-        are serialized as JSON-lists with either two or three elements:
+    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> Union[List, Dict]:
+        """Converts the tree into a JSON-serializable nested list. Nodes can
+        be serialized in list-flavor (faster) or dictionary-flavor
+        (``asdict=True``, slower).
+
+        In list-flavor, Nodes are serialized as JSON-lists with either
+        two or three elements:
 
         1. name (always a string),
         2. content (either a string or a list of JSON-serialized Nodes)
         3. optional: a dictionary that maps attribute names to attribute values,
            both of which are strings.
 
-        Example::
+        In dictionary flavor, Nodes are serialized as dictionaries that map
+        the node's name to a string (in case of a leaf node) or to a dictionary
+        of its children (in case all the children's names are unique) or to
+        a list of pairs (child name, child's result).
+
+        Examples (list flavor)::
 
             >>> Node('root', 'content').with_attr(importance="high").to_json_obj()
             ['root', 'content', {'importance': 'high'}]
+            >>> node = parse_sxpr('(letters (a "A") (b "B") (c "C"))')
+            >>> node.to_json_obj()
+            ['letters', [['a', 'A'], ['b', 'B'], ['c', 'C']]]
+
+        Examples (dictionary flavor)
+            >>> node.to_json_obj(as_dict=True)
+            {'letters': {'a': 'A', 'b': 'B', 'c': 'C'}}
+            >>> node.result = node.children + (Node('a', 'doublette'),)
+            >>> node.to_json_obj(as_dict=True)
+            {'letters': [['a', 'A'], ['b', 'B'], ['c', 'C'], ['a', 'doublette']]}
+
         """
-        jo = [self.name,
-              [nd.to_json_obj() for nd in self._children]
-              if self._children else str(self.result)]
-        pos = self._pos
-        if pos >= 0:
-            jo.append(pos)
-        if self.has_attr():
-            jo.append(self.attr)
-        return jo
+        def list_flavor(node):
+            jo = [node.name,
+                  [list_flavor(nd) for nd in node._children]
+                  if node._children else str(node.result)]
+            pos = node._pos
+            if include_pos and pos >= 0:
+                jo.append(pos)
+            if node.has_attr():
+                jo.append(node.attr)
+            return jo
+
+        def dict_flavor(node):
+            names = set()
+            for nd in node._children:
+                if nd.name in names:
+                    # if any name appears more than once among the child node's names,
+                    # lists must be used instead of dictionaries!
+                    jo = {node.name: [[nd.name, dict_flavor(nd)[nd.name]]
+                                      for nd in node._children]
+                                     if node._children else node._result}
+                    break
+                else:
+                    names.add(nd.name)
+            else:
+                # use a dictionary only after having made sure
+                # that each child node's name is unique
+                jo = {node.name: {nd.name: dict_flavor(nd)[nd.name]
+                                  for nd in node._children}
+                                 if node._children else node._result}
+            additional = {}
+            if include_pos:
+                pos = node._pos
+                if pos >= 0:
+                    additional['pos__'] = str(pos)
+            if node.has_attr():
+                additional['attributes__'] = node.attr
+            if additional:
+                if node._children:
+                    if isinstance(jo[node.name], dict):
+                        jo[node.name].update(additional)
+                    else:
+                        jo[node.name].extend(additional.items())
+                else:
+                    d = {'content__': node._result}
+                    d.update(additional)
+                    jo[node.name] = d
+            return jo
+
+        return dict_flavor(self) if as_dict else list_flavor(self)
 
     @staticmethod
     def from_json_obj(json_obj: Union[Dict, Sequence]) -> Node:
         """Converts a JSON-object representing a node (or tree) back into a
         Node object. Raises a ValueError, if `json_obj` does not represent
         a node."""
-        assert isinstance(json_obj, Sequence)
-        assert 2 <= len(json_obj) <= 4, str(json_obj)
-        if isinstance(json_obj[1], str):
-            result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
-        else:
-            result = tuple(Node.from_json_obj(item) for item in json_obj[1])
-        node = Node(json_obj[0], result)
-        for extra in json_obj[2:]:
-            if isinstance(extra, dict):
-                node.attr.update(extra)
+        if isinstance(json_obj, Sequence):  # list flavor
+            assert 2 <= len(json_obj) <= 4, str(json_obj)
+            if isinstance(json_obj[1], str):
+                result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
             else:
-                assert isinstance(extra, int)
-                node._pos = extra
+                result = tuple(Node.from_json_obj(item) for item in json_obj[1])
+            node = Node(json_obj[0], result)
+            for extra in json_obj[2:]:
+                if isinstance(extra, dict):
+                    node.attr.update(extra)
+                else:
+                    assert isinstance(extra, int)
+                    node._pos = extra
+        else:  # dictionary flavor
+            assert isinstance(json_obj, dict)
+            name, result = list(json_obj.items())[0]
+            if isinstance(result, str):
+                pos = -1
+                attrs = {}
+            else:
+                if isinstance(result, dict):
+                    result_iter = result.items()
+                else:
+                    assert isinstance(result, list)
+                    result_iter = result
+                    result = {k: v for k, v in result}
+                pos = int(result.get('pos__', -1))
+                attrs = result.get('attributes__', {})
+                content = result.get('content__', None)
+                if content is None:
+                    result = tuple(Node.from_json_obj({k: v})
+                                   for k, v in result_iter if k[-2:] != '__')
+                else:
+                    result = content
+            node = Node(name, result)
+            if pos >= 0:  node = node.with_pos(pos)
+            if attrs:  node = node.with_attr(attrs)
         return node
 
-    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False) -> str:
+    def as_json(self, indent: Optional[int] = 2, ensure_ascii=False,
+                as_dict: bool=False, include_pos: bool=True) -> str:
         """Serializes the tree originating in `self` as JSON-string. Nodes
         are serialized as JSON-lists with either two or three elements:
 
@@ -1784,13 +1949,26 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         3. optional: a dictionary that maps attribute names to attribute values,
            both of which are strings.
 
+        If as_dict is True, nodes are serialized as JSON dictionaries, which
+        can be better human-readable when serialized. Keep in mind, though,
+        that while this renders the json files more readable, not
+        all json parsers honor the order of the entries of dictionaries.
+        Thus, serializing node trees as ordered JSON-dictionaries is not
+        strictly in accordance with the JSON-specification! Also serializing
+        and de-serializing the dictionary-flavored JSON is slower.
+
         Example::
 
-            >>> Node('root', 'content').with_attr(importance="high").as_json(indent=0)
+            >>> node = Node('root', 'content').with_attr(importance="high")
+            >>> node.as_json(indent=0)
             '["root","content",{"importance":"high"}]'
+            >>> node.as_json(indent=0, as_dict=True)
+            '{"root":{"content__":"content","attributes__":{"importance":"high"}}}'
+
         """
         if not indent or indent <= 0:  indent = None
-        return json.dumps(self.to_json_obj(), indent=indent, ensure_ascii=ensure_ascii,
+        return json.dumps(self.to_json_obj(as_dict=as_dict, include_pos=include_pos),
+                          indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
     # serialization meta-method ###
@@ -1832,10 +2010,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if switch in ('S-expression', 'S-Expression', 's-expression', 'sxpr'):
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
+        elif switch == 'sxml':
+            return self.as_sxml(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
+                                compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch == 'xml':
             return self.as_xml(strict_mode=False)
+        elif switch == 'html':
+            return self.as_html(strict_mode=False)
         elif switch == 'json':
-            return self.as_json()
+            return self.as_json(indent=0)
+        elif switch in ('dict.json', 'jsondict'):
+            return self.as_json(indent=2, as_dict=True, include_pos=False)
         elif switch in ('indented', 'tree'):
             return self.as_tree()
         else:
@@ -2345,9 +2530,14 @@ def gen_chain_ID() -> str:
     return ''.join(cid)
 
 
+@deprecated('Function "split()" has been renamed to "split_node()".')
+def split(*args, **kwargs):
+    return split_node(*args, **kwargs)
+
+
 @cython.locals(k=cython.int)
-def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
-          chain_attr: Optional[dict] = None) -> int:
+def split_node(node: Node, parent: Node, i: cint, left_biased: bool = True,
+               chain_attr: Optional[dict] = None) -> int:
     """Splits a node at the given index (in case of a branch-node) or
     string-position (in case of a leaf-node). Returns the index of the
     right part within the parent node after the split. (This means
@@ -2357,23 +2547,37 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
     Non-anonymous node that have been split will be marked by updateing
     their attribute-dictionary with the chain_attr-dictionary if given.
 
+    :param node: the node to be split
+    :param parent: the node's parent
+    :param i: the index either of the child or of the character before
+        which the node will be split.
+    :param left_biased: if True, yields the location after the end of
+        the previous path rather than the location at the very beginning
+        of the next path. Default value is "False".
+    :param chain_attr: a dictionary with a single key and value resembling
+        an attribute and value that will be added to the attributes-dicitonary
+        of both nodes after the split, if the node is named node.
+
+    :returns: the index of the split within the children's tuple of the
+        parent node.
+
     Examples::
 
         >>> test_tree = parse_sxpr('(X (A "Hello, ") (B "Peter") (C " Smith"))').with_pos(0)
         >>> X = copy.deepcopy(test_tree)
 
         # test edge cases first
-        >>> split(X['B'], X, 0)
+        >>> split_node(X['B'], X, 0)
         1
         >>> print(X.as_sxpr())
         (X (A "Hello, ") (B "Peter") (C " Smith"))
-        >>> split(X['B'], X, X['B'].strlen())
+        >>> split_node(X['B'], X, X['B'].strlen())
         2
         >>> print(X.as_sxpr())
         (X (A "Hello, ") (B "Peter") (C " Smith"))
 
         # standard case
-        >>> split(X['B'], X, 2)
+        >>> split_node(X['B'], X, 2)
         2
         >>> print(X.as_sxpr())
         (X (A "Hello, ") (B "Pe") (B "ter") (C " Smith"))
@@ -2382,10 +2586,10 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
 
         # use split() as preparation for adding markup
         >>> X = copy.deepcopy(test_tree)
-        >>> a = split(X['A'], X, 6)
+        >>> a = split_node(X['A'], X, 6)
         >>> a
         1
-        >>> b = split(X['C'], X, 1)
+        >>> b = split_node(X['C'], X, 1)
         >>> b
         4
         >>> print(X.as_sxpr())
@@ -2397,13 +2601,13 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
 
         # a more complex case: add markup to a nested tree
         >>> X = parse_sxpr('(X (A "Hello, ") (B "Peter") (bold (C " Smith")))').with_pos(0)
-        >>> a = split(X['A'], X, 6)
-        >>> b0 = split(X['bold']['C'], X['bold'], 1)
+        >>> a = split_node(X['A'], X, 6)
+        >>> b0 = split_node(X['bold']['C'], X['bold'], 1)
         >>> b0
         1
         >>> print(X.as_sxpr())
         (X (A "Hello,") (A " ") (B "Peter") (bold (C " ") (C "Smith")))
-        >>> b = split(X['bold'], X, b0)
+        >>> b = split_node(X['bold'], X, b0)
         >>> b
         4
         >>> print(X.as_sxpr())
@@ -2415,9 +2619,9 @@ def split(node: Node, parent: Node, i: cint, left_biased: bool = True,
 
         # use left_bias hint for potentially ambiguous cases:
         >>> X = parse_sxpr('(X (A ""))')
-        >>> split(X['A'], X, X['A'].strlen())
+        >>> split_node(X['A'], X, X['A'].strlen())
         0
-        >>> split(X['A'], X, X['A'].strlen(), left_biased=False)
+        >>> split_node(X['A'], X, X['A'].strlen(), left_biased=False)
         1
     """
     assert i >= 0
@@ -2508,7 +2712,7 @@ def deep_split(path: Path, i: cint, left_biased: bool=True,
         node = parent
         parent = path[-idx]
         if chain_attr_name:  chain_attr = {chain_attr_name: gen_chain_ID()}
-        i = split(node, parent, i, left_biased, chain_attr)
+        i = split_node(node, parent, i, left_biased, chain_attr)
         if greedy and idx < last_index:
             if left_biased:
                 if i > 0 and _strlen_of(parent.children[:i], match_func, skip_func) == 0:  i = 0
@@ -2571,7 +2775,7 @@ def can_split(t: Path, i: cint, left_biased: bool = True, greedy: bool = True,
         if i != 0 and i != len(node._result) and not (node.anonymous or node.name in divisable):
             break
         parent = t[-k - 2]
-        i = split(node, parent, i, left_biased)
+        i = split_node(node, parent, i, left_biased)
         if greedy:
             if left_biased:
                 if i > 0 and _strlen_of(parent.children[:i], match_func, skip_func) == 0:  i = 0
@@ -2838,7 +3042,7 @@ def _breed_leaf_selector(select: PathSelector,
 def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     """Creates a path-match function that matches only and all leaf path
     for those paths that the criterion matches. Warning: This may be
-    slower than a custom algorithm that matches only leaf-poth right
+    slower than a custom algorithm that matches only leaf-paths right
     from the start. Example::
 
         >>> xml = '''<doc><p>In München<footnote><em>München</em> is the German
@@ -3653,7 +3857,7 @@ class FrozenNode(Node):
     def with_pos(self, pos: cint) -> Node:
         raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 
-    def to_json_obj(self) -> List:
+    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> List:
         raise NotImplementedError("Frozen nodes cannot and be serialized as JSON!")
 
     @staticmethod
@@ -3689,7 +3893,7 @@ def tree_sanity_check(tree: Node) -> bool:
 #
 #######################################################################
 
-_EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
+EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
 
 
 def default_divisable() -> AbstractSet[str]:
@@ -3775,9 +3979,9 @@ class RootNode(Node):
         self.lbreaks: List[int] = linebreaks(source)
 
         # customization for XML-Representation
-        self.inline_tags: AbstractSet[str] = set()
-        self.string_tags: AbstractSet[str] = {TOKEN_PTYPE}
-        self.empty_tags: AbstractSet[str] = set()
+        self.inline_tags: Set[str] = set()
+        self.string_tags: Set[str] = {MIXED_MODE_TEXT_PTYPE}
+        self.empty_tags: Set[str] = set()
 
         # meta-data
         self.docname: str = ''
@@ -4047,15 +4251,15 @@ class RootNode(Node):
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
-               inline_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
-               string_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
-               empty_tags: AbstractSet[str] = _EMPTY_SET_SENTINEL,
+               inline_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               string_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
                strict_mode: bool=True) -> str:
         return super().as_xml(
             src, indentation,
-            inline_tags=self.inline_tags if inline_tags is _EMPTY_SET_SENTINEL else inline_tags,
-            string_tags=self.string_tags if string_tags is _EMPTY_SET_SENTINEL else string_tags,
-            empty_tags=self.empty_tags if empty_tags is _EMPTY_SET_SENTINEL else empty_tags,
+            inline_tags=self.inline_tags if inline_tags is EMPTY_SET_SENTINEL else inline_tags,
+            string_tags=self.string_tags if string_tags is EMPTY_SET_SENTINEL else string_tags,
+            empty_tags=self.empty_tags if empty_tags is EMPTY_SET_SENTINEL else empty_tags,
             strict_mode=strict_mode)
 
     def serialize(self, how: str = '') -> str:
@@ -4131,8 +4335,39 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
         nonlocal remaining
         remaining = s
 
+    @cython.locals(pos=cython.int, i=cython.int, k=cython.int, m=cython.int, L=cython.int)
+    def parse_attrs(sxpr: StringView, attr_start: str, attributes: Dict[str, Any]) -> Tuple[str, int]:
+        pos: int = -1
+        L: int = len(attr_start)
+        while sxpr[:L] == attr_start:
+            i = sxpr.find('"')
+            k = sxpr.find(')')
+            if k > i:
+                k = sxpr.find(')', sxpr.find('"', i + 1))
+            if i < 0:
+                i = k + 1
+            if k < 0:
+                raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
+            # read very special attribute pos
+            if sxpr[L:L + 3] == "pos" and (L == 1 or 0 < k < i):
+                pos = int(str(sxpr[L + 3:k].strip(' \'"').split(' ')[0]))
+            # ignore very special attribute err
+            elif sxpr[L:L + 3] == "err" and 0 <= sxpr.find('`', L + 3) < k:
+                m = sxpr.find('(', L + 3)
+                while 0 <= m < k:
+                    m = sxpr.find('(', k)
+                    k = max(k, sxpr.find(')', max(m, 0)))
+            # read attr
+            else:
+                attr = str(sxpr[L:i].strip())
+                if not RX_ATTR_NAME.match(attr):
+                    raise ValueError('Illegal attribute name: ' + attr)
+                value = sxpr[i:k].strip()[1:-1]
+                attributes[attr] = str(value)
+            sxpr = sxpr[k + 1:].strip()
+        return sxpr, pos
 
-    @cython.locals(pos=cython.int, i=cython.int, k=cython.int, end=cython.int)
+    @cython.locals(pos=cython.int, i=cython.int, end=cython.int)
     def inner_parser(sxpr: StringView) -> Node:
         if sxpr[0] != '(':
             raise ValueError('"(" expected, not ' + sxpr[:10])
@@ -4147,34 +4382,13 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
         attributes = OrderedDict()  # type: Dict[str, Any]
-        pos = -1  # type: int
         # parse attr
-        while sxpr[:2] == "`(":
-            i = sxpr.find('"')
-            k = sxpr.find(')')
-            if k > i:
-                k = sxpr.find(')', sxpr.find('"', i + 1))
-            if i < 0:
-                i = k + 1
-            if k < 0:
-                raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
-            # read very special attribute pos
-            if sxpr[2:5] == "pos" and 0 < k < i:
-                pos = int(str(sxpr[5:k].strip(' \'"').split(' ')[0]))
-            # ignore very special attribute err
-            elif sxpr[2:5] == "err" and 0 <= sxpr.find('`', 5) < k:
-                m = sxpr.find('(', 5)
-                while 0 <= m < k:
-                    m = sxpr.find('(', k)
-                    k = max(k, sxpr.find(')', max(m, 0)))
-            # read attr
-            else:
-                attr = str(sxpr[2:i].strip())
-                if not RX_ATTR_NAME.match(attr):
-                    raise ValueError('Illegal attribute name: ' + attr)
-                value = sxpr[i:k].strip()[1:-1]
-                attributes[attr] = str(value)
-            sxpr = sxpr[k + 1:].strip()
+        if sxpr[:2] == '(@':  # SXML-style
+            sxpr, pos = parse_attrs(sxpr[2:].lstrip(), "(", attributes)
+            assert sxpr[0] == ')'
+            sxpr = sxpr[1:].lstrip()
+        else:  # DHParser-style
+            sxpr, pos = parse_attrs(sxpr, "`(", attributes)
         if sxpr[0] == '(':
             result = tuple(inner_parser(block)
                            for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
@@ -4209,6 +4423,18 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
     if remaining != ')':
         raise ValueError('Malformed S-expression. Superfluous characters: ' + remaining[1:])
     return RootNode(tree)
+
+
+def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
+    """Generates a tree of nodes from `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_.
+    Example::
+
+        >>> sxml = '(employee(@ (branch "Secret Service") (id "007")) "James Bond")'
+        >>> tree = parse_sxml(sxml)
+        >>> print(tree.as_xml())
+        <employee branch="Secret Service" id="007">James Bond</employee>
+    """
+    return parse_sxpr(sxml)
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')

@@ -174,7 +174,6 @@ def identity(x):
     return x
 
 
-
 global_id_counter: int = 0
 
 
@@ -190,11 +189,17 @@ class ThreadLocalSingletonFactory:
     Generates a singleton-factory that returns one and
     the same instance of `class_or_factory` for one and the
     same thread, but different instances for different threads.
+
+    Note: Parameter uniqueID should be provided if class_or_factory is not
+    unique but generic. See source code of
+    :py:func:`DHParser.dsl.create_transtable_transition`
     """
-    def __init__(self, class_or_factory, name: str = ""):
+
+    def __init__(self, class_or_factory, name: str = "", *, uniqueID: Union[str, int] = 0):
         self.class_or_factory = class_or_factory
-        self.singleton_name = "{NAME}_{ID}_singleton".format(
-            NAME=name or class_or_factory.__name__, ID=str(id(self)))
+        # partial functions do not have a __name__ attribute!
+        name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
+        self.singleton_name = f"{name}_{str(id(self))}_{str(uniqueID)}_singleton"
         THREAD_LOCALS = access_thread_locals()
         assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name
 
@@ -309,7 +314,7 @@ def as_list(item_or_sequence) -> List[Any]:
     return [item_or_sequence]
 
 
-def as_tuple(item_or_sequence) -> List[Any]:
+def as_tuple(item_or_sequence) -> Tuple[Any]:
     """Turns an arbitrary sequence or a single item into a tuple. In case of
     a single item, the tuple contains this element as its sole item."""
     if isinstance(item_or_sequence, Iterable):
@@ -352,8 +357,8 @@ def deprecation_warning(message: str):
 
 
 def deprecated(message: str) -> Callable:
-    """Marks a function as deprecated and emits a deprecation
-    message on its first use::
+    """Decorator that marks a function as deprecated and emits
+    a deprecation message on its first use::
 
         >>> @deprecated('This function is deprecated!')
         ... def bad():
@@ -364,7 +369,6 @@ def deprecated(message: str) -> Callable:
         ... except DeprecationWarning as w:  print(w)
         This function is deprecated!
         >>> set_config_value('deprecation_policy', save)
-
     """
     assert isinstance(message, str)
     def decorator(f: Callable) -> Callable:
@@ -1357,6 +1361,7 @@ class SingleThreadExecutor(concurrent.futures.Executor):
     It is not recommended to use this in asynchronous code or code that
     relies on the submit() or map()-method of executors to return quickly.
     """
+
     def submit(self, fn, *args, **kwargs) -> concurrent.futures.Future:
         future = concurrent.futures.Future()
         try:

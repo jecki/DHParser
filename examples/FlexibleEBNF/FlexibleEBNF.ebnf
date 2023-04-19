@@ -44,7 +44,7 @@
 
 #: top-level
 
-syntax     = ~ { definition | directive } EOF
+syntax     = ~ { definition | directive | macrodef } EOF
 definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
@@ -54,7 +54,12 @@ directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
-FOLLOW_UP  = `@` | symbol | EOF
+macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
+             :DEF~ [ OR~ ] macrobody :ENDL~ & FOLLOW_UP
+  macrobody  = expression
+  is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~:DEF
+
+FOLLOW_UP  = `@` | `$` | symbol | EOF
 
 
 #: components
@@ -81,6 +86,8 @@ element    = [retrieveop] symbol !:DEF          # negative lookahead to be sure 
            | any_char
            | whitespace
            | group
+           | macro !:DEF
+           | placeholder !:DEF
            | parser                             # a user-defined parser
 
 
@@ -110,8 +117,7 @@ multiplier = /[1-9]\d*/~
 #: leaf-elements
 
 parser     = "@" name "(" [argument] ")"        # a user defined parser
-  argument = literal | name
-  name     = SYM_REGEX ~                        # name of Parser class or (factory) function
+  argument = literal | name~
 
 symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
@@ -126,6 +132,15 @@ character  = :CH_LEADIN HEXCODE
 free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
+
+
+#: macros
+
+macro       = "$" name "(" no_range expression { "," no_range expression } ")"
+placeholder = "$" name !`(` ~
+
+name        = SYM_REGEX
+
 
 #: delimiters
 

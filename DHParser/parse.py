@@ -31,6 +31,7 @@ for an example.
 
 from __future__ import annotations
 
+import functools
 from bisect import bisect_left
 from collections import defaultdict, namedtuple
 import copy
@@ -50,7 +51,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, \
-    SourceMapFunc, has_errors
+    INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, SourceMapFunc, has_errors
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -771,14 +772,18 @@ class Parser:
                     f'be overwritten with "{proxy}".').encode('utf-8'))
             self._parse_proxy = cast(ParseFunc, proxy)
 
-    def name(self, pname: str, disposable: bool = False) -> Parser:
+    def name(self, pname: str) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
-        self.pname = pname
-        self.disposable = disposable
-        if disposable:
-            self.node_name = (':' + pname) if pname[0:1] != ':' else self.ptype
+        assert pname, "Tried to assigned empty name!"
+        assert self.pname == "", f'Parser name cannot be reassigned! "{self.pname}" -> "{pname}"'
+
+        self.node_name = pname
+        if pname[0:1] == ":":
+            # self.disposable = True
+            self.pname = pname[1:]
         else:
-            self.node_name = pname if pname else self.ptype
+            self.disposable = False
+            self.pname = pname
         return self
 
     @property
@@ -1429,15 +1434,15 @@ class Grammar:
             cls.parser_names__ = []
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
-                    anonymous = True if cls.disposable__.match(entry) else False
+                    anonymous = ":" if cls.disposable__.match(entry) else ""
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
-                            cast(Forward, parser).parser.name(entry, anonymous)
+                            cast(Forward, parser).parser.name(anonymous + entry)
                             # cast(Forward, parser).parser.pname = entry
                             # cast(Forward, parser).parser.disposable = anonymous
                     else:
-                        parser.name(entry, anonymous)
+                        parser.name(anonymous + entry)
                         # parser.pname = entry
                         # parser.disposable = anonymous
                     cls.parser_names__.append(entry)
@@ -1533,7 +1538,7 @@ class Grammar:
             determine_eq_classes(root)
             self.root_parser__ = copy.deepcopy(root)
             if not self.root_parser__.pname:
-                self.root_parser__.name("root", disposable=False)
+                self.root_parser__.name("root")
                 # TODO: Reset name and name after parsing has been finished
                 # self.root_parser__.pname = "root"
                 # self.root_parser__.disposable = False
@@ -2087,6 +2092,10 @@ class Grammar:
         return error_list
 
 
+ParserFunc: TypeAlias = Union[Grammar, Callable[[str], RootNode], functools.partial]
+ParserFactory: TypeAlias = Union[Callable[[], ParserFunc], functools.partial]
+
+
 def dsl_error_msg(parser: Parser, error_str: str) -> str:
     """
     Returns an error message for errors in the parser configuration,
@@ -2099,12 +2108,16 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
     :return: An error message string including the call stack if
         history tracking has been enabled in the grammar object.
     """
-    msg = ["DSL parser specification error:", error_str, 'Caught by parser "%s".' % str(parser)]
+    msg = ["DSL parser specification:", error_str, 'Caught by parser "%s".' % str(parser)]
     if parser.grammar.history__:
         msg.extend(["\nCall stack:", parser.grammar.history__[-1].stack])
     else:
         msg.extend(["\nEnable history tracking in Grammar object to display call stack."])
     return " ".join(msg)
+
+
+def dsl_error(parser, node, error_str, error_code):
+    parser.grammar.tree__.new_error(node, dsl_error_msg(parser, error_str), error_code)
 
 
 _GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
@@ -2139,7 +2152,13 @@ class Unparameterized(Parser):
 class Always(Unparameterized):
     """A parser that always matches, but does not capture anything."""
     def _parse(self, location: cint) -> ParsingResult:
-        return EMPTY_NODE, location
+        if self.node_name[0:1] == ':':
+            return EMPTY_NODE, location
+        else:
+            return Node(self.node_name, ''), location
+
+    def is_optional(self) -> Optional[bool]:
+        return True  # parser can never fail, like an optional parser
 
 
 class Never(Unparameterized):
@@ -2322,6 +2341,9 @@ class Text(Parser):
         return '`%s`' % abbreviate_middle(self.text, 80)
         # return ("'%s'" if self.text.find("'") <= 0 else '"%s"') % abbreviate_middle(self.text, 80)
 
+    def is_optional(self) -> Optional[bool]:
+        return not self.text
+
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.text
 
@@ -2377,14 +2399,19 @@ class RegExp(Parser):
         try:
             if pattern == self._grammar.WSP_RE__:
                 return '~'
-            elif pattern == self._grammar.COMMENT__:
+            elif pattern and pattern == self._grammar.COMMENT__:
                 return 'comment__'
-            elif pattern == self._grammar.WHITESPACE__:
+            elif pattern and pattern == self._grammar.WHITESPACE__:
                 return 'whitespace__'
         except (AttributeError, NameError):
             pass
         return '/' + escape_ctrl_chars('%s' % abbreviate_middle(pattern, 118))\
             .replace('/', '\\/') + '/'
+
+    def is_optional(self) -> Optional[bool]:
+        if not self.regexp.pattern:
+            return True
+        return super().is_optional()
 
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.regexp.pattern
@@ -2491,7 +2518,7 @@ class CombinedParser(Parser):
     The reasoning is that the earlier the tree is reduced, the less work
     remains to do at all later processing stages. As these typically run
     through all nodes of the syntax tree, this results in a considerable
-    speed up.
+    speedup.
     """
 
     def __init__(self):
@@ -2941,9 +2968,20 @@ class Option(UnaryParser):
         errors = super().static_analysis()
         if self.parser.is_optional():
             errors.append(self.static_error(
-                "Redundant nesting of optional parser in " + self.location_info(),
+                "Redundant nesting of optional or empty parser in " + self.location_info(),
                 OPTIONAL_REDUNDANTLY_NESTED_WARNING))
         return errors
+
+
+def infinite_loop_warning(parser, node, location):
+    assert isinstance(parser, UnaryParser) or isinstance(parser, NaryParser)
+    if location < parser.grammar.document_length__ \
+            and get_config_value('infinite_loop_warning'):
+        if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
+        dsl_error(parser, node,
+                  f'Repeating parser did not make any progress! Was inner parser '
+                  f'of "{parser.symbol}" really intended to capture empty text?',
+                  INFINITE_LOOP_WARNING)
 
 
 class ZeroOrMore(Option):
@@ -2959,9 +2997,12 @@ class ZeroOrMore(Option):
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> Grammar(sentence)('.').content  # an empty sentence also matches
         '.'
-        >>> forever = ZeroOrMore(RegExp(''))
+        >>> forever = ZeroOrMore(RegExp('(?=.)|$'))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
+
+    Except for the end of file a warning will be emitted, if an infinite-loop
+    is detected.
 
     EBNF-Notation: ``{ ... }``
 
@@ -2972,19 +3013,30 @@ class ZeroOrMore(Option):
     def _parse(self, location: cint) -> ParsingResult:
         results: Tuple[Node, ...] = ()
         n: int = location - 1
-        while location > n:
+        while True:  # location > n:
             n = location
             node, location = self.parser(location)
             if node is None:
                 break
-            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node._result or node.name[0] != ':': # drop anonymous empty nodes
                 results += (node,)
+            if location <= n:
+                infinite_loop_warning(self, node, location)
+                break
         nd = self._return_values(results)  # type: Node
         return nd, location
 
     def __repr__(self):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.pname else self.parser.repr) + '}'
+
+    def static_analysis(self) -> List[AnalysisError]:
+        errors = super().static_analysis()
+        if self.parser.is_optional():
+            errors.append(self.static_error(
+                "Optional or empty parsers should not be nested inside repeating parsers: "
+                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
+        return errors
 
 
 class OneOrMore(UnaryParser):
@@ -3000,9 +3052,12 @@ class OneOrMore(UnaryParser):
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
         ' <<< Error on "." | Parser "root->/\\\\w+,?/" did not match: ».« >>> '
-        >>> forever = OneOrMore(RegExp(''))
+        >>> forever = OneOrMore(RegExp('(?=.)|$'))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
+
+    Except for the end of file a warning will be emitted, if an infinite-loop
+    is detected.
 
     EBNF-Notation: ``{ ... }+``
 
@@ -3014,7 +3069,7 @@ class OneOrMore(UnaryParser):
         # text_ = text  # type: StringView
         match_flag: bool = False
         n: int = location - 1
-        while location > n:
+        while True:
             n = location
             node, location = self.parser(location)
             if node is None:
@@ -3022,6 +3077,9 @@ class OneOrMore(UnaryParser):
             match_flag = True
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
+            if location <= n:
+                infinite_loop_warning(self, node, location)
+                break
         if not match_flag:
             return None, location
         nd = self._return_values(results)  # type: Node
@@ -3083,6 +3141,7 @@ class Counted(UnaryParser):
     """
     def __init__(self, parser: Parser, repetitions: Tuple[int, int]) -> None:
         super(Counted, self).__init__(parser)
+        assert repetitions[0] <= repetitions[1]
         self.repetitions = repetitions  # type: Tuple[int, int]
 
     def __deepcopy__(self, memo):
@@ -3101,6 +3160,7 @@ class Counted(UnaryParser):
                 return None, location_
             results += (node,)
             if location_ >= location:
+                infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
             location_ = location
         for _ in range(self.repetitions[1] - self.repetitions[0]):
@@ -3109,12 +3169,16 @@ class Counted(UnaryParser):
                 break
             results += (node,)
             if location_ >= location:
+                infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
             location_ = location
         return self._return_values(results), location
 
     def is_optional(self) -> Optional[bool]:
-        return self.repetitions[0] == 0
+        if self.repetitions[0] == 0:
+            return True
+        else:
+            return None
 
     def __repr__(self):
         return self.parser.repr + "{%i,%i}" % self.repetitions
@@ -3126,8 +3190,16 @@ class Counted(UnaryParser):
         if a < 0 or b < 0 or a > b or a > INFINITE or b > INFINITE:
             errors.append(self.static_error(
                 'Repetition count [a=%i, b=%i] for parser %s violates requirement '
-                '0 <= a <= b <= infinity = 2^30' % (a, b, str(self)),
+                '0 <= a <= b <= infinity (%i)' % (a, b, str(self), INFINITE),
                 BAD_REPETITION_COUNT))
+        if self.repetitions == (1, 1):
+            errors.append(self.static_error(
+                "Repetition count from 1 to 1 renders Counted-parser redundant: "
+                + self.location_info(), REDUNDANT_PARSER_WARNING))
+        if self.parser.is_optional() and self.repetitions != (1, 1):
+            errors.append(self.static_error(
+                "Optional parsers should not be nested inside repeating parsers: "
+                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
         return errors
 
     def _signature(self) -> Hashable:
@@ -3418,6 +3490,11 @@ class Series(MandatoryNary):
         self.mandatory = combined_mandatory(self, other)
         return self
 
+    def is_optional(self) -> Optional[bool]:
+        if all(p.is_optional() for p in self.parsers):
+            return True
+        return super().is_optional()
+
 
 def starting_string(parser: Parser) -> str:
     """If parser starts with a fixed string, this will be returned.
@@ -3524,6 +3601,12 @@ class Alternative(NaryParser):
             else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
         self.parsers += other_parsers
         return self
+
+    def is_optional(self) -> Optional[bool]:
+        if (self.parsers and self.parsers[-1].is_optional()) \
+                or any(p.is_optional() for p in self.parsers):
+            return True
+        return super().is_optional()
 
     def static_analysis(self) -> List['AnalysisError']:
         errors = super().static_analysis()
@@ -3673,6 +3756,7 @@ class Interleave(MandatoryNary):
                  mandatory: int = NO_MANDATORY,
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
         super(Interleave, self).__init__(*parsers, mandatory=mandatory)
+        assert all(0 <= r[0] <= r[1] for r in repetitions)
         if len(repetitions) == 0:
             repetitions = [(1, 1)] * len(parsers)
         elif len(parsers) != len(repetitions):
@@ -3724,7 +3808,8 @@ class Interleave(MandatoryNary):
                 if reloc < 0:
                     break
             if location__ <= location_:
-                break
+                infinite_loop_warning(self, node, location)
+                break  # infinite loop protection
             location_ = location__
         nd = self._return_values(results)  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
@@ -4217,9 +4302,8 @@ class Retrieve(ContextSensitive):
                 return None, location
             else:
                 node = Node(tn, '', True).with_pos(location)
-                self.grammar.tree__.new_error(
-                    node, dsl_error_msg(self, "'%s' undefined or exhausted." % self.symbol_pname),
-                    UNDEFINED_RETRIEVE)
+                dsl_error(self, node, "'{self.symbol_pname}' undefined or exhausted.",
+                          UNDEFINED_RETRIEVE)
                 return node, location
         if value is None:
             return None, location
@@ -4296,7 +4380,6 @@ class Synonym(UnaryParser):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
     def __init__(self, parser: Parser) -> None:
-        assert not parser.drop_content
         super(Synonym, self).__init__(parser)
 
     def _parse(self, location: cint) -> ParsingResult:
@@ -4358,11 +4441,10 @@ class Forward(UnaryParser):
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
-    def name(self, pname: str, disposable: bool = False) -> Parser:
+    def name(self, pname: str,) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
         assert not pname, "Forward-parser mustn't have a name. "\
             'Use pname="" when calling  Forward.name()'
-        super().name(pname, disposable)
         return self
 
     def __deepcopy__(self, memo):

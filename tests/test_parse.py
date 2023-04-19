@@ -34,7 +34,7 @@ from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
 from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
     PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING, \
-    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, ErrorCode
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING, ErrorCode
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
@@ -115,6 +115,13 @@ class TestParserClass:
         assert result == 'word', result
 
 
+def check_infinite_loop_warning(result):
+    assert result.errors, "At least one Warning, Infninite Loop Warning exptected!"
+    assert result.errors[0].code == INFINITE_LOOP_WARNING, str(result.errors[0])
+    # print(result.errors[0])
+    result.errors = []
+
+
 class TestInfiLoopsAndRecursion:
     def setup(self):
         pass
@@ -178,7 +185,7 @@ class TestInfiLoopsAndRecursion:
 
     def test_indirect_left_recursion1(self):
         minilang = """@literalws = right
-            Expr    = //~ (Product | Sum | Value)
+            Expr    = ~ (Product | Sum | Value)
             Product = Expr { ('*' | '/') Expr }+
             Sum     = Expr { ('+' | '-') Expr }+
             Value   = /[0-9.]+/~ | '(' §Expr ')'
@@ -250,41 +257,49 @@ class TestInfiLoopsAndRecursion:
             log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
 
-
     def test_break_inifnite_loop_ZeroOrMore(self):
-        forever = ZeroOrMore(RegExp(''))
+        forever = ZeroOrMore(RegExp('(?=.)|$'))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_inifnite_loop_OneOrMore(self):
-        forever = OneOrMore(RegExp(''))
+        forever = OneOrMore(RegExp('(?=.)|$'))
         result = Grammar(forever)('')  # infinite loops will automatically be broken
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Counted(self):
-        forever = Counted(Always(), (0, INFINITE))
+        forever = Counted(RegExp('(?=.)|$'), (0, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Counted(Always(), (5, INFINITE))
+        forever = Counted(RegExp('(?=.)|$'), (5, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Counted(Always(), (INFINITE, INFINITE))
+        forever = Counted(RegExp('(?=.)|$'), (INFINITE, INFINITE))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Counted(Always(), (1000, INFINITE - 1))
+        forever = Counted(RegExp('(?=.)|$'), (1000, INFINITE - 1))
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     def test_break_infinite_loop_Interleave(self):
-        forever = Interleave(Always(), repetitions=[(0, INFINITE)])
+        forever = Interleave(RegExp('(?=.)|$'), repetitions=[(0, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Interleave(Always(), Always(),
+        forever = Interleave(RegExp('(?=.)|$'), RegExp('(?=.)|$'),
                              repetitions=[(5, INFINITE), (INFINITE, INFINITE)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
-        forever = Interleave(Always(), repetitions=[(1000, INFINITE - 1)])
+        forever = Interleave(RegExp('(?=.)|$'), repetitions=[(1000, INFINITE - 1)])
         result = Grammar(forever)('')  # if this takes very long, something is wrong
+        # check_infinite_loop_warning(result)  # no infinite loop warning at eof!
         assert repr(result) == "Node('root', '')", repr(result)
 
     # def test_infinite_loops(self):
@@ -1145,7 +1160,7 @@ class TestBorderlineCases:
         assert not cst.error_flag
 
 
-EBNF_with_Errors = r"""# Test code with errors. All places marked by a "$" should yield and error
+EBNF_with_Errors = r"""# Test code with errors. All places marked by a "€" should yield and error
 
 @ comment    = /#.*(?:\n|$)/
 @ whitespace = /\s*/
@@ -1180,7 +1195,7 @@ sequence   = ["§"] ( interleave | lookaround )
              { :AND~ ["§"] ( interleave | lookaround ) }
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
-difference = term ["-" § (oneormore $ pure_elem)]               # <- ERROR
+difference = term ["-" § (oneormore € pure_elem)]               # <- ERROR
 term       = oneormore | repetition | option | pure_elem        # resuming expected her
 
 #: elements
@@ -1191,25 +1206,25 @@ element    = [retrieveop] symbol !DEF
            | plaintext
            | regexp
            | whitespace
-           | group$                                             # <- ERROR
+           | group€                                             # <- ERROR
 
 #: flow-operators
 
 flowmarker = "!"  | "&"                                         # resuming expected her
            | "<-!" | "<-&"
-retr$ieveop = "::" | ":?" | ":"
+retr€ieveop = "::" | ":?" | ":"
 
 #: groups
 
 group      = "(" §expression ")"
 oneormore  = "{" expression "}+" | element "+"
-repetition = "{" §expressi$on "}" | element "*"                 # <- ERROR
+repetition = "{" §expressi€on "}" | element "*"                 # <- ERROR
 option     = "[" §expression "]" | element "?"                  # resuming expected here
 
 #: leaf-elements
 
 symbol     = /(?!\d)\w+/~
-$literals   = { literal }+                                      # <- ERROR
+€literals   = { literal }+                                      # <- ERROR
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~                         # resuming expected her
            | /'(?:(?<!\\)\\'|[^'])*?'/~
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~
@@ -1696,7 +1711,7 @@ class TestErrorLocations:
         _ = parseXML(testdoc)
 
     def test_error_resumption(self):
-        miniXML = '''
+        miniXML = r'''
         @ whitespace  = /\s*/
         @ disposable  = EOF
         @ drop        = EOF, whitespace, strings
@@ -1725,7 +1740,7 @@ class TestErrorLocations:
         assert len(result.errors) == 2
 
     def test_error_resumption_2(self):
-        miniXML = '''
+        miniXML = r'''
         @ whitespace  = /\s*/
         @ disposable  = EOF
         @ drop        = EOF, whitespace, strings
