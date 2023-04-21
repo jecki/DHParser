@@ -1410,7 +1410,7 @@ class EBNFCompiler(Compiler):
         self.variables = {}                    # type: Dict[str, List[Node]]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
-        self.macros = {}                       # type: Dict[str, Node]
+        self.macros = {}                       # type: Dict[str, Tuple[Node, List[str], Node]]
         self.macro_stack = []                  # type: List[str]
         self.required_keywords = set()         # type: Set[str]
         self.deferred_tasks = []               # type: List[Callable]
