@@ -65,7 +65,6 @@ def cpu_profile(func):
     st.sort_stats('time').print_stats(40)
     return result
 
-
 if __name__ == '__main__':
     argv = sys.argv[:]
     try:

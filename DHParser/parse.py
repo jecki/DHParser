@@ -538,9 +538,10 @@ class Parser:
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
         self.pname = ''               # type: str
+        self.ptype = ':' + self.__class__.__name__  # type: str  # must never be changed
+        self.node_name = self.ptype   # type: str  # can be changed later
         self.disposable = True        # type: bool
         self.drop_content = False     # type: bool
-        self.node_name = self.ptype   # type: str
         self.eq_class = id(self)      # type: int
         self.sub_parsers = frozenset()  # type: AbstractSet[Parser]
         # this indirection is required for Cython-compatibility
@@ -571,11 +572,11 @@ class Parser:
     def __str__(self):
         return self.pname + (' = ' if self.pname else '') + repr(self)
 
-    @property
-    def ptype(self) -> str:
-        """Returns a type name for the parser. By default, this is the name of
-        the parser class with an added leading colon ':'. """
-        return ':' + self.__class__.__name__
+    # @property
+    # def ptype(self) -> str:
+    #     """Returns a type name for the parser. By default, this is the name of
+    #     the parser class with an added leading colon ':'. """
+    #     return ':' + self.__class__.__name__
 
     @property
     def symbol(self) -> str:
@@ -606,7 +607,7 @@ class Parser:
         ``reset()``-method of the derived class."""
         # global _GRAMMAR_PLACEHOLDER
         # grammar = self._grammar
-        self.visited: MemoizationDict = self.grammar.get_memoization_dict__(self)
+        self.visited: MemoizationDict = self._grammar.get_memoization_dict__(self)
 
     @cython.locals(next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
     def __call__(self: Parser, location: cint) -> ParsingResult:
@@ -2172,7 +2173,7 @@ class AnyChar(Unparameterized):
     whatever that is. The parser fails only at the very end of the text."""
     @cython.locals(location_=cython.int, L=cython.int)
     def _parse(self, location: cint) -> ParsingResult:
-        text = self.grammar.document__._text
+        text = self._grammar.document__._text
         L = len(text)
         if location < L:
             location_ = location + 1
@@ -2207,7 +2208,7 @@ class PreprocessorToken(Parser):
 
     @cython.locals(end=cython.int)
     def _parse(self, location: cint) -> ParsingResult:
-        text = self.grammar.document__[location:]
+        text = self._grammar.document__[location:]
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
             if end < 0:
@@ -2286,10 +2287,10 @@ class ERR(Parser):
 
     def _parse(self, location: cint) -> ParsingResult:
         node = Node(ZOMBIE_TAG, '').with_pos(location)
-        before = '...' + self.grammar.document__[location - 10:location].replace('\n', '\\n')
-        after = self.grammar.document__[location:location + 10].replace('\n', '\\n') + '...'
+        before = '...' + self._grammar.document__[location - 10:location].replace('\n', '\\n')
+        after = self._grammar.document__[location:location + 10].replace('\n', '\\n') + '...'
         message = self.err_msg.format(before, after)
-        self.grammar.tree__.new_error(node, message, self.err_code)
+        self._grammar.tree__.new_error(node, message, self.err_code)
         return node, location
 
     def __repr__(self):
@@ -2329,7 +2330,7 @@ class Text(Parser):
     def _parse(self, location: cint) -> ParsingResult:
         location_ = location + self.len
         self_text = self.text
-        if self.grammar.text__[location:location_] == self_text:
+        if self._grammar.text__[location:location_] == self_text:
             if self.drop_content:
                 return EMPTY_NODE, location_
             elif self_text or not self.disposable:
@@ -2383,7 +2384,7 @@ class RegExp(Parser):
         return duplicate
 
     def _parse(self, location: cint) -> ParsingResult:
-        match = self.regexp.match(self.grammar.text__, location)
+        match = self.regexp.match(self._grammar.text__, location)
         if match:
             capture = match.group(0)
             if capture or not self.disposable:
@@ -2823,7 +2824,7 @@ class CustomParser(CombinedParser):
 
     def _parse(self, location: cint) -> ParsingResult:
         try:
-            node = self.parse_func(self.grammar.document__[location:])
+            node = self.parse_func(self._grammar.document__[location:])
         except Exception as e:
             node = Node(self.node_name, '').with_pos(location)
             self.grammar.tree__.new_error(node, f"Custom parser {self.parse_func} crashed: {e}",
@@ -2975,7 +2976,7 @@ class Option(UnaryParser):
 
 def infinite_loop_warning(parser, node, location):
     assert isinstance(parser, UnaryParser) or isinstance(parser, NaryParser)
-    if location < parser.grammar.document_length__ \
+    if location < parser._grammar.document_length__ \
             and get_config_value('infinite_loop_warning'):
         if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
         dsl_error(parser, node,
@@ -3968,7 +3969,7 @@ class NegativeLookahead(Lookahead):
         return '!' + self.parser.repr
 
     def match(self, bool_value) -> bool:
-        return _negative_match(self.grammar, bool_value)
+        return _negative_match(self._grammar, bool_value)
 
 
 class Lookbehind(FlowParser):
@@ -3993,8 +3994,8 @@ class Lookbehind(FlowParser):
 
     @cython.locals(start=cython.int)
     def _parse(self, location: cint) -> ParsingResult:
-        start = self.grammar.document_length__ - location
-        backwards_text = self.grammar.reversed__[start:]
+        start = self._grammar.document_length__ - location
+        backwards_text = self._grammar.reversed__[start:]
         if self.regexp is None:  # assert self.text is not None
             does_match = backwards_text[:len(self.text)] == self.text
         else:  # assert self.regexp is not None
@@ -4018,7 +4019,7 @@ class NegativeLookbehind(Lookbehind):
         return '-!' + self.parser.repr
 
     def match(self, bool_value) -> bool:
-        return _negative_match(self.grammar, bool_value)
+        return _negative_match(self._grammar, bool_value)
 
 
 ########################################################################
@@ -4127,7 +4128,7 @@ class Capture(ContextSensitive):
         return cast(bool, self._can_capture_zero_length)
 
     def _rollback(self):
-        return self.grammar.variables__[self.pname].pop()
+        return self._grammar.variables__[self.pname].pop()
 
     @cython.locals(location_=cython.int)
     def _parse(self, location: cint) -> ParsingResult:
@@ -4136,8 +4137,8 @@ class Capture(ContextSensitive):
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
             assert not self.parser.drop_content, \
                 "Cannot capture content from parsers that drop content!"
-            self.grammar.variables__[self.pname].append(node.content)
-            self.grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
+            self._grammar.variables__[self.pname].append(node.content)
+            self._grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
             return self._return_value(node), location_
         else:
             return None, location
@@ -4267,16 +4268,16 @@ class Retrieve(ContextSensitive):
     @cython.locals(location_=cython.int)
     def _parse(self, location: cint) -> ParsingResult:
         # auto-capture on first use if symbol was not captured before
-        if len(self.grammar.variables__[self.symbol_pname]) == 0:
+        if len(self._grammar.variables__[self.symbol_pname]) == 0:
             node, location_ = self.parser(location)   # auto-capture value
             if node is None:
                 # set last_rb__loc__ to avoid memoizing of retrieved results
-                self.grammar.push_rollback__(
+                self._grammar.push_rollback__(
                     self._rollback_location(location, location_), lambda: None)
                 return None, location_
         node, location_ = self.retrieve_and_match(location)
         # set last_rb__loc__ to avoid memoizing of retrieved results
-        self.grammar.push_rollback__(
+        self._grammar.push_rollback__(
             self._rollback_location(location, location_), lambda: None)
         return node, location_
 
@@ -4291,9 +4292,9 @@ class Retrieve(ContextSensitive):
         accordingly.
         """
         # ``or self.parser.parser.pname`` needed, because Forward-Parsers do not have a pname
-        text = self.grammar.document__[location:]
+        text = self._grammar.document__[location:]
         try:
-            stack = self.grammar.variables__[self.symbol_pname]
+            stack = self._grammar.variables__[self.symbol_pname]
             value = self.match(text, stack)
         except (KeyError, IndexError):
             tn = self.get_node_name()
@@ -4338,17 +4339,17 @@ class Pop(Retrieve):
     #     return duplicate
 
     def _rollback(self):
-        self.grammar.variables__[self.symbol_pname].append(self.values.pop())
+        self._grammar.variables__[self.symbol_pname].append(self.values.pop())
 
     @cython.locals(location_=cython.int)
     def _parse(self, location: cint) -> ParsingResult:
         node, location_ = self.retrieve_and_match(location)
-        if node is not None and not id(node) in self.grammar.tree__.error_nodes:
-            self.values.append(self.grammar.variables__[self.symbol_pname].pop())
-            self.grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
+        if node is not None and not id(node) in self._grammar.tree__.error_nodes:
+            self.values.append(self._grammar.variables__[self.symbol_pname].pop())
+            self._grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
         else:
             # set last_rb__loc__ to avoid memoizing of retrieved results
-            self.grammar.push_rollback__(self._rollback_location(location, location_), lambda: None)
+            self._grammar.push_rollback__(self._rollback_location(location, location_), lambda: None)
         return node, location_
 
     def __repr__(self):
@@ -4478,7 +4479,7 @@ class Forward(UnaryParser):
         See also:
         http://www.vpri.org/pdf/tr2007002_packrat.pdf
         """
-        grammar = self.grammar
+        grammar = self._grammar
         if not grammar.left_recursion__:  # TODO: add a static check and flag: self.left_recursive__!
             return self.parser(location)
 

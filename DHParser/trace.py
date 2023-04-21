@@ -84,9 +84,9 @@ def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Option
         parsers = [parsers]
     if parsers:
         pivot = next(parsers.__iter__())
-        assert all(pivot.grammar == parser.grammar for parser in parsers)
+        assert all(pivot._grammar == parser._grammar for parser in parsers)
         if tracer is not None:
-            pivot.grammar.history_tracking__ = True
+            pivot._grammar.history_tracking__ = True
         for parser in parsers:
             if parser.ptype != ':Forward':
                 parser.set_proxy(tracer)
@@ -165,7 +165,7 @@ def trace_history(self: Parser, location: cint) -> Tuple[Optional[Node], cint]:
           else (self.pname or self.node_name)), location))  # ' ' added to avoid ':' as first char!
     grammar.moving_forward__ = True
 
-    doc = self.grammar.document__
+    doc = self._grammar.document__
     try:
         node, location_ = self._parse(location)   # <===== call to the actual parser!
     except ParserError as pe:

@@ -1959,8 +1959,8 @@ class EBNFCompiler(Compiler):
         def directive_node(tree, directive) -> Node:
             """Returns the node, where the given directive was stated in the
             EBNF-source."""
-            for dr in tree.select('directive'):
-                if dr.pick('symbol').content == directive:
+            for dr in tree.select_if(lambda nd: nd.name == 'directive'):
+                if dr.pick_if(lambda nd: nd.name == 'symbol').content == directive:
                     return dr
             return tree
 
@@ -2372,10 +2372,10 @@ class EBNFCompiler(Compiler):
         # TODO: Better reference-cycle-prevention than countdown
         macro_name = node['name'].content
         placeholders = [pl.content for pl in node.children if pl.name == 'placeholder']
-        body = node.pick('macrobody')
+        body = node.pick_if(lambda nd: nd.name == 'macrobody')
         assert body and body.children and len(body.children) == 1
         template = body.children[0]
-        for sym in template.select('symbol', include_root=True):
+        for sym in template.select_if(lambda nd: nd.name=='symbol', include_root=True):
             self.referred_otherwise.add(sym.content)
         used_placholders = set()
         replacement = 1
@@ -2383,7 +2383,7 @@ class EBNFCompiler(Compiler):
         while replacement and countdown > 0:
             replacement = None
             countdown -= 1
-            for pl in template.select('placeholder', include_root=True):
+            for pl in template.select(lambda nd: nd.name == 'placeholder', include_root=True):
                 pl_name = pl.content
                 if pl_name in placeholders:
                     used_placholders.add(pl_name)
@@ -2474,7 +2474,7 @@ class EBNFCompiler(Compiler):
             return "wsp__"  # use wsp__ as a placeholder
         args = dict(zip(margs, values))
         tmpl = copy.deepcopy(expansion)
-        for arg in tmpl.select('placeholder'):
+        for arg in tmpl.select_if(lambda nd: nd.name == 'placeholder'):
             arg_name = arg.content
             if arg_name in args:
                 value = args[arg_name]

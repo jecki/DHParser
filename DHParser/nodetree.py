@@ -765,7 +765,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         assert pos >= 0, "Negative value %i not allowed!"
         if self._pos < 0:
             self._pos = pos
-            for nd in self.select(ANY_NODE, include_root=False):
+            for nd in self.walk_tree(include_root=False):
                 if nd._pos < 0:
                     if nd._children:
                         nd._pos = pos
@@ -1100,6 +1100,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         children = self._children
         return tuple(i for i in range(len(children)) if mf(children[i]))
 
+    def walk_tree(self, include_root: bool = False, reverse: bool = False) -> Iterator[Node]:
+        """Yields all nodes of the tree. (Faster than select())"""
+        def walk_recursive(nd: Node) -> Iterator[Node]:
+            nonlocal reverse
+            child_iterator = reversed(nd._children) if reverse else nd._children
+            for child in child_iterator:
+                yield child
+                if child._children:
+                    yield from walk_recursive(child)
+
+        if include_root:
+            yield self
+        yield from walk_recursive(self)
+
     def select_if(self, match_func: NodeMatchFunction,
                   include_root: bool = False, reverse: bool = False,
                   skip_func: NodeMatchFunction = NO_NODE) -> Iterator[Node]:
@@ -1179,6 +1193,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if match_function(child):
                     yield child
 
+    def pick_if(self, match_func: NodeMatchFunction,
+                include_root: bool = False,
+                reverse: bool = False,
+                skip_subtree: NodeSelector = NO_NODE) -> Optional[Node]:
+        """Picks the first (or last if run in reverse mode) descendant for
+        which the match-functions returns True. Or, returns None if no matching
+        node exists."""
+        try:
+            return next(self.select_if(match_func, include_root, reverse, skip_subtree))
+        except StopIteration:
+            return None
+
     def pick(self, criteria: NodeSelector,
              include_root: bool = False,
              reverse: bool = False,
@@ -1246,6 +1272,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # path selection ###
 
+    def walk_tree_paths(self, include_root: bool=False, reverse: bool=False):
+        """Yields all paths of the tree. (Faster than select_paths_if())"""
+        def recursive(trl) -> Iterator[Path]:
+            nonlocal reverse
+            top = trl[-1]
+            child_iterator = reversed(top._children) if reverse else top._children
+            for child in child_iterator:
+                child_trl = trl + [child]
+                yield child_trl
+                if child._children:
+                    yield from recursive(child_trl)
+
+        trl = [self]
+        if include_root:
+            yield trl
+        yield from recursive(trl)
+
     def select_path_if(self, match_func: PathMatchFunction,
                        include_root: bool = False,
                        reverse: bool = False,
@@ -1287,6 +1330,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self.select_path_if(create_path_match_function(criteria),
                                    include_root, reverse,
                                    create_path_match_function(skip_subtree))
+
+    def pick_path_if(self, match_func: PathMatchFunction,
+                include_root: bool = False,
+                reverse: bool = False,
+                skip_subtree: NodeSelector = NO_NODE) -> Path:
+        """Picks the first (or last if run in reverse mode) descendant-path for
+        which the match-functions returns True. Or, returns None if no matching
+        node exists."""
+        try:
+            return next(self.select_path_if(match_func, include_root, reverse, skip_subtree))
+        except StopIteration:
+            return None
 
     def pick_path(self, criteria: PathSelector,
                   include_root: bool = False,
@@ -3537,7 +3592,7 @@ class ContentMapping:
         assert path_B
         common_ancestor, i = find_common_ancestor(path_A, path_B)
         assert common_ancestor
-        assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
+        assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
 
         if self.chain_attr_name and self.chain_attr_name not in attr_dict:
             attr_dict[self.chain_attr_name] = gen_chain_ID()
@@ -3613,7 +3668,7 @@ class ContentMapping:
         if self.auto_cleanup:
             self.rebuild_mapping_slice(self.get_path_index(start_pos),
                                        self.get_path_index(end_pos, left_biased=True))
-        assert not common_ancestor.pick(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
+        assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
         return common_ancestor
 
 
