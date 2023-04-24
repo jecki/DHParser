@@ -114,7 +114,7 @@ proc withSourcePos*(node: Node, sourcePos: int): Node =
 
 const indentation = 2
 
-func serialize(node: Node,
+proc serialize(node: Node,
                opening, closing: proc (nd: Node) : string,
                leafdata: proc(nd: Node): seq[string],
                ind: int = 0): seq[string] =

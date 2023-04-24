@@ -59,6 +59,6 @@ venv/*
 experimental
 
 
-/nim_rewrite/nodetree
-/nim_rewrite/parse
-/nim_rewrite/nimdoc
+/nimparser/nodetree
+/nimparser/parse
+/nimparser/nimdoc

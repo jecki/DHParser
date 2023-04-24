@@ -7,6 +7,6 @@
 
 import unittest
 
-import nim_rewritepkg/submodule
-test "correct welcome":
-  check getWelcomeMessage() == "Hello, World!"
+import nimparser/parse
+test "Text parser, simple test":
+  doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
