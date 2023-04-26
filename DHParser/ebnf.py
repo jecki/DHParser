@@ -1055,7 +1055,7 @@ def transform_ebnf(cst: RootNode) -> RootNode:
 
 ########################################################################
 #
-# EBNF abstract syntax tree to Python parser compilation
+# EBNF abstract syntax tree to Python-parser compilation
 #
 ########################################################################
 
@@ -1141,7 +1141,7 @@ class EBNFDirectives:
     :ivar whitespace:  the regular expression string for (insignificant)
             whitespace
     :ivar comment:  the regular expression string for comments
-    :ivar literalws:  automatic whitespace eating next to literals. Can
+    :ivar literalws:  automatic "whitespace eating" next to literals. Can
             be either 'left', 'right', 'none', 'both'
     :ivar tokens:  set of the names of preprocessor tokens
     :ivar filter:  mapping of symbols to python match functions that
