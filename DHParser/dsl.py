@@ -839,11 +839,15 @@ def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
     return partial(transformer, transformation_table=table.copy(),
                    src_stage=src_stage, dst_stage=dst_stage)
 
+@deprecated("")
 def create_transtable_transition(table: TransformationDict,
                                  src_stage: str,
                                  dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a transformation-table :py:func:`transform.traverse`.
+
+    TODO: This does not work if table contains functions that cannot be
+    pickled like lambda-functions!
     """
     assert isinstance(table, dict)
     assert src_stage and src_stage.islower()

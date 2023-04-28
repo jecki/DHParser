@@ -39,6 +39,7 @@ import os
 import random
 import sys
 import threading
+import traceback
 import time
 from typing import Dict, List, Union, Deque, cast
 
@@ -160,8 +161,9 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
         stage = d['stage']
         if stage not in allowed_stages:
             raise KeyError(f'Unknown stage "{stage}" in file "{filename}"! '
-                           f'must be one of: {allowed_stages}')
+                           f"must be one of: {allowed_stages}")
         symbol = d['symbol']
+        unit.setdefault(symbol, OD()).setdefault(stage, OD())  # allow empty tests!
         pos = eat_comments(cfg, section_match.span()[1])
 
         entry_match = RX_ENTRY.match(cfg, pos)
@@ -172,8 +174,8 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
             testcode = normalize_code(
                 testcode, full_normalization=
                 stage not in ('match', 'fail', 'ast', 'cst'))
-            # unit.setdefault(symbol, OD()).setdefault(stage, OD())[testkey] = testcode
-            test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
+            # test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
+            test = unit[symbol][stage]
             if testkey.strip('*') in test or (testkey.strip('*') + '*') in test:
                 raise KeyError('"%s": Key %s already exists in %s:%s !'
                                % (filename, testkey, stage, symbol))
@@ -395,7 +397,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
     if isinstance(test_unit, str):
         _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
-        test_unit = unit_from_file(test_unit, UNIT_STAGES | show)
+        test_unit = unit_from_file(test_unit, UNIT_STAGES | {j.dst for j in junctions})
     else:
         unit_name = 'unit_test_' + str(id(test_unit))
     if verbose:
@@ -436,14 +438,14 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                 'environment, when a testing artifact has occurred!'
         return is_artifact
 
-    def add_errors_to_errata(test_errors: List[Error]):
+    def add_errors_to_errata(test_errors: List[Error], stage="?", test_name="?", parser_name="?"):
         nonlocal errata
         test_errors.sort(key=lambda e: e.pos)
         if is_error(max(e.code for e in test_errors) if test_errors else 0):
             if test_errors:
                 if errata:  errata[-1] = errata[-1].rstrip('\n')
-                errata.append('\t' + '\n\t'.join(
-                    str(msg).replace('\n', '\n\t\t') for msg in test_errors))
+                errata.append(f'Errors in test "{test_name}" of [{stage}:{parser_name}]\n\t'
+                    + '\n\t'.join(str(msg).replace('\n', '\n\t\t') for msg in test_errors))
                 # errata.append('\n\n')  # leads to wrong error count!!!
 
     for parser_name, tests in test_unit.items():
@@ -518,7 +520,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     raise e
                 tests.setdefault('__ast__', {})[test_name] = ast
                 ast_errors = [e for e in ast.errors if e not in old_errors]
-                add_errors_to_errata(ast_errors)
+                add_errors_to_errata(ast_errors, 'ast', test_name, parser_name)
 
             # compilation-tests
 
@@ -534,16 +536,22 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 try:
                     targets = run_pipeline(junctions, {'ast': copy.deepcopy(ast)},
                                            transformation_stages | show)
-                except ValueError as e:
-                    raise SyntaxError(f'Compilation-Test {test_name} of parser {parser_name} '
-                                      f'failed with:\n{str(e)}')
+                except Exception as e:  # at least: (ValueError, IndexError)
+                    # raise SyntaxError(f'Compilation-Test {test_name} of parser {parser_name} '
+                    #                   f'failed with:\n{str(e)}\n{traceback.format_exc()}')
+                    err = Error(f'Python Error in compilation-test {test_name} of parser '
+                                f'{parser_name} failed with: {str(e)}\n{traceback.format_exc()}\n'
+                                f'Processing of {test_name}:{parser_name} stopped at this point.',
+                                pos=0, line=1, column=0)
+                    add_errors_to_errata([err], '?', test_name, parser_name)
+                    targets = dict()
                 t_errors: Dict[str, List[Error]] = {}
                 for stage in list(transformation_stages) + [t for t in targets if t in show]:
                     tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
                     t_errors[stage] = [e for e in targets[stage][1] if e not in old_errors]
                     for e in t_errors[stage]:
                         old_errors.add(e)
-                    add_errors_to_errata(t_errors[stage])
+                    add_errors_to_errata(t_errors[stage], stage, test_name, parser_name)
                 # keep test-items, so that the order of the items is the same as
                 # in which they are processed in the pipeline.
                 for t in targets:

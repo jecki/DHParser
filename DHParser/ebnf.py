@@ -1087,10 +1087,16 @@ get_grammar = parsing.factory # for backwards compatibility, only
 
 
 TRANSFORMER_FACTORY = '''
+# DEPRECATED, because it requires pickling the transformation-table, which rules out lambdas!
+# ASTTransformation: Junction = create_transition(
+#     {NAME}_AST_transformation_table, "cst", "ast", "transtable")
 
-ASTTransformation: Junction = create_transition(
-    {NAME}_AST_transformation_table.copy(), "cst", "ast", "transtable")
+def {NAME}Transformer() -> TransformerFunc:
+    return partial(transformer, transformation_table={NAME}_AST_transformation_table.copy(),
+                   src_stage='cst', dst_stage='ast')
 
+ASTTransformation: Junction = Junction(
+    'cst', ThreadLocalSingletonFactory({NAME}Transformer), 'ast')
 '''
 
 
