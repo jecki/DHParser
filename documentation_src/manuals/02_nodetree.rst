@@ -569,7 +569,7 @@ Basics
 ^^^^^^
 
 For finding a passage in the text or identifying certain textual features
-like, for example, matching brackets, traversing the tree is not really an 
+like, for example, matching brackets, traversing the document-tree is not really an
 option, if only, because a passage may extend over several nodes, possibly
 even on different levels of the tree hierarchy. For such cases it is possible to
 generate a content mapping that maps text positions within the pure string-content
@@ -796,7 +796,7 @@ been finished.
 Markup insertion
 ----------------
 
-Class :py:class:`ContentMapping` provides a powerful markup-methods
+Class :py:class:`ContentMapping` provides powerful markup-methods
 that allows you to add markup at any position you like simply by
 passing the start- and end-position in the string-representation of
 the document-tree and "automagically" taking care of such perils
