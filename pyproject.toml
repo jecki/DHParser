@@ -76,5 +76,5 @@ dhparser_cythonize_stringview = 'DHParser.scripts.dhparser_cythonize:main'
 
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "setuptools", "wheel"]  # "Cython>=0.29"
+requires = ["poetry-core>=1.0.0", "setuptools", "wheel"]  # "Cython>=0.30"
 build-backend = "poetry.core.masonry.api"
