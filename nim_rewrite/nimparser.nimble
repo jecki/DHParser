@@ -6,7 +6,7 @@ description   = "A rewrite of DHParser.parse and parts of DHParser.nodetree in n
 license       = "Apache-2.0"
 srcDir        = "src"
 installExt    = @["nim"]
-bin           = @["nim_rewrite"]
+bin           = @["nimparser"]
 
 
 # Dependencies
