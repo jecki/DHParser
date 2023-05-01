@@ -483,7 +483,10 @@ class TestFalsePositives:
         os.chdir(self.save_dir)
 
     def test_false_positives_1(self):
-        """actually tests for a bug in parse.py, Grammar.__call__()"""
+        """actually tests for a bug in parse.py, Grammar.__call__() where
+        under an incomplete match of the document would not raise an
+        error message, if there was already a warning at the very location
+        where parsing stopped."""
         ebnf = r"""@ whitespace  = linefeed
         @ literalws   = right
         @ comment     = /#.*/
