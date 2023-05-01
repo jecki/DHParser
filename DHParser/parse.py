@@ -51,7 +51,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, \
-    INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, SourceMapFunc, has_errors
+    INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, SourceMapFunc, has_errors, is_error
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -1846,7 +1846,7 @@ class Grammar:
                     err_code = PARSER_STOPPED_ON_RETRY
                     err_pos = stitch.pos  # in this case stich.pos is more important than ff_pos
                 if error_code in {PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_LOOKAHEAD_FAILURE_ONLY} \
-                        or not any(e.pos == err_pos for e in self.tree__.errors):
+                        or not any(e.pos == err_pos for e in self.tree__.errors if is_error(e)):
                     error = Error(error_msg, err_pos, error_code)
                     self.tree__.add_error(stitch, error)
                     if self.history_tracking__:

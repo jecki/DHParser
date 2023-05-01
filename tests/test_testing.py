@@ -33,6 +33,7 @@ from DHParser.transform import traverse, remove_whitespace, remove_empty, \
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
     MANDATORY_CONTINUATION_AT_EOF, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, ERROR
+from DHParser.log import start_logging
 from DHParser.testing import get_report, grammar_unit, unit_from_file, \
     unit_from_config, clean_report, unique_name, reset_unit
 from DHParser.trace import set_tracer, trace_history
@@ -470,6 +471,44 @@ class TestSExpr:
         assert tree.result[0].name == 'b'
         assert tree.result[1].name == ':class3'
         assert tree.result[2].name == 'c'
+
+
+class TestFalsePositives:
+    def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptpath)
+
+    def teardown(self):
+        clean_report('REPORT_ZP')
+        os.chdir(self.save_dir)
+
+    def test_false_positives_1(self):
+        """actually tests for a bug in parse.py, Grammar.__call__()"""
+        ebnf = r"""@ whitespace  = linefeed
+        @ literalws   = right
+        @ comment     = /#.*/
+        @ ignorecase  = False
+        @ reduction   = merge
+        @ disposable  = /_\w+/
+        @ drop        = whitespace, _EOF
+        ZP               = "ZP:" { !(_LEERZEILE|_EOF|Feldname) [/\n/] /[\n]*/ }  # missing ^ in re
+        Feldname         = /[A-Z]+:/
+        _LEERZEILE       =  /[ \t]*(?:\n|$)/   # missing _AM_ZEILENANFANG!
+        _EOF             =  /$/
+        _AM_ZEILENANFANG = /(?<=(?:\n|^))/
+        """
+        test_zp = '''[match:ZP]
+        M1*: """ZP: SOCist, Abt in Ford (Devonshire) (ca. 1175), Bischof von Worcester
+            (ab 1180), dann Erzbischof von Canterbury (ab 1184). – * in Exeter,
+            † 19. Nov. 1190 vor Akkon (beim Kreuzzug).""" 
+        '''
+        parser_provider = grammar_provider(ebnf)
+        transformer_provider = lambda : lambda _: _
+        test_unit = unit_from_config(test_zp, 'test_zp.ini')
+        start_logging('LOGS')
+        errata = grammar_unit(test_unit, parser_provider, transformer_provider,
+                              'REPORT_ZP')
+        assert errata
 
 
 if __name__ == "__main__":
