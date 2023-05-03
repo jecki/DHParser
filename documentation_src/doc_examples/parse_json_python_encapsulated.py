@@ -8,7 +8,7 @@ from DHParser.parse import Grammar, Forward, Whitespace, Drop, NegativeLookahead
     ZeroOrMore, RegExp, Option, TKN, DTKN, Text
 
 class JSON:
-    _element = Forward().name('_element', disposable=True)
+    _element = Forward().name(pname='_element', disposable=True)
     _dwsp = Drop(Whitespace(r'\s*'))
     _EOF = NegativeLookahead(RegExp('.'))
     EXP = (Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')).name('EXP')
@@ -17,7 +17,7 @@ class JSON:
     NEG = Text("-").name('NEG')
     INT = (Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
     HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]').name('HEX')
-    UNICODE = (DTKN("\\u") + HEX + HEX).name('unicode')
+    UNICODE = (DTKN("\\u") + HEX + HEX).name('UNICODE')
     ESCAPE = (RegExp('\\\\[/bnrt\\\\]') | UNICODE).name('ESCAPE')
     PLAIN = RegExp('[^"\\\\]+').name('PLAIN')
     _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)

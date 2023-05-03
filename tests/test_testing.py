@@ -498,7 +498,7 @@ class TestFalsePositives:
         Feldname         = /[A-Z]+:/
         _LEERZEILE       =  /[ \t]*(?:\n|$)/   # missing _AM_ZEILENANFANG!
         _EOF             =  /$/
-        _AM_ZEILENANFANG = /(?<=(?:\n|^))/
+        _AM_ZEILENANFANG = /(?<=\n)|(?<=^)/
         """
         test_zp = '''[match:ZP]
         M1*: """ZP: SOCist, Abt in Ford (Devonshire) (ca. 1175), Bischof von Worcester

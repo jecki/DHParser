@@ -9,21 +9,22 @@ from DHParser.parse import Grammar, Forward, Whitespace, Drop, NegativeLookahead
 
 class JSON_Grammar(Grammar):
     # Parser-names must be assigned explicitly by calling the Parser.names()-method
-    # for all parsers that contain any of the operators + (Series), | (Alternative)
-    # or * (Interlave) on the top-level of their definition.
+    # for all parsers that are referred to as arguments of operators,
+    # + (Series), | (Alternative) or * (Interlave), and have the same type as the
+    # parsers created by the operator.
     # For any other parsers, the name is assigned automatically and early enough
     # by class Grammar. (This has technical reasons.)
     disposable__ = re.compile(r'_\w+')
     _element = Forward()
     _dwsp = Drop(Whitespace(r'\s*'))
     _EOF = NegativeLookahead(RegExp('.'))
-    EXP = (Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')).name('EXP')
+    EXP = Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')
     DOT = Text(".")
-    FRAC = (DOT + RegExp(r'[0-9]+')).name('FRAC')
+    FRAC = DOT + RegExp(r'[0-9]+')
     NEG = Text("-")
-    INT = (Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
+    INT = Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')
     HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]')
-    UNICODE = (DTKN("\\u") + HEX + HEX).name('unicode')
+    UNICODE = DTKN("\\u") + HEX + HEX
     ESCAPE = RegExp('\\\\[/bnrt\\\\]') | UNICODE
     PLAIN = RegExp('[^"\\\\]+')
     _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
@@ -31,13 +32,13 @@ class JSON_Grammar(Grammar):
     false = TKN("false")
     true = TKN("true")
     _bool = true | false
-    number = (INT + Option(FRAC) + Option(EXP) + _dwsp).name('number')
-    string = (Text('"') + _CHARACTERS + Text('"') + _dwsp).name('string')
-    array = (DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")).name('array')
-    member = (string + DTKN(":") + _element).name('member')
-    json_object = (DTKN("{") + member +  ZeroOrMore(DTKN(",") + member) + DTKN("}")).name('json_object')
+    number = INT + Option(FRAC) + Option(EXP) + _dwsp
+    string = Text('"') + _CHARACTERS + Text('"') + _dwsp
+    array = DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")
+    member = string + DTKN(":") + _element
+    json_object = DTKN("{") + member +  ZeroOrMore(DTKN(",") + member) + DTKN("}")
     _element.set(json_object | array | string | number | _bool | null)
-    json = (_dwsp + _element + _EOF).name('json')
+    json = _dwsp + _element + _EOF
     root__ = json
 
 json_parser = JSON_Grammar()

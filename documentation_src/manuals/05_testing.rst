@@ -22,7 +22,7 @@ unit-testing framework allows to::
 Because one and the same formal language can be described by different
 grammars and because the way the grammar is written influences the shape
 of the syntax-tree that the parser yields, test driven development is
-particularly useful for conditioning the shape of the syntax-tree when
+particularly useful for refactoring the shape of the syntax-tree when
 writing a grammar. 
 
 

@@ -773,17 +773,19 @@ class Parser:
                     f'be overwritten with "{proxy}".').encode('utf-8'))
             self._parse_proxy = cast(ParseFunc, proxy)
 
-    def name(self, pname: str) -> Parser:
+    def name(self, pname: str="", disposable: Optional[bool] = None) -> Parser:  # -> Self for Python 3.11 and above...
         """Sets the parser name to ``pname`` and returns ``self``."""
         assert pname, "Tried to assigned empty name!"
-        assert self.pname == "", f'Parser name cannot be reassigned! "{self.pname}" -> "{pname}"'
+        assert self.pname == "" or self.pname == pname, f'Parser name cannot be reassigned! "{self.pname}" -> "{pname}"'
 
         self.node_name = pname
         if pname[0:1] == ":":
-            # self.disposable = True
+            self.disposable = True
+            if disposable is False:  self.disposable = False
             self.pname = pname[1:]
         else:
             self.disposable = False
+            if disposable is True:  self.disposable = True
             self.pname = pname
         return self
 
@@ -4442,10 +4444,10 @@ class Forward(UnaryParser):
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
-    def name(self, pname: str,) -> Parser:
+    def name(self, pname: str="", disposable: Optional[bool] = None) -> Parser:
         """Sets the parser name to ``pname`` and returns ``self``."""
-        assert not pname, "Forward-parser mustn't have a name. "\
-            'Use pname="" when calling  Forward.name()'
+        self.pname = pname
+        self.disposable = True if disposable is True else False
         return self
 
     def __deepcopy__(self, memo):
@@ -4599,7 +4601,10 @@ class Forward(UnaryParser):
         """
         self.parser = parser
         self.sub_parsers = frozenset({parser})
+        if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
+        if not parser.drop_content:  parser.disposable = self.disposable
         self.drop_content = parser.drop_content
+        self.pname = ""
 
     def _signature(self) -> Hashable:
         # This code should theoretically never be reached, except when debugging
