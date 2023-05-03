@@ -539,7 +539,7 @@ class Parser:
         # assert isinstance(name, str), str(name)
         self.pname = ''               # type: str
         self.ptype = ':' + self.__class__.__name__  # type: str  # must never be changed
-        self.node_name = self.ptype   # type: str  # can be changed later
+        self.node_name = self.ptype   # type: str   # can be changed later
         self.disposable = True        # type: bool
         self.drop_content = False     # type: bool
         self.eq_class = id(self)      # type: int
@@ -987,6 +987,7 @@ def get_parser_placeholder() -> Parser:
     if PARSER_PLACEHOLDER is None:
         PARSER_PLACEHOLDER = Parser.__new__(Parser)  # Parser()
         PARSER_PLACEHOLDER.pname = ''
+        PARSER_PLACEHOLDER.ptype = ':Parser'
         PARSER_PLACEHOLDER.disposable = False
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
@@ -2743,7 +2744,7 @@ def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> P
         >>> print(tree.as_sxpr())
         (root "AB")
 
-        >>> root = Text('A') + Text('B') + (Text('C').name('important') | Text('D'))
+        >>> root = Series(Text('A'), Text('B'), Text('C').name('important') | Text('D'))
         >>> grammar = Grammar(TreeReduction(root, CombinedParser.NO_TREE_REDUCTION))
         >>> tree = grammar('ABC')
         >>> print(tree.as_sxpr())
@@ -3380,22 +3381,6 @@ class MandatoryNary(NaryParser):
         return errors
 
 
-@cython.returns(cython.int)
-def combined_mandatory(left: Parser, right: Parser) -> int:
-    """
-    Returns the position of the first mandatory element (if any) when
-    parsers ``left`` and ``right`` are joined to a sequence.
-    """
-    left_mandatory, left_length = (left.mandatory, len(left.parsers)) \
-        if isinstance(left, Series) else (NO_MANDATORY, 1)
-    if left_mandatory != NO_MANDATORY:
-        return left_mandatory
-    right_mandatory = right.mandatory if isinstance(right, Series) else NO_MANDATORY
-    if right_mandatory != NO_MANDATORY:
-        return right_mandatory + left_length
-    return NO_MANDATORY
-
-
 class Series(MandatoryNary):
     r"""
     Matches if each of a series of parsers matches exactly in the order of
@@ -3461,37 +3446,13 @@ class Series(MandatoryNary):
     # ``RE('\d+') + Optional(RE('\.\d+)`` instead of ``Series(RE('\d+'), Optional(RE('\.\d+))``
 
     def __add__(self, other: Parser) -> 'Series':
-        if self.pname or other.pname:
-            return Series(self, other)
-        if not isinstance(self, Series):
-            # for some reason cython calls __add__ instead of __radd__,
-            # so we have to repeat the __radd__ code here...
-            self, other = other, self
-            other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
-                else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-            return Series(*(other_parsers + cast(NaryParser, self).parsers),
-                          mandatory=combined_mandatory(other, self))
-        other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
-            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-        return Series(*(self.parsers + other_parsers),
-                      mandatory=combined_mandatory(self, other))
+        return Series(self, other)
 
     def __radd__(self, other: Parser) -> 'Series':
-        if self.pname or other.pname:
-            return Series(other, self)
-        other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
-            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-        return Series(*(other_parsers + self.parsers),
-                      mandatory=combined_mandatory(other, self))
+        return Series(other, self)
 
     def __iadd__(self, other: Parser) -> 'Series':
-        if self.pname or other.pname:
-            return Series(self, other)
-        other_parsers = cast('Series', other).parsers if isinstance(other, Series) \
-            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-        self.parsers += other_parsers
-        self.mandatory = combined_mandatory(self, other)
-        return self
+        return Series(self, other)
 
     def is_optional(self) -> Optional[bool]:
         if all(p.is_optional() for p in self.parsers):
@@ -3577,33 +3538,13 @@ class Alternative(NaryParser):
     # ``Alternative(Series(RE('\d+'), RE('\.'), RE('\d+')), RE('\d+'))``
 
     def __or__(self, other: Parser) -> 'Alternative':
-        if self.pname or other.pname:
-            return Alternative(self, other)
-        if not isinstance(self, Alternative):
-            # for some reason cython called __or__ instead of __ror__,
-            # so we have to repeat the __ror__ code here...
-            self, other = other, self
-            other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
-                else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-            return Alternative(*(other_parsers + cast(NaryParser, self).parsers))
-        other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
-            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-        return Alternative(*(self.parsers + other_parsers))
+        return Alternative(self, other)
 
     def __ror__(self, other: Parser) -> 'Alternative':
-        if self.pname or other.pname:
-            return Alternative(other, self)
-        other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
-            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-        return Alternative(*(other_parsers + self.parsers))
+        return Alternative(other, self)
 
     def __ior__(self, other: Parser) -> 'Alternative':
-        if self.pname or other.pname:
-            return Alternative(self, other)
-        other_parsers = cast('Alternative', other).parsers if isinstance(other, Alternative) \
-            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-        self.parsers += other_parsers
-        return self
+        return Alternative(self, other)
 
     def is_optional(self) -> Optional[bool]:
         if (self.parsers and self.parsers[-1].is_optional()) \
@@ -3832,57 +3773,14 @@ class Interleave(MandatoryNary):
 
         return ' ° '.join(rep(parser) for parser in self.parsers)
 
-    def _prepare_combined(self, other: Parser) \
-            -> Tuple[Tuple[Parser, ...], int, List[Tuple[int, int]]]:
-        """Returns the other's parsers and repetitions if ``other`` is an Interleave-parser,
-        otherwise returns ((other,),), [(1, 1])."""
-        other = to_interleave(other)
-        other_parsers = cast('Interleave', other).parsers if isinstance(other, Interleave) \
-            else cast(Tuple[Parser, ...], (other,))  # type: Tuple[Parser, ...]
-        other_repetitions = cast('Interleave', other).repetitions \
-            if isinstance(other, Interleave) else [(1, 1), ]
-        other_mandatory = cast('Interleave', other).mandatory \
-            if isinstance(other, Interleave) else NO_MANDATORY
-        if other_mandatory == NO_MANDATORY:
-            mandatory = self.mandatory
-            parsers = self.parsers + other_parsers  # type: Tuple[Parser, ...]
-            repetitions = self.repetitions + other_repetitions  # type: List[Tuple[int, int]]
-        elif self.mandatory == NO_MANDATORY:
-            mandatory = other_mandatory
-            parsers = other_parsers + self.parsers
-            repetitions = other_repetitions + self.repetitions
-        else:
-            mandatory = self.mandatory + other_mandatory
-            parsers = self.parsers[:self.mandatory] + other_parsers[:other_mandatory] \
-                + self.parsers[self.mandatory:] + other_parsers[other_mandatory:]
-            repetitions = self.repetitions[:self.mandatory] + other_repetitions[:other_mandatory] \
-                + self.repetitions[self.mandatory:] + other_repetitions[other_mandatory:]
-        return parsers, mandatory, repetitions
-
     def __mul__(self, other: Parser) -> 'Interleave':
-        if self.pname or other.pname:
-            return Interleave(self, other)
-        if not isinstance(self, Interleave):
-            # for some reason cython called __mul__ instead of __rmul__,
-            # so we have to flip self and other...
-            self, other = other, self
-        parsers, mandatory, repetitions = cast(Interleave, self)._prepare_combined(other)
-        return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
+        return Interleave(self, other)
 
     def __rmul__(self, other: Parser) -> 'Interleave':
-        if self.pname or other.pname:
-            return Interleave(other, self)
-        parsers, mandatory, repetitions = self._prepare_combined(other)
-        return Interleave(*parsers, mandatory=mandatory, repetitions=repetitions)
+        return Interleave(other, self)
 
     def __imul__(self, other: Parser) -> 'Interleave':
-        if self.pname or other.pname:
-            return Interleave(self, other)
-        parsers, mandatory, repetitions = self._prepare_combined(other)
-        self.parsers = parsers
-        self.mandatory = mandatory
-        self.repetitions = repetitions
-        return self
+        return Interleave(self, other)
 
     @cython.locals(a=cython.int, b=cython.int)
     def static_analysis(self) -> List['AnalysisError']:

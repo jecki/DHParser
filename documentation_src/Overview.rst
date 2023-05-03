@@ -166,37 +166,46 @@ parser much like you'd compile a regular expresseion. Let's do this for a
 
 
 Instead of specifying the grammar with EBNF and then generating a parser
-form the grammar, parsers can also be directly written with Python-code::
+form the grammar, parsers can also be directly written with Python-code.
+This is best be done inside a derivative class of :py:class:`~parse.Grammar`.
+Doing so avoids namespace pollution and invokes a bit of Grammar-class magic
+that assigns the field names to the Parser-objects. (Otherwise
+the :py:meth:`~parse.Parser.name`-method would have to be called, explicitly.)::
 
     import sys, re
 
     from DHParser.parse import Grammar, Forward, Whitespace, Drop, NegativeLookahead, \
         ZeroOrMore, RegExp, Option, TKN, DTKN, Text
 
-    _element = Forward().name('_element', disposable=True)
-    _dwsp = Drop(Whitespace(r'\s*'))
-    _EOF = NegativeLookahead(RegExp('.'))
-    EXP = (Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')).name('EXP')
-    FRAC = (Text(".") + RegExp(r'[0-9]+')).name('FRAC')
-    INT = (Option(Text("-")) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
-    HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]').name('HEX')
-    UNICODE = (DTKN("\\u") + HEX + HEX).name('unicode')
-    ESCAPE = (RegExp('\\\\[/bnrt\\\\]') | UNICODE).name('ESCAPE')
-    PLAIN = RegExp('[^"\\\\]+').name('PLAIN')
-    _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
-    null = TKN("null").name('null')
-    false = TKN("false").name('false')
-    true = TKN("true").name('true')
-    _bool = true | false
-    number = (INT + Option(FRAC) + Option(EXP) + _dwsp).name('number')
-    string = (Text('"') + _CHARACTERS + Text('"') + _dwsp).name('string')
-    array = (DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")).name('array')
-    member = (string + DTKN(":") + _element).name('member')
-    json_object = (DTKN("{") + member +  ZeroOrMore(DTKN(",") + member) + DTKN("}")).name('json_object')
-    _element.set(json_object | array | string | number | _bool | null)
-    json = (_dwsp + _element + _EOF).name('json')
+    class JSON_Grammar(Grammar):
+        disposable__ = re.compile(r'_\w+')  # keep syntax-tree free from matching names
+        _element = Forward()
+        _dwsp = Drop(Whitespace(r'\s*'))
+        _EOF = NegativeLookahead(RegExp('.'))
+        EXP = Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')
+        DOT = Text(".")
+        FRAC = DOT + RegExp(r'[0-9]+')
+        NEG = Text("-")
+        INT = Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')
+        HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]')
+        UNICODE = DTKN("\\u") + HEX + HEX
+        ESCAPE = RegExp('\\\\[/bnrt\\\\]') | UNICODE
+        PLAIN = RegExp('[^"\\\\]+')
+        _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
+        null = TKN("null")
+        false = TKN("false")
+        true = TKN("true")
+        _bool = true | false
+        number = INT + Option(FRAC) + Option(EXP) + _dwsp
+        string = Text('"') + _CHARACTERS + Text('"') + _dwsp
+        array = DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")
+        member = string + DTKN(":") + _element
+        json_object = DTKN("{") + member +  ZeroOrMore(DTKN(",") + member) + DTKN("}")
+        _element.set(json_object | array | string | number | _bool | null)
+        json = _dwsp + _element + _EOF
+        root__ = json  # required, must point to the root-parser of the grammar!
 
-    json_parser = Grammar(json)
+    json_parser = JSON_Grammar()
 
     if __name__ == '__main__':
         if len(sys.argv) > 1:
@@ -208,26 +217,15 @@ form the grammar, parsers can also be directly written with Python-code::
         syntax_tree = json_parser(json_text)
         print(syntax_tree.serialize(how='indented'))
 
-There are few caveats when defining parsers directly within Python-code:
-Any parser that is referred to in other parsers must be assigned to a variable. Unless they are
-disposable (see :any:`simplifying_syntax_trees`), their name must be assigned
-explicitly with the :py:meth:`~parse.Parser.name`-method. Forward-declarations always need to be
-named explicitly, even if the declared parser is considered disposable.
 
-Both of this can be avoided be encapsulating the variables defining the parser in 
-a class definition. Doing so has the further benefit to reduce namespace-pollution::
-
-    class JSON:
-        _element = Forward().name('_element', disposable=True)
-        ...
-        json = (_dwsp + _element + _EOF).name('json')
-
-    json_parser = Grammar(JSON.json)
-    ...
+Note, that a ``root__``-field must be added to the class definition that points to the root-parser
+of the Grammar! (The ``disposable__``-field is optional and defines a pattern for names of parsers
+which are considered mere "helper"-parsers that do not capture any essential unit of data by
+themselves and therefore do not need to appear as node-names in the syntax-tree.)
 
 Usually, the best alternative is to specify the grammar in EBNF, compile it and then copy and paste the
-compiled grammar into your script. This is easier and neater than specifying the parser with Python-code, but 
-it also saves the added startup time that results from compiling the gramar within the Python-script. 
+compiled grammar into your script. This is easier and neater than specifying the parser with Python-code.
+And it saves the added startup time that results from compiling the grammar within the Python-script.
 
 
 .. _full_scale_DSLs:

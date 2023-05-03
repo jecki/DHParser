@@ -38,7 +38,7 @@ from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
-    GrammarError, Counted, Always, INFINITE, longest_match, extract_error_code
+    GrammarError, Counted, Always, INFINITE, longest_match, extract_error_code, Option, DTKN
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
@@ -596,41 +596,6 @@ class TestSeries:
         # transitivity of mandatory-operator
         st = parser("ABC_");  assert st.error_flag
         assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
-
-    def test_series_composition(self):
-        TA, TB, TC, TD, TE = (TKN(b) for b in "ABCDE")
-        s1 = Series(TA, TB, TC, mandatory=2)
-        s2 = Series(TD, TE)
-
-        combined = Alternative(s1 + s2, RegExp('.*'))
-        parser = Grammar(combined)
-        st = parser("ABCDE");  assert not st.error_flag
-        st = parser("A_CDE");  assert not st.error_flag
-        st = parser("AB_DE");  assert st.error_flag
-        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
-        st = parser("ABC_E");  assert st.error_flag
-        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
-
-        combined = Alternative(s2 + s1, RegExp('.*'))
-        parser = Grammar(combined)
-        st = parser("DEABC");  assert not st.error_flag
-        st = parser("_EABC");  assert not st.error_flag
-        st = parser("D_ABC");  assert not st.error_flag
-        st = parser("DE_BC");  assert not st.error_flag
-        st = parser("DEA_C");  assert not st.error_flag
-        st = parser("DEAB_");  assert st.error_flag
-        assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
-
-    # def test_boundary_cases(self):
-    #     lang = """
-    #     document = series | §!single | /.*/
-    #     series = "A" "B" §"C" "D"
-    #     single = "E"
-    #     """
-    #     parser_class = grammar_provider(lang)
-    #     parser = parser_class()
-    #     print(parser.python_src__)
-    #     print(parser_class.python_src__)
 
     def test_ebnf_serialization(self):
         ebnf_grammar = get_ebnf_grammar()
@@ -1541,55 +1506,6 @@ class TestMetaParser:
         assert bool(cst.pick('MUL')), "Named empty nodes should not be dropped!!!"
 
 
-class TestParserCombining:
-    def test_series(self):
-        parser = RegExp(r'\d+') + RegExp(r'\.')
-        assert isinstance(parser, Series)
-        parser += RegExp(r'\d+')
-        assert isinstance(parser, Series)
-        assert len(parser.parsers) == 3
-        parser = Text(">") + parser
-        assert isinstance(parser, Series)
-        assert len(parser.parsers) == 4
-        parser = parser + Text("<")
-        assert isinstance(parser, Series)
-        assert len(parser.parsers) == 5
-
-    def test_alternative(self):
-        parser = RegExp(r'\d+') | RegExp(r'\.')
-        assert isinstance(parser, Alternative)
-        parser |= RegExp(r'\d+')
-        assert isinstance(parser, Alternative)
-        assert len(parser.parsers) == 3
-        parser = Text(">") | parser
-        assert isinstance(parser, Alternative)
-        assert len(parser.parsers) == 4
-        parser = parser | Text("<")
-        assert isinstance(parser, Alternative)
-        assert len(parser.parsers) == 5
-
-    def test_interleave(self):
-        parser = RegExp(r'\d+') * RegExp(r'\.')
-        assert isinstance(parser, Interleave)
-        parser *= RegExp(r'\d+')
-        assert isinstance(parser, Interleave)
-        assert len(parser.parsers) == 3
-        parser = Text(">") * parser
-        assert isinstance(parser, Interleave)
-        assert len(parser.parsers) == 4
-        parser = parser * Text("<")
-        assert isinstance(parser, Interleave)
-        assert len(parser.parsers) == 5
-
-    def test_mixed_combinations(self):
-        parser = RegExp(r'\d+') +  RegExp(r'\.') + RegExp(r'\d+') | RegExp(r'\d+')
-        assert isinstance(parser, Alternative)
-        assert len(parser.parsers) == 2
-        assert isinstance(parser.parsers[0], Series)
-        assert len(parser.parsers[0].parsers) == 3
-        assert isinstance(parser.parsers[1], RegExp)
-
-
 class TestStaticAnalysis:
     def setup(self):
         self.static_analysis = get_config_value('static_analysis')
@@ -1802,18 +1718,155 @@ class TestStructurePreservationOnLookahead:
         assert author.name == "author" and author.content == "Bertrand Russell"
         assert author.errors[0].code == MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
 
-#
-# class TestParserTrails:
-#     def test_parser_trails(self):
-#         grammar = """
-#         root = a | b
-#         a = `a`
-#         b = c | root
-#         c = `c`
-#         """
-#         gr = create_parser(grammar)
-#         print(gr['b'].descendant_trails)
 
+class TestAlternativeParserDefinitions:
+    json_text = '{ "one": 1, "two": 2 }'
+    goal = parse_sxpr('''(json
+          (json_object
+            (member
+              (string
+                (:Text '"')
+                (PLAIN "one")
+                (:Text '"'))
+              (number
+                (INT "1")))
+            (member
+              (string
+                (:Text '"')
+                (PLAIN "two")
+                (:Text '"'))
+              (number
+                (INT "2")))))''')
+
+    def test_ebnf(self):
+        json_grammar = r"""
+            @literalws  = right
+            @drop       = whitespace, strings
+            @disposable = /_\w+/
+
+            json        = ~ _element _EOF
+            _element    = json_object | array | string | number | _bool | null
+            json_object = "{" member { "," §member } §"}"
+            member      = string §":" _element
+            array       = "[" [ _element { "," _element } ] §"]"
+            string      = `"` §_CHARACTERS `"` ~
+            number      = INT [ FRAC ] [ EXP ] ~
+            _bool       = true | false
+            true        = `true` ~
+            false       = `false` ~
+            null        = "null"
+
+            _CHARACTERS = { PLAIN | ESCAPE }
+            PLAIN       = /[^"\\]+/
+            ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+            UNICODE     = "\u" HEX HEX
+            HEX         = /[0-9a-fA-F][0-9a-fA-F]/
+
+            INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
+            NEG         = `-`
+            FRAC        = DOT /[0-9]+/
+            DOT         = `.`
+            EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
+
+            _EOF        =  !/./
+            """
+        json_parser = create_parser(json_grammar, 'JSON')
+        st1 = json_parser(self.json_text)
+        assert st1.equals(self.goal)
+
+    def test_python_top_level(self):
+        _element = Forward().name('_element', disposable=True)
+        _dwsp = Drop(Whitespace(r'\s*'))
+        _EOF = NegativeLookahead(RegExp('.'))
+        EXP = (Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')).name('EXP')
+        DOT = Text(".").name('DOT')
+        FRAC = (DOT + RegExp(r'[0-9]+')).name('FRAC')
+        NEG = Text("-").name('NEG')
+        INT = (Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
+        HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]').name('HEX')
+        UNICODE = (DTKN("\\u") + HEX + HEX).name('unicode')
+        ESCAPE = (RegExp('\\\\[/bnrt\\\\]') | UNICODE).name('ESCAPE')
+        PLAIN = RegExp('[^"\\\\]+').name('PLAIN')
+        _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
+        null = TKN("null").name('null')
+        false = TKN("false").name('false')
+        true = TKN("true").name('true')
+        _bool = true | false
+        number = (INT + Option(FRAC) + Option(EXP) + _dwsp).name('number')
+        string = (Text('"') + _CHARACTERS + Text('"') + _dwsp).name('string')
+        array = (DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")).name('array')
+        member = (string + DTKN(":") + _element).name('member')
+        json_object = (DTKN("{") + member + ZeroOrMore(DTKN(",") + member) + DTKN("}")).name('json_object')
+        _element.set(json_object | array | string | number | _bool | null)
+        json = (_dwsp + _element + _EOF).name('json')
+
+        json_parser = Grammar(json)
+        st1 = json_parser(self.json_text)
+        assert st1.equals(self.goal)
+
+    def test_python_class(self):
+        class JSON:
+            _element = Forward().name(pname='_element', disposable=True)
+            _dwsp = Drop(Whitespace(r'\s*'))
+            _EOF = NegativeLookahead(RegExp('.'))
+            EXP = (Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')).name('EXP')
+            DOT = Text(".").name('DOT')
+            FRAC = (DOT + RegExp(r'[0-9]+')).name('FRAC')
+            NEG = Text("-").name('NEG')
+            INT = (Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
+            HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]').name('HEX')
+            UNICODE = (DTKN("\\u") + HEX + HEX).name('UNICODE')
+            ESCAPE = (RegExp('\\\\[/bnrt\\\\]') | UNICODE).name('ESCAPE')
+            PLAIN = RegExp('[^"\\\\]+').name('PLAIN')
+            _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
+            null = TKN("null").name('null')
+            false = TKN("false").name('false')
+            true = TKN("true").name('true')
+            _bool = true | false
+            number = (INT + Option(FRAC) + Option(EXP) + _dwsp).name('number')
+            string = (Text('"') + _CHARACTERS + Text('"') + _dwsp).name('string')
+            array = (DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")).name('array')
+            member = (string + DTKN(":") + _element).name('member')
+            json_object = (DTKN("{") + member + ZeroOrMore(DTKN(",") + member) + DTKN("}")).name('json_object')
+            _element.set(json_object | array | string | number | _bool | null)
+            json = (_dwsp + _element + _EOF).name('json')
+
+        json_parser = Grammar(JSON.json)
+        st1 = json_parser(self.json_text)
+        assert st1.equals(self.goal)
+
+    def test_grammar_class(self):
+        class JSON_Grammar(Grammar):
+            disposable__ = re.compile(r'_\w+')
+            _element = Forward()
+            _dwsp = Drop(Whitespace(r'\s*'))
+            _EOF = NegativeLookahead(RegExp('.'))
+            EXP = Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')
+            DOT = Text(".")
+            FRAC = DOT + RegExp(r'[0-9]+')
+            NEG = Text("-")
+            INT = Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')
+            HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]')
+            UNICODE = DTKN("\\u") + HEX + HEX
+            ESCAPE = RegExp('\\\\[/bnrt\\\\]') | UNICODE
+            PLAIN = RegExp('[^"\\\\]+')
+            _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
+            null = TKN("null")
+            false = TKN("false")
+            true = TKN("true")
+            _bool = true | false
+            number = INT + Option(FRAC) + Option(EXP) + _dwsp
+            string = Text('"') + _CHARACTERS + Text('"') + _dwsp
+            array = DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")
+            member = string + DTKN(":") + _element
+            json_object = DTKN("{") + member + ZeroOrMore(DTKN(",") + member) + DTKN("}")
+            _element.set(json_object | array | string | number | _bool | null)
+            json = _dwsp + _element + _EOF
+            root__ = json
+
+        json_parser = JSON_Grammar()
+        st1 = json_parser(self.json_text)
+        assert st1.equals(self.goal)
 
 
 if __name__ == "__main__":

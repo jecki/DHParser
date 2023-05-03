@@ -7,41 +7,33 @@ import sys, re
 from DHParser.parse import Grammar, Forward, Whitespace, Drop, NegativeLookahead, \
     ZeroOrMore, RegExp, Option, TKN, DTKN, Text
 
-class JSON_Grammar(Grammar):
-    # Parser-names must be assigned explicitly by calling the Parser.names()-method
-    # for all parsers that are referred to as arguments of operators,
-    # + (Series), | (Alternative) or * (Interlave), and have the same type as the
-    # parsers created by the operator.
-    # For any other parsers, the name is assigned automatically and early enough
-    # by class Grammar. (This has technical reasons.)
-    disposable__ = re.compile(r'_\w+')
-    _element = Forward()
+class JSON:
+    _element = Forward().name(pname='_element', disposable=True)
     _dwsp = Drop(Whitespace(r'\s*'))
     _EOF = NegativeLookahead(RegExp('.'))
-    EXP = Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')
-    DOT = Text(".")
-    FRAC = DOT + RegExp(r'[0-9]+')
-    NEG = Text("-")
-    INT = Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')
-    HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]')
-    UNICODE = DTKN("\\u") + HEX + HEX
-    ESCAPE = RegExp('\\\\[/bnrt\\\\]') | UNICODE
-    PLAIN = RegExp('[^"\\\\]+')
+    EXP = (Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')).name('EXP')
+    DOT = Text(".").name('DOT')
+    FRAC = (DOT + RegExp(r'[0-9]+')).name('FRAC')
+    NEG = Text("-").name('NEG')
+    INT = (Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')).name('INT')
+    HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]').name('HEX')
+    UNICODE = (DTKN("\\u") + HEX + HEX).name('UNICODE')
+    ESCAPE = (RegExp('\\\\[/bnrt\\\\]') | UNICODE).name('ESCAPE')
+    PLAIN = RegExp('[^"\\\\]+').name('PLAIN')
     _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
-    null = TKN("null")
-    false = TKN("false")
-    true = TKN("true")
+    null = TKN("null").name('null')
+    false = TKN("false").name('false')
+    true = TKN("true").name('true')
     _bool = true | false
-    number = INT + Option(FRAC) + Option(EXP) + _dwsp
-    string = Text('"') + _CHARACTERS + Text('"') + _dwsp
-    array = DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")
-    member = string + DTKN(":") + _element
-    json_object = DTKN("{") + member +  ZeroOrMore(DTKN(",") + member) + DTKN("}")
+    number = (INT + Option(FRAC) + Option(EXP) + _dwsp).name('number')
+    string = (Text('"') + _CHARACTERS + Text('"') + _dwsp).name('string')
+    array = (DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")).name('array')
+    member = (string + DTKN(":") + _element).name('member')
+    json_object = (DTKN("{") + member +  ZeroOrMore(DTKN(",") + member) + DTKN("}")).name('json_object')
     _element.set(json_object | array | string | number | _bool | null)
-    json = _dwsp + _element + _EOF
-    root__ = json
+    json = (_dwsp + _element + _EOF).name('json')
 
-json_parser = JSON_Grammar()
+json_parser = Grammar(JSON.json)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
