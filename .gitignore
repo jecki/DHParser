@@ -62,3 +62,9 @@ experimental
 /nimparser/nodetree
 /nimparser/parse
 /nimparser/nimdoc
+/documentation_src/doc_examples/outline/outlineApp.py
+/documentation_src/doc_examples/outline/outlineParser.py
+/documentation_src/doc_examples/outline/outlineServer.py
+/documentation_src/doc_examples/macros/macrosApp.py
+/documentation_src/doc_examples/macros/macrosParser.py
+/documentation_src/doc_examples/macros/macrosServer.py
