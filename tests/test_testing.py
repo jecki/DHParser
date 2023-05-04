@@ -508,7 +508,7 @@ class TestFalsePositives:
         parser_provider = grammar_provider(ebnf)
         transformer_provider = lambda : lambda _: _
         test_unit = unit_from_config(test_zp, 'test_zp.ini')
-        start_logging('LOGS')
+        # start_logging('LOGS')
         errata = grammar_unit(test_unit, parser_provider, transformer_provider,
                               'REPORT_ZP')
         assert errata

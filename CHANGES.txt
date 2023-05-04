@@ -1,3 +1,14 @@
+DHParser Version 1.5.0
+......................
+
+- parse.py: removed methods for combining parsers, i.e. turn cascades
+  of nested Series, Interleave or Alternative parsers into one
+  flat parser with a longer list of arguments, because these are
+  practically never needed and have undesired side-effects.
+- EXPERIMENTAL: started a nim-rewrite of the parser core to increase
+  parser speed to the level of a compiled language, i.e. nim (nim-lang.org)
+
+
 DHParser Version 1.4.2 (19.4.2023)
 ..................................
 
